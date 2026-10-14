@@ -8,11 +8,17 @@
 | `status.md` | generated status projection |
 | `roadmap.md` | execution sheet — единственный источник команд запуска |
 | `handoff.md` | текущий semantic Next |
-| `brief/` | сообщение владельца (`00`) и уточнения (`01`) |
+| `brief/` | сообщение владельца (`00`), уточнения (`01`, `02`) |
 | `research/P1-sources.md` | карта внешних источников P1 по назначению (Brain, соседние репо) |
 | `research/P1-corpus.md` | snapshot полного корпуса Brain о Billium: 222 SRC (D6) |
 | `research/P1-audit-inventory.md` | snapshot аудита Perplexity и заданий DR: 244 ID + 38 пунктов (D6) |
 | `artifacts/P1-design/build-inventories.py` | генератор инвентарей (design-only) |
+| `research/P1-acceptance-inventory.md` | 82 сценария PB/PF/MG/FD/SB/EC, источники и SHA-256 (D8) |
+| `research/P1-design.md` | покрытие постановки и модель инвариантов |
+| `research/P1-design-rag.md` | evidence design-delta и пределы проверки |
+| `artifacts/P1-design/examples.md` | примеры исполнения контракта |
+| `artifacts/P1-design/test-check-p1.py` | воспроизводимые синтетические регрессии приёмки |
+| `artifacts/P1-design/validation.md` | результаты проверок дизайна и их пределы |
 | `decisions/` | D-записи и generated views |
 | `phases/P1/` | детализированная P1: `P1.md` + `P1.1…P1.9` |
 | `phases/P2…P10/` | скелеты фаз |

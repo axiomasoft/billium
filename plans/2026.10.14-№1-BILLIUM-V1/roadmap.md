@@ -2,7 +2,7 @@
 
 <!-- execution-sheet/v1 -->
 
-**Обновлён:** 2026-10-14 · **Соответствует plan.md:** design pass 1 (P1 детализирована, 9 items; D1–D7)
+**Обновлён:** 2026-10-14 · **Соответствует plan.md:** design pass 2 (P1 детализирована, 9 items; D1–D8)
 
 Roadmap не переопределяет Routing §3 и owner gates. Он группирует только готовые соседние items P1.
 P2–P10 — скелеты: их строки появятся после `task:plan-design 2026.10.14-№1-BILLIUM-V1 Pn`.

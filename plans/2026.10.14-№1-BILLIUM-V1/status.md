@@ -2,8 +2,8 @@
 projection: status-view
 projection_version: v1
 source_scope: plan core + phases + journal
-through: —
-inputs_sha256: 122d399d886fed26afaa4b3d7282dbdaaf14bd25f558075136f38b40058be372
+through: 2026-10-14
+inputs_sha256: 9da4999670f405f50f2fe9a9e5d7ce07a948042e01efca4c1a5409f7b3912a4e
 generated_by: task plan-views status
 -->
 
@@ -17,7 +17,7 @@ generated_by: task plan-views status
 |:--|:--|
 | Version | — |
 | Status | ⬜ Not started |
-| Last Updated | — |
+| Last Updated | 2026-10-14 |
 
 ## 4. Phase Index & Status Board
 
@@ -97,7 +97,9 @@ generated_by: task plan-views status
 
 | Date | Who (role/model) | What |
 |:--|:--|:--|
-| — | — | No entries |
+| 2026-10-14 | codex/designer | plan-design · in-progress · Owner requested maximum-detail P1 refinement. D8 and acceptance regressions authored; finalization pending. No execution item started. |
+| 2026-10-14 | codex/designer | plan-design · no-op · Design finalized; execution has not started. |
+| 2026-10-14 | codex/designer | plan-design · no-op · Design finalized; execution has not started. |
 
 ## Owner Gates
 

@@ -1,46 +1,50 @@
 # HANDOFF — 2026-10-14 — after P1
 
-**Next:** design-phase: task:plan-design 2026.10.14-№1-BILLIUM-V1 P1
+**Next:** run-items: task:plan-run 2026.10.14-№1-BILLIUM-V1 P1.1
 
 | Parameter | Meaning |
 |:--|:--|
-| Batch | n/a |
-| Model class | frontier |
-| Effort | high — финализация design P1 (design-context → finalize-design), без изменения контрактов items |
-| Capabilities | — |
+| Batch | solo |
+| Model | frontier |
+| Thinking | high |
 | Context | continue-root |
-| Essence | Специфика P1 (9 items) написана полностью. Остался `finalize-design --phase P1`: runtime требует точный вызов `/task:plan-design 2026.10.14-№1-BILLIUM-V1 P1` в сессии, а эта сессия запущена как `start` |
+| The bottom line | Дизайн P1 завершён; рекомендовано исполнение P1.1 по execution sheet после вызова владельца |
 
-````
-/task:plan-design 2026.10.14-№1-BILLIUM-V1 P1
-````
+```session-continuity-decision/v1
+{
+  "outcome": "continue-root",
+  "reason": "authorized-scope-complete",
+  "evidence": [
+    "lifecycle:scope-complete",
+    "checkpoint:plans/2026.10.14-№1-BILLIUM-V1/research/P1-design.md"
+  ],
+  "runnable": true,
+  "schema_version": "session-continuity-decision/v1"
+}
+```
 
-После GREEN finalize первый запуск исполнения берётся из `roadmap.md`:
-`task:plan-run 2026.10.14-№1-BILLIUM-V1 P1.1`. P1.5 можно запустить параллельно.
+Рекомендация для текущего чата:
 
-**Done:**
-- план создан: `plan.md` (верхний уровень P1–P10, правила, Routing P1);
-- P1 детализирована: 9 items;
-- P2–P10 — скелеты с правилом детализации D7;
-- D1–D7;
-- полные инвентари источников (D6): `research/P1-corpus.md` — 222 документа Brain;
-  `research/P1-audit-inventory.md` — 244 ID аудита и 38 пунктов DR;
-- правило происхождения (D7);
-- checker `artifacts/P1-design/check-p1.py` проверен на синтетических данных: полное покрытие → GREEN,
-  12 дефектов → RED;
-- `roadmap.md` с execution sheet.
+```text
+$ task:plan-run 2026.10.14-№1-BILLIUM-V1 P1.1
+```
 
-**Remaining:** finalize-design P1, затем исполнение P1.1–P1.9. После GREEN P1.9 —
-`task:plan-design 2026.10.14-№1-BILLIUM-V1 P2`.
+**Done:** P1 полностью детализирована (9 items); D8 устраняет противоречия контракта/приёмки.
+Матрица всей постановки и модель инвариантов — `research/P1-design.md`.
+Сохранены корпус 222 SRC, аудит 244 ID и 38 DR; добавлен snapshot 82 приёмочных сценариев.
+Синтетические регрессии checker-а проверяют GREEN-fixture и отказы по дефектам, включая удаление
+каждого исходного сценария. Они не подтверждают исполнение P1.
 
-**Sources of truth:** `plans/2026.10.14-№1-BILLIUM-V1/plan.md` · `phases/P1/P1.md` · `brief/00-owner-message.md` · `brief/01-refinements.md` · `research/P1-corpus.md` · `research/P1-audit-inventory.md` · `decisions/`
+**Remaining:** исполнить P1.1–P1.9; после GREEN независимого P1.9 — design P2 по результатам.
+Все девять states остаются Not started. P1.5 независима и также доступна по отдельному вызову.
 
-**Open risks:**
-- MG/FD/SB/EC: точные ID сценариев в паспортах designer не перечислял. Если какого-то набора нет,
-  P1.7 эскалирует по D3, а не ослабляет checker.
-- Brain содержит чужие dirty-файлы. P1.8 коммитит только свои hunks (D4).
+**Sources of truth:** `plan.md` · `roadmap.md` · `phases/P1/P1.md` · `phases/P1/P1.1.md` ·
+`brief/00-owner-message.md` · `brief/02-p1-design-refinements.md` · `decisions/D8-p1-complete-acceptance.md` ·
+`research/P1-design.md` · `research/P1-acceptance-inventory.md`.
 
-**Workarounds/Deferred/Open questions:**
-- workarounds: внешние пути (Brain, соседние репо) недоступны bundler-у → `research/P1-sources.md` § N
-- deferred: заполнение `repo:` в карточке Brain (вопрос `BRAIN-REPO`, P1.8); детализация P2–P10 (D1)
-- open_questions: I-01, I-02, I-16, I-28, PSP первого запуска, валюты, первый платный потребитель — собираются в P1.8
+**Open risks:** внешние источники могут измениться после snapshot; фиксировать drift, не менять ID.
+Бизнес-факты и BRAIN-REPO остаются вопросами владельцу. Чужие изменения Brain сохраняются по D4.
+
+**Workarounds/Deferred/Open questions:** внешние reads задаются через P1-sources и SRC; primary web
+verification, выбор архитектуры и реальные PostgreSQL/PHP/Dart проверки принадлежат исполнению.
+Детализация P2–P10 отложена по D1; новые денежные или соседние обязанности не приняты в design.

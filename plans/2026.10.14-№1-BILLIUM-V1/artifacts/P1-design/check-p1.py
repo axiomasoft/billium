@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Structural acceptance checks for PLAN1 phase P1 (decisions D3, D6, D7).
 
-Usage: python3 plans/2026.10.14-№1-BILLIUM-V1/artifacts/P1-design/check-p1.py P1.1|...|P1.9|all
+Usage: python3 plans/2026.10.14-№1-BILLIUM-V1/artifacts/P1-design/check-p1.py P1.1|...|P1.9|pre-review|all
 
 Stdlib only. Checks presence, required sections, full coverage of the source
 inventories (D6), resolvable provenance links (D7), evidence labels, verdict
@@ -28,7 +28,7 @@ EMPTY = {"", "—", "-", "–"}
 TOKEN = re.compile(
     r"\b(?:REQ-[A-Z]+-\d{2,}|INV-\d{2,}|CONFLICT-\d{2,}|SRC-\d{3}|AUD-\d{3}|V3-\d{2}|AC-\d{2}"
     r"|FS-\d{2}|CL-\d{2,}|DR0[1-4]-T\d{2}|DR0[1-4]-\d{2,}|M-\d{2,}|ACC-[A-Z]+-\d{2,}"
-    r"|PB-\d{2}|PF-\d{2}|[CGREQL]-\d{2}|D\d+)\b")
+    r"|PB-\d{2}|PF-\d{2}|MG-\d{2}|FD-\d{2}|SB-\d{2}|EC-\d{2}|[CGREQL]-\d{2}|D\d+)\b")
 REQ_KINDS = ("REQ-", "INV-")
 EVIDENCE_KINDS = ("REQ-", "INV-", "CL-", "DR0", "M-", "SRC-", "AUD-", "FS-", "C-", "E-", "L-")
 LEDGER_DISPOSITIONS = {"использован", "без новых требований", "дубль", "процесс/история", "вне границ"}
@@ -267,7 +267,14 @@ def check_ledger(r: Report, tiers: set[str]) -> None:
             continue
         refs, note = cell(row, pos["Требования"]), strip_md(cell(row, pos["Примечание"]))
         if disposition == "использован":
-            provenance(r, f"{where}: {ident}", refs, REQ_KINDS)
+            links = provenance(r, f"{where}: {ident}", refs, REQ_KINDS)
+            requirements = {}
+            for header, req_rows in tables(file_text(REPO / "docs/requirements.md")):
+                source = column(header, "Источник")
+                if header and header[0] == "ID" and source is not None:
+                    requirements.update({strip_md(cell(row, 0)): cell(row, source) for row in req_rows})
+            r.check(any(ident in TOKEN.findall(requirements.get(link, "")) for link in links),
+                    f"{where}: {ident} «использован», но ни одно указанное требование не ссылается на SRC")
         elif disposition == "вне границ":
             r.check("REQ-OUT-" in refs, f"{where}: {ident} «вне границ» без REQ-OUT")
             provenance(r, f"{where}: {ident}", refs, REQ_KINDS)
@@ -301,6 +308,7 @@ def check_requirements(r: Report) -> None:
                     continue
                 r.check(ident not in seen, f"{where}: повтор ID {ident}")
                 seen.add(ident)
+                r.check(strip_md(cell(row, 1)) not in EMPTY, f"{where}: {ident} без содержания")
                 if ident.startswith("REQ-"):
                     areas.add(ident.split("-")[1])
                 if source is not None:
@@ -308,6 +316,7 @@ def check_requirements(r: Report) -> None:
                     r.check(bool(srcs), f"{where}: {ident} без SRC в «Источник»")
                     for src in srcs:
                         r.check(src in corpus, f"{where}: {ident} — {src} нет в инвентаре")
+                    provenance(r, f"{where}: {ident} «Источник»", cell(row, source), ("SRC-",))
         r.check(id_tables > 0, f"{where}: нет таблиц с колонкой ID")
         for number in range(1, 9):
             r.check(f"INV-{number:02d}" in seen, f"{where}: нет INV-{number:02d}")
@@ -359,8 +368,11 @@ def check_audit(r: Report) -> None:
         if r.check(found is not None, f"{where}: нет таблицы утверждений `ID | … | Статус | Источник | Нужна проверка`"):
             _, rows, pos = found
             r.check(len(rows) > 0, f"{where}: таблица утверждений пуста")
+            seen_claims = set()
             for row in rows:
                 ident = strip_md(cell(row, pos["ID"]))
+                r.check(ident not in seen_claims, f"{where}: повтор утверждения {ident}")
+                seen_claims.add(ident)
                 r.check(bool(re.fullmatch(r"CL-\d{2,}", ident)), f"{where}: неверный ID утверждения `{ident}`")
                 r.check(strip_md(cell(row, pos["Статус"])).lower() in LABELS, f"{where}: {ident} — неверный статус")
                 provenance(r, f"{where}: {ident} «Источник»", cell(row, pos["Источник"]),
@@ -409,8 +421,7 @@ def check_audit(r: Report) -> None:
                     value = cell(row, position)
                     label = f"«{cell(row, 0)} × {header[position]}»"
                     r.check(bool(LABEL_RE.search(value)), f"{where}: ячейка {label} без метки доказанности")
-                    if "n/a" not in value.lower():
-                        provenance(r, f"{where}: ячейка {label}", value, ("CL-",))
+                    provenance(r, f"{where}: ячейка {label}", value, ("CL-",))
     fixes = section(text, "Поправки и gaps", r, where)
     if fixes is not None:
         found = find_table(fixes, ["ID", "Суть", "Как учтено", "Требования"])
@@ -511,9 +522,25 @@ def check_research(r: Report) -> None:
                         provenance(r, f"{where}: {task}", refs, REQ_KINDS)
                     else:
                         r.err(f"{where}: {task} — диспозиция `{disposition}` вне ответ|открыто|вне границ")
-        for claim in pending[key]:
-            r.check(re.search(rf"\b{re.escape(claim)}\b", text) is not None,
-                    f"{where}: не закрыт и не перенесён в «Открыто» {claim}")
+        resolutions = section(text, "Проверка утверждений аудита", r, where) or ""
+        found = find_table(resolutions, ["ID", "Диспозиция", "Ссылки"])
+        if r.check(found is not None, f"{where}: нет таблицы проверки CL/C"):
+            _, rows, pos = found
+            by_id = {strip_md(cell(row, pos["ID"])): row for row in rows}
+            r.check(len(by_id) == len(rows), f"{where}: повтор в таблице проверки CL/C")
+            for claim in pending[key]:
+                row = by_id.get(claim)
+                if not r.check(row is not None, f"{where}: нет диспозиции {claim}"):
+                    continue
+                disposition = strip_md(cell(row, pos["Диспозиция"]))
+                refs = cell(row, pos["Ссылки"])
+                if disposition in {"подтверждено", "опровергнуто", "уточнено"}:
+                    tokens = provenance(r, f"{where}: {claim}", refs, (key + "-",))
+                    r.check(any(token in claim_ids for token in tokens), f"{where}: {claim} без факта этого DR")
+                elif disposition == "открыто":
+                    r.check(claim in TOKEN.findall(opened), f"{where}: {claim} нет в «Открыто»")
+                else:
+                    r.err(f"{where}: {claim} — неверная диспозиция {disposition}")
 
 
 # --- P1.5: methods ------------------------------------------------------------
@@ -537,6 +564,8 @@ def check_methods(r: Report) -> None:
         data = json.loads(raw)
     except json.JSONDecodeError as exc:
         r.err(f"{where}: невалидный JSON: {exc}")
+        return
+    if not r.check(isinstance(data, dict), f"{where}: корень JSON не объект"):
         return
     r.check(data.get("schema") == "billium-methods/v1", f"{where}: schema != billium-methods/v1")
     r.check(bool(re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(data.get("generated", "")))), f"{where}: generated не YYYY-MM-DD")
@@ -608,7 +637,7 @@ def p16_decisions() -> dict[int, str]:
     result = {}
     for number, path in decision_files().items():
         text = path.read_text(encoding="utf-8")
-        if number >= 8 and re.search(r"^items:.*\bP1\.6\b", text, re.MULTILINE):
+        if number >= 9 and re.search(r"^items:.*\bP1\.6\b", text, re.MULTILINE):
             result[number] = text
     return result
 
@@ -631,7 +660,7 @@ def check_architecture(r: Report) -> None:
                     r.check(bool(verdict) and verdict.split()[0] in {"build", "adopt", "hybrid"},
                             f"{where}: «{area}» — решение `{verdict}` вне build|adopt|hybrid")
                     refs = [int(n) for n in re.findall(r"D(\d+)", cell(row, pos["D#"]))]
-                    r.check(any(n in decisions for n in refs), f"{where}: «{area}» без D# (≥ D8, items: P1.6)")
+                    r.check(any(n in decisions for n in refs), f"{where}: «{area}» без D# (≥ D9, items: P1.6)")
                     provenance(r, f"{where}: «{area}» «Основа»", cell(row, pos["Основа"]), EVIDENCE_KINDS)
         for prefix in ("Профили embedded и server", "Границы с соседями"):
             section(text, prefix, r, where)
@@ -651,7 +680,8 @@ def check_architecture(r: Report) -> None:
     where = "docs/architecture/data-model.md"
     text = read(REPO / "docs" / "architecture" / "data-model.md", r)
     if text is not None:
-        for prefix in ("ERD", "FSM денежной операции", "FSM инвойса", "Коррекции", "Retention и restore"):
+        for prefix in ("ERD", "FSM денежной операции", "FSM инвойса", "Коррекции", "Retention и restore",
+                       "Операции и блокировки", "Словарь данных", "Диспозиции новых требований"):
             section(text, prefix, r, where)
         r.check("erDiagram" in text, f"{where}: нет mermaid erDiagram")
         r.check(text.count("stateDiagram-v2") >= 2, f"{where}: меньше двух mermaid stateDiagram-v2")
@@ -683,7 +713,7 @@ def check_architecture(r: Report) -> None:
     structure = read(KNOW / "target-structure.md", r)
     if structure is not None:
         r.check(len([l for l in structure.splitlines() if l.strip()]) >= 20, "knowledge/target-structure.md: меньше 20 строк")
-    r.check(len(decisions) >= 7, f"decisions/: D-записей P1.6 (≥ D8) {len(decisions)} < 7")
+    r.check(len(decisions) >= 10, f"decisions/: D-записей P1.6 (≥ D9) {len(decisions)} < 10 (7 областей + стек + раскладка + профили)")
     for number, text in decisions.items():
         why = next((v for k, v in sections(text).items() if k.strip().lower() == "why"), "")
         r.check(len(re.findall(r"^- Альтернатива", why, re.MULTILINE)) >= 2, f"decisions/D{number}: в `## Why` меньше двух `- Альтернатива`")
@@ -737,7 +767,7 @@ def check_contracts(r: Report) -> None:
         section(text, prefix, r, where)
     rows_by_id: dict[str, list[str]] = {}
     for header, rows in tables(text):
-        pos = {name: column(header, name) for name in ("ID", "Сценарий", "Сторона", "Фаза", "Требования", "Контракт")}
+        pos = {name: column(header, name) for name in ("ID", "Сценарий", "Сторона", "Фаза", "Требования", "Контракт", "Примечание")}
         if any(value is None for value in pos.values()):
             continue
         for row in rows:
@@ -745,13 +775,41 @@ def check_contracts(r: Report) -> None:
             r.check(ident not in rows_by_id, f"{where}: повтор {ident}")
             rows_by_id[ident] = row
             side = strip_md(cell(row, pos["Сторона"]))
-            r.check(bool(re.match(r"^(billium|сосед:\S+|n/a)", side)), f"{where}: {ident} — «Сторона» `{side}`")
+            r.check(bool(re.fullmatch(r"billium|сосед:\S+|n/a", side)), f"{where}: {ident} — «Сторона» `{side}`")
+            r.check(strip_md(cell(row, pos["Сценарий"])) not in EMPTY, f"{where}: {ident} без сценария")
+            if side == "billium":
+                r.check(bool(re.search(r"\bP(?:[2-9]|10)\b", cell(row, pos["Фаза"]))), f"{where}: {ident} без фазы реализации")
+                r.check(strip_md(cell(row, pos["Контракт"])) not in EMPTY, f"{where}: {ident} без контракта/модели")
+            else:
+                r.check(len(strip_md(cell(row, pos["Примечание"]))) >= 15, f"{where}: {ident} вне Billium без причины")
+                provenance(r, f"{where}: {ident} диспозиция", cell(row, pos["Требования"]), ("REQ-OUT-", "REQ-NBR-"))
             provenance(r, f"{where}: {ident}", cell(row, pos["Требования"]), REQ_KINDS, required=side.startswith("billium"))
     r.check(bool(rows_by_id), f"{where}: нет таблиц `ID | Сценарий | Сторона | Фаза | Требования | Контракт`")
-    for ident in [f"PB-{n:02d}" for n in range(1, 25)] + [f"PF-{n:02d}" for n in range(1, 15)]:
+    expected = inventory("P1-acceptance-inventory.md")
+    r.check(len(expected) == 82, f"{where}: snapshot приёмки должен содержать 82 ID")
+    for ident in expected:
         r.check(ident in rows_by_id, f"{where}: нет {ident}")
+    for ident in rows_by_id:
+        r.check(ident in expected or bool(re.fullmatch(r"ACC-(CON|RST)-\d{2,}", ident)), f"{where}: неизвестный сценарий {ident}")
     for prefix in ("MG-", "FD-", "SB-", "EC-", "ACC-CON-", "ACC-RST-"):
         r.check(any(key.startswith(prefix) for key in rows_by_id), f"{where}: нет строк {prefix}*")
+    coverage = section(text, "Покрытие требований", r, where) or ""
+    found = find_table(coverage, ["ID", "Диспозиция", "Сценарии", "Основание"])
+    if r.check(found is not None, f"{where}: нет таблицы покрытия REQ/INV"):
+        _, rows, pos = found
+        by_id = {strip_md(cell(row, pos["ID"])): row for row in rows}
+        requirements = {i for i in first_column_ids(file_text(REPO / "docs/requirements.md")) if i.startswith(REQ_KINDS)}
+        r.check(set(by_id) == requirements, f"{where}: покрытие REQ/INV неполно или содержит лишние ID")
+        r.check(len(by_id) == len(rows), f"{where}: дубликаты в покрытии REQ/INV")
+        for ident, row in by_id.items():
+            disposition = strip_md(cell(row, pos["Диспозиция"]))
+            refs = cell(row, pos["Основание"])
+            provenance(r, f"{where}: покрытие {ident}", refs, ("REQ-", "INV-", "D"))
+            if disposition == "учтено":
+                scenarios = TOKEN.findall(cell(row, pos["Сценарии"]))
+                r.check(bool(scenarios) and all(s in rows_by_id for s in scenarios), f"{where}: {ident} без разрешимых сценариев")
+            else:
+                r.check(disposition in {"вопрос владельцу", "вне границ"}, f"{where}: {ident} неверная диспозиция")
 
 
 # --- P1.8: roadmap, owner questions, Brain, entrypoint ---------------------------
@@ -769,7 +827,8 @@ def check_roadmap(r: Report) -> None:
         else:
             r.check("P2" in phases, f"{where}: нет раздела `## P2`")
         for phase, body in phases.items():
-            for label in ("**Цель:**", "**Выходы:**", "**Зависит от:**", "**Решения:**"):
+            for label in ("**Цель:**", "**Выходы:**", "**Зависит от:**", "**Решения:**",
+                          "**Приёмка:**", "**Вопросы/риски:**"):
                 r.check(label in body, f"{where}: {phase} без {label}")
             decided = re.search(r"\*\*Решения:\*\*(.+)", body)
             if decided:
@@ -796,8 +855,9 @@ def check_roadmap(r: Report) -> None:
         for prefix in ("Package-Status", "Bridge-Catalog", "CD-предложения"):
             body = section(text, prefix, r, where)
             if body is not None:
-                r.check(bool(re.search(r"Brain commit:\s*(`?[0-9a-f]{7,40}`?|не применено\s*—\s*\S+)", body)),
-                        f"{where}: в «{prefix}» нет `Brain commit: <sha>` или `не применено — <причина>`")
+                no_change = r"|не требуется\s*—\s*\S+" if prefix == "CD-предложения" else ""
+                r.check(bool(re.search(r"Brain commit:\s*(`?[0-9a-f]{7,40}`?|не применено\s*—\s*\S+" + no_change + r")", body)),
+                        f"{where}: в «{prefix}» нет SHA или причины неприменения (для CD допустимо «не требуется»)")
     for path in (REPO / ".ai" / "guidelines" / "agent-entrypoint.md", REPO / "README.md"):
         content = read(path, r)
         if content is not None:
@@ -831,6 +891,8 @@ def check_review(r: Report) -> None:
         r.check(bool(re.search(rf"^### {re.escape(ident)} — ", text, re.MULTILINE)), f"{where}: нет заголовка `### {ident} — …`")
     if verdict and verdict.group(1) == "GREEN":
         r.check(not severe, f"{where}: GREEN при наличии blocker/major")
+    if verdict:
+        r.check(verdict.group(1) == "GREEN", f"{where}: verdict RED — P1.9 не закрыта")
 
 
 CHECKS = {"P1.1": check_requirements, "P1.2": check_corpus, "P1.3": check_audit,
@@ -839,10 +901,10 @@ CHECKS = {"P1.1": check_requirements, "P1.2": check_corpus, "P1.3": check_audit,
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 2 or argv[1] not in {*CHECKS, "all"}:
-        print(f"usage: {Path(argv[0]).name} {'|'.join(CHECKS)}|all", file=sys.stderr)
+    if len(argv) != 2 or argv[1] not in {*CHECKS, "pre-review", "all"}:
+        print(f"usage: {Path(argv[0]).name} {'|'.join(CHECKS)}|pre-review|all", file=sys.stderr)
         return 2
-    selected = list(CHECKS) if argv[1] == "all" else [argv[1]]
+    selected = list(CHECKS) if argv[1] == "all" else list(CHECKS)[:-1] if argv[1] == "pre-review" else [argv[1]]
     failed = False
     for item in selected:
         report = Report(item)

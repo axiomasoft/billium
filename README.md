@@ -2,7 +2,8 @@
 
 Billing system implemented in **PHP** and **Dart**.
 
-The repository currently contains development environment configuration.
+The repository currently contains development environment configuration and an executable
+implementation plan.
 Frameworks, runtime versions, persistence, package layout, and billing APIs
 will be defined during implementation.
 
@@ -15,3 +16,5 @@ are enabled in `.swissknife.json`.
 
 See [development environment](docs/development-environment.md) for setup and
 verification commands.
+
+See [planning and design checks](docs/planning.md) for the current P1 plan and its validation commands.
