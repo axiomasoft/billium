@@ -21,7 +21,9 @@ objects, codec и коды ошибок; ни один не пишет дене�
    `refundedTotal`) — та же строка в валюте операции.
 3. **Идемпотентность (INV-05).** Каждая команда, меняющая деньги, несёт `commandKey` вызывающего.
    Scope ключа — `(installationRef, environment, sellerRef, operationKind, commandKey)`; отдельно
-   уникальна business binding `(source.context, source.intentRef, operationKind)`. `digest` —
+   уникальна business binding `(source.context, source.intentRef, operationKind)` — без `sellerRef`, как в
+   пилоте: совпадение с операцией того же продавца возвращает её, с операцией иного продавца —
+   `billium.idempotency.conflict` без раскрытия чужой операции (D36, INV-14). `digest` —
    `sha256` от RFC 8785 канонизации envelope без транспортных полей; тот же ключ с другим digest —
    `billium.idempotency.conflict`; повтор — исходный receipt (REQ-CON-32).
 4. **Unknown (INV-04).** Каждая денежная команда имеет исход `accepted-unknown`; timeout и транспортная

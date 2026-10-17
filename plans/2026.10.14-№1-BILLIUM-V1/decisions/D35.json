@@ -1,0 +1,63 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:decision:v1",
+  "id": "D35",
+  "title": "Refund ↔ ledger: admission refund первым, ledger по наблюдению и policy reallocation (P19-F02)",
+  "date": "2026-10-17",
+  "status": "accepted",
+  "question": "Как связаны admission refund и снятие allocation в ledger, чтобы отказ refund не открывал долг повторно и refundAuthorization оставался запросом только для чтения (P19-F02, REQ-CON-14, INV-09)?",
+  "options": [
+    {
+      "id": "A",
+      "text": "Refund admission первым: ledger не меняется до исхода; succeeded refund приходит в ledger наблюдением applyPaymentObservation (refunded_total), payment.reallocation_required вычисляется CHECK-ом как allocated > captured − refunded; policy reallocation — отдельная keyed команда ledger (credit note или reversal с cause = refund); refundAuthorization — только чтение (ёмкость и требуемая reallocation)",
+      "pros": "Ledger меняется только по подтверждённому денежному факту; отказ, pending или unknown refund ничего не снимают; один путь проекции (D28); REQ-CON-14 без отступления"
+    },
+    {
+      "id": "B",
+      "text": "Keyed резерв ledger-авторизации: команда ledger с commandKey резервирует снятие allocation и выдаёт receipt; refund admission потребляет receipt; terminal-отказ refund освобождает резерв",
+      "cons": "Вторая денежная команда и второй резерв на один refund; освобождение зависит от исхода execution — связь двух модулей в обход D28; refundAuthorization становится мутацией вопреки REQ-CON-14"
+    },
+    {
+      "id": "C",
+      "text": "Текущая модель: reversal allocation отдельной Tx до admission refund",
+      "cons": "Отказ admission или crash между Tx оставляет долг открытым без возврата денег — collection списывает повторно (P19-F02, REQ-FAIL-19)"
+    }
+  ],
+  "context": "P19-F02 (reviews/P1-review.md): строка «Refund authorization (ledger)» data-model.md § Операции и блокировки делает reversal до admission refund без commandKey; флаг reallocation_required не блокирует новые allocation.",
+  "decision": "A — Refund admission первым: ledger не меняется до исхода; succeeded refund приходит в ledger наблюдением applyPaymentObservation (refunded_total), payment.reallocation_required вычисляется CHECK-ом как allocated > captured − refunded; policy reallocation — отдельная keyed команда ledger (credit note или reversal с cause = refund); refundAuthorization — только чтение (ёмкость и требуемая reallocation)",
+  "rationale": "Ledger меняется только по подтверждённому refund через applyPaymentObservation (D28), поэтому отказ admission, pending или unknown refund не открывают долг (INV-09, REQ-FAIL-19); refundAuthorization остаётся чтением (REQ-CON-14) без отступления; флаг reallocation_required выводится CHECK-ом и блокирует новые allocation триггером. B вводит вторую денежную команду и связь модулей в обход D28.",
+  "consequences": [
+    "Отклонены B и C.",
+    "Триггер allocation_guard: положительная allocation из payment допускается, только если после неё allocated_minor ≤ captured_minor − refunded_minor; при reallocation_required — отказ.",
+    "CHECK payment: reallocation_required = (allocated_minor > captured_minor − refunded_minor) — флаг снимается той же Tx, что возвращает allocated в пределы net.",
+    "Reversal с cause = refund не создаёт collection step (REQ-FAIL-19); credit note — policy по умолчанию для оплаченного и возвращённого.",
+    "Unknown/pending refund держит резерв на charge (INV-10) и не меняет ledger."
+  ],
+  "applies_to": [
+    "P1.6",
+    "P1.10",
+    "P1.11"
+  ],
+  "evidence": [
+    {
+      "kind": "repo",
+      "ref": "docs/requirements.md",
+      "note": "REQ-CON-14, REQ-CON-13, INV-05, INV-09, INV-10, REQ-FAIL-19"
+    },
+    {
+      "kind": "repo",
+      "ref": "decisions/D28.json",
+      "note": "D28"
+    },
+    {
+      "kind": "repo",
+      "ref": "reviews/P1-review.md",
+      "note": "P19-F02"
+    }
+  ],
+  "actor": {
+    "provider": "anthropic",
+    "model": "claude-opus-5-5",
+    "effort": "high"
+  },
+  "answered_by": "agent"
+}

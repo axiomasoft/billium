@@ -8,7 +8,7 @@
   "options": [
     {
       "id": "A",
-      "text": "READ COMMITTED; claim идемпотентности первым; SELECT … FOR UPDATE корней в порядке occurrence → dunning case → obligation → invoice → payment → charge → refund → series; UNIQUE/CHECK как backstop; lease/fence CAS для workers; relay SKIP LOCKED",
+      "text": "READ COMMITTED; claim идемпотентности — первая запись корневой Tx; затем SELECT … FOR UPDATE/SHARE в едином глобальном порядке installation_state → feed_partition → billing_schedule → billing_occurrence → dunning_case → obligation → invoice → payment/customer_credit → money_operation charge → refund → attempt → document_series; UNIQUE/CHECK как backstop; lease/fence CAS для workers; relay SKIP LOCKED",
       "pros": "Предсказуемые deadlock-free пары; refund lock на исходном charge"
     },
     {
@@ -28,14 +28,16 @@
     }
   ],
   "context": "research/P1-design.md: матрица пар операций с общим ресурсом.",
-  "decision": "Выбрана A. Порядок и таблица пар — docs/architecture/data-model.md § Операции и блокировки.",
+  "decision": "Выбрана A. Единый нормативный порядок: claim идемпотентности → installation_state → feed_partition → billing_schedule → billing_occurrence → dunning_case → obligation (id asc) → invoice (id asc) → payment/customer_credit (id asc) → money_operation charge → refund → attempt → document_series. Операция берёт только нужные ей звенья, но не нарушает порядок; collection step — одна Tx с claim ключа шага первым (P19-F06). Таблица операций и пар — docs/architecture/data-model.md § Операции и блокировки.",
   "rationale": "M-39, M-40, M-41, M-55, M-56; CL-64, CL-65, CL-66; DR01-09 (отсутствие lock у Lago), DR01-24.",
   "consequences": [
     "Отклонены B–D.",
-    "Каждая пара — N-процессный тест PostgreSQL в фазе реализации (REQ-ACC-11)."
+    "Каждая пара — N-процессный тест PostgreSQL в фазе реализации (REQ-ACC-11).",
+    "P1.10 (P19-F06): в порядок добавлены installation_state, feed_partition, billing_schedule и attempt; refund admission не снимает allocation (D35); dispatch-пакет берёт installation_state FOR UPDATE (D34)."
   ],
   "applies_to": [
-    "P1.6"
+    "P1.6",
+    "P1.10"
   ],
   "global": false,
   "supersedes": [],
