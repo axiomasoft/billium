@@ -1,0 +1,123 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:item:v1",
+  "id": "P1.9",
+  "title": "Review P1 — независимый verdict",
+  "status": "todo",
+  "summary": "Независимый read-only review всей P1 в свежей сессии, не авторской: обоснованность схемы и модели данных, границы канона, трассировка, качество доказательств; выпустить verdict.",
+  "why": "P1 фиксирует архитектуру денежной системы, которую к 1.0 будет трудно менять. Структурный checker (D3) не доказывает, что выбор верен и инварианты защищены. RAG: repo-grounded (D3).",
+  "scope": {
+    "include": [
+      "reviews/P1-review.md: строка **Verdict:** GREEN или RED; таблица ID | Severity | Где | Суть | Owning item (blocker|major|minor); заголовки ### <ID> — … по findings; ## Проверено",
+      "Обязательные проверки: (1) каждое решение области имеет D# с ≥ 2 альтернативами и опирается на факты P1.4 или явный риск; (2) INV-01…INV-08 имеют enforcement без очевидного обхода, разобраны два исполнителя, lost response и restore; (3) ни одно решение не нарушает plan.md §2; (4) каталог трассируется на REQ/INV, контракты совместимы с пилотом; (5) ≥ 5 внешних фактов перепроверено по URL из P1.4; (6) вопросы владельцу не подменены фактами; (7) происхождение: ≥ 30 случайных нормативных утверждений из docs/ и knowledge/; (8) полнота: ≥ 15 случайных ID из P1-corpus и ≥ 15 из P1-audit-inventory"
+    ],
+    "exclude": [
+      "правка любых артефактов P1",
+      "новые исследования сверх выборочной перепроверки",
+      "детализация P2"
+    ]
+  },
+  "depends_on": [
+    "P1.8"
+  ],
+  "decisions": [
+    "D3",
+    "D7",
+    "D8"
+  ],
+  "skills": [],
+  "reads": [
+    {
+      "why": "Правило происхождения",
+      "required": true,
+      "path": "@plan/decisions/D7.json",
+      "section": "Solution"
+    },
+    {
+      "why": "Проверяемый артефакт",
+      "required": true,
+      "path": "docs/architecture/target-architecture.md"
+    },
+    {
+      "why": "Проверяемый артефакт",
+      "required": true,
+      "path": "docs/architecture/data-model.md"
+    },
+    {
+      "why": "Проверяемый артефакт",
+      "required": true,
+      "path": "docs/contracts/billium-contracts-v1.md"
+    },
+    {
+      "why": "Проверяемый артефакт",
+      "required": true,
+      "path": "docs/acceptance-catalog.md"
+    },
+    {
+      "why": "Проверяемый артефакт",
+      "required": true,
+      "path": "docs/requirements.md"
+    },
+    {
+      "why": "Pre-review и all",
+      "required": true,
+      "path": "@plan/artifacts/P1-design/check-p1.py"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "@plan/knowledge/owner-questions.md",
+      "role": "input",
+      "note": "Вопросы владельцу"
+    }
+  ],
+  "task_files": [
+    {
+      "path": "@plan/reviews/P1-review.md",
+      "change": "create"
+    }
+  ],
+  "rules": [
+    "Сначала check-p1.py pre-review (P1.1–P1.8); RED — verdict RED с finding на owning item.",
+    "Severity: blocker — нарушение канона или незащищённый денежный инвариант; major — решение без доказательной базы или пропуск покрытия; minor — форма.",
+    "Рецензент не переписывает решения, а описывает дефект и ожидаемое исправление. Review только читает."
+  ],
+  "guidance": "Finding — конкретное место (файл + раздел), сценарий отказа и ожидаемое исправление. ## Проверено перечисляет проверенное, в том числе без findings.",
+  "validation": [
+    {
+      "id": "V1",
+      "cmd": "python3 plans/2026.10.14-№1-BILLIUM-V1/artifacts/P1-design/check-p1.py all",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V2",
+      "cmd": "python3 plans/2026.10.14-№1-BILLIUM-V1/artifacts/P1-design/check-p1.py P1.9",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V3",
+      "cmd": "git diff --check",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    }
+  ],
+  "deliverables": [
+    "reviews/P1-review.md с verdict и findings, привязанными к owning items; при GREEN фаза закрывается, при RED — одна корректировка и повторный P1.9"
+  ],
+  "route": {
+    "class": "frontier",
+    "effort": "high"
+  },
+  "review": {
+    "mode": "none"
+  },
+  "authority": {
+    "kind": "routine"
+  },
+  "rag": {
+    "need": "none",
+    "status": "not_needed"
+  },
+  "updated_at": "2026-10-17T07:28:24Z"
+}

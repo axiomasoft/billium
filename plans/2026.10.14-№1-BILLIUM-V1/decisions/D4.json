@@ -1,0 +1,56 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:decision:v1",
+  "id": "D4",
+  "title": "Записи в Brain в конце P1",
+  "date": "2026-10-14",
+  "status": "accepted",
+  "question": "Какие правки вносить в Brain по итогам P1 и как их фиксировать?",
+  "options": [
+    {
+      "id": "A",
+      "text": "Не писать в Brain, только предложить текст",
+      "cons": "владелец поручил обновить строки в конце P1"
+    },
+    {
+      "id": "B",
+      "text": "Заодно заполнить repo: в карточке Billium",
+      "cons": "включает brain sync — внешний эффект, масштаб неизвестен"
+    },
+    {
+      "id": "C",
+      "text": "Три правки: Package-Status, Bridge-Catalog, CD-предложения со статусом «предложено»; локальный commit только своих hunks, без push",
+      "pros": "точно по поручению владельца"
+    }
+  ],
+  "context": "Постановка §6 разрешает три правки Brain в конце P1.",
+  "decision": "Выбрана альтернатива C. Поле repo: без ответа владельца не меняется.",
+  "rationale": "Точный текст и SHA — в knowledge/brain-updates.md. Вопрос BRAIN-REPO — владельцу (M2 п. 2). Чужие dirty-файлы не stage-ятся.",
+  "consequences": [
+    "Отклонена A: поручение владельца прямое.",
+    "Отклонена B: побочный эффект sync описан неполно."
+  ],
+  "applies_to": [
+    "P1.8"
+  ],
+  "global": false,
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "kind": "owner",
+      "ref": "M1",
+      "note": "§6"
+    },
+    {
+      "kind": "owner",
+      "ref": "M2",
+      "note": "п. 2 (repo:)"
+    }
+  ],
+  "actor": {
+    "provider": "claude-code",
+    "model": "claude-opus-5-5",
+    "effort": "high"
+  },
+  "answered_by": "agent"
+}

@@ -1,0 +1,29 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:phase:v1",
+  "id": "P10",
+  "title": "P10 — Release gate 1.0",
+  "design": "skeleton",
+  "goal": "Release gate 1.0.",
+  "context": "SKELETON — не детализирована. Детализация: design-сессия plan-design Pn после P1 и roadmap-proposal (D1). Состав провизорен до P1.8.",
+  "contract": {
+    "consumes": [
+      "выход P9"
+    ],
+    "produces": [],
+    "boundaries": []
+  },
+  "scope": {
+    "include": [
+      "Release gate 1.0."
+    ],
+    "exclude": []
+  },
+  "depends_on": [
+    "P9"
+  ],
+  "pitfalls": [],
+  "validation": [],
+  "deliverables": [],
+  "items": [],
+  "batches": []
+}

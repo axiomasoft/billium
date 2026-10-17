@@ -1,0 +1,93 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:item:v1",
+  "id": "P1.5",
+  "title": "Методы разработки: methods.json",
+  "status": "todo",
+  "summary": "Изучить AgenTools, Chatom, AzGuard, Commerz (инварианты), Vaulter (idempotency ADR); записать knowledge/methods.json с вердиктом accept | adapt | reject по каждой практике.",
+  "why": "Billium, как AgenTools, — PHP+Dart с общими контрактами. Chatom и AzGuard прошли заморозку API/SPI/схемы до 1.0. Без явного списка каждая фаза заново изобретает процесс. RAG: repo-grounded (brief/00 §1 п.2, §3 п.4; research/P1-sources.md §6).",
+  "scope": {
+    "include": [
+      "knowledge/methods.json по схеме billium-methods/v1: practices[] (id M-NN, topic из enum, practice, source{repo, path}, verdict, reason, billium, phase) и sources_reviewed[] (path, practices, note)",
+      "покрыть каждый путь research/P1-sources.md §6 и §7; каждое значение topic — хотя бы одна практика",
+      "topic: spec-revisions, json-schema, vectors-golden, conformance-runner, jcs-oracle, php-sdk, dart-sdk, minimal-core-modules, api-spi-attributes, type-map, identities, upgrade-map, release-gate, target-structure, lock-model, outbox-inbox, problem-codes, money-invariants, idempotency, test-affected-only, mutation-testing, load-testing"
+    ],
+    "exclude": [
+      "выбор архитектуры Billium (P1.6)",
+      "копирование кода или скриптов соседей",
+      "правка соседних репозиториев",
+      "инструменты, которых нет в соседях"
+    ]
+  },
+  "depends_on": [],
+  "decisions": [
+    "D2",
+    "D3",
+    "D7"
+  ],
+  "skills": [],
+  "reads": [
+    {
+      "why": "Методы разработки",
+      "required": true,
+      "path": "@plan/brief.json",
+      "section": "§ 3 п. 4"
+    },
+    {
+      "why": "Что проверяет checker P1.5",
+      "required": true,
+      "path": "@plan/artifacts/P1-design/check-p1.py"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "@plan/research/P1-sources.md",
+      "role": "input",
+      "note": "Методы разработки: соседние репозитории (§ 6, § 7)"
+    }
+  ],
+  "task_files": [
+    {
+      "path": "@plan/knowledge/methods.json",
+      "change": "create"
+    }
+  ],
+  "rules": [
+    "source.path — реально существующий путь в соседнем репо, не пересказ.",
+    "reject и adapt объясняют отличие Billium: деньги, embedded-профиль, single writer.",
+    "AgenTools — образец для spec/fixtures/conformance/SDK; Chatom и AzGuard — ядро, заморозка, release gate; Commerz и Vaulter — денежные инварианты и idempotency.",
+    "JSON валиден, UTF-8, отступ 2, без комментариев."
+  ],
+  "guidance": "Одна практика — одно проверяемое правило, например «fixtures — language-neutral JSON vectors, оба SDK гоняют один набор».",
+  "validation": [
+    {
+      "id": "V1",
+      "cmd": "python3 plans/2026.10.14-№1-BILLIUM-V1/artifacts/P1-design/check-p1.py P1.5",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V2",
+      "cmd": "git diff --check",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    }
+  ],
+  "deliverables": [
+    "knowledge/methods.json — валиден, все topic покрыты, у каждой практики источник, вердикт и причина"
+  ],
+  "route": {
+    "class": "frontier",
+    "effort": "high"
+  },
+  "review": {
+    "mode": "none"
+  },
+  "authority": {
+    "kind": "routine"
+  },
+  "rag": {
+    "need": "none",
+    "status": "not_needed"
+  },
+  "updated_at": "2026-10-17T07:28:24Z"
+}

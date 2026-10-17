@@ -1,0 +1,63 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:decision:v1",
+  "id": "D3",
+  "title": "Приёмка P1: структурный checker и независимый review",
+  "date": "2026-10-14",
+  "status": "accepted",
+  "question": "Чем принимать item P1: checker, review или обоими?",
+  "options": [
+    {
+      "id": "A",
+      "text": "Только review",
+      "cons": "нет детерминированного критерия полноты (24 PB, 14 PF, 8 инвариантов)"
+    },
+    {
+      "id": "B",
+      "text": "Только checker",
+      "cons": "структура не доказывает обоснованность build/adopt/hybrid"
+    },
+    {
+      "id": "C",
+      "text": "Checker на каждый item + независимый review P1.9 в свежей сессии",
+      "pros": "детерминированная полнота и смысловая проверка"
+    },
+    {
+      "id": "D",
+      "text": "Review в каждом item",
+      "cons": "дорого; протокол запрещает ритуальный review на каждый item"
+    }
+  ],
+  "context": "P1.1–P1.8 закрываются self-check и checker; смысловое качество — P1.9.",
+  "decision": "Выбрана альтернатива C. Item-ы P1.1–P1.8 — review: none.",
+  "rationale": "Checker (artifacts/P1-design/check-p1.py) — design-owned; executor его не ослабляет. Расхождение требования checker с источником — эскалация, а не правка checker.",
+  "consequences": [
+    "Отклонены A, B и D по причинам в options."
+  ],
+  "applies_to": [
+    "P1.1",
+    "P1.2",
+    "P1.3",
+    "P1.4",
+    "P1.5",
+    "P1.6",
+    "P1.7",
+    "P1.8",
+    "P1.9"
+  ],
+  "global": false,
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "kind": "repo",
+      "ref": "docs/development-environment.md",
+      "note": "тулинга PHP/Dart в репозитории ещё нет"
+    }
+  ],
+  "actor": {
+    "provider": "claude-code",
+    "model": "claude-opus-5-5",
+    "effort": "high"
+  },
+  "answered_by": "agent"
+}

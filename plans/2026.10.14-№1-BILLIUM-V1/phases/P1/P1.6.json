@@ -1,0 +1,161 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:item:v1",
+  "id": "P1.6",
+  "title": "Целевая схема, модель данных, стек и раскладка",
+  "status": "todo",
+  "summary": "Выбрать одну целевую схему: build/adopt/hybrid по 7 областям; модель данных (ERD, инварианты constraint/lock, FSM, коррекции, retention/restore); стек, роль Dart, раскладка axiomasoft/billium-*, target-structure.",
+  "why": "Главный выход P1: от него зависят контракты (P1.7), состав P2–P10 и реализация. Решение опирается на требования, покрытие, первичные факты и методы, а не на синтез аудита. RAG: repo-grounded (brief/00 §3 пп. 5, 6, 9).",
+  "scope": {
+    "include": [
+      "docs/architecture/target-architecture.md: ## Решения по областям (Область | Решение | Основа | D#) для 7 областей: contracts; execution journal; obligations/invoicing; rating/schedule; usage-приём; документы; collection — решение build|adopt|hybrid; ## Профили embedded и server (CD-14); ## Стек; ## Пакеты (Пакет | Назначение | Профиль | Потребитель | Инвариант | D#, extraction gate); ## Границы с соседями",
+      "docs/architecture/data-model.md: ## ERD (mermaid erDiagram); ## Инварианты (ID | Инвариант | Constraint | Lock | Тест-идея | Источник) для INV-01…INV-08 и всех INV P1.1; ## FSM денежной операции и ## FSM инвойса (mermaid stateDiagram-v2); ## Коррекции (AC-03); ## Retention и restore; ## Fault stories (FS-01…FS-26); ## Операции и блокировки; ## Словарь данных; ## Диспозиции новых требований",
+      "knowledge/target-structure.md: каталоги, namespace, публичный API/SPI, identities, что замораживается к 1.0",
+      "docs/requirements.md: закрыть заявки «новое требование» из P1.3 через D#; новые ID — со SRC и D#; смысл существующих ID сохранить",
+      "decisions/D9+.json: минимум одна на каждую из 7 областей, плюс стек, раскладка и embedded/server; ≥ 2 альтернативы; evidence с разрешимыми ID"
+    ],
+    "exclude": [
+      "контракты v1 и каталог приёмки (P1.7)",
+      "код, composer.json, pubspec.yaml, CI (P2, D5)",
+      "проектирование Tariffler, AiFina, PaymentDrivers и моста Commerz",
+      "GL и двойная запись (I-20)",
+      "выдуманные бизнес-факты"
+    ]
+  },
+  "depends_on": [
+    "P1.4",
+    "P1.5"
+  ],
+  "decisions": [
+    "D2",
+    "D5",
+    "D7",
+    "D8"
+  ],
+  "skills": [],
+  "reads": [
+    {
+      "why": "Практики (P1.5)",
+      "required": true,
+      "path": "@plan/knowledge/methods.json"
+    },
+    {
+      "why": "Что проверяет checker P1.6",
+      "required": true,
+      "path": "@plan/artifacts/P1-design/check-p1.py"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "@plan/research/P1-design.md",
+      "role": "input",
+      "note": "Матрица постановки и модель инвариантов"
+    },
+    {
+      "path": "@plan/knowledge/audit-matrix.md",
+      "role": "input",
+      "note": "Матрица и кандидаты (P1.3)"
+    },
+    {
+      "path": "@plan/knowledge/research/DR-01.md",
+      "role": "input",
+      "note": "Первичные факты (P1.4)"
+    },
+    {
+      "path": "@plan/knowledge/research/DR-02.md",
+      "role": "input",
+      "note": "Первичные факты (P1.4)"
+    },
+    {
+      "path": "@plan/knowledge/research/DR-03-boundary.md",
+      "role": "input",
+      "note": "Граница с Tariffler (P1.4)"
+    },
+    {
+      "path": "@plan/knowledge/research/DR-04.md",
+      "role": "input",
+      "note": "Money и conformance (P1.4)"
+    }
+  ],
+  "task_files": [
+    {
+      "path": "docs/architecture/target-architecture.md",
+      "change": "create"
+    },
+    {
+      "path": "docs/architecture/data-model.md",
+      "change": "create"
+    },
+    {
+      "path": "docs/requirements.md",
+      "change": "modify"
+    },
+    {
+      "path": "@plan/knowledge/target-structure.md",
+      "change": "create"
+    },
+    {
+      "path": "@plan/knowledge/P1.6-self-check.md",
+      "change": "create"
+    },
+    {
+      "path": "@plan/decisions/D9.json",
+      "change": "create",
+      "note": "и последующие D#"
+    }
+  ],
+  "rules": [
+    "risk-class: data-integrity; invariant-model: research/P1-design.md.",
+    "Решение не нарушает plan.md §2. Если лучший вариант требует сдвинуть границу канона — accepted D# о действии «предложить изменение CD» с черновиком для P1.8; целевая схема строится в текущих границах.",
+    "adopt/hybrid на внешнем движке — только если P1.4 подтвердила лицензию и edition, embedded без сервера возможен или не нужен, single writer сохраняется.",
+    "[UNVERIFIED] в основании решения — риск в D#.",
+    "Каждый из восьми обязательных инвариантов получает enforcement (constraint, lock или правило приложения) и путь обхода, который enforcement закрывает.",
+    "D-записи — по шаблону: id, title, question, options, decision, rationale, consequences, evidence (с разрешимыми ID)."
+  ],
+  "guidance": "Модель данных строится от владения и инвариантов, а не от таблиц кандидата. ERD показывает сущности Billium; сущности соседей — внешними ссылками. Денежные суммы — minor units или decimal с D#, без float. Для каждой FSM — запрещённые переходы. Ориентир: target-architecture 150–300 строк, data-model 200–400.",
+  "validation": [
+    {
+      "id": "V1",
+      "cmd": "python3 plans/2026.10.14-№1-BILLIUM-V1/artifacts/P1-design/check-p1.py P1.6",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V2",
+      "cmd": "python3 plans/2026.10.14-№1-BILLIUM-V1/artifacts/P1-design/check-p1.py P1.1",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V3",
+      "cmd": "python3 plans/2026.10.14-№1-BILLIUM-V1/artifacts/P1-design/check-p1.py P1.2",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V4",
+      "cmd": "git diff --check",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    }
+  ],
+  "deliverables": [
+    "docs/architecture/target-architecture.md — 7 областей build/adopt/hybrid с D#, профили, стек, пакеты",
+    "docs/architecture/data-model.md — ERD, инварианты, две FSM, коррекции, retention/restore",
+    "knowledge/target-structure.md, новые REQ/INV и диспозиции, self-check, D9+ с альтернативами"
+  ],
+  "route": {
+    "class": "frontier",
+    "effort": "high"
+  },
+  "review": {
+    "mode": "none"
+  },
+  "authority": {
+    "kind": "routine"
+  },
+  "rag": {
+    "need": "none",
+    "status": "not_needed"
+  },
+  "updated_at": "2026-10-17T07:28:24Z"
+}

@@ -1,0 +1,63 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:decision:v1",
+  "id": "D2",
+  "title": "Где живут результаты P1",
+  "date": "2026-10-14",
+  "status": "accepted",
+  "question": "В каком виде и где хранить результаты P1: docs/, knowledge/ или смешанно?",
+  "options": [
+    {
+      "id": "A",
+      "text": "Всё в knowledge/ в виде JSON, как Chatom/AzGuard",
+      "cons": "требования и архитектура — постоянная документация репозитория"
+    },
+    {
+      "id": "B",
+      "text": "Всё в docs/",
+      "cons": "матрицы аудита и research-заметки — доказательства решений, а не документация продукта"
+    },
+    {
+      "id": "C",
+      "text": "Нормативное в docs/; доказательная база и матрицы в knowledge/ плана; methods.json — JSON, остальное — Markdown (ERD и FSM в mermaid)",
+      "pros": "docs переживают план; evidence остаётся provenance"
+    }
+  ],
+  "context": "Нормативные документы переживут план; матрицы и research-заметки — доказательства решений.",
+  "decision": "Выбрана альтернатива C.",
+  "rationale": "Пути docs/requirements.md, docs/architecture/*, docs/contracts/*, docs/acceptance-catalog.md и knowledge/* зафиксированы в item spec и checker. Перенос — новая D-запись и правка item spec.",
+  "consequences": [
+    "Отклонена A: требования и архитектура — документация репозитория.",
+    "Отклонена B: evidence не должно смешиваться с продуктовой документацией."
+  ],
+  "applies_to": [
+    "P1.1",
+    "P1.2",
+    "P1.3",
+    "P1.4",
+    "P1.5",
+    "P1.6",
+    "P1.7",
+    "P1.8"
+  ],
+  "global": false,
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "kind": "owner",
+      "ref": "M1",
+      "note": "§3 п. 4 (methods.json как JSON)"
+    },
+    {
+      "kind": "repo",
+      "ref": "artifacts/P1-design/check-p1.py",
+      "note": "проверяет эти пути"
+    }
+  ],
+  "actor": {
+    "provider": "claude-code",
+    "model": "claude-opus-5-5",
+    "effort": "high"
+  },
+  "answered_by": "agent"
+}

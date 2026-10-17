@@ -1,0 +1,151 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:brief:v1",
+  "messages": [
+    {
+      "id": "M1",
+      "date": "2026-10-14",
+      "text": "# Billium — постановка SKM-плана PLAN1\n\nРепозиторий: `/home/vostrikov/projects/packages/billium` (пустой скелет, коммитов нет). Brain: `/home/vostrikov/Vaults/Brain` (ниже `BRAIN`). Пути даны абсолютные — читай адресно, нужными разделами.\n\n## 1. Задача\n\nСоздай SKM-план (`task:plan-design new`) реализации **Billium** — биллинга продавца ПО экосистемы Axioma. В плане сразу записать **полный верхний уровень** (цель, границы, правила, все фазы с целями и выходами), а детально проработать только **P1 — большую подготовительную фазу**. Остальные фазы детализируются отдельными сессиями после решений P1.\n\nP1 отвечает на два вопроса:\n\n1. **Какая схема Billium идеальна.** Главный вход — аудит Perplexity:\n   - отчёт: `/home/vostrikov/Vaults/Brain/Infrastructure/Research/Reports/Billium-Perplexity-Volume-1-2026-10-12.md` (84 КБ, читать целиком);\n   - его разбор: `/home/vostrikov/Vaults/Brain/Infrastructure/Research/Reports/Billium-Volume-1-Review-2026-10-12.md` (статусы доказанности, 10 поправок, gaps G-01…G-06);\n   - evidence: `/home/vostrikov/Vaults/Brain/Infrastructure/Research/Evidence/Billium-Audit-Evidence-2026-10-12.md`.\n\n   В аудите разобраны разные схемы (Lago, Kill Bill, OpenMeter, PHP embedded path, invoice applications, минимальное payment storage, invoice-модуль, server storage, idempotency, usage, credits, outbox/inbox, конкуренция, расширяемость, эволюция схемы, PHP и Dart). Нужно сравнить их с нашими требованиями, проверить по первичным источникам и выбрать одну целевую схему: build / adopt / hybrid, модель данных, состав пакетов, контракты.\n2. **Как разрабатывать.** Изучить и перенять методы **AgenTools** (spec-first, PHP+Dart SDK, общие fixtures и conformance — главный образец, т.к. Billium тоже PHP+Dart), **Chatom** и **AzGuard** (минимальное ядро + модули, заморозка API/SPI/схемы/идентичностей до 1.0, target-structure, type-map, identities, release gate). Итог — явный список практик, которые Billium принимает, с причиной.\n\nАрхитектурные решения принимай сам, проверяя по коду и первичным источникам (Perplexity — для поиска и синтеза), записывай D# с альтернативами и причиной. Я могу отменить любое. Бизнес-факты (продавцы, цены, налоговые режимы) не выдумывай — список вопросов ко мне.\n\n## 2. Границы — нормативно, не пересматривать в плане\n\nИсточник: канон экосистемы `BRAIN/Infrastructure/Canon/`. Изменить границу можно только предложением CD-записи в `Canon-Decision-Log.md`, не тихо в плане.\n\n**Billium владеет:** PriceVersion и rating, денежные occurrences, obligations, invoices / credit notes, allocation платежей, collection / dunning, юридическая нумерация документов, собственное исполнение платежей для своих операций (журнал попыток, unknown-recovery, callbacks, reconcile).\n\n**Billium не владеет:**\n- права, квоты, планы-как-право — Tariffler;\n- agreement-сага покупки — хост (ProductCoordinator);\n- розничный заказ — Commerz;\n- книга компании и двойная запись — AiFina / `axioma_finance`, GL внутри Billium не делаем (I-20);\n- кредиты Edufy и награды Memster — продукты;\n- PSP- и касс-интеграции — семейство PaymentDrivers (stateless, отдельный репо; Billium зависит только от его contracts);\n- лицензии — Licensing.\n\n**Решения канона:**\n- **CD-02** — `billium-contracts` лёгкий; Commerz подключается своим мостом `commerz-billium`, мост живёт в репо Commerz, не здесь.\n- **CD-03/04** — PaymentDrivers; фискал запускает исполнитель оплаты.\n- **CD-05** — на границах MoneyWire: decimal string + ISO 4217, без float.\n- **CD-08** — миграция денежных частей Memster billing и Edufy Billing.\n- **CD-14** — профили `embedded` (Laravel-пакет в хосте) и `server` (сервис с API) — один код. Обязательны только contracts + core.\n- **CD-15** — Billium и Tariffler друг друга не импортируют; usage/overage Billium принимает по своему входному контракту.\n\n**Dart:** клиент контрактов и SDK, **не второй денежный writer** (`BRAIN/Infrastructure/Workspace/Projects/Billium/Features-Billium.md`).\n\n**Потребители:** Flex/FlexCRM (SaaS), FlexCMS/AiFina/AiResto (лицензии и подписки через их PHP-облака), AiResto MP (тарифы сети), Memster, Edufy, Agelto, ChatomIo, Commerz через мост.\n\n**Обязательные инварианты:**\n- один writer на сущность;\n- один исполнитель на денежную операцию на всю её жизнь;\n- сетевой вызов вне транзакции;\n- `unknown` разрешается lookup-ом, а не новым ключом;\n- idempotency key + digest, тот же ключ с другим payload = conflict;\n- cumulative totals не складываются как дельты;\n- refund идёт к исполнителю исходного charge;\n- транспортный ACK — не бизнес-receipt.\n\n## 3. P1 — подготовительная фаза (детализировать полностью)\n\nПункты — ориентир; состав, порядок и батчи выбери сам. У каждого пункта: reads, deliverable в `plans/…/knowledge/` или `docs/`, проверяемый критерий.\n\n1. **Требования и трассировка.** Собрать требования из канона, досье и паспортов (раздел 5) в `docs/requirements.md` репо: state → writer, профили, контракты, инварианты, отказы, ID приёмочных сценариев. Каждая строка — со ссылкой на источник. Отдельно — что нужно от соседей.\n2. **Разбор аудита Perplexity.** Все схемы тома 1 и поправки review (G-01…G-06, 10 поправок к ownership). Матрица: схема × требование (профили A–D из отчёта, embedded без сервера, RU-платежи/54-ФЗ, PHP+Dart, single writer, лицензия/edition, эволюция схемы, операционная цена). Отмечать, что подтверждено, а что inference.\n3. **Исследования по первичным источникам.** Выполнить задания DR-01 (исходники и реальные схемы: Lago / Kill Bill / OpenMeter / лёгкие PHP-основы; лицензии AGPL и edition-gates, migrations, extension API), DR-02 (RU-платежи и фискализация — только то, что нужно интерфейсу исполнения и ports), DR-04 (Money / PHP–Dart / fixtures). DR-03 — только граница Billium↔Tariffler, без проектирования Tariffler. Результаты — с URL, датой, версией; без проверки — `[UNVERIFIED]`.\n4. **Методы разработки.** Изучить AgenTools, Chatom, AzGuard (+ Commerz invariants, Vaulter idempotency ADR) и записать `knowledge/methods.json`:\n   - spec-revisions и JSON Schema;\n   - language-neutral vectors/golden, conformance runner, JCS-oracle, PHP и Dart SDK;\n   - минимальное ядро и модули только через контракты ядра;\n   - `#[Api]`/`#[Spi]`, type-map, identities, upgrade-map, release gate;\n   - lock model, outbox/inbox, problem-codes;\n   - стратегия тестов: только затронутое, мутации и нагрузка отдельно.\n\n   Для каждой практики — принять / адаптировать / отклонить, с причиной.\n5. **Выбор целевой схемы.** Решение build / adopt / hybrid по каждой области (contracts, execution journal, obligations/invoicing, rating/schedule, usage-приём, документы, collection). Модель данных: ERD и таблица инвариантов с constraint/lock, FSM операций и инвойса, правила коррекций и retention/restore. Минимум две альтернативы на каждое ключевое решение.\n6. **Стек и раскладка.** PHP/Laravel/PostgreSQL-версии, роль Dart, структура монорепо `packages/<name>/` (`axiomasoft/billium-*`), что входит в embedded и что в server. Новый пакет — только с потребителем и инвариантом (extraction gate).\n7. **Контракты v1.** `billium-contracts`:\n   - команды и исходы оплат/возвратов — совместимые с envelopes пилота `payment.execute.v1` / `payment.outcome.v1`;\n   - приём usage/overage-фактов;\n   - obligation/invoice queries;\n   - события и receipts;\n   - ошибки.\n\n   План fixtures для PHP и Dart.\n8. **Каталог приёмки.** Сторона Billium из PB-01…24, PF-01…14, MG, FD, SB, EC; N-процессные concurrency-тесты; restore/clone/lost-response.\n9. **Целевая структура и roadmap.** Зафиксировать target-structure (как у AzGuard/Chatom), цели и выходы P2…Pn и вопросы ко мне.\n\n**Spikes:** разрешены только минимальные, для проверки решения (например, поднять схему кандидата и прогнать инвариант). Production-кода в P1 нет.\n\n## 4. Верхний уровень P2+ (ориентир, финал — по итогам P1)\n\n| Фаза | Содержание |\n|:--|:--|\n| P2 | Bootstrap репо, CI, `billium-contracts` PHP+Dart, conformance fixtures |\n| P3 | Core: obligations, invoices / credit notes, allocations, conservation-инварианты |\n| P4 | PriceVersion, rating, occurrences, schedule / proration |\n| P5 | Execution journal: попытки, unknown, callbacks, refunds, reconcile; PaymentDrivers только через contracts, тест-драйвер |\n| P6 | Документы и нумерация, fiscal port, accounting export (FinBridge-факты) |\n| P7 | Collection / dunning, recurring |\n| P8 | Server-профиль: API, seller partitioning; Dart SDK |\n| P9 | Адаптеры миграции Memster/Edufy; контракт для `commerz-billium` |\n| P10 | Release gate 1.0 |\n\n## 5. Что читать\n\n### Канон и протокол\n\n- `BRAIN/Infrastructure/Guides/Development-Start.md` — протокол\n- `BRAIN/Infrastructure/Canon/Ecosystem-Canon.md` — §1–§5\n- `BRAIN/Infrastructure/Canon/Money-Domain-Canon.md` — весь, особенно §1, §3, §4, §5, §8, §9\n- `BRAIN/Infrastructure/Canon/Canon-Decision-Log.md`\n- `BRAIN/Infrastructure/Canon/Bridge-Catalog.md`\n- `BRAIN/Infrastructure/Canon/Engineering-Standards.md`\n- `BRAIN/Infrastructure/Canon/Unit-Source-Map.md` — строка Billium\n\n### Досье Billium\n\n- `BRAIN/Infrastructure/Workspace/Projects/Billium/Boundary-Billium.md`\n- `BRAIN/Infrastructure/Workspace/Projects/Billium/Features-Billium.md` — матрица профилей\n- `BRAIN/Infrastructure/Workspace/Projects/Billium/Materials-Billium.md`\n- `BRAIN/Infrastructure/Workspace/Unit-Functional-Cards-2026-10-13.md` — раздел Billium\n- `BRAIN/Infrastructure/Workspace/Domains/Billing/Billium-Boundaries.md`\n- `BRAIN/05-Projects/03-Packages/Billium/Billium.md` — tower; ссылки на `Development/` не использовать\n\n### Аудит Perplexity и его разбор — главный вход выбора схемы\n\n- `BRAIN/Infrastructure/Research/Reports/Billium-Perplexity-Volume-1-2026-10-12.md` — схемы Lago / OpenMeter / Kill Bill, payment storage, invoice, idempotency, usage, credits, outbox, конкуренция, расширяемость, PHP и Dart\n- `BRAIN/Infrastructure/Research/Reports/Billium-Volume-1-Review-2026-10-12.md` — статусы доказанности, поправки, gaps G-01…G-06\n- `BRAIN/Infrastructure/Research/Evidence/Billium-Audit-Evidence-2026-10-12.md`\n- `BRAIN/Infrastructure/Research/Prompts/Billium-Research.md` — исходное задание\n- `BRAIN/Infrastructure/Research/Prompts/DR-01-Billing-Sources-and-Schemas.md`\n- `BRAIN/Infrastructure/Research/Prompts/DR-02-Russian-Payments-and-Fiscalization.md`\n- `BRAIN/Infrastructure/Research/Prompts/DR-03-Rights-Quotas-and-Credits.md`\n- `BRAIN/Infrastructure/Research/Prompts/DR-04-Financial-Contracts-and-Authority.md`\n- `BRAIN/Infrastructure/Research/Evidence/Primary-Verification-2026-10-12.md`\n- `BRAIN/Infrastructure/Research/Evidence/Payment-Provider-Primary-Review-2026-10-12.md`\n\n### Паспорта и контракты — только разделы о Billium\n\n- `BRAIN/Infrastructure/Workspace/Pilot-Commerz-Billium-Payment-Boundary.md` — envelopes, invariants, failure matrix, PB-01…24\n- `BRAIN/Infrastructure/Workspace/Domains/Billing/Payment-Execution-Passport.md`\n- `BRAIN/Infrastructure/Workspace/Domains/Billing/Payment-Implementation-Prerequisites.md` — PF-01…14\n- `BRAIN/Infrastructure/Workspace/Domains/Billing/Payment-Provider-Binding-and-Recovery.md`\n- `BRAIN/Infrastructure/Workspace/Domains/Billing/Payment-Intent-Retention-and-Restore.md`\n- `BRAIN/Infrastructure/Workspace/Domains/Billing/Payment-Operation-Feed-and-Bootstrap.md`\n- `BRAIN/Infrastructure/Workspace/Domains/Billing/Agreement-Grants-Passport.md` — FC-06, occurrences\n- `BRAIN/Infrastructure/Workspace/Domains/Tariffs/Tariffler-Boundaries.md`\n- `BRAIN/Infrastructure/Workspace/Domains/Tariffs/Usage-Reservation-Frontier.md`\n- `BRAIN/Infrastructure/Workspace/Fiscal-Offline-and-Documents-Passport.md`\n- `BRAIN/Infrastructure/Workspace/Settlements-and-Bundles-Passport.md`\n- `BRAIN/Infrastructure/Workspace/Domains/Finance/Finance-Wire-and-Mapping.md`\n- `BRAIN/Infrastructure/Workspace/Domains/Finance/Finance-Kernel-Options.md` — почему без GL\n- `BRAIN/Infrastructure/Workspace/Domains/Finance/AiFina-Billium-Financial-Boundaries.md`\n- `BRAIN/Infrastructure/Workspace/Projects/Memster/Memster-Subscription-Grants-Passport.md` — первый потребитель и миграция\n- `BRAIN/Infrastructure/Workspace/Projects/Edufy/Edufy-Run-Credit-Settlement-Passport.md`\n- `BRAIN/Infrastructure/Workspace/Functional-Contract-Index-2026-10-13.md` — FC-02, FC-04, FC-05, FC-06, FC-10\n- `BRAIN/Infrastructure/Workspace/Capability-Ownership.md` — C-04…C-12\n- `BRAIN/Infrastructure/Decisions/Payment-Decision-Recommendations-2026-10-12.md`\n- `BRAIN/Infrastructure/Decisions/Finance-Distribution-Recommendation-2026-10-12.md`\n- `BRAIN/Infrastructure/Decisions/Boundary-Owner-Decision-Package-2026-10-13.md` — I-03, I-04, I-09, I-17, I-20, I-21\n\n### Методы разработки — код соседних репо\n\n**AgenTools** — PHP+Dart, spec-first:\n- `/home/vostrikov/projects/packages/agentools/README.md`\n- `/home/vostrikov/projects/packages/agentools/spec/revisions/2026-09/` — `00_overview`, `09_idempotency-errors`, `11_conformance-harness`, `12_hardening-semantics`, `rules.json`, `schema/`\n- `/home/vostrikov/projects/packages/agentools/fixtures/` — vectors, golden, README\n- `/home/vostrikov/projects/packages/agentools/conformance/` — runner, adapters, `oracles/jcs`, README\n- `/home/vostrikov/projects/packages/agentools/php/`\n- `/home/vostrikov/projects/packages/agentools/dart/agentools/`\n- `/home/vostrikov/projects/packages/agentools/docs/`\n\n**Chatom** — модульное ядро и стабилизация API:\n- `/home/vostrikov/projects/packages/chatom/docs/architecture/` — `philosophy`, `core-boundary`, `layering-rules`, `lifecycle`, `structure`, `adr/`\n- `/home/vostrikov/projects/packages/chatom/plans/2026.10.10-№1-CHATOM-API-STABILIZATION/` — `plan.json`, `brief.json`, `decisions/`, `knowledge/` (architecture, api-spi, contracts, identities, type-map, target-structure, upgrade-map, persistence, p2-lock-model, release-gate)\n- `/home/vostrikov/projects/packages/chatom/scripts/` — api manifest, bc-check, error codes, golden, quality gates\n\n**AzGuard** — target structure и заморозка контрактов:\n- `/home/vostrikov/projects/packages/azguard/plans/2026.10.10-№1-AZGUARD-CORE-STABILIZATION/` — `plan.json`, `brief.json` (B1–B22), `decisions/`, `knowledge/` (architecture, contracts, identities), `views/roadmap.md`\n- `/home/vostrikov/projects/packages/azguard/docs/adr/0001-ecosystem-conventions.md`\n- `/home/vostrikov/projects/packages/azguard/CHANGELOG.md` — 1.0.0\n\n**Денежные инварианты и idempotency:**\n- `/home/vostrikov/projects/packages/commerz/docs/architecture/` — `invariants.md`, `decisions.md` (D7, D8, D18, D33), `extension.md`, `packages.md`\n- `/home/vostrikov/projects/packages/commerz/packages/sales/src/Payments/`\n- `/home/vostrikov/projects/packages/commerz/packages/sales/src/Refunds/`\n- `/home/vostrikov/projects/packages/vaulter/docs/adr/0029-idempotency.md`\n- `/home/vostrikov/projects/packages/vaulter/docs/adr/0028-extension-slots-and-operation-pipeline.md`\n\n**Dart / ERP:**\n- `/home/vostrikov/projects/packages/erp-sdk/contracts/axioma_contracts/` — Money\n- `/home/vostrikov/projects/packages/erp-sdk/versions.yaml`\n\n## 6. Правила\n\n- Не выходить за раздел 2. Конфликт с каноном — D# в плане + предложение CD-записи для Brain.\n- Не читать и не использовать `BRAIN/Development/`.\n- Внешние факты (версии, лицензии, API провайдеров) — по первичным источникам, с URL и датой.\n- Stack по умолчанию — как в экосистеме (PHP 8.4, Laravel 13, PostgreSQL ≥ 16, PHPStan max, Pint, Rector). Отклонение — с причиной.\n- Тесты — только затронутое; мутации и нагрузка — отдельные пункты; проваленная проверка не зелёная.\n- Push, публикация, релиз-тег — только по моему запросу. Коммиты локально, Conventional Commits с ID плана.\n- В конце P1: обновить строку Billium в `BRAIN/Infrastructure/Canon/Package-Status.md`, статусы мостов в `Bridge-Catalog.md`, предложенные CD-записи.\n\n## 7. Открытые вопросы ко мне (собрать, не решать)\n\n- Юридические продавцы и их реквизиты (I-01).\n- Какие пакеты бесплатные, а какие платные (I-02).\n- Налоговые режимы и фискальные профили (I-16).\n- Первый платный сценарий-потребитель — Memster или FlexCRM.\n- Список PSP первого запуска.\n- Бандл AiFina+AiResto (I-28).\n- Валюты и мультиюрисдикция.\n",
+      "channel": "Brain:05-Projects/03-Packages/Billium/Billium-Plan-Prompt.md (sha256 54c32461…99dc47)",
+      "kind": "owner"
+    },
+    {
+      "id": "M2",
+      "date": "2026-10-14",
+      "text": "# Уточнения владельца в design-сессии\n\nДата: 2026-10-14. Источник: сообщение владельца в design-сессии, пришедшее вместе с указанием на\n`brief/00-owner-message.md`. Часть текста дошла повреждённой; ниже записано только то, что читается\nоднозначно, а неясные места отмечены.\n\n1. Запуск: `task:plan-design new \"Billium — целевая архитектура и реализация биллинга\"`, сообщение\n   владельца — файл промпта (см. `00-owner-message.md`). В промпте 71 путь, владелец их проверил.\n2. Brain: у карточки Billium (`05-Projects/03-Packages/Billium/Billium.md`) не заполнено поле\n   `repo:`. Если его заполнить, включится brain sync. Вместе с `code: billkit` есть дополнительное\n   следствие, но эта часть текста повреждена. Владелец оставил этот вопрос агенту.\n   Как это учтено в плане: P1.8 выносит заполнение `repo:` в вопросы владельцу и даёт рекомендацию.\n   Frontmatter карточки без ответа владельца не меняется, потому что включение sync — внешний\n   эффект.\n3. В скелете репозитория `AGENTS.md`/`CLAUDE.md` и `README.md` называют Billium системой «на PHP и\n   Dart». Роль Dart как клиента контрактов фиксируется в плане. Строку в entrypoint нужно уточнить\n   позже. Как это учтено: P1.8 правит `.ai/guidelines/agent-entrypoint.md` и `README.md`, затем\n   пересобирает агентные документы через `bash scripts/build-agent-docs.sh`.\n",
+      "channel": "design-сессия: уточнения владельца, часть текста повреждена",
+      "kind": "record"
+    },
+    {
+      "id": "M3",
+      "date": "2026-10-14",
+      "text": "# Уточнение владельца: завершение дизайна P1\n\nИсточник — текущая Codex-сессия, 2026-10-14.\n\n- Вызов: `$ task:plan-design 2026.10.14-№1-BILLIUM-V1 P1`.\n- «максимальная проработка, учитывай все трабования».\n- «если надо подключай PERPLEXITY».\n\nОбъём — полная проработка исполнимого контракта P1 и его финализация. Исследования,\nархитектурные решения продукта и создание выходов P1.1–P1.9 остаются исполнением фазы.\nPerplexity разрешён по необходимости; первичные ссылки проверяются отдельно.\nПредыдущая команда commit/push завершена коммитом 19cccc1; это отдельное поручение.\nAI-служебные файлы сохраняются локально, не включаются в Git.\n",
+      "channel": "Codex-сессия: уточнение владельца о завершении дизайна P1",
+      "kind": "owner"
+    }
+  ],
+  "requirements": [
+    {
+      "id": "B1",
+      "text": "Billium владеет: PriceVersion и rating, денежные occurrences, obligations, invoices и credit notes, allocation платежей, collection/dunning, юридическая нумерация документов, собственное исполнение платежей для своих операций (журнал попыток, unknown-recovery, callbacks, reconcile).",
+      "source": "M1",
+      "owners": [
+        "P1.1",
+        "P1.6"
+      ]
+    },
+    {
+      "id": "B2",
+      "text": "Billium не владеет: права/квоты/планы (Tariffler), agreement-сагой покупки (хост), розничным заказом (Commerz), книгой компании и GL (AiFina, I-20), кредитами и наградами продуктов, PSP/касс-интеграциями (PaymentDrivers), лицензиями (Licensing).",
+      "source": "M1",
+      "owners": [
+        "P1.1",
+        "P1.6"
+      ]
+    },
+    {
+      "id": "B3",
+      "text": "Обязательные денежные инварианты: один writer на сущность; один исполнитель на денежную операцию; сетевой вызов вне транзакции; unknown разрешается lookup-ом; idempotency key + digest (тот же ключ с другим payload = conflict); cumulative totals не складываются как дельты; refund идёт к исполнителю исходного charge; транспортный ACK не является бизнес-receipt.",
+      "source": "M1",
+      "owners": [
+        "P1.1",
+        "P1.6",
+        "P1.7"
+      ]
+    },
+    {
+      "id": "B4",
+      "text": "Профили embedded (Laravel-пакет в хосте) и server (сервис с API) — один код; обязательны только contracts и core (CD-14).",
+      "source": "M1",
+      "owners": [
+        "P1.6"
+      ]
+    },
+    {
+      "id": "B5",
+      "text": "Dart — клиент контрактов и SDK, не второй денежный writer.",
+      "source": "M1",
+      "owners": [
+        "P1.6",
+        "P1.7"
+      ]
+    },
+    {
+      "id": "B6",
+      "text": "CD-05: на границах MoneyWire — decimal string + ISO 4217, без float. CD-15: Billium и Tariffler друг друга не импортируют.",
+      "source": "M1",
+      "owners": [
+        "P1.7"
+      ]
+    },
+    {
+      "id": "B7",
+      "text": "P1 отвечает на два вопроса: какая схема Billium целевая (build/adopt/hybrid по областям, модель данных, пакеты, контракты) и как разрабатывать (практики AgenTools, Chatom, AzGuard, Commerz, Vaulter).",
+      "source": "M1",
+      "owners": [
+        "P1.3",
+        "P1.4",
+        "P1.5",
+        "P1.6"
+      ]
+    },
+    {
+      "id": "B8",
+      "text": "Полный верхний уровень P1–P10 записан сразу; детализирована только P1; production-кода в P1 нет.",
+      "source": "M1",
+      "owners": [
+        "P1"
+      ]
+    },
+    {
+      "id": "B9",
+      "text": "Архитектурные решения принимает агент с D#, альтернативами и причиной; бизнес-факты не выдумываются и уходят вопросами владельцу.",
+      "source": "M1",
+      "owners": [
+        "P1.6",
+        "P1.8"
+      ]
+    },
+    {
+      "id": "B10",
+      "text": "Стек по умолчанию экосистемы: PHP 8.4, Laravel 13, PostgreSQL ≥ 16, PHPStan max, Pint, Rector. Отклонение — с D#.",
+      "source": "M1",
+      "owners": [
+        "P1.6"
+      ]
+    },
+    {
+      "id": "B11",
+      "text": "Push, публикация и релиз-тег — только по запросу владельца; коммиты локальные, Conventional Commits с ID плана.",
+      "source": "M1",
+      "owners": [
+        "P1.8"
+      ]
+    },
+    {
+      "id": "B12",
+      "text": "Полнота источников: каждый из 222 документов корпуса, 244 ID аудита и 38 пунктов DR получает диспозицию; нормативное утверждение без ссылки на источник не пишется.",
+      "source": "M3",
+      "owners": [
+        "P1.1",
+        "P1.2",
+        "P1.3",
+        "P1.4",
+        "P1.9"
+      ]
+    }
+  ],
+  "constraints": [
+    "Не выходить за границы канона (M1 §2). Конфликт с каноном — D# и предложение CD-записи, без тихой правки.",
+    "Не читать и не использовать BRAIN/Development/.",
+    "Внешние факты — по первичным источникам с URL, датой и версией; без проверки — [UNVERIFIED].",
+    "Тесты — только затронутое; мутации и нагрузка — отдельные пункты; проваленная проверка не считается зелёной."
+  ],
+  "environment": [
+    "Репозиторий billium: пустой скелет, коммитов нет на момент постановки; стек не выбран.",
+    "Brain: /home/vostrikov/Vaults/Brain; соседние репозитории читаются по research/P1-sources.md."
+  ],
+  "out_of_scope": [
+    "Tariffler (проектирование), AiFina GL, PaymentDrivers, мост commerz-billium (живёт в Commerz).",
+    "Выбор PSP первого запуска, юридические реквизиты продавцов, налоговые режимы — вопросы владельцу."
+  ]
+}

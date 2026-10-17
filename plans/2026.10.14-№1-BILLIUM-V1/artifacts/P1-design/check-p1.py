@@ -194,10 +194,7 @@ def known_ids() -> frozenset[str]:
         known |= {str(p.get("id")) for p in methods.get("practices", []) if isinstance(p, dict)}
     except json.JSONDecodeError:
         pass
-    for path in (PLAN / "decisions").glob("D*-*.md"):
-        match = re.match(r"(D\d+)-", path.name)
-        if match:
-            known.add(match.group(1))
+    known |= {path.stem for path in (PLAN / "decisions").glob("D*.json")}
     known |= set(first_column_ids(file_text(REPO / "docs" / "acceptance-catalog.md")))
     return frozenset(known)
 
@@ -215,8 +212,8 @@ def provenance(r: Report, where: str, value: str, kinds: tuple[str, ...], *, req
 
 def decision_files() -> dict[int, Path]:
     found = {}
-    for path in (PLAN / "decisions").glob("D*-*.md"):
-        match = re.match(r"D(\d+)-", path.name)
+    for path in (PLAN / "decisions").glob("D*.json"):
+        match = re.fullmatch(r"D(\d+)", path.stem)
         if match:
             found[int(match.group(1))] = path
     return found
@@ -633,12 +630,12 @@ AREAS = {
 }
 
 
-def p16_decisions() -> dict[int, str]:
+def p16_decisions() -> dict[int, dict]:
     result = {}
     for number, path in decision_files().items():
-        text = path.read_text(encoding="utf-8")
-        if number >= 9 and re.search(r"^items:.*\bP1\.6\b", text, re.MULTILINE):
-            result[number] = text
+        record = json.loads(path.read_text(encoding="utf-8"))
+        if number >= 9 and "P1.6" in record.get("applies_to", []):
+            result[number] = record
     return result
 
 
@@ -714,13 +711,12 @@ def check_architecture(r: Report) -> None:
     if structure is not None:
         r.check(len([l for l in structure.splitlines() if l.strip()]) >= 20, "knowledge/target-structure.md: меньше 20 строк")
     r.check(len(decisions) >= 10, f"decisions/: D-записей P1.6 (≥ D9) {len(decisions)} < 10 (7 областей + стек + раскладка + профили)")
-    for number, text in decisions.items():
-        why = next((v for k, v in sections(text).items() if k.strip().lower() == "why"), "")
-        r.check(len(re.findall(r"^- Альтернатива", why, re.MULTILINE)) >= 2, f"decisions/D{number}: в `## Why` меньше двух `- Альтернатива`")
-        r.check(bool(re.search(r"^status:\s*accepted", text, re.MULTILINE)), f"decisions/D{number}: status не accepted")
-        evidence = re.search(r"^\*\*Evidence:\*\*(.+)$", text, re.MULTILINE)
-        if r.check(evidence is not None, f"decisions/D{number}: нет строки **Evidence:**"):
-            provenance(r, f"decisions/D{number} Evidence", evidence.group(1), EVIDENCE_KINDS)
+    for number, record in decisions.items():
+        r.check(len(record.get("options", [])) >= 2, f"decisions/D{number}: меньше двух options")
+        r.check(record.get("status") == "accepted", f"decisions/D{number}: status не accepted")
+        evidence = " ".join(f"{e.get('ref', '')} {e.get('note', '')}" for e in record.get("evidence", []))
+        if r.check(bool(evidence.strip()), f"decisions/D{number}: нет evidence"):
+            provenance(r, f"decisions/D{number} evidence", evidence, EVIDENCE_KINDS)
 
 
 # --- P1.7: contracts and acceptance ---------------------------------------------

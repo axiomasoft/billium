@@ -1,0 +1,112 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:item:v1",
+  "id": "P1.2",
+  "title": "Расширенный корпус Brain: уровни B и C",
+  "status": "todo",
+  "summary": "Пройти 177 документов уровней B и C; дописать новые требования новыми ID; каждому SRC дать диспозицию.",
+  "why": "Список владельца покрывает 40 из 217 документов с упоминанием Billium. Вне списка остались Package-Boundaries, Package-Boundary-Deep-Audit, Shared-Layer-Draft, Integration-Map, Implementation-Order, Purchase-and-Activation. RAG: repo-grounded (D6; research/P1-corpus.md).",
+  "scope": {
+    "include": [
+      "прочитать все разделы с упоминаниями Billium/BillKit/Billiot в SRC уровня B; для уровня C — строки с контекстом, при содержательном факте дочитать раздел",
+      "полностью прочитать приёмочные разделы SRC-165, SRC-208, SRC-215, SRC-221 (источники MG/FD/EC/SB)",
+      "новые требования дописываются в docs/requirements.md в существующие разделы со свободными номерами; уже выданные ID не меняются",
+      "knowledge/corpus-ledger.md: строки для всех SRC уровней B и C и раздел ## Итог прохода"
+    ],
+    "exclude": [
+      "документы без упоминания Billium",
+      "изменение строк уровня A и ранее выданных REQ/INV",
+      "разбор аудита (P1.3)",
+      "правка Brain",
+      "BRAIN/Development/"
+    ]
+  },
+  "depends_on": [
+    "P1.1"
+  ],
+  "decisions": [
+    "D6",
+    "D7"
+  ],
+  "skills": [],
+  "reads": [
+    {
+      "why": "Существующие ID — основа для дописывания (P1.1)",
+      "required": true,
+      "path": "docs/requirements.md"
+    },
+    {
+      "why": "Леджер уровня A (P1.1)",
+      "required": true,
+      "path": "knowledge/corpus-ledger.md"
+    },
+    {
+      "why": "Правило происхождения",
+      "required": true,
+      "path": "@plan/decisions/D7.json",
+      "section": "Solution"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "@plan/research/P1-corpus.md",
+      "role": "input",
+      "note": "Уровни B и C (§ 1)"
+    }
+  ],
+  "task_files": [
+    {
+      "path": "docs/requirements.md",
+      "change": "modify"
+    },
+    {
+      "path": "@plan/knowledge/corpus-ledger.md",
+      "change": "modify"
+    }
+  ],
+  "rules": [
+    "Пути документов — BRAIN + путь из инвентаря; порядок прохода — по SRC, пропускать нельзя.",
+    "«Без новых требований» допустимо, только если примечание называет, что сказано о Billium.",
+    "Канон старше остальных документов: при расхождении — CONFLICT.",
+    "Документ, устаревший относительно канона (BillKit-эпоха), — процесс/история и ссылка на CONFLICT-NN."
+  ],
+  "guidance": "Работать пакетами по ~20 SRC: прочитать, сразу записать строки леджера. Не копировать фрагменты документов.",
+  "validation": [
+    {
+      "id": "V1",
+      "cmd": "python3 plans/2026.10.14-№1-BILLIUM-V1/artifacts/P1-design/check-p1.py P1.2",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V2",
+      "cmd": "python3 plans/2026.10.14-№1-BILLIUM-V1/artifacts/P1-design/check-p1.py P1.1",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V3",
+      "cmd": "git diff --check",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    }
+  ],
+  "deliverables": [
+    "knowledge/corpus-ledger.md — все 222 SRC с диспозицией и ## Итог прохода",
+    "docs/requirements.md — новые требования с разрешимыми SRC; checker P1.1 остаётся GREEN"
+  ],
+  "route": {
+    "class": "frontier",
+    "effort": "high"
+  },
+  "review": {
+    "mode": "none"
+  },
+  "authority": {
+    "kind": "routine"
+  },
+  "rag": {
+    "need": "none",
+    "status": "not_needed"
+  },
+  "updated_at": "2026-10-17T07:28:24Z"
+}

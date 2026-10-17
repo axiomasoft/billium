@@ -1,0 +1,108 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:item:v1",
+  "id": "P1.3",
+  "title": "Полный разбор аудита Perplexity: покрытие и матрица схем × требований",
+  "status": "todo",
+  "summary": "Разобрать весь пакет аудита тома 1; каждый из 244 ID инвентаря получает диспозицию; схемы сводятся в матрицу с метками доказанности.",
+  "why": "Аудит — главный вход выбора схемы, но содержит inference и recommendation, 10 поправок к ownership и 6 gaps. Покрытие по ID делает пропуски видимыми. RAG: repo-grounded (D6; разбор тома 1).",
+  "scope": {
+    "include": [
+      "knowledge/audit-matrix.md: ## Покрытие аудита (ID | Диспозиция | Ссылки | Примечание) для каждого ID §1–§9 инвентаря; диспозиции: учтено, вне границ, нет утверждений, дубль",
+      "## Утверждения: CL-NN | Тема | Утверждение | Статус | Источник | Нужна проверка (DR-01…DR-04 или нет)",
+      "## Сводная матрица: 16 тем тома 1 × 8 критериев (Профили A–D; Embedded без сервера; RU-платежи/54-ФЗ; PHP+Dart; Single writer; Лицензия/edition; Эволюция схемы; Операционная цена)",
+      "## Поправки и gaps: AC-01…AC-10, G-01…G-06 → REQ/INV",
+      "## Fault stories → требования: FS-01…FS-26",
+      "## Кандидаты: какие схемы проходят в P1.6, какие отсеяны и почему"
+    ],
+    "exclude": [
+      "первичная проверка URL и лицензий (P1.4)",
+      "окончательный выбор схемы (P1.6)",
+      "новые исследования вне пакета аудита",
+      "проектирование Tariffler"
+    ]
+  },
+  "depends_on": [
+    "P1.2"
+  ],
+  "decisions": [
+    "D2",
+    "D6",
+    "D7"
+  ],
+  "skills": [],
+  "reads": [
+    {
+      "why": "Требования, на которые ссылается матрица (P1.1–P1.2)",
+      "required": true,
+      "path": "docs/requirements.md"
+    },
+    {
+      "why": "Правило происхождения",
+      "required": true,
+      "path": "@plan/decisions/D7.json",
+      "section": "Solution"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "@plan/research/P1-audit-inventory.md",
+      "role": "input",
+      "note": "244 ID инвентаря (§ 1–§ 9)"
+    },
+    {
+      "path": "@plan/research/P1-sources.md",
+      "role": "input",
+      "note": "Четыре файла аудита (§ 3)"
+    },
+    {
+      "path": "@plan/research/P1-sources.md",
+      "role": "input",
+      "note": "Разделы аудита (§ 4)"
+    }
+  ],
+  "task_files": [
+    {
+      "path": "@plan/knowledge/audit-matrix.md",
+      "change": "create"
+    }
+  ],
+  "rules": [
+    "Четыре файла из research/P1-sources.md §3 читаются полностью по порядку; строки покрытия пишутся по ходу чтения.",
+    "Статус утверждения берётся из разбора (C-ID); иначе не выше hypothesis. [FACT] автора отчёта — не verified-*.",
+    "Требования берутся только из docs/requirements.md; недостающее — «новое требование для P1.6» со ссылкой на FS/AUD.",
+    "Ссылки разрешимы (D7)."
+  ],
+  "guidance": "Сводная матрица компактная: ячейка до ~12 слов + метка + CL. ERD отчёта не копировать.",
+  "validation": [
+    {
+      "id": "V1",
+      "cmd": "python3 plans/2026.10.14-№1-BILLIUM-V1/artifacts/P1-design/check-p1.py P1.3",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V2",
+      "cmd": "git diff --check",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    }
+  ],
+  "deliverables": [
+    "knowledge/audit-matrix.md — покрытие всех 244 ID, CL с метками, матрица 16×8, AC/G→REQ, FS→требования, кандидаты"
+  ],
+  "route": {
+    "class": "frontier",
+    "effort": "high"
+  },
+  "review": {
+    "mode": "none"
+  },
+  "authority": {
+    "kind": "routine"
+  },
+  "rag": {
+    "need": "none",
+    "status": "not_needed"
+  },
+  "updated_at": "2026-10-17T07:28:24Z"
+}

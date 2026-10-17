@@ -1,0 +1,29 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:phase:v1",
+  "id": "P2",
+  "title": "P2 — Bootstrap репозитория и `billium-contracts` PHP+Dart",
+  "design": "skeleton",
+  "goal": "Bootstrap монорепо по target-structure P1.6, CI (PHPStan max, Pint, Rector, Dart analyze/test), пакет billium-contracts для PHP и Dart, language-neutral fixtures и conformance runner.",
+  "context": "SKELETON — не детализирована. Детализация: design-сессия plan-design Pn после P1 и roadmap-proposal (D1). Состав провизорен до P1.8.",
+  "contract": {
+    "consumes": [
+      "выход P1"
+    ],
+    "produces": [],
+    "boundaries": []
+  },
+  "scope": {
+    "include": [
+      "Bootstrap монорепо по target-structure P1.6, CI (PHPStan max, Pint, Rector, Dart analyze/test), пакет billium-contracts для PHP и Dart, language-neutral fixtures и conformance runner."
+    ],
+    "exclude": []
+  },
+  "depends_on": [
+    "P1"
+  ],
+  "pitfalls": [],
+  "validation": [],
+  "deliverables": [],
+  "items": [],
+  "batches": []
+}

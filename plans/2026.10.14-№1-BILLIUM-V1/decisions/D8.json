@@ -1,0 +1,52 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:decision:v1",
+  "id": "D8",
+  "title": "Полная приёмка P1: 82 сценария, право P1.6 расширять требования, pre-review",
+  "date": "2026-10-14",
+  "status": "accepted",
+  "question": "Как закрыть противоречия контракта и приёмки перед исполнением?",
+  "options": [
+    {
+      "id": "A",
+      "text": "Оставить D1–D7 без уточнений",
+      "cons": "остаются противоречия в применении контракта и приёмки"
+    },
+    {
+      "id": "B",
+      "text": "Уточнить D1–D7: 82 сценария закреплены, требования дописываются через D#, decisions с D9, pre-review и all, self-check инвариантов",
+      "pros": "устраняет противоречия без переоткрытия items"
+    }
+  ],
+  "context": "Design pass 2: полное покрытие постановки, 82 сценария PB/PF/MG/FD/SB/EC.",
+  "decision": "Выбрана альтернатива B. 82 сценария закреплены в research/P1-acceptance-inventory.md; SRC-ID не менять.",
+  "rationale": "Design-delta меняет контракты P1.1–P1.9 до начала исполнения; переоткрытие не требуется. Архитектурные решения начинаются с D9. RED verdict всегда означает незавершённую P1.9. Синтетические регрессии checker-а не являются evidence реализации.",
+  "consequences": [
+    "Отклонена A: см. options."
+  ],
+  "applies_to": [
+    "P1.6",
+    "P1.7",
+    "P1.9"
+  ],
+  "global": false,
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "kind": "repo",
+      "ref": "research/P1-acceptance-inventory.md",
+      "note": "82 сценария, SHA-256"
+    },
+    {
+      "kind": "repo",
+      "ref": "artifacts/P1-design/validation.md",
+      "note": "синтетические регрессии"
+    }
+  ],
+  "actor": {
+    "provider": "claude-code",
+    "model": "claude-opus-5-5",
+    "effort": "high"
+  },
+  "answered_by": "agent"
+}

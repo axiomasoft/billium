@@ -1,0 +1,53 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:decision:v1",
+  "id": "D7",
+  "title": "Правило происхождения: без утверждений без источника",
+  "date": "2026-10-14",
+  "status": "accepted",
+  "question": "Как связывать нормативные утверждения P1 и P2+ с источниками?",
+  "options": [
+    {
+      "id": "A",
+      "text": "Свободные ссылки на документы",
+      "cons": "не проверяемо checker-ом"
+    },
+    {
+      "id": "B",
+      "text": "Ссылки только через ID с одним владельцем: REQ/INV, SRC, AUD/C/V3/AC/G/R/FS/E/L/Q, CL, DR0N, M, D#",
+      "pros": "разрешимость проверяется"
+    }
+  ],
+  "context": "Владелец требует отсутствия отсебятины при детализации.",
+  "decision": "Выбрана альтернатива B. Вывод исполнителя — D# с альтернативами или строка hypothesis с основаниями.",
+  "rationale": "Нормативное утверждение без разрешимого ID не пишется. Бизнес-факты — вопросы владельцу. P1.9 выборочно проверяет происхождение; finding уровня major. Scope P2+ — только из roadmap-proposal, D#, REQ/INV и каталога приёмки.",
+  "consequences": [
+    "Отклонена A: не проверяемо."
+  ],
+  "applies_to": [
+    "P1.1",
+    "P1.2",
+    "P1.3",
+    "P1.4",
+    "P1.5",
+    "P1.6",
+    "P1.7",
+    "P1.8",
+    "P1.9"
+  ],
+  "global": false,
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "kind": "owner",
+      "ref": "M1",
+      "note": "§1, §6"
+    }
+  ],
+  "actor": {
+    "provider": "claude-code",
+    "model": "claude-opus-5-5",
+    "effort": "high"
+  },
+  "answered_by": "agent"
+}

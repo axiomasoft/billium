@@ -53,3 +53,4 @@ __pycache__/
 .env.*
 !.env.example
 .swissknifeman/backups/
+.swissknifeman/config.toml.lock

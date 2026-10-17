@@ -115,15 +115,10 @@ class CheckerRegression(unittest.TestCase):
                                  for path in self.c.source_map_paths((6, 7))]}
         self.put('knowledge/methods.json', json.dumps(data, ensure_ascii=False))
         for n in range(9, 19):
-            self.put(f'decisions/D{n}-synthetic.md', f'''---
-status: accepted
-items: [P1.6]
----
-**Evidence:** INV-01
-## Why
-- Альтернатива A synthetic
-- Альтернатива B synthetic
-''')
+            self.put(f'decisions/D{n}.json', json.dumps({
+                'id': f'D{n}', 'status': 'accepted', 'applies_to': ['P1.6'],
+                'options': [{'id': 'A', 'text': 'Synthetic A'}, {'id': 'B', 'text': 'Synthetic B'}],
+                'evidence': [{'kind': 'repo', 'ref': 'docs/requirements.md', 'note': 'INV-01'}]}, ensure_ascii=False))
         self.put('docs/architecture/target-architecture.md', sections([
             ('Решения по областям', table(['Область', 'Решение', 'Основа', 'D#'],
                 [[area, 'build', 'INV-01', 'D' + str(n)] for n, area in enumerate(self.c.AREAS, 9)])),
@@ -268,7 +263,7 @@ items: [P1.6]
 
     def test_missing_stack_layout_profile_decisions_fails(self):
         for n in range(16,19):
-            (self.plan / f'decisions/D{n}-synthetic.md').unlink()
+            (self.plan / f'decisions/D{n}.json').unlink()
         self.red('P1.6', '< 10')
 
     def test_missing_invariant_fails(self):

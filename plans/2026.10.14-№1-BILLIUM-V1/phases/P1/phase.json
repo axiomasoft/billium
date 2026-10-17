@@ -1,0 +1,153 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:phase:v1",
+  "id": "P1",
+  "title": "P1 — Подготовка: целевая схема и методы разработки",
+  "design": "detailed",
+  "goal": "Выбрать целевую схему Billium (build/adopt/hybrid по 7 областям), модель данных, стек и раскладку, контракты billium-contracts v1 и каталог приёмки; записать методы разработки и roadmap P2–P10.",
+  "context": "Billium — биллинг продавца ПО экосистемы Axioma. Фаза отвечает на два вопроса: какая схема Billium целевая (аудит Perplexity, сверка с требованиями канона, первичные источники; решение build/adopt/hybrid, модель данных, раскладка, контракты v1, каталог приёмки) и как разрабатывать (AgenTools, Chatom, AzGuard, Commerz, Vaulter). Production-кода нет (D5). Фаза готова, когда все девять items GREEN по check-p1.py и verdict P1.9 = GREEN. Далее P2 детализируется только из артефактов P1 (D7 п. 4).\n\nПоследовательность: P1.1 → P1.2 → P1.3 → P1.4 → P1.6 → P1.7 → P1.8 → P1.9; P1.5 независима и может идти параллельно.",
+  "contract": {
+    "consumes": [
+      "полный корпус Brain о Billium — 222 документа (research/P1-corpus.md)",
+      "пакет аудита Perplexity тома 1 и задания DR — 244 ID и 38 пунктов (research/P1-audit-inventory.md)",
+      "код соседних репозиториев (research/P1-sources.md §6–7)"
+    ],
+    "produces": [
+      "docs/requirements.md и knowledge/corpus-ledger.md",
+      "knowledge/audit-matrix.md и knowledge/research/DR-*.md",
+      "knowledge/methods.json",
+      "docs/architecture/target-architecture.md, docs/architecture/data-model.md, knowledge/target-structure.md",
+      "docs/contracts/billium-contracts-v1.md и docs/acceptance-catalog.md",
+      "knowledge/roadmap-proposal.md, knowledge/owner-questions.md, knowledge/brain-updates.md",
+      "reviews/P1-review.md (verdict)"
+    ],
+    "boundaries": [
+      "Правами, квотами, GL, PSP-интеграциями, мостом commerz-billium фаза не занимается; Tariffler не проектирует.",
+      "Границы plan.md §2 нормативны; конфликт с каноном — D# и предложение CD."
+    ]
+  },
+  "scope": {
+    "include": [
+      "требования и трассировка (P1.1–P1.2)",
+      "покрытие аудита и матрица схем × требований (P1.3)",
+      "первичные исследования DR-01, DR-02, DR-04 и граница DR-03 (P1.4)",
+      "методы разработки methods.json (P1.5)",
+      "целевая схема, модель данных, стек, раскладка (P1.6)",
+      "контракты v1, fixtures plan, каталог приёмки (P1.7)",
+      "roadmap P2–P10, вопросы владельцу, Brain-правки, entrypoint (P1.8)",
+      "независимый review (P1.9)"
+    ],
+    "exclude": [
+      "production-код, composer.json, pubspec.yaml, CI (D5)",
+      "проектирование Tariffler, AiFina GL, PaymentDrivers, моста Commerz",
+      "выбор PSP первого запуска и бизнес-фактов (вопросы владельцу)"
+    ]
+  },
+  "depends_on": [],
+  "pitfalls": [
+    "Аудит Perplexity — не источник требований; его гипотезы не переносятся в REQ.",
+    "Инвентари корпуса и аудита — snapshot design-этапа; executor их не меняет, пропуск ID — RED.",
+    "Сводная матрица не является evidence без первичной проверки (P1.4)."
+  ],
+  "validation": [
+    {
+      "id": "V9",
+      "cmd": "git diff --check",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    }
+  ],
+  "deliverables": [
+    "7 областей с решением build/adopt/hybrid и D#",
+    "контракты v1 и каталог приёмки с полной трассировкой на REQ/INV",
+    "verdict P1.9 = GREEN"
+  ],
+  "assurance": {
+    "impact": "public-contract",
+    "seams": [
+      "payment-execution",
+      "moneywire",
+      "usage-input",
+      "brain-canon"
+    ],
+    "live": false,
+    "note": "P1 проектирует денежные контракты и меняет разрешённые строки Brain; live денежных эффектов нет."
+  },
+  "supporting": [
+    "@plan/research/P1-design.md",
+    "@plan/research/P1-design-rag.md",
+    "@plan/research/P1-acceptance-inventory.md",
+    "@plan/artifacts/P1-design/examples.md",
+    "@plan/artifacts/P1-design/check-p1.py"
+  ],
+  "items": [
+    "P1.1",
+    "P1.2",
+    "P1.3",
+    "P1.4",
+    "P1.5",
+    "P1.6",
+    "P1.7",
+    "P1.8",
+    "P1.9"
+  ],
+  "batches": [
+    {
+      "id": "B1",
+      "items": [
+        "P1.1"
+      ],
+      "mode": "recommended",
+      "note": "уровень A ≈ 850 КБ; весь бюджет контекста — под требования и леджер A"
+    },
+    {
+      "id": "B2",
+      "items": [
+        "P1.2"
+      ],
+      "mode": "recommended",
+      "note": "сплошной проход 177 документов B/C ≈ 1,8 МБ; зависит от REQ-ID P1.1"
+    },
+    {
+      "id": "B3",
+      "items": [
+        "P1.3"
+      ],
+      "mode": "recommended",
+      "note": "пакет аудита ≈ 183 КБ читается полностью"
+    },
+    {
+      "id": "B4",
+      "items": [
+        "P1.4"
+      ],
+      "mode": "recommended",
+      "note": "нужна web/primary-source research и отдельный бюджет под 38 пунктов DR"
+    },
+    {
+      "id": "B5",
+      "items": [
+        "P1.5"
+      ],
+      "mode": "recommended",
+      "note": "только соседние репозитории; может идти параллельно с P1.1–P1.4"
+    },
+    {
+      "id": "B-P1-DESIGN",
+      "items": [
+        "P1.6",
+        "P1.7",
+        "P1.8"
+      ],
+      "mode": "recommended",
+      "note": "проектирование одним батчем: D# и модель данных читаются один раз"
+    },
+    {
+      "id": "B6",
+      "items": [
+        "P1.9"
+      ],
+      "mode": "required",
+      "note": "независимый read-only verdict в свежей сессии; совмещать с исполнением нельзя"
+    }
+  ]
+}

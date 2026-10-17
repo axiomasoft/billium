@@ -1,0 +1,29 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:phase:v1",
+  "id": "P9",
+  "title": "P9 — Адаптеры миграции Memster/Edufy; контракт для commerz-billium",
+  "design": "skeleton",
+  "goal": "Адаптеры миграции Memster и Edufy; контракт для commerz-billium.",
+  "context": "SKELETON — не детализирована. Детализация: design-сессия plan-design Pn после P1 и roadmap-proposal (D1). Состав провизорен до P1.8.",
+  "contract": {
+    "consumes": [
+      "выход P8"
+    ],
+    "produces": [],
+    "boundaries": []
+  },
+  "scope": {
+    "include": [
+      "Адаптеры миграции Memster и Edufy; контракт для commerz-billium."
+    ],
+    "exclude": []
+  },
+  "depends_on": [
+    "P8"
+  ],
+  "pitfalls": [],
+  "validation": [],
+  "deliverables": [],
+  "items": [],
+  "batches": []
+}

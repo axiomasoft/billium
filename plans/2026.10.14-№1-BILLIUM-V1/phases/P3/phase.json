@@ -1,0 +1,29 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:phase:v1",
+  "id": "P3",
+  "title": "P3 — Core: obligations, invoices, credit notes, allocations",
+  "design": "skeleton",
+  "goal": "Core: obligations, invoices / credit notes, allocations, conservation-инварианты.",
+  "context": "SKELETON — не детализирована. Детализация: design-сессия plan-design Pn после P1 и roadmap-proposal (D1). Состав провизорен до P1.8.",
+  "contract": {
+    "consumes": [
+      "выход P2"
+    ],
+    "produces": [],
+    "boundaries": []
+  },
+  "scope": {
+    "include": [
+      "Core: obligations, invoices / credit notes, allocations, conservation-инварианты."
+    ],
+    "exclude": []
+  },
+  "depends_on": [
+    "P2"
+  ],
+  "pitfalls": [],
+  "validation": [],
+  "deliverables": [],
+  "items": [],
+  "batches": []
+}

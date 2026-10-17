@@ -1,0 +1,128 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:item:v1",
+  "id": "P1.4",
+  "title": "Первичные исследования DR-01, DR-02, DR-04 и граница DR-03",
+  "status": "todo",
+  "summary": "Выполнить DR-01, DR-02, DR-04 и границу DR-03 по первичным источникам; каждый факт — URL, дата, версия; закрыть или явно оставить открытыми G-01, G-02, G-04 и часть G-03.",
+  "why": "Решение build/adopt/hybrid зависит от фактов, которых нет в томе 1: реальные схемы и миграции Lago, Kill Bill, OpenMeter; AGPL и edition-gates (AC-08); extension API; семантика lookup/refund у RU-PSP и требования 54-ФЗ; conformance Money PHP↔Dart.",
+  "scope": {
+    "include": [
+      "knowledge/research/DR-01.md: исходники и схемы Lago, Kill Bill, OpenMeter, лёгкие PHP-основы; лицензии, edition-gates, миграции, extension API; вывод «можно брать без fork и коммерческой edition»",
+      "knowledge/research/DR-02.md: lookup по idempotency/order-ключу, partial/full refund, TTL, callbacks/подписи; чек при оплате и возврате (54-ФЗ), кто запускает фискал (CD-04); конкретные PSP не выбирать",
+      "knowledge/research/DR-03-boundary.md: usage/overage-факты, которые Billium принимает (CD-15); что остаётся у Tariffler; поправки AC-01, AC-04; Tariffler не проектировать",
+      "knowledge/research/DR-04.md: Money/decimal в PHP и Dart, axioma_contracts Money; fixtures/vectors и JCS; accounting authority (I-20, AC-09)",
+      "в каждом файле: ## Покрытие задания, ## Утверждения (ID | Утверждение | Источник | Дата | Версия | Статус), ## Выводы для Billium, ## Проверка утверждений аудита, ## Открыто"
+    ],
+    "exclude": [
+      "выбор схемы (P1.6)",
+      "проектирование Tariffler, PaymentDrivers, фискального сервиса",
+      "выбор PSP первого запуска",
+      "DR-05…10",
+      "изменения вне knowledge/research/ и artifacts/spikes/"
+    ]
+  },
+  "depends_on": [
+    "P1.3"
+  ],
+  "decisions": [
+    "D2",
+    "D5",
+    "D6",
+    "D7"
+  ],
+  "skills": [],
+  "reads": [],
+  "artifacts": [
+    {
+      "path": "@plan/knowledge/audit-matrix.md",
+      "role": "input",
+      "note": "Колонка «Нужна проверка» (P1.3)"
+    },
+    {
+      "path": "@plan/research/P1-audit-inventory.md",
+      "role": "input",
+      "note": "Пункты DR-заданий (§ 10)"
+    },
+    {
+      "path": "@plan/research/P1-audit-inventory.md",
+      "role": "input",
+      "note": "C-ID, направленные на DR (§ 2)"
+    },
+    {
+      "path": "@plan/research/P1-sources.md",
+      "role": "input",
+      "note": "Первичные источники (§ 4)"
+    },
+    {
+      "path": "@plan/research/P1-sources.md",
+      "role": "input",
+      "note": "Соседние репозитории (§ 5, § 7)"
+    }
+  ],
+  "task_files": [
+    {
+      "path": "@plan/knowledge/research/DR-01.md",
+      "change": "create"
+    },
+    {
+      "path": "@plan/knowledge/research/DR-02.md",
+      "change": "create"
+    },
+    {
+      "path": "@plan/knowledge/research/DR-03-boundary.md",
+      "change": "create"
+    },
+    {
+      "path": "@plan/knowledge/research/DR-04.md",
+      "change": "create"
+    },
+    {
+      "path": "@plan/artifacts/spikes/**",
+      "change": "create",
+      "note": "только если без spike факт не проверить (D5)"
+    }
+  ],
+  "rules": [
+    "Первичный источник: репозиторий на теге/commit, официальная документация, текст лицензии, официальный текст закона или документация ФНС/провайдера.",
+    "Perplexity и вторичные статьи — только поиск ссылок, не «Источник».",
+    "«Дата» — YYYY-MM-DD; «Версия» — тег, commit, версия API или редакция закона; нет версии — n/a с причиной.",
+    "Факт без первичного источника — [UNVERIFIED], не verified-*.",
+    "Задания DR-01/02/03/04 читаются полностью; их пункты — минимум (§10 инвентаря).",
+    "Вывод без ID утверждения не пишется (D7). Spike-контейнеры после прогона останавливаются."
+  ],
+  "guidance": "Одно утверждение — одна строка, проверяемо: «Lago v1.x: таблица fees хранит amount_cents bigint». ## Выводы для Billium — до ~15 пунктов со ссылкой на CL-ID.",
+  "validation": [
+    {
+      "id": "V1",
+      "cmd": "python3 plans/2026.10.14-№1-BILLIUM-V1/artifacts/P1-design/check-p1.py P1.4",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V2",
+      "cmd": "git diff --check",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    }
+  ],
+  "deliverables": [
+    "четыре research-заметки с таблицами утверждений (источник, дата, версия, статус)",
+    "все 38 пунктов DR имеют диспозицию; все C-ID и «Нужна проверка = DR-*» закрыты или в ## Открыто"
+  ],
+  "route": {
+    "class": "frontier",
+    "effort": "high"
+  },
+  "review": {
+    "mode": "none"
+  },
+  "authority": {
+    "kind": "routine"
+  },
+  "rag": {
+    "need": "optional",
+    "status": "pending",
+    "notes": "web/primary-source research: первичные URL, Perplexity — только поиск"
+  },
+  "updated_at": "2026-10-17T07:28:24Z"
+}
