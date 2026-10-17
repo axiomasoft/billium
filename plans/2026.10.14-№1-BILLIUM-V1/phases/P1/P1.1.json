@@ -2,7 +2,7 @@
   "$schema": "urn:swissknifeman:task:plan:item:v1",
   "id": "P1.1",
   "title": "Требования и трассировка: обязательный корпус (уровень A)",
-  "status": "todo",
+  "status": "done",
   "summary": "Собрать требования к Billium из 45 документов уровня A в docs/requirements.md; каждый документ уровня A получает диспозицию в corpus-ledger.",
   "why": "Требования разнесены по канону, досье и паспортам. Без единой таблицы с ID выбор схемы и каталог приёмки нельзя проверить. RAG: repo-grounded (brief/00 §3 п.1, §5; D6; D7).",
   "scope": {
@@ -45,6 +45,16 @@
       "path": "@plan/artifacts/P1-design/check-p1.py"
     }
   ],
+  "task_files": [
+    {
+      "path": "docs/requirements.md",
+      "change": "create"
+    },
+    {
+      "path": "@plan/knowledge/corpus-ledger.md",
+      "change": "create"
+    }
+  ],
   "artifacts": [
     {
       "path": "@plan/research/P1-corpus.md",
@@ -55,16 +65,6 @@
       "path": "@plan/research/P1-sources.md",
       "role": "input",
       "note": "Источники и каноны (§ 1, § 2, § 5)"
-    }
-  ],
-  "task_files": [
-    {
-      "path": "docs/requirements.md",
-      "change": "create"
-    },
-    {
-      "path": "@plan/knowledge/corpus-ledger.md",
-      "change": "create"
     }
   ],
   "rules": [
@@ -108,5 +108,28 @@
     "need": "none",
     "status": "not_needed"
   },
-  "updated_at": "2026-10-17T07:28:24Z"
+  "result": {
+    "started_at": "2026-10-17T09:10:29Z",
+    "finished_at": "2026-10-17T09:24:28Z",
+    "executor": {
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "session": "edd9064a-8610-458f-9118-950b7a7701ca"
+    },
+    "notes": "docs/requirements.md: 9 разделов, 162 ID (REQ-OWN 18, PROF 19, CON 32, FAIL 25, ACC 18, NBR 15, OUT 15, INV-01…12, CONFLICT-01…08), у каждой строки разрешимый SRC. knowledge/corpus-ledger.md: 45 SRC уровня A (33 использован, 1 дубль, 2 без новых требований, 9 процесс/история). Drift SRC-004 записан (CONFLICT-06).",
+    "checks": [
+      {
+        "id": "V1",
+        "exit": 0,
+        "at": "2026-10-17T09:24:28Z"
+      },
+      {
+        "id": "V2",
+        "exit": 0,
+        "at": "2026-10-17T09:24:28Z"
+      }
+    ]
+  },
+  "updated_at": "2026-10-17T09:24:28Z"
 }
