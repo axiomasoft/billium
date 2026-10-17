@@ -1,0 +1,55 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:decision:v1",
+  "id": "D30",
+  "title": "Семья платёжных envelopes: refund/cancel/find отдельными схемами .v1",
+  "date": "2026-10-17",
+  "status": "accepted",
+  "question": "Как выразить команды RequestRefund, CancelOperation и FindOperation пилота в billium-contracts, не меняя payment.execute.v1/payment.outcome.v1?",
+  "options": [
+    {
+      "id": "A",
+      "text": "Отдельные envelopes той же семьи: payment.refund.v1, payment.cancel.v1, payment.find.v1 и ответ payment.admission.v1; общие поля и правила scope/digest из execute; outcome refund — payment.outcome.v1 с originalOperationRef",
+      "pros": "Поля пилота не меняются; у каждой команды своя схема и свои отрицательные векторы"
+    },
+    {
+      "id": "B",
+      "text": "Refund как payment.execute.v1 с operationKind=refund и новыми полями",
+      "cons": "Расширяет execute.v1 обязательными для refund полями — условная схема и риск silent-extension"
+    },
+    {
+      "id": "C",
+      "text": "Один универсальный envelope command.v1",
+      "cons": "Ломает имена пилота (breaking)"
+    }
+  ],
+  "context": "REQ-CON-04…09: пилот описывает ExecutePayment JSON и текстом RequestRefund/Cancel/Find.",
+  "decision": "Выбрана A. Все команды несут commandKey, digest, sellerRef, environment, installationRef; refund — собственный operationRef и originalOperationRef; outcome refund добавляет originalOperationRef (оговорено пилотом).",
+  "rationale": "Сохраняет совместимость пилота (REQ-CON-20) и даёт каждой денежной команде key, digest и исход unknown (INV-04, INV-05, INV-07).",
+  "consequences": [
+    "Отклонены B и C."
+  ],
+  "applies_to": [
+    "P1.7"
+  ],
+  "global": false,
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "kind": "repo",
+      "ref": "docs/requirements.md",
+      "note": "REQ-CON-04, REQ-CON-05, REQ-CON-06, REQ-CON-07, REQ-CON-08, REQ-CON-09, REQ-CON-20, INV-07"
+    },
+    {
+      "kind": "repo",
+      "ref": "knowledge/methods.json",
+      "note": "M-04, M-05, M-52"
+    }
+  ],
+  "actor": {
+    "provider": "anthropic",
+    "model": "claude-opus-5-5",
+    "effort": "high"
+  },
+  "answered_by": "agent"
+}

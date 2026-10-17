@@ -1,0 +1,68 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:decision:v1",
+  "id": "D29",
+  "title": "MoneyWire: decimal major-строка со scale валюты (закрывает CONFLICT-03)",
+  "date": "2026-10-17",
+  "status": "accepted",
+  "question": "Какова форма MoneyWire на границах billium-contracts: decimal major-строка пилота или целое minor в строке + scale (CONFLICT-03)?",
+  "options": [
+    {
+      "id": "A",
+      "text": "Объект {amount, currency}: amount — decimal-строка в major units ровно с числом знаков scale валюты по версионированной таблице ISO 4217 (\"1490.00\" RUB, \"1\" JPY, \"1.000\" KWD); знак только для корректировок; float/JSON number запрещены",
+      "pros": "Совпадает с envelopes пилота payment.execute.v1/payment.outcome.v1 и каноном B-16 «decimal string + ISO 4217, scale валюты»; не breaking"
+    },
+    {
+      "id": "B",
+      "text": "Целое minor в строке + scale + revision реестра (Finance-Wire, FC-01)",
+      "cons": "Breaking для пилота: меняет смысл поля amount; требует миграции Commerz Fingerprint 0.1"
+    },
+    {
+      "id": "C",
+      "text": "Поддерживать обе формы на входе",
+      "cons": "Две канонизации одного digest; неоднозначность \"100\" (major или minor)"
+    }
+  ],
+  "context": "REQ-CON-02 фиксирует decimal string + ISO 4217 + scale; CONFLICT-03 оставлен открытым до P1.7.",
+  "decision": "Выбрана A. Строка проходит regex по scale валюты; лишние/недостающие знаки, экспонента, ведущий '+', пробелы и JSON number — ошибка billium.money.scale_invalid. Внутри — bigint minor (D19). Мост billium-finbridge переводит в форму finbridge.fact/1 у себя. Канонизация — RFC 8785 над строками.",
+  "rationale": "Пилот (REQ-CON-04, REQ-CON-09) уже несёт major decimal; DR04-12 и DR04-13 требуют строку; DR04-11 даёт exponent; совпадение с каноном делает CD-изменение ненужным, а фиксацию формы — уточнением (предложение CD в P1.8).",
+  "consequences": [
+    "Отклонены B и C.",
+    "CONFLICT-03 закрыт в пользу пилота; P1.8 предлагает CD-уточнение MoneyWire со статусом «предложено».",
+    "Fixtures: scale RUB/JPY/KWD, отрицательные векторы формы (DR04 «Предложение fixtures»)."
+  ],
+  "applies_to": [
+    "P1.7",
+    "P1.8"
+  ],
+  "global": false,
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "kind": "repo",
+      "ref": "knowledge/research/DR-04.md",
+      "note": "DR04-11, DR04-12, DR04-13, DR04-05, DR04-01"
+    },
+    {
+      "kind": "repo",
+      "ref": "docs/requirements.md",
+      "note": "REQ-CON-02, REQ-CON-04, REQ-CON-09, REQ-ACC-13"
+    },
+    {
+      "kind": "repo",
+      "ref": "knowledge/audit-matrix.md",
+      "note": "CL-73, CL-75"
+    },
+    {
+      "kind": "repo",
+      "ref": "knowledge/methods.json",
+      "note": "M-07, M-15, M-48"
+    }
+  ],
+  "actor": {
+    "provider": "anthropic",
+    "model": "claude-opus-5-5",
+    "effort": "high"
+  },
+  "answered_by": "agent"
+}
