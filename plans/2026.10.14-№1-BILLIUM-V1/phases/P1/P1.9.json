@@ -2,7 +2,7 @@
   "$schema": "urn:swissknifeman:task:plan:item:v1",
   "id": "P1.9",
   "title": "Review P1 — независимый verdict",
-  "status": "todo",
+  "status": "blocked",
   "summary": "Независимый read-only review всей P1 в свежей сессии, не авторской: обоснованность схемы и модели данных, границы канона, трассировка, качество доказательств; выпустить verdict.",
   "why": "P1 фиксирует архитектуру денежной системы, которую к 1.0 будет трудно менять. Структурный checker (D3) не доказывает, что выбор верен и инварианты защищены. RAG: repo-grounded (D3).",
   "scope": {
@@ -63,17 +63,17 @@
       "path": "@plan/artifacts/P1-design/check-p1.py"
     }
   ],
+  "task_files": [
+    {
+      "path": "@plan/reviews/P1-review.md",
+      "change": "create"
+    }
+  ],
   "artifacts": [
     {
       "path": "@plan/knowledge/owner-questions.md",
       "role": "input",
       "note": "Вопросы владельцу"
-    }
-  ],
-  "task_files": [
-    {
-      "path": "@plan/reviews/P1-review.md",
-      "change": "create"
     }
   ],
   "rules": [
@@ -119,5 +119,34 @@
     "need": "none",
     "status": "not_needed"
   },
-  "updated_at": "2026-10-17T07:28:24Z"
+  "result": {
+    "started_at": "2026-10-17T11:19:29Z",
+    "finished_at": "2026-10-17T11:30:51Z",
+    "executor": {
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "session": "c124bef1-ff2a-4408-825f-aa9c09490264"
+    },
+    "notes": "reviews/P1-review.md: Verdict RED. Pre-review P1.1–P1.8 GREEN. Findings: blocker F01 (P1.6), major F02 (P1.6), F03/F04/F05 (P1.7), minor F06–F08 (P1.6), F09 (P1.7). Проверено: 12 внешних фактов по URL (все подтверждены), 37 нормативных утверждений, 32 ID корпуса/аудита. V1/V2 RED только по строке verdict (D8): 'reviews/P1-review.md: verdict RED — P1.9 не закрыта'.",
+    "escalation": "Владельцу: разрешить одну корректировку закрытых P1.6 (F01, F02, F06–F08) и P1.7 (F03–F05, F09) — переоткрыть items или design-delta — и затем повторный P1.9 в свежей сессии. Blocker F01 требует D# о внешнем допуске writer (lease вне БД) для restore/clone.",
+    "checks": [
+      {
+        "id": "V1",
+        "exit": 1,
+        "at": "2026-10-17T11:30:51Z"
+      },
+      {
+        "id": "V2",
+        "exit": 1,
+        "at": "2026-10-17T11:30:51Z"
+      },
+      {
+        "id": "V3",
+        "exit": 0,
+        "at": "2026-10-17T11:30:51Z"
+      }
+    ]
+  },
+  "updated_at": "2026-10-17T11:30:51Z"
 }

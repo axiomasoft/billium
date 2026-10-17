@@ -149,5 +149,10 @@
       "mode": "required",
       "note": "независимый read-only verdict в свежей сессии; совмещать с исполнением нельзя"
     }
-  ]
+  ],
+  "closed": {
+    "at": "2026-10-17T11:30:51Z",
+    "result": "blocked",
+    "summary": "9 item(s): 5 done, 3 done_with_deviations, 1 blocked"
+  }
 }
