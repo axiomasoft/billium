@@ -27,9 +27,9 @@ envelopes `.v1`, MoneyWire, problem-codes, rules index, lock), `fixtures/` и `c
 obligations, invoices (FSM, триггер заморозки), credit notes, allocations/reversals, customer credit,
 `applyPaymentObservation`, queries; документ lock model; N-процессный стенд PostgreSQL.
 **Зависит от:** P2.
-**Решения:** D11, D20, D21, D22, D23, D25, D27, D28, D35; INV-09, INV-13, INV-14.
+**Решения:** D11, D20, D21, D22, D23, D25, D27, D28, D35, D41; INV-09, INV-13, INV-14.
 **Приёмка:** PB-14, PF-10, PF-12, PF-13, PF-14, SB-07, ACC-CON-08, ACC-CON-09, ACC-CON-14, ACC-CON-16,
-ACC-CON-17, ACC-CON-19, ACC-CON-24, ACC-RST-05, ACC-RST-06, ACC-RST-07, ACC-RST-10 (feed — с test double
+ACC-CON-17, ACC-CON-19, ACC-CON-24, ACC-CON-26, ACC-RST-05, ACC-RST-06, ACC-RST-07, ACC-RST-10 (feed — с test double
 источника); fixtures `ledger/conservation`, `payment/observation`.
 **Вопросы/риски:** GRANT по модулям в embedded невозможен — INV-01 только arch-тестом; горизонты retention.
 
@@ -53,10 +53,10 @@ lookup/reconcile worker, refund reservation, cancel, discrepancy, restore quaran
 (D34) с адаптерами embedded и server; тест-драйвер в
 `billium-testkit`; PHP API платёжных команд без server-профиля.
 **Зависит от:** P3; PaymentDrivers `payment-drivers/contracts` (сосед).
-**Решения:** D10, D26, D27, D28, D30, D34, D35, D36, D37; INV-02, INV-04, INV-07, INV-10.
+**Решения:** D10, D26, D27, D28, D30, D34, D35, D36, D37, D39, D40; INV-02, INV-04, INV-07, INV-10.
 **Приёмка:** PB-02…PB-11, PB-13, PB-16…PB-20, PB-22…PB-24, PF-01…PF-11, ACC-CON-01…ACC-CON-07,
 ACC-CON-15, ACC-CON-18, ACC-CON-20, ACC-CON-22, ACC-CON-23, ACC-CON-25, ACC-RST-01…ACC-RST-04, ACC-RST-08,
-ACC-RST-12; test double и реальный runtime — раздельно (REQ-ACC-18).
+ACC-RST-12, ACC-RST-13; test double и реальный runtime — раздельно (REQ-ACC-18).
 **Вопросы/риски:** PSP первого запуска и наличие драйвера; operational owner execution (REQ-PROF-21);
 ротация credentials у провайдеров не описана (DR02-T05).
 

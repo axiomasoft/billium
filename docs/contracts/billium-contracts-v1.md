@@ -186,7 +186,7 @@ identity — (`sellerRef`, `operationRef`, `operationRevision`).
 | `state` | string | да | `accepted-unknown`, `pending`, `succeeded`, `failed-terminal`, `cancelled` | state |
 | `currency` | string (ISO 4217) | да | валюта операции; все суммы в ней | currency |
 | `requested` | MoneyWire | да | запрошенная сумма | cumulative totals |
-| `authorizedTotal`, `capturedTotal`, `refundedTotal` | MoneyWire | да | `authorizedTotal` = `capturedTotal`, если провайдер не различает; cumulative; присваиваются, не складываются (INV-06); у refund — `capturedTotal` = сумма возврата | cumulative totals |
+| `authorizedTotal`, `capturedTotal`, `refundedTotal` | MoneyWire | да | `authorizedTotal` = `capturedTotal`, если провайдер не различает; cumulative; присваиваются, не складываются (INV-06); у refund — `capturedTotal` = сумма возврата (детализация и сверка, не база: D41) | cumulative totals |
 | `providerAccountRef` | string | да | merchant account исполнения из binding; не секрет | `providerAccountRef` |
 | `providerOperationId` | string | после подтверждения | ID операции у провайдера | evidence |
 | `evidenceRef` | string | да | ссылка на проверенное evidence | evidence |
@@ -208,6 +208,12 @@ Dedupe и порядок у получателя (одна Tx: inbox → про�
    `billium.auth.denied`, наблюдение не применяется и не раскрывается (INV-14, REQ-CON-21).
 6. Несогласованное наблюдение (валюта не равна валюте операции, `refundedTotal` > `capturedTotal` без
    `discrepancy`, refund без `originalPaymentRef`) — `billium.observation.conflict`, quarantine.
+7. Каноническая денежная база refund (D41, SRC-023 § 2): `payment.refunded_minor` присваивается только
+   из `refundedTotal` наблюдения charge (монотонно по `operationRevision`). Наблюдение refund-операции
+   (`operationKind = refund`) меняет лишь саму refund-операцию (state, evidence) и сверяется: Σ `capturedTotal`
+   succeeded refund одного `originalPaymentRef` должна равняться `refundedTotal` charge; расхождение —
+   `discrepancy.recorded.v1`, ledger не меняется, код conflict не выдаётся. Оба наблюдения одного refund
+   не складываются: charge 100.00, refund 30.00 → `refunded_minor` = 30.00.
 
 `invoice` view: `invoiceRef`, `status` (`draft`, `issued`, `partially_paid`, `paid`, `uncollectible`,
 `void`), `legalNumber` (после `issued`), `seller`, `buyerSnapshotDigest`, `currency`, `lines[]`
@@ -251,8 +257,8 @@ identity и содержимое; потребитель дедуплициру�
 | `billium.lookup.unavailable` | lookup неполон (реплика, доступ) | да, тем же запросом | повторить find | none | REQ-CON-08, REQ-FAIL-08, M-45 |
 | `billium.refund.capacity_exceeded` | сумма refund > доступной ёмкости | нет | уменьшить сумму или ждать исходов (новый ключ) | stored | INV-10, D31 |
 | `billium.operation.not_cancellable` | запрос уже отправлен или исход terminal | нет | ждать исхода; refund отдельно | stored | REQ-CON-07, D31 |
-| `billium.observation.parked` | refund раньше платежа / нет основания / пропуск `sourceSequence` | да, тем же ключом | дослать зависимость или пропуск; наблюдение в custody до применения | stored | REQ-FAIL-12, REQ-FAIL-13, REQ-CON-27 |
-| `billium.observation.conflict` | та же revision или тот же `eventId` с другим digest | нет | reconcile/оператор; наблюдение в quarantine | stored | REQ-FAIL-04, REQ-CON-27 |
+| `billium.observation.parked` | refund раньше платежа / нет основания / пропуск `sourceSequence` | да, повторной доставкой того же `eventId` | дослать зависимость или пропуск; наблюдение в custody до применения из custody | none | REQ-FAIL-12, REQ-FAIL-13, REQ-CON-27 |
+| `billium.observation.conflict` | та же revision или тот же `eventId` с другим digest | нет | reconcile/оператор; наблюдение в quarantine | stored по `eventId` | REQ-FAIL-04, REQ-CON-27 |
 | `billium.usage.conflict` | та же identity и revision, иной digest | нет | новая revision факта | none | REQ-CON-15, D31 |
 | `billium.policy.unknown` | нет policy для денежного эффекта | нет | задать policy | stored | REQ-ACC-23, D31 |
 | `billium.invoice.frozen` | изменение issued invoice вне allow-list | нет | credit note или void/reissue | stored | INV-13, D31 |
@@ -260,7 +266,7 @@ identity и содержимое; потребитель дедуплициру�
 | `billium.installation.quarantined` | нет допуска writer `WriterAdmission`: restore, клон, иная incarnation, lease занят | нет | ждать допуска writer | none | REQ-FAIL-15, INV-02, D34 |
 | `billium.transport.unavailable` | сервер недоступен / timeout | да, тем же ключом | повторить тот же envelope | none | REQ-CON-05, INV-04, M-45 |
 
-Receipt policy — только колонка Receipt (M-45, D31). `stored` — отказ по бизнес-состоянию сохраняется
+Receipt policy — только колонка Receipt (M-45, D31). У наблюдений ключа команды нет: receipt — по `eventId` (`stored по eventId`: повтор доставки с тем же digest возвращает его, иной digest — `billium.observation.conflict`); `parked` — состояние custody, не терминальный receipt: повторная доставка получает текущий статус custody или, после прихода зависимости, исход применения. `stored` — отказ по бизнес-состоянию сохраняется
 как receipt ключа: повтор того же envelope возвращает его, другой digest — `billium.idempotency.conflict`.
 `none` — claim ключа откатывается, receipt не сохраняется: тот же ключ можно повторить, в том числе с
 исправленным envelope (validation, schema, money-формат, auth, in_flight, transient,
@@ -285,7 +291,7 @@ codec/контрактов. Поведенческие векторы денеж
 | `usage/fact` | семантики, duplicate/conflict, поздний факт | да | codec | golden |
 | `ledger/conservation` | invoice с частичными оплатами, refund после расчёта, prepaid | да | нет | golden REQ-ACC-10 |
 | `errors/codes` | реестр кодов, колонка Receipt (D31), retryable/sameKey | да | да | индекс кодов |
-| `payment/observation` | поля REQ-CON-27; dedupe `eventId`, revision, пропуск и регресс `sourceSequence`, чужой seller, несогласованные totals | да | codec | golden |
+| `payment/observation` | поля REQ-CON-27; dedupe `eventId`, revision, пропуск и регресс `sourceSequence`, чужой seller, несогласованные totals, база refund (charge 100.00 + refund 30.00 → 30.00, D41) | да | codec | golden |
 | `compat/pilot` | старый/новый потребитель outcome (PB-15) | да | да | pinned producer/consumer |
 
 ## Трассировка

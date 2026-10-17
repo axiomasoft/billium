@@ -2,7 +2,7 @@
   "$schema": "urn:swissknifeman:task:plan:item:v1",
   "id": "P1.13",
   "title": "Корректировка P1.7 по review r2 (P19R2-F02, F05, ACC для F01/F03)",
-  "status": "todo",
+  "status": "done",
   "summary": "Вторая корректировка (D38) выходов P1.7 по findings P19R2-F02, P19R2-F05 и сценариям каталога для P19R2-F01/F03: каноническая денежная база refund в payment.observation.v1, receipt-коды наблюдения по eventId, ACC-RST для cancel/allocation после снятия копии без dispatch, DB proof dispatch × cancel. Check-p1.py P1.7 и P1.8 зелёные.",
   "why": "P19R2-F02 (major): refundedTotal charge и наблюдение refund-операции можно вычесть дважды (SRC-023 § 2) — refunded_minor 60.00 вместо 30.00, лишние reallocation_required и credit note (REQ-ACC-10, INV-09). P19R2-F05: receipt parked/conflict определены через commandKey, которого у наблюдения нет. Сценарии каталога для F01/F03 нужны, чтобы P3/P5 имели приёмку.",
   "scope": {
@@ -186,6 +186,53 @@
     "need": "none",
     "status": "not_needed"
   },
-  "result": null,
-  "updated_at": "2026-10-17T15:53:12Z"
+  "result": {
+    "started_at": "2026-10-17T15:56:27Z",
+    "finished_at": "2026-10-17T15:57:40Z",
+    "executor": {
+      "provider": "anthropic",
+      "model": "claude-sonnet-5-5",
+      "effort": "high",
+      "session": "116dbde6-1d35-4121-b6df-498c22f09c5e"
+    },
+    "notes": "P19R2-F02 → D41 (база refund — refundedTotal charge, правило 7, Словарь, ACC-CON-26, вектор payment/observation); P19R2-F05 → Receipt по eventId, parked не терминальный; ACC-RST-13 (F01, D39) и DB proof ACC-CON-07 (F03, D40); покрытие и roadmap P3/P5 обновлены; self-check § Корректировка P19 r2",
+    "checks": [
+      {
+        "id": "V1",
+        "exit": 0,
+        "at": "2026-10-17T15:57:40Z"
+      },
+      {
+        "id": "V2",
+        "exit": 0,
+        "at": "2026-10-17T15:57:40Z"
+      },
+      {
+        "id": "V3",
+        "exit": 0,
+        "at": "2026-10-17T15:57:40Z"
+      },
+      {
+        "id": "V4",
+        "exit": 0,
+        "at": "2026-10-17T15:57:40Z"
+      },
+      {
+        "id": "V5",
+        "exit": 0,
+        "at": "2026-10-17T15:57:40Z"
+      },
+      {
+        "id": "V6",
+        "exit": 0,
+        "at": "2026-10-17T15:57:40Z"
+      },
+      {
+        "id": "V7",
+        "exit": 0,
+        "at": "2026-10-17T15:57:40Z"
+      }
+    ]
+  },
+  "updated_at": "2026-10-17T15:57:40Z"
 }
