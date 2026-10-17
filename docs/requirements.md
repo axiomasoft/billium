@@ -1,7 +1,7 @@
 # Billium — требования и трассировка
 
-Статус: требования уровня A корпуса (PLAN1.P1.1). Документы уровней B и C добавляет P1.2 без
-перенумерации существующих строк. Источник каждой строки — ID `SRC-NNN` из
+Статус: требования уровня A корпуса (PLAN1.P1.1) и дописанные строки уровней B и C (PLAN1.P1.2);
+существующие строки не перенумерованы, новые получили свободные номера в своих разделах. Источник каждой строки — ID `SRC-NNN` из
 `plans/2026.10.14-№1-BILLIUM-V1/research/P1-corpus.md` (`BRAIN` = `/home/vostrikov/Vaults/Brain`);
 `§` указывает раздел документа. Диспозиция каждого прочитанного документа — в
 `plans/2026.10.14-№1-BILLIUM-V1/knowledge/corpus-ledger.md`.
@@ -44,6 +44,8 @@ delegated engine внутри Billium; второго writer у сущности
 | REQ-OWN-16 | Billium пишет только свои таблицы и не читает чужие; это проверяет gate владения таблицами | Billium | SRC-016 §3; SRC-041 §2 |
 | REQ-OWN-17 | В каждом профиле поставки на инсталляцию приходится один writer каждой сущности Billium. План Billium ведёт таблицу «state → writer» | Billium | SRC-002 §4; SRC-016 §1 п. 5, §3 |
 | REQ-OWN-18 | Dart — клиент контрактов и SDK. Он не пишет денежное state и не повторяет lifecycle исполнения | Dart SDK — только чтение и команды | SRC-025; SRC-016 §1 п. 6 |
+| REQ-OWN-19 | Возврат по компоненту соглашения или bundle рассчитывается от исходной оплаты, `PriceVersion` и условий этого компонента, а не долей прав. Сбой provisioning не порождает повторный charge | Billium | SRC-077 §W-03; SRC-091 §W-03 |
+| REQ-OWN-20 | Исходный merchant account и authority исполнения операции неизменяемы; ротация credentials допустима только в том же account. Маршрут по умолчанию не переносит старые операции к новому исполнителю | Execution owner операции | SRC-111 §I-17 |
 
 ## Профили поставки и потребители
 
@@ -61,6 +63,9 @@ delegated engine внутри Billium; второго writer у сущности
 | REQ-PROF-08 | В server-профиле продавцы изолированы. Два продавца не смешивают балансы, нумерацию, мандаты и секреты. Credentials провайдера не выводятся из tenant или бренда | SRC-014 §Требования; SRC-025; SRC-005 §Admission |
 | REQ-PROF-09 | Пакеты tenancy-neutral: в доменных таблицах Billium нет `tenant_id` без решения. Изоляцию даёт хост (соединение, БД, scope) | SRC-016 §3; SRC-041 §1 |
 | REQ-PROF-10 | Платность — свойство доступности пакета, а не ветки кода: нет edition-флагов и `pro`-веток. Состав бесплатного и платного — вопрос владельцу (I-02); рекомендация «полезная бесплатная база без paywall-инвариантов» — hypothesis до решения владельца | SRC-016 §1 п. 2, §3; SRC-009 (открытые inputs); SRC-001 §I-02 |
+| REQ-PROF-20 | Первый профиль Billium — библиотека obligations/invoice/allocation; remote execution — позже и не заменяет исполнение Commerz. Рекомендация источников (O-06, disposition DEFER), подтверждается в P1.6 | SRC-053 §O-01…O-10; SRC-089 §Billium |
+| REQ-PROF-21 | Опциональный runtime Billium execution (standalone/remote) включается только при доказанных operational owner, SLO, backup/restore и migration plan | SRC-053 §Wave 4 |
+| REQ-PROF-22 | «Лёгкий» и бесплатный профиль — ограниченный scope, а не ослабленные инварианты: изоляция продавцов, idempotency, recovery после commit, точность валют и целостность экспорта одинаковы во всех комплектациях. Выбор комплектации B-A/B-B/B-C — вопрос владельцу (I-02) | SRC-061 §Минимальная полезная бесплатная часть, §Billium; SRC-088 §Billium |
 
 ### Потребители
 
@@ -115,6 +120,12 @@ delegated engine внутри Billium; второго writer у сущности
 | REQ-CON-30 | Внутренние деньги: целые minor units + валюта, точная арифметика, явное округление, largest-remainder allocation | SRC-041 §2; SRC-002 §8 |
 | REQ-CON-31 | Публичная поверхность пакетов — только `Contracts`, `Data`, `Enums`, `Events`, `Exceptions`; маркеры `#[Api]` и `#[Spi]`; остальное `Internal/`. Eloquent не появляется в публичных сигнатурах | SRC-041 §1 |
 | REQ-CON-32 | Idempotency-ключ claim-ится в корневой транзакции мутации с digest payload. Повтор возвращает сохранённый receipt, другой payload даёт conflict, replay проверяет текущую авторизацию | SRC-041 §2; SRC-044 §1 |
+| REQ-CON-33 | Начисление не выводится из изменяемого поля текущего плана. Изменение плана или цены проходит preview/quote → фиксацию условий в revision соглашения хоста → явный pending/commit; вторая таблица subscriptions с независимым коммерческим lifecycle не вводится | SRC-049 §Владение подпиской и ценой |
+| REQ-CON-34 | Экспорт в учёт: несколько статусов или allocations одного capture не порождают нескольких фактов выручки; allocation Billium — коммерческая детализация, а не второй cash effect, и не повторное взыскание розничного платежа | SRC-070 §Detailed W-01; SRC-104 §Payment feed import requirements; SRC-111 §I-26 |
+| REQ-CON-35 | Экспортный факт для FinBridge (`finbridge.fact/1`, proposal) несёт sourceBook, sourceFact, sourceOperation, sourceRevision, eventKind, бизнес-дату, `recordedAt` UTC, hash, точные деньги, seller и ссылки на исходный факт. Mapping version — сохранённая metadata, а не ключ импорта; новый status, revision или transport ID не разрешает повторную проводку | SRC-104 §Detailed W-01 |
+| REQ-CON-36 | Invoice, платёж, фискальный документ, grant и готовность ресурса — независимые машины состояний; общая кнопка «оплатить» их не объединяет. Состояния invoice из источника (Draft, Issued, PartiallyPaid, Paid, Uncollectible) — иллюстрация и вход FSM P1.6, не контракт | SRC-109 §Связь финансовых состояний, §FlexCRM |
+| REQ-CON-37 | Dart SDK — online-клиент server API: offline-запись денежного state он не обещает. Денежная арифметика в Dart — только в профилях, где её допускает `axioma_contracts` (dart2js запрещён) | SRC-129 §Runtime map, §Четыре способа |
+| REQ-CON-38 | Рендер юридического документа фиксирует frozen вход, версию шаблона, шрифты с лицензией, версию renderer и digest вывода; повторный рендер или смена шаблона не меняет юридический номер. Renderer пока не выбран | SRC-144 §FD; SRC-208 §FD-G04 |
 
 ## Инварианты
 
@@ -166,6 +177,9 @@ INV-01…INV-08 — дословно из `plan.md` §2 (брифа M1 §2), п�
 | REQ-FAIL-23 | Источник восстановлен ниже применённой получателем revision → partition `recoveryRequired`, дублирующего экономического эффекта нет | SRC-023 §4; SRC-018 §PF |
 | REQ-FAIL-24 | Сбой фискализации или provisioning не стирает факт оплаты; unknown фискального результата → запрос исходного; ручная сверка вместо автоматической повторной отправки | SRC-024 §Success; SRC-014 §Требования; SRC-025 |
 | REQ-FAIL-25 | Отсутствие записи после restore — не доказательство свежего намерения: старый ключ с неизвестным namespace → `recoveryRequired` / `expiredNamespace`, отправки нет | SRC-044 §1 |
+| REQ-FAIL-26 | Повторный callback или повторная доставка исхода не порождает повторный fulfilment: исход несёт `operationRef` + version, получатель дедуплицирует; успешная доставка — не доказательство выданного grant | SRC-054 §Контракты между контекстами; SRC-099 §S-14 |
+| REQ-FAIL-27 | Отмена соглашения не откатывает завершённую денежную операцию, refund не равен revoke прав; сбой provisioning не переписывает исход оплаты, компенсация или refund — отдельная команда | SRC-080 §Коммерческая покупка; SRC-099 §S-02, §S-04 |
+| REQ-FAIL-28 | Смена writer при миграции legacy-биллинга: явный cutoff и authority binding, остановка старых admissions, drain/reconcile незавершённых операций, snapshot + post-cutoff факты. Независимые dual writes запрещены; неудачный импорт не перезапускает старый writer без обратного handover | SRC-165 §Import и смена writer |
 
 ## Приёмочные сценарии
 
@@ -192,6 +206,11 @@ ID сценариев — из источников; полный перечен
 | REQ-ACC-16 | Перед релизом — consumer install smoke из артефактов | SRC-041 §3 |
 | REQ-ACC-17 | Приёмка моста: conformance fixtures обеих сторон плюс сценарии duplicate, lost response и out-of-order | SRC-013 §Правила моста п. 8 |
 | REQ-ACC-18 | Результаты test double хранятся отдельно от реального runtime; conformance double не доказывает готовность реального Billium или PSP | SRC-005 §Acceptance tests |
+| REQ-ACC-19 | Аналитические сценарии границ со стороной Billium входят в каталог P1.7: S-01 (timeout PSP и двойной поздний webhook без второго charge), S-02 (оплата при сбое provisioning), S-04 (частичная отмена bundle без переоценки прошлого invoice), S-05 (однократный импорт в учёт покупателя), S-14 (replay webhook оплаченного invoice) | SRC-099 §Boundary scenarios |
+| REQ-ACC-20 | MG со стороны Billium: MG-01 (потерян ответ — исходный receipt, без лишних денег), MG-02 (тот же ключ с иной ценой/периодом — conflict до записи), MG-03 (годовое покрытие + 12 слотов — funding replay не повторяет obligation), MG-08 (proration по исходным условиям цены), MG-10 (частичный refund — точная денежная коррекция компонента, без процента), MG-11 (replay импорта legacy без сгенерированных provider ID) | SRC-165 §Acceptance |
+| REQ-ACC-21 | FD со стороны Billium: FD-01 (без смешения SaaS и гостевых продаж), FD-02 (тот же ключ/digest — исходный receipt, иной seller/body — conflict), FD-06 (независимые исходы оплаты и фискала), FD-07 (номер invoice не меняется при смене шаблона и повторном рендере), FD-09 (cancel/correction/refund со связанным receipt), FD-10 (restore/clone не воскрешает удалённое и не повторяет отправку) | SRC-208 §Fixtures |
+| REQ-ACC-22 | EC со стороны Billium: EC-11 (usage сверх резерва или после закрытого invoice — факт в исходном периоде, явная доплата/долг/discrepancy, без переноса в новый период), EC-12 (restore и ревизия цены не меняют исходный quote и не повторяют consume) | SRC-215 §Acceptance fixtures |
+| REQ-ACC-23 | SB со стороны Billium: SB-02 (неизвестная policy блокирует денежный эффект, нулевое обязательство не выдумывается), SB-07 (bundle из двух компонентов — точная allocation, налог, округление, lineage), SB-09 (частичная отмена отдельна от потреблённой квоты и позднего usage) | SRC-221 §Acceptance |
 
 ## Требования к соседям
 
@@ -212,6 +231,7 @@ ID сценариев — из источников; полный перечен
 | REQ-NBR-13 | Юридический и учётный владелец продавца: профиль продавца, налоговый режим, фискальный профиль (I-01, I-16) — входы, Billium их не выбирает | SRC-024 §Owners; SRC-009 (открытые inputs) |
 | REQ-NBR-14 | Авторизация: Billium принимает verdict через свой порт; AzGuard подключается мостом хоста | SRC-016 §3 |
 | REQ-NBR-15 | Хранение выведенных документов — Vaulter или хранилище хоста (опционально); renderer не управляет GC | SRC-024 §Owners |
+| REQ-NBR-16 | Адаптеры миграции Memster и Edufy не выводят денежную цену, валюту, funding и occurrences из изменяемого плана (в subscriptionify 1.0.0 их нет), не создают оплаченную `PriceVersion` из документированной цены, не угадывают покрытие, оплату или provider ID и не начисляют исторические строки повторно; неполная история помечается как legacy-unanchored | SRC-110 §I-03; SRC-140 §Практические выводы; SRC-165 §Import и смена writer; SRC-215 §Compatibility |
 
 ## Вне границ
 
@@ -232,6 +252,10 @@ ID сценариев — из источников; полный перечен
 | REQ-OUT-13 | Tenancy и изоляция, аутентификация, хранилище и очереди приходят от хоста | SRC-016 §1 п. 7, §3 |
 | REQ-OUT-14 | Универсальные PaymentKernel, Wallet, Meter, FinancialKernel и общий money-пакет не создаются | SRC-006 §8; SRC-020; SRC-009 CD-05 |
 | REQ-OUT-15 | Бизнес-факты не выдумываются: продавцы и реквизиты (I-01), платность пакетов (I-02), налоговые и фискальные профили (I-16), первый платный потребитель (I-18), PSP первого запуска, бандл AiFina+AiResto (I-28), валюты, цены — вопросы владельцу | SRC-016 (режим принятия); SRC-002 §10; SRC-009 (открытые inputs); SRC-031 |
+| REQ-OUT-16 | Billium не является глобальным налоговым движком: налоговый результат приходит snapshot-ом с policy/version ref от владельца правил по seller/product | SRC-057 §Реестр возможностей №5 |
+| REQ-OUT-17 | Деньги покупателей магазина владельца сайта (Commerz в FlexCMS) не входят в Billium продавца ПО: у продаж разные продавцы, PSP credentials, основания и документы | SRC-109 §FlexCMS + Commerz |
+| REQ-OUT-18 | Себестоимость провайдера (float cost telemetry), внутренние eval-нагрузки и отдельные provider-попытки не являются денежными фактами Billium: rating — только по принятым billable фактам и frozen `PriceVersion` | SRC-143 §Usage / attribution; SRC-146 §Owner map; SRC-219 §Минимальный target seam |
+| REQ-OUT-19 | Billium не управляет жизненным циклом ресурсов хоста: не регистрирует providers модулей, не запускает их миграции, не создаёт БД; платёжный или долговой статус сам не выбирает удаление ресурса — это отдельное право и policy хоста | SRC-203 §Сохраняемые гарантии; SRC-205 §Владельцы и authority; SRC-054 §W-04 |
 
 ## Конфликты
 
@@ -245,3 +269,8 @@ ID сценариев — из источников; полный перечен
 | CONFLICT-06 | Состояние репозитория: канон и досье — «repo нет», «`repo:` пуст», «без коммитов»; рабочее дерево Brain содержит незакоммиченное `repo: ~/projects/packages/billium` в tower (sha256 `dc22ac6bd5d4` против snapshot `e2c40fe7ddec`) и неотслеживаемый каталог `docs/` | SRC-004; SRC-016 §4.2; SRC-026; SRC-008 §W-02/03 | Открыт; brain sync — внешний эффект, решает владелец (вопрос P1.8) |
 | CONFLICT-07 | Tower: фискализация 54-ФЗ — bounded context внутри Billium. Канон CD-04: фискализацию запускает исполнитель оплаты через fiscal driver или receipt capability PaymentDrivers | SRC-004 §Ключевые решения; SRC-009 CD-04; SRC-002 §5 | Действует канон (REQ-CON-24) |
 | CONFLICT-08 | Рекомендация дистрибуции говорит о «pro extensions». Канон: нет `pro`-префиксов и edition-веток, платность — доступность пакета | SRC-001 §B-A / B-B / B-C; SRC-016 §1 п. 2, §3 | Действует канон (REQ-PROF-10); модель дистрибуции — вопрос I-02 |
+| CONFLICT-09 | Package-Boundaries: «старые frozen схемы Billium остаются существующим контрактом v1», зависимость старого Billium от `corex/payments`, модуль Fiscal integration внутри Billium; Purchase-and-Activation ссылается на «frozen Billium v1». Канон: драйверы — PaymentDrivers (CD-03), фискал — исполнитель (CD-04); контракты v1 проектирует P1.7, старые схемы лежат в исключённом `Development/` | SRC-049 §Лёгкое ядро, §Что сохраняем; SRC-109 §Связь финансовых состояний; SRC-009 CD-03, CD-04 | Действует канон; старые схемы не читаются. Опубликованы ли они потребителям — вопрос владельцу в P1.8 |
+| CONFLICT-10 | Tower: arm's-length вызов Lago по REST «не заражает» проприетарный код AGPL. Distribution options: это не универсальный факт, нужен разбор лицензии и edition | SRC-004 §Ключевые решения; SRC-061 §Licence premises | Открыт; проверяет P1.4 (DR-01, лицензии), до этого Lago по REST не считается безопасным по умолчанию |
+| CONFLICT-11 | Towers FlexCRM и FlexStore (вердикт P3.1): тарифный биллинг аккаунта «остаётся в `corex/billing`», FlexStore — «разовые и подписочные платежи e-commerce» через Billium. Канон: `corex/billing` вынесен в standalone Billium, розница — Commerz | SRC-178 §Синергии; SRC-179 §Синергии; SRC-181 §Состав ядра; SRC-002 §4 | Действует канон (REQ-OUT-03, REQ-PROF-19); строки towers — в brain-updates P1.8 |
+| CONFLICT-12 | Tower Memster: Billium — «монетизация авторов». Требования: выплаты правообладателям и payables — кандидат Settlement, не строится | SRC-180 §Синергии; SRC-002 §1; SRC-030 §Подтверждённое | Действует REQ-OUT-09; I-15 — вопрос владельцу |
+| CONFLICT-13 | Package-Boundary-Policy называет адаптер `commerz-billium-adapter`; канон — мост `commerz-billium` в репозитории Commerz | SRC-211 §Adapter policy; SRC-009 CD-02; SRC-013 §Реестр | Действует канон (REQ-CON-01, REQ-OUT-08) |
