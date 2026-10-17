@@ -16,7 +16,25 @@
 .serena/memories/
 .swissknifeman/task-terminal/
 .swissknifeman/terminal-admission/
+.swissknifeman/state/
+.swissknifeman/orch/
+.swissknifeman/instruction-adopt/
 plans/*/.plan-cache/
+plans/*/artifacts/**/*.jsonl
+.claude/runs/
+.claude/analyze/
+.claude/worktrees/
+.cursor/state/
+.cursor/logs/
+.cursor/runs/
+.cursor/review-gate.state.json
+.grok/state/
+.grok/logs/
+.grok/runs/
+.grok/review-gate.state.json
+.serena/logs/
+.serena/project.local.yml
+.playwright-mcp/
 *.bak
 *.last
 
