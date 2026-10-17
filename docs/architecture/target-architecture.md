@@ -95,9 +95,11 @@ flowchart LR
    (M-22). Лёгкий профиль не ослабляет инварианты (REQ-PROF-22).
 4. Где модуль execution включён (`remote-billium`, `standalone-billium`), хост или deployment реализует
    порт `WriterAdmission` (SPI Implement): authority вне БД Billium выдаёт исключительный lease на
-   (`installation_ref`, incarnation) и ротирует `writer_checkpoint` на каждый dispatch-пакет; без
-   адаптера execution не стартует, отказ — quarantine с `billium.installation.quarantined` (INV-02,
-   REQ-FAIL-15, D34). В embedded — адаптер хоста, в server — сервис deployment; учётные данные authority
+   (`installation_ref`, incarnation), ротирует `writer_checkpoint` на каждый dispatch-пакет и принимает
+   `acquire`, `renew`, `release` с водяным знаком `commit_no` журнала `money_commit_log`: захват lease без
+   предшествующего `release` открывает recovery без отправок и collection до активации оператором, `commit_no`
+   копии ниже `released_commit_no` — quarantine; без адаптера execution не стартует, отказ — quarantine с
+   `billium.installation.quarantined` (INV-02, REQ-FAIL-15, D34, D39). В embedded — адаптер хоста, в server — сервис deployment; учётные данные authority
    в БД не хранятся. В `embedded-commerz` execution выключен и порт не нужен.
 
 ## Стек

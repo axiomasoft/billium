@@ -1,0 +1,51 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:decision:v1",
+  "id": "D38",
+  "title": "Вторая корректировка P1 по RED r2 (решение владельца)",
+  "date": "2026-10-17",
+  "status": "accepted",
+  "question": "Как закрыть RED r2 по P1.9 (P19R2-F01…F05) при policy.corrections_max = 1 (D8)?",
+  "options": [
+    {
+      "id": "A",
+      "text": "Вторая корректировка владельца: P1.12 (P1.6: F01, F03, F04) и P1.13 (P1.7: F02, F05), затем повторный review r3 (P1.9 переоткрыт); прежний r2 сохраняется как reviews/P1-review-r2.md",
+      "pros": "Закрывает незащищённый INV-02/REQ-FAIL-15 до P2; P3 и P5 реализуют модель буквально, дефект схемы к 1.0 трудно менять"
+    },
+    {
+      "id": "B",
+      "text": "Принять риск P19R2-F01 явным решением D# и закрыть P1 с отложенными findings",
+      "cons": "Остаётся окно второго денежного эффекта копии (REQ-FAIL-19); рецензент r2 квалифицировал как blocker"
+    }
+  ],
+  "context": "P1.9 r2 = RED (reviews/P1-review-r2.md): P19R2-F01 blocker, F02 major, F03–F05 minor. Вторая корректировка запрещена без решения владельца.",
+  "decision": "A — Вторая корректировка владельца: P1.12 (P1.6: F01, F03, F04) и P1.13 (P1.7: F02, F05), затем повторный review r3 (P1.9 переоткрыт); прежний r2 сохраняется как reviews/P1-review-r2.md",
+  "rationale": "Владелец: «ну делай тогда» + выбор «Вторая корректировка (Recommended)» (2026-10-17)",
+  "consequences": [
+    "Отклонена B.",
+    "Добавлены P1.12, P1.13; P1.9 переоткрыт (depends_on P1.13), r2 сохранён как reviews/P1-review-r2.md.",
+    "Ссылки на reviews/P1-review.md в D31, D34–D37 перенаправляются корректировкой P1.12 на reviews/P1-review-r1.md."
+  ],
+  "applies_to": [
+    "P1.9",
+    "P1.12",
+    "P1.13"
+  ],
+  "evidence": [
+    {
+      "kind": "repo",
+      "ref": "reviews/P1-review-r2.md",
+      "note": "P19R2-F01…F05"
+    },
+    {
+      "kind": "repo",
+      "ref": "decisions/D8.json",
+      "note": "corrections_max = 1"
+    }
+  ],
+  "actor": {
+    "provider": "anthropic",
+    "model": "claude-sonnet-5-5",
+    "effort": "high"
+  },
+  "answered_by": "owner"
+}

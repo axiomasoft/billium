@@ -38,7 +38,7 @@ billium/
 
 - Маркеры `#[Api]` и `#[Spi(kind: Call|Implement)]` — собственные атрибуты Billium (M-24).
 - SPI Implement: порты драйвера (через `payment-drivers/contracts`), renderer, storage, auth verdict,
-  источник seller/actor хоста, `WriterAdmission` (внешний допуск writer для execution, D34). SPI Call: `applyPaymentObservation`, `prepareObligation`,
+  источник seller/actor хоста, `WriterAdmission` (внешний допуск writer для execution: lease, ticket, acquire/renew/release с `commit_no` журнала `money_commit_log`, D34, D39). SPI Call: `applyPaymentObservation`, `prepareObligation`,
   `authorizeCollection`, приём usage-фактов.
 - Модуль не импортирует `Internal` соседа и не пишет его таблицы; ссылки на хост, Tariffler, Commerz —
   строковые `*_ref` (M-23).

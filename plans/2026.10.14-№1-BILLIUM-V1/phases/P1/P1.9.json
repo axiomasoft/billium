@@ -2,28 +2,29 @@
   "$schema": "urn:swissknifeman:task:plan:item:v1",
   "id": "P1.9",
   "title": "Review P1 — независимый verdict",
-  "status": "blocked",
-  "summary": "Повторный независимый read-only review P1 после одной корректировки (P1.10, P1.11) в свежей сессии, не исполнявшей P1.6–P1.11: проверить закрытие каждого finding P19-F01…F09 и отсутствие регрессий; выпустить verdict r2.",
+  "status": "todo",
+  "summary": "Повторный независимый read-only review P1 (раунд 3) после второй корректировки по решению владельца D38 (P1.12, P1.13) в свежей сессии, не исполнявшей P1.6–P1.13: проверить закрытие P19R2-F01…F05 и отсутствие регрессий; выпустить verdict r3.",
   "why": "P1 фиксирует архитектуру денежной системы, которую к 1.0 будет трудно менять. Структурный checker (D3) не доказывает, что выбор верен и инварианты защищены. RAG: repo-grounded (D3).",
   "scope": {
     "include": [
-      "Перед записью: `git mv plans/2026.10.14-№1-BILLIUM-V1/reviews/P1-review.md plans/2026.10.14-№1-BILLIUM-V1/reviews/P1-review-r1.md` — verdict r1 неизменен",
-      "reviews/P1-review.md (r2): строка **Verdict:** GREEN или RED; таблица ID | Severity | Где | Суть | Owning item (blocker|major|minor), новые findings с префиксом P19R2-; заголовки ### <ID> — … по findings; ## Закрытие r1 — таблица Finding r1 | Статус (закрыт|частично|не закрыт|отклонён с D#) | Где исправлено | Проверка; ## Проверено",
-      "Обязательные проверки r2: (1) каждый P19-F01…F09 — по ожидаемому исправлению из reviews/P1-review-r1.md; (2) новые D# P1.10/P1.11 — ≥ 2 альтернативы, evidence разрешимо, не нарушают plan.md §2; (3) INV-02 после F01: внешний допуск writer закрывает сырой клон без процедуры restore; (4) F02: нет денежной мутации без commandKey, отказ refund admission не оставляет снятую allocation; (5) регрессии: check-p1.py pre-review GREEN, трассировка каталога на REQ/INV полна, контракты совместимы с пилотом (payment.execute.v1/payment.outcome.v1 без breaking); (6) происхождение: ≥ 15 случайных нормативных утверждений из изменённых разделов"
+      "Файл reviews/P1-review-r2.md (verdict r2) уже сохранён переоткрытием P1.9 (git mv); r1 — reviews/P1-review-r1.md; оба неизменны",
+      "reviews/P1-review.md (r3): строка **Verdict:** GREEN или RED; таблица ID | Severity | Где | Суть | Owning item (blocker|major|minor), новые findings с префиксом P19R3-; заголовки ### <ID> — … по findings; ## Закрытие r2 — таблица Finding r2 | Статус (закрыт|частично|не закрыт|отклонён с D#) | Где исправлено | Проверка (P19R2-F01…F05), и краткий ## Закрытие r1 (регрессии P19-F01…F09); ## Проверено",
+      "Обязательные проверки r3: (1) каждый P19R2-F01…F05 — по ожидаемому исправлению из reviews/P1-review-r2.md; (2) INV-02: копия, взявшая lease после остановки writer, не отправляет отменённую операцию и не создаёт collection step при оплаченной obligation — без dispatch writer после снятия копии; убраны утверждения «второго денежного эффекта нет»; (3) refund: единственная денежная база, расчёт 100.00/30.00 не даёт 60.00; (4) новые D# P1.12/P1.13 — ≥ 2 альтернативы, evidence разрешимо, не нарушают plan.md §2; (5) регрессии: check-p1.py pre-review GREEN, трассировка каталога на REQ/INV полна, контракты совместимы с пилотом (payment.execute.v1/payment.outcome.v1 без breaking), закрытие r1 не откатилось; (6) происхождение: ≥ 15 случайных нормативных утверждений из изменённых разделов"
     ],
     "exclude": [
-      "правка любых артефактов P1, кроме git mv r1",
-      "вторая корректировка (policy.corrections_max = 1): при RED — blocked с эскалацией владельцу",
+      "правка любых артефактов P1",
+      "третья корректировка: при RED — blocked с эскалацией владельцу (D8, D38)",
       "детализация P2"
     ]
   },
   "depends_on": [
-    "P1.11"
+    "P1.13"
   ],
   "decisions": [
     "D3",
     "D7",
-    "D8"
+    "D8",
+    "D38"
   ],
   "skills": [],
   "reads": [
@@ -66,31 +67,31 @@
   ],
   "task_files": [
     {
-      "path": "@plan/reviews/P1-review-r1.md",
-      "change": "create",
-      "note": "git mv из P1-review.md"
-    },
-    {
       "path": "@plan/reviews/P1-review.md",
       "change": "create",
-      "note": "verdict r2"
+      "note": "verdict r3"
     }
   ],
   "artifacts": [
     {
-      "path": "@plan/reviews/P1-review.md",
+      "path": "@plan/reviews/P1-review-r2.md",
       "role": "input",
-      "note": "verdict r1 (до git mv) — findings P19-F01…F09 и ожидаемые исправления"
+      "note": "verdict r2 — findings P19R2-F01…F05 и ожидаемые исправления"
+    },
+    {
+      "path": "@plan/reviews/P1-review-r1.md",
+      "role": "input",
+      "note": "findings r1"
     },
     {
       "path": "@plan/knowledge/P1.6-self-check.md",
       "role": "input",
-      "note": "§ Корректировка P19 (P1.10)"
+      "note": "§ Корректировка P19 и P19 r2"
     },
     {
       "path": "@plan/knowledge/P1.7-self-check.md",
       "role": "input",
-      "note": "§ Корректировка P19 (P1.11)"
+      "note": "§ Корректировка P19 и P19 r2"
     },
     {
       "path": "@plan/knowledge/owner-questions.md",
@@ -102,9 +103,9 @@
     "Сначала check-p1.py pre-review (P1.1–P1.8); RED — verdict RED с finding на owning item.",
     "Severity: blocker — нарушение канона или незащищённый денежный инвариант; major — решение без доказательной базы или пропуск покрытия; minor — форма.",
     "Рецензент не переписывает решения, а описывает дефект и ожидаемое исправление. Review только читает.",
-    "Исполнитель r2 — сессия, не исполнявшая P1.6, P1.7, P1.10, P1.11; сессии r1 и авторов перечислить в шапке.",
     "Owning item новых findings — P1.1…P1.8 (формат check-p1.py); корректировка P1.10 указывается как P1.6, P1.11 — как P1.7.",
-    "RED r2 — finish --status blocked с escalation владельцу: вторая корректировка запрещена без решения владельца (D8, policy.corrections_max = 1)."
+    "Исполнитель r3 — сессия, не исполнявшая P1.6, P1.7, P1.10–P1.13; сессии r1, r2 и авторов перечислить в шапке.",
+    "RED r3 — finish --status blocked с escalation владельцу: третья корректировка запрещена без нового решения владельца (D8, D38)."
   ],
   "guidance": "Finding — конкретное место (файл + раздел), сценарий отказа и ожидаемое исправление. ## Проверено перечисляет проверенное, в том числе без findings.",
   "validation": [
@@ -122,13 +123,13 @@
     },
     {
       "id": "V3",
-      "cmd": "grep -c 'P19-F0[1-9]' plans/2026.10.14-№1-BILLIUM-V1/reviews/P1-review.md",
-      "expect": "вывод ≥ 9 (каждый finding r1 в ## Закрытие r1)",
+      "cmd": "grep -c 'P19R2-F0[1-5]' plans/2026.10.14-№1-BILLIUM-V1/reviews/P1-review.md",
+      "expect": "вывод ≥ 5",
       "kind": "acceptance"
     },
     {
       "id": "V4",
-      "cmd": "test -f plans/2026.10.14-№1-BILLIUM-V1/reviews/P1-review-r1.md",
+      "cmd": "test -f plans/2026.10.14-№1-BILLIUM-V1/reviews/P1-review-r2.md",
       "expect": "exit 0",
       "kind": "acceptance"
     },
@@ -140,7 +141,7 @@
     }
   ],
   "deliverables": [
-    "reviews/P1-review-r1.md (неизменённый r1) и reviews/P1-review.md (r2) с verdict, ## Закрытие r1 и findings; при GREEN фаза P1 закрывается, при RED — blocked и эскалация владельцу"
+    "reviews/P1-review-r1.md, reviews/P1-review-r2.md (неизменённые) и reviews/P1-review.md (r3) с verdict, ## Закрытие r2 и findings; при GREEN фаза P1 закрывается, при RED — blocked и эскалация владельцу"
   ],
   "route": {
     "class": "frontier",
@@ -156,44 +157,6 @@
     "need": "none",
     "status": "not_needed"
   },
-  "result": {
-    "started_at": "2026-10-17T15:06:39Z",
-    "finished_at": "2026-10-17T15:14:23Z",
-    "executor": {
-      "provider": "anthropic",
-      "model": "claude-opus-5-5",
-      "effort": "high",
-      "session": "d04db85a-a925-43cf-bdc2-db576bebdd48"
-    },
-    "notes": "r1 сохранён git mv в reviews/P1-review-r1.md; r2 RED: закрыты P19-F02…F09, P19-F01 частично. Новые: P19R2-F01 blocker P1.6 (fence D34 только на dispatch), P19R2-F02 major P1.7 (база refund в payment.observation.v1), P19R2-F03…F05 minor. V1/V2 RED только по правилу 'verdict RED — P1.9 не закрыта'; P1.1–P1.8 GREEN; V3=12 строк P19-F0x",
-    "escalation": "Владелец: разрешить вторую корректировку P1.6/P1.7 по P19R2-F01…F05 (сверх policy.corrections_max = 1, D8) с повторным P1.9 r3, либо принять риск P19R2-F01 явным решением D# и закрыть P1. Без решения P1 не закрывается и P2 не детализируется.",
-    "checks": [
-      {
-        "id": "V1",
-        "exit": 1,
-        "at": "2026-10-17T15:14:23Z"
-      },
-      {
-        "id": "V2",
-        "exit": 1,
-        "at": "2026-10-17T15:14:23Z"
-      },
-      {
-        "id": "V3",
-        "exit": 0,
-        "at": "2026-10-17T15:14:23Z"
-      },
-      {
-        "id": "V4",
-        "exit": 0,
-        "at": "2026-10-17T15:14:23Z"
-      },
-      {
-        "id": "V5",
-        "exit": 0,
-        "at": "2026-10-17T15:14:23Z"
-      }
-    ]
-  },
-  "updated_at": "2026-10-17T15:14:23Z"
+  "result": null,
+  "updated_at": "2026-10-17T15:53:13Z"
 }

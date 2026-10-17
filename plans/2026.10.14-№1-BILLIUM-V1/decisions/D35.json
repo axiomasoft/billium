@@ -8,7 +8,7 @@
   "options": [
     {
       "id": "A",
-      "text": "Refund admission первым: ledger не меняется до исхода; succeeded refund приходит в ledger наблюдением applyPaymentObservation (refunded_total), payment.reallocation_required вычисляется CHECK-ом как allocated > captured − refunded; policy reallocation — отдельная keyed команда ledger (credit note или reversal с cause = refund); refundAuthorization — только чтение (ёмкость и требуемая reallocation)",
+      "text": "A — Refund admission первым: ledger не меняется до исхода; succeeded refund приходит в ledger наблюдением applyPaymentObservation (refunded_total), payment.reallocation_required вычисляется CHECK-ом как allocated > captured − refunded; policy reallocation — отдельная keyed команда ledger в двух режимах: credit_note = reversal с cause = refund плюс credit note на ту же сумму в одной Tx (долг закрыт), reversal = reversal с cause = refund без credit note (долг открыт, collection не стартует); refundAuthorization — только чтение (ёмкость и требуемая reallocation)",
       "pros": "Ledger меняется только по подтверждённому денежному факту; отказ, pending или unknown refund ничего не снимают; один путь проекции (D28); REQ-CON-14 без отступления"
     },
     {
@@ -22,20 +22,23 @@
       "cons": "Отказ admission или crash между Tx оставляет долг открытым без возврата денег — collection списывает повторно (P19-F02, REQ-FAIL-19)"
     }
   ],
-  "context": "P19-F02 (reviews/P1-review.md): строка «Refund authorization (ledger)» data-model.md § Операции и блокировки делает reversal до admission refund без commandKey; флаг reallocation_required не блокирует новые allocation.",
-  "decision": "A — Refund admission первым: ledger не меняется до исхода; succeeded refund приходит в ledger наблюдением applyPaymentObservation (refunded_total), payment.reallocation_required вычисляется CHECK-ом как allocated > captured − refunded; policy reallocation — отдельная keyed команда ledger (credit note или reversal с cause = refund); refundAuthorization — только чтение (ёмкость и требуемая reallocation)",
+  "context": "P19-F02 (reviews/P1-review-r1.md): строка «Refund authorization (ledger)» data-model.md § Операции и блокировки делает reversal до admission refund без commandKey; флаг reallocation_required не блокирует новые allocation.",
+  "decision": "A — Refund admission первым: ledger не меняется до исхода; succeeded refund приходит в ledger наблюдением applyPaymentObservation (refunded_total), payment.reallocation_required вычисляется CHECK-ом как allocated > captured − refunded; policy reallocation — отдельная keyed команда ledger в двух режимах: credit_note = reversal с cause = refund плюс credit note на ту же сумму в одной Tx (долг закрыт), reversal = reversal с cause = refund без credit note (долг открыт, collection не стартует); refundAuthorization — только чтение (ёмкость и требуемая reallocation)",
   "rationale": "Ledger меняется только по подтверждённому refund через applyPaymentObservation (D28), поэтому отказ admission, pending или unknown refund не открывают долг (INV-09, REQ-FAIL-19); refundAuthorization остаётся чтением (REQ-CON-14) без отступления; флаг reallocation_required выводится CHECK-ом и блокирует новые allocation триггером. B вводит вторую денежную команду и связь модулей в обход D28.",
   "consequences": [
     "Отклонены B и C.",
     "Триггер allocation_guard: положительная allocation из payment допускается, только если после неё allocated_minor ≤ captured_minor − refunded_minor; при reallocation_required — отказ.",
     "CHECK payment: reallocation_required = (allocated_minor > captured_minor − refunded_minor) — флаг снимается той же Tx, что возвращает allocated в пределы net.",
     "Reversal с cause = refund не создаёт collection step (REQ-FAIL-19); credit note — policy по умолчанию для оплаченного и возвращённого.",
-    "Unknown/pending refund держит резерв на charge (INV-10) и не меняет ledger."
+    "Unknown/pending refund держит резерв на charge (INV-10) и не меняет ledger.",
+    "Режим credit_note без reversal запрещён: allocated + credited > amount_due нарушил бы CHECK obligation и не снял бы флаг (P19R2-F04); reversal и credit note — одна Tx.",
+    "Reversal без credit note оставляет долг открытым; collection не стартует (reversal с cause = refund), долг закрывается следующей командой владельца."
   ],
   "applies_to": [
     "P1.6",
     "P1.10",
-    "P1.11"
+    "P1.11",
+    "P1.12"
   ],
   "evidence": [
     {
@@ -50,7 +53,7 @@
     },
     {
       "kind": "repo",
-      "ref": "reviews/P1-review.md",
+      "ref": "reviews/P1-review-r1.md",
       "note": "P19-F02"
     }
   ],

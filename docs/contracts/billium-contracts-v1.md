@@ -150,7 +150,7 @@ identity и revision). Поздний факт после закрытого п�
 | ensureBillingOccurrence | `occurrence.ensure.v1` | `componentRef`, `purpose`, `interval`, `scheduleRevision`, `commandKey` | `billingOccurrenceRef` (тот же при повторе) | INV-11 |
 | authorizeCollection | `collection.authorize.v1` | `obligationRef`, `businessPaymentIntentRef`, `executorBindingRef` | разрешение или `already-settled` | REQ-CON-12 |
 | applyPaymentObservation | `payment.observation.v1` | поля и dedupe — § payment.observation.v1 ниже | `AllocationReceipt` / `ObservationParked` | REQ-CON-13, REQ-CON-27 |
-| reallocatePayment | `allocation.reallocate.v1` | `paymentRef` (= `operationRef` платежа), `policyVersion`, `mode` (`credit_note` или `reversal`), `commandKey`, `digest` | `AllocationReceipt`; reversal с `cause = refund` не создаёт collection step | INV-09, REQ-FAIL-19, D35 |
+| reallocatePayment | `allocation.reallocate.v1` | `paymentRef` (= `operationRef` платежа), `policyVersion`, `mode` (`credit_note` — reversal с `cause = refund` плюс credit note на ту же сумму в одной Tx; `reversal` — reversal с `cause = refund` без credit note), `commandKey`, `digest` | `AllocationReceipt`; reversal с `cause = refund` не создаёт collection step | INV-09, REQ-FAIL-19, D35 |
 | queries | `billium.query.v1` | `paymentStatus`, `obligation`, `invoice`, `allocationByOperation`, `refundAuthorization`, `readRender` | снимок + revision | REQ-CON-14 |
 
 `refundAuthorization` — только чтение (REQ-CON-14, D35): ёмкость refund по исходному charge и сумма

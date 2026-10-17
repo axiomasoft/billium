@@ -17,7 +17,7 @@
       "cons": "Хост нескольких продавцов, повторивший намерение новым ключом с другим sellerRef, получает вторую операцию и второй charge (REQ-FAIL-07)"
     }
   ],
-  "context": "P19-F07 (reviews/P1-review.md): словарь data-model.md (с seller) расходится с § Операции, contracts § Принципы п. 3 и SRC-005 § Admission (без seller).",
+  "context": "P19-F07 (reviews/P1-review-r1.md): словарь data-model.md (с seller) расходится с § Операции, contracts § Принципы п. 3 и SRC-005 § Admission (без seller).",
   "decision": "A — Форма пилота: UNIQUE (source_context, business_intent_ref, kind) в БД инсталляции; seller_ref операции сохраняется и сравнивается: совпадение binding с тем же seller → исходная операция (REQ-FAIL-07), с иным seller → billium.idempotency.conflict без раскрытия чужой операции и receipt",
   "rationale": "Форма пилота (SRC-005 § Admission) уже в контракте; при совпадении с иным seller конфликт без раскрытия сохраняет цель INV-14 и не даёт второго charge (REQ-FAIL-07), тогда как B его допускает.",
   "consequences": [
@@ -28,7 +28,8 @@
   "applies_to": [
     "P1.6",
     "P1.10",
-    "P1.11"
+    "P1.11",
+    "P1.12"
   ],
   "evidence": [
     {
@@ -43,7 +44,7 @@
     },
     {
       "kind": "repo",
-      "ref": "reviews/P1-review.md",
+      "ref": "reviews/P1-review-r1.md",
       "note": "P19-F07"
     }
   ],

@@ -33,7 +33,8 @@
   "consequences": [
     "Отклонены B–D.",
     "Каждая пара — N-процессный тест PostgreSQL в фазе реализации (REQ-ACC-11).",
-    "P1.10 (P19-F06): в порядок добавлены installation_state, feed_partition, billing_schedule и attempt; refund admission не снимает allocation (D35); dispatch-пакет берёт installation_state FOR UPDATE (D34)."
+    "P1.10 (P19-F06): в порядок добавлены installation_state, feed_partition, billing_schedule и attempt; refund admission не снимает allocation (D35); dispatch-пакет берёт installation_state FOR UPDATE (D34).",
+    "Dispatch (Tx B): installation_state FOR UPDATE → money_operation FOR SHARE → attempt CAS; cancel: money_operation FOR UPDATE (D40)."
   ],
   "applies_to": [
     "P1.6",

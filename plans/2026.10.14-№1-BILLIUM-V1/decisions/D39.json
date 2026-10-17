@@ -1,0 +1,75 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:decision:v1",
+  "id": "D39",
+  "title": "Fence writer: водяной знак commit_no, release и recovery при захвате lease без release (P19R2-F01)",
+  "date": "2026-10-17",
+  "status": "accepted",
+  "question": "Как authority отличает writer от копии БД, взявшей lease после остановки writer, если writer менял денежное состояние без dispatch (cancel, применение исхода, allocation, шаг collection) и checkpoint D34 ротируется только dispatch-пакетом (P19R2-F01, INV-02, REQ-FAIL-15)?",
+  "options": [
+    {
+      "id": "A",
+      "text": "Ротировать fence в каждой корневой денежной Tx: admission, cancel, применение исхода и наблюдения, allocation/reallocate, шаг collection получают ticket authority и записывают новый checkpoint",
+      "pros": "Копия устаревает после любого денежного изменения writer; authority видит каждую Tx",
+      "cons": "Вызов authority перед каждой корневой Tx: недоступность authority блокирует cancel, приём исходов и callbacks (Tx C), то есть теряет входящие факты провайдера; вызов вне Tx на горячем пути; checkpoint-строка installation_state под FOR UPDATE у всех денежных Tx"
+    },
+    {
+      "id": "B",
+      "text": "Захват lease после остановки writer — потенциальный restore. Каждая корневая денежная Tx вставляет строку в append-only `money_commit_log` (INSERT без lock); `commit_no` = max значение — водяной знак состояния. Порт WriterAdmission: acquire(installation_ref, incarnation, commit_no), renew, release(commit_no) при штатной остановке после drain. Authority хранит `released_commit_no`. Acquire: первый для incarnation или presented = released → lease, режим active; presented < released → копия, quarantine; lease истёк без release (crash, kill, потеря связи) → режим recovery: dispatch и collection выключены, lookup и применение исходов разрешены, до привилегированной активации оператором с audit (REQ-FAIL-10), которая фиксирует выбранную БД и её commit_no как baseline",
+      "pros": "Закрывает копию после остановки writer без dispatch: штатная остановка оставляет released_commit_no, копия старше его; нештатная — не распознаётся по данным, поэтому не доверяется без решения оператора; ни одной синхронной зависимости от authority на путях cancel/apply/allocation; водяной знак согласован со снимком БД (строка и состояние в одной Tx)",
+      "cons": "Нештатная остановка writer (crash, kill) выключает отправки и collection до активации оператором — меньше доступности; рост журнала (prune оставляет последнюю строку); перезапуск после crash в том же deployment требует активации, пока адаптер не докажет, что прежняя БД та же (адаптер вправе автоматизировать, это деталь P5)"
+    },
+    {
+      "id": "C",
+      "text": "Оставить D34 как есть: checkpoint только в dispatch-пакете, утверждение «копия без последующих dispatch эквивалентна writer»",
+      "cons": "Неверно: cancel и allocation после снятия копии не меняют checkpoint; копия отправляет отменённую операцию и взыскивает оплаченное (P19R2-F01, REQ-FAIL-19)"
+    },
+    {
+      "id": "D",
+      "text": "Периодический heartbeat с водяным знаком вместо release: authority принимает presented ≥ последнего heartbeat",
+      "cons": "Денежные Tx между последним heartbeat и остановкой остаются невидимыми для authority — то же окно, лишь короче; доказательства отсутствия окна нет"
+    }
+  ],
+  "context": "P19R2-F01 (reviews/P1-review-r2.md, blocker): D34 закрыл путь «dispatch после копии», но не путь «денежное изменение без dispatch, затем копия берёт lease». SRC-005 § Rollback gates: «Activation/dispatch admission должна проверяться вне клонированного backup state; до reconciliation effect dispatch выключен».",
+  "decision": "B — Захват lease после остановки writer — потенциальный restore. Каждая корневая денежная Tx вставляет строку в append-only `money_commit_log` (INSERT без lock); `commit_no` = max значение — водяной знак состояния. Порт WriterAdmission: acquire(installation_ref, incarnation, commit_no), renew, release(commit_no) при штатной остановке после drain. Authority хранит `released_commit_no`. Acquire: первый для incarnation или presented = released → lease, режим active; presented < released → копия, quarantine; lease истёк без release (crash, kill, потеря связи) → режим recovery: dispatch и collection выключены, lookup и применение исходов разрешены, до привилегированной активации оператором с audit (REQ-FAIL-10), которая фиксирует выбранную БД и её commit_no как baseline",
+  "rationale": "A ломает приём исходов при недоступности authority; C и D оставляют окно; B переносит доказательство в данные и факт release",
+  "consequences": [
+    "Отклонены A, C, D.",
+    "Новая таблица platform `money_commit_log` (commit_no bigint identity, kind, occurred_at); INSERT в каждой корневой денежной Tx модуля-владельца (admission, cancel, применение исхода и наблюдения, allocation, reallocate, credit note, шаг collection, Tx B); без lock; prune оставляет последнюю строку и все строки выше последнего released_commit_no.",
+    "WriterAdmission получает acquire/renew/release с commit_no; установка lease без release — recovery-режим; активация оператором — единственный выход (REQ-FAIL-10).",
+    "Режим recovery: dispatch, replay, замены и новые collection step выключены; lookup и применение исходов и наблюдений разрешены; admitted-операции из копии не отправляются до активации (отсутствие записи не свежее намерение, REQ-FAIL-25).",
+    "D34: consequences пункт «Остаточное окно отсутствует…» заменён ссылкой на D39.",
+    "Стоимость: crash или kill writer требует активации оператором; штатный deploy (drain + release) не требует."
+  ],
+  "applies_to": [
+    "P1.6",
+    "P1.12"
+  ],
+  "evidence": [
+    {
+      "kind": "repo",
+      "ref": "docs/requirements.md",
+      "note": "REQ-FAIL-15, REQ-FAIL-19, REQ-FAIL-25, REQ-FAIL-10, REQ-FAIL-12, INV-02, INV-03"
+    },
+    {
+      "kind": "repo",
+      "ref": "research/P1-corpus.md",
+      "note": "SRC-005 § Rollback gates"
+    },
+    {
+      "kind": "repo",
+      "ref": "decisions/D34.json",
+      "note": "базовый механизм WriterAdmission"
+    },
+    {
+      "kind": "repo",
+      "ref": "reviews/P1-review-r2.md",
+      "note": "P19R2-F01"
+    }
+  ],
+  "actor": {
+    "provider": "anthropic",
+    "model": "claude-sonnet-5-5",
+    "effort": "high"
+  },
+  "answered_by": "agent"
+}

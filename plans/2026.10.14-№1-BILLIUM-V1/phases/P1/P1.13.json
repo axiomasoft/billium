@@ -1,0 +1,191 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:item:v1",
+  "id": "P1.13",
+  "title": "Корректировка P1.7 по review r2 (P19R2-F02, F05, ACC для F01/F03)",
+  "status": "todo",
+  "summary": "Вторая корректировка (D38) выходов P1.7 по findings P19R2-F02, P19R2-F05 и сценариям каталога для P19R2-F01/F03: каноническая денежная база refund в payment.observation.v1, receipt-коды наблюдения по eventId, ACC-RST для cancel/allocation после снятия копии без dispatch, DB proof dispatch × cancel. Check-p1.py P1.7 и P1.8 зелёные.",
+  "why": "P19R2-F02 (major): refundedTotal charge и наблюдение refund-операции можно вычесть дважды (SRC-023 § 2) — refunded_minor 60.00 вместо 30.00, лишние reallocation_required и credit note (REQ-ACC-10, INV-09). P19R2-F05: receipt parked/conflict определены через commandKey, которого у наблюдения нет. Сценарии каталога для F01/F03 нужны, чтобы P3/P5 имели приёмку.",
+  "scope": {
+    "include": [
+      "P19R2-F02: правило в docs/contracts/billium-contracts-v1.md § payment.observation.v1 и в data-model.md § Словарь (payment.refunded_minor) — какая база меняет payment.refunded_minor (accepted totals charge или наблюдение refund; другое — только сверка), запрет второго вычитания, обработка расхождения двух баз (discrepancy); вектор в fixtures plan `payment/observation`; проверка в ACC-CON-24 или ACC-CON-20; D# с ≥ 2 альтернативами",
+      "P19R2-F05: § Ошибки — для наблюдений Receipt по eventId (явно); billium.observation.parked не терминальный receipt (none или replay текущего статуса custody), убрать «тем же ключом»; conflict — stored по eventId",
+      "docs/acceptance-catalog.md: ACC-RST-04 или новая строка ACC-RST-13 — сценарий «cancel или allocation после снятия копии, без dispatch, затем копия берёт lease» с исходом 0 отправок и 0 collection step (по D#, принятому в P1.12); ACC-CON-07 — DB proof по механизму dispatch × cancel из P1.12; REQ-ACC-11/12 трассировка новых строк",
+      "knowledge/roadmap-proposal.md — только при переносе фаз",
+      "knowledge/P1.7-self-check.md: раздел ## Корректировка P19 r2 — по строке на каждый из P19R2-F02, F05 и добавленные строки каталога для F01/F03"
+    ],
+    "exclude": [
+      "правки data-model.md кроме payment.refunded_minor § Словарь (F02) — прочее принадлежит P1.12",
+      "переписывание решений, не названных в findings",
+      "новые внешние исследования",
+      "production-код и DDL (D5)",
+      "правка reviews/P1-review-r2.md и reviews/P1-review-r1.md"
+    ]
+  },
+  "depends_on": [
+    "P1.12"
+  ],
+  "related": [
+    {
+      "ref": "P1.9",
+      "relation": "follows_up",
+      "note": "findings P19R2-F02, F05 из reviews/P1-review-r2.md (r2)"
+    }
+  ],
+  "decisions": [
+    "D7",
+    "D8",
+    "D31",
+    "D35",
+    "D38"
+  ],
+  "skills": [
+    "architect:data-schema",
+    "php:production-readiness-checklist"
+  ],
+  "reads": [
+    {
+      "path": "docs/contracts/billium-contracts-v1.md",
+      "section": "payment.observation.v1; Ошибки; allocation.reallocate.v1",
+      "why": "Исправляемый артефакт",
+      "required": true
+    },
+    {
+      "path": "docs/acceptance-catalog.md",
+      "section": "ACC-CON; ACC-RST",
+      "why": "Исправляемый артефакт",
+      "required": true
+    },
+    {
+      "path": "docs/architecture/data-model.md",
+      "section": "Словарь данных (payment); Retention и restore (после P1.12)",
+      "why": "База refund; новый механизм F01",
+      "required": true
+    },
+    {
+      "path": "@plan/artifacts/P1-design/check-p1.py",
+      "section": "check_contracts, check_roadmap",
+      "why": "V1, V2",
+      "required": true
+    }
+  ],
+  "task_files": [
+    {
+      "path": "docs/contracts/billium-contracts-v1.md",
+      "change": "modify"
+    },
+    {
+      "path": "docs/architecture/data-model.md",
+      "change": "modify",
+      "note": "только payment.refunded_minor § Словарь"
+    },
+    {
+      "path": "docs/acceptance-catalog.md",
+      "change": "modify"
+    },
+    {
+      "path": "@plan/knowledge/roadmap-proposal.md",
+      "change": "modify",
+      "note": "только при переносе фаз"
+    },
+    {
+      "path": "@plan/knowledge/P1.7-self-check.md",
+      "change": "modify"
+    },
+    {
+      "path": "@plan/decisions/D*.json",
+      "change": "any",
+      "note": "только через plan.py add-decision/decide"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "@plan/reviews/P1-review-r2.md",
+      "role": "input",
+      "note": "r2: P19R2-F02, F05, ожидаемые исправления ACC для F01 и F03"
+    },
+    {
+      "path": "@plan/knowledge/P1.7-self-check.md",
+      "role": "input",
+      "note": "прежние контрпримеры"
+    },
+    {
+      "path": "@plan/research/P1-sources.md",
+      "role": "input",
+      "note": "SRC-023 § 2, § 4"
+    }
+  ],
+  "rules": [
+    "risk-class: data-integrity. Имена полей пилота сохраняются; новое поле REQ-CON-27 вне конверта — только с D# и причиной.",
+    "Каждый D# создаётся plan.py add-decision и принимается plan.py decide --by agent; applies_to включает P1.7 и P1.13; ≥ 2 options.",
+    "Receipt policy — единственный носитель таблица кодов (M-45); абзац под таблицей не противоречит колонке.",
+    "Каждое изменённое нормативное утверждение ссылается на ID с владельцем (D7).",
+    "Каждый finding закрыт или отклонён с D# в self-check; молчаливый пропуск — RED повторного review."
+  ],
+  "guidance": "Порядок: F02 → F05 → ACC-строки. Формат строк каталога — как у соседних строк раздела (N, барьеры, начальные данные, допустимые исходы, INV, DB proof для ACC-CON; checkpoint, потерянный effect/reply, recovery barrier, условие возобновления для ACC-RST). Новые ID — в продолжение нумерации; существующие не переименовывать.",
+  "validation": [
+    {
+      "id": "V1",
+      "cmd": "python3 plans/2026.10.14-№1-BILLIUM-V1/artifacts/P1-design/check-p1.py P1.7",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V2",
+      "cmd": "python3 plans/2026.10.14-№1-BILLIUM-V1/artifacts/P1-design/check-p1.py P1.8",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V3",
+      "cmd": "grep -c 'P19R2-F0[25]' plans/2026.10.14-№1-BILLIUM-V1/knowledge/P1.7-self-check.md",
+      "expect": "вывод ≥ 2",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V4",
+      "cmd": "grep -n -E 'eventId' docs/contracts/billium-contracts-v1.md",
+      "expect": "exit 0, строки в § Ошибки и § payment.observation.v1",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V5",
+      "cmd": "grep -c -E 'ACC-RST-13|P19R2-F01' docs/acceptance-catalog.md",
+      "expect": "вывод ≥ 1",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V6",
+      "cmd": "python3 -I .swissknifeman/launcher.py planner check 2026.10.14-№1-BILLIUM-V1",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V7",
+      "cmd": "git diff --check",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    }
+  ],
+  "deliverables": [
+    "contracts § payment.observation.v1 и § Ошибки исправлены по P19R2-F02/F05",
+    "acceptance-catalog.md: сценарии для F01/F03/F02",
+    "D# базы refund",
+    "knowledge/P1.7-self-check.md § Корректировка P19 r2"
+  ],
+  "route": {
+    "class": "frontier",
+    "effort": "high"
+  },
+  "review": {
+    "mode": "none"
+  },
+  "authority": {
+    "kind": "routine"
+  },
+  "rag": {
+    "need": "none",
+    "status": "not_needed"
+  },
+  "result": null,
+  "updated_at": "2026-10-17T15:53:12Z"
+}

@@ -27,20 +27,21 @@
       "cons": "Окно провайдера конечно: ЮKassa 24 ч (DR02-02), CloudPayments 1 ч (DR02-08); collection на клоне создаёт новые операции с новыми reference"
     }
   ],
-  "context": "P19-F01 (reviews/P1-review.md, blocker): единственный fence против restore/clone — installation_state в копируемой БД. SRC-005 § Rollback gates: «Activation/dispatch admission должна проверяться вне клонированного backup state».",
-  "decision": "A — Порт хоста WriterAdmission (SPI Implement): authority вне БД (сервис хоста или deployment) выдаёт исключительный lease на (installation_ref, incarnation) с монотонным lease_epoch и ротирует writer_checkpoint при каждом допуске dispatch-пакета; Tx B CAS требует ticket с incarnation и checkpoint, равными installation_state, и записывает новый checkpoint; запуск collection требует действующего lease; отказ или несовпадение — quarantine (dispatch_enabled = false, billium.installation.quarantined). Restore — команда authority поднимает active_incarnation; учётные данные authority не хранятся в БД",
+  "context": "P19-F01 (reviews/P1-review-r1.md, blocker): единственный fence против restore/clone — installation_state в копируемой БД. SRC-005 § Rollback gates: «Activation/dispatch admission должна проверяться вне клонированного backup state».",
+  "decision": "A — Порт хоста WriterAdmission (SPI Implement): authority вне БД (сервис хоста или deployment) выдаёт исключительный lease на (installation_ref, incarnation) с монотонным lease_epoch и ротирует writer_checkpoint при каждом допуске dispatch-пакета; Tx B CAS требует ticket с incarnation и checkpoint, равными installation_state, и записывает новый checkpoint; запуск collection требует действующего lease; отказ или несовпадение — quarantine (dispatch_enabled = false, billium.installation.quarantined). Restore — команда authority поднимает active_incarnation; учётные данные authority не хранятся в БД. Дополнено D39: ротация checkpoint — только для клона рядом с живым writer; копия после остановки writer — по D39",
   "rationale": "Только A проверяет допуск вне копируемого состояния (SRC-005 § Rollback gates, REQ-FAIL-15) и закрывает три пути: restore без процедуры (incarnation authority), клон в чужом deployment (нет учётных данных authority), клон рядом с живым writer (lease занят, checkpoint ротирован последним dispatch). B — та же семантика с навязанной инфраструктурой, C не закрывает сырой клон, D ограничен окном провайдера (DR02-02, DR02-08).",
   "consequences": [
     "Отклонены B (как норма; допустим как адаптер A), C, D.",
     "installation_state получает writer_checkpoint и lease_epoch; Tx B берёт installation_state FOR UPDATE (сериализация dispatch-пакетов инсталляции), admission — FOR SHARE.",
     "Без настроенного адаптера WriterAdmission модуль execution не стартует (fail-closed); в embedded-commerz execution выключен и порт не нужен.",
-    "Остаточное окно отсутствует для денежных эффектов: любой dispatch после снятия копии ротирует checkpoint, поэтому копия без последующих dispatch эквивалентна writer по отправкам.",
+    "Окно «копия после остановки writer без dispatch» не закрыто checkpoint-ом dispatch-пакета: закрыто D39 (водяной знак commit_no, release, recovery при захвате lease без release); прежнее утверждение об отсутствии остаточного окна отменено (P19R2-F01).",
     "Неподтверждённую ротацию (Tx B откатилась после ответа authority) повторяет только держатель lease; копия держателем не является."
   ],
   "applies_to": [
     "P1.6",
     "P1.10",
-    "P1.11"
+    "P1.11",
+    "P1.12"
   ],
   "evidence": [
     {
@@ -60,7 +61,7 @@
     },
     {
       "kind": "repo",
-      "ref": "reviews/P1-review.md",
+      "ref": "reviews/P1-review-r1.md",
       "note": "P19-F01"
     }
   ],
