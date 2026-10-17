@@ -1,11 +1,20 @@
 # Billium
 
-Billing system implemented in **PHP** and **Dart**.
+Billing for the software seller of the Axioma ecosystem, implemented in **PHP**.
+**Dart** is the contracts client and SDK: it builds commands and reads outcomes, but never writes
+money state.
 
-The repository currently contains development environment configuration and an executable
-implementation plan.
-Frameworks, runtime versions, persistence, package layout, and billing APIs
-will be defined during implementation.
+The repository contains the development environment configuration, the executable plan
+`plans/2026.10.14-№1-BILLIUM-V1`, and the P1 design. Production code starts in P2.
+
+- [Requirements and traceability](docs/requirements.md)
+- [Target architecture](docs/architecture/target-architecture.md) and
+  [data model](docs/architecture/data-model.md)
+- [billium-contracts v1](docs/contracts/billium-contracts-v1.md)
+- [Acceptance catalog](docs/acceptance-catalog.md)
+
+Stack: PHP 8.4+, Laravel 13, PostgreSQL 16+; packages `axiomasoft/billium-*` in `packages/<name>/`
+(embedded Laravel package and server profile from one codebase).
 
 ## Agent environment
 

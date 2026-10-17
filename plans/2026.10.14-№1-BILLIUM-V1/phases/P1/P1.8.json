@@ -2,7 +2,7 @@
   "$schema": "urn:swissknifeman:task:plan:item:v1",
   "id": "P1.8",
   "title": "Roadmap P2–P10, вопросы владельцу, синхронизация Brain и entrypoint",
-  "status": "todo",
+  "status": "done",
   "summary": "Подвести итог P1: roadmap-proposal P2–P10, owner-questions с рекомендациями, Brain-правки по D4, уточнённая роль Dart в entrypoint и README.",
   "why": "Скелеты P2–P10 провизорны (D1). Без сводки следующая design-сессия заново прочитает всю P1. Владелец просил собрать вопросы, а не решать их. RAG: repo-grounded (brief/00 §3 п. 9, §6, §7; brief/01).",
   "scope": {
@@ -62,18 +62,6 @@
       "path": ".ai/guidelines/agent-entrypoint.md"
     }
   ],
-  "artifacts": [
-    {
-      "path": "@plan/knowledge/roadmap-proposal.md",
-      "role": "input",
-      "note": "Вход для P2 следующей design-сессии (создаётся в этом item)"
-    },
-    {
-      "path": "@plan/research/P1-sources.md",
-      "role": "input",
-      "note": "Brain-правки (§ 8)"
-    }
-  ],
   "task_files": [
     {
       "path": "@plan/knowledge/roadmap-proposal.md",
@@ -104,6 +92,18 @@
       "path": "CLAUDE.md",
       "change": "modify",
       "note": "только через build-agent-docs.sh"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "@plan/knowledge/roadmap-proposal.md",
+      "role": "input",
+      "note": "Вход для P2 следующей design-сессии (создаётся в этом item)"
+    },
+    {
+      "path": "@plan/research/P1-sources.md",
+      "role": "input",
+      "note": "Brain-правки (§ 8)"
     }
   ],
   "rules": [
@@ -153,5 +153,33 @@
     "need": "none",
     "status": "not_needed"
   },
-  "updated_at": "2026-10-17T07:28:24Z"
+  "result": {
+    "started_at": "2026-10-17T11:11:23Z",
+    "finished_at": "2026-10-17T11:15:09Z",
+    "executor": {
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "session": "c4fe3d1f-636d-44cb-9971-2edeb900d6f8"
+    },
+    "notes": "roadmap P2–P10 (9 фаз как в скелете; P5 зависит от P3, не от P4 — D28); owner-questions: 51 строка (I-01/02/16/18/28, PSP, валюты, горизонты, gates, BRAIN-REPO, 24 открытых DR/CL, CONFLICT-01…13); Brain локальный commit 22ee611f (Package-Status S1, Bridge-Catalog, CD-16 предложено), без push; entrypoint/README: Dart — клиент контрактов, ссылки на docs; AGENTS/CLAUDE пересобраны; check-p1 pre-review GREEN",
+    "checks": [
+      {
+        "id": "V1",
+        "exit": 0,
+        "at": "2026-10-17T11:15:09Z"
+      },
+      {
+        "id": "V2",
+        "exit": 0,
+        "at": "2026-10-17T11:15:09Z"
+      },
+      {
+        "id": "V3",
+        "exit": 0,
+        "at": "2026-10-17T11:15:09Z"
+      }
+    ]
+  },
+  "updated_at": "2026-10-17T11:15:09Z"
 }
