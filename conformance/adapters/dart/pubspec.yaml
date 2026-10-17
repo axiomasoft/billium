@@ -1,0 +1,14 @@
+name: billium_contracts_adapter
+description: Conformance adapter of billium_contracts for Dart (not part of the package delivery).
+version: 0.0.0
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  billium_contracts:
+    path: ../../../packages/contracts-dart
+
+dev_dependencies:
+  lints: ^6.0.0

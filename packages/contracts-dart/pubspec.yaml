@@ -9,6 +9,9 @@ environment:
 billium:
   spec_rev: "2026-10"
 
+dependencies:
+  crypto: ^3.0.0
+
 dev_dependencies:
   lints: ^6.0.0
   test: ^1.25.0

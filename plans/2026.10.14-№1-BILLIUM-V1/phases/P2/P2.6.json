@@ -2,7 +2,7 @@
   "$schema": "urn:swissknifeman:task:plan:item:v1",
   "id": "P2.6",
   "title": "Dart billium_contracts и Dart-адаптер",
-  "status": "todo",
+  "status": "done_with_deviations",
   "summary": "Пакет packages/contracts-dart: Money (BigInt, int64), Currency, MoneyMath, ProblemCode, envelopes, Codec с JCS и digest (D32); Dart conformance-адаптер; срез корпуса с профилем dart зелёный, dart analyze --fatal-infos чист.",
   "why": "Dart — клиент контрактов (REQ-OWN-18, REQ-CON-26): суммы, округление и ошибки должны совпасть с PHP до принятия wire (REQ-CON-03). Риск: int/double Dart теряют точность > 2^53 на web (DR04-13) и JSON number проходит как double — поэтому BigInt, проверка `is num` и запрет dart2js (REQ-CON-37).",
   "scope": {
@@ -150,6 +150,46 @@
     "need": "none",
     "status": "not_needed"
   },
-  "result": null,
-  "updated_at": "2026-10-17T12:03:00Z"
+  "result": {
+    "started_at": "2026-10-17T17:14:14Z",
+    "finished_at": "2026-10-17T17:37:16Z",
+    "executor": {
+      "provider": "claude",
+      "model": "sonnet-5.5",
+      "effort": "high",
+      "session": "a33b6574-0db3-4db9-904e-88de415f0991"
+    },
+    "notes": "packages/contracts-dart: Money/Currency (BigInt, int64), MoneyMath, Codec (strict decode, RFC 8785 JCS собственным сериализатором, sha256 через package:crypto, digest D32), ProblemCode, 15 сгенерированных envelope-классов (export-dart.py); Dart-адаптер: корпус 333 pass + 1 control must-fail, baseline пуст; dart analyze --fatal-infos чист, 67 тестов; double в lib/ отсутствует (тест). Найдено расхождение с PHP на ключе с ведущим NUL (см. difficulty), P2.5 требует follow-up.",
+    "deviations": [
+      "pubspec.lock не коммитятся (.gitignore); добавлены packages/contracts-dart/README.md и ссылка в корневом README.md вне task_files"
+    ],
+    "checks": [
+      {
+        "id": "V1",
+        "exit": 0,
+        "at": "2026-10-17T17:37:16Z"
+      },
+      {
+        "id": "V2",
+        "exit": 0,
+        "at": "2026-10-17T17:37:16Z"
+      },
+      {
+        "id": "V3",
+        "exit": 0,
+        "at": "2026-10-17T17:37:16Z"
+      },
+      {
+        "id": "V4",
+        "exit": 0,
+        "at": "2026-10-17T17:37:16Z"
+      },
+      {
+        "id": "V5",
+        "exit": 0,
+        "at": "2026-10-17T17:37:16Z"
+      }
+    ]
+  },
+  "updated_at": "2026-10-17T17:37:16Z"
 }
