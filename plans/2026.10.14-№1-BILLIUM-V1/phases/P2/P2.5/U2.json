@@ -25,8 +25,24 @@
     "effort": "high"
   },
   "mode": "either",
-  "status": "todo",
-  "outcome": null,
-  "updated_at": "2026-10-17T12:02:33Z",
+  "status": "accepted",
+  "outcome": {
+    "agent": {
+      "provider": "claude",
+      "model": "sonnet-5.5",
+      "effort": "high"
+    },
+    "at": "2026-10-17T17:30:45Z",
+    "notes": "V1, V2, V3 green",
+    "changed": [
+      "packages/contracts/src",
+      "packages/contracts/resources",
+      "packages/contracts/tests",
+      "conformance/adapters/php",
+      "conformance/baseline/php.json",
+      "scripts/spec/export-php.py"
+    ]
+  },
+  "updated_at": "2026-10-17T17:30:45Z",
   "kind": "implementation"
 }

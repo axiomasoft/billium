@@ -4,7 +4,10 @@
     "type": "library",
     "license": "proprietary",
     "require": {
-        "php": "^8.4"
+        "php": "^8.4",
+        "ext-mbstring": "*",
+        "brick/math": "~0.15.0 || ~0.16.0 || ~0.17.0 || ~0.18.0 || ~0.19.0 || ~0.20.0 || ^1.0",
+        "brick/money": "^0.15"
     },
     "autoload": {
         "psr-4": {

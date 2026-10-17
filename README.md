@@ -12,6 +12,7 @@ The repository contains the development environment configuration, the executabl
   [data model](docs/architecture/data-model.md)
 - [billium-contracts v1](docs/contracts/billium-contracts-v1.md)
 - [Acceptance catalog](docs/acceptance-catalog.md)
+- [PHP contracts package](packages/contracts/README.md): `Codec`, `Money`, `MoneyMath`, envelopes
 
 Stack: PHP 8.4+, Laravel 13, PostgreSQL 16+; packages `axiomasoft/billium-*` in `packages/<name>/`
 (embedded Laravel package and server profile from one codebase).

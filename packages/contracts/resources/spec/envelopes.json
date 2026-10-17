@@ -1,0 +1,148 @@
+{
+  "payment.execute.v1": {
+    "schemaId": "urn:billium:spec:2026-10:payment/execute.v1.json",
+    "variants": [
+      {
+        "class": "ExecutePayment",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "payment.refund.v1": {
+    "schemaId": "urn:billium:spec:2026-10:payment/refund.v1.json",
+    "variants": [
+      {
+        "class": "RequestRefund",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "payment.cancel.v1": {
+    "schemaId": "urn:billium:spec:2026-10:payment/cancel.v1.json",
+    "variants": [
+      {
+        "class": "CancelOperation",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "payment.find.v1": {
+    "schemaId": "urn:billium:spec:2026-10:payment/find.v1.json",
+    "variants": [
+      {
+        "class": "FindResult",
+        "digestMember": "digest",
+        "verifyDigest": false,
+        "requires": "status"
+      },
+      {
+        "class": "FindOperation",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "payment.admission.v1": {
+    "schemaId": "urn:billium:spec:2026-10:payment/admission.v1.json",
+    "variants": [
+      {
+        "class": "PaymentAdmission",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "payment.outcome.v1": {
+    "schemaId": "urn:billium:spec:2026-10:payment/outcome.v1.json",
+    "variants": [
+      {
+        "class": "PaymentOutcome",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "payment.observation.v1": {
+    "schemaId": "urn:billium:spec:2026-10:payment/observation.v1.json",
+    "variants": [
+      {
+        "class": "PaymentObservation",
+        "digestMember": "contentDigest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "usage.fact.v1": {
+    "schemaId": "urn:billium:spec:2026-10:usage/fact.v1.json",
+    "variants": [
+      {
+        "class": "UsageFact",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "usage.receipt.v1": {
+    "schemaId": "urn:billium:spec:2026-10:usage/receipt.v1.json",
+    "variants": [
+      {
+        "class": "UsageReceipt",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "obligation.prepare.v1": {
+    "schemaId": "urn:billium:spec:2026-10:obligation/prepare.v1.json",
+    "variants": [
+      {
+        "class": "PrepareObligation",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "occurrence.ensure.v1": {
+    "schemaId": "urn:billium:spec:2026-10:occurrence/ensure.v1.json",
+    "variants": [
+      {
+        "class": "EnsureBillingOccurrence",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "collection.authorize.v1": {
+    "schemaId": "urn:billium:spec:2026-10:collection/authorize.v1.json",
+    "variants": [
+      {
+        "class": "AuthorizeCollection",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "billium.query.v1": {
+    "schemaId": "urn:billium:spec:2026-10:query/query.v1.json",
+    "variants": [
+      {
+        "class": "BilliumQuery",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "billium.event.v1": {
+    "schemaId": "urn:billium:spec:2026-10:event/event.v1.json",
+    "variants": [
+      {
+        "class": "EventEnvelope",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  }
+}

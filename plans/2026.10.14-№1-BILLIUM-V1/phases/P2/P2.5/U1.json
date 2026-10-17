@@ -19,8 +19,21 @@
   },
   "mode": "self",
   "instructions": "Сначала Money/Currency parse/format и адаптер ops money.*; затем MoneyMathMoneyPhp и MoneyMathBrick; переключатель реализации — env BILLIUM_MONEY_IMPL только на время U1, удаляется вместе с проигравшей. D#: plan.py add-decision (альтернативы MoneyPHP, Brick Money, собственная арифметика на GMP; applies_to P2.5) и plan.py decide --by agent; evidence: DR04-03, DR04-06, DR04-24, CL-117 и отчёты runner.",
-  "status": "todo",
-  "outcome": null,
-  "updated_at": "2026-10-17T12:02:32Z",
+  "status": "accepted",
+  "outcome": {
+    "agent": {
+      "provider": "claude",
+      "model": "sonnet-5.5",
+      "effort": "high"
+    },
+    "at": "2026-10-17T17:30:43Z",
+    "notes": "V2 green after the choice: pass 333, control fail 1",
+    "changed": [
+      "packages/contracts/src/Internal/Money",
+      "packages/contracts/composer.json",
+      "composer.lock"
+    ]
+  },
+  "updated_at": "2026-10-17T17:30:43Z",
   "kind": "preparation"
 }

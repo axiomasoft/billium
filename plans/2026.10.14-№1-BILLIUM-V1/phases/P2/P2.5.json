@@ -2,7 +2,7 @@
   "$schema": "urn:swissknifeman:task:plan:item:v1",
   "id": "P2.5",
   "title": "PHP axiomasoft/billium-contracts, PHP-адаптер и выбор money-библиотеки (CL-117)",
-  "status": "todo",
+  "status": "done_with_deviations",
   "summary": "Пакет packages/contracts: Money/Currency/MoneyMath, ProblemCode, envelopes ревизии 2026-10, Codec с JCS и digest (D32), атрибуты Api/Spi; PHP conformance-адаптер; полный корпус fixtures зелёный в PHP (baseline пуст для наборов P2); D# выбора MoneyPHP или Brick Money по прогону money/*.",
   "why": "PHP — единственный денежный writer (D16); ошибка parse/allocation/digest здесь проникает во все фазы. CL-117 и DR04-24 открыты: MoneyPHP раздаёт остаток через float (DR04-03), что нарушает REQ-CON-30 и M-48 — выбор только по прогону, не по документации.",
   "scope": {
@@ -176,6 +176,52 @@
     "U1",
     "U2"
   ],
-  "result": null,
-  "updated_at": "2026-10-17T12:02:58Z"
+  "result": {
+    "started_at": "2026-10-17T17:14:14Z",
+    "finished_at": "2026-10-17T17:31:00Z",
+    "executor": {
+      "provider": "claude",
+      "model": "sonnet-5.5",
+      "effort": "high",
+      "session": "a33b6574-0db3-4db9-904e-88de415f0991"
+    },
+    "notes": "packages/contracts: Codec (decode/encode/canonicalize/digest, JCS, строгий валидатор схем ревизии без внешней библиотеки), Money/Currency/MoneyMath на Brick Money (D44: 149/149 против MoneyPHP 146/149, float в allocate), ProblemCode, 15 сгенерированных envelope-классов (export-php.py); PHP-адаптер: корпус 333 pass + 1 control must-fail, baseline пуст; Pest 63 теста, Pint/PHPStan max/Rector чисты. Риск денег и public API: рекомендуется planner:review.",
+    "deviations": [
+      "Добавлены scripts/spec/export_common.py (общая модель экспортёров PHP/Dart), packages/contracts/README.md и ссылка в корневом README.md — вне task_files"
+    ],
+    "checks": [
+      {
+        "id": "V1",
+        "exit": 0,
+        "at": "2026-10-17T17:31:00Z"
+      },
+      {
+        "id": "V2",
+        "exit": 0,
+        "at": "2026-10-17T17:31:00Z"
+      },
+      {
+        "id": "V3",
+        "exit": 0,
+        "at": "2026-10-17T17:31:00Z"
+      },
+      {
+        "id": "V4",
+        "exit": 0,
+        "at": "2026-10-17T17:31:00Z"
+      },
+      {
+        "id": "V5",
+        "exit": 0,
+        "at": "2026-10-17T17:31:00Z"
+      },
+      {
+        "id": "V6",
+        "exit": 0,
+        "at": "2026-10-17T17:31:00Z"
+      }
+    ],
+    "decision": "D44"
+  },
+  "updated_at": "2026-10-17T17:31:00Z"
 }
