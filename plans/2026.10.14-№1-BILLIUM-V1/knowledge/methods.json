@@ -1,0 +1,1061 @@
+{
+  "schema": "billium-methods/v1",
+  "generated": "2026-10-17",
+  "item": "PLAN1.P1.5",
+  "scope": "Методы разработки Billium из соседних репозиториев (brief.json § 3 п. 4; research/P1-sources.md § 6, § 7). Вердикт относится к практике как методу; выбор архитектуры Billium — P1.6.",
+  "snapshots": [
+    {
+      "repo": "agentools",
+      "commit": "74bf925",
+      "date": "2026-10-08",
+      "note": "на машине нет; прочитан read-only shallow-клон github.com/axiomasoft/agentools (журнал P1.5, deviation)"
+    },
+    {
+      "repo": "chatom",
+      "commit": "b161ceec",
+      "note": "локально"
+    },
+    {
+      "repo": "azguard",
+      "commit": "93258463",
+      "note": "локально"
+    },
+    {
+      "repo": "commerz",
+      "commit": "ad0232e",
+      "note": "локально"
+    },
+    {
+      "repo": "vaulter",
+      "commit": "2dae001f",
+      "note": "локально"
+    },
+    {
+      "repo": "erp-sdk",
+      "commit": "825fd60",
+      "date": "2026-06-13",
+      "note": "на машине нет; в клоне main есть только docs/, contracts/axioma_contracts/ и versions.yaml отсутствуют"
+    }
+  ],
+  "verdicts": {
+    "accept": "практика переносится как есть",
+    "adapt": "практика переносится с изменением под деньги, embedded-профиль или single writer; отличие названо в reason",
+    "reject": "практика не переносится; причина — отличие Billium; phase «—»"
+  },
+  "practices": [
+    {
+      "id": "M-01",
+      "topic": "spec-revisions",
+      "practice": "Нормативная спецификация живёт в датированном каталоге ревизии; имя каталога финально, замороженная ревизия неизменяема, несовместимое изменение выходит новой датированной ревизией (OVR-22, OVR-23).",
+      "source": {
+        "repo": "agentools",
+        "path": "spec/revisions/2026-09/00_overview.md"
+      },
+      "verdict": "adapt",
+      "reason": "Billium обязан совмещать ревизию спеки с версиями envelope пилота (payment.execute.v1 / payment.outcome.v1, brief § 3 п. 7): у денежного сообщения версия — в его типе, и смена версии сообщения не должна ждать новой ревизии всего корпуса.",
+      "billium": "billium-contracts ведёт датированную ревизию спеки; каждый envelope несёт собственную версию `.vN`; ревизия фиксирует набор версий envelope; frozen-ревизия не правится, новая версия envelope — только в новой ревизии.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-02",
+      "topic": "spec-revisions",
+      "practice": "Нормативное требование — только строка правила `**<ID> (<RFC 2119>, <уровень>).**`; индекс правил `rules.json` — производный артефакт генератора, ручная правка запрещена (OVR-7, CFH-15).",
+      "source": {
+        "repo": "agentools",
+        "path": "spec/revisions/2026-09/rules.json"
+      },
+      "verdict": "adapt",
+      "reason": "В Billium адрес нормы уже задан D7: REQ/INV и D# с владельцем. Второй словарь маркеров дал бы два носителя одной нормы.",
+      "billium": "Строки правил спеки billium-contracts ссылаются на REQ/INV (D7) и несут собственный маркер документа; rules index генерируется и проверяется на свежесть в CI.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-03",
+      "topic": "spec-revisions",
+      "practice": "Digest-qualified lock ревизии (`revision.lock.json`): sha-256 каждого нормативного файла, генерируется tooling, ручная правка запрещена.",
+      "source": {
+        "repo": "agentools",
+        "path": "spec/revisions/2026-09/revision.lock.json"
+      },
+      "verdict": "accept",
+      "reason": "Защищает frozen-ревизию от тихой правки байтов; для денежных контрактов это то же требование, что для AgenTools.",
+      "billium": "Ревизия billium-contracts получает lock-файл с digest нормативных документов и схем; заморозка ревизии проверяет совпадение lock.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-04",
+      "topic": "json-schema",
+      "practice": "Схемы — JSON Schema 2020-12; перечисление, встречающееся больше одного раза, объявлено одним узлом `$defs`; каждый `$ref` резолвится офлайн; `description` без нормативных слов (OVR-15, OVR-16, OVR-17).",
+      "source": {
+        "repo": "agentools",
+        "path": "spec/revisions/2026-09/schema/"
+      },
+      "verdict": "accept",
+      "reason": "Схема — договор о форме для PHP и Dart; дубль перечисления статусов денежной операции разошёлся бы молча.",
+      "billium": "Схемы envelope, MoneyWire, obligation/invoice queries и ошибок лежат в ревизии; статусы и коды — один `$defs` на словарь.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-05",
+      "topic": "json-schema",
+      "practice": "Пример в документе ревизии объявляет схему первой строкой (`// example: <схема>`) и проверяется против неё; корпус содержит вектор с лишним полем для проверки закрытой схемы (OVR-18, CFH-48, CFH-49).",
+      "source": {
+        "repo": "agentools",
+        "path": "spec/revisions/2026-09/11_conformance-harness.md"
+      },
+      "verdict": "accept",
+      "reason": "Непроверенный пример денежного envelope становится альтернативным источником нормы для интеграторов.",
+      "billium": "Все примеры в docs/contracts и спеке валидируются линтером ревизии; закрытые схемы входящих команд имеют отрицательный вектор с неизвестным полем.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-06",
+      "topic": "vectors-golden",
+      "practice": "Fixtures — language-neutral JSON vectors: самодостаточный файл с `id`, `spec_refs`, `given`, `script`, `expect`; оба SDK гоняют один и тот же набор.",
+      "source": {
+        "repo": "agentools",
+        "path": "fixtures/README.md"
+      },
+      "verdict": "accept",
+      "reason": "Только общий корпус держит PHP и Dart честными (DR04-22: общая — спецификация и fixtures, не код).",
+      "billium": "fixtures/ billium-contracts: vectors для MoneyWire, rounding/allocation, envelope оплат/возвратов и ошибок; spec_refs указывают на REQ/INV и маркеры спеки.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-07",
+      "topic": "vectors-golden",
+      "practice": "Golden-файл — UTF-8 без BOM, ровно один завершающий LF, сравнение байт-в-байт; эталон доставляется строкой байт и не участвует в вычислении (CFH-35, CFH-39, CFH-40).",
+      "source": {
+        "repo": "agentools",
+        "path": "fixtures/golden/"
+      },
+      "verdict": "adapt",
+      "reason": "Для денег golden нужен прежде всего для канонической формы суммы, округления и раскладки остатка, а не для сценариев агента; числа в JSON ненадёжны (DR04-12, DR04-13).",
+      "billium": "golden/money: каноническая MoneyWire-строка, результаты rounding и allocation на граничных суммах (RUB 2, JPY 0, KWD 3 — DR04-11); golden/idempotency: digest payload.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-08",
+      "topic": "vectors-golden",
+      "practice": "Golden snapshots продуктового вывода (схема БД, wire) сравниваются с ожидаемыми fixtures; фактический вывод приложения не модифицируется под эталон.",
+      "source": {
+        "repo": "chatom",
+        "path": "scripts/golden.php"
+      },
+      "verdict": "accept",
+      "reason": "Снимок схемы и wire-ответов ловит незаявленное изменение хранимых денежных форм.",
+      "billium": "Golden-снимок DDL ядра и ответов obligation/invoice queries; обновление эталона — отдельный осознанный коммит.",
+      "phase": "P3"
+    },
+    {
+      "id": "M-09",
+      "topic": "conformance-runner",
+      "practice": "Conformance runner исполняет vectors против отдельного процесса-адаптера по протоколу start → config → run × N → stop; адаптер не получает `expect`; статусы отчёта закрыты, `skip` не существует.",
+      "source": {
+        "repo": "agentools",
+        "path": "conformance/README.md"
+      },
+      "verdict": "adapt",
+      "reason": "Dart — клиент контрактов и SDK, не второй денежный writer (правило плана): Dart-адаптер не исполняет оплаты, а проверяет codec, валидацию envelope и MoneyWire.",
+      "billium": "Runner гоняет PHP-адаптер на полном корпусе и Dart-адаптер на срезе contract/codec; поведенческие векторы денежных операций исполняет только PHP writer.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-10",
+      "topic": "conformance-runner",
+      "practice": "Трассировка «правило ↔ вектор» проверяется в обе стороны; `Not testable` допустим только с причиной в строке правила и не засчитывается как pass (CFH-13, CFH-14, CFH-20, CFH-21).",
+      "source": {
+        "repo": "agentools",
+        "path": "spec/revisions/2026-09/11_conformance-harness.md"
+      },
+      "verdict": "accept",
+      "reason": "Без обратной трассировки инвариант денег без вектора выглядит покрытым.",
+      "billium": "Каждый INV и нормативная строка спеки имеет вектор или явную причину Not testable; каталог приёмки ссылается на те же ID.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-11",
+      "topic": "conformance-runner",
+      "practice": "Известные отказы — отдельный baseline-файл с `reason`, `owner`, `since`, `issue`; прогон зелёный только при совпадении множества фактических отказов с baseline; исчезнувшая запись — ошибка (CFH-22, CFH-23, CFH-24).",
+      "source": {
+        "repo": "agentools",
+        "path": "conformance/baseline/"
+      },
+      "verdict": "adapt",
+      "reason": "Для денежных инвариантов known-failure не может закрывать релиз: исключение допустимо только для нереализованного среза, не для нарушения инварианта.",
+      "billium": "Baseline допускает записи только для векторов ещё не начатых фаз; запись по INV денежной корректности блокирует release gate P10.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-12",
+      "topic": "conformance-runner",
+      "practice": "Lockstep: манифест каждого SDK — единственный носитель ревизии (`composer.json` `extra.<pkg>.spec_rev`, `pubspec.yaml` `<pkg>.spec_rev`); runner сверяет ревизию корпуса, тег и объявления SDK (CFH-45 … CFH-47).",
+      "source": {
+        "repo": "agentools",
+        "path": "php/composer.json"
+      },
+      "verdict": "accept",
+      "reason": "PHP и Dart выпускаются независимо; без lockstep клиент тихо говорит на другой ревизии денежного контракта.",
+      "billium": "billium-contracts PHP и Dart объявляют spec_rev в своих манифестах; CI красный при расхождении.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-13",
+      "topic": "conformance-runner",
+      "practice": "Уровни соответствия L1/L2/L3 с порогом заявления (100 % L1, ≥ 80 % L2, L3 без порога) позволяют SDK заявлять частичную зрелость.",
+      "source": {
+        "repo": "agentools",
+        "path": "spec/revisions/2026-09/00_overview.md"
+      },
+      "verdict": "reject",
+      "reason": "Частично соответствующий денежный контракт — это расхождение сумм или статусов между системами; для Billium допустим только профиль, пройденный на 100 %, а различие embedded/server выражается составом профиля, а не процентом.",
+      "billium": "Вместо уровней — профили (например contracts-only, embedded writer, server) с порогом 100 % каждого заявленного профиля.",
+      "phase": "—"
+    },
+    {
+      "id": "M-14",
+      "topic": "conformance-runner",
+      "practice": "Классы evidence разделены: кросс-языковая семантика, результаты JCS-оракула и совместимость с внешним протоколом не подменяют друг друга; exactly-once внешних эффектов не обещается.",
+      "source": {
+        "repo": "agentools",
+        "path": "README.md"
+      },
+      "verdict": "adapt",
+      "reason": "Billium добавляет свой класс: исход у провайдера. Транспортный ACK — не бизнес-receipt (правило плана), поэтому conformance SDK не доказывает исполнение денег.",
+      "billium": "Отчёты разделяют: conformance contracts, паритет PHP/Dart, провайдерские сценарии тест-драйвера; ни один не заявляется как доказательство exactly-once.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-15",
+      "topic": "jcs-oracle",
+      "practice": "Независимый JCS-оракул (RFC 8785) вендорится с пином upstream-коммита и лицензией; ожидаемые байты авторитетны, вывод SDK не используется для их регенерации.",
+      "source": {
+        "repo": "agentools",
+        "path": "conformance/oracles/jcs/PROVENANCE.md"
+      },
+      "verdict": "adapt",
+      "reason": "Digest idempotency payload должен совпадать в PHP и Dart, но I-JSON ограничивает числа double (DR04-12): денежные суммы в канонизируемом документе — только строки.",
+      "billium": "Пиннутый JCS-оракул проверяет канонизацию payload для digest; схема запрещает JSON number для сумм и количеств, чтобы канонизация не теряла точность.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-16",
+      "topic": "jcs-oracle",
+      "practice": "Корпус содержит контрольную golden-пару, доказывающую, что раннер действительно сравнивает канонизацию, а не принимает любой вывод (CFH-41).",
+      "source": {
+        "repo": "agentools",
+        "path": "fixtures/golden/jcs/"
+      },
+      "verdict": "accept",
+      "reason": "Без отрицательного контроля зелёный прогон канонизации не отличим от отключённой проверки.",
+      "billium": "Контрольный вектор с заведомо неверным эталоном обязан краснеть в обоих адаптерах.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-17",
+      "topic": "php-sdk",
+      "practice": "PHP SDK — тонкая библиотека контрактов: production autoload только `src/`; TestKit и Reference — `autoload-dev`, не попадают в архив; поверхность описана API.md и manifest; PHPStan level max.",
+      "source": {
+        "repo": "agentools",
+        "path": "php/"
+      },
+      "verdict": "accept",
+      "reason": "Совпадает с правилом стека плана (PHPStan max) и не даёт testkit-дублям попасть в денежный runtime.",
+      "billium": "Пакет billium-contracts PHP: value objects, envelope, codec; testkit отдельно и только dev; архивный consumer-тест проверяет, что testkit не автозагружается.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-18",
+      "topic": "php-sdk",
+      "practice": "Production-гарантии (replay protection, lease fencing, event collision) даются только durable PostgreSQL-адаптерами; in-memory реализации — testkit-only.",
+      "source": {
+        "repo": "agentools",
+        "path": "php/README.md"
+      },
+      "verdict": "adapt",
+      "reason": "У AgenTools PostgreSQL — опция; Billium PostgreSQL-only (стек плана, PostgreSQL ≥ 16), денежные гарантии без durable хранилища не существуют.",
+      "billium": "Writer Billium не имеет in-memory режима в production; in-memory store допустим только в testkit для unit-тестов без инвариантов конкурентности.",
+      "phase": "P3"
+    },
+    {
+      "id": "M-19",
+      "topic": "dart-sdk",
+      "practice": "Dart SDK образует пару с PHP через conformance fixtures, а не через общий runtime; testkit — отдельный import; `dart analyze --fatal-infos`; `publish_to: none` до решения владельца.",
+      "source": {
+        "repo": "agentools",
+        "path": "dart/agentools/README.md"
+      },
+      "verdict": "adapt",
+      "reason": "Dart в Billium — клиент контрактов и SDK, не второй денежный writer: пакет ограничен типами, codec и клиентом API.",
+      "billium": "billium-contracts Dart (P2): MoneyWire, envelope, ошибки и codec на общем корпусе; Dart SDK клиента server-профиля (P8) поверх них.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-20",
+      "topic": "dart-sdk",
+      "practice": "Dart-реализация повторяет runtime целиком: confirmation, idempotency coordinator, journal, persistence.",
+      "source": {
+        "repo": "agentools",
+        "path": "dart/agentools/lib/src/"
+      },
+      "verdict": "reject",
+      "reason": "Один исполнитель на денежную операцию на всю её жизнь и Dart не второй writer (правила плана): Dart-копия journal/idempotency создала бы второго writer денег.",
+      "billium": "В Dart нет journal, idempotency store и persistence денежных сущностей; Dart предъявляет idempotency key и читает исходы.",
+      "phase": "—"
+    },
+    {
+      "id": "M-21",
+      "topic": "minimal-core-modules",
+      "practice": "Ядро намеренно мало; модули и companion-пакеты подключаются только через контракты ядра; ядро владеет механизмом outbox, его таблицей и relay.",
+      "source": {
+        "repo": "chatom",
+        "path": "docs/architecture/core-boundary.md"
+      },
+      "verdict": "adapt",
+      "reason": "У Billium граница ядра проходит по владению деньгами: всё, что пишет obligations, invoices, allocations и journal, — ядро embedded-профиля; модуль не получает права записи денежной сущности.",
+      "billium": "Модули (документы, collection, server API) взаимодействуют с ядром только через его контракты и события; новый пакет — только с потребителем и инвариантом (extraction gate, brief § 3 п. 6).",
+      "phase": "P3"
+    },
+    {
+      "id": "M-22",
+      "topic": "minimal-core-modules",
+      "practice": "Разделение по ответственности, никогда по монетизации: нет 'pro'-имён, edition-переключателей, альтернативных правил решения и второй схемы (AzGuard B14); каждый модуль, пакет и контракт обоснован существующим поведением (B15).",
+      "source": {
+        "repo": "azguard",
+        "path": "plans/2026.10.10-№1-AZGUARD-CORE-STABILIZATION/brief.json"
+      },
+      "verdict": "accept",
+      "reason": "Для биллинга вторая схема или edition-ветка означает две версии правил денег.",
+      "billium": "Embedded и server — профили одного ядра и одной схемы; различаются составом модулей, не правилами расчёта.",
+      "phase": "P3"
+    },
+    {
+      "id": "M-23",
+      "topic": "minimal-core-modules",
+      "practice": "Feature-пакет зависит только от core; взаимодействие — через core ports и события; пакет пишет только в таблицы своих существительных; межпакетных FK нет, ссылки — typed ID или `*_ref`.",
+      "source": {
+        "repo": "commerz",
+        "path": "docs/architecture/packages.md"
+      },
+      "verdict": "adapt",
+      "reason": "В Billium запрет усилен single writer: одна сущность — один writer (правило плана), поэтому порт модуля не может даже через core менять денежную сущность чужого владельца.",
+      "billium": "Arch-тесты: модуль не импортирует Internal соседа, не пишет в таблицы ядра; ссылки на host и Tariffler — строковые refs.",
+      "phase": "P3"
+    },
+    {
+      "id": "M-24",
+      "topic": "api-spi-attributes",
+      "practice": "Поддерживаемые типы маркируются `#[Api]` или `#[Spi(kind: SpiKind::Call|Implement)]`; остальное internal; до freeze каталогизируются члены, параметры, defaults, исключения.",
+      "source": {
+        "repo": "chatom",
+        "path": "plans/2026.10.10-№1-CHATOM-API-STABILIZATION/knowledge/api-spi.json"
+      },
+      "verdict": "accept",
+      "reason": "Конвенция экосистемы (Chatom, AzGuard, Commerz) — потребитель Billium должен видеть ту же модель публичности.",
+      "billium": "Billium объявляет собственные атрибуты Api/Spi/SpiKind без runtime-зависимости от соседей; PaymentDriver-порт — Spi Implement.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-25",
+      "topic": "api-spi-attributes",
+      "practice": "Общие инженерные правила экосистемы: `axiomasoft/<package>`, `self.version`, один config-файл с readonly `*Config`, event envelope (`eventId` ULID, `occurredAt`, `actor`, `correlationId`, `noun.verb_past`, после commit), `<Condition>Exception` со `snake_case` кодом, команды `<package>:<area>:<verb>`, `<Package>\\Testing\\`.",
+      "source": {
+        "repo": "azguard",
+        "path": "docs/adr/0001-ecosystem-conventions.md"
+      },
+      "verdict": "adapt",
+      "reason": "Event envelope «после commit» для денежных фактов недостаточен: интеграционные факты Billium доставляются через outbox (M-40), а не только after-commit dispatch.",
+      "billium": "Billium принимает имена, config, команды и Testing-namespace как есть; доменные события — те же поля envelope, интеграционные — через outbox.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-26",
+      "topic": "type-map",
+      "practice": "Каждый тип имеет ровно одну запись в карте типов: зона, маркер (Api/SpiC/SpiI/internal), действие; карта генерируется из инвентаря, правка — только через генератор и поправку плана.",
+      "source": {
+        "repo": "chatom",
+        "path": "plans/2026.10.10-№1-CHATOM-API-STABILIZATION/knowledge/type-map.json"
+      },
+      "verdict": "adapt",
+      "reason": "Billium — пустой репозиторий: действий relocate/retire нет; карта нужна как целевая (тип → пакет → маркер) и затем как генерируемый снимок кода.",
+      "billium": "Target type-map публичных типов billium-contracts и ядра пишется до кода фазы; после реализации — генератор из кода и arch-тест сверки.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-27",
+      "topic": "identities",
+      "practice": "Frozen identities — команды, config-ключи, routes, wire-события, коды ошибок, хранимые значения — инвентаризируются со статусом frozen/changed/new/retired; fixtures лежат в tests, arch-тест сверяет их с кодом.",
+      "source": {
+        "repo": "chatom",
+        "path": "plans/2026.10.10-№1-CHATOM-API-STABILIZATION/knowledge/identities.json"
+      },
+      "verdict": "adapt",
+      "reason": "Для биллинга identity — ещё и хранимые денежные значения: статусы FSM операций и инвойса, формат номеров документов, формат idempotency key; их смена ломает сверку и аудит.",
+      "billium": "Реестр identities Billium включает persisted статусы, номерные серии, event types и коды ошибок; снапшот-fixtures с P2, заморозка в P10.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-28",
+      "topic": "identities",
+      "practice": "Basenames миграций, publish tags, doctor finding ids и коды исключений — identities; изменение после 1.0 — решение major-версии.",
+      "source": {
+        "repo": "azguard",
+        "path": "plans/2026.10.10-№1-AZGUARD-CORE-STABILIZATION/knowledge/identities.json"
+      },
+      "verdict": "accept",
+      "reason": "Хост встраивает Billium миграциями и doctor; переименование ломает установленный embedded-профиль.",
+      "billium": "Basenames миграций и doctor finding ids Billium входят в реестр identities с первого шага схемы.",
+      "phase": "P3"
+    },
+    {
+      "id": "M-29",
+      "topic": "upgrade-map",
+      "practice": "Одна карта перехода baseline → 1.0 candidate (types, members, config, REST, events, js) с фазой в каждой строке; из неё генерируется UPGRADING.",
+      "source": {
+        "repo": "chatom",
+        "path": "plans/2026.10.10-№1-CHATOM-API-STABILIZATION/knowledge/upgrade-map.json"
+      },
+      "verdict": "reject",
+      "reason": "У Billium нет установленного baseline: переход pre-1.0 → 1.0 описывать нечего (как AzGuard B23 — 1.0 стартовая точка).",
+      "billium": "Карта перехода не ведётся до 1.0; переход legacy-биллингов покрывает M-30.",
+      "phase": "—"
+    },
+    {
+      "id": "M-30",
+      "topic": "upgrade-map",
+      "practice": "Карта перехода строка-в-строку: старая identity → новая identity, действие, фаза, основание; строка без фазы недопустима.",
+      "source": {
+        "repo": "chatom",
+        "path": "plans/2026.10.10-№1-CHATOM-API-STABILIZATION/knowledge/upgrade-map.json"
+      },
+      "verdict": "adapt",
+      "reason": "Применяется не к API Billium, а к миграции Memster/Edufy: денежные факты legacy должны иметь явное соответствие без потерь и двойного учёта.",
+      "billium": "Migration map legacy → Billium (статусы, суммы, номера, ключи) с фазой и тестом каждой строки; адаптеры P9 исполняют только её.",
+      "phase": "P9"
+    },
+    {
+      "id": "M-31",
+      "topic": "upgrade-map",
+      "practice": "Миграции forward-safe: backup, репетиция на одноразовом клоне, восстановление = restore + replay вместо универсальных down-миграций; DDL общих таблиц — контракт.",
+      "source": {
+        "repo": "agentools",
+        "path": "docs/migrations.md"
+      },
+      "verdict": "accept",
+      "reason": "Down-миграция денежной схемы с данными небезопасна; restore/clone входит в каталог приёмки (brief § 3 п. 8).",
+      "billium": "Каждая миграция ядра репетируется на клоне; down-миграции для таблиц с денежными фактами не обещаются; restore-сценарий — тест.",
+      "phase": "P3"
+    },
+    {
+      "id": "M-32",
+      "topic": "release-gate",
+      "practice": "Каждое условие release gate подтверждается на одном candidate SHA, в воспроизводимой среде, с сохранённым evidence; «есть тест», `--check` генерации или waiver не равны прохождению.",
+      "source": {
+        "repo": "chatom",
+        "path": "plans/2026.10.10-№1-CHATOM-API-STABILIZATION/knowledge/release-gate.json"
+      },
+      "verdict": "accept",
+      "reason": "Иначе денежные инварианты и parity PHP/Dart доказываются на разных коммитах.",
+      "billium": "Gate 1.0 Billium — таблица G-условий с доказательством каждого на одном SHA (P10).",
+      "phase": "P10"
+    },
+    {
+      "id": "M-33",
+      "topic": "release-gate",
+      "practice": "Четырёхслойный гейт слияния в фиксированном порядке: линт нормативных документов → свежесть производных → тесты каждого SDK → кросс-языковые векторы и golden; слой без предмета не считается зелёным (CFH-27 … CFH-32).",
+      "source": {
+        "repo": "agentools",
+        "path": "spec/revisions/2026-09/11_conformance-harness.md"
+      },
+      "verdict": "accept",
+      "reason": "Порядок слоёв ловит устаревший rules index до долгих тестов; пустой слой не маскирует отсутствие Dart-проверок.",
+      "billium": "CI Billium (P2) — один скрипт-носитель состава слоёв; workflow вызывает только его.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-34",
+      "topic": "release-gate",
+      "practice": "SemVer-снимок публичного API (`php-api.json`) генерируется дважды с побайтным совпадением; `--check` краснеет при устаревании; BC-проверка сравнивает с immutable baseline.",
+      "source": {
+        "repo": "chatom",
+        "path": "scripts/generate-api-manifest.php"
+      },
+      "verdict": "accept",
+      "reason": "Детерминированный снимок — единственный способ доказать отсутствие ломки контрактов после 1.0.",
+      "billium": "API-manifest billium-contracts и ядра с P2; BC-gate против тега 1.0 после релиза.",
+      "phase": "P10"
+    },
+    {
+      "id": "M-35",
+      "topic": "release-gate",
+      "practice": "CHANGELOG по Keep a Changelog + SemVer; раздел Stability перечисляет машинные форматы (config, commands, events, exceptions, doctor JSON, migrations, tables) под SemVer.",
+      "source": {
+        "repo": "azguard",
+        "path": "CHANGELOG.md"
+      },
+      "verdict": "accept",
+      "reason": "Интеграторам биллинга нужен явный список того, что стабильно, включая wire и хранимые форматы.",
+      "billium": "CHANGELOG Billium с первым релизом 1.0 и разделом Stability, включающим envelope и MoneyWire.",
+      "phase": "P10"
+    },
+    {
+      "id": "M-36",
+      "topic": "target-structure",
+      "practice": "Target-structure — нормативный эталон раскладки (PSR-4 roots, владельцы, состав поставки, владение тестами); отклонение — только поправка плана с D#.",
+      "source": {
+        "repo": "chatom",
+        "path": "plans/2026.10.10-№1-CHATOM-API-STABILIZATION/knowledge/target-structure.json"
+      },
+      "verdict": "accept",
+      "reason": "Без эталона фазы реализации тихо перераспределяют ответственность (D7 п. 4).",
+      "billium": "knowledge/target-structure.md (P1.6) — эталон для P2+; изменение — D#.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-37",
+      "topic": "target-structure",
+      "practice": "Внутренние модули — `packages/core/modules/<m>/src` со своим PSR-4 root в пакете core; Composer резолвит longest prefix; отдельный Composer-пакет — только с самостоятельным назначением.",
+      "source": {
+        "repo": "azguard",
+        "path": "plans/2026.10.10-№1-AZGUARD-CORE-STABILIZATION/knowledge/target-structure.json"
+      },
+      "verdict": "adapt",
+      "reason": "Billium задан монорепо `packages/<name>/` с `axiomasoft/billium-*` (brief § 3 п. 6) и вторым языком: Dart-пакеты живут рядом, а выделение пакета решает extraction gate.",
+      "billium": "Внутренний модуль по умолчанию; пакет billium-* — только с потребителем и инвариантом; Dart — свой каталог пакета с тем же именем контракта.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-38",
+      "topic": "target-structure",
+      "practice": "Публичные категории модуля — только `Contracts`, `Data`, `Enums`, `Events`, `Exceptions`; остальное в `Internal/`; Eloquent-модели только в `Internal/Models` и не в публичных сигнатурах; суффиксы без `Service`/`Manager`.",
+      "source": {
+        "repo": "commerz",
+        "path": "docs/architecture/packages.md"
+      },
+      "verdict": "accept",
+      "reason": "Закрытый Internal делает обход writer-а проверяемым arch-тестом.",
+      "billium": "Раскладка модулей ядра Billium по тому же канону; модели obligations/journal не появляются в публичном API.",
+      "phase": "P3"
+    },
+    {
+      "id": "M-39",
+      "topic": "lock-model",
+      "practice": "Единый порядок блокировок (пример: channel → target rows → seats); решения reauthorize и replay принимаются по строкам, прочитанным под lock в текущей транзакции; мешающие пары операций покрываются двухсессионными тестами на реальных движках; SQLite не доказывает изоляцию.",
+      "source": {
+        "repo": "chatom",
+        "path": "plans/2026.10.10-№1-CHATOM-API-STABILIZATION/knowledge/p2-lock-model.json"
+      },
+      "verdict": "adapt",
+      "reason": "Billium PostgreSQL-only: нет mysql-матрицы; мешающие пары — денежные (allocation vs refund, invoice vs correction), и тесты N-процессные (brief § 3 п. 8).",
+      "billium": "Документ lock model ядра с глобальным порядком и таблицей мешающих пар; каждая пара — N-процессный тест на PostgreSQL.",
+      "phase": "P3"
+    },
+    {
+      "id": "M-40",
+      "topic": "lock-model",
+      "practice": "Реестр инвариантов: ID, инвариант, владелец и единственная точка enforcement, закрытый обход, тест; плюс глобальный порядок блокировок и таблица интерферирующих операций.",
+      "source": {
+        "repo": "commerz",
+        "path": "docs/architecture/invariants.md"
+      },
+      "verdict": "accept",
+      "reason": "Та же форма уже нужна Billium (таблица инвариантов с constraint/lock, brief § 3 п. 5).",
+      "billium": "docs/architecture/data-model.md и реестр INV: каждый инвариант — constraint или lock, обход и тест.",
+      "phase": "P3"
+    },
+    {
+      "id": "M-41",
+      "topic": "outbox-inbox",
+      "practice": "`Outbox::record` требует открытой транзакции; relay берёт пачки `FOR UPDATE SKIP LOCKED`, отказывается работать внутри транзакции, доставка at-least-once, потребители дедуплицируют по `event_id`; доменные события — после commit.",
+      "source": {
+        "repo": "commerz",
+        "path": "docs/architecture/invariants.md"
+      },
+      "verdict": "accept",
+      "reason": "Совпадает с DR04-20 и DR04-21: after-commit не durable, интеграционный факт денег должен быть в той же транзакции.",
+      "billium": "Outbox Billium в транзакции writer-а; relay вне транзакции; экспорт фактов (FinBridge, AiFina) только из outbox.",
+      "phase": "P3"
+    },
+    {
+      "id": "M-42",
+      "topic": "outbox-inbox",
+      "practice": "Входящие события провайдера проходят inbox `UNIQUE(gateway, external_event_id)` с fingerprint под lock заказа; semantic event id даёт адаптер; повтор — duplicate (PAY-01, D33).",
+      "source": {
+        "repo": "commerz",
+        "path": "docs/architecture/decisions.md"
+      },
+      "verdict": "adapt",
+      "reason": "В Billium провайдерский вызов идёт через PaymentDrivers и envelope payment.outcome.v1; inbox ключуется по исполнителю и его outcome id, а транспортный ACK не является бизнес-receipt.",
+      "billium": "Inbox исходов исполнения: уникальность (executor, outcome id) + digest; тот же id с другим payload — conflict; ACK отделён от применения исхода.",
+      "phase": "P5"
+    },
+    {
+      "id": "M-43",
+      "topic": "outbox-inbox",
+      "practice": "After-commit события — публичный core-контракт `CommittedEvents::dispatch()` вне транзакции (Commerz D18).",
+      "source": {
+        "repo": "commerz",
+        "path": "docs/architecture/decisions.md"
+      },
+      "verdict": "adapt",
+      "reason": "Для денег after-commit dispatch — best effort (DR04-21); Billium использует его только для локальных реакций, не для фактов, которые должен получить другой writer.",
+      "billium": "Одна политика after-commit в ядре для UI/кэша; всё, что влияет на учёт или collection, — outbox.",
+      "phase": "P3"
+    },
+    {
+      "id": "M-44",
+      "topic": "problem-codes",
+      "practice": "Объект ошибки несёт `code`, `category`, `retryable`, `title` (+ `detail`, `context`); `code` формы `<vendor>.<category>.<slug>`; коды — одно перечисление в одном `$defs`; у каждого кода назван производитель (IDE-25, IDE-26, IDE-30, IDE-31).",
+      "source": {
+        "repo": "agentools",
+        "path": "spec/revisions/2026-09/schema/error.json"
+      },
+      "verdict": "adapt",
+      "reason": "Для денег `retryable` обязан различать «повтор с тем же ключом» и «новое намерение»: ошибочный retry новым ключом — двойное списание.",
+      "billium": "`billium.<category>.<slug>`; retryable дополняется указанием, повторять ли с тем же idempotency key; таблица кодов с производителем в спеке.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-45",
+      "topic": "problem-codes",
+      "practice": "Политика receipt — часть каждого problem-кода: кэшируемый отказ сохраняется как receipt, auth/validation/5xx/transient — нет (ADR-0029 п. 4).",
+      "source": {
+        "repo": "vaulter",
+        "path": "docs/adr/0029-idempotency.md"
+      },
+      "verdict": "accept",
+      "reason": "Без явной политики повтор после временной ошибки получит сохранённый отказ или наоборот исполнится второй раз.",
+      "billium": "Каждый код Billium объявляет receipt policy; таблица кодов — её единственный носитель.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-46",
+      "topic": "problem-codes",
+      "practice": "Коды ошибок принадлежат объявляющему пакету; генератор собирает общий индекс code → owner; код, объявленный двумя владельцами, — ошибка.",
+      "source": {
+        "repo": "chatom",
+        "path": "scripts/generate-error-codes.php"
+      },
+      "verdict": "accept",
+      "reason": "Модули Billium добавляют коды; без владельца код ошибки модуля спутают с кодом ядра.",
+      "billium": "Сгенерированный индекс кодов Billium с владельцем; CI проверяет свежесть.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-47",
+      "topic": "money-invariants",
+      "practice": "Деньги — `int` minor units + currency; `brick/math` с явным округлением; allocation по largest remainder; ставки в basis points (Commerz D8).",
+      "source": {
+        "repo": "commerz",
+        "path": "docs/architecture/decisions.md"
+      },
+      "verdict": "adapt",
+      "reason": "Wire Billium — MoneyWire: decimal string + ISO 4217 + scale, float запрещён (REQ-CON-02, DR04-22); хранение и арифметика выбираются в P1.6 по DR-04, а не копируются.",
+      "billium": "Явный rounding mode в каждой операции, детерминированная allocation с правилом ничьих, сумма частей = целое — инвариант с golden-векторами.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-48",
+      "topic": "money-invariants",
+      "practice": "`double` для денег запрещён везде (модели, API, БД, UI); операции только для одной валюты; запрет контролируется lint-правилом в CI (erp-sdk ADR-008).",
+      "source": {
+        "repo": "erp-sdk",
+        "path": "docs/03_Dev/ADR/ADR-008 Money Type.md"
+      },
+      "verdict": "adapt",
+      "reason": "ADR-008 — Dart-only и хранит курс ЦБ рядом с суммой; Billium переносит только запрет float и lint-gate в обоих языках, FX — вне границ.",
+      "billium": "PHPStan-правило и Dart lint запрещают float/double в денежных полях и сигнатурах billium-*.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-49",
+      "topic": "money-invariants",
+      "practice": "Платёж не превышает amount due, возврат не превышает captured: баланс проверяется под lock заказа (initiate) и под lock заказа + платежа (refund), backstop `CHECK refunded ≤ captured` (SAL-01).",
+      "source": {
+        "repo": "commerz",
+        "path": "packages/sales/src/Refunds/"
+      },
+      "verdict": "adapt",
+      "reason": "В Billium refund идёт к исполнителю исходного charge, а лимиты считаются по obligations и allocations, а не по заказу.",
+      "billium": "Conservation-инварианты allocation/refund с constraint и lock; N-процессные тесты параллельных refund одного charge.",
+      "phase": "P5"
+    },
+    {
+      "id": "M-50",
+      "topic": "money-invariants",
+      "practice": "Переходы статуса платежа монотонны по рангу; captured — сильнейший факт и применяется из любого статуса; `initiating`/`unknown` не наблюдаются у провайдера.",
+      "source": {
+        "repo": "commerz",
+        "path": "packages/sales/src/Payments/Internal/PaymentTransitions.php"
+      },
+      "verdict": "adapt",
+      "reason": "Billium хранит попытки в execution journal; cumulative totals провайдера не складываются как дельты (правило плана), поэтому монотонность — по сумме и статусу.",
+      "billium": "FSM попытки исполнения с таблицей переходов и векторами на каждый недопустимый переход.",
+      "phase": "P5"
+    },
+    {
+      "id": "M-51",
+      "topic": "money-invariants",
+      "practice": "Сетевой вызов провайдера никогда не идёт внутри транзакции; неизвестный исход — `unknown` и разрешается `find(reference)`, а не угадывается как `failed`; finish пишет только при совпадении `attempts` (PAY-02, SAL-03).",
+      "source": {
+        "repo": "commerz",
+        "path": "packages/sales/src/Payments/Internal/PaymentWorkflow.php"
+      },
+      "verdict": "accept",
+      "reason": "Ровно правила плана: сетевой вызов вне транзакции, unknown разрешается lookup-ом, а не новым ключом.",
+      "billium": "Execution journal Billium: Tx A записывает намерение, вызов вне транзакции, fenced finish, reconcile через lookup драйвера.",
+      "phase": "P5"
+    },
+    {
+      "id": "M-52",
+      "topic": "idempotency",
+      "practice": "Ключ генерирует вызывающий; реализация не выводит ключ из хеша аргументов; отпечаток `sha-256(JCS(args))` ловит только misuse — тот же ключ с другими аргументами — отдельным кодом (IDE-1, IDE-2, IDE-6, IDE-8, IDE-16).",
+      "source": {
+        "repo": "agentools",
+        "path": "spec/revisions/2026-09/09_idempotency-errors.md"
+      },
+      "verdict": "accept",
+      "reason": "Совпадает с правилом плана: idempotency key + digest, тот же ключ с другим payload = conflict.",
+      "billium": "Envelope команд Billium несёт ключ вызывающего и digest payload; conflict и in-flight — разные коды.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-53",
+      "topic": "idempotency",
+      "practice": "Ровно три состояния разрешения ключа: `new` (атомарно уникальностью, не check-then-insert), `duplicate_completed` (сохранённый результат как есть, включая ошибку), `concurrent_in_flight` (немедленный отказ); четвёртого «упало — можно повторить» нет (IDE-10 … IDE-15).",
+      "source": {
+        "repo": "agentools",
+        "path": "spec/revisions/2026-09/09_idempotency-errors.md"
+      },
+      "verdict": "adapt",
+      "reason": "Для денег сохранённым является только отказ с кэшируемой политикой (M-45); поведение при in-flight (немедленный отказ AgenTools или ограниченное ожидание Vaulter) выбирается контрактом P1.7, а не копируется.",
+      "billium": "Три состояния и атомарный claim в ядре; таблица кодов задаёт, какие отказы сохраняются.",
+      "phase": "P3"
+    },
+    {
+      "id": "M-54",
+      "topic": "idempotency",
+      "practice": "Claim ключа — строка в той же корневой транзакции, что и мутация; уникальность по digest тегированного кортежа (tenant, scope, actor, operation, key) с length-prefix; replay только после повторной авторизации; TTL и prune (ADR-0029 п. 1–7).",
+      "source": {
+        "repo": "vaulter",
+        "path": "docs/adr/0029-idempotency.md"
+      },
+      "verdict": "adapt",
+      "reason": "Область ключа Billium — продавец и операция; actor в области для денежной команды дал бы двойное исполнение при смене оператора.",
+      "billium": "Receipt пишется в транзакции writer-а; область — (seller, operation, key); TTL не короче окна повторов клиента и драйвера.",
+      "phase": "P3"
+    },
+    {
+      "id": "M-55",
+      "topic": "idempotency",
+      "practice": "Один pipeline для каждой записи: admission → middleware → корневая транзакция (повтор всей попытки при serialization failure/deadlock) → claim → lock и авторизация → мутация с событиями → commit → after-commit; сеть только до или после транзакции (ADR-0028 п. 2).",
+      "source": {
+        "repo": "vaulter",
+        "path": "docs/adr/0028-extension-slots-and-operation-pipeline.md"
+      },
+      "verdict": "adapt",
+      "reason": "Автоматический повтор попытки в Billium допустим только для чисто БД-работы; шаг с вызовом драйвера не повторяется pipeline-ом.",
+      "billium": "OperationRunner ядра — единственный путь записи денежных сущностей; повтор при 40001/40P01 ограничен БД-шагами.",
+      "phase": "P3"
+    },
+    {
+      "id": "M-56",
+      "topic": "idempotency",
+      "practice": "Production idempotency — fenced acquire/heartbeat/complete с lease token; пустой `RETURNING` после CAS — lost lease, эффект не исполняется; ambiguous внешний эффект → `fail(ambiguous)` без автоматического re-invoke (HRD-15 … HRD-18).",
+      "source": {
+        "repo": "agentools",
+        "path": "spec/revisions/2026-09/12_hardening-semantics.md"
+      },
+      "verdict": "accept",
+      "reason": "Один исполнитель на денежную операцию на всю её жизнь требует fencing; ambiguous = unknown, который разрешается lookup-ом.",
+      "billium": "Lease/fencing в execution journal; takeover сначала делает lookup у драйвера.",
+      "phase": "P5"
+    },
+    {
+      "id": "M-57",
+      "topic": "idempotency",
+      "practice": "`payments`-строка — попытка, её `reference` — idempotency key провайдера; keyed команда применяется не больше одного раза в своей области через `OperationReceipts::once(scope, key, fingerprint)` плюс натуральный unique key владельца (INV-01, D33).",
+      "source": {
+        "repo": "commerz",
+        "path": "docs/architecture/decisions.md"
+      },
+      "verdict": "accept",
+      "reason": "Защита от двойного списания живёт в writer-е, а не в каждом адаптере провайдера.",
+      "billium": "Попытка исполнения Billium имеет собственный reference = ключ к драйверу; повтор той же попытки — тот же reference, новая попытка — только после разрешённого исхода.",
+      "phase": "P5"
+    },
+    {
+      "id": "M-58",
+      "topic": "test-affected-only",
+      "practice": "Локально запускаются тесты только затронутых зон и зависящих от них (`tests/zones.json`); это быстрый отклик и никогда не замена полного прогона как evidence плана или релиза.",
+      "source": {
+        "repo": "chatom",
+        "path": "scripts/test-changed.php"
+      },
+      "verdict": "accept",
+      "reason": "Совпадает с правилом плана «тесты — только затронутое»; граница evidence явная.",
+      "billium": "Карта зон Billium с P2; plan-item проверяет затронутое, release gate — полный прогон.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-59",
+      "topic": "test-affected-only",
+      "practice": "Для PR: затронутые модули и замыкание зависимостей → стиль/статанализ → свежесть генераторов → негативные контроли границ → contract fixtures; изменения схемы/auth/конкурентности включают race/security/mutation-профили затронутого.",
+      "source": {
+        "repo": "chatom",
+        "path": "plans/2026.10.10-№1-CHATOM-API-STABILIZATION/knowledge/release-gate.json"
+      },
+      "verdict": "accept",
+      "reason": "Изменение денежного инварианта без race-профиля проходит зелёным при одном процессе.",
+      "billium": "CI-политика Billium: изменение схемы, lock или journal автоматически включает N-процессные тесты затронутого.",
+      "phase": "P2"
+    },
+    {
+      "id": "M-60",
+      "topic": "mutation-testing",
+      "practice": "Infection запускается на критических каталогах (`src/Idempotency`, `src/Confirmation`, …) с порогом `minMsi`/`minCoveredMsi` 70 как отдельная команда, не в каждом прогоне.",
+      "source": {
+        "repo": "agentools",
+        "path": "php/infection.json5"
+      },
+      "verdict": "adapt",
+      "reason": "Для Billium критичны allocation, rounding, FSM journal и idempotency; порог задаётся в плане отдельным item (правило плана: мутации — отдельные пункты).",
+      "billium": "Mutation-профиль на модули денежных инвариантов, отдельный item фазы; порог и состав — в его spec.",
+      "phase": "P3"
+    },
+    {
+      "id": "M-61",
+      "topic": "mutation-testing",
+      "practice": "Зоны мутаций выводятся из каталога владения: строка на каждый PHP-файл юнита; новый файл получает зону, изменённый декларативный файл краснеет до ревью.",
+      "source": {
+        "repo": "chatom",
+        "path": "scripts/mutation.php"
+      },
+      "verdict": "accept",
+      "reason": "Новый денежный код не должен выпадать из mutation-профиля молча.",
+      "billium": "Инвентарь mutation-зон Billium генерируется из ownership-каталога и проверяется в CI.",
+      "phase": "P10"
+    },
+    {
+      "id": "M-62",
+      "topic": "load-testing",
+      "practice": "Нагрузочный стенд одноразовый и воспроизводимый: образы `tag@digest` в lock-файле, лимиты CPU/RAM — часть контракта измерения, хост записывается в результат, baselines по профилям.",
+      "source": {
+        "repo": "chatom",
+        "path": "bench/README.md"
+      },
+      "verdict": "adapt",
+      "reason": "Для Billium первична конкурентная корректность денег под нагрузкой (нет двойного списания, conservation), а не только latency; стенд нужен server-профилю.",
+      "billium": "Отдельный item нагрузки server-профиля: профили конкурентных оплат/возвратов с проверкой инвариантов после прогона.",
+      "phase": "P8"
+    },
+    {
+      "id": "M-63",
+      "topic": "load-testing",
+      "practice": "Полный продуктовый benchmark переснимается в каждом PR.",
+      "source": {
+        "repo": "chatom",
+        "path": "plans/2026.10.10-№1-CHATOM-API-STABILIZATION/knowledge/release-gate.json"
+      },
+      "verdict": "reject",
+      "reason": "Сам Chatom не переснимает benchmark на documentation-only коммитах; для Billium нагрузка — отдельный пункт (правило плана), PR гоняет только N-процессные тесты корректности.",
+      "billium": "Нагрузка вне PR-гейта; в PR — только race-тесты затронутого (M-59).",
+      "phase": "—"
+    }
+  ],
+  "sources_reviewed": [
+    {
+      "path": "agentools/README.md",
+      "practices": [
+        "M-14"
+      ],
+      "note": "раскладка, ревизии, классы evidence; клон @74bf925"
+    },
+    {
+      "path": "agentools/spec/revisions/2026-09",
+      "practices": [
+        "M-01",
+        "M-02",
+        "M-03",
+        "M-04",
+        "M-05",
+        "M-10",
+        "M-13",
+        "M-33",
+        "M-44",
+        "M-52",
+        "M-53",
+        "M-56"
+      ],
+      "note": "00_overview, 09_idempotency-errors, 11_conformance-harness, 12_hardening-semantics, rules.json, revision.lock.json, schema/"
+    },
+    {
+      "path": "agentools/fixtures",
+      "practices": [
+        "M-06",
+        "M-07",
+        "M-16"
+      ],
+      "note": "README (формат вектора, частичный матч), golden/jcs, golden/idempotency"
+    },
+    {
+      "path": "agentools/conformance",
+      "practices": [
+        "M-09",
+        "M-11",
+        "M-15"
+      ],
+      "note": "README (протокол runner, baseline, lockstep), oracles/jcs/PROVENANCE.md"
+    },
+    {
+      "path": "agentools/php",
+      "practices": [
+        "M-12",
+        "M-17",
+        "M-18",
+        "M-60"
+      ],
+      "note": "README, API.md, composer.json (extra.agentools.spec_rev), infection.json5, phpstan.neon"
+    },
+    {
+      "path": "agentools/dart/agentools",
+      "practices": [
+        "M-19",
+        "M-20"
+      ],
+      "note": "README, pubspec.yaml (agentools.spec_rev), lib/src"
+    },
+    {
+      "path": "agentools/docs",
+      "practices": [
+        "M-31"
+      ],
+      "note": "migrations.md; operations.md и installation.md — эксплуатационные runbook без отдельного метода"
+    },
+    {
+      "path": "chatom/docs/architecture",
+      "practices": [
+        "M-21"
+      ],
+      "note": "core-boundary, layering-rules, lifecycle, philosophy, structure, adr/0001–0005"
+    },
+    {
+      "path": "chatom/plans/2026.10.10-№1-CHATOM-API-STABILIZATION",
+      "practices": [
+        "M-24",
+        "M-26",
+        "M-27",
+        "M-29",
+        "M-30",
+        "M-32",
+        "M-36",
+        "M-39",
+        "M-59",
+        "M-63"
+      ],
+      "note": "knowledge: api-spi, type-map, identities, upgrade-map, p2-lock-model, release-gate, target-structure, architecture"
+    },
+    {
+      "path": "chatom/scripts",
+      "practices": [
+        "M-08",
+        "M-34",
+        "M-46",
+        "M-58",
+        "M-61"
+      ],
+      "note": "golden.php, generate-api-manifest.php, bc-check.php, generate-error-codes.php, test-changed.php, mutation.php, ci-gate.sh"
+    },
+    {
+      "path": "chatom/bench/README.md",
+      "practices": [
+        "M-62"
+      ],
+      "note": "вне § 6, но в репозитории-соседе: единственный нагрузочный стенд среди соседей"
+    },
+    {
+      "path": "azguard/plans/2026.10.10-№1-AZGUARD-CORE-STABILIZATION",
+      "practices": [
+        "M-22",
+        "M-28",
+        "M-37"
+      ],
+      "note": "brief.json B1–B23, knowledge: architecture, contracts, identities, target-structure; views/roadmap.md — только заголовок"
+    },
+    {
+      "path": "azguard/docs/adr/0001-ecosystem-conventions.md",
+      "practices": [
+        "M-25"
+      ],
+      "note": "общие инженерные правила экосистемы"
+    },
+    {
+      "path": "azguard/CHANGELOG.md",
+      "practices": [
+        "M-35"
+      ],
+      "note": "1.0.0, Keep a Changelog, раздел Stability"
+    },
+    {
+      "path": "commerz/docs/architecture",
+      "practices": [
+        "M-23",
+        "M-38",
+        "M-40",
+        "M-41",
+        "M-42",
+        "M-43",
+        "M-47",
+        "M-57"
+      ],
+      "note": "invariants.md, decisions.md (D7, D8, D18, D33), extension.md, packages.md"
+    },
+    {
+      "path": "commerz/packages/sales/src/Payments",
+      "practices": [
+        "M-50",
+        "M-51"
+      ],
+      "note": "Internal/PaymentWorkflow.php, Internal/PaymentTransitions.php, Enums/PaymentStatus.php"
+    },
+    {
+      "path": "commerz/packages/sales/src/Refunds",
+      "practices": [
+        "M-49"
+      ],
+      "note": "Internal/RefundWorkflow.php, Internal/RefundablePayment.php"
+    },
+    {
+      "path": "vaulter/docs/adr/0029-idempotency.md",
+      "practices": [
+        "M-45",
+        "M-54"
+      ],
+      "note": "claim в транзакции, digest области, replay, receipt policy"
+    },
+    {
+      "path": "vaulter/docs/adr/0028-extension-slots-and-operation-pipeline.md",
+      "practices": [
+        "M-55"
+      ],
+      "note": "виды слотов и единый pipeline записи"
+    },
+    {
+      "path": "erp-sdk/contracts/axioma_contracts",
+      "practices": [],
+      "note": "нет ни на машине, ни в github axiomasoft/erp-sdk@825fd60 (main содержит только docs/); Money axioma_contracts — по Brain evidence L-07 (DR04-15), отдельной практики не даёт"
+    },
+    {
+      "path": "erp-sdk/versions.yaml",
+      "practices": [],
+      "note": "нет ни на машине, ни в github axiomasoft/erp-sdk@825fd60 (main содержит только docs/); пин версий ERP недоступен, практики не даёт"
+    },
+    {
+      "path": "erp-sdk/docs/03_Dev/ADR/ADR-008 Money Type.md",
+      "practices": [
+        "M-48"
+      ],
+      "note": "замена недоступного axioma_contracts: Money int minor, запрет double, lint-gate"
+    }
+  ]
+}

@@ -2,7 +2,7 @@
   "$schema": "urn:swissknifeman:task:plan:item:v1",
   "id": "P1.5",
   "title": "Методы разработки: methods.json",
-  "status": "todo",
+  "status": "done_with_deviations",
   "summary": "Изучить AgenTools, Chatom, AzGuard, Commerz (инварианты), Vaulter (idempotency ADR); записать knowledge/methods.json с вердиктом accept | adapt | reject по каждой практике.",
   "why": "Billium, как AgenTools, — PHP+Dart с общими контрактами. Chatom и AzGuard прошли заморозку API/SPI/схемы до 1.0. Без явного списка каждая фаза заново изобретает процесс. RAG: repo-grounded (brief/00 §1 п.2, §3 п.4; research/P1-sources.md §6).",
   "scope": {
@@ -38,17 +38,17 @@
       "path": "@plan/artifacts/P1-design/check-p1.py"
     }
   ],
+  "task_files": [
+    {
+      "path": "@plan/knowledge/methods.json",
+      "change": "create"
+    }
+  ],
   "artifacts": [
     {
       "path": "@plan/research/P1-sources.md",
       "role": "input",
       "note": "Методы разработки: соседние репозитории (§ 6, § 7)"
-    }
-  ],
-  "task_files": [
-    {
-      "path": "@plan/knowledge/methods.json",
-      "change": "create"
     }
   ],
   "rules": [
@@ -89,5 +89,31 @@
     "need": "none",
     "status": "not_needed"
   },
-  "updated_at": "2026-10-17T07:28:24Z"
+  "result": {
+    "started_at": "2026-10-17T10:38:07Z",
+    "finished_at": "2026-10-17T10:47:52Z",
+    "executor": {
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "session": "4ad4cb0d-4a8e-4428-b672-53a0c05c1705"
+    },
+    "notes": "knowledge/methods.json: 63 практики (30 accept, 29 adapt, 4 reject), все 22 topic, все пути §6/§7 в sources_reviewed; source.path проверены по локальным репо и клонам; check-p1.py P1.5 GREEN",
+    "deviations": [
+      "agentools и erp-sdk отсутствуют локально: прочитаны read-only shallow-клоны github axiomasoft (agentools@74bf925, erp-sdk@825fd60) в scratchpad; erp-sdk contracts/axioma_contracts и versions.yaml нет и в github — в sources_reviewed с note, Money взят из erp-sdk docs ADR-008"
+    ],
+    "checks": [
+      {
+        "id": "V1",
+        "exit": 0,
+        "at": "2026-10-17T10:47:52Z"
+      },
+      {
+        "id": "V2",
+        "exit": 0,
+        "at": "2026-10-17T10:47:52Z"
+      }
+    ]
+  },
+  "updated_at": "2026-10-17T10:47:52Z"
 }
