@@ -2,7 +2,7 @@
   "$schema": "urn:swissknifeman:task:plan:item:v1",
   "id": "P2.3",
   "title": "Conformance runner, вендоренный JCS-оракул, baseline и lockstep",
-  "status": "todo",
+  "status": "done_with_deviations",
   "summary": "conformance/runner/run.py по протоколу start → config → run × N → stop, закрытые статусы без skip, baseline с проверкой устаревания, control must-fail, lockstep spec_rev; вендоренный cyberphone JCS-оракул с PROVENANCE.md; conformance/adapters.json; самотесты на фейковом адаптере.",
   "why": "M-09/M-11/M-12/M-16 — единственный механизм, доказывающий паритет PHP и Dart. Риски: runner, принимающий любой вывод (нет control-вектора), baseline, скрывающий регрессии, и расхождение ревизии корпуса с манифестами SDK.",
   "scope": {
@@ -136,6 +136,41 @@
     "need": "none",
     "status": "not_needed"
   },
-  "result": null,
-  "updated_at": "2026-10-17T12:02:08Z"
+  "result": {
+    "started_at": "2026-10-17T16:50:21Z",
+    "finished_at": "2026-10-17T16:57:02Z",
+    "executor": {
+      "provider": "anthropic",
+      "model": "claude-sonnet-5-5",
+      "effort": "high",
+      "session": "f5961dc3-3b72-467d-879d-0147051c82aa"
+    },
+    "notes": "conformance/runner (run, protocol, vectors, gate), вендоренный cyberphone JCS (commit 32a4819, PROVENANCE.md), oracle.py, adapters.json, 42 unittest на fake_adapter (pass/fail/error/timeout/unknown op/stale baseline/control/lockstep/golden), README, слой conformance в ci.sh (unittest + --check-golden + php + dart). Слой conformance красный до P2.4–P2.6 — ожидаемо (M-33).",
+    "deviations": [
+      "Runner шире design: --root/--timeout/--phase/--check-golden, violations в отчёте, красный прогон без control-вектора и пустого профиля, проверка orphan golden; phase baseline проверяется только с --phase."
+    ],
+    "checks": [
+      {
+        "id": "V1",
+        "exit": 0,
+        "at": "2026-10-17T16:57:02Z"
+      },
+      {
+        "id": "V2",
+        "exit": 0,
+        "at": "2026-10-17T16:57:02Z"
+      },
+      {
+        "id": "V3",
+        "exit": 0,
+        "at": "2026-10-17T16:57:02Z"
+      },
+      {
+        "id": "V4",
+        "exit": 0,
+        "at": "2026-10-17T16:57:02Z"
+      }
+    ]
+  },
+  "updated_at": "2026-10-17T16:57:02Z"
 }

@@ -1,0 +1,8 @@
+{
+  "php": {
+    "cmd": ["php", "conformance/adapters/php/bin/adapter.php"]
+  },
+  "dart": {
+    "cmd": ["dart", "run", "conformance/adapters/dart/bin/adapter.dart"]
+  }
+}
