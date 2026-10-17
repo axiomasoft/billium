@@ -161,5 +161,9 @@
       "note": "повторный независимый read-only verdict в свежей сессии, не исполнявшей P1.10/P1.11"
     }
   ],
-  "closed": null
+  "closed": {
+    "at": "2026-10-17T15:14:23Z",
+    "result": "blocked",
+    "summary": "11 item(s): 6 done, 4 done_with_deviations, 1 blocked"
+  }
 }

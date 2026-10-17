@@ -2,7 +2,7 @@
   "$schema": "urn:swissknifeman:task:plan:item:v1",
   "id": "P1.9",
   "title": "Review P1 — независимый verdict",
-  "status": "todo",
+  "status": "blocked",
   "summary": "Повторный независимый read-only review P1 после одной корректировки (P1.10, P1.11) в свежей сессии, не исполнявшей P1.6–P1.11: проверить закрытие каждого finding P19-F01…F09 и отсутствие регрессий; выпустить verdict r2.",
   "why": "P1 фиксирует архитектуру денежной системы, которую к 1.0 будет трудно менять. Структурный checker (D3) не доказывает, что выбор верен и инварианты защищены. RAG: repo-grounded (D3).",
   "scope": {
@@ -156,6 +156,44 @@
     "need": "none",
     "status": "not_needed"
   },
-  "result": null,
-  "updated_at": "2026-10-17T11:50:24Z"
+  "result": {
+    "started_at": "2026-10-17T15:06:39Z",
+    "finished_at": "2026-10-17T15:14:23Z",
+    "executor": {
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "session": "d04db85a-a925-43cf-bdc2-db576bebdd48"
+    },
+    "notes": "r1 сохранён git mv в reviews/P1-review-r1.md; r2 RED: закрыты P19-F02…F09, P19-F01 частично. Новые: P19R2-F01 blocker P1.6 (fence D34 только на dispatch), P19R2-F02 major P1.7 (база refund в payment.observation.v1), P19R2-F03…F05 minor. V1/V2 RED только по правилу 'verdict RED — P1.9 не закрыта'; P1.1–P1.8 GREEN; V3=12 строк P19-F0x",
+    "escalation": "Владелец: разрешить вторую корректировку P1.6/P1.7 по P19R2-F01…F05 (сверх policy.corrections_max = 1, D8) с повторным P1.9 r3, либо принять риск P19R2-F01 явным решением D# и закрыть P1. Без решения P1 не закрывается и P2 не детализируется.",
+    "checks": [
+      {
+        "id": "V1",
+        "exit": 1,
+        "at": "2026-10-17T15:14:23Z"
+      },
+      {
+        "id": "V2",
+        "exit": 1,
+        "at": "2026-10-17T15:14:23Z"
+      },
+      {
+        "id": "V3",
+        "exit": 0,
+        "at": "2026-10-17T15:14:23Z"
+      },
+      {
+        "id": "V4",
+        "exit": 0,
+        "at": "2026-10-17T15:14:23Z"
+      },
+      {
+        "id": "V5",
+        "exit": 0,
+        "at": "2026-10-17T15:14:23Z"
+      }
+    ]
+  },
+  "updated_at": "2026-10-17T15:14:23Z"
 }
