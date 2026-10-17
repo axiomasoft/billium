@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-10:occurrence/ensure.v1.json",
+  "title": "ensureBillingOccurrence",
+  "type": "object",
+  "required": [
+    "schema",
+    "commandKey",
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "componentRef",
+    "purpose",
+    "interval",
+    "scheduleRevision"
+  ],
+  "properties": {
+    "schema": {
+      "const": "occurrence.ensure.v1"
+    },
+    "commandKey": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/commandKey"
+    },
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    },
+    "componentRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "purpose": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "interval": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/interval"
+    },
+    "scheduleRevision": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/counter"
+    }
+  },
+  "additionalProperties": false
+}

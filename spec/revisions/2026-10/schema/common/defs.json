@@ -1,0 +1,264 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-10:common/defs.json",
+  "title": "Общие определения ревизии 2026-10",
+  "$defs": {
+    "ref": {
+      "description": "Непрозрачный стабильный идентификатор.",
+      "type": "string",
+      "minLength": 1
+    },
+    "commandKey": {
+      "description": "Ключ идемпотентности вызывающего, UUID в текстовой форме.",
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "schemaName": {
+      "description": "Имя и major-версия envelope.",
+      "type": "string",
+      "pattern": "^[a-z][a-z_]*\\.[a-z][a-z_]*\\.v[1-9][0-9]*$"
+    },
+    "timestamp": {
+      "description": "Момент времени RFC 3339 в UTC.",
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$"
+    },
+    "digest": {
+      "description": "SHA-256 канонической формы RFC 8785 с префиксом алгоритма.",
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "ulid": {
+      "description": "ULID в Crockford base32.",
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "currencyCode": {
+      "description": "Буквенный код ISO 4217.",
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "quantity": {
+      "description": "Неотрицательное количество в десятичной записи.",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "counter": {
+      "description": "Неотрицательное целое в точном диапазоне IEEE 754 double.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "operationStatus": {
+      "description": "Статус денежной операции.",
+      "enum": [
+        "accepted-unknown",
+        "pending",
+        "succeeded",
+        "failed-terminal",
+        "cancelled"
+      ]
+    },
+    "findStatus": {
+      "description": "Статус ответа поиска операции.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/operationStatus"
+        },
+        {
+          "const": "absent"
+        }
+      ]
+    },
+    "admissionResult": {
+      "description": "Результат admission команды.",
+      "enum": [
+        "accepted",
+        "known-terminal",
+        "conflict"
+      ]
+    },
+    "operationKind": {
+      "description": "Вид денежной операции.",
+      "enum": [
+        "charge",
+        "refund"
+      ]
+    },
+    "executionProfile": {
+      "description": "Профиль исполнения операции.",
+      "enum": [
+        "remote-billium",
+        "standalone-billium"
+      ]
+    },
+    "sourceAuthority": {
+      "description": "Исполнитель-источник денежного наблюдения.",
+      "enum": [
+        "embedded-commerz",
+        "remote-billium",
+        "standalone-billium"
+      ]
+    },
+    "usageSemantics": {
+      "description": "Семантика метрики usage.",
+      "enum": [
+        "additive",
+        "gauge",
+        "distinct"
+      ]
+    },
+    "usageReceiptResult": {
+      "description": "Результат приёма факта usage.",
+      "enum": [
+        "accepted",
+        "duplicate",
+        "conflict"
+      ]
+    },
+    "invoiceStatus": {
+      "description": "Статус invoice.",
+      "enum": [
+        "draft",
+        "issued",
+        "partially_paid",
+        "paid",
+        "uncollectible",
+        "void"
+      ]
+    },
+    "receiptKind": {
+      "description": "Вид бизнес-receipt.",
+      "enum": [
+        "CommandAccepted",
+        "ProviderOutcomeRecorded",
+        "ProjectionApplied",
+        "AllocationReceipt",
+        "FulfilmentReceipt",
+        "UsageFactAccepted",
+        "DocumentReserved"
+      ]
+    },
+    "eventType": {
+      "description": "Тип события v1.",
+      "enum": [
+        "payment.outcome.v1",
+        "obligation.created.v1",
+        "obligation.adjusted.v1",
+        "invoice.issued.v1",
+        "credit_note.issued.v1",
+        "allocation.applied.v1",
+        "discrepancy.recorded.v1"
+      ]
+    },
+    "queryKind": {
+      "description": "Вид запроса чтения.",
+      "enum": [
+        "paymentStatus",
+        "obligation",
+        "invoice",
+        "allocationByOperation",
+        "refundAuthorization",
+        "readRender"
+      ]
+    },
+    "roundingMode": {
+      "description": "Режим округления по имени.",
+      "enum": [
+        "HALF_EVEN",
+        "HALF_UP"
+      ]
+    },
+    "problemCode": {
+      "description": "Код ошибки из problem-codes.json.",
+      "enum": [
+        "billium.validation.invalid",
+        "billium.schema.unsupported",
+        "billium.money.scale_invalid",
+        "billium.money.currency_mismatch",
+        "billium.auth.denied",
+        "billium.idempotency.conflict",
+        "billium.idempotency.in_flight",
+        "billium.key.expired",
+        "billium.recovery.required",
+        "billium.lookup.unavailable",
+        "billium.refund.capacity_exceeded",
+        "billium.operation.not_cancellable",
+        "billium.observation.parked",
+        "billium.observation.conflict",
+        "billium.usage.conflict",
+        "billium.policy.unknown",
+        "billium.invoice.frozen",
+        "billium.allocation.reallocation_required",
+        "billium.installation.quarantined",
+        "billium.transport.unavailable"
+      ]
+    },
+    "problemCategory": {
+      "description": "Категория кода ошибки.",
+      "enum": [
+        "allocation",
+        "auth",
+        "idempotency",
+        "installation",
+        "invoice",
+        "key",
+        "lookup",
+        "money",
+        "observation",
+        "operation",
+        "policy",
+        "recovery",
+        "refund",
+        "schema",
+        "transport",
+        "usage",
+        "validation"
+      ]
+    },
+    "receiptPolicy": {
+      "description": "Политика receipt кода ошибки.",
+      "enum": [
+        "stored",
+        "none"
+      ]
+    },
+    "commandSource": {
+      "description": "Бизнес-источник команды.",
+      "type": "object",
+      "required": [
+        "context",
+        "intentRef"
+      ],
+      "properties": {
+        "context": {
+          "$ref": "#/$defs/ref"
+        },
+        "intentRef": {
+          "$ref": "#/$defs/ref"
+        },
+        "orderRef": {
+          "$ref": "#/$defs/ref"
+        }
+      },
+      "additionalProperties": false
+    },
+    "interval": {
+      "description": "Полуинтервал времени [start, end).",
+      "type": "object",
+      "required": [
+        "start",
+        "end"
+      ],
+      "properties": {
+        "start": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "end": {
+          "$ref": "#/$defs/timestamp"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-10:usage/fact.v1.json",
+  "title": "Факт usage",
+  "type": "object",
+  "required": [
+    "schema",
+    "source",
+    "factId",
+    "revision",
+    "sellerRef",
+    "subjectRef",
+    "metricRef",
+    "metricVersion",
+    "semantics",
+    "unit",
+    "quantity",
+    "interval",
+    "eventAt",
+    "observedAt",
+    "provenance",
+    "digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "usage.fact.v1"
+    },
+    "source": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "factId": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "revision": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/counter"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "subjectRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "metricRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "metricVersion": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "semantics": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/usageSemantics"
+    },
+    "unit": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "quantity": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/quantity"
+    },
+    "interval": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/interval"
+    },
+    "eventAt": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/timestamp"
+    },
+    "observedAt": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/timestamp"
+    },
+    "provenance": {
+      "type": "object",
+      "required": [
+        "collector",
+        "version",
+        "sourceRef"
+      ],
+      "properties": {
+        "collector": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+        },
+        "version": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+        },
+        "sourceRef": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+        }
+      },
+      "additionalProperties": false
+    },
+    "correctsFactId": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    }
+  },
+  "additionalProperties": false
+}

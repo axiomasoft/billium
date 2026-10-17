@@ -1,0 +1,61 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:decision:v1",
+  "id": "D43",
+  "title": "Схемы 2026-10: заполнение пробелов контрактов v1 без изменения полей пилота",
+  "date": "2026-10-17",
+  "status": "accepted",
+  "question": "Как схемы ревизии 2026-10 заполняют места, где docs/contracts/billium-contracts-v1.md задаёт только ключевые поля или общий текст, не меняя полей пилота?",
+  "options": [
+    {
+      "id": "A",
+      "text": "Заполнить пробелы по принципам контрактов v1 и D30: (1) obligation.prepare/occurrence.ensure/collection.authorize несут общий заголовок команды commandKey, sellerRef, installationRef, environment; (2) входящие команды допускают необязательный digest, равный вычисленному получателем; (3) ответ payment.find.v1 требует revision, digest и totals только при статусе операции, при absent — absenceCertificate; (4) событие — envelope billium.event.v1, schemaVersion несёт член schema (как у payment.observation.v1); (5) usage.fact.v1 provenance = {collector, version, sourceRef}; (6) allocation.reallocate.v1 вне набора 2026-10 до ledger P3",
+      "pros": "поля пилота не меняются; каждая команда закрыта и несёт seller-scope (INV-14); схема не требует выдумывать revision/digest для отсутствующей операции"
+    },
+    {
+      "id": "B",
+      "text": "Схемы только по буквальным таблицам контрактов v1: команды obligation/collection без scope, find требует revision/digest/totals и при absent, событие без schema",
+      "cons": "команда без seller-scope нарушает INV-14; absent требует фиктивных revision и digest; событие нельзя декодировать по schema (BC-ENV-01)"
+    },
+    {
+      "id": "C",
+      "text": "Отложить схемы obligation/occurrence/collection/query/event до P3",
+      "cons": "ревизия P2 неполна по списку spec-revision; lint и fixtures errors/codes не покрывают набор envelope"
+    }
+  ],
+  "context": "P2.2 пишет JSON Schema всех envelopes v1. Контракты v1 для obligation/occurrence/collection дают «ключевые поля», для события — список без schema, для find — «да» у снимка и «при absent» у absenceCertificate, D30 — «все команды несут commandKey, digest, sellerRef, environment, installationRef».",
+  "decision": "A — пробелы заполнены по принципам контрактов v1 (принципы 1, 3, 5), D30, D32 и INV-14; поля пилота payment.execute.v1/payment.outcome.v1 не меняются. Нормы — spec/revisions/2026-10/03-envelopes.md (BC-ENV-09, BC-ENV-15), 02-idempotency-digest.md (BC-ID-17), 05-events-receipts.md (BC-EVT-02).",
+  "rationale": "B нарушает INV-14 и BC-ENV-01; C оставляет ревизию без части набора. A — уточнение, а не изменение контракта: docs/contracts v1 не правится (scope P2.2).",
+  "consequences": [
+    "Отклонены B и C.",
+    "P2.4 пишет векторы по этим схемам; P3 добавляет allocation.reallocate.v1 новой ревизией или до заморозки 2026-10."
+  ],
+  "applies_to": [
+    "P2.2",
+    "P2.4",
+    "P2.5",
+    "P2.6"
+  ],
+  "evidence": [
+    {
+      "kind": "repo",
+      "ref": "docs/contracts/billium-contracts-v1.md",
+      "note": "§ Принципы п. 1, 3, 5; § Obligations и invoices; § События"
+    },
+    {
+      "kind": "repo",
+      "ref": "decisions/D30.json",
+      "note": "общие поля команд"
+    },
+    {
+      "kind": "repo",
+      "ref": "docs/requirements.md",
+      "note": "INV-14, REQ-CON-08, REQ-CON-18, REQ-CON-21"
+    }
+  ],
+  "actor": {
+    "provider": "anthropic",
+    "model": "claude-opus-5-5",
+    "effort": "high"
+  },
+  "answered_by": "agent"
+}

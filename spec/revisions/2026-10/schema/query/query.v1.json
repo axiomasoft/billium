@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-10:query/query.v1.json",
+  "title": "Запрос чтения",
+  "type": "object",
+  "required": [
+    "schema",
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "query",
+    "selector"
+  ],
+  "properties": {
+    "schema": {
+      "const": "billium.query.v1"
+    },
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "query": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/queryKind"
+    },
+    "selector": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+      }
+    }
+  },
+  "additionalProperties": false
+}

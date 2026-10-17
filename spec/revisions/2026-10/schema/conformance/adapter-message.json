@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-10:conformance/adapter-message.json",
+  "title": "Сообщение протокола адаптера conformance (JSON Lines)",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/start"
+    },
+    {
+      "$ref": "#/$defs/ready"
+    },
+    {
+      "$ref": "#/$defs/config"
+    },
+    {
+      "$ref": "#/$defs/ok"
+    },
+    {
+      "$ref": "#/$defs/run"
+    },
+    {
+      "$ref": "#/$defs/result"
+    },
+    {
+      "$ref": "#/$defs/stop"
+    }
+  ],
+  "$defs": {
+    "start": {
+      "type": "object",
+      "required": [
+        "type",
+        "protocol"
+      ],
+      "properties": {
+        "type": {
+          "const": "start"
+        },
+        "protocol": {
+          "const": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "ready": {
+      "type": "object",
+      "required": [
+        "type",
+        "adapter",
+        "spec_rev",
+        "ops"
+      ],
+      "properties": {
+        "type": {
+          "const": "ready"
+        },
+        "adapter": {
+          "$ref": "urn:billium:spec:2026-10:conformance/vector.json#/$defs/profile"
+        },
+        "spec_rev": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}$"
+        },
+        "ops": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "urn:billium:spec:2026-10:conformance/vector.json#/$defs/op"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "config": {
+      "type": "object",
+      "required": [
+        "type",
+        "profile"
+      ],
+      "properties": {
+        "type": {
+          "const": "config"
+        },
+        "profile": {
+          "$ref": "urn:billium:spec:2026-10:conformance/vector.json#/$defs/profile"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ok": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "const": "ok"
+        }
+      },
+      "additionalProperties": false
+    },
+    "run": {
+      "type": "object",
+      "required": [
+        "type",
+        "id",
+        "given",
+        "script"
+      ],
+      "properties": {
+        "type": {
+          "const": "run"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "given": {
+          "type": "object"
+        },
+        "script": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "urn:billium:spec:2026-10:conformance/vector.json#/$defs/step"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "required": [
+        "type",
+        "id",
+        "outputs"
+      ],
+      "properties": {
+        "type": {
+          "const": "result"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:billium:spec:2026-10:conformance/vector.json#/$defs/output"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "stop": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "const": "stop"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -2,7 +2,7 @@
   "$schema": "urn:swissknifeman:task:plan:item:v1",
   "id": "P2.2",
   "title": "Ревизия спеки 2026-10: документы правил, JSON Schema, problem-codes, currencies, генераторы и lint",
-  "status": "todo",
+  "status": "done_with_deviations",
   "summary": "spec/revisions/2026-10 с документами правил (маркеры BC-*), JSON Schema 2020-12 всех envelopes v1 по contracts v1 после P1.11, problem-codes.json по D31, currencies.json из ISO 4217 List One, схемы вектора и протокола адаптера; генераторы rules.json, revision.lock.json, docs/contracts/problem-codes.md и lint (M-01…M-05, M-44…M-46). Слои lint и derived зелёные.",
   "why": "Схемы и коды P2 замораживаются к 1.0 (target-structure § Что замораживается); PHP и Dart сверяются только через спеку и fixtures, не через общий код (REQ-CON-03). Риск: схема, расходящаяся с docs/contracts (особенно payment.observation.v1 и receipt policy после P1.11), разведёт PHP и Dart и сломает пилот (REQ-CON-04, REQ-CON-09).",
   "scope": {
@@ -188,6 +188,59 @@
     "need": "none",
     "status": "not_needed"
   },
-  "result": null,
-  "updated_at": "2026-10-17T12:02:55Z"
+  "result": {
+    "started_at": "2026-10-17T16:30:56Z",
+    "finished_at": "2026-10-17T16:46:58Z",
+    "executor": {
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "session": "0e9787fd-1e7e-421c-a913-03303179b497"
+    },
+    "notes": "Ревизия 2026-10 (draft): 6 документов правил, 95 правил BC-* со ссылками REQ/INV/D#/M; 19 JSON Schema 2020-12 (14 envelope + defs, money-wire, problem, vector, adapter-message); problem-codes.json 20 кодов (receipt по D31, сверка с docs/contracts § Ошибки в lint); currencies.json 165 валют из SIX List One Pblshd 2026-09-17 (sha256 33139b43…). Генераторы build-rules/lock/codes-index/currencies с --check; lint.py — конвенции 1–8, правила, коды, валюты; 16 unittest. ci.sh derived включает build-currencies. V5 прогнан после git add файлов item (иначе untracked не видны git diff). Риск схемы/public API: рекомендуется planner:review.",
+    "deviations": [
+      "Regex ссылок правил шире guidance: REQ-[A-Z]+-NN|INV-NN|D<n>|M-NN|SRC-NNN (guidance-regex не матчит REQ-CON-02).",
+      "spec/revisions/2026-10/.gitattributes: sources/*.xml binary — List One хранится байт-в-байт (CRLF), иначе git diff --check падает.",
+      "Пробелы контрактов v1 заполнены по D43 (заголовок команд obligation/occurrence/collection, необязательный digest, условный ответ find, billium.event.v1, provenance); allocation.reallocate.v1 вне набора 2026-10."
+    ],
+    "checks": [
+      {
+        "id": "V1",
+        "exit": 0,
+        "at": "2026-10-17T16:46:58Z"
+      },
+      {
+        "id": "V2",
+        "exit": 0,
+        "at": "2026-10-17T16:46:58Z"
+      },
+      {
+        "id": "V3",
+        "exit": 0,
+        "at": "2026-10-17T16:46:58Z"
+      },
+      {
+        "id": "V4",
+        "exit": 0,
+        "at": "2026-10-17T16:46:58Z"
+      },
+      {
+        "id": "V5",
+        "exit": 0,
+        "at": "2026-10-17T16:46:58Z"
+      },
+      {
+        "id": "V6",
+        "exit": 0,
+        "at": "2026-10-17T16:46:58Z"
+      },
+      {
+        "id": "V7",
+        "exit": 0,
+        "at": "2026-10-17T16:46:58Z"
+      }
+    ],
+    "decision": "D43"
+  },
+  "updated_at": "2026-10-17T16:46:58Z"
 }

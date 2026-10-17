@@ -1,0 +1,859 @@
+[
+  {
+    "id": "BC-CNF-01",
+    "doc": "06-conformance.md",
+    "line_digest": "sha256:466ddccbf4ee1fb8ed6b6f126d2d589d89ad4948b4cfdcce19ab3fed428286be",
+    "refs": [
+      "REQ-CON-03",
+      "D9"
+    ]
+  },
+  {
+    "id": "BC-CNF-02",
+    "doc": "06-conformance.md",
+    "line_digest": "sha256:c5f5264252612f485a4160d297ed5dad2027ccb7e746b62e1e9ecd65a3101a65",
+    "refs": [
+      "M-02",
+      "M-03"
+    ]
+  },
+  {
+    "id": "BC-CNF-03",
+    "doc": "06-conformance.md",
+    "line_digest": "sha256:0b86ca478ad7f93052201f54d54e15aaa05bc6f561a8f71e8f79dee22a3405b4",
+    "refs": [
+      "M-01",
+      "REQ-CON-20"
+    ]
+  },
+  {
+    "id": "BC-CNF-04",
+    "doc": "06-conformance.md",
+    "line_digest": "sha256:e35cdf535f4d2a9f39f75aa9f77f158ec317c9e62c2ad59625a51482260d8530",
+    "refs": [
+      "M-06"
+    ]
+  },
+  {
+    "id": "BC-CNF-05",
+    "doc": "06-conformance.md",
+    "line_digest": "sha256:b61eb21d4b5847d20ae4d1e181ccb7a25f3c2a2a2dac664dd0a4efd51d31b34d",
+    "refs": [
+      "M-10"
+    ]
+  },
+  {
+    "id": "BC-CNF-06",
+    "doc": "06-conformance.md",
+    "line_digest": "sha256:49463c803ad495da0b81946326b44f04d8c19444afab6086fb3fd4ef0a217593",
+    "refs": [
+      "M-10"
+    ]
+  },
+  {
+    "id": "BC-CNF-07",
+    "doc": "06-conformance.md",
+    "line_digest": "sha256:0067b52bfa9cfa0eee70870dadabb2e650710317473acc1ebb649c82b947786f",
+    "refs": [
+      "M-06"
+    ]
+  },
+  {
+    "id": "BC-CNF-08",
+    "doc": "06-conformance.md",
+    "line_digest": "sha256:da34b67990a8863f20159fca3b310a66df0c9cf9f743ec7beb85fc202f88898f",
+    "refs": [
+      "M-07",
+      "M-15"
+    ]
+  },
+  {
+    "id": "BC-CNF-09",
+    "doc": "06-conformance.md",
+    "line_digest": "sha256:c793ac63c5f2f4096e5e92ba50795f68beab68c5fbc661a02aa8873b7c016fd7",
+    "refs": [
+      "M-16"
+    ]
+  },
+  {
+    "id": "BC-CNF-10",
+    "doc": "06-conformance.md",
+    "line_digest": "sha256:75ca7747d64124178474ee31374fd27fbaf78e58f4060c6935530999f9cad908",
+    "refs": [
+      "REQ-OWN-18",
+      "M-09",
+      "M-19"
+    ]
+  },
+  {
+    "id": "BC-CNF-11",
+    "doc": "06-conformance.md",
+    "line_digest": "sha256:884346d8751ca3a45518c6318af76e18e1248bd8eb093fae093facd59e02c30a",
+    "refs": [
+      "M-09"
+    ]
+  },
+  {
+    "id": "BC-CNF-12",
+    "doc": "06-conformance.md",
+    "line_digest": "sha256:821a6da4ebae8485956dfe95799208a636e85d983bb3281fc773f339085db7d3",
+    "refs": [
+      "M-09",
+      "M-33"
+    ]
+  },
+  {
+    "id": "BC-CNF-13",
+    "doc": "06-conformance.md",
+    "line_digest": "sha256:9aee3db72a4506e3bb2c236bb037b346e596870802b3847cb99f6286c8710a43",
+    "refs": [
+      "M-11"
+    ]
+  },
+  {
+    "id": "BC-CNF-14",
+    "doc": "06-conformance.md",
+    "line_digest": "sha256:bbbb7ea5258ae13c47d83625cff3c898143b516de7274278e8bb0609e0643191",
+    "refs": [
+      "M-12"
+    ]
+  },
+  {
+    "id": "BC-CNF-15",
+    "doc": "06-conformance.md",
+    "line_digest": "sha256:594b87991cacb2dd038fb64c3f9267938eda08460a980da5a8d179bb344c4b29",
+    "refs": [
+      "M-14"
+    ]
+  },
+  {
+    "id": "BC-ENV-01",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:ab1e2dd2ab156f839a6d5253e71604710ce39aaba85b85dca7f8a6fc9c0900c0",
+    "refs": [
+      "M-01",
+      "REQ-CON-20"
+    ]
+  },
+  {
+    "id": "BC-ENV-02",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:78378b64fe6115c15fe10e6ad3b95faeaa787e6bbab6c652a9f3d60dbd117708",
+    "refs": [
+      "REQ-CON-20"
+    ]
+  },
+  {
+    "id": "BC-ENV-03",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:c4048f6aa66c6f5a3ad4736bd2380cbc4132bdcd8691a71288df89cbcbf8063d",
+    "refs": [
+      "REQ-CON-20",
+      "D29"
+    ]
+  },
+  {
+    "id": "BC-ENV-04",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:dd747bbac1c0717efe4fa9bc93957658ce8bba19ee04064b9032701eaabdd4e0",
+    "refs": [
+      "REQ-CON-20",
+      "REQ-CON-05"
+    ]
+  },
+  {
+    "id": "BC-ENV-05",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:2a0fdfffcb2cadd59bbc8890624ad1fa9c5bf18d7807dbc95e3edc0530978e97",
+    "refs": [
+      "REQ-CON-20",
+      "M-05"
+    ]
+  },
+  {
+    "id": "BC-ENV-06",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:91793bedd8d0b52cc74b330a4ea9034072a69d79ab7ccea414f25aeb235f9789",
+    "refs": [
+      "REQ-CON-20",
+      "M-04"
+    ]
+  },
+  {
+    "id": "BC-ENV-07",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:108fae69e2cb83ba547c03e8c0613e60daecb37937c0f28ec5a047ba89e31cde",
+    "refs": [
+      "REQ-CON-02",
+      "D29",
+      "M-15"
+    ]
+  },
+  {
+    "id": "BC-ENV-08",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:2a7ba28f4a94a78ae3ccd282dccba6930adbe02403fc896abeb94742ee846b89",
+    "refs": [
+      "REQ-CON-21",
+      "REQ-CON-35"
+    ]
+  },
+  {
+    "id": "BC-ENV-09",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:44e6f47ef464d888b479219ceb8545aa2f34747a3bb4478bc209512f0283ccb1",
+    "refs": [
+      "D30",
+      "D43",
+      "INV-14",
+      "REQ-CON-21"
+    ]
+  },
+  {
+    "id": "BC-ENV-10",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:bd04fd825a907e68cdaf3e611835be89b87625bbf3c2cfdd6d6f9bda278b4e2c",
+    "refs": [
+      "REQ-CON-21",
+      "INV-14"
+    ]
+  },
+  {
+    "id": "BC-ENV-11",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:4c46f29564d0dc507c01fb80526415f9d5817c3a968641bb1ca7af9c384ec0b1",
+    "refs": [
+      "REQ-CON-04",
+      "REQ-CON-09",
+      "REQ-CON-20",
+      "M-01"
+    ]
+  },
+  {
+    "id": "BC-ENV-12",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:84984d61868ef81da3ae160c534a774744e740ec03e62bd730ce4d7579be9cfc",
+    "refs": [
+      "REQ-CON-04",
+      "D30"
+    ]
+  },
+  {
+    "id": "BC-ENV-13",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:7b254636cc90af86eb7d6646c58884844e7057df3b29751749f673785cc8df97",
+    "refs": [
+      "REQ-CON-06",
+      "INV-07",
+      "D30"
+    ]
+  },
+  {
+    "id": "BC-ENV-14",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:71edad4cd0b1afbb4ff1f51f8fe1f6366c2ad52a42198f9e8175cfb18799d092",
+    "refs": [
+      "REQ-CON-07"
+    ]
+  },
+  {
+    "id": "BC-ENV-15",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:7d8a466cf26a583231a87c2c7a0dd030f67201b9c0f0bec3a30717486879b591",
+    "refs": [
+      "REQ-CON-08",
+      "REQ-FAIL-08",
+      "D43"
+    ]
+  },
+  {
+    "id": "BC-ENV-16",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:623c3466a324b3d5bed19952f7924375b37b423bd37f89a26626a3b68f6a058f",
+    "refs": [
+      "REQ-CON-08"
+    ]
+  },
+  {
+    "id": "BC-ENV-17",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:f864c4ecf0016d5dab50bc4d9824a98554c044bcaa7d9219bb038e93f84532d8",
+    "refs": [
+      "REQ-CON-04",
+      "D30"
+    ]
+  },
+  {
+    "id": "BC-ENV-18",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:d033af90099103bcd962166e3e3afada4a9fd17d191a3e331fbb5575ff7b8035",
+    "refs": [
+      "REQ-CON-09",
+      "INV-06",
+      "D30"
+    ]
+  },
+  {
+    "id": "BC-ENV-19",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:2feb6e908d07e8d433a29074ce3275073dfdbf7c1061dba740f8dcbac7ea48f5",
+    "refs": [
+      "REQ-CON-09",
+      "INV-06"
+    ]
+  },
+  {
+    "id": "BC-ENV-20",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:e3a6c534655d621fb22cca8e3ed8b4c4cf26bbc633ba44da9e3563ba8603df32",
+    "refs": [
+      "REQ-CON-27",
+      "INV-07"
+    ]
+  },
+  {
+    "id": "BC-ENV-21",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:8cf839add8ee347aa9d356e5233dd2aa2a6fa872c33c8b980bf659e6aa4cdccf",
+    "refs": [
+      "REQ-CON-27",
+      "REQ-FAIL-13",
+      "REQ-FAIL-23"
+    ]
+  },
+  {
+    "id": "BC-ENV-22",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:d7ed18b3a0beb215bb8811f59df6b532360e5390baa397db296a2d286856d23a",
+    "refs": [
+      "REQ-CON-15",
+      "REQ-CON-16"
+    ]
+  },
+  {
+    "id": "BC-ENV-23",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:9837a4ba2991fda37d2e326bf1f9adb10c2becc0ee67f9f336e307d81be4c50f",
+    "refs": [
+      "REQ-CON-15"
+    ]
+  },
+  {
+    "id": "BC-ENV-24",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:81560e82af89363457904cfd763b638c50a3e9212855079a82aa3e052208c467",
+    "refs": [
+      "REQ-CON-11",
+      "REQ-CON-12",
+      "INV-11"
+    ]
+  },
+  {
+    "id": "BC-ENV-25",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:70a40344a517ebf54772d06079a8d73137132212b4082ceb4e55a96979b53552",
+    "refs": [
+      "REQ-CON-14"
+    ]
+  },
+  {
+    "id": "BC-ERR-01",
+    "doc": "04-errors.md",
+    "line_digest": "sha256:1c56ad1fcc4ec0766dc65959b7adab804f61264728fa37dd53d282b638547a23",
+    "refs": [
+      "REQ-CON-19",
+      "M-44"
+    ]
+  },
+  {
+    "id": "BC-ERR-02",
+    "doc": "04-errors.md",
+    "line_digest": "sha256:7334bf7c7344406a8f2e2eee9e3ddbfb32358ef164d8e60eae93117f04d5a92d",
+    "refs": [
+      "M-44",
+      "M-45",
+      "M-46"
+    ]
+  },
+  {
+    "id": "BC-ERR-03",
+    "doc": "04-errors.md",
+    "line_digest": "sha256:c22a9c533cece63a10a475047fc698816d8bfc42ed17e00d2a5e3acf220f892b",
+    "refs": [
+      "M-44"
+    ]
+  },
+  {
+    "id": "BC-ERR-04",
+    "doc": "04-errors.md",
+    "line_digest": "sha256:17596a2c9e4afe3249a5714f53d00d1e5e6785d56fdc3a1400a669254d2520f9",
+    "refs": [
+      "M-44",
+      "REQ-CON-05"
+    ]
+  },
+  {
+    "id": "BC-ERR-05",
+    "doc": "04-errors.md",
+    "line_digest": "sha256:d6e664a2d5c717cc0e27b7d54f754ad0012864cd9404d8169579dcf19b981b08",
+    "refs": [
+      "M-45",
+      "D31"
+    ]
+  },
+  {
+    "id": "BC-ERR-06",
+    "doc": "04-errors.md",
+    "line_digest": "sha256:6d5663ea61ef5a32541c88a10fe1a097ba2218aea35d7c5975130ca8eec5731c",
+    "refs": [
+      "M-45",
+      "D31"
+    ]
+  },
+  {
+    "id": "BC-ERR-07",
+    "doc": "04-errors.md",
+    "line_digest": "sha256:c9817a8d4d5eab5c8e6aa4b864f03de7e74f363e20fd2dfb59a3f896940dd704",
+    "refs": [
+      "REQ-CON-05"
+    ]
+  },
+  {
+    "id": "BC-ERR-08",
+    "doc": "04-errors.md",
+    "line_digest": "sha256:5598227f370f60b9b2c2d93b180c58f2e00709d4e184a1e4da5b886b3a660e9b",
+    "refs": [
+      "M-44",
+      "M-46"
+    ]
+  },
+  {
+    "id": "BC-ERR-09",
+    "doc": "04-errors.md",
+    "line_digest": "sha256:97213dc0f3894ab4e91c2ccf1cd9f0fe3365a0ca776b0e40de52645f12f80596",
+    "refs": [
+      "M-45",
+      "M-01"
+    ]
+  },
+  {
+    "id": "BC-ERR-10",
+    "doc": "04-errors.md",
+    "line_digest": "sha256:e80547e018c7150e1279c4deac1cc93c50ebf9c9d89cab8f9270779242844b05",
+    "refs": [
+      "REQ-CON-27",
+      "REQ-FAIL-12",
+      "D31"
+    ]
+  },
+  {
+    "id": "BC-ERR-11",
+    "doc": "04-errors.md",
+    "line_digest": "sha256:1d1d5cb676a75a044f4bbb296ff497087e01ae81243bc7887fe98b8f6a8d46b3",
+    "refs": [
+      "REQ-CON-19",
+      "REQ-CON-20"
+    ]
+  },
+  {
+    "id": "BC-EVT-01",
+    "doc": "05-events-receipts.md",
+    "line_digest": "sha256:3e9b1c6b4253462cd74964949229506f91d9ef218ddf1c5c8adbdaecd43fd9ec",
+    "refs": [
+      "REQ-CON-18"
+    ]
+  },
+  {
+    "id": "BC-EVT-02",
+    "doc": "05-events-receipts.md",
+    "line_digest": "sha256:e61fecdc8c758a525d91c3c6e18b4749c03208b549b8c69eed9ee643c6d0ac13",
+    "refs": [
+      "REQ-CON-18",
+      "M-01",
+      "D43"
+    ]
+  },
+  {
+    "id": "BC-EVT-03",
+    "doc": "05-events-receipts.md",
+    "line_digest": "sha256:8f11bd144e78ca07f3e7f07a4ce074323a2859eb1679b8784c269f52cb5fb0ab",
+    "refs": [
+      "REQ-CON-18",
+      "REQ-CON-22"
+    ]
+  },
+  {
+    "id": "BC-EVT-04",
+    "doc": "05-events-receipts.md",
+    "line_digest": "sha256:99bcef61b6b2a94f0d7922bf17b618c66f9ec96639da0afae68a372301ded813",
+    "refs": [
+      "REQ-CON-18",
+      "INV-08"
+    ]
+  },
+  {
+    "id": "BC-EVT-05",
+    "doc": "05-events-receipts.md",
+    "line_digest": "sha256:f9de68baf6319db02adfe520f971beb7e770449092c804ba3bed747761c3021f",
+    "refs": [
+      "INV-08"
+    ]
+  },
+  {
+    "id": "BC-EVT-06",
+    "doc": "05-events-receipts.md",
+    "line_digest": "sha256:a23018012dda4b032d0e7a71e2da72324dc4232084f51898ad8d6117d7237d90",
+    "refs": [
+      "REQ-CON-10",
+      "INV-08"
+    ]
+  },
+  {
+    "id": "BC-EVT-07",
+    "doc": "05-events-receipts.md",
+    "line_digest": "sha256:eeef62bddc3f946afc2bfd458893d8c064ae015fecc917b9da1b371cd2ff8c9a",
+    "refs": [
+      "REQ-CON-10",
+      "INV-04"
+    ]
+  },
+  {
+    "id": "BC-EVT-08",
+    "doc": "05-events-receipts.md",
+    "line_digest": "sha256:281c5d59bc283c651c9cca821691419158fa740815386fed4589ea5db652731e",
+    "refs": [
+      "REQ-CON-10",
+      "INV-09"
+    ]
+  },
+  {
+    "id": "BC-EVT-09",
+    "doc": "05-events-receipts.md",
+    "line_digest": "sha256:2527a92f3c5e59bb506735cc36fe6a38990141c7c660a1de07ee315d7ff9ad47",
+    "refs": [
+      "REQ-CON-22",
+      "REQ-CON-34",
+      "REQ-CON-35"
+    ]
+  },
+  {
+    "id": "BC-ID-01",
+    "doc": "02-idempotency-digest.md",
+    "line_digest": "sha256:2a501799c01fe2a5f3e89c720a088fabbf9fb8eebc23610f1a54ed768c82f99c",
+    "refs": [
+      "INV-05",
+      "REQ-CON-21"
+    ]
+  },
+  {
+    "id": "BC-ID-02",
+    "doc": "02-idempotency-digest.md",
+    "line_digest": "sha256:055f1414f61b5972a1d447a0a3794c5cd7d06686cd938ff4368abd6da82980f2",
+    "refs": [
+      "INV-05",
+      "INV-14",
+      "D30"
+    ]
+  },
+  {
+    "id": "BC-ID-03",
+    "doc": "02-idempotency-digest.md",
+    "line_digest": "sha256:827d3f59d90f534df94c225d84f5c13001326c85b7c05135c1589d38b5810cf2",
+    "refs": [
+      "INV-14"
+    ]
+  },
+  {
+    "id": "BC-ID-04",
+    "doc": "02-idempotency-digest.md",
+    "line_digest": "sha256:1a7b4b972f6e524a6a762f5a0748c00df9cd86dd2d5f05a87204620a843cb546",
+    "refs": [
+      "D36",
+      "INV-14"
+    ]
+  },
+  {
+    "id": "BC-ID-05",
+    "doc": "02-idempotency-digest.md",
+    "line_digest": "sha256:3f8b4d96a9bd93d8ccb876a5da515ba9b24d6f8a3e5e9b0c6f40f8c9f53f4463",
+    "refs": [
+      "REQ-CON-32",
+      "INV-05"
+    ]
+  },
+  {
+    "id": "BC-ID-06",
+    "doc": "02-idempotency-digest.md",
+    "line_digest": "sha256:91d94d446eb73e2fd56b08f7b0107cea019c5ed035b78bd8a0340a9841c599b8",
+    "refs": [
+      "INV-05",
+      "REQ-CON-32"
+    ]
+  },
+  {
+    "id": "BC-ID-07",
+    "doc": "02-idempotency-digest.md",
+    "line_digest": "sha256:9360d428559e7b1b9a4127e20b1fa24fa46ab5c531cdd7d9e9bba8b68e555560",
+    "refs": [
+      "INV-05",
+      "REQ-CON-32",
+      "REQ-FAIL-06"
+    ]
+  },
+  {
+    "id": "BC-ID-08",
+    "doc": "02-idempotency-digest.md",
+    "line_digest": "sha256:9de49fba89dca8b84fc8b711527cd7f08df0fff3645b81439a5b87ab530534f6",
+    "refs": [
+      "M-45",
+      "D31"
+    ]
+  },
+  {
+    "id": "BC-ID-09",
+    "doc": "02-idempotency-digest.md",
+    "line_digest": "sha256:66b05462b8573cc461f715ea7be45a6ee1830b9284b053b563dacc0159f736a7",
+    "refs": [
+      "INV-04",
+      "REQ-CON-05"
+    ]
+  },
+  {
+    "id": "BC-ID-10",
+    "doc": "02-idempotency-digest.md",
+    "line_digest": "sha256:77dde52adad767bfecfc5579038a59f2f117f1cbbc097a1c08dee920c0f1b846",
+    "refs": [
+      "REQ-CON-27",
+      "REQ-CON-13"
+    ]
+  },
+  {
+    "id": "BC-ID-11",
+    "doc": "02-idempotency-digest.md",
+    "line_digest": "sha256:948da1496cadd332af54485cd25af7e89ac1a1f5210311c5e7927ec6ff1c109a",
+    "refs": [
+      "REQ-CON-15",
+      "D13"
+    ]
+  },
+  {
+    "id": "BC-ID-12",
+    "doc": "02-idempotency-digest.md",
+    "line_digest": "sha256:d984c122762bbca366fc65bf4ee8654a0e34c8708b7f857737c15c28fc19fb55",
+    "refs": [
+      "D32",
+      "M-15"
+    ]
+  },
+  {
+    "id": "BC-ID-13",
+    "doc": "02-idempotency-digest.md",
+    "line_digest": "sha256:cd7eced92c3cd8e13dc1592576b887685c220390d8e33172753959790f79f21c",
+    "refs": [
+      "D32"
+    ]
+  },
+  {
+    "id": "BC-ID-14",
+    "doc": "02-idempotency-digest.md",
+    "line_digest": "sha256:a6004215d2dc64af163ab35173b89efb7757b12e699519ec9a95a29ed79c48c3",
+    "refs": [
+      "D32",
+      "REQ-CON-21"
+    ]
+  },
+  {
+    "id": "BC-ID-15",
+    "doc": "02-idempotency-digest.md",
+    "line_digest": "sha256:dcf6b86463aadf2d766324c08b7543be483190dea71b99230920532cd308e06d",
+    "refs": [
+      "D32",
+      "M-15"
+    ]
+  },
+  {
+    "id": "BC-ID-16",
+    "doc": "02-idempotency-digest.md",
+    "line_digest": "sha256:3f6b314a9c801de6fadc8803fe42778a799f5ed98a13b2e67d4d5faca13c25a6",
+    "refs": [
+      "D32",
+      "M-15",
+      "D29"
+    ]
+  },
+  {
+    "id": "BC-ID-17",
+    "doc": "02-idempotency-digest.md",
+    "line_digest": "sha256:2a273f590ec172ee847fc723d8611e86580f8a0f9ce98654ba5f028772cb4119",
+    "refs": [
+      "D30",
+      "D32",
+      "D43"
+    ]
+  },
+  {
+    "id": "BC-MW-01",
+    "doc": "01-money-wire.md",
+    "line_digest": "sha256:58c70393bb44ce031b315518af420f0c93966be478633426b1ca9c407c795243",
+    "refs": [
+      "REQ-CON-02",
+      "D29"
+    ]
+  },
+  {
+    "id": "BC-MW-02",
+    "doc": "01-money-wire.md",
+    "line_digest": "sha256:666b4766b5b5b3864bd49cb1c7cf16089e441ef54403d9628bbf16ae0f13001e",
+    "refs": [
+      "REQ-CON-02",
+      "D19",
+      "D29"
+    ]
+  },
+  {
+    "id": "BC-MW-03",
+    "doc": "01-money-wire.md",
+    "line_digest": "sha256:07caf12997988ea1907410aab8c91223159f94b3e9a8ad088b45c4a2ade9cfb4",
+    "refs": [
+      "REQ-CON-02",
+      "D29"
+    ]
+  },
+  {
+    "id": "BC-MW-04",
+    "doc": "01-money-wire.md",
+    "line_digest": "sha256:ec8d21c86a3231fcf100988968495286caf7fa7d88457cdfa6766e51ec1f8ce3",
+    "refs": [
+      "REQ-CON-02",
+      "D29",
+      "M-15"
+    ]
+  },
+  {
+    "id": "BC-MW-05",
+    "doc": "01-money-wire.md",
+    "line_digest": "sha256:a0f7d9826f0c26a0601c019e9d90a047f1cbf6c5878961db88ecf51ffed8d815",
+    "refs": [
+      "REQ-CON-02",
+      "D29"
+    ]
+  },
+  {
+    "id": "BC-MW-06",
+    "doc": "01-money-wire.md",
+    "line_digest": "sha256:6b93534143826c8ae8a2f0b150333d7557a4634663ef284a1ead71c0ffe06fa1",
+    "refs": [
+      "D19",
+      "D29"
+    ]
+  },
+  {
+    "id": "BC-MW-07",
+    "doc": "01-money-wire.md",
+    "line_digest": "sha256:afc8f8e1f7736afe61c722f28132dd601c63e84221ee588885763a66f250ac07",
+    "refs": [
+      "REQ-CON-02",
+      "D29",
+      "D31"
+    ]
+  },
+  {
+    "id": "BC-MW-08",
+    "doc": "01-money-wire.md",
+    "line_digest": "sha256:99d93418454fba4f971d71a6f9f6aa8d9f3569dd8e9d5460127790afe37999a5",
+    "refs": [
+      "D19",
+      "D29"
+    ]
+  },
+  {
+    "id": "BC-MW-09",
+    "doc": "01-money-wire.md",
+    "line_digest": "sha256:b759f2dce6ca214209d4cd51ac7ef42af15696b29199e7cc83d0eb98841e6b29",
+    "refs": [
+      "D19",
+      "REQ-CON-30"
+    ]
+  },
+  {
+    "id": "BC-MW-10",
+    "doc": "01-money-wire.md",
+    "line_digest": "sha256:dc546acf4937b5cd048a7143c2dff0eadf223d88e9322403fb71a26a48e613d1",
+    "refs": [
+      "REQ-CON-02",
+      "REQ-CON-30",
+      "D19"
+    ]
+  },
+  {
+    "id": "BC-MW-11",
+    "doc": "01-money-wire.md",
+    "line_digest": "sha256:548cdf9a05fd716b07efeb26b3c73253ffc06ec195923043b31b0655decedaae",
+    "refs": [
+      "D29",
+      "REQ-CON-03"
+    ]
+  },
+  {
+    "id": "BC-MW-12",
+    "doc": "01-money-wire.md",
+    "line_digest": "sha256:60e502b542fdf55178a8d514be77854f2341317890b08f0ee36a8618dbd47ef4",
+    "refs": [
+      "D29",
+      "REQ-CON-04"
+    ]
+  },
+  {
+    "id": "BC-MW-13",
+    "doc": "01-money-wire.md",
+    "line_digest": "sha256:242958522c8c48674bdeca9b9eb3f28dec5a288d1d515bd76977692f48a879ed",
+    "refs": [
+      "REQ-CON-30",
+      "D19"
+    ]
+  },
+  {
+    "id": "BC-MW-14",
+    "doc": "01-money-wire.md",
+    "line_digest": "sha256:62021bda6b29a8c402348145b487c160515f881f063ae51e4db37ebc8c1e756a",
+    "refs": [
+      "REQ-CON-30",
+      "REQ-ACC-13"
+    ]
+  },
+  {
+    "id": "BC-MW-15",
+    "doc": "01-money-wire.md",
+    "line_digest": "sha256:51f4cc2c87074a4d2e4cd6a18f495512653c54be09174195bad7b570360a6e51",
+    "refs": [
+      "REQ-CON-30",
+      "REQ-ACC-13"
+    ]
+  },
+  {
+    "id": "BC-MW-16",
+    "doc": "01-money-wire.md",
+    "line_digest": "sha256:3849bbc3399958c664d3b7488e4c9e7a7b2bad5b6b5d1afe25b66b33d115c2dd",
+    "refs": [
+      "REQ-CON-30",
+      "REQ-ACC-13"
+    ]
+  },
+  {
+    "id": "BC-MW-17",
+    "doc": "01-money-wire.md",
+    "line_digest": "sha256:868e27ced6926aa1572634d42199b25c4ac34847854e1e52f721ea7d0aef0e22",
+    "refs": [
+      "REQ-CON-30",
+      "D29"
+    ]
+  },
+  {
+    "id": "BC-MW-18",
+    "doc": "01-money-wire.md",
+    "line_digest": "sha256:d52c272c69aad3ad616bc6d345d2cc0a9880d70356e2de66c233e63018811eea",
+    "refs": [
+      "REQ-CON-30"
+    ]
+  }
+]

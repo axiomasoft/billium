@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-10:usage/receipt.v1.json",
+  "title": "Ответ приёма факта usage",
+  "type": "object",
+  "required": [
+    "schema",
+    "result",
+    "source",
+    "factId",
+    "revision",
+    "digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "usage.receipt.v1"
+    },
+    "result": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/usageReceiptResult"
+    },
+    "source": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "factId": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "revision": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/counter"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-10:problem/problem.json",
+  "title": "Problem object (RFC 9457) Billium",
+  "type": "object",
+  "required": [
+    "code",
+    "category",
+    "retryable",
+    "sameKey",
+    "receipt",
+    "title"
+  ],
+  "properties": {
+    "code": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/problemCode"
+    },
+    "category": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/problemCategory"
+    },
+    "retryable": {
+      "type": "boolean"
+    },
+    "sameKey": {
+      "type": "boolean"
+    },
+    "receipt": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/receiptPolicy"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "detail": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string"
+    },
+    "status": {
+      "type": "integer",
+      "minimum": 400,
+      "maximum": 599
+    },
+    "instance": {
+      "type": "string"
+    }
+  }
+}
