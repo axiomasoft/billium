@@ -1,0 +1,205 @@
+[
+  {
+    "schema": "payment.execute.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\ExecutePayment",
+    "dart": "ExecutePayment",
+    "category": "Data"
+  },
+  {
+    "schema": "payment.refund.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\RequestRefund",
+    "dart": "RequestRefund",
+    "category": "Data"
+  },
+  {
+    "schema": "payment.cancel.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\CancelOperation",
+    "dart": "CancelOperation",
+    "category": "Data"
+  },
+  {
+    "schema": "payment.find.v1",
+    "variant": "request",
+    "php": "Billium\\Contracts\\Data\\Envelopes\\FindOperation",
+    "dart": "FindOperation",
+    "category": "Data"
+  },
+  {
+    "schema": "payment.find.v1",
+    "variant": "response",
+    "php": "Billium\\Contracts\\Data\\Envelopes\\FindResult",
+    "dart": "FindResult",
+    "category": "Data"
+  },
+  {
+    "schema": "payment.admission.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\PaymentAdmission",
+    "dart": "PaymentAdmission",
+    "category": "Data"
+  },
+  {
+    "schema": "payment.outcome.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\PaymentOutcome",
+    "dart": "PaymentOutcome",
+    "category": "Data"
+  },
+  {
+    "schema": "payment.observation.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\PaymentObservation",
+    "dart": "PaymentObservation",
+    "category": "Data"
+  },
+  {
+    "schema": "usage.fact.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\UsageFact",
+    "dart": "UsageFact",
+    "category": "Data"
+  },
+  {
+    "schema": "usage.receipt.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\UsageReceipt",
+    "dart": "UsageReceipt",
+    "category": "Data"
+  },
+  {
+    "schema": "obligation.prepare.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\PrepareObligation",
+    "dart": "PrepareObligation",
+    "category": "Data"
+  },
+  {
+    "schema": "occurrence.ensure.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\EnsureBillingOccurrence",
+    "dart": "EnsureBillingOccurrence",
+    "category": "Data"
+  },
+  {
+    "schema": "collection.authorize.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\AuthorizeCollection",
+    "dart": "AuthorizeCollection",
+    "category": "Data"
+  },
+  {
+    "schema": "billium.query.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\BilliumQuery",
+    "dart": "BilliumQuery",
+    "category": "Data"
+  },
+  {
+    "schema": "billium.event.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\EventEnvelope",
+    "dart": "EventEnvelope",
+    "category": "Data"
+  },
+  {
+    "schema": null,
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Money",
+    "dart": "Money",
+    "category": "Data"
+  },
+  {
+    "schema": null,
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Currency",
+    "dart": "Currency",
+    "category": "Data"
+  },
+  {
+    "schema": null,
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelope",
+    "dart": "Envelope",
+    "category": "Data"
+  },
+  {
+    "schema": null,
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Problem",
+    "dart": "Problem",
+    "category": "Data"
+  },
+  {
+    "schema": null,
+    "variant": null,
+    "php": "Billium\\Contracts\\Enums\\ProblemCode",
+    "dart": "ProblemCode",
+    "category": "Enums"
+  },
+  {
+    "schema": null,
+    "variant": null,
+    "php": "Billium\\Contracts\\Enums\\RoundingMode",
+    "dart": "RoundingMode",
+    "category": "Enums"
+  },
+  {
+    "schema": null,
+    "variant": null,
+    "php": "Billium\\Contracts\\Contracts\\Codec",
+    "dart": "Codec",
+    "category": "Contracts"
+  },
+  {
+    "schema": null,
+    "variant": null,
+    "php": "Billium\\Contracts\\Contracts\\MoneyMath",
+    "dart": "MoneyMath",
+    "category": "Contracts"
+  },
+  {
+    "schema": null,
+    "variant": null,
+    "php": "Billium\\Contracts\\Contracts\\MoneyMathFactory",
+    "dart": null,
+    "category": "Contracts"
+  },
+  {
+    "schema": null,
+    "variant": null,
+    "php": "Billium\\Contracts\\Contracts\\SpecRevision",
+    "dart": null,
+    "category": "Contracts"
+  },
+  {
+    "schema": null,
+    "variant": null,
+    "php": "Billium\\Contracts\\Exceptions\\ProblemException",
+    "dart": "ProblemException",
+    "category": "Exceptions"
+  },
+  {
+    "schema": null,
+    "variant": null,
+    "php": "Billium\\Contracts\\Attributes\\Api",
+    "dart": null,
+    "category": "Attributes"
+  },
+  {
+    "schema": null,
+    "variant": null,
+    "php": "Billium\\Contracts\\Attributes\\Spi",
+    "dart": null,
+    "category": "Attributes"
+  },
+  {
+    "schema": null,
+    "variant": null,
+    "php": "Billium\\Contracts\\Attributes\\SpiKind",
+    "dart": null,
+    "category": "Attributes"
+  }
+]

@@ -1,0 +1,1545 @@
+{
+  "revision": "2026-10",
+  "entries": [
+    {
+      "kind": "envelope",
+      "id": "billium.event.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/event/event.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "billium.query.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/query.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "collection.authorize.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/collection/authorize.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "obligation.prepare.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/obligation/prepare.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "occurrence.ensure.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/ensure.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "payment.admission.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/admission.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "payment.cancel.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/cancel.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "payment.execute.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/execute.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "payment.find.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/find.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "payment.observation.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "payment.outcome.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/outcome.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "payment.refund.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/refund.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "usage.fact.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "usage.receipt.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/receipt.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v1#/properties/aggregateRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/event/event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/event/event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v1#/properties/eventId",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/event/event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v1#/properties/eventType",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/event/event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v1#/properties/occurredAt",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/event/event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v1#/properties/payload",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/event/event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v1#/properties/revision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/event/event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/event/event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/event/event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.query.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/query.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.query.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/query.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.query.v1#/properties/query",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/query.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.query.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/query.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.query.v1#/properties/selector",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/query.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.query.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/query.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "collection.authorize.v1#/properties/businessPaymentIntentRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/collection/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "collection.authorize.v1#/properties/commandKey",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/collection/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "collection.authorize.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/collection/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "collection.authorize.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/collection/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "collection.authorize.v1#/properties/executorBindingRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/collection/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "collection.authorize.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/collection/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "collection.authorize.v1#/properties/obligationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/collection/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "collection.authorize.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/collection/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "collection.authorize.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/collection/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "obligation.prepare.v1#/properties/agreementRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/obligation/prepare.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "obligation.prepare.v1#/properties/agreementRevision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/obligation/prepare.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "obligation.prepare.v1#/properties/billingOccurrenceRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/obligation/prepare.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "obligation.prepare.v1#/properties/commandKey",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/obligation/prepare.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "obligation.prepare.v1#/properties/componentRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/obligation/prepare.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "obligation.prepare.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/obligation/prepare.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "obligation.prepare.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/obligation/prepare.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "obligation.prepare.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/obligation/prepare.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "obligation.prepare.v1#/properties/priceVersionRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/obligation/prepare.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "obligation.prepare.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/obligation/prepare.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "obligation.prepare.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/obligation/prepare.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "obligation.prepare.v1#/properties/snapshotDigest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/obligation/prepare.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.ensure.v1#/properties/commandKey",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/ensure.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.ensure.v1#/properties/componentRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/ensure.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.ensure.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/ensure.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.ensure.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/ensure.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.ensure.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/ensure.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.ensure.v1#/properties/interval",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/ensure.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.ensure.v1#/properties/purpose",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/ensure.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.ensure.v1#/properties/scheduleRevision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/ensure.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.ensure.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/ensure.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.ensure.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/ensure.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.admission.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/admission.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.admission.v1#/properties/operationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/admission.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.admission.v1#/properties/outcomeQueryRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/admission.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.admission.v1#/properties/receipt",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/admission.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.admission.v1#/properties/result",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/admission.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.admission.v1#/properties/revision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/admission.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.admission.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/admission.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.cancel.v1#/properties/commandKey",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/cancel.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.cancel.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/cancel.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.cancel.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/cancel.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.cancel.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/cancel.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.cancel.v1#/properties/operationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/cancel.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.cancel.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/cancel.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.cancel.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/cancel.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execute.v1#/properties/bindingRevision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/execute.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execute.v1#/properties/commandKey",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/execute.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execute.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/execute.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execute.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/execute.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execute.v1#/properties/executionProfile",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/execute.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execute.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/execute.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execute.v1#/properties/merchantAccountRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/execute.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execute.v1#/properties/money",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/execute.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execute.v1#/properties/operationKind",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/execute.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execute.v1#/properties/operationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/execute.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execute.v1#/properties/requestedAt",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/execute.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execute.v1#/properties/returnContextRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/execute.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execute.v1#/properties/routingEpoch",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/execute.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execute.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/execute.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execute.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/execute.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execute.v1#/properties/source",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/execute.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.find.v1#/$defs/request/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.find.v1#/$defs/request/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.find.v1#/$defs/request/properties/operationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.find.v1#/$defs/request/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.find.v1#/$defs/request/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.find.v1#/$defs/response/properties/absenceCertificate",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.find.v1#/$defs/response/properties/capturedTotal",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.find.v1#/$defs/response/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.find.v1#/$defs/response/properties/operationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.find.v1#/$defs/response/properties/refundedTotal",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.find.v1#/$defs/response/properties/reservedRefundTotal",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.find.v1#/$defs/response/properties/revision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.find.v1#/$defs/response/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.find.v1#/$defs/response/properties/status",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/authorizedTotal",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/businessIntentRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/capturedTotal",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/contentDigest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/currency",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/discrepancy",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/eventId",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/evidenceRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/observedAt",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/operationKind",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/operationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/operationRevision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/originalPaymentRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/partitionRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/providerAccountRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/providerOperationId",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/recordedAt",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/refundedTotal",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/requested",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/sourceAuthority",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/sourceLineage",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/sourceSequence",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.observation.v1#/properties/state",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/observation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.outcome.v1#/properties/bindingRevision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.outcome.v1#/properties/capturedTotal",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.outcome.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.outcome.v1#/properties/merchantAccountRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.outcome.v1#/properties/money",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.outcome.v1#/properties/occurredAt",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.outcome.v1#/properties/operationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.outcome.v1#/properties/originalOperationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.outcome.v1#/properties/providerEvidenceRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.outcome.v1#/properties/refundedTotal",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.outcome.v1#/properties/revision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.outcome.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.outcome.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.outcome.v1#/properties/status",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.refund.v1#/properties/category",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/refund.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.refund.v1#/properties/commandKey",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/refund.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.refund.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/refund.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.refund.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/refund.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.refund.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/refund.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.refund.v1#/properties/money",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/refund.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.refund.v1#/properties/operationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/refund.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.refund.v1#/properties/originalOperationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/refund.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.refund.v1#/properties/reasonCode",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/refund.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.refund.v1#/properties/requestedAt",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/refund.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.refund.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/refund.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.refund.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/refund.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.refund.v1#/properties/source",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/refund.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v1#/properties/correctsFactId",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v1#/properties/eventAt",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v1#/properties/factId",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v1#/properties/interval",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v1#/properties/metricRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v1#/properties/metricVersion",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v1#/properties/observedAt",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v1#/properties/provenance",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v1#/properties/quantity",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v1#/properties/revision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v1#/properties/semantics",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v1#/properties/source",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v1#/properties/subjectRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v1#/properties/unit",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.receipt.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/receipt.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.receipt.v1#/properties/factId",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/receipt.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.receipt.v1#/properties/result",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/receipt.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.receipt.v1#/properties/revision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/receipt.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.receipt.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/receipt.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.receipt.v1#/properties/source",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/receipt.v1.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.allocation.reallocation_required",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.auth.denied",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.idempotency.conflict",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.idempotency.in_flight",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.installation.quarantined",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.invoice.frozen",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.key.expired",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.lookup.unavailable",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.money.currency_mismatch",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.money.scale_invalid",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.observation.conflict",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.observation.parked",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.operation.not_cancellable",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.policy.unknown",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.recovery.required",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.refund.capacity_exceeded",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.schema.unsupported",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.transport.unavailable",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.usage.conflict",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.validation.invalid",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "event-type",
+      "id": "allocation.applied.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "event-type",
+      "id": "credit_note.issued.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "event-type",
+      "id": "discrepancy.recorded.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "event-type",
+      "id": "invoice.issued.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "event-type",
+      "id": "obligation.adjusted.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "event-type",
+      "id": "obligation.created.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "event-type",
+      "id": "payment.outcome.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "operation-status",
+      "id": "accepted-unknown",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "operation-status",
+      "id": "cancelled",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "operation-status",
+      "id": "failed-terminal",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "operation-status",
+      "id": "pending",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "operation-status",
+      "id": "succeeded",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "invoice-status",
+      "id": "draft",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "invoice-status",
+      "id": "issued",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "invoice-status",
+      "id": "paid",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "invoice-status",
+      "id": "partially_paid",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "invoice-status",
+      "id": "uncollectible",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "invoice-status",
+      "id": "void",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "spec-revision",
+      "id": "2026-10",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/README.md"
+    }
+  ]
+}

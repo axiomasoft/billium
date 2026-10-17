@@ -1,0 +1,16 @@
+[
+  "billium.event.v1",
+  "billium.query.v1",
+  "collection.authorize.v1",
+  "obligation.prepare.v1",
+  "occurrence.ensure.v1",
+  "payment.admission.v1",
+  "payment.cancel.v1",
+  "payment.execute.v1",
+  "payment.find.v1",
+  "payment.observation.v1",
+  "payment.outcome.v1",
+  "payment.refund.v1",
+  "usage.fact.v1",
+  "usage.receipt.v1"
+]

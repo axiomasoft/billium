@@ -2,7 +2,7 @@
   "$schema": "urn:swissknifeman:task:plan:item:v1",
   "id": "P2.7",
   "title": "Identities, type-map, запрет float/double и arch-тесты",
-  "status": "todo",
+  "status": "done_with_deviations",
   "summary": "spec/identities.json со снапшотами, spec/type-map.json, генераторы с --check в слое derived; PHPStan-правило NoFloatTypeRule, Pest arch-тесты (без float/Eloquent в публичных сигнатурах, #[Api] вне Internal, снапшоты identities), scripts/lint/no-double.py в слое dart.",
   "why": "Identities и публичные типы замораживаются к 1.0 и меняются только major-версией (M-27, M-28, target-structure § Что замораживается); без реестра с P2 незаметное переименование кода ошибки или поля ломает потребителей. Float в денежной сигнатуре — нарушение D19 и M-48, которое ловится только автоматически.",
   "scope": {
@@ -169,6 +169,46 @@
     "need": "none",
     "status": "not_needed"
   },
-  "result": null,
-  "updated_at": "2026-10-17T12:02:11Z"
+  "result": {
+    "started_at": "2026-10-17T17:41:43Z",
+    "finished_at": "2026-10-17T17:46:27Z",
+    "executor": {
+      "provider": "anthropic",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "session": "40db5db4-62f3-415d-81d5-866386e0cc7a"
+    },
+    "notes": "identities.py (220 entries, 11 snapshot kinds), type-map.py (reflection + Dart exports), NoFloatTypeRule, Pest Arch tests, Dart identities test, no-double.py wired. Negative cases red then reverted: float param (phpstan+arch), renamed ProblemCode case (arch snapshot), double in Dart (no-double), removed-without-retired (merge error), stale type-map.",
+    "deviations": [
+      "SchemaValidator::number() int|float exempted via one counted ignoreErrors entry (schema keyword bounds, not money)"
+    ],
+    "checks": [
+      {
+        "id": "V1",
+        "exit": 0,
+        "at": "2026-10-17T17:46:27Z"
+      },
+      {
+        "id": "V2",
+        "exit": 0,
+        "at": "2026-10-17T17:46:27Z"
+      },
+      {
+        "id": "V3",
+        "exit": 0,
+        "at": "2026-10-17T17:46:27Z"
+      },
+      {
+        "id": "V4",
+        "exit": 0,
+        "at": "2026-10-17T17:46:27Z"
+      },
+      {
+        "id": "V5",
+        "exit": 0,
+        "at": "2026-10-17T17:46:27Z"
+      }
+    ]
+  },
+  "updated_at": "2026-10-17T17:46:27Z"
 }

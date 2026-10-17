@@ -1,0 +1,22 @@
+[
+  "billium.allocation.reallocation_required",
+  "billium.auth.denied",
+  "billium.idempotency.conflict",
+  "billium.idempotency.in_flight",
+  "billium.installation.quarantined",
+  "billium.invoice.frozen",
+  "billium.key.expired",
+  "billium.lookup.unavailable",
+  "billium.money.currency_mismatch",
+  "billium.money.scale_invalid",
+  "billium.observation.conflict",
+  "billium.observation.parked",
+  "billium.operation.not_cancellable",
+  "billium.policy.unknown",
+  "billium.recovery.required",
+  "billium.refund.capacity_exceeded",
+  "billium.schema.unsupported",
+  "billium.transport.unavailable",
+  "billium.usage.conflict",
+  "billium.validation.invalid"
+]

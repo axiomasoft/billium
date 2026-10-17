@@ -30,7 +30,8 @@
     ],
     "autoload-dev": {
         "psr-4": {
-            "Billium\\Core\\Tests\\": "packages/core/tests/"
+            "Billium\\Core\\Tests\\": "packages/core/tests/",
+            "Billium\\Tooling\\PhpStan\\": "scripts/phpstan/src/"
         }
     },
     "config": {
