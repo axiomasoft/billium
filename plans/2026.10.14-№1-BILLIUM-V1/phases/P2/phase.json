@@ -134,5 +134,10 @@
       "mode": "recommended",
       "note": "identities/type-map и закрытие фазы"
     }
-  ]
+  ],
+  "closed": {
+    "at": "2026-10-17T17:50:36Z",
+    "result": "done_with_deviations",
+    "summary": "8 item(s): 1 done, 7 done_with_deviations"
+  }
 }

@@ -66,9 +66,8 @@ layer_php() {
     vendor/bin/phpstan analyse --memory-limit=1G
     vendor/bin/rector process --dry-run
     vendor/bin/pest
-    if [[ -f scripts/smoke/php.sh ]]; then
-        bash scripts/smoke/php.sh
-    fi
+    need_path scripts/smoke/consumer-install.sh
+    bash scripts/smoke/consumer-install.sh php
 }
 
 layer_dart() {
@@ -83,9 +82,8 @@ layer_dart() {
     )
     need_path scripts/lint/no-double.py
     python3 scripts/lint/no-double.py
-    if [[ -f scripts/smoke/dart.sh ]]; then
-        bash scripts/smoke/dart.sh
-    fi
+    need_path scripts/smoke/consumer-install.sh
+    bash scripts/smoke/consumer-install.sh dart
 }
 
 layer_conformance() {

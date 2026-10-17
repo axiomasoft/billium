@@ -1,7 +1,8 @@
 # billium-contracts v1
 
 Статус: PLAN1.P1.7 (2026-10-17). Документ задаёт форму и семантику контрактов; JSON Schema, fixtures и
-код пакетов пишет P2 (D9). Термины и требования — `docs/requirements.md`; архитектура —
+код пакетов пишет P2 (D9). Нормативная wire-форма (JSON Schema, problem-codes, правила) живёт в
+`spec/revisions/2026-10/` (draft). Термины и требования — `docs/requirements.md`; архитектура —
 `docs/architecture/target-architecture.md`; модель — `docs/architecture/data-model.md`.
 
 Пакеты: PHP `axiomasoft/billium-contracts`, Dart `billium_contracts` (D9). Оба содержат схемы, value

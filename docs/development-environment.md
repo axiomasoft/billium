@@ -1,8 +1,36 @@
 # Development environment
 
 Billium uses the AgenTools agent environment with PHP and Dart enabled.
-The application has not been scaffolded yet; framework choices, runtime
-versions, manifests, test runners, and billing APIs remain to be defined.
+Only the contracts packages exist so far (`packages/contracts`, `packages/contracts-dart`) plus the
+core skeleton `packages/core`; domain code, persistence and billing APIs start in P3.
+
+## Toolchain and checks
+
+The host has PHP 8.3 and no Dart SDK, so every check runs in the `toolchain` image (D33): PHP 8.4,
+Composer, Dart SDK 3.13.5 and the pinned Python tooling. `compose.yaml` runs it as `UID:GID` of the host user
+so files created in the container stay owned by you. PostgreSQL is not needed before P3.
+
+```bash
+docker compose build toolchain
+docker compose run --rm toolchain composer install --no-interaction
+docker compose run --rm toolchain bash scripts/ci.sh                  # full gate
+docker compose run --rm toolchain bash scripts/ci.sh --layer <lint|derived|php|dart|conformance>
+docker compose run --rm toolchain bash scripts/ci.sh --list           # layers and their subjects
+docker compose run --rm toolchain bash scripts/smoke/consumer-install.sh [php|dart]
+```
+
+`scripts/ci.sh` is the single carrier of the gate composition and `.github/workflows/ci.yml` calls it unchanged.
+A layer without its subject, or a missing tool, is red, never skipped. Regenerate derived files with the
+script that `--check` names (for example `python3 scripts/spec/identities.py`).
+
+Identities (`spec/identities.json`, snapshots in `spec/identities/snapshots/`) and `spec/type-map.json` are
+frozen to 1.0 by major versions only: an entry that disappears must be kept with status `retired`.
+`NoFloatTypeRule` (PHPStan) and `scripts/lint/no-double.py` (Dart) keep `float`/`double` out of money paths;
+`packages/contracts/tests/Arch` checks `#[Api]` and the identity snapshots.
+
+The consumer install smoke installs each package by copy into an empty project (no dev dependencies,
+no `laravel/framework`) and decodes the pilot `payment.execute.v1`. PB-15 (the previous-minor consumer reads
+`payment.outcome.v1`) is proved by the `compat/pilot` vectors in the `conformance` layer for both adapters.
 
 ## Skills and providers
 

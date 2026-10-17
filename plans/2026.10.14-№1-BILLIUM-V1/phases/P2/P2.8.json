@@ -2,7 +2,7 @@
   "$schema": "urn:swissknifeman:task:plan:item:v1",
   "id": "P2.8",
   "title": "Закрытие P2: consumer install smoke, PB-15, полный гейт и документация",
-  "status": "todo",
+  "status": "done",
   "summary": "scripts/smoke/consumer-install.sh для PHP и Dart в слоях php/dart; полный `scripts/ci.sh` зелёный в toolchain; README.md, docs/development-environment.md и docs/contracts/billium-contracts-v1.md ссылаются на ревизию 2026-10, команды и evidence; PB-15 закрыт набором compat/pilot.",
   "why": "Пакет, зелёный в монорепо, может не устанавливаться потребителем (path-symlink скрывает отсутствующие файлы, лишние зависимости); REQ-CON-01 требует лёгкий пакет без Laravel. Приёмка P2 (roadmap) включает consumer install smoke и PB-15; документация команд — правило CLAUDE.md.",
   "scope": {
@@ -142,6 +142,58 @@
     "need": "none",
     "status": "not_needed"
   },
-  "result": null,
-  "updated_at": "2026-10-17T12:02:12Z"
+  "result": {
+    "started_at": "2026-10-17T17:41:43Z",
+    "finished_at": "2026-10-17T17:50:36Z",
+    "executor": {
+      "provider": "anthropic",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "session": "40db5db4-62f3-415d-81d5-866386e0cc7a"
+    },
+    "notes": "Full gate scripts/ci.sh in toolchain (run after ci.sh wired the smoke into php/dart layers): lint, derived, php, dart, conformance PASS; php/dart conformance 333 pass, 1 fail counted GREEN by runner, 0 error. consumer-install.sh: PHP by copy without laravel/framework, Dart by path copy of the package; negative case (missing resources/currencies.php) red, restored. PB-15 via compat/pilot vectors in both adapters. README, development-environment, contracts doc status line updated.",
+    "checks": [
+      {
+        "id": "V1",
+        "exit": 0,
+        "at": "2026-10-17T17:50:36Z"
+      },
+      {
+        "id": "V2",
+        "exit": 0,
+        "at": "2026-10-17T17:50:36Z"
+      },
+      {
+        "id": "V3",
+        "exit": 0,
+        "at": "2026-10-17T17:50:36Z"
+      },
+      {
+        "id": "V4",
+        "exit": 0,
+        "at": "2026-10-17T17:50:36Z"
+      },
+      {
+        "id": "V5",
+        "exit": 0,
+        "at": "2026-10-17T17:50:36Z"
+      },
+      {
+        "id": "V90",
+        "exit": 0,
+        "at": "2026-10-17T17:50:36Z"
+      },
+      {
+        "id": "V91",
+        "exit": 0,
+        "at": "2026-10-17T17:50:36Z"
+      },
+      {
+        "id": "V92",
+        "exit": 0,
+        "at": "2026-10-17T17:50:36Z"
+      }
+    ]
+  },
+  "updated_at": "2026-10-17T17:50:36Z"
 }
