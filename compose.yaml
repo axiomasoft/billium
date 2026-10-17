@@ -1,0 +1,17 @@
+services:
+  toolchain:
+    build: docker/toolchain
+    user: "${UID:-1000}:${GID:-1000}"
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - composer-cache:/tmp/composer
+      - pub-cache:/tmp/pub-cache
+    environment:
+      HOME: /tmp/home
+      COMPOSER_HOME: /tmp/composer
+      PUB_CACHE: /tmp/pub-cache
+
+volumes:
+  composer-cache:
+  pub-cache:

@@ -1,0 +1,44 @@
+{
+    "name": "axiomasoft/billium-workspace",
+    "description": "Billium dev workspace: path-linked packages and shared tooling (private).",
+    "type": "project",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.4"
+    },
+    "require-dev": {
+        "axiomasoft/billium-contracts": "^0.1",
+        "axiomasoft/billium-core": "^0.1",
+        "laravel/pint": "^1.0",
+        "orchestra/testbench": "^11.0",
+        "pestphp/pest": "^4.0",
+        "phpstan/phpstan": "^2.3",
+        "rector/rector": "^2.0"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "packages/*",
+            "options": {
+                "symlink": true,
+                "versions": {
+                    "axiomasoft/billium-contracts": "0.1.0",
+                    "axiomasoft/billium-core": "0.1.0"
+                }
+            }
+        }
+    ],
+    "autoload-dev": {
+        "psr-4": {
+            "Billium\\Core\\Tests\\": "packages/core/tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

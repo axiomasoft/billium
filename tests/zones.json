@@ -1,0 +1,39 @@
+{
+  "zones": [
+    {
+      "id": "spec",
+      "paths": ["spec/**", "scripts/spec/**"],
+      "layers": ["lint", "derived", "conformance"]
+    },
+    {
+      "id": "fixtures",
+      "paths": ["fixtures/**"],
+      "layers": ["lint", "conformance"]
+    },
+    {
+      "id": "conformance",
+      "paths": ["conformance/**"],
+      "layers": ["conformance"]
+    },
+    {
+      "id": "php-contracts",
+      "paths": ["packages/contracts/**", "conformance/adapters/php/**"],
+      "layers": ["php", "conformance"]
+    },
+    {
+      "id": "php-core",
+      "paths": ["packages/core/**", "composer.json", "composer.lock", "phpstan.neon.dist", "pint.json", "rector.php", "phpunit.xml.dist", "tests/**"],
+      "layers": ["php"]
+    },
+    {
+      "id": "dart-contracts",
+      "paths": ["packages/contracts-dart/**", "conformance/adapters/dart/**"],
+      "layers": ["dart", "conformance"]
+    },
+    {
+      "id": "toolchain",
+      "paths": ["docker/**", "compose.yaml", "scripts/ci.sh", ".github/**"],
+      "layers": ["lint", "derived", "php", "dart", "conformance"]
+    }
+  ]
+}

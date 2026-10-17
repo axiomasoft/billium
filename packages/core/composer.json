@@ -1,0 +1,25 @@
+{
+    "name": "axiomasoft/billium-core",
+    "description": "Billium core skeleton: Laravel 13 service provider (modules arrive from P3).",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.4",
+        "axiomasoft/billium-contracts": "^0.1",
+        "laravel/framework": "^13.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Billium\\Core\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Billium\\Core\\BilliumCoreServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

@@ -1,0 +1,21 @@
+{
+    "name": "axiomasoft/billium-contracts",
+    "description": "Billium contracts v1: money, canonical digest, envelopes and error codes (no persistence, no provider SDK).",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "Billium\\Contracts\\": "src/"
+        }
+    },
+    "extra": {
+        "billium": {
+            "spec_rev": "2026-10"
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

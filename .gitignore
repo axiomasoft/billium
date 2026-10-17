@@ -54,3 +54,15 @@ __pycache__/
 !.env.example
 .swissknifeman/backups/
 .swissknifeman/config.toml.lock
+
+# P2 toolchain caches and reports
+conformance/reports/
+.phpunit.cache/
+.pint.cache
+.php-cs-fixer.cache
+.rector/
+.composer/
+.pub-cache/
+
+# Dart library lockfile
+**/pubspec.lock

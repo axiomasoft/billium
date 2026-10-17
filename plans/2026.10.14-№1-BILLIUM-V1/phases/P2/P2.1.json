@@ -2,7 +2,7 @@
   "$schema": "urn:swissknifeman:task:plan:item:v1",
   "id": "P2.1",
   "title": "Bootstrap: toolchain-образ, workspace composer, скелеты пакетов, scripts/ci.sh",
-  "status": "todo",
+  "status": "done_with_deviations",
   "summary": "Образ docker/toolchain (PHP 8.4, composer 2, Dart 3.13.5, Python tooling) и сервис compose toolchain; корневой dev-workspace composer.json со статанализом; скелеты packages/contracts, packages/core (Laravel 13 resolver, CL-116), packages/contracts-dart; scripts/ci.sh с четырьмя слоями и --layer/--list; tests/zones.json; workflow CI.",
   "why": "Хост владельца — PHP 8.3 и без Dart (D33); без образа ни одна проверка P2 не воспроизводима. CL-116 (resolver Laravel 13 не запускался, D16) закрывается только реальным composer resolve. Гейт M-33 — один носитель; если состав слоёв размазан по workflow, CI и локальный прогон расходятся.",
   "scope": {
@@ -236,6 +236,66 @@
     "need": "none",
     "status": "not_needed"
   },
-  "result": null,
-  "updated_at": "2026-10-17T12:02:07Z"
+  "result": {
+    "started_at": "2026-10-17T16:17:01Z",
+    "finished_at": "2026-10-17T16:29:43Z",
+    "executor": {
+      "provider": "anthropic",
+      "model": "claude-sonnet-5-5",
+      "effort": "high",
+      "session": "e7a217ec-76b6-4bbb-8537-4f5da5bbacb8"
+    },
+    "notes": "Toolchain PHP 8.4/Dart 3.13.5/jsonschema 4.26.0, Laravel v13.37.0 (CL-116), Pest 4.7.8, PHPStan 2.3.1; слои php и dart зелёные, lint/derived/conformance красные без предмета.",
+    "deviations": [
+      "V7 ожидаемо exit 1 (слой conformance без предмета красный, M-33). Host-прогон docker требует DOCKER_CONFIG с пустым config из-за отсутствия docker-credential-desktop. Добавлены phpunit.xml.dist и root repositories options.versions=0.1.0 (^0.1) вместо @dev."
+    ],
+    "checks": [
+      {
+        "id": "V1",
+        "exit": 0,
+        "at": "2026-10-17T16:29:43Z"
+      },
+      {
+        "id": "V2",
+        "exit": 0,
+        "at": "2026-10-17T16:29:43Z"
+      },
+      {
+        "id": "V3",
+        "exit": 0,
+        "at": "2026-10-17T16:29:43Z"
+      },
+      {
+        "id": "V4",
+        "exit": 0,
+        "at": "2026-10-17T16:29:43Z"
+      },
+      {
+        "id": "V5",
+        "exit": 0,
+        "at": "2026-10-17T16:29:43Z"
+      },
+      {
+        "id": "V6",
+        "exit": 0,
+        "at": "2026-10-17T16:29:43Z"
+      },
+      {
+        "id": "V7",
+        "exit": 1,
+        "at": "2026-10-17T16:29:43Z"
+      },
+      {
+        "id": "V8",
+        "exit": 0,
+        "at": "2026-10-17T16:29:43Z"
+      },
+      {
+        "id": "V9",
+        "exit": 0,
+        "at": "2026-10-17T16:29:43Z"
+      }
+    ]
+  },
+  "updated_at": "2026-10-17T16:29:43Z"
 }

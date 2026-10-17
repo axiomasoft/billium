@@ -1,0 +1,34 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:decision:v1",
+  "id": "D42",
+  "title": "Принять риск P19R3-F01 и перенести в дизайн WriterAdmission P5 (решение владельца)",
+  "date": "2026-10-17",
+  "status": "accepted",
+  "question": "Как закрыть RED r3 по P1.9 (P19R3-F01, blocker в P1.6/D39) при исчерпанных corrections_max (D8) и D38?",
+  "options": [
+    {
+      "id": "A",
+      "text": "Третья корректировка P1.6/P1.7 с review r4",
+      "cons": "Нужен новый лимит D8; ещё один круг P1 до старта P2"
+    },
+    {
+      "id": "B",
+      "text": "Принять риск P19R3-F01 решением владельца, перенести в дизайн адаптера WriterAdmission (P5), закрыть P1.9 как skipped и открыть P2",
+      "pros": "P2 (контракты, fixtures, toolchain) не зависит от fence writer; риск адресуется там, где реализуется WriterAdmission",
+      "cons": "До P5 INV-02 при денежных Tx после release и выходе из recovery через release не защищён в спеке"
+    }
+  ],
+  "context": "P1.9 r3 = RED (reviews/P1-review.md): blocker P19R3-F01 — release/commit_no (D39) не защищает INV-02. Третья корректировка запрещена без решения владельца.",
+  "decision": "B — Принять риск P19R3-F01 решением владельца, перенести в дизайн адаптера WriterAdmission (P5), закрыть P1.9 как skipped и открыть P2",
+  "rationale": "Владелец: «делай» + выбор «Принять риск через D# (Recommended)» (2026-10-17). P19R3-F01 переносится в дизайн адаптера WriterAdmission P5.",
+  "applies_to": [
+    "P1.9",
+    "P2.1"
+  ],
+  "actor": {
+    "provider": "anthropic",
+    "model": "claude-sonnet-5-5",
+    "effort": "high"
+  },
+  "answered_by": "owner"
+}
