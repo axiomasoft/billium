@@ -89,7 +89,8 @@ objects, codec и коды ошибок; ни один не пишет дене�
 | `source` | object | да | `context`, `intentRef` refund-намерения |
 
 Admission резервирует сумму под lock исходного charge: captured − confirmed − reserved/pending/unknown
-(INV-10); превышение — `billium.refund.capacity_exceeded`.
+(INV-10); превышение — `billium.refund.capacity_exceeded`. Admission не меняет ledger: allocation
+снимается только после succeeded refund — наблюдением и `allocation.reallocate.v1` (D35).
 
 ### payment.cancel.v1 и payment.find.v1
 
@@ -148,8 +149,65 @@ identity и revision). Поздний факт после закрытого п�
 | prepareObligation | `obligation.prepare.v1` | `agreementRef`, `agreementRevision`, `componentRef`, `billingOccurrenceRef`, `priceVersionRef`, `snapshotDigest`, `commandKey` | `obligationRef`, money, rounding, `taxSnapshotRef` | REQ-CON-11 |
 | ensureBillingOccurrence | `occurrence.ensure.v1` | `componentRef`, `purpose`, `interval`, `scheduleRevision`, `commandKey` | `billingOccurrenceRef` (тот же при повторе) | INV-11 |
 | authorizeCollection | `collection.authorize.v1` | `obligationRef`, `businessPaymentIntentRef`, `executorBindingRef` | разрешение или `already-settled` | REQ-CON-12 |
-| applyPaymentObservation | `payment.observation.v1` | `operationRef`, `authoritativeRevision`, cumulative totals, `evidenceRef`, `sourceAuthority` | `AllocationReceipt` / `ObservationParked` | REQ-CON-13, REQ-CON-27 |
+| applyPaymentObservation | `payment.observation.v1` | поля и dedupe — § payment.observation.v1 ниже | `AllocationReceipt` / `ObservationParked` | REQ-CON-13, REQ-CON-27 |
+| reallocatePayment | `allocation.reallocate.v1` | `paymentRef` (= `operationRef` платежа), `policyVersion`, `mode` (`credit_note` или `reversal`), `commandKey`, `digest` | `AllocationReceipt`; reversal с `cause = refund` не создаёт collection step | INV-09, REQ-FAIL-19, D35 |
 | queries | `billium.query.v1` | `paymentStatus`, `obligation`, `invoice`, `allocationByOperation`, `refundAuthorization`, `readRender` | снимок + revision | REQ-CON-14 |
+
+`refundAuthorization` — только чтение (REQ-CON-14, D35): ёмкость refund по исходному charge и сумма
+reallocation, которая потребуется после succeeded refund; это справка, не резерв и не мутация. Ledger
+меняется только наблюдением succeeded refund; затем при `reallocation_required` новые allocation из
+платежа отвергаются (`billium.allocation.reallocation_required`) до `allocation.reallocate.v1`.
+
+### payment.observation.v1
+
+Денежное наблюдение операции для ledger (REQ-CON-13, REQ-CON-27; SRC-023 § 2): feed Commerz в
+`embedded-commerz` (REQ-OWN-11) и собственный исход execution (D28) — один конверт. Для своих операций
+поля `payment.outcome.v1` отображаются так: `revision` → `operationRevision`, `status` → `state`,
+`merchantAccountRef` → `providerAccountRef`, `providerEvidenceRef` → `evidenceRef`. Суммы — MoneyWire
+(D29), время — RFC 3339 UTC. Наблюдение не несёт `commandKey`: identity — `eventId`, экономическая
+identity — (`sellerRef`, `operationRef`, `operationRevision`).
+
+| Поле | Тип wire | Обязательно | Семантика | REQ-CON-27 |
+|:--|:--|:--|:--|:--|
+| `schema` | string | да | `payment.observation.v1`; неизвестная major — отказ до custody | `schemaVersion` (имя и версия в одном поле, принцип 1) |
+| `eventId` | string (ULID) | да | неизменяемая identity наблюдения; re-enqueue сохраняет identity и содержимое | `eventId` |
+| `contentDigest` | string | да | `sha256:` + hex RFC 8785 envelope без самого поля (D32) | `contentDigest` |
+| `sourceAuthority` | string | да | исполнитель-источник (`embedded-commerz`, `remote-billium`, `standalone-billium`); сверяется с аутентифицированным каналом | `sourceAuthority` |
+| `sourceLineage` | string | да | lineage источника (incarnation runtime); restored источник не создаёт новую economic identity | `sourceLineage` |
+| `partitionRef` | string | да | упорядоченная partition feed; включает seller и environment scope | `partitionRef` |
+| `sourceSequence` | integer | да | монотонная позиция в partition; применяется только contiguous | `sourceSequence` |
+| `installationRef`, `environment` | string | да | scope; сверяются с контекстом (REQ-CON-21) | — (scope) |
+| `sellerRef` | string | да | продавец из аутентифицированного контекста и partition; иной — отказ без раскрытия (INV-14) | — (scope, INV-14) |
+| `operationRef` | string | да | identity операции исполнителя | `operationRef` |
+| `operationKind` | string | да | `charge` или `refund` | kind |
+| `originalPaymentRef` | string | при `refund` | исходный charge refund-а (INV-07) | `originalPaymentRef` |
+| `businessIntentRef` | string | да | намерение (заказ, компонент соглашения, collection occurrence) | `businessIntentRef` |
+| `operationRevision` | integer | да | монотонная revision операции у источника (= `authoritativeRevision` REQ-CON-13) | `operationRevision` |
+| `state` | string | да | `accepted-unknown`, `pending`, `succeeded`, `failed-terminal`, `cancelled` | state |
+| `currency` | string (ISO 4217) | да | валюта операции; все суммы в ней | currency |
+| `requested` | MoneyWire | да | запрошенная сумма | cumulative totals |
+| `authorizedTotal`, `capturedTotal`, `refundedTotal` | MoneyWire | да | `authorizedTotal` = `capturedTotal`, если провайдер не различает; cumulative; присваиваются, не складываются (INV-06); у refund — `capturedTotal` = сумма возврата | cumulative totals |
+| `providerAccountRef` | string | да | merchant account исполнения из binding; не секрет | `providerAccountRef` |
+| `providerOperationId` | string | после подтверждения | ID операции у провайдера | evidence |
+| `evidenceRef` | string | да | ссылка на проверенное evidence | evidence |
+| `observedAt`, `recordedAt` | string (RFC 3339) | да | время у провайдера и время записи источником | evidence |
+| `discrepancy` | object | нет | отдельная lineage: `discrepancyRef`, `kind`, `revision`, `acceptedTotals`, `verifiedExternalFacts`, `resolution`; своя identity и revision, не понижается как revision операции | lineage discrepancy |
+
+Dedupe и порядок у получателя (одна Tx: inbox → проекция → allocation receipt → outbox):
+
+1. `eventId`: тот же `contentDigest` — duplicate, исходный receipt; иной — `billium.observation.conflict`,
+   quarantine (REQ-FAIL-04).
+2. (`sellerRef`, `operationRef`, `operationRevision`): та же revision с иным содержимым —
+   `billium.observation.conflict`; revision ≤ применённой — без эффекта, totals не понижаются (REQ-FAIL-13).
+3. (`sourceLineage`, `partitionRef`, `sourceSequence`): применяется `applied_sequence + 1`; пропуск — custody
+   и hold, `billium.observation.parked`, запрос пропуска у источника; `sourceSequence` ≤ применённой с иным
+   `eventId` или регресс lineage (источник восстановлен ниже применённой revision) — partition
+   `recovery_required`, `billium.recovery.required` (REQ-FAIL-23).
+4. Нет основания (refund раньше платежа, нет obligation) — parked с запросом зависимости (REQ-FAIL-12).
+5. `sellerRef`, environment или installation не совпали с контекстом или scope partition —
+   `billium.auth.denied`, наблюдение не применяется и не раскрывается (INV-14, REQ-CON-21).
+6. Несогласованное наблюдение (валюта не равна валюте операции, `refundedTotal` > `capturedTotal` без
+   `discrepancy`, refund без `originalPaymentRef`) — `billium.observation.conflict`, quarantine.
 
 `invoice` view: `invoiceRef`, `status` (`draft`, `issued`, `partially_paid`, `paid`, `uncollectible`,
 `void`), `legalNumber` (после `issued`), `seller`, `buyerSnapshotDigest`, `currency`, `lines[]`
@@ -179,30 +237,35 @@ identity и содержимое; потребитель дедуплициру�
 
 ## Ошибки
 
-| Код | Когда | Повторяемо | Действие клиента | Основание |
-|:--|:--|:--|:--|:--|
-| `billium.validation.invalid` | нарушена схема или поле | нет | исправить и отправить новый ключ | REQ-CON-05, REQ-CON-20 |
-| `billium.schema.unsupported` | неизвестная обязательная схема/major | нет | обновить клиента | REQ-CON-20 |
-| `billium.money.scale_invalid` | строка суммы не по scale валюты или JSON number | нет | исправить сумму | REQ-CON-02, D29 |
-| `billium.money.currency_mismatch` | валюта не совпадает с операцией/obligation | нет | исправить | REQ-CON-30 |
-| `billium.auth.denied` | caller, seller или environment не совпадают с контекстом | нет | не повторять новым ключом | REQ-CON-05, REQ-CON-21, INV-14 |
-| `billium.idempotency.conflict` | тот же ключ, другой digest | нет | найти исходную команду | INV-05, REQ-FAIL-06 |
-| `billium.idempotency.in_flight` | ключ claim-нут, команда выполняется | да, тем же ключом | повторить тот же envelope позже | INV-05, M-53 |
-| `billium.key.expired` | ключ старше горизонта namespace | нет | `payment.find.v1`; нового эффекта нет | REQ-FAIL-07, REQ-FAIL-16 |
-| `billium.recovery.required` | restore/clone/пробел retention | нет | ждать сверки оператора | REQ-FAIL-15, REQ-FAIL-25 |
-| `billium.lookup.unavailable` | lookup неполон (реплика, доступ) | да, тем же запросом | повторить find | REQ-CON-08, REQ-FAIL-08 |
-| `billium.refund.capacity_exceeded` | сумма refund > доступной ёмкости | нет | уменьшить сумму или ждать исходов | INV-10 |
-| `billium.operation.not_cancellable` | запрос уже отправлен или исход terminal | нет | ждать исхода; refund отдельно | REQ-CON-07 |
-| `billium.observation.parked` | refund раньше платежа / нет основания | да, тем же ключом | дослать зависимость | REQ-FAIL-12 |
-| `billium.observation.conflict` | та же revision с другим digest | нет | reconcile/оператор | REQ-FAIL-04 |
-| `billium.usage.conflict` | та же identity и revision, иной digest | нет | новая revision факта | REQ-CON-15 |
-| `billium.policy.unknown` | нет policy для денежного эффекта | нет | задать policy | REQ-ACC-23 |
-| `billium.invoice.frozen` | изменение issued invoice вне allow-list | нет | credit note или void/reissue | INV-13 |
-| `billium.installation.quarantined` | dispatch выключен после restore | нет | ждать допуска writer | REQ-FAIL-15 |
-| `billium.transport.unavailable` | сервер недоступен / timeout | да, тем же ключом | повторить тот же envelope | REQ-CON-05, INV-04 |
+| Код | Когда | Повторяемо | Действие клиента | Receipt | Основание |
+|:--|:--|:--|:--|:--|:--|
+| `billium.validation.invalid` | нарушена схема или поле | нет | исправить envelope; тот же ключ допустим (receipt не сохраняется) | none | REQ-CON-05, REQ-CON-20, M-45, D31 |
+| `billium.schema.unsupported` | неизвестная обязательная схема/major | нет | обновить клиента | none | REQ-CON-20, M-45, D31 |
+| `billium.money.scale_invalid` | строка суммы не по scale валюты или JSON number | нет | исправить сумму; тот же ключ допустим | none | REQ-CON-02, D29, D31 |
+| `billium.money.currency_mismatch` | валюта не совпадает с операцией/obligation | нет | исправить; тот же ключ допустим | none | REQ-CON-30, D31 |
+| `billium.auth.denied` | caller, seller или environment не совпадают с контекстом или scope partition | нет | не повторять новым ключом | none | REQ-CON-05, REQ-CON-21, INV-14, M-45 |
+| `billium.idempotency.conflict` | тот же ключ, другой digest; тот же business binding у иного seller (D36) | нет | найти исходную команду; её receipt не меняется | none | INV-05, REQ-FAIL-06, D36 |
+| `billium.idempotency.in_flight` | ключ claim-нут, команда выполняется | да, тем же ключом | повторить тот же envelope позже | none | INV-05, M-53, M-45 |
+| `billium.key.expired` | ключ старше горизонта namespace | нет | `payment.find.v1`; нового эффекта нет | none | REQ-FAIL-07, REQ-FAIL-16 |
+| `billium.recovery.required` | restore/clone/пробел retention; источник feed ниже применённой revision или регресс `sourceSequence` | нет | ждать сверки оператора | none | REQ-FAIL-15, REQ-FAIL-23, REQ-FAIL-25 |
+| `billium.lookup.unavailable` | lookup неполон (реплика, доступ) | да, тем же запросом | повторить find | none | REQ-CON-08, REQ-FAIL-08, M-45 |
+| `billium.refund.capacity_exceeded` | сумма refund > доступной ёмкости | нет | уменьшить сумму или ждать исходов (новый ключ) | stored | INV-10, D31 |
+| `billium.operation.not_cancellable` | запрос уже отправлен или исход terminal | нет | ждать исхода; refund отдельно | stored | REQ-CON-07, D31 |
+| `billium.observation.parked` | refund раньше платежа / нет основания / пропуск `sourceSequence` | да, тем же ключом | дослать зависимость или пропуск; наблюдение в custody до применения | stored | REQ-FAIL-12, REQ-FAIL-13, REQ-CON-27 |
+| `billium.observation.conflict` | та же revision или тот же `eventId` с другим digest | нет | reconcile/оператор; наблюдение в quarantine | stored | REQ-FAIL-04, REQ-CON-27 |
+| `billium.usage.conflict` | та же identity и revision, иной digest | нет | новая revision факта | none | REQ-CON-15, D31 |
+| `billium.policy.unknown` | нет policy для денежного эффекта | нет | задать policy | stored | REQ-ACC-23, D31 |
+| `billium.invoice.frozen` | изменение issued invoice вне allow-list | нет | credit note или void/reissue | stored | INV-13, D31 |
+| `billium.allocation.reallocation_required` | новая allocation из платежа с `reallocation_required` после refund | нет | выполнить `allocation.reallocate.v1`, затем новый ключ | stored | INV-09, D35, D31 |
+| `billium.installation.quarantined` | нет допуска writer `WriterAdmission`: restore, клон, иная incarnation, lease занят | нет | ждать допуска writer | none | REQ-FAIL-15, INV-02, D34 |
+| `billium.transport.unavailable` | сервер недоступен / timeout | да, тем же ключом | повторить тот же envelope | none | REQ-CON-05, INV-04, M-45 |
 
-Каждый код объявляет receipt policy: кэшируемые отказы (`conflict`, `validation`, `capacity`)
-сохраняются как receipt ключа; auth, transient и 5xx — нет (M-45).
+Receipt policy — только колонка Receipt (M-45, D31). `stored` — отказ по бизнес-состоянию сохраняется
+как receipt ключа: повтор того же envelope возвращает его, другой digest — `billium.idempotency.conflict`.
+`none` — claim ключа откатывается, receipt не сохраняется: тот же ключ можно повторить, в том числе с
+исправленным envelope (validation, schema, money-формат, auth, in_flight, transient,
+lookup.unavailable, 5xx). Новый код объявляет Receipt при добавлении; fixtures `errors/codes` проверяют
+колонку в PHP и Dart.
 
 ## План fixtures
 
@@ -221,7 +284,8 @@ codec/контрактов. Поведенческие векторы денеж
 | `payment/outcome` | монотонная revision, cumulative totals, refund outcome | да | codec | golden |
 | `usage/fact` | семантики, duplicate/conflict, поздний факт | да | codec | golden |
 | `ledger/conservation` | invoice с частичными оплатами, refund после расчёта, prepaid | да | нет | golden REQ-ACC-10 |
-| `errors/codes` | реестр кодов, receipt policy, retryable/sameKey | да | да | индекс кодов |
+| `errors/codes` | реестр кодов, колонка Receipt (D31), retryable/sameKey | да | да | индекс кодов |
+| `payment/observation` | поля REQ-CON-27; dedupe `eventId`, revision, пропуск и регресс `sourceSequence`, чужой seller, несогласованные totals | да | codec | golden |
 | `compat/pilot` | старый/новый потребитель outcome (PB-15) | да | да | pinned producer/consumer |
 
 ## Трассировка
@@ -236,6 +300,11 @@ codec/контрактов. Поведенческие векторы денеж
 | payment.find.v1 | REQ-CON-08, REQ-FAIL-08, INV-04 |
 | payment.outcome.v1 | REQ-CON-09, INV-06 |
 | receipts | REQ-CON-10, INV-08 |
+| receipt policy (колонка Receipt) | M-45, D31 |
+| payment.observation.v1 | REQ-CON-27, REQ-CON-13, INV-06, INV-14, REQ-FAIL-13, REQ-FAIL-23, D32 |
+| allocation.reallocate.v1, refundAuthorization | INV-09, REQ-CON-14, D35 |
+| business binding | REQ-FAIL-07, INV-14, D36 |
+| billium.installation.quarantined | REQ-FAIL-15, INV-02, D34 |
 | obligation/collection/observation | REQ-CON-11, REQ-CON-12, REQ-CON-13, REQ-CON-14 |
 | usage.fact.v1 | REQ-CON-15, REQ-CON-16, REQ-CON-17, D13 |
 | события и outbox | REQ-CON-18, REQ-CON-35 |

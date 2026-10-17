@@ -2,7 +2,10 @@
 
 Вход design-сессии следующей фазы (D1, D7 п. 4). Состав фаз совпадает со скелетом plan.json; изменены
 только зависимости: P5 зависит от P3, а не от P4, — execution отдаёт исходы в ledger через
-`applyPaymentObservation` и не читает rating (D28). Scope фазы берётся только отсюда, из D#, REQ/INV и
+`applyPaymentObservation` и не читает rating (D28). Корректировка P1.11 (P19-F03, P19-F09): приёмка
+фида наблюдений (PF-13, PF-14, ACC-CON-16, ACC-RST-07) начинается в P3 — первая поставка embedded ledger
+принимает feed Commerz (REQ-PROF-20, REQ-OWN-11) — и повторяется в P9 с мостом; MG-10 перенесён из P5 в P7,
+которая зависит от P4 и P5 (PriceVersion компонента, REQ-OWN-19). Scope фазы берётся только отсюда, из D#, REQ/INV и
 `docs/acceptance-catalog.md`. Item-детализация — дело plan-design Pn.
 
 ## P2 — Bootstrap и billium-contracts PHP+Dart
@@ -24,9 +27,10 @@ envelopes `.v1`, MoneyWire, problem-codes, rules index, lock), `fixtures/` и `c
 obligations, invoices (FSM, триггер заморозки), credit notes, allocations/reversals, customer credit,
 `applyPaymentObservation`, queries; документ lock model; N-процессный стенд PostgreSQL.
 **Зависит от:** P2.
-**Решения:** D11, D20, D21, D22, D23, D25, D27, D28; INV-09, INV-13, INV-14.
-**Приёмка:** PB-14, PF-10, PF-12, SB-07, ACC-CON-08, ACC-CON-09, ACC-CON-14, ACC-CON-17, ACC-RST-05,
-ACC-RST-06, ACC-RST-10; fixture `ledger/conservation`.
+**Решения:** D11, D20, D21, D22, D23, D25, D27, D28, D35; INV-09, INV-13, INV-14.
+**Приёмка:** PB-14, PF-10, PF-12, PF-13, PF-14, SB-07, ACC-CON-08, ACC-CON-09, ACC-CON-14, ACC-CON-16,
+ACC-CON-17, ACC-CON-19, ACC-CON-24, ACC-RST-05, ACC-RST-06, ACC-RST-07, ACC-RST-10 (feed — с test double
+источника); fixtures `ledger/conservation`, `payment/observation`.
 **Вопросы/риски:** GRANT по модулям в embedded невозможен — INV-01 только arch-тестом; горизонты retention.
 
 ## P4 — PriceVersion, rating, schedule, usage
@@ -45,12 +49,14 @@ occurrence с EXCLUDE по бизнес-интервалу, supersession, prorat
 
 **Цель:** собственное исполнение платежей и возвратов: один исполнитель, unknown через lookup, refund к исходному charge.
 **Выходы:** модуль execution: operation/attempt/binding, lease/fence, dispatch вне Tx, inbox callbacks,
-lookup/reconcile worker, refund reservation, cancel, discrepancy, restore quarantine; тест-драйвер в
+lookup/reconcile worker, refund reservation, cancel, discrepancy, restore quarantine и порт `WriterAdmission`
+(D34) с адаптерами embedded и server; тест-драйвер в
 `billium-testkit`; PHP API платёжных команд без server-профиля.
 **Зависит от:** P3; PaymentDrivers `payment-drivers/contracts` (сосед).
-**Решения:** D10, D26, D27, D28, D30; INV-02, INV-04, INV-07, INV-10.
-**Приёмка:** PB-02…PB-11, PB-13, PB-16…PB-20, PB-22…PB-24, PF-01…PF-11, MG-10, ACC-CON-01…ACC-CON-07,
-ACC-CON-15, ACC-RST-01…ACC-RST-04, ACC-RST-08; test double и реальный runtime — раздельно (REQ-ACC-18).
+**Решения:** D10, D26, D27, D28, D30, D34, D35, D36, D37; INV-02, INV-04, INV-07, INV-10.
+**Приёмка:** PB-02…PB-11, PB-13, PB-16…PB-20, PB-22…PB-24, PF-01…PF-11, ACC-CON-01…ACC-CON-07,
+ACC-CON-15, ACC-CON-18, ACC-CON-20, ACC-CON-22, ACC-CON-23, ACC-CON-25, ACC-RST-01…ACC-RST-04, ACC-RST-08,
+ACC-RST-12; test double и реальный runtime — раздельно (REQ-ACC-18).
 **Вопросы/риски:** PSP первого запуска и наличие драйвера; operational owner execution (REQ-PROF-21);
 ротация credentials у провайдеров не описана (DR02-T05).
 
@@ -72,8 +78,8 @@ fiscal_receipt через fiscal-contracts, credit notes как документ
 **Выходы:** модуль collection: dunning case и шаги, policy versions, `collection.authorize.v1`, recurring
 через execution; закрытие сбора по cancellation generation хоста.
 **Зависит от:** P4, P5.
-**Решения:** D15; REQ-OWN-06, REQ-FAIL-19, REQ-CON-12.
-**Приёмка:** MG-06, ACC-CON-13; повтор scheduler не создаёт второго шага.
+**Решения:** D15, D35; REQ-OWN-06, REQ-FAIL-19, REQ-CON-12.
+**Приёмка:** MG-06, MG-10, ACC-CON-13, ACC-CON-21; повтор scheduler не создаёт второго шага.
 **Вопросы/риски:** grace/ограничение доступа — policy продукта, не Billium (REQ-OWN-06); сохранённые способы оплаты у PSP (DR02-21).
 
 ## P8 — Server-профиль и Dart SDK
@@ -93,7 +99,7 @@ fiscal_receipt через fiscal-contracts, credit notes как документ
 tail), conformance-набор для моста; адаптеры продуктов живут у продуктов.
 **Зависит от:** P5, P8.
 **Решения:** D18, D26; REQ-FAIL-28, REQ-NBR-16, REQ-CON-27.
-**Приёмка:** PB-12, PB-21, PF-09, PF-13, PF-14, MG-11, ACC-CON-16, ACC-RST-07.
+**Приёмка:** PB-12, PB-21, PF-09, PF-13, PF-14, MG-11, ACC-CON-16, ACC-RST-07 (с мостом Commerz; embedded — P3).
 **Вопросы/риски:** версия subscriptionify в Memster (DR03-T07); готовность моста в репо Commerz; первый платный потребитель.
 
 ## P10 — Release gate 1.0

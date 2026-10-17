@@ -1,6 +1,6 @@
 # Billium — каталог приёмки
 
-Статус: PLAN1.P1.7 (2026-10-17). Источник ID — `plans/2026.10.14-№1-BILLIUM-V1/research/P1-acceptance-inventory.md`
+Статус: PLAN1.P1.7 (2026-10-17), корректировка PLAN1.P1.11 по review P1.9. Источник ID — `plans/2026.10.14-№1-BILLIUM-V1/research/P1-acceptance-inventory.md`
 (82 сценария: PB 24, PF 14, MG 12, FD 10, SB 10, EC 12); ID не переименованы. Одна строка — один сценарий.
 Фаза — провизорная фаза реализации по roadmap (D1); контракт/модель — `docs/contracts/billium-contracts-v1.md`
 и `docs/architecture/data-model.md`.
@@ -61,8 +61,8 @@
 | PF-10 | Строка, revision, лог и outbox в одной транзакции соединения | billium | P3 | REQ-CON-18, INV-08, REQ-OWN-15 | outbox_event |  |
 | PF-11 | Истина discrepancy независима от локальных границ | billium | P5 | REQ-FAIL-10, REQ-OWN-14 | discrepancy |  |
 | PF-12 | Inbox и allocation Billium применяются атомарно и идемпотентно | billium | P3 | REQ-CON-13, REQ-FAIL-20, REQ-ACC-02, REQ-OWN-11, REQ-FAIL-12 | payment.observation.v1 |  |
-| PF-13 | Согласованный snapshot + сохранённый tail для нового потребителя | billium | P9 | REQ-FAIL-22, REQ-CON-27 | feed_partition | Feed Commerz — REQ-NBR-03 |
-| PF-14 | Committed cursor источника и restore lineage | billium | P9 | REQ-FAIL-23, REQ-CON-27 | feed_partition |  |
+| PF-13 | Согласованный snapshot + сохранённый tail для нового потребителя | billium | P3, P9 | REQ-FAIL-22, REQ-CON-27 | feed_partition | Feed Commerz — REQ-NBR-03; P3 — embedded ledger с test double источника, P9 — с мостом Commerz |
+| PF-14 | Committed cursor источника и restore lineage | billium | P3, P9 | REQ-FAIL-23, REQ-CON-27 | feed_partition; payment.observation.v1 | P3 — embedded ledger с test double источника (REQ-PROF-20, REQ-OWN-11); P9 — с мостом Commerz |
 
 ## MG, FD, SB, EC
 
@@ -77,7 +77,7 @@
 | MG-07 | Отмена в конце срока против немедленной, просроченный Active/trial | сосед:memster | — | REQ-OUT-01, REQ-NBR-06 | — | Допуск к сервису решает продукт/хост по принятому cutoff |
 | MG-08 | Upgrade/downgrade в середине периода: proration по исходным условиям цены | billium | P4 | REQ-ACC-20, INV-12, REQ-CON-33, REQ-OWN-01 | rated_line; adjustment | Квоты при смене — Tariffler |
 | MG-09 | Поздняя выдача после конца периода, календарные края: денежный интервал заморожен | billium | P4 | INV-11, REQ-CON-11 | billing_occurrence.interval | Выдача grant — Memster |
-| MG-10 | Частичный refund при потреблённых единицах: точная денежная коррекция компонента | billium | P5 | REQ-ACC-20, REQ-OWN-19, INV-10, REQ-ACC-04 | payment.refund.v1; credit_note | Коррекция прав — владелец прав (REQ-OUT-01) |
+| MG-10 | Частичный refund при потреблённых единицах: точная денежная коррекция компонента | billium | P7 | REQ-ACC-20, REQ-OWN-19, INV-10, REQ-ACC-04 | payment.refund.v1; credit_note | Коррекция прав — владелец прав (REQ-OUT-01); фаза P7 — нужны PriceVersion компонента (P4) и refund (P5) |
 | MG-11 | Replay импорта legacy: без сгенерированных provider ID и прошлых начислений | billium | P9 | REQ-ACC-20, REQ-NBR-16, REQ-FAIL-28, REQ-NBR-11 | import port |  |
 | MG-12 | Резерв60/факт35/settlement, поздний usage | сосед:tariffler | — | REQ-OUT-10, REQ-NBR-08 | — | Резерв и его исходы — Tariffler; итоговый факт Billium — EC-11 |
 | FD-01 | Выбранный продавец/режим: без смешения SaaS и гостевых продаж | billium | P6 | REQ-ACC-21, REQ-OUT-12, REQ-NBR-13, REQ-ACC-05 | legal_document | Фискальный профиль продавца — вход (I-16) |
@@ -122,11 +122,11 @@ N-процессные тесты на PostgreSQL ≥ 16 (REQ-ACC-11): N про�
 | ID | Сценарий | Сторона | Фаза | Требования | Контракт | Примечание | N | Барьеры | Начальные данные | Допустимые исходы | DB proof |
 |:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|
 | ACC-CON-01 | Один commandKey, разные digest | billium | P5 | INV-05, REQ-FAIL-06, REQ-ACC-11, REQ-CON-39, REQ-ACC-15 | idempotency_receipt | — | 20 | все стартуют после общего барьера до claim | одна операция без receipt | один accepted; остальные duplicate или conflict по digest | одна строка receipt; одна операция |
-| ACC-CON-02 | Одно намерение, разные ключи | billium | P5 | REQ-FAIL-07, REQ-OWN-10, REQ-ACC-11 | money_operation (business binding) | — | 10 | барьер перед Tx A | нет операций | одна операция; остальные получают её operationRef | UNIQUE business binding; count = 1 |
+| ACC-CON-02 | Одно намерение, разные ключи | billium | P5 | REQ-FAIL-07, REQ-OWN-10, REQ-ACC-11 | money_operation (business binding) | — | 10 | барьер перед Tx A | нет операций | одна операция; остальные получают её operationRef | UNIQUE business binding без seller (D36); count = 1 |
 | ACC-CON-03 | Параллельные refund одного charge | billium | P5 | INV-10, REQ-FAIL-09, REQ-ACC-11 | payment.refund.v1 | — | 10 | барьер перед admission | charge captured 1000.00 | Σ confirmed + reserved ≤ captured; лишние — capacity_exceeded | CHECK charge; lock wait в pg_locks |
 | ACC-CON-04 | Refund admission и исход charge одновременно | billium | P5 | INV-10, INV-06, REQ-ACC-11 | money_operation | — | 4 | callback и refund стартуют вместе | charge pending | refund отклонён до captured или видит captured | сериализация lock charge |
 | ACC-CON-05 | Callback и lookup применяют одну revision | billium | P5 | INV-06, REQ-FAIL-04, REQ-FAIL-03, REQ-ACC-11 | inbox_message; operation_revision | — | 8 | барьер перед apply | операция unknown | одна revision; иной digest — quarantine | UNIQUE (operation, revision) |
-| ACC-CON-06 | Finish текущего и устаревшего worker | billium | P5 | INV-02, REQ-FAIL-14, REQ-FAIL-17, REQ-ACC-11 | attempt | — | 3 | lease истекает между вызовом и finish | attempt dispatching | один переход; evidence проигравшего сохранено | CAS lease_token; count переходов = 1 |
+| ACC-CON-06 | Finish текущего и устаревшего worker | billium | P5 | INV-02, REQ-FAIL-14, REQ-FAIL-17, REQ-ACC-11 | attempt | — | 3 | lease истекает между вызовом и finish | attempt dispatching | один переход; evidence проигравшего сохранено | CAS lease_token; count переходов = 1; count attempt = 1 (UNIQUE operation_id, D37) |
 | ACC-CON-07 | Dispatch и cancel | billium | P5 | REQ-CON-07, REQ-ACC-11 | payment.cancel.v1; attempt | — | 2 | барьер перед Tx B и cancel | операция admitted | либо cancelled без отправки, либо отправлено и cancel не отменяет | CAS state = admitted |
 | ACC-CON-08 | Allocation одного платежа на две obligations | billium | P3 | INV-09, REQ-ACC-11, REQ-ACC-10, REQ-OWN-12, REQ-PROF-22 | allocation | — | 10 | барьер перед Tx | payment 100.00, две obligations по 80.00 | Σ allocation ≤ 100.00, каждая ≤ 80.00 | CHECK payment/obligation; порядок locks |
 | ACC-CON-09 | Allocation и credit note одной invoice | billium | P3 | INV-09, INV-13, REQ-ACC-11 | allocation; credit_note | — | 4 | барьер | issued invoice 100.00 | open ≥ 0; credit ≤ open + reversal по policy | CHECK obligation |
@@ -135,9 +135,17 @@ N-процессные тесты на PostgreSQL ≥ 16 (REQ-ACC-11): N про�
 | ACC-CON-12 | Один usage-факт от нескольких доставщиков | billium | P4 | REQ-CON-15, REQ-CON-16, REQ-ACC-11, REQ-CON-39 | usage.fact.v1 | — | 10 | барьер | пусто | один факт; иной digest — conflict | UNIQUE (seller, source, fact_id, revision) |
 | ACC-CON-13 | Шаг collection и allocation одной obligation | billium | P7 | REQ-FAIL-19, INV-09, REQ-ACC-11, REQ-CON-12, REQ-OWN-06 | dunning_case; collection_step | — | 4 | барьер | obligation open 50.00 | после allocation шаг не создаётся; повтор job — UNIQUE | UNIQUE (case, step); lock obligation |
 | ACC-CON-14 | Несколько relay одного outbox | billium | P3 | REQ-CON-18, INV-08, REQ-ACC-11 | outbox_event | — | 4 | одновременный старт relay | 100 событий | каждое доставлено ≥ 1 раз; потребитель применяет 1 раз | SKIP LOCKED; dedupe event_id |
-| ACC-CON-15 | Dispatch во время перевода инсталляции в quarantine | billium | P5 | REQ-FAIL-15, INV-02, REQ-ACC-11 | installation_state | — | 3 | restore-переключение между Tx B | операции admitted | после quarantine отправок нет | FOR SHARE против FOR UPDATE |
-| ACC-CON-16 | Параллельное применение feed одной partition | billium | P9 | REQ-FAIL-13, REQ-FAIL-23, REQ-CON-27, REQ-ACC-11 | feed_partition | — | 4 | барьер | applied_sequence = 10 | sequence монотонна; пропуск — hold | lock partition |
+| ACC-CON-15 | Dispatch во время перевода инсталляции в quarantine | billium | P5 | REQ-FAIL-15, INV-02, REQ-ACC-11 | installation_state | — | 3 | restore-переключение между Tx B | операции admitted | после quarantine отправок нет | Tx B и quarantine — FOR UPDATE installation_state; CAS `writer_checkpoint` (D34) |
+| ACC-CON-16 | Параллельное применение feed одной partition | billium | P3, P9 | REQ-FAIL-13, REQ-FAIL-23, REQ-CON-27, REQ-ACC-11 | feed_partition | — | 4 | барьер | applied_sequence = 10 | sequence монотонна; пропуск — hold | lock partition |
 | ACC-CON-17 | Правка metadata и выпуск invoice | billium | P3 | INV-13, REQ-ACC-11 | invoice | — | 2 | барьер | draft invoice | после issue меняется только allow-list | триггер заморозки |
+| ACC-CON-18 | Одно намерение от двух продавцов разными ключами | billium | P5 | INV-14, REQ-FAIL-07, INV-05, REQ-ACC-11 | money_operation (business binding); billium.idempotency.conflict | D36 | 4 | барьер перед Tx A | продавцы A и B, операций нет | одна операция продавца A; запросы продавца B — conflict без её operationRef | UNIQUE (source_context, business_intent_ref, kind); count = 1 |
+| ACC-CON-19 | Allocation платежа продавца A на obligation продавца B | billium | P3 | INV-14, INV-09, REQ-ACC-11, REQ-PROF-20 | allocation | P19-F09 | 2 | барьер перед Tx allocation A→A и A→B | payment A 100.00; obligations A и B по 100.00 | A→A проходит; A→B отвергнута | составной FK (seller_ref, id); 0 строк allocation A→B |
+| ACC-CON-20 | Refund, применение его наблюдения и allocation из того же платежа | billium | P5 | INV-09, INV-10, REQ-FAIL-19, REQ-CON-14, REQ-ACC-11 | payment.refund.v1; payment.observation.v1; allocation.reallocate.v1 | P19-F02, D35 | 4 | барьер: refund admission, observation apply, allocation, refundAuthorization | invoice 100.00 оплачен и распределён; refund 30.00 | admission отклонён — ledger без изменений, obligation open = 0; succeeded — `reallocation_required`, новая allocation из платежа отвергнута до reallocate; refundAuthorization ничего не пишет | CHECK `reallocation_required`; триггер `allocation_guard`; 0 строк allocation до reallocate |
+| ACC-CON-21 | Шаг collection и refund одной obligation | billium | P7 | REQ-FAIL-19, INV-09, REQ-ACC-11, REQ-OWN-06 | dunning_case; collection_step; allocation.reallocate.v1 | D35 | 3 | барьер: collection job, исход refund, reallocate | obligation оплачена; refund 30.00 pending | шаг не создаётся ни при pending и отказе refund, ни после reversal с `cause = refund` | lock obligation; count collection_step = 0 |
+| ACC-CON-22 | Живой writer и его клон запрашивают допуск dispatch | billium | P5 | INV-02, REQ-FAIL-15, REQ-ACC-11 | WriterAdmission; installation_state | D34; две БД, один authority | 2 | барьер перед запросом ticket | prod и копия, операции admitted в обеих | один держатель lease; после первого dispatch writer копия — quarantine навсегда | authority: один lease; у копии `dispatch_enabled = false`, 0 attempt в `dispatching` |
+| ACC-CON-23 | Ротация credentials и callbacks двух merchants с одинаковым external ID | billium | P5 | REQ-OWN-20, REQ-OWN-21, REQ-FAIL-05, INV-07, INV-14, REQ-ACC-03, REQ-ACC-11 | execution_binding; inbox_message | PE-08 | 4 | барьер: ротация credential account A, callback A, callback B с тем же external ID, refund старой операции A | merchants A и B; операции с одинаковым provider external ID | callback применяется только к операции своего (provider, merchant account, environment); без internal ref и совпадения account — quarantine до ACK; refund старой операции A идёт по её binding с новой версией credential того же account | UNIQUE inbox (provider, merchant_account_ref, environment, external_event_id); binding_id операций неизменен; 0 переходов чужой операции |
+| ACC-CON-24 | Применение наблюдений одной partition: дубль eventId, пропуск sequence, конфликт revision, чужой seller, несогласованные totals | billium | P3 | REQ-CON-27, REQ-CON-13, REQ-FAIL-13, REQ-FAIL-12, INV-06, INV-14, REQ-ACC-11 | payment.observation.v1; feed_partition; inbox_message | P19-F03; PE-06, PE-09 | 6 | барьер перед apply | applied_sequence = 10; payment captured 30.00 rev 2 | один эффект на eventId; seq 12 до 11 — parked; та же revision с иным digest — conflict; чужой seller — auth.denied без эффекта; rev 3 captured 60.00 — totals присвоены (60.00, не 90.00) | UNIQUE inbox eventId; applied_sequence монотонна; payment.captured_minor = 6000 |
+| ACC-CON-25 | Смена маршрута, затем refund старого charge | billium | P5 | INV-07, REQ-OWN-20, REQ-OWN-21, REQ-ACC-11 | payment.refund.v1; execution_binding | P19-F09 | 2 | барьер: смена маршрута по умолчанию и refund admission | charge succeeded на binding 1; маршрут по умолчанию переключён на binding 2 | refund получает binding 1 исходного charge; иной binding отвергнут триггером | refund.binding_id = charge.binding_id; 0 refund на binding 2 |
 
 ## Restore, clone, lost response
 
@@ -147,16 +155,17 @@ Drills до effect-capable remote-профиля и при смене runtime, r
 | ID | Сценарий | Сторона | Фаза | Требования | Контракт | Примечание | Checkpoint | Потерян effect/reply | Recovery barrier | Условие возобновления |
 |:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|
 | ACC-RST-01 | Потерян ответ accepted после Tx A | billium | P5 | REQ-FAIL-01, REQ-ACC-12, REQ-ACC-14, REQ-ACC-15 | payment.execute.v1 / payment.outcome.v1 | — | commit Tx A | ответ клиенту | повтор тем же ключом | исходная операция возвращена |
-| ACC-RST-02 | Crash после принятия провайдером до Tx C | billium | P5 | REQ-FAIL-02, INV-04, REQ-ACC-12, REQ-ACC-14 | attempt; payment.find.v1 | — | запрос отправлен | ответ провайдера | lookup до любой новой attempt | исход применён по lookup/callback |
+| ACC-RST-02 | Crash после принятия провайдером до Tx C | billium | P5 | REQ-FAIL-02, INV-04, REQ-ACC-12, REQ-ACC-14 | attempt; payment.find.v1 | — | запрос отправлен | ответ провайдера | lookup до любой новой отправки; второй attempt нет (D37) | исход применён по lookup/callback |
 | ACC-RST-03 | Restore без свежего inbox | billium | P5 | REQ-FAIL-15, REQ-ACC-12, REQ-ACC-14 | installation_state | — | backup до callback | inbox-записи | quarantine incarnation; сверка с провайдером | допуск writer извне |
-| ACC-RST-04 | Клон со старой epoch | billium | P5 | REQ-FAIL-15, INV-02, REQ-ACC-12 | installation_state | — | копия БД | fence (epoch скопирована) | dispatch выключен | внешний допуск активного writer |
+| ACC-RST-04 | Клон со старой epoch и сырой клон без процедуры restore: в чужом deployment, рядом с живым writer, workers стартуют до сверки | billium | P5 | REQ-FAIL-15, INV-02, REQ-ACC-12, REQ-FAIL-19 | installation_state; WriterAdmission; billium.installation.quarantined | P19-F01, D34: копия несёт `dispatch_enabled = true`, ту же incarnation и epoch | копия БД без процедуры (`dispatch_enabled = true`) | fence (epoch, incarnation, флаг скопированы) | ticket `WriterAdmission` не выдан (нет учётных данных, lease занят, checkpoint устарел) → quarantine; 0 отправок и 0 collection step | активация новой incarnation от authority после сверки inventory провайдера |
 | ACC-RST-05 | Потерян ответ allocation | billium | P3 | REQ-FAIL-20, REQ-ACC-12, REQ-ACC-14, REQ-CON-14 | AllocationReceipt | — | commit allocation | ответ | query по receipt | тот же receipt, без PSP |
 | ACC-RST-06 | Новый потребитель после prune outbox | billium | P3 | REQ-FAIL-22, REQ-FAIL-30, REQ-ACC-12 | outbox_event | — | prune выше floor | ранние события | snapshot + committed cursor | tail без пропусков |
-| ACC-RST-07 | Источник feed восстановлен ниже применённой revision | billium | P9 | REQ-FAIL-23, REQ-ACC-12 | feed_partition | — | applied > source | хвост источника | partition recovery_required | rebootstrap |
+| ACC-RST-07 | Источник feed восстановлен ниже применённой revision | billium | P3, P9 | REQ-FAIL-23, REQ-ACC-12 | feed_partition | — | applied > source | хвост источника | partition recovery_required | rebootstrap |
 | ACC-RST-08 | Replay старого ключа после prune tombstone | billium | P5 | REQ-FAIL-25, REQ-FAIL-16, REQ-ACC-12 | intent_tombstone | — | горизонт истёк | запись намерения | namespace закрыт | `billium.key.expired`, эффекта нет |
 | ACC-RST-09 | Потерян ответ регистрации чека | billium | P6 | REQ-FAIL-24, REQ-CON-24, REQ-ACC-12 | fiscal_receipt | — | external_id сохранён до сети | uuid/ответ | query исходного, без повторной отправки | чек найден или manualRecovery |
 | ACC-RST-10 | Rolling upgrade посреди операции | billium | P3 | REQ-FAIL-29, REQ-ACC-12 | все таблицы | — | expand-миграция | старые workers | оба поколения workers | contract-миграция после окна отката |
 | ACC-RST-11 | Потерян ответ выпуска invoice | billium | P6 | REQ-OWN-07, INV-13, REQ-ACC-12, REQ-ACC-14 | DocumentReserved | — | commit номера | ответ | повтор тем же ключом | тот же номер |
+| ACC-RST-12 | Refund failed, replacement refund, затем поздний success первого | billium | P5 | INV-10, INV-06, REQ-FAIL-10, REQ-FAIL-18, REQ-ACC-03, REQ-ACC-12 | payment.refund.v1; discrepancy | PE-04 | refund 1 failed-terminal с certificate, refund 2 succeeded | поздний success refund 1 у провайдера | `failed_terminal → succeeded` по факту + discrepancy сверх ёмкости; авто-возврат и повторное взыскание запрещены | discrepancy разрешена оператором; evidence провайдера сохранено |
 
 ## Покрытие требований
 
@@ -170,7 +179,7 @@ Drills до effect-capable remote-профиля и при смене runtime, r
 | REQ-OWN-03 | учтено | MG-03 | REQ-OWN-03 |
 | REQ-OWN-04 | учтено | FD-07, FD-09 | REQ-OWN-04 |
 | REQ-OWN-05 | учтено | PB-14 | REQ-OWN-05 |
-| REQ-OWN-06 | учтено | MG-06, ACC-CON-13 | REQ-OWN-06 |
+| REQ-OWN-06 | учтено | MG-06, ACC-CON-13, ACC-CON-21 | REQ-OWN-06 |
 | REQ-OWN-07 | учтено | FD-07, ACC-CON-10, ACC-RST-11 | REQ-OWN-07 |
 | REQ-OWN-08 | учтено | PB-02 | REQ-OWN-08 |
 | REQ-OWN-09 | учтено | PF-02 | REQ-OWN-09 |
@@ -184,8 +193,8 @@ Drills до effect-capable remote-профиля и при смене runtime, r
 | REQ-OWN-17 | учтено | PB-02 | REQ-OWN-17 |
 | REQ-OWN-18 | учтено | PB-15 | REQ-OWN-18 |
 | REQ-OWN-19 | учтено | MG-10, SB-09 | REQ-OWN-19 |
-| REQ-OWN-20 | учтено | PB-21 | REQ-OWN-20 |
-| REQ-OWN-21 | учтено | PF-01 | REQ-OWN-21 |
+| REQ-OWN-20 | учтено | PB-21, ACC-CON-23, ACC-CON-25 | REQ-OWN-20 |
+| REQ-OWN-21 | учтено | PF-01, ACC-CON-23, ACC-CON-25 | REQ-OWN-21 |
 | REQ-PROF-01 | учтено | PB-02, PB-14 | REQ-PROF-01 |
 | REQ-PROF-02 | учтено | PB-14 | REQ-PROF-02 |
 | REQ-PROF-03 | учтено | PB-15 | REQ-PROF-03 |
@@ -196,7 +205,7 @@ Drills до effect-capable remote-профиля и при смене runtime, r
 | REQ-PROF-08 | учтено | PB-17 | REQ-PROF-08 |
 | REQ-PROF-09 | учтено | PB-17 | REQ-PROF-09 |
 | REQ-PROF-10 | вопрос владельцу | — | REQ-PROF-10, D18; состав бесплатного и платного (I-02) |
-| REQ-PROF-20 | учтено | PB-14, SB-07 | REQ-PROF-20 |
+| REQ-PROF-20 | учтено | PB-14, SB-07, ACC-CON-19 | REQ-PROF-20 |
 | REQ-PROF-21 | учтено | PB-02, PB-11 | REQ-PROF-21 |
 | REQ-PROF-22 | учтено | PB-14, ACC-CON-08 | REQ-PROF-22 |
 | REQ-PROF-11 | вопрос владельцу | — | REQ-PROF-11, D18; профиль и первый платный потребитель не выбраны (I-18) |
@@ -220,8 +229,8 @@ Drills до effect-capable remote-профиля и при смене runtime, r
 | REQ-CON-10 | учтено | PB-14 | REQ-CON-10 |
 | REQ-CON-11 | учтено | MG-09 | REQ-CON-11 |
 | REQ-CON-12 | учтено | ACC-CON-13 | REQ-CON-12 |
-| REQ-CON-13 | учтено | PB-14, PF-12 | REQ-CON-13 |
-| REQ-CON-14 | учтено | ACC-RST-05 | REQ-CON-14 |
+| REQ-CON-13 | учтено | PB-14, PF-12, ACC-CON-24 | REQ-CON-13 |
+| REQ-CON-14 | учтено | ACC-RST-05, ACC-CON-20 | REQ-CON-14 |
 | REQ-CON-15 | учтено | ACC-CON-12 | REQ-CON-15 |
 | REQ-CON-16 | учтено | ACC-CON-12 | REQ-CON-16 |
 | REQ-CON-17 | учтено | EC-11 | REQ-CON-17 |
@@ -234,7 +243,7 @@ Drills до effect-capable remote-профиля и при смене runtime, r
 | REQ-CON-24 | учтено | FD-03, ACC-RST-09 | REQ-CON-24 |
 | REQ-CON-25 | учтено | FD-09 | REQ-CON-25 |
 | REQ-CON-26 | учтено | PB-15 | REQ-CON-26 |
-| REQ-CON-27 | учтено | PF-13, PF-14, ACC-CON-16 | REQ-CON-27 |
+| REQ-CON-27 | учтено | PF-13, PF-14, ACC-CON-16, ACC-CON-24 | REQ-CON-27 |
 | REQ-CON-28 | учтено | MG-02 | REQ-CON-28 |
 | REQ-CON-29 | учтено | PB-06, PF-03, PF-04 | REQ-CON-29 |
 | REQ-CON-30 | учтено | SB-07 | REQ-CON-30 |
@@ -248,38 +257,38 @@ Drills до effect-capable remote-профиля и при смене runtime, r
 | REQ-CON-38 | учтено | FD-07 | REQ-CON-38 |
 | REQ-CON-39 | учтено | ACC-CON-01, ACC-CON-12 | REQ-CON-39 |
 | INV-01 | учтено | PB-02 | INV-01 |
-| INV-02 | учтено | PB-02, PB-13, PB-20, PF-02, ACC-CON-06, ACC-CON-15, ACC-RST-04 | INV-02 |
+| INV-02 | учтено | PB-02, PB-13, PB-20, PF-02, ACC-CON-06, ACC-CON-15, ACC-RST-04, ACC-CON-22 | INV-02 |
 | INV-03 | учтено | PB-18 | INV-03 |
-| INV-04 | учтено | PB-06, ACC-RST-02 | INV-04 |
-| INV-05 | учтено | PB-03, PB-04, MG-02, FD-02, ACC-CON-01 | INV-05 |
-| INV-06 | учтено | PB-08, PB-09, PB-23, ACC-CON-04, ACC-CON-05 | INV-06 |
-| INV-07 | учтено | PB-21 | INV-07 |
+| INV-04 | учтено | PB-06, ACC-RST-02, ACC-CON-06 | INV-04 |
+| INV-05 | учтено | PB-03, PB-04, MG-02, FD-02, ACC-CON-01, ACC-CON-18 | INV-05 |
+| INV-06 | учтено | PB-08, PB-09, PB-23, ACC-CON-04, ACC-CON-05, ACC-CON-24, ACC-RST-12 | INV-06 |
+| INV-07 | учтено | PB-21, ACC-CON-23, ACC-CON-25 | INV-07 |
 | INV-08 | учтено | PB-14, PF-10, ACC-CON-14 | INV-08 |
-| INV-09 | учтено | ACC-CON-08, ACC-CON-09, ACC-CON-13 | INV-09 |
-| INV-10 | учтено | PB-09, PB-16, MG-10, ACC-CON-03, ACC-CON-04 | INV-10 |
+| INV-09 | учтено | ACC-CON-08, ACC-CON-09, ACC-CON-13, ACC-CON-19, ACC-CON-20, ACC-CON-21 | INV-09 |
+| INV-10 | учтено | PB-09, PB-16, MG-10, ACC-CON-03, ACC-CON-04, ACC-CON-20, ACC-RST-12 | INV-10 |
 | INV-11 | учтено | MG-03, MG-04, MG-09, ACC-CON-11 | INV-11 |
 | INV-12 | учтено | MG-04, MG-08, EC-12, ACC-CON-11 | INV-12 |
 | INV-13 | учтено | FD-07, ACC-CON-09, ACC-CON-10, ACC-CON-17, ACC-RST-11 | INV-13 |
-| INV-14 | учтено | PB-17 | INV-14 |
+| INV-14 | учтено | PB-17, ACC-CON-18, ACC-CON-19, ACC-CON-23, ACC-CON-24 | INV-14 |
 | REQ-FAIL-01 | учтено | PB-03, PB-05, PB-18, MG-01, ACC-RST-01 | REQ-FAIL-01 |
 | REQ-FAIL-02 | учтено | PB-06, ACC-RST-02 | REQ-FAIL-02 |
 | REQ-FAIL-03 | учтено | PB-07, PF-05, ACC-CON-05 | REQ-FAIL-03 |
 | REQ-FAIL-04 | учтено | PB-08, ACC-CON-05 | REQ-FAIL-04 |
-| REQ-FAIL-05 | учтено | PB-17, PF-05 | REQ-FAIL-05 |
+| REQ-FAIL-05 | учтено | PB-17, PF-05, ACC-CON-23 | REQ-FAIL-05 |
 | REQ-FAIL-06 | учтено | PB-04, MG-02, ACC-CON-01 | REQ-FAIL-06 |
-| REQ-FAIL-07 | учтено | PB-19, ACC-CON-02 | REQ-FAIL-07 |
+| REQ-FAIL-07 | учтено | PB-19, ACC-CON-02, ACC-CON-18 | REQ-FAIL-07 |
 | REQ-FAIL-08 | учтено | PF-03 | REQ-FAIL-08 |
 | REQ-FAIL-09 | учтено | PB-16, ACC-CON-03 | REQ-FAIL-09 |
-| REQ-FAIL-10 | учтено | PB-24, PF-11 | REQ-FAIL-10 |
+| REQ-FAIL-10 | учтено | PB-24, PF-11, ACC-RST-12 | REQ-FAIL-10 |
 | REQ-FAIL-11 | учтено | PB-22 | REQ-FAIL-11 |
-| REQ-FAIL-12 | учтено | PF-12 | REQ-FAIL-12 |
-| REQ-FAIL-13 | учтено | ACC-CON-16 | REQ-FAIL-13 |
+| REQ-FAIL-12 | учтено | PF-12, ACC-CON-24 | REQ-FAIL-12 |
+| REQ-FAIL-13 | учтено | ACC-CON-16, ACC-CON-24 | REQ-FAIL-13 |
 | REQ-FAIL-14 | учтено | PB-13, ACC-CON-06 | REQ-FAIL-14 |
-| REQ-FAIL-15 | учтено | PB-11, PB-20, PF-08, FD-10, SB-10, ACC-CON-15, ACC-RST-03, ACC-RST-04 | REQ-FAIL-15 |
+| REQ-FAIL-15 | учтено | PB-11, PB-20, PF-08, FD-10, SB-10, ACC-CON-15, ACC-RST-03, ACC-RST-04, ACC-CON-22 | REQ-FAIL-15 |
 | REQ-FAIL-16 | учтено | PB-19, PF-07, ACC-RST-08 | REQ-FAIL-16 |
 | REQ-FAIL-17 | учтено | PF-02, ACC-CON-06 | REQ-FAIL-17 |
-| REQ-FAIL-18 | учтено | PB-24, PF-06 | REQ-FAIL-18 |
-| REQ-FAIL-19 | учтено | MG-06, ACC-CON-13 | REQ-FAIL-19 |
+| REQ-FAIL-18 | учтено | PB-24, PF-06, ACC-RST-12 | REQ-FAIL-18 |
+| REQ-FAIL-19 | учтено | MG-06, ACC-CON-13, ACC-RST-04, ACC-CON-20, ACC-CON-21 | REQ-FAIL-19 |
 | REQ-FAIL-20 | учтено | PB-14, PF-12, ACC-RST-05 | REQ-FAIL-20 |
 | REQ-FAIL-21 | учтено | EC-11 | REQ-FAIL-21 |
 | REQ-FAIL-22 | учтено | PB-23, PF-13, ACC-RST-06 | REQ-FAIL-22 |
@@ -293,7 +302,7 @@ Drills до effect-capable remote-профиля и при смене runtime, r
 | REQ-FAIL-30 | учтено | PB-11, PF-07, FD-10, ACC-RST-06 | REQ-FAIL-30 |
 | REQ-ACC-01 | учтено | PB-02, PB-10, PB-12, PB-21 | REQ-ACC-01 |
 | REQ-ACC-02 | учтено | PF-01, PF-12 | REQ-ACC-02 |
-| REQ-ACC-03 | учтено | PF-02 | REQ-ACC-03 |
+| REQ-ACC-03 | учтено | PF-02, ACC-CON-01, PB-03, PB-04, ACC-RST-01, ACC-RST-02, ACC-CON-06, PB-05, PF-03, PB-06, PB-17, ACC-CON-03, PB-16, ACC-RST-12, PB-22, ACC-CON-02, PB-23, PB-14, ACC-CON-05, ACC-CON-24, ACC-RST-08, PF-07, PB-19, ACC-RST-03, ACC-CON-23, PB-08, PF-06 | REQ-ACC-03 |
 | REQ-ACC-04 | учтено | MG-01, MG-10 | REQ-ACC-04 |
 | REQ-ACC-05 | учтено | FD-01 | REQ-ACC-05 |
 | REQ-ACC-06 | учтено | SB-02, SB-07 | REQ-ACC-06 |
@@ -301,8 +310,8 @@ Drills до effect-capable remote-профиля и при смене runtime, r
 | REQ-ACC-08 | учтено | MG-03 | REQ-ACC-08 |
 | REQ-ACC-09 | учтено | MG-04, EC-11 | REQ-ACC-09 |
 | REQ-ACC-10 | учтено | ACC-CON-08 | REQ-ACC-10 |
-| REQ-ACC-11 | учтено | ACC-CON-01, ACC-CON-02, ACC-CON-03, ACC-CON-04, ACC-CON-05, ACC-CON-06, ACC-CON-07, ACC-CON-08, ACC-CON-09, ACC-CON-10, ACC-CON-11, ACC-CON-12, ACC-CON-13, ACC-CON-14, ACC-CON-15, ACC-CON-16, ACC-CON-17 | REQ-ACC-11 |
-| REQ-ACC-12 | учтено | PB-11, ACC-RST-01, ACC-RST-02, ACC-RST-03, ACC-RST-04, ACC-RST-05, ACC-RST-06, ACC-RST-07, ACC-RST-08, ACC-RST-09, ACC-RST-10, ACC-RST-11 | REQ-ACC-12 |
+| REQ-ACC-11 | учтено | ACC-CON-01, ACC-CON-02, ACC-CON-03, ACC-CON-04, ACC-CON-05, ACC-CON-06, ACC-CON-07, ACC-CON-08, ACC-CON-09, ACC-CON-10, ACC-CON-11, ACC-CON-12, ACC-CON-13, ACC-CON-14, ACC-CON-15, ACC-CON-16, ACC-CON-17, ACC-CON-18, ACC-CON-19, ACC-CON-20, ACC-CON-21, ACC-CON-22, ACC-CON-23, ACC-CON-24, ACC-CON-25 | REQ-ACC-11 |
+| REQ-ACC-12 | учтено | PB-11, ACC-RST-01, ACC-RST-02, ACC-RST-03, ACC-RST-04, ACC-RST-05, ACC-RST-06, ACC-RST-07, ACC-RST-08, ACC-RST-09, ACC-RST-10, ACC-RST-11, ACC-RST-12 | REQ-ACC-12 |
 | REQ-ACC-13 | учтено | PB-15 | REQ-ACC-13 |
 | REQ-ACC-14 | учтено | ACC-RST-01, ACC-RST-02, ACC-RST-03, ACC-RST-05, ACC-RST-11 | REQ-ACC-14 |
 | REQ-ACC-15 | учтено | ACC-CON-01, ACC-RST-01 | REQ-ACC-15 |
@@ -350,3 +359,20 @@ Drills до effect-capable remote-профиля и при смене runtime, r
 | REQ-OUT-17 | вне границ | — | REQ-OUT-17, D17 |
 | REQ-OUT-18 | вне границ | EC-05 | REQ-OUT-18, D17 |
 | REQ-OUT-19 | вне границ | — | REQ-OUT-19, D17 |
+
+### PE → каталог
+
+PE-01…PE-09 — предложенные сценарии паспорта исполнения (SRC-006 § 9), применяемые к Billium execution
+(REQ-ACC-03). Суть — по тексту источника; часть, принадлежащая соседу, названа явно.
+
+| PE | Суть по SRC-006 §9 | Строки каталога | Покрытие |
+|:--|:--|:--|:--|
+| PE-01 | Тот же ключ и payload параллельно → одна операция и один initiate; изменённые сумма/meta/платёж → conflict | ACC-CON-01, PB-03, PB-04 | полное; null-default суммы Commerz неприменим — `money` обязателен в `payment.execute.v1` |
+| PE-02 | Kill после Tx A / принятия PSP / Tx B, потеря ответа → recovery той же операции и ключа; stale worker не понижает state | PF-02, ACC-RST-01, ACC-RST-02, ACC-CON-06, PB-05 | полное |
+| PE-03 | Пустой lookup при живом запросе, истёкшем TTL или неверном merchant → uncertain, баланс удержан; absence только с evidence | PF-03, PB-06, ACC-RST-02, PB-17 | полное |
+| PE-04 | 100 captured: 70 unknown + параллельные 40 (отказ) и 30 (допуск); failed → поздний success после replacement refund → отдельная discrepancy | ACC-CON-03, PB-16, ACC-RST-12 | полное |
+| PE-05 | Cancel заказа, затем подтверждённый capture: деньги сохранены, одно compensation-намерение, grant не активируется | PB-22, ACC-CON-02, PB-24 | частичное: статус заказа — Commerz (REQ-NBR-02), grant — хост (REQ-OUT-11) |
+| PE-06 | 30 → 60 из 100 при том же статусе: наблюдение или query-repair, allocation 60; дубли и перестановки totals не суммируются | PB-23, PB-14, ACC-CON-05, ACC-CON-24 | полное |
+| PE-07 | Тот же ключ после 30-дневного prune receipts и restore: прежний charge/refund не исполняется снова | ACC-RST-08, PF-07, PB-19, ACC-RST-03 | полное |
+| PE-08 | Два merchants с одинаковым external ID, ротация credentials, callback без internal ref: изоляция и исходный binding; unmatched callback — только с durable custody | ACC-CON-23 | полное |
+| PE-09 | Несовпадение суммы/валюты refund, нет суммы при partial capture, отозванный actor, decline после success: несогласованное наблюдение отвергнуто или в quarantine | PB-08, PB-17, PF-06, ACC-CON-24 | полное |
