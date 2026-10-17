@@ -1,0 +1,39 @@
+{
+  "id": "money/bounds/add-max-plus-min",
+  "spec_refs": [
+    "BC-MW-13",
+    "BC-MW-10",
+    "REQ-CON-30",
+    "D19"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.add",
+      "args": {
+        "a": {
+          "amount": "92233720368547758.07",
+          "currency": "RUB"
+        },
+        "b": {
+          "amount": "-92233720368547758.08",
+          "currency": "RUB"
+        }
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "wire": {
+          "amount": "-0.01",
+          "currency": "RUB"
+        }
+      }
+    }
+  ]
+}

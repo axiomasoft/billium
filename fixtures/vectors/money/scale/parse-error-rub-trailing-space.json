@@ -1,0 +1,27 @@
+{
+  "id": "money/scale/parse-error-rub-trailing-space",
+  "spec_refs": [
+    "BC-MW-05",
+    "REQ-CON-02"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.parse",
+      "args": {
+        "wire_text": "{\"amount\":\"1.00 \",\"currency\":\"RUB\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.money.scale_invalid"
+      }
+    }
+  ]
+}

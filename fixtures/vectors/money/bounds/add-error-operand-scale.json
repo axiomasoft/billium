@@ -1,0 +1,34 @@
+{
+  "id": "money/bounds/add-error-operand-scale",
+  "spec_refs": [
+    "BC-MW-07",
+    "BC-MW-13"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.add",
+      "args": {
+        "a": {
+          "amount": "1.0",
+          "currency": "RUB"
+        },
+        "b": {
+          "amount": "1.00",
+          "currency": "RUB"
+        }
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.money.scale_invalid"
+      }
+    }
+  ]
+}

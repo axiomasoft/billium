@@ -1,0 +1,31 @@
+{
+  "id": "errors/codes/registry",
+  "spec_refs": [
+    "BC-ERR-02",
+    "BC-ERR-04",
+    "BC-ERR-05",
+    "BC-ERR-06",
+    "REQ-CON-19"
+  ],
+  "description": "Реестр кодов равен golden, сгенерированному из problem-codes.json.",
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "codes.registry",
+      "args": {}
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "codes": {
+          "golden": "errors/registry.json"
+        }
+      }
+    }
+  ]
+}

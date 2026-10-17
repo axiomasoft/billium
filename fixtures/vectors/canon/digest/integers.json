@@ -1,0 +1,44 @@
+{
+  "id": "canon/digest/integers",
+  "spec_refs": [
+    "BC-ID-15",
+    "BC-ID-16",
+    "D32"
+  ],
+  "description": "Целые 0, -1 и 2^53-1 пишутся без лишних знаков.",
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "canon.canonicalize",
+      "args": {
+        "json_text": "{\"zero\":0,\"minus_one\":-1,\"max_safe\":9007199254740991,\"list\":[0,-1,1]}"
+      }
+    },
+    {
+      "op": "canon.digest",
+      "args": {
+        "json_text": "{\"zero\":0,\"minus_one\":-1,\"max_safe\":9007199254740991,\"list\":[0,-1,1]}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "text": {
+          "golden": "canon/digest/integers-canonical.txt"
+        }
+      }
+    },
+    {
+      "ok": {
+        "digest": {
+          "golden": "canon/digest/integers-digest.txt"
+        }
+      }
+    }
+  ]
+}

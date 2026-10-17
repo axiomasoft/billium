@@ -1,0 +1,46 @@
+{
+  "id": "canon/digest/execute-basic",
+  "spec_refs": [
+    "BC-ID-12",
+    "BC-ID-13",
+    "BC-ID-15",
+    "BC-CNF-08",
+    "D32"
+  ],
+  "description": "Worked example из дизайна P2: ключи в произвольном порядке, golden создан оракулом.",
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "canon.canonicalize",
+      "args": {
+        "json_text": "{\"source\":{\"context\":\"commerz\",\"orderRef\":\"ord-1\",\"intentRef\":\"int-1\"},\"money\":{\"amount\":\"1490.00\",\"currency\":\"RUB\"},\"schema\":\"payment.execute.v1\",\"requestedAt\":\"2026-10-17T12:00:00Z\",\"sellerRef\":\"seller-1\",\"routingEpoch\":1,\"bindingRevision\":\"sha256:00\",\"operationRef\":\"op-1\",\"merchantAccountRef\":\"ma-1\",\"executionProfile\":\"remote-billium\",\"environment\":\"test\",\"operationKind\":\"charge\",\"installationRef\":\"inst-1\",\"commandKey\":\"0b6f2c1e-6d1a-4a44-9a51-3f0c6f2f7a10\"}"
+      }
+    },
+    {
+      "op": "canon.digest",
+      "args": {
+        "json_text": "{\"source\":{\"context\":\"commerz\",\"orderRef\":\"ord-1\",\"intentRef\":\"int-1\"},\"money\":{\"amount\":\"1490.00\",\"currency\":\"RUB\"},\"schema\":\"payment.execute.v1\",\"requestedAt\":\"2026-10-17T12:00:00Z\",\"sellerRef\":\"seller-1\",\"routingEpoch\":1,\"bindingRevision\":\"sha256:00\",\"operationRef\":\"op-1\",\"merchantAccountRef\":\"ma-1\",\"executionProfile\":\"remote-billium\",\"environment\":\"test\",\"operationKind\":\"charge\",\"installationRef\":\"inst-1\",\"commandKey\":\"0b6f2c1e-6d1a-4a44-9a51-3f0c6f2f7a10\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "text": {
+          "golden": "canon/digest/execute-basic-canonical.txt"
+        }
+      }
+    },
+    {
+      "ok": {
+        "digest": {
+          "golden": "canon/digest/execute-basic-digest.txt"
+        }
+      }
+    }
+  ]
+}

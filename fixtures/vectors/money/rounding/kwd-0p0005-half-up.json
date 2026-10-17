@@ -1,0 +1,34 @@
+{
+  "id": "money/rounding/kwd-0p0005-half-up",
+  "spec_refs": [
+    "BC-MW-17",
+    "BC-MW-18",
+    "BC-MW-10",
+    "REQ-CON-30"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.round",
+      "args": {
+        "value": "0.0005",
+        "currency": "KWD",
+        "mode": "HALF_UP"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "wire": {
+          "amount": "0.001",
+          "currency": "KWD"
+        }
+      }
+    }
+  ]
+}

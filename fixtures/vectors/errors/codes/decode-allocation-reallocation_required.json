@@ -1,0 +1,32 @@
+{
+  "id": "errors/codes/decode-allocation-reallocation_required",
+  "spec_refs": [
+    "BC-ERR-01",
+    "BC-ERR-04",
+    "BC-ERR-05"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "problem.decode",
+      "args": {
+        "json_text": "{\"code\":\"billium.allocation.reallocation_required\",\"category\":\"allocation\",\"retryable\":false,\"sameKey\":false,\"receipt\":\"stored\",\"title\":\"Problem\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "code": "billium.allocation.reallocation_required",
+        "category": "allocation",
+        "retryable": false,
+        "sameKey": false,
+        "receipt": "stored"
+      }
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "id": "money/bounds/parse-rub-int64-max",
+  "spec_refs": [
+    "BC-MW-08",
+    "BC-MW-09",
+    "BC-MW-10",
+    "REQ-ACC-13",
+    "D19"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.parse",
+      "args": {
+        "wire_text": "{\"amount\":\"92233720368547758.07\",\"currency\":\"RUB\"}"
+      }
+    },
+    {
+      "op": "money.format",
+      "args": {
+        "minor": "9223372036854775807",
+        "currency": "RUB"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "minor": "9223372036854775807",
+        "currency": "RUB"
+      }
+    },
+    {
+      "ok": {
+        "wire": {
+          "amount": "92233720368547758.07",
+          "currency": "RUB"
+        }
+      }
+    }
+  ]
+}

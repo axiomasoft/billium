@@ -1,0 +1,32 @@
+{
+  "id": "errors/codes/decode-refund-capacity_exceeded",
+  "spec_refs": [
+    "BC-ERR-01",
+    "BC-ERR-04",
+    "BC-ERR-05"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "problem.decode",
+      "args": {
+        "json_text": "{\"code\":\"billium.refund.capacity_exceeded\",\"category\":\"refund\",\"retryable\":false,\"sameKey\":false,\"receipt\":\"stored\",\"title\":\"Problem\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "code": "billium.refund.capacity_exceeded",
+        "category": "refund",
+        "retryable": false,
+        "sameKey": false,
+        "receipt": "stored"
+      }
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "id": "collection/authorize/missing-command-key",
+  "spec_refs": [
+    "BC-ENV-24",
+    "BC-ENV-09",
+    "BC-ID-01"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"collection.authorize.v1\",\"installationRef\":\"inst-1\",\"environment\":\"test\",\"sellerRef\":\"seller-1\",\"obligationRef\":\"obl-1\",\"businessPaymentIntentRef\":\"bpi-1\",\"executorBindingRef\":\"exb-1\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

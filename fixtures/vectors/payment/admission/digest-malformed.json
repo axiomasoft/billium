@@ -1,0 +1,27 @@
+{
+  "id": "payment/admission/digest-malformed",
+  "spec_refs": [
+    "BC-ID-13",
+    "BC-ENV-17"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"payment.admission.v1\",\"result\":\"accepted\",\"operationRef\":\"op-1\",\"revision\":1,\"outcomeQueryRef\":\"oq-op-1\",\"receipt\":\"CommandAccepted\",\"digest\":\"sha256\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

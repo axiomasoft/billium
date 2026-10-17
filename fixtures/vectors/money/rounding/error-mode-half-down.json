@@ -1,0 +1,30 @@
+{
+  "id": "money/rounding/error-mode-half-down",
+  "spec_refs": [
+    "BC-MW-17",
+    "BC-MW-18",
+    "BC-MW-09"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.round",
+      "args": {
+        "value": "0.005",
+        "currency": "RUB",
+        "mode": "HALF_DOWN"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

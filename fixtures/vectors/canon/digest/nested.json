@@ -1,0 +1,44 @@
+{
+  "id": "canon/digest/nested",
+  "spec_refs": [
+    "BC-ID-12",
+    "BC-ID-15",
+    "D32"
+  ],
+  "description": "Вложенность сохраняется целиком, ключи сортируются на каждом уровне.",
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "canon.canonicalize",
+      "args": {
+        "json_text": "{\"z\":{\"b\":[3,2,{\"y\":[],\"x\":{}}],\"a\":1},\"money\":{\"currency\":\"RUB\",\"amount\":\"1.00\"}}"
+      }
+    },
+    {
+      "op": "canon.digest",
+      "args": {
+        "json_text": "{\"z\":{\"b\":[3,2,{\"y\":[],\"x\":{}}],\"a\":1},\"money\":{\"currency\":\"RUB\",\"amount\":\"1.00\"}}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "text": {
+          "golden": "canon/digest/nested-canonical.txt"
+        }
+      }
+    },
+    {
+      "ok": {
+        "digest": {
+          "golden": "canon/digest/nested-digest.txt"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "id": "payment/outcome/extra-optional-member-allowed",
+  "spec_refs": [
+    "BC-ENV-06",
+    "BC-ENV-18"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"payment.outcome.v1\",\"operationRef\":\"op-1\",\"revision\":3,\"status\":\"succeeded\",\"money\":{\"amount\":\"1490.00\",\"currency\":\"RUB\"},\"capturedTotal\":\"1490.00\",\"refundedTotal\":\"0.00\",\"bindingRevision\":\"sha256:00\",\"sellerRef\":\"seller-1\",\"merchantAccountRef\":\"ma-1\",\"providerEvidenceRef\":\"ev-1\",\"occurredAt\":\"2026-10-17T12:03:41Z\",\"providerMetadataRef\":\"pm-1\",\"digest\":\"sha256:740f2d5cd5d83afa6438465b8ead929bd6d0cc3fe7f5d5e852fa7f6ba81dcb90\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "payment.outcome.v1",
+        "digest": "sha256:740f2d5cd5d83afa6438465b8ead929bd6d0cc3fe7f5d5e852fa7f6ba81dcb90"
+      }
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "id": "usage/fact/valid-distinct",
+  "spec_refs": [
+    "BC-ENV-22",
+    "BC-ENV-07",
+    "REQ-CON-16"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"usage.fact.v1\",\"source\":\"tariffler\",\"factId\":\"fact-1\",\"revision\":1,\"sellerRef\":\"seller-1\",\"subjectRef\":\"subject-1\",\"metricRef\":\"api_calls\",\"metricVersion\":\"v1\",\"semantics\":\"distinct\",\"unit\":\"call\",\"quantity\":\"42\",\"interval\":{\"start\":\"2026-10-01T00:00:00Z\",\"end\":\"2026-11-01T00:00:00Z\"},\"eventAt\":\"2026-10-17T10:00:00Z\",\"observedAt\":\"2026-10-17T10:00:05Z\",\"provenance\":{\"collector\":\"usage-collector\",\"version\":\"1.4.2\",\"sourceRef\":\"batch-77\"},\"digest\":\"sha256:f9e4f8ec61369da62db310be624c0b00bae69f8d06da5fb62b14b1d6d375c152\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "usage.fact.v1",
+        "digest": "sha256:f9e4f8ec61369da62db310be624c0b00bae69f8d06da5fb62b14b1d6d375c152"
+      }
+    }
+  ]
+}

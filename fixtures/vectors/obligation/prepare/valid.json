@@ -1,0 +1,28 @@
+{
+  "id": "obligation/prepare/valid",
+  "spec_refs": [
+    "BC-ENV-24",
+    "BC-ENV-09"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"obligation.prepare.v1\",\"commandKey\":\"1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f\",\"installationRef\":\"inst-1\",\"environment\":\"test\",\"sellerRef\":\"seller-1\",\"agreementRef\":\"agr-1\",\"agreementRevision\":2,\"componentRef\":\"cmp-1\",\"billingOccurrenceRef\":\"occ-1\",\"priceVersionRef\":\"pv-1\",\"snapshotDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "obligation.prepare.v1",
+        "digest": "sha256:164570193dbc14bd58c10f47352e2defadfefc7a156ea8c8d46bc3eca665d74a"
+      }
+    }
+  ]
+}

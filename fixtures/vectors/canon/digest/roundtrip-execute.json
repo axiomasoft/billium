@@ -1,0 +1,30 @@
+{
+  "id": "canon/digest/roundtrip-execute",
+  "spec_refs": [
+    "BC-ID-12",
+    "BC-ENV-11"
+  ],
+  "description": "decode → encode даёт каноническую форму входа.",
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.roundtrip",
+      "args": {
+        "json_text": "{\"source\":{\"context\":\"commerz\",\"orderRef\":\"ord-1\",\"intentRef\":\"int-1\"},\"money\":{\"amount\":\"1490.00\",\"currency\":\"RUB\"},\"schema\":\"payment.execute.v1\",\"requestedAt\":\"2026-10-17T12:00:00Z\",\"sellerRef\":\"seller-1\",\"routingEpoch\":1,\"bindingRevision\":\"sha256:00\",\"operationRef\":\"op-1\",\"merchantAccountRef\":\"ma-1\",\"executionProfile\":\"remote-billium\",\"environment\":\"test\",\"operationKind\":\"charge\",\"installationRef\":\"inst-1\",\"commandKey\":\"0b6f2c1e-6d1a-4a44-9a51-3f0c6f2f7a10\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "text": {
+          "golden": "canon/digest/execute-basic-canonical.txt"
+        }
+      }
+    }
+  ]
+}

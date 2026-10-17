@@ -1,0 +1,142 @@
+[
+  {
+    "code": "billium.validation.invalid",
+    "category": "validation",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none"
+  },
+  {
+    "code": "billium.schema.unsupported",
+    "category": "schema",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none"
+  },
+  {
+    "code": "billium.money.scale_invalid",
+    "category": "money",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none"
+  },
+  {
+    "code": "billium.money.currency_mismatch",
+    "category": "money",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none"
+  },
+  {
+    "code": "billium.auth.denied",
+    "category": "auth",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none"
+  },
+  {
+    "code": "billium.idempotency.conflict",
+    "category": "idempotency",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "none"
+  },
+  {
+    "code": "billium.idempotency.in_flight",
+    "category": "idempotency",
+    "retryable": true,
+    "sameKey": true,
+    "receipt": "none"
+  },
+  {
+    "code": "billium.key.expired",
+    "category": "key",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "none"
+  },
+  {
+    "code": "billium.recovery.required",
+    "category": "recovery",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none"
+  },
+  {
+    "code": "billium.lookup.unavailable",
+    "category": "lookup",
+    "retryable": true,
+    "sameKey": true,
+    "receipt": "none"
+  },
+  {
+    "code": "billium.refund.capacity_exceeded",
+    "category": "refund",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored"
+  },
+  {
+    "code": "billium.operation.not_cancellable",
+    "category": "operation",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored"
+  },
+  {
+    "code": "billium.observation.parked",
+    "category": "observation",
+    "retryable": true,
+    "sameKey": true,
+    "receipt": "none"
+  },
+  {
+    "code": "billium.observation.conflict",
+    "category": "observation",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored"
+  },
+  {
+    "code": "billium.usage.conflict",
+    "category": "usage",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "none"
+  },
+  {
+    "code": "billium.policy.unknown",
+    "category": "policy",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored"
+  },
+  {
+    "code": "billium.invoice.frozen",
+    "category": "invoice",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored"
+  },
+  {
+    "code": "billium.allocation.reallocation_required",
+    "category": "allocation",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored"
+  },
+  {
+    "code": "billium.installation.quarantined",
+    "category": "installation",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none"
+  },
+  {
+    "code": "billium.transport.unavailable",
+    "category": "transport",
+    "retryable": true,
+    "sameKey": true,
+    "receipt": "none"
+  }
+]

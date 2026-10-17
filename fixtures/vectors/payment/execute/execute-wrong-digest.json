@@ -1,0 +1,27 @@
+{
+  "id": "payment/execute/execute-wrong-digest",
+  "spec_refs": [
+    "BC-ID-17",
+    "D32"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"payment.execute.v1\",\"commandKey\":\"0b6f2c1e-6d1a-4a44-9a51-3f0c6f2f7a10\",\"operationRef\":\"op-1\",\"operationKind\":\"charge\",\"source\":{\"context\":\"commerz\",\"orderRef\":\"ord-1\",\"intentRef\":\"int-1\"},\"installationRef\":\"inst-1\",\"environment\":\"test\",\"executionProfile\":\"remote-billium\",\"routingEpoch\":1,\"sellerRef\":\"seller-1\",\"merchantAccountRef\":\"ma-1\",\"money\":{\"amount\":\"1490.00\",\"currency\":\"RUB\"},\"bindingRevision\":\"sha256:00\",\"requestedAt\":\"2026-10-17T12:00:00Z\",\"digest\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

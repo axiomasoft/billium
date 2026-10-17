@@ -1,0 +1,39 @@
+{
+  "id": "money/bounds/add-above-2p53",
+  "spec_refs": [
+    "BC-MW-13",
+    "BC-MW-10",
+    "REQ-CON-30",
+    "D19"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.add",
+      "args": {
+        "a": {
+          "amount": "90071992547409.93",
+          "currency": "RUB"
+        },
+        "b": {
+          "amount": "0.01",
+          "currency": "RUB"
+        }
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "wire": {
+          "amount": "90071992547409.94",
+          "currency": "RUB"
+        }
+      }
+    }
+  ]
+}

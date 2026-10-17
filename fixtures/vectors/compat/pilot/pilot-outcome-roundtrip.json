@@ -1,0 +1,30 @@
+{
+  "id": "compat/pilot/pilot-outcome-roundtrip",
+  "spec_refs": [
+    "BC-ENV-11",
+    "BC-ID-12",
+    "REQ-CON-20"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.roundtrip",
+      "args": {
+        "json_text": "{\"schema\":\"payment.outcome.v1\",\"operationRef\":\"op-8f3a21\",\"revision\":3,\"status\":\"succeeded\",\"money\":{\"amount\":\"1490.00\",\"currency\":\"RUB\"},\"capturedTotal\":\"1490.00\",\"refundedTotal\":\"0.00\",\"bindingRevision\":\"bind-7c91d0e2\",\"sellerRef\":\"seller-acme\",\"merchantAccountRef\":\"ma-main\",\"providerEvidenceRef\":\"ev-5512\",\"occurredAt\":\"2026-10-17T12:03:41Z\",\"digest\":\"sha256:94dfbc58bb1ea75cb87e2e2f2faaff4fbba1876aa666f7e9ebc96c3c7b0239ba\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "text": {
+          "golden": "canon/digest/pilot-outcome-canonical.txt"
+        }
+      }
+    }
+  ]
+}

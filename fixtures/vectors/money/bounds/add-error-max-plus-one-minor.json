@@ -1,0 +1,34 @@
+{
+  "id": "money/bounds/add-error-max-plus-one-minor",
+  "spec_refs": [
+    "BC-MW-13",
+    "BC-MW-09"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.add",
+      "args": {
+        "a": {
+          "amount": "92233720368547758.07",
+          "currency": "RUB"
+        },
+        "b": {
+          "amount": "0.01",
+          "currency": "RUB"
+        }
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

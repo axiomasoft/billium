@@ -1,0 +1,52 @@
+{
+  "id": "money/allocation/int64-min-three",
+  "spec_refs": [
+    "BC-MW-14",
+    "BC-MW-15",
+    "BC-MW-16",
+    "BC-MW-10",
+    "REQ-CON-30",
+    "REQ-ACC-13"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.allocate",
+      "args": {
+        "total": {
+          "amount": "-92233720368547758.08",
+          "currency": "RUB"
+        },
+        "ratios": [
+          "1",
+          "1",
+          "1"
+        ]
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "parts": [
+          {
+            "amount": "-30744573456182586.03",
+            "currency": "RUB"
+          },
+          {
+            "amount": "-30744573456182586.03",
+            "currency": "RUB"
+          },
+          {
+            "amount": "-30744573456182586.02",
+            "currency": "RUB"
+          }
+        ]
+      }
+    }
+  ]
+}

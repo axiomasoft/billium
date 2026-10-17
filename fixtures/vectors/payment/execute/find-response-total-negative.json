@@ -1,0 +1,27 @@
+{
+  "id": "payment/execute/find-response-total-negative",
+  "spec_refs": [
+    "BC-ENV-15",
+    "BC-MW-12"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"payment.find.v1\",\"operationRef\":\"op-1\",\"status\":\"succeeded\",\"revision\":3,\"capturedTotal\":{\"amount\":\"-1.00\",\"currency\":\"RUB\"},\"refundedTotal\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"reservedRefundTotal\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"digest\":\"sha256:546451887f182c89a910a6a02282ab926972fdaeead517fe5a644ce3965f0669\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

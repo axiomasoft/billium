@@ -1,0 +1,28 @@
+{
+  "id": "payment/admission/extra-optional-member-allowed",
+  "spec_refs": [
+    "BC-ENV-06",
+    "BC-ENV-17"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"payment.admission.v1\",\"result\":\"accepted\",\"operationRef\":\"op-1\",\"revision\":1,\"outcomeQueryRef\":\"oq-op-1\",\"receipt\":\"CommandAccepted\",\"hint\":\"retry-later\",\"digest\":\"sha256:00d495248618f035f0eb09af31eef7f114011129692acba119f6d70e200f757d\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "payment.admission.v1",
+        "digest": "sha256:00d495248618f035f0eb09af31eef7f114011129692acba119f6d70e200f757d"
+      }
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "id": "money/allocation/error-plus-ratio",
+  "spec_refs": [
+    "BC-MW-14",
+    "REQ-ACC-13"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.allocate",
+      "args": {
+        "total": {
+          "amount": "1.00",
+          "currency": "USD"
+        },
+        "ratios": [
+          "+1",
+          "2"
+        ]
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "id": "usage/fact/quantity-leading-zero",
+  "spec_refs": [
+    "BC-ENV-22"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"usage.fact.v1\",\"source\":\"tariffler\",\"factId\":\"fact-1\",\"revision\":1,\"sellerRef\":\"seller-1\",\"subjectRef\":\"subject-1\",\"metricRef\":\"api_calls\",\"metricVersion\":\"v1\",\"semantics\":\"additive\",\"unit\":\"call\",\"quantity\":\"01\",\"interval\":{\"start\":\"2026-10-01T00:00:00Z\",\"end\":\"2026-11-01T00:00:00Z\"},\"eventAt\":\"2026-10-17T10:00:00Z\",\"observedAt\":\"2026-10-17T10:00:05Z\",\"provenance\":{\"collector\":\"usage-collector\",\"version\":\"1.4.2\",\"sourceRef\":\"batch-77\"},\"digest\":\"sha256:034d8c88d42cb0c1036c28053a0f0ef6c273314d72cfaabe86690ff4458a52dd\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "id": "canon/digest/unicode-key-order",
+  "spec_refs": [
+    "BC-ID-15",
+    "BC-ID-12",
+    "D32"
+  ],
+  "description": "Порядок по UTF-16 code units: U+1F600 (суррогаты D83D DE00) раньше U+FFE0.",
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "canon.canonicalize",
+      "args": {
+        "json_text": "{\"\\uffe0\":1,\"\\ud83d\\ude00\":2,\"é\":3,\"a\":4,\"B\":5,\"10\":6,\"9\":7,\"\":8}"
+      }
+    },
+    {
+      "op": "canon.digest",
+      "args": {
+        "json_text": "{\"\\uffe0\":1,\"\\ud83d\\ude00\":2,\"é\":3,\"a\":4,\"B\":5,\"10\":6,\"9\":7,\"\":8}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "text": {
+          "golden": "canon/digest/unicode-key-order-canonical.txt"
+        }
+      }
+    },
+    {
+      "ok": {
+        "digest": {
+          "golden": "canon/digest/unicode-key-order-digest.txt"
+        }
+      }
+    }
+  ]
+}

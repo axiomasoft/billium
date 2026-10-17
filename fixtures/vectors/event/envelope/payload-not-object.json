@@ -1,0 +1,26 @@
+{
+  "id": "event/envelope/payload-not-object",
+  "spec_refs": [
+    "BC-EVT-02"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"billium.event.v1\",\"eventId\":\"01JBX5Q0Z8M3N4P7R9S2T6V1WB\",\"eventType\":\"payment.outcome.v1\",\"sellerRef\":\"seller-1\",\"aggregateRef\":\"op-1\",\"revision\":3,\"occurredAt\":\"2026-10-17T12:03:41Z\",\"payload\":\"x\",\"digest\":\"sha256:3826a109fda3df6a814e4e2ba3c3ae2e7dd0f8023cbaae3c65f2b8705cabaa39\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

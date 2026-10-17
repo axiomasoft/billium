@@ -1,0 +1,27 @@
+{
+  "id": "payment/admission/decode-known-terminal",
+  "spec_refs": [
+    "BC-ENV-17"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"payment.admission.v1\",\"result\":\"known-terminal\",\"operationRef\":\"op-1\",\"revision\":1,\"outcomeQueryRef\":\"oq-op-1\",\"receipt\":\"CommandAccepted\",\"digest\":\"sha256:722d1569746242106e2733f005f2bcece0c6168f950411b5a9b7517c7e1d50bb\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "payment.admission.v1",
+        "digest": "sha256:722d1569746242106e2733f005f2bcece0c6168f950411b5a9b7517c7e1d50bb"
+      }
+    }
+  ]
+}

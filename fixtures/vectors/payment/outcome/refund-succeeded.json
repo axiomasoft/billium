@@ -1,0 +1,29 @@
+{
+  "id": "payment/outcome/refund-succeeded",
+  "spec_refs": [
+    "BC-ENV-18",
+    "BC-ENV-13",
+    "INV-07"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"payment.outcome.v1\",\"operationRef\":\"op-2\",\"revision\":1,\"status\":\"succeeded\",\"money\":{\"amount\":\"490.00\",\"currency\":\"RUB\"},\"capturedTotal\":\"490.00\",\"refundedTotal\":\"490.00\",\"bindingRevision\":\"sha256:00\",\"sellerRef\":\"seller-1\",\"merchantAccountRef\":\"ma-1\",\"providerEvidenceRef\":\"ev-2\",\"occurredAt\":\"2026-10-18T09:31:02Z\",\"originalOperationRef\":\"op-1\",\"digest\":\"sha256:a1d2a3230125c236148fd00fbcfa75d1d0120797572f86614524a79021330391\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "payment.outcome.v1",
+        "digest": "sha256:a1d2a3230125c236148fd00fbcfa75d1d0120797572f86614524a79021330391"
+      }
+    }
+  ]
+}

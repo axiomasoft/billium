@@ -1,0 +1,29 @@
+{
+  "id": "compat/pilot/pilot-refund-outcome",
+  "spec_refs": [
+    "BC-ENV-11",
+    "BC-ENV-18",
+    "REQ-CON-09"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"payment.outcome.v1\",\"operationRef\":\"op-8f3a22\",\"revision\":1,\"status\":\"succeeded\",\"money\":{\"amount\":\"490.00\",\"currency\":\"RUB\"},\"capturedTotal\":\"490.00\",\"refundedTotal\":\"490.00\",\"bindingRevision\":\"bind-7c91d0e2\",\"sellerRef\":\"seller-acme\",\"merchantAccountRef\":\"ma-main\",\"providerEvidenceRef\":\"ev-5601\",\"occurredAt\":\"2026-10-17T12:03:41Z\",\"originalOperationRef\":\"op-8f3a21\",\"digest\":\"sha256:7d547618efe4d04d2f3ca85c825b988c912a7ce317f71c27e32bdb914c735c5a\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "payment.outcome.v1",
+        "digest": "sha256:7d547618efe4d04d2f3ca85c825b988c912a7ce317f71c27e32bdb914c735c5a"
+      }
+    }
+  ]
+}

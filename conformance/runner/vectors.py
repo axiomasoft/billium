@@ -69,6 +69,17 @@ def read_golden(golden_root: Path, rel: str) -> str:
         raise VectorError(f"golden {rel!r} is not UTF-8") from error
 
 
+def golden_value(golden_root: Path, rel: str) -> Any:
+    """Golden text; a `.json` golden is parsed and compared as JSON (e.g. `errors/registry.json`)."""
+    text = read_golden(golden_root, rel)
+    if not rel.endswith(".json"):
+        return text
+    try:
+        return json.loads(text)
+    except ValueError as error:
+        raise VectorError(f"golden {rel!r} is not JSON: {error}") from error
+
+
 def golden_ref(value: Any) -> str | None:
     if isinstance(value, dict) and set(value) == {"golden"} and isinstance(value["golden"], str):
         return value["golden"]
@@ -76,13 +87,13 @@ def golden_ref(value: Any) -> str | None:
 
 
 def resolve_golden(expect: list[dict[str, Any]], golden_root: Path) -> list[dict[str, Any]]:
-    """Replace `{"golden": path}` values of top-level `expect.ok` fields by the golden text."""
+    """Replace `{"golden": path}` values of top-level `expect.ok` fields by the golden value."""
     resolved = []
     for output in expect:
         ok = output.get("ok")
         if isinstance(ok, dict):
             ok = {
-                key: read_golden(golden_root, ref) if (ref := golden_ref(value)) is not None else value
+                key: golden_value(golden_root, ref) if (ref := golden_ref(value)) is not None else value
                 for key, value in ok.items()
             }
             output = {"ok": ok}

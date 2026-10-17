@@ -1,0 +1,29 @@
+{
+  "id": "canon/digest/execute-amount-number-above-2p53",
+  "spec_refs": [
+    "BC-MW-04",
+    "BC-MW-07",
+    "BC-ENV-07",
+    "D32"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"payment.execute.v1\",\"commandKey\":\"0b6f2c1e-6d1a-4a44-9a51-3f0c6f2f7a10\",\"installationRef\":\"inst-1\",\"environment\":\"test\",\"sellerRef\":\"seller-1\",\"operationRef\":\"op-1\",\"operationKind\":\"charge\",\"source\":{\"context\":\"commerz\",\"intentRef\":\"int-1\"},\"executionProfile\":\"remote-billium\",\"routingEpoch\":1,\"merchantAccountRef\":\"ma-1\",\"money\":{\"amount\":9007199254740993,\"currency\":\"RUB\"},\"bindingRevision\":\"b-1\",\"requestedAt\":\"2026-10-17T12:00:00Z\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.money.scale_invalid"
+      }
+    }
+  ]
+}

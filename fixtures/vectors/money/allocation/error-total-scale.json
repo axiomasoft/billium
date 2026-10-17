@@ -1,0 +1,34 @@
+{
+  "id": "money/allocation/error-total-scale",
+  "spec_refs": [
+    "BC-MW-07",
+    "BC-MW-14"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.allocate",
+      "args": {
+        "total": {
+          "amount": "1.0",
+          "currency": "USD"
+        },
+        "ratios": [
+          "1",
+          "1"
+        ]
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.money.scale_invalid"
+      }
+    }
+  ]
+}

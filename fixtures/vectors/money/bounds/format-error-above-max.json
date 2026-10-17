@@ -1,0 +1,27 @@
+{
+  "id": "money/bounds/format-error-above-max",
+  "spec_refs": [
+    "BC-MW-09"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.format",
+      "args": {
+        "minor": "9223372036854775808",
+        "currency": "RUB"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

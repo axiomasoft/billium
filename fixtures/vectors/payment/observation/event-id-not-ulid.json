@@ -1,0 +1,26 @@
+{
+  "id": "payment/observation/event-id-not-ulid",
+  "spec_refs": [
+    "BC-ENV-20"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"payment.observation.v1\",\"eventId\":\"not-a-ulid\",\"sourceAuthority\":\"remote-billium\",\"sourceLineage\":\"lineage-1\",\"partitionRef\":\"part-1\",\"sourceSequence\":17,\"installationRef\":\"inst-1\",\"environment\":\"test\",\"sellerRef\":\"seller-1\",\"operationRef\":\"op-1\",\"operationKind\":\"charge\",\"businessIntentRef\":\"int-1\",\"operationRevision\":3,\"state\":\"succeeded\",\"currency\":\"RUB\",\"requested\":{\"amount\":\"1490.00\",\"currency\":\"RUB\"},\"authorizedTotal\":{\"amount\":\"1490.00\",\"currency\":\"RUB\"},\"capturedTotal\":{\"amount\":\"1490.00\",\"currency\":\"RUB\"},\"refundedTotal\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"providerAccountRef\":\"pa-1\",\"evidenceRef\":\"ev-1\",\"observedAt\":\"2026-10-17T12:03:41Z\",\"recordedAt\":\"2026-10-17T12:03:42Z\",\"contentDigest\":\"sha256:9ab9f8229959732d986c6702ff88d965e1095951be1c07db82f1d9eb89e8d8b7\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

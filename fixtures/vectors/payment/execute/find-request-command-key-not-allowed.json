@@ -1,0 +1,27 @@
+{
+  "id": "payment/execute/find-request-command-key-not-allowed",
+  "spec_refs": [
+    "BC-ENV-09",
+    "BC-ENV-05"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"payment.find.v1\",\"installationRef\":\"inst-1\",\"environment\":\"test\",\"sellerRef\":\"seller-1\",\"operationRef\":\"op-1\",\"commandKey\":\"0b6f2c1e-6d1a-4a44-9a51-3f0c6f2f7a10\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

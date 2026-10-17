@@ -1,0 +1,44 @@
+{
+  "id": "money/scale/roundtrip-kwd",
+  "spec_refs": [
+    "BC-MW-11",
+    "BC-MW-08",
+    "D29"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.format",
+      "args": {
+        "minor": "-1",
+        "currency": "KWD"
+      }
+    },
+    {
+      "op": "money.parse",
+      "args": {
+        "wire_text": "{\"amount\":\"-0.001\",\"currency\":\"KWD\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "wire": {
+          "amount": "-0.001",
+          "currency": "KWD"
+        }
+      }
+    },
+    {
+      "ok": {
+        "minor": "-1",
+        "currency": "KWD"
+      }
+    }
+  ]
+}

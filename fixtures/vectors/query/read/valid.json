@@ -1,0 +1,28 @@
+{
+  "id": "query/read/valid",
+  "spec_refs": [
+    "BC-ENV-25",
+    "BC-ENV-09"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"billium.query.v1\",\"installationRef\":\"inst-1\",\"environment\":\"test\",\"sellerRef\":\"seller-1\",\"query\":\"paymentStatus\",\"selector\":{\"operationRef\":\"op-1\"}}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "billium.query.v1",
+        "digest": "sha256:26f3e69165b0a6ff0af105630cbc657edee0cd8952f48ed8a731a101682ba638"
+      }
+    }
+  ]
+}

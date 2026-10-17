@@ -1,0 +1,52 @@
+{
+  "id": "money/allocation/negative-three-equal",
+  "spec_refs": [
+    "BC-MW-14",
+    "BC-MW-15",
+    "BC-MW-16",
+    "BC-MW-10",
+    "REQ-CON-30",
+    "REQ-ACC-13"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.allocate",
+      "args": {
+        "total": {
+          "amount": "-1.00",
+          "currency": "USD"
+        },
+        "ratios": [
+          "1",
+          "1",
+          "1"
+        ]
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "parts": [
+          {
+            "amount": "-0.34",
+            "currency": "USD"
+          },
+          {
+            "amount": "-0.33",
+            "currency": "USD"
+          },
+          {
+            "amount": "-0.33",
+            "currency": "USD"
+          }
+        ]
+      }
+    }
+  ]
+}

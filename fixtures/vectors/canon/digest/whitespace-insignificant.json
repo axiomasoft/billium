@@ -1,0 +1,43 @@
+{
+  "id": "canon/digest/whitespace-insignificant",
+  "spec_refs": [
+    "BC-ID-12",
+    "D32"
+  ],
+  "description": "Пробелы входного текста не влияют на каноническую форму.",
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "canon.canonicalize",
+      "args": {
+        "json_text": " {\n  \"b\" : 2 ,\t\"a\" : [ 1 , 2 ]\n}\n"
+      }
+    },
+    {
+      "op": "canon.digest",
+      "args": {
+        "json_text": " {\n  \"b\" : 2 ,\t\"a\" : [ 1 , 2 ]\n}\n"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "text": {
+          "golden": "canon/digest/whitespace-insignificant-canonical.txt"
+        }
+      }
+    },
+    {
+      "ok": {
+        "digest": {
+          "golden": "canon/digest/whitespace-insignificant-digest.txt"
+        }
+      }
+    }
+  ]
+}

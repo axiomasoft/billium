@@ -1,0 +1,28 @@
+{
+  "id": "money/bounds/parse-error-rub-above-max",
+  "spec_refs": [
+    "BC-MW-09",
+    "REQ-ACC-13",
+    "D19"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.parse",
+      "args": {
+        "wire_text": "{\"amount\":\"92233720368547758.08\",\"currency\":\"RUB\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

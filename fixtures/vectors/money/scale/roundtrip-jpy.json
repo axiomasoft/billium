@@ -1,0 +1,44 @@
+{
+  "id": "money/scale/roundtrip-jpy",
+  "spec_refs": [
+    "BC-MW-11",
+    "BC-MW-08",
+    "D29"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.format",
+      "args": {
+        "minor": "98765",
+        "currency": "JPY"
+      }
+    },
+    {
+      "op": "money.parse",
+      "args": {
+        "wire_text": "{\"amount\":\"98765\",\"currency\":\"JPY\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "wire": {
+          "amount": "98765",
+          "currency": "JPY"
+        }
+      }
+    },
+    {
+      "ok": {
+        "minor": "98765",
+        "currency": "JPY"
+      }
+    }
+  ]
+}

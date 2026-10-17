@@ -1,0 +1,27 @@
+{
+  "id": "money/scale/parse-error-currency-number",
+  "spec_refs": [
+    "BC-MW-02",
+    "REQ-CON-02"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.parse",
+      "args": {
+        "wire_text": "{\"amount\":\"1.00\",\"currency\":643}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.money.scale_invalid"
+      }
+    }
+  ]
+}

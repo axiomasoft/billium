@@ -1,0 +1,27 @@
+{
+  "id": "payment/execute/find-response-pending",
+  "spec_refs": [
+    "BC-ENV-15"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"payment.find.v1\",\"operationRef\":\"op-1\",\"status\":\"pending\",\"revision\":3,\"capturedTotal\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"refundedTotal\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"reservedRefundTotal\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"digest\":\"sha256:8b5748cd7d89f507a25e85326da62079c5a10e8fa8027681c4ae43ac8750e594\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "payment.find.v1",
+        "digest": "sha256:8b5748cd7d89f507a25e85326da62079c5a10e8fa8027681c4ae43ac8750e594"
+      }
+    }
+  ]
+}

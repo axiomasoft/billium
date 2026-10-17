@@ -1,0 +1,26 @@
+{
+  "id": "errors/codes/decode-error-missing-title",
+  "spec_refs": [
+    "BC-ERR-01"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "problem.decode",
+      "args": {
+        "json_text": "{\"code\":\"billium.validation.invalid\",\"category\":\"validation\",\"retryable\":false,\"sameKey\":true,\"receipt\":\"none\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

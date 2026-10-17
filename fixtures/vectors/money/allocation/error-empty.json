@@ -1,0 +1,31 @@
+{
+  "id": "money/allocation/error-empty",
+  "spec_refs": [
+    "BC-MW-14",
+    "REQ-ACC-13"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.allocate",
+      "args": {
+        "total": {
+          "amount": "1.00",
+          "currency": "USD"
+        },
+        "ratios": []
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

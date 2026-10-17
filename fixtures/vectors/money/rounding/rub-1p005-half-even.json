@@ -1,0 +1,34 @@
+{
+  "id": "money/rounding/rub-1p005-half-even",
+  "spec_refs": [
+    "BC-MW-17",
+    "BC-MW-18",
+    "BC-MW-10",
+    "REQ-CON-30"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.round",
+      "args": {
+        "value": "1.005",
+        "currency": "RUB",
+        "mode": "HALF_EVEN"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "wire": {
+          "amount": "1.00",
+          "currency": "RUB"
+        }
+      }
+    }
+  ]
+}

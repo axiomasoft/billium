@@ -1,0 +1,26 @@
+{
+  "id": "payment/admission/schema-v2",
+  "spec_refs": [
+    "BC-ENV-02"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"payment.admission.v2\",\"result\":\"accepted\",\"operationRef\":\"op-1\",\"revision\":1,\"outcomeQueryRef\":\"oq-op-1\",\"receipt\":\"CommandAccepted\",\"digest\":\"sha256:3e7e9107801eed5704b77f33e66e764a3af35112a33aed0889a90e552ec0fe1e\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.schema.unsupported"
+      }
+    }
+  ]
+}

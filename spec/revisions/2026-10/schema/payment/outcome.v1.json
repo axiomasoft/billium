@@ -38,10 +38,10 @@
       "$ref": "urn:billium:spec:2026-10:common/money-wire.json#/$defs/positive"
     },
     "capturedTotal": {
-      "$ref": "urn:billium:spec:2026-10:common/money-wire.json#/$defs/nonNegative"
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/operationTotal"
     },
     "refundedTotal": {
-      "$ref": "urn:billium:spec:2026-10:common/money-wire.json#/$defs/nonNegative"
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/operationTotal"
     },
     "bindingRevision": {
       "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"

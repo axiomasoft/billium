@@ -1,0 +1,52 @@
+{
+  "id": "money/allocation/kwd-three-equal",
+  "spec_refs": [
+    "BC-MW-14",
+    "BC-MW-15",
+    "BC-MW-16",
+    "BC-MW-10",
+    "REQ-CON-30",
+    "REQ-ACC-13"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.allocate",
+      "args": {
+        "total": {
+          "amount": "1.000",
+          "currency": "KWD"
+        },
+        "ratios": [
+          "1",
+          "1",
+          "1"
+        ]
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "parts": [
+          {
+            "amount": "0.334",
+            "currency": "KWD"
+          },
+          {
+            "amount": "0.333",
+            "currency": "KWD"
+          },
+          {
+            "amount": "0.333",
+            "currency": "KWD"
+          }
+        ]
+      }
+    }
+  ]
+}

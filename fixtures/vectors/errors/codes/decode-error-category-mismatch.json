@@ -1,0 +1,26 @@
+{
+  "id": "errors/codes/decode-error-category-mismatch",
+  "spec_refs": [
+    "BC-ERR-03"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "problem.decode",
+      "args": {
+        "json_text": "{\"code\":\"billium.validation.invalid\",\"category\":\"money\",\"retryable\":false,\"sameKey\":true,\"receipt\":\"none\",\"title\":\"Problem\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

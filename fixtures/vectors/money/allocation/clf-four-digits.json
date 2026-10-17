@@ -1,0 +1,52 @@
+{
+  "id": "money/allocation/clf-four-digits",
+  "spec_refs": [
+    "BC-MW-14",
+    "BC-MW-15",
+    "BC-MW-16",
+    "BC-MW-10",
+    "REQ-CON-30",
+    "REQ-ACC-13"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.allocate",
+      "args": {
+        "total": {
+          "amount": "1.0001",
+          "currency": "CLF"
+        },
+        "ratios": [
+          "3",
+          "3",
+          "3"
+        ]
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "parts": [
+          {
+            "amount": "0.3334",
+            "currency": "CLF"
+          },
+          {
+            "amount": "0.3334",
+            "currency": "CLF"
+          },
+          {
+            "amount": "0.3333",
+            "currency": "CLF"
+          }
+        ]
+      }
+    }
+  ]
+}

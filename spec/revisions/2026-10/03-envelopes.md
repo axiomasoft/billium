@@ -17,7 +17,7 @@
 
 [BC-ENV-06] Исходы, ответы и события (`payment.outcome`, `payment.admission`, ответ `payment.find`, `usage.receipt`, `billium.event`) открыты для аддитивных необязательных членов: потребитель игнорирует неизвестный необязательный член. (REQ-CON-20, M-04)
 
-[BC-ENV-07] Суммы — MoneyWire, количества — неотрицательная decimal string; JSON number для сумм и количеств запрещён схемой. (REQ-CON-02, D29, M-15)
+[BC-ENV-07] Суммы — MoneyWire (исключение — итоги outcome по BC-ENV-18), количества — неотрицательная decimal string; JSON number для сумм и количеств запрещён схемой. (REQ-CON-02, D29, M-15)
 
 [BC-ENV-08] Время — RFC 3339 в UTC с суффиксом `Z`; идентификаторы — непрозрачные непустые строки. (REQ-CON-21, REQ-CON-35)
 
@@ -41,7 +41,7 @@
 
 [BC-ENV-17] `payment.admission.v1` несёт `result` ∈ {`accepted`, `known-terminal`, `conflict`}, `operationRef`, `revision`, `digest`, `outcomeQueryRef` и `receipt` = `CommandAccepted`. (REQ-CON-04, D30)
 
-[BC-ENV-18] `payment.outcome.v1`: `revision` монотонна; `capturedTotal` и `refundedTotal` cumulative и присваиваются, а не складываются; refund outcome несёт `originalOperationRef`. (REQ-CON-09, INV-06, D30)
+[BC-ENV-18] `payment.outcome.v1`: `revision` монотонна; `capturedTotal` и `refundedTotal` — неотрицательные decimal string в валюте `money.currency` со scale этой валюты (форма пилота), cumulative и присваиваются, а не складываются; нарушение формы итога даёт `billium.money.scale_invalid`; refund outcome несёт `originalOperationRef`. (REQ-CON-09, INV-06, D30, SRC-005)
 
 [BC-ENV-19] Та же revision outcome с иным digest уходит в quarantine у потребителя; каждое материальное изменение суммы — новая revision. (REQ-CON-09, INV-06)
 

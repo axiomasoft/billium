@@ -1,0 +1,27 @@
+{
+  "id": "errors/codes/decode-error-unknown-code",
+  "spec_refs": [
+    "BC-ERR-11",
+    "REQ-CON-19"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "problem.decode",
+      "args": {
+        "json_text": "{\"code\":\"billium.validation.imaginary\",\"category\":\"validation\",\"retryable\":false,\"sameKey\":true,\"receipt\":\"none\",\"title\":\"Problem\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

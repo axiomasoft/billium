@@ -1,0 +1,30 @@
+{
+  "id": "compat/pilot/pilot-execute-decode",
+  "spec_refs": [
+    "BC-ENV-11",
+    "BC-ENV-12",
+    "REQ-CON-20",
+    "REQ-CON-04"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"payment.execute.v1\",\"commandKey\":\"7e0c4a52-91d3-4b6f-8a25-c3d1e9f04b87\",\"operationRef\":\"op-8f3a21\",\"operationKind\":\"charge\",\"source\":{\"context\":\"commerz\",\"orderRef\":\"ord-10234\",\"intentRef\":\"int-10234-1\"},\"installationRef\":\"inst-eu-1\",\"environment\":\"test\",\"executionProfile\":\"remote-billium\",\"routingEpoch\":1,\"sellerRef\":\"seller-acme\",\"merchantAccountRef\":\"ma-main\",\"money\":{\"amount\":\"1490.00\",\"currency\":\"RUB\"},\"bindingRevision\":\"bind-7c91d0e2\",\"returnContextRef\":\"rc-10234\",\"requestedAt\":\"2026-10-17T12:00:00Z\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "payment.execute.v1",
+        "digest": "sha256:8199e286a5e284ec244da4b37c245e4d15e3d0c174adcb7e8eb61a36a7fc9abf"
+      }
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "id": "usage/fact/receipt-accepted",
+  "spec_refs": [
+    "BC-ENV-23",
+    "BC-ENV-06"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"usage.receipt.v1\",\"result\":\"accepted\",\"source\":\"tariffler\",\"factId\":\"fact-1\",\"revision\":1,\"digest\":\"sha256:937c8868d811b91889e07446eaa620926948cbbceaaac9380944288dd641308e\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "usage.receipt.v1",
+        "digest": "sha256:937c8868d811b91889e07446eaa620926948cbbceaaac9380944288dd641308e"
+      }
+    }
+  ]
+}

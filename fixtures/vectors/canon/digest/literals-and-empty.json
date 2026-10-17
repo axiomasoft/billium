@@ -1,0 +1,43 @@
+{
+  "id": "canon/digest/literals-and-empty",
+  "spec_refs": [
+    "BC-ID-15",
+    "BC-ID-12",
+    "D32"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "canon.canonicalize",
+      "args": {
+        "json_text": "{\"t\":true,\"f\":false,\"n\":null,\"o\":{},\"a\":[],\"s\":\"\"}"
+      }
+    },
+    {
+      "op": "canon.digest",
+      "args": {
+        "json_text": "{\"t\":true,\"f\":false,\"n\":null,\"o\":{},\"a\":[],\"s\":\"\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "text": {
+          "golden": "canon/digest/literals-and-empty-canonical.txt"
+        }
+      }
+    },
+    {
+      "ok": {
+        "digest": {
+          "golden": "canon/digest/literals-and-empty-digest.txt"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "id": "money/rounding/rub-92233720368547758p074-half-up",
+  "spec_refs": [
+    "BC-MW-17",
+    "BC-MW-18",
+    "BC-MW-10",
+    "REQ-CON-30"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.round",
+      "args": {
+        "value": "92233720368547758.074",
+        "currency": "RUB",
+        "mode": "HALF_UP"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "wire": {
+          "amount": "92233720368547758.07",
+          "currency": "RUB"
+        }
+      }
+    }
+  ]
+}

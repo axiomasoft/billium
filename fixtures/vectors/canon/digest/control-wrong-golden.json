@@ -1,0 +1,31 @@
+{
+  "id": "canon/digest/control-wrong-golden",
+  "spec_refs": [
+    "BC-CNF-09",
+    "D32"
+  ],
+  "description": "Контрольный вектор (M-16): эталон заведомо неверен, прогон обязан его отвергнуть.",
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "canon.digest",
+      "args": {
+        "json_text": "{\"source\":{\"context\":\"commerz\",\"orderRef\":\"ord-1\",\"intentRef\":\"int-1\"},\"money\":{\"amount\":\"1490.00\",\"currency\":\"RUB\"},\"schema\":\"payment.execute.v1\",\"requestedAt\":\"2026-10-17T12:00:00Z\",\"sellerRef\":\"seller-1\",\"routingEpoch\":1,\"bindingRevision\":\"sha256:00\",\"operationRef\":\"op-1\",\"merchantAccountRef\":\"ma-1\",\"executionProfile\":\"remote-billium\",\"environment\":\"test\",\"operationKind\":\"charge\",\"installationRef\":\"inst-1\",\"commandKey\":\"0b6f2c1e-6d1a-4a44-9a51-3f0c6f2f7a10\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "digest": {
+          "golden": "canon/digest/control-wrong-golden.txt"
+        }
+      }
+    }
+  ],
+  "control": "must-fail"
+}

@@ -1,0 +1,28 @@
+{
+  "id": "usage/fact/receipt-duplicate-extra-member",
+  "spec_refs": [
+    "BC-ENV-23",
+    "BC-ENV-06"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"usage.receipt.v1\",\"result\":\"duplicate\",\"source\":\"tariffler\",\"factId\":\"fact-1\",\"revision\":1,\"note\":\"ignored\",\"digest\":\"sha256:50dc5c1e8e65ce81a869adc0f0382639fab920d06dde3913fa364475a1c779e6\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "usage.receipt.v1",
+        "digest": "sha256:50dc5c1e8e65ce81a869adc0f0382639fab920d06dde3913fa364475a1c779e6"
+      }
+    }
+  ]
+}

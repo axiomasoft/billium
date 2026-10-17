@@ -1,0 +1,28 @@
+{
+  "id": "money/scale/parse-error-jpy-extra-fraction",
+  "spec_refs": [
+    "BC-MW-03",
+    "BC-MW-07",
+    "REQ-CON-02"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.parse",
+      "args": {
+        "wire_text": "{\"amount\":\"1.0\",\"currency\":\"JPY\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.money.scale_invalid"
+      }
+    }
+  ]
+}

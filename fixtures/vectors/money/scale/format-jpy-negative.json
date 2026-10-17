@@ -1,0 +1,32 @@
+{
+  "id": "money/scale/format-jpy-negative",
+  "spec_refs": [
+    "BC-MW-03",
+    "BC-MW-11",
+    "D29"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.format",
+      "args": {
+        "minor": "-1500",
+        "currency": "JPY"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "wire": {
+          "amount": "-1500",
+          "currency": "JPY"
+        }
+      }
+    }
+  ]
+}

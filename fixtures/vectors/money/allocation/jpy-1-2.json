@@ -1,0 +1,47 @@
+{
+  "id": "money/allocation/jpy-1-2",
+  "spec_refs": [
+    "BC-MW-14",
+    "BC-MW-15",
+    "BC-MW-16",
+    "BC-MW-10",
+    "REQ-CON-30",
+    "REQ-ACC-13"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.allocate",
+      "args": {
+        "total": {
+          "amount": "100",
+          "currency": "JPY"
+        },
+        "ratios": [
+          "1",
+          "2"
+        ]
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "parts": [
+          {
+            "amount": "33",
+            "currency": "JPY"
+          },
+          {
+            "amount": "67",
+            "currency": "JPY"
+          }
+        ]
+      }
+    }
+  ]
+}

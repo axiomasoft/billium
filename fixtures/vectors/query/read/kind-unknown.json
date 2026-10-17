@@ -1,0 +1,26 @@
+{
+  "id": "query/read/kind-unknown",
+  "spec_refs": [
+    "BC-ENV-25"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"billium.query.v1\",\"installationRef\":\"inst-1\",\"environment\":\"test\",\"sellerRef\":\"seller-1\",\"query\":\"writeSomething\",\"selector\":{\"operationRef\":\"op-1\"}}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

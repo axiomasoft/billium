@@ -1,0 +1,26 @@
+{
+  "id": "payment/execute/execute-command-key-not-uuid",
+  "spec_refs": [
+    "BC-ID-01"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"payment.execute.v1\",\"commandKey\":\"not-a-uuid\",\"operationRef\":\"op-1\",\"operationKind\":\"charge\",\"source\":{\"context\":\"commerz\",\"orderRef\":\"ord-1\",\"intentRef\":\"int-1\"},\"installationRef\":\"inst-1\",\"environment\":\"test\",\"executionProfile\":\"remote-billium\",\"routingEpoch\":1,\"sellerRef\":\"seller-1\",\"merchantAccountRef\":\"ma-1\",\"money\":{\"amount\":\"1490.00\",\"currency\":\"RUB\"},\"bindingRevision\":\"sha256:00\",\"requestedAt\":\"2026-10-17T12:00:00Z\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

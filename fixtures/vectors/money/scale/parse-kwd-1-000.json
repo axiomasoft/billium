@@ -1,0 +1,32 @@
+{
+  "id": "money/scale/parse-kwd-1-000",
+  "spec_refs": [
+    "BC-MW-03",
+    "BC-MW-05",
+    "BC-MW-06",
+    "BC-MW-08",
+    "REQ-CON-02",
+    "D29"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.parse",
+      "args": {
+        "wire_text": "{\"amount\":\"1.000\",\"currency\":\"KWD\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "minor": "1000",
+        "currency": "KWD"
+      }
+    }
+  ]
+}

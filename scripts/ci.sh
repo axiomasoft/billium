@@ -35,16 +35,16 @@ layer_lint() {
     need_tool python3
     need_path "$SPEC_REV_DIR/schema"
     python3 scripts/spec/lint.py "$SPEC_REV_DIR"
-    if [[ -f scripts/spec/lint-vectors.py ]]; then
-        python3 scripts/spec/lint-vectors.py
-    fi
+    need_path scripts/spec/lint-vectors.py
+    python3 -m unittest discover -s scripts/spec/tests -p test_lint_vectors.py
+    python3 scripts/spec/lint-vectors.py
 }
 
 layer_derived() {
     need_tool python3
     local found=0 script
     for script in scripts/spec/build-rules.py scripts/spec/build-currencies.py \
-        scripts/spec/build-codes-index.py scripts/spec/build-lock.py scripts/spec/identities.py \
+        scripts/spec/build-codes-index.py scripts/spec/build-golden.py scripts/spec/build-lock.py scripts/spec/identities.py \
         scripts/spec/type-map.py scripts/spec/export-*.py; do
         [[ -f "$script" ]] || continue
         python3 "$script" --check

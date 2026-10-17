@@ -1,0 +1,33 @@
+{
+  "id": "money/bounds/add-error-currency-mismatch",
+  "spec_refs": [
+    "BC-MW-13"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.add",
+      "args": {
+        "a": {
+          "amount": "1.00",
+          "currency": "RUB"
+        },
+        "b": {
+          "amount": "1.00",
+          "currency": "USD"
+        }
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.money.currency_mismatch"
+      }
+    }
+  ]
+}

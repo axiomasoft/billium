@@ -1,0 +1,26 @@
+{
+  "id": "usage/fact/receipt-result-unknown",
+  "spec_refs": [
+    "BC-ENV-23"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"usage.receipt.v1\",\"result\":\"rejected\",\"source\":\"tariffler\",\"factId\":\"fact-1\",\"revision\":1,\"digest\":\"sha256:937c8868d811b91889e07446eaa620926948cbbceaaac9380944288dd641308e\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

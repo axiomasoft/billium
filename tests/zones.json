@@ -8,7 +8,7 @@
     {
       "id": "fixtures",
       "paths": ["fixtures/**"],
-      "layers": ["lint", "conformance"]
+      "layers": ["lint", "derived", "conformance"]
     },
     {
       "id": "conformance",

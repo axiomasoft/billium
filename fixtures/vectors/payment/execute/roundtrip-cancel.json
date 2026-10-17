@@ -1,0 +1,29 @@
+{
+  "id": "payment/execute/roundtrip-cancel",
+  "spec_refs": [
+    "BC-ID-12",
+    "BC-ENV-09"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.roundtrip",
+      "args": {
+        "json_text": "{\"schema\":\"payment.cancel.v1\",\"commandKey\":\"9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d\",\"installationRef\":\"inst-1\",\"environment\":\"test\",\"sellerRef\":\"seller-1\",\"operationRef\":\"op-1\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "text": {
+          "golden": "canon/digest/cancel-canonical.txt"
+        }
+      }
+    }
+  ]
+}

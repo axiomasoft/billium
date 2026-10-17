@@ -1,0 +1,43 @@
+{
+  "id": "canon/digest/nested-digest-kept",
+  "spec_refs": [
+    "BC-ID-12",
+    "D32"
+  ],
+  "description": "Вложенный digest входит в каноническую форму; верхний — исключается только из digest.",
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "canon.canonicalize",
+      "args": {
+        "json_text": "{\"outer\":{\"digest\":\"x\",\"v\":1},\"digest\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\"}"
+      }
+    },
+    {
+      "op": "canon.digest",
+      "args": {
+        "json_text": "{\"outer\":{\"digest\":\"x\",\"v\":1},\"digest\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "text": {
+          "golden": "canon/digest/nested-digest-kept-canonical.txt"
+        }
+      }
+    },
+    {
+      "ok": {
+        "digest": {
+          "golden": "canon/digest/nested-digest-kept-digest.txt"
+        }
+      }
+    }
+  ]
+}

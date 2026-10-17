@@ -15,7 +15,7 @@ import os
 import sys
 import time
 
-OPS = "money.parse,money.format,canon.canonicalize,canon.digest,envelope.roundtrip"
+OPS = "money.parse,money.format,canon.canonicalize,canon.digest,envelope.roundtrip,codes.registry"
 
 
 def emit(message):

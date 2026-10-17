@@ -1,0 +1,32 @@
+{
+  "id": "money/scale/format-rub",
+  "spec_refs": [
+    "BC-MW-03",
+    "BC-MW-11",
+    "D29"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.format",
+      "args": {
+        "minor": "149000",
+        "currency": "RUB"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "wire": {
+          "amount": "1490.00",
+          "currency": "RUB"
+        }
+      }
+    }
+  ]
+}

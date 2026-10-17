@@ -1,0 +1,31 @@
+{
+  "id": "compat/pilot/pilot-execute-roundtrip",
+  "spec_refs": [
+    "BC-ENV-11",
+    "BC-ID-12",
+    "REQ-CON-20"
+  ],
+  "description": "PB-15: execute пилота проходит decode → encode без потери полей.",
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.roundtrip",
+      "args": {
+        "json_text": "{\"schema\":\"payment.execute.v1\",\"commandKey\":\"7e0c4a52-91d3-4b6f-8a25-c3d1e9f04b87\",\"operationRef\":\"op-8f3a21\",\"operationKind\":\"charge\",\"source\":{\"context\":\"commerz\",\"orderRef\":\"ord-10234\",\"intentRef\":\"int-10234-1\"},\"installationRef\":\"inst-eu-1\",\"environment\":\"test\",\"executionProfile\":\"remote-billium\",\"routingEpoch\":1,\"sellerRef\":\"seller-acme\",\"merchantAccountRef\":\"ma-main\",\"money\":{\"amount\":\"1490.00\",\"currency\":\"RUB\"},\"bindingRevision\":\"bind-7c91d0e2\",\"returnContextRef\":\"rc-10234\",\"requestedAt\":\"2026-10-17T12:00:00Z\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "text": {
+          "golden": "canon/digest/pilot-execute-canonical.txt"
+        }
+      }
+    }
+  ]
+}

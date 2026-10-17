@@ -1,0 +1,46 @@
+{
+  "id": "money/bounds/parse-jpy-above-2p53",
+  "spec_refs": [
+    "BC-MW-08",
+    "BC-MW-09",
+    "BC-MW-10",
+    "REQ-ACC-13",
+    "D19"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.parse",
+      "args": {
+        "wire_text": "{\"amount\":\"9007199254740993\",\"currency\":\"JPY\"}"
+      }
+    },
+    {
+      "op": "money.format",
+      "args": {
+        "minor": "9007199254740993",
+        "currency": "JPY"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "minor": "9007199254740993",
+        "currency": "JPY"
+      }
+    },
+    {
+      "ok": {
+        "wire": {
+          "amount": "9007199254740993",
+          "currency": "JPY"
+        }
+      }
+    }
+  ]
+}

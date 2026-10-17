@@ -1,0 +1,44 @@
+{
+  "id": "canon/digest/non-ascii-values",
+  "spec_refs": [
+    "BC-ID-15",
+    "BC-ID-12",
+    "D32"
+  ],
+  "description": "Не-ASCII в значениях пишется как есть в UTF-8.",
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "canon.canonicalize",
+      "args": {
+        "json_text": "{\"ru\":\"Привет, мир\",\"ja\":\"日本語\",\"emoji\":\"😀\",\"esc\":\"\\u00e9\\ud83d\\ude00\"}"
+      }
+    },
+    {
+      "op": "canon.digest",
+      "args": {
+        "json_text": "{\"ru\":\"Привет, мир\",\"ja\":\"日本語\",\"emoji\":\"😀\",\"esc\":\"\\u00e9\\ud83d\\ude00\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "text": {
+          "golden": "canon/digest/non-ascii-values-canonical.txt"
+        }
+      }
+    },
+    {
+      "ok": {
+        "digest": {
+          "golden": "canon/digest/non-ascii-values-digest.txt"
+        }
+      }
+    }
+  ]
+}

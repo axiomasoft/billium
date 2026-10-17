@@ -1,0 +1,29 @@
+{
+  "id": "money/scale/parse-error-rub-json-number-fraction",
+  "spec_refs": [
+    "BC-MW-04",
+    "BC-MW-07",
+    "D29",
+    "REQ-CON-02"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.parse",
+      "args": {
+        "wire_text": "{\"amount\":1.1,\"currency\":\"RUB\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.money.scale_invalid"
+      }
+    }
+  ]
+}

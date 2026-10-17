@@ -1,0 +1,27 @@
+{
+  "id": "payment/execute/execute-json-syntax-error",
+  "spec_refs": [
+    "BC-ENV-03",
+    "BC-ENV-04"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"payment.execute.v1\","
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

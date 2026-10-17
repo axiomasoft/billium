@@ -1,0 +1,42 @@
+{
+  "id": "money/allocation/single-part",
+  "spec_refs": [
+    "BC-MW-14",
+    "BC-MW-15",
+    "BC-MW-16",
+    "BC-MW-10",
+    "REQ-CON-30",
+    "REQ-ACC-13"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.allocate",
+      "args": {
+        "total": {
+          "amount": "123.45",
+          "currency": "RUB"
+        },
+        "ratios": [
+          "5"
+        ]
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "parts": [
+          {
+            "amount": "123.45",
+            "currency": "RUB"
+          }
+        ]
+      }
+    }
+  ]
+}

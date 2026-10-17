@@ -51,7 +51,7 @@ start, every remaining vector is an `error`.
 equal exactly (types strict: `1`, `1.0` and `true` differ; nested objects and arrays are compared whole).
 `error` compares `code`; `detail` is diagnostic. A value `{"golden": "<set>/<name>.<ext>"}` is replaced by the
 golden file under `fixtures/golden/` before comparing: UTF-8 without BOM and exactly one trailing LF, which is
-dropped.
+dropped. A golden whose name ends in `.json` (for example `errors/registry.json`) is parsed and compared as a JSON value instead of as text.
 
 ## What makes a run red
 

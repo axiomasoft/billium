@@ -1,0 +1,28 @@
+{
+  "id": "money/scale/parse-error-kwd-too-few-digits",
+  "spec_refs": [
+    "BC-MW-03",
+    "BC-MW-06",
+    "REQ-CON-02"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.parse",
+      "args": {
+        "wire_text": "{\"amount\":\"1.00\",\"currency\":\"KWD\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.money.scale_invalid"
+      }
+    }
+  ]
+}

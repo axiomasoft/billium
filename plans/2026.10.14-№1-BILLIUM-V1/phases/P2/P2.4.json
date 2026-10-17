@@ -2,7 +2,7 @@
   "$schema": "urn:swissknifeman:task:plan:item:v1",
   "id": "P2.4",
   "title": "Корпус fixtures P2: vectors, golden, coverage и lint-vectors",
-  "status": "todo",
+  "status": "done_with_deviations",
   "summary": "fixtures/vectors и fixtures/golden для наборов money/scale, money/bounds, money/allocation, money/rounding, canon/digest, payment/execute, payment/admission, payment/outcome, usage/fact, errors/codes, compat/pilot; golden создаются JCS-оракулом/генератором и авторитетны; fixtures/coverage.json и scripts/spec/lint-vectors.py (схема вектора, разрешимость spec_refs, покрытие правил M-10, отрицательный вектор неизвестного поля M-05).",
   "why": "Корпус — единственное общее между PHP и Dart (REQ-CON-03); REQ-ACC-13 требует точности валют, int64, > 2^53, allocation одной minor unit и отказа на неизвестной схеме. Риск: golden, сгенерированный SDK, превращает conformance в тавтологию (M-15); правило без вектора остаётся непроверенным (M-10).",
   "scope": {
@@ -161,6 +161,51 @@
     "need": "none",
     "status": "not_needed"
   },
-  "result": null,
-  "updated_at": "2026-10-17T12:02:57Z"
+  "result": {
+    "started_at": "2026-10-17T16:50:21Z",
+    "finished_at": "2026-10-17T17:13:19Z",
+    "executor": {
+      "provider": "anthropic",
+      "model": "claude-sonnet-5-5",
+      "effort": "high",
+      "session": "f5961dc3-3b72-467d-879d-0147051c82aa"
+    },
+    "notes": "334 вектора в 17 наборах, 25 golden (24 canon оракулом + errors/registry.json генератором), coverage.json (37 not_testable), lint-vectors.py и build-golden.py с самотестами (17 unittest), слой derived проверяет golden. Риск схемы/public API: рекомендуется planner:review.",
+    "deviations": [
+      "Правка схемы outcome.v1 (totals — decimal string, по решению владельца), расширение runner (.json golden), 6 дополнительных наборов fixtures, vector 'refund outcome без originalOperationRef' не написан (схема без поля вида операции)."
+    ],
+    "checks": [
+      {
+        "id": "V1",
+        "exit": 0,
+        "at": "2026-10-17T17:13:19Z"
+      },
+      {
+        "id": "V2",
+        "exit": 0,
+        "at": "2026-10-17T17:13:19Z"
+      },
+      {
+        "id": "V3",
+        "exit": 0,
+        "at": "2026-10-17T17:13:19Z"
+      },
+      {
+        "id": "V4",
+        "exit": 0,
+        "at": "2026-10-17T17:13:19Z"
+      },
+      {
+        "id": "V5",
+        "exit": 0,
+        "at": "2026-10-17T17:13:19Z"
+      },
+      {
+        "id": "V6",
+        "exit": 0,
+        "at": "2026-10-17T17:13:19Z"
+      }
+    ]
+  },
+  "updated_at": "2026-10-17T17:13:19Z"
 }

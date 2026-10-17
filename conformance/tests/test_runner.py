@@ -205,6 +205,19 @@ class RunnerTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.tree.status("canon/digest/uses-golden"), "pass")
 
+    def test_json_golden_is_compared_as_json(self) -> None:
+        self.tree.golden("errors/registry.json", b'[\n  {"code": "a", "retryable": false}\n]\n')
+        step = {"op": "codes.registry", "args": {"result": {"codes": [{"retryable": False, "code": "a"}]}}}
+        wrong = {"op": "codes.registry", "args": {"result": {"codes": [{"retryable": 0, "code": "a"}]}}}
+        expect = [{"ok": {"codes": {"golden": "errors/registry.json"}}}]
+        self.tree.vector(vector("errors/codes/registry", steps=[step], expect=expect))
+        self.tree.vector(vector("errors/codes/registry-drift", steps=[wrong], expect=expect))
+        self.tree.baseline("errors/codes/registry-drift")
+        result = self.run_php()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.tree.status("errors/codes/registry"), "pass")
+        self.assertEqual(self.tree.status("errors/codes/registry-drift"), "fail")
+
     def test_malformed_golden_is_error(self) -> None:
         for name, data in (("bom", b"\xef\xbb\xbf{}\n"), ("nolf", b"{}"), ("twolf", b"{}\n\n")):
             self.tree.golden(f"canon/digest/{name}.txt", data)

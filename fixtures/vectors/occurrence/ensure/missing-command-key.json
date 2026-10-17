@@ -1,0 +1,28 @@
+{
+  "id": "occurrence/ensure/missing-command-key",
+  "spec_refs": [
+    "BC-ENV-24",
+    "BC-ENV-09",
+    "BC-ID-01"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"occurrence.ensure.v1\",\"installationRef\":\"inst-1\",\"environment\":\"test\",\"sellerRef\":\"seller-1\",\"componentRef\":\"cmp-1\",\"purpose\":\"recurring\",\"interval\":{\"start\":\"2026-10-01T00:00:00Z\",\"end\":\"2026-11-01T00:00:00Z\"},\"scheduleRevision\":1}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

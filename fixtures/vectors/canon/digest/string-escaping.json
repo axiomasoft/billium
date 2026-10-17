@@ -1,0 +1,44 @@
+{
+  "id": "canon/digest/string-escaping",
+  "spec_refs": [
+    "BC-ID-15",
+    "BC-ID-12",
+    "D32"
+  ],
+  "description": "Экранирование RFC 8785: / не экранируется, управляющие — \\u00xx строчными.",
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "canon.canonicalize",
+      "args": {
+        "json_text": "{\"q\":\"a\\\"b\",\"bs\":\"a\\\\b\",\"sl\":\"a\\/b\",\"c0\":\"\\u000f\",\"c1\":\"\\u001f\",\"ctl\":\"\\b\\f\\n\\r\\t\",\"del\":\"\\u007f\",\"ls\":\"\\u2028\",\"nul\":\"\\u0000\"}"
+      }
+    },
+    {
+      "op": "canon.digest",
+      "args": {
+        "json_text": "{\"q\":\"a\\\"b\",\"bs\":\"a\\\\b\",\"sl\":\"a\\/b\",\"c0\":\"\\u000f\",\"c1\":\"\\u001f\",\"ctl\":\"\\b\\f\\n\\r\\t\",\"del\":\"\\u007f\",\"ls\":\"\\u2028\",\"nul\":\"\\u0000\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "text": {
+          "golden": "canon/digest/string-escaping-canonical.txt"
+        }
+      }
+    },
+    {
+      "ok": {
+        "digest": {
+          "golden": "canon/digest/string-escaping-digest.txt"
+        }
+      }
+    }
+  ]
+}

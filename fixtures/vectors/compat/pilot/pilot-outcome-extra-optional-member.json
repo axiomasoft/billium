@@ -1,0 +1,31 @@
+{
+  "id": "compat/pilot/pilot-outcome-extra-optional-member",
+  "spec_refs": [
+    "BC-ENV-06",
+    "BC-ENV-11",
+    "REQ-CON-20",
+    "REQ-CON-03"
+  ],
+  "description": "Потребитель предыдущего minor читает outcome с новым необязательным членом; digest считается по полученному объекту.",
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"payment.outcome.v1\",\"operationRef\":\"op-8f3a21\",\"revision\":3,\"status\":\"succeeded\",\"money\":{\"amount\":\"1490.00\",\"currency\":\"RUB\"},\"capturedTotal\":\"1490.00\",\"refundedTotal\":\"0.00\",\"bindingRevision\":\"bind-7c91d0e2\",\"sellerRef\":\"seller-acme\",\"merchantAccountRef\":\"ma-main\",\"providerEvidenceRef\":\"ev-5512\",\"occurredAt\":\"2026-10-17T12:03:41Z\",\"providerMetadataRef\":\"pm-77\",\"digest\":\"sha256:fe2729bd81837839acca87e285312522628ac596e4ad551233b2fd370473a9f9\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "payment.outcome.v1",
+        "digest": "sha256:fe2729bd81837839acca87e285312522628ac596e4ad551233b2fd370473a9f9"
+      }
+    }
+  ]
+}

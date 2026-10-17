@@ -1,0 +1,29 @@
+{
+  "id": "money/rounding/error-currency-unknown",
+  "spec_refs": [
+    "BC-MW-02",
+    "BC-MW-17"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.round",
+      "args": {
+        "value": "1.005",
+        "currency": "XXQ",
+        "mode": "HALF_UP"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.money.scale_invalid"
+      }
+    }
+  ]
+}

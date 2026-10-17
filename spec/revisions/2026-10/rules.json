@@ -182,7 +182,7 @@
   {
     "id": "BC-ENV-07",
     "doc": "03-envelopes.md",
-    "line_digest": "sha256:108fae69e2cb83ba547c03e8c0613e60daecb37937c0f28ec5a047ba89e31cde",
+    "line_digest": "sha256:643869b815e26a8c7230a000649964356d160e1eeaf86ee805ef4dc723b562d5",
     "refs": [
       "REQ-CON-02",
       "D29",
@@ -286,11 +286,12 @@
   {
     "id": "BC-ENV-18",
     "doc": "03-envelopes.md",
-    "line_digest": "sha256:d033af90099103bcd962166e3e3afada4a9fd17d191a3e331fbb5575ff7b8035",
+    "line_digest": "sha256:c63d62909e3b270aeae7e3cbc2cf8f4f3c1f29afdabdeb96f7687604b50b0a1f",
     "refs": [
       "REQ-CON-09",
       "INV-06",
-      "D30"
+      "D30",
+      "SRC-005"
     ]
   },
   {

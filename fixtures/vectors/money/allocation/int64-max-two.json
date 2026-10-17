@@ -1,0 +1,47 @@
+{
+  "id": "money/allocation/int64-max-two",
+  "spec_refs": [
+    "BC-MW-14",
+    "BC-MW-15",
+    "BC-MW-16",
+    "BC-MW-10",
+    "REQ-CON-30",
+    "REQ-ACC-13"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "money.allocate",
+      "args": {
+        "total": {
+          "amount": "92233720368547758.07",
+          "currency": "RUB"
+        },
+        "ratios": [
+          "1",
+          "1"
+        ]
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "parts": [
+          {
+            "amount": "46116860184273879.04",
+            "currency": "RUB"
+          },
+          {
+            "amount": "46116860184273879.03",
+            "currency": "RUB"
+          }
+        ]
+      }
+    }
+  ]
+}
