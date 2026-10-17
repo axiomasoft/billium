@@ -1,0 +1,91 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:decision:v1",
+  "id": "D16",
+  "title": "Стек: PHP 8.4, Laravel 13, PostgreSQL ≥ 16; Dart только для контрактов и SDK",
+  "date": "2026-10-17",
+  "status": "accepted",
+  "question": "Какие версии рантаймов и инструментов принимает Billium и какова роль Dart?",
+  "options": [
+    {
+      "id": "A",
+      "text": "Дефолт экосистемы: PHP ≥ 8.4, Laravel 13, PostgreSQL ≥ 16, PHPStan max, Pint, Rector; Dart 3 — billium-contracts и SDK клиента",
+      "pros": "Совпадает с постановкой; Laravel 13 требует PHP ^8.3; PostgreSQL 16 поддерживается до 2028-11-09"
+    },
+    {
+      "id": "B",
+      "text": "Минимум PHP 8.5",
+      "cons": "Сужает хосты embedded без инварианта, ради которого это нужно"
+    },
+    {
+      "id": "C",
+      "text": "Framework-agnostic PHP-ядро без Laravel",
+      "cons": "Канон: embedded — Laravel-пакет в хосте (REQ-PROF-01)"
+    },
+    {
+      "id": "D",
+      "text": "Поддержка MySQL наряду с PostgreSQL",
+      "cons": "Partial unique, NOT VALID и N-процессные доказательства — на PostgreSQL (REQ-ACC-11)"
+    }
+  ],
+  "context": "Постановка задаёт дефолт стека; отклонение — с D#. Версии проверены 2026-10-17 по Packagist, php.net, postgresql.org, dart.dev.",
+  "decision": "Выбрана A. Writer денег — только PostgreSQL ≥ 16; SQLite для денежного writer не поддерживается в 1.0. Money-библиотека PHP (MoneyPHP или Brick) выбирается в P2 по прогону fixtures (CL-117).",
+  "rationale": "DR01-35 и DR03-04: PHP-основы и subscriptionify совместимы с Laravel 13 по manifest; Dart — клиент (REQ-OWN-18, REQ-CON-37).",
+  "consequences": [
+    "Отклонены B–D.",
+    "Риск unverified: resolver composer на Laravel 13 не запускался (CL-116) — проверяется в P2."
+  ],
+  "applies_to": [
+    "P1.6"
+  ],
+  "global": false,
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "kind": "rag",
+      "ref": "https://repo.packagist.org/p2/laravel/framework.json",
+      "note": "2026-10-17: laravel/framework v13.37.0 (2026-10-16), require php ^8.3; REQ-PROF-01"
+    },
+    {
+      "kind": "rag",
+      "ref": "https://www.php.net/releases/index.php?json&version=8.4",
+      "note": "2026-10-17: PHP 8.4.26 (24 Sep 2026), supported 8.2–8.5"
+    },
+    {
+      "kind": "rag",
+      "ref": "https://www.postgresql.org/support/versioning/",
+      "note": "2026-10-17: PostgreSQL 16.15 supported до 2028-11-09, 18.6 текущая; REQ-ACC-11"
+    },
+    {
+      "kind": "rag",
+      "ref": "https://storage.googleapis.com/dart-archive/channels/stable/release/latest/VERSION",
+      "note": "2026-10-17: Dart stable 3.13.5; REQ-CON-37"
+    },
+    {
+      "kind": "rag",
+      "ref": "https://repo.packagist.org/p2/phpstan/phpstan.json",
+      "note": "2026-10-17: phpstan 2.3.1"
+    },
+    {
+      "kind": "repo",
+      "ref": "knowledge/research/DR-01.md",
+      "note": "DR01-35"
+    },
+    {
+      "kind": "repo",
+      "ref": "knowledge/research/DR-03-boundary.md",
+      "note": "DR03-04"
+    },
+    {
+      "kind": "repo",
+      "ref": "knowledge/research/DR-04.md",
+      "note": "DR04-24; CL-117"
+    }
+  ],
+  "actor": {
+    "provider": "anthropic",
+    "model": "claude-opus-5-5",
+    "effort": "high"
+  },
+  "answered_by": "agent"
+}

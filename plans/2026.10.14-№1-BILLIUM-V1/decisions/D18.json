@@ -1,0 +1,65 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:decision:v1",
+  "id": "D18",
+  "title": "Профили embedded и server: один код, разный состав модулей; оси не смешиваются",
+  "date": "2026-10-17",
+  "status": "accepted",
+  "question": "Чем отличаются embedded и server и как они соотносятся с профилями authority исполнения?",
+  "options": [
+    {
+      "id": "A",
+      "text": "Один код: embedded = contracts + core в Laravel-хосте с БД хоста; server = те же пакеты + billium-server (HTTP API, seller routing, auth verdict). Authority-профиль фиксируется в операции",
+      "pros": "CD-14; лёгкий путь без сервера; первая поставка — библиотека"
+    },
+    {
+      "id": "B",
+      "text": "Только server",
+      "cons": "Нарушает REQ-PROF-02"
+    },
+    {
+      "id": "C",
+      "text": "Раздельные кодовые базы",
+      "cons": "Нарушает CD-14 (REQ-PROF-01)"
+    },
+    {
+      "id": "D",
+      "text": "Server: схема БД на каждого seller",
+      "cons": "Операционная цена; seller уже в каждом ключе (INV-14)"
+    }
+  ],
+  "context": "REQ-PROF-01…06, REQ-PROF-20, REQ-PROF-21.",
+  "decision": "Выбрана A. Первая поставка — embedded-библиотека obligations/invoice/allocation; execution включается в standalone-billium/remote-billium только при REQ-PROF-21.",
+  "rationale": "REQ-PROF-20 подтверждён: DR01-19, DR01-31 показывают, что server-движки не дают embedded-пути.",
+  "consequences": [
+    "Отклонены B–D."
+  ],
+  "applies_to": [
+    "P1.6"
+  ],
+  "global": false,
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "kind": "repo",
+      "ref": "knowledge/research/DR-01.md",
+      "note": "DR01-19, DR01-31"
+    },
+    {
+      "kind": "repo",
+      "ref": "knowledge/audit-matrix.md",
+      "note": "CL-05, CL-86, CL-89"
+    },
+    {
+      "kind": "repo",
+      "ref": "docs/requirements.md",
+      "note": "REQ-PROF-01, REQ-PROF-02, REQ-PROF-04, REQ-PROF-05, REQ-PROF-06, REQ-PROF-20, REQ-PROF-21"
+    }
+  ],
+  "actor": {
+    "provider": "anthropic",
+    "model": "claude-opus-5-5",
+    "effort": "high"
+  },
+  "answered_by": "agent"
+}

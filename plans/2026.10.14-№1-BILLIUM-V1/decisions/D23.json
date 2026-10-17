@@ -1,0 +1,60 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:decision:v1",
+  "id": "D23",
+  "title": "Seller в каждом денежном агрегате и уникальном ключе (новый INV-14)",
+  "date": "2026-10-17",
+  "status": "accepted",
+  "question": "Как обеспечить изоляцию продавцов на уровне данных?",
+  "options": [
+    {
+      "id": "A",
+      "text": "seller_ref NOT NULL в каждом денежном агрегате, во всех бизнес-UNIQUE и scope идемпотентности; FK составные (seller_ref, id)",
+      "pros": "Перекрёстная ссылка между продавцами невозможна на уровне БД"
+    },
+    {
+      "id": "B",
+      "text": "Изоляция только профилем (БД или scope хоста)",
+      "cons": "Один хост может обслуживать нескольких продавцов; seller из join подделывается (FS-21)"
+    },
+    {
+      "id": "C",
+      "text": "tenant_id в доменных таблицах",
+      "cons": "Tenant ≠ seller; противоречит REQ-PROF-09"
+    }
+  ],
+  "context": "Заявка P1.3 №4 (CL-82); дополняет REQ-PROF-08.",
+  "decision": "Выбрана A; записан INV-14.",
+  "rationale": "DR01-11 (seller ближе к billing entity внутри organization), DR01-14 (scope idempotency не в схеме) — у вендоров seller выводится; Billium хранит явно.",
+  "consequences": [
+    "Отклонены B и C."
+  ],
+  "applies_to": [
+    "P1.6"
+  ],
+  "global": false,
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "kind": "repo",
+      "ref": "knowledge/audit-matrix.md",
+      "note": "CL-82, AUD-065, FS-09, FS-21"
+    },
+    {
+      "kind": "repo",
+      "ref": "knowledge/research/DR-01.md",
+      "note": "DR01-11, DR01-14"
+    },
+    {
+      "kind": "repo",
+      "ref": "docs/requirements.md",
+      "note": "REQ-PROF-08, REQ-PROF-09, REQ-CON-28"
+    }
+  ],
+  "actor": {
+    "provider": "anthropic",
+    "model": "claude-opus-5-5",
+    "effort": "high"
+  },
+  "answered_by": "agent"
+}

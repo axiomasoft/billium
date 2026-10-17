@@ -1,0 +1,55 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:decision:v1",
+  "id": "D20",
+  "title": "Политика изменений invoice по состояниям (новый INV-13)",
+  "date": "2026-10-17",
+  "status": "accepted",
+  "question": "Что можно менять в invoice после выпуска?",
+  "options": [
+    {
+      "id": "A",
+      "text": "Draft редактируется; после issued номер, seller, buyer snapshot, currency, lines, totals и tax snapshot заморожены; коррекция — credit note или void/reissue; metadata — по allow-list",
+      "pros": "Юридический номер и суммы неизменяемы; доставка и заметки исправимы"
+    },
+    {
+      "id": "B",
+      "text": "Свободная правка до оплаты",
+      "cons": "Ломает нумерацию и INV-12"
+    },
+    {
+      "id": "C",
+      "text": "Полная неизменяемость, включая metadata",
+      "cons": "Нельзя исправить контакт доставки без нового документа"
+    }
+  ],
+  "context": "Заявка P1.3 №1 (FS-11, CL-42).",
+  "decision": "Выбрана A; записан INV-13. Enforcement: writer ledger + триггер БД, отвергающий UPDATE замороженных колонок при status ≠ draft.",
+  "rationale": "CL-42 (AUD-047) и REQ-CON-36, REQ-CON-38, INV-12.",
+  "consequences": [
+    "Отклонены B и C."
+  ],
+  "applies_to": [
+    "P1.6"
+  ],
+  "global": false,
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "kind": "repo",
+      "ref": "knowledge/audit-matrix.md",
+      "note": "FS-11, CL-42, AUD-047"
+    },
+    {
+      "kind": "repo",
+      "ref": "docs/requirements.md",
+      "note": "INV-12, REQ-CON-36, REQ-CON-38"
+    }
+  ],
+  "actor": {
+    "provider": "anthropic",
+    "model": "claude-opus-5-5",
+    "effort": "high"
+  },
+  "answered_by": "agent"
+}

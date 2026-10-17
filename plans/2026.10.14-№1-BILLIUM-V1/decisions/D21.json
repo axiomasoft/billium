@@ -1,0 +1,60 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:decision:v1",
+  "id": "D21",
+  "title": "Эволюция схемы: expand/contract, совместимость workers, статусы — text + CHECK (новый REQ-FAIL-29)",
+  "date": "2026-10-17",
+  "status": "accepted",
+  "question": "Как менять схему без потери журнала при одновременной работе старых и новых workers?",
+  "options": [
+    {
+      "id": "A",
+      "text": "Expand/contract: nullable add, dual read, backfill, NOT VALID → VALIDATE, переключение readers, drop после окна отката; статусы — text + CHECK; down-миграций для денежных фактов нет",
+      "pros": "Rolling upgrade без остановки исполнения"
+    },
+    {
+      "id": "B",
+      "text": "Остановка мира и down-миграции",
+      "cons": "Простой исполнения и риск потери незавершённых операций"
+    },
+    {
+      "id": "C",
+      "text": "PostgreSQL enum для статусов",
+      "cons": "Изменение enum хуже обратимо (CL-71)"
+    }
+  ],
+  "context": "Заявка P1.3 №2 (FS-25, CL-70, CL-71).",
+  "decision": "Выбрана A; записан REQ-FAIL-29.",
+  "rationale": "CL-70, CL-71 и M-31 (forward-safe миграции, репетиция на клоне).",
+  "consequences": [
+    "Отклонены B и C."
+  ],
+  "applies_to": [
+    "P1.6"
+  ],
+  "global": false,
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "kind": "repo",
+      "ref": "knowledge/audit-matrix.md",
+      "note": "FS-25, CL-70, CL-71, AUD-057"
+    },
+    {
+      "kind": "repo",
+      "ref": "knowledge/methods.json",
+      "note": "M-28, M-31"
+    },
+    {
+      "kind": "repo",
+      "ref": "docs/requirements.md",
+      "note": "REQ-CON-20"
+    }
+  ],
+  "actor": {
+    "provider": "anthropic",
+    "model": "claude-opus-5-5",
+    "effort": "high"
+  },
+  "answered_by": "agent"
+}

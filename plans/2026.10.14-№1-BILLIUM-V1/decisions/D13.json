@@ -1,0 +1,66 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:decision:v1",
+  "id": "D13",
+  "title": "Область usage-приём: собственный входной контракт фактов (build)",
+  "date": "2026-10-17",
+  "status": "accepted",
+  "question": "Как Billium принимает usage/overage-факты: свой входной контракт, OpenMeter как обязательный ingest или OverageEvent Tariffler?",
+  "options": [
+    {
+      "id": "A",
+      "text": "Собственный контракт приёма фактов в billium-contracts и таблица фактов с UNIQUE(seller, source, factId, revision) и явной семантикой метрики; семантика агрегаций OpenMeter — образец",
+      "pros": "CD-15: без импорта источника; работает в embedded"
+    },
+    {
+      "id": "B",
+      "text": "OpenMeter как обязательный ingest",
+      "cons": "Kafka + ClickHouse, beta-версия; asynchronous query; не embedded"
+    },
+    {
+      "id": "C",
+      "text": "OverageEvent Tariffler как единственный вход",
+      "cons": "Нарушает CD-15 и REQ-CON-15 (CONFLICT-01)"
+    }
+  ],
+  "context": "REQ-CON-15…17: факт несёт стабильный (source, factId), metricVersion, семантику; OverageEvent v1 не расширяется молча.",
+  "decision": "build: выбрана A. Модуль usage ядра принимает факты по своему контракту; источник (коллектор, OpenMeter, Tariffler) — сосед со своим адаптером снаружи Billium.",
+  "rationale": "DR01-29, DR01-30 подтверждают семантику и dedupe source+id как образец; DR01-31, DR01-03 — эксплуатационную цену OpenMeter; DR03-01 — CD-15.",
+  "consequences": [
+    "Отклонены B и C.",
+    "Количества — decimal string с явной семантикой (DR03-06, DR03-08 показывают, что источники хранят строки/float)."
+  ],
+  "applies_to": [
+    "P1.6"
+  ],
+  "global": false,
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "kind": "repo",
+      "ref": "knowledge/research/DR-01.md",
+      "note": "DR01-03, DR01-29, DR01-30, DR01-31"
+    },
+    {
+      "kind": "repo",
+      "ref": "knowledge/research/DR-03-boundary.md",
+      "note": "DR03-01, DR03-06, DR03-08"
+    },
+    {
+      "kind": "repo",
+      "ref": "knowledge/audit-matrix.md",
+      "note": "CL-24, CL-52, CL-53, CL-55"
+    },
+    {
+      "kind": "repo",
+      "ref": "docs/requirements.md",
+      "note": "REQ-CON-15, REQ-CON-16, REQ-CON-17, REQ-OUT-10"
+    }
+  ],
+  "actor": {
+    "provider": "anthropic",
+    "model": "claude-opus-5-5",
+    "effort": "high"
+  },
+  "answered_by": "agent"
+}

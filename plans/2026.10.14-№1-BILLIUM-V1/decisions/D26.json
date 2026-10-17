@@ -1,0 +1,61 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:decision:v1",
+  "id": "D26",
+  "title": "Неизменяемый execution binding операции (новый REQ-OWN-21)",
+  "date": "2026-10-17",
+  "status": "accepted",
+  "question": "Какую форму имеет привязка операции к продавцу, merchant account и драйверу?",
+  "options": [
+    {
+      "id": "A",
+      "text": "Строка binding на операцию: seller_ref, merchant_account_ref, environment, driver_ref + версия контракта драйвера, binding_revision, credential_ref (ротация — новая версия credential того же account), routing_epoch; пишется в Tx A до отправки; refund берёт binding исходного charge",
+      "pros": "Ротация не ломает lookup/refund; секреты не в БД Billium"
+    },
+    {
+      "id": "B",
+      "text": "Binding выводится при отправке из текущего config",
+      "cons": "Typed merchant-version нет даже в Commerz (DR02-27); ротация ломает refund (FS-08)"
+    },
+    {
+      "id": "C",
+      "text": "Полный снимок credentials в операции",
+      "cons": "Секреты в БД (REQ-PROF-08)"
+    }
+  ],
+  "context": "Заявка P1.3 №7 (CL-39, CL-51); дополняет REQ-OWN-20.",
+  "decision": "Выбрана A; записан REQ-OWN-21.",
+  "rationale": "DR02-27; DR02-T05 открыт (ротация у провайдеров не описана) — поэтому binding фиксирует account, а не credential.",
+  "consequences": [
+    "Отклонены B и C."
+  ],
+  "applies_to": [
+    "P1.6",
+    "P1.7"
+  ],
+  "global": false,
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "kind": "repo",
+      "ref": "knowledge/research/DR-02.md",
+      "note": "DR02-27"
+    },
+    {
+      "kind": "repo",
+      "ref": "knowledge/audit-matrix.md",
+      "note": "CL-39, CL-51, AUD-040, FS-08"
+    },
+    {
+      "kind": "repo",
+      "ref": "docs/requirements.md",
+      "note": "REQ-OWN-09, REQ-OWN-20, INV-07"
+    }
+  ],
+  "actor": {
+    "provider": "anthropic",
+    "model": "claude-opus-5-5",
+    "effort": "high"
+  },
+  "answered_by": "agent"
+}

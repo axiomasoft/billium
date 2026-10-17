@@ -1,0 +1,71 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:decision:v1",
+  "id": "D27",
+  "title": "Модель блокировок: пессимистичные row locks в глобальном порядке + constraints как backstop",
+  "date": "2026-10-17",
+  "status": "accepted",
+  "question": "Как сериализуются конкурирующие денежные операции?",
+  "options": [
+    {
+      "id": "A",
+      "text": "READ COMMITTED; claim идемпотентности первым; SELECT … FOR UPDATE корней в порядке occurrence → dunning case → obligation → invoice → payment → charge → refund → series; UNIQUE/CHECK как backstop; lease/fence CAS для workers; relay SKIP LOCKED",
+      "pros": "Предсказуемые deadlock-free пары; refund lock на исходном charge"
+    },
+    {
+      "id": "B",
+      "text": "Только optimistic version",
+      "cons": "Шторм повторов на горячем charge; нет резерва ёмкости refund"
+    },
+    {
+      "id": "C",
+      "text": "SERIALIZABLE везде",
+      "cons": "Повторы на БД хоста embedded; не даёт lease/fence для внешних вызовов"
+    },
+    {
+      "id": "D",
+      "text": "Lock на уровне account (как Kill Bill)",
+      "cons": "Слишком грубо: сериализует независимые charges (DR01-24)"
+    }
+  ],
+  "context": "research/P1-design.md: матрица пар операций с общим ресурсом.",
+  "decision": "Выбрана A. Порядок и таблица пар — docs/architecture/data-model.md § Операции и блокировки.",
+  "rationale": "M-39, M-40, M-41, M-55, M-56; CL-64, CL-65, CL-66; DR01-09 (отсутствие lock у Lago), DR01-24.",
+  "consequences": [
+    "Отклонены B–D.",
+    "Каждая пара — N-процессный тест PostgreSQL в фазе реализации (REQ-ACC-11)."
+  ],
+  "applies_to": [
+    "P1.6"
+  ],
+  "global": false,
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "kind": "repo",
+      "ref": "knowledge/methods.json",
+      "note": "M-39, M-40, M-41, M-55, M-56"
+    },
+    {
+      "kind": "repo",
+      "ref": "knowledge/audit-matrix.md",
+      "note": "CL-64, CL-65, CL-66"
+    },
+    {
+      "kind": "repo",
+      "ref": "knowledge/research/DR-01.md",
+      "note": "DR01-09, DR01-24"
+    },
+    {
+      "kind": "repo",
+      "ref": "docs/requirements.md",
+      "note": "INV-09, INV-10, REQ-ACC-11"
+    }
+  ],
+  "actor": {
+    "provider": "anthropic",
+    "model": "claude-opus-5-5",
+    "effort": "high"
+  },
+  "answered_by": "agent"
+}

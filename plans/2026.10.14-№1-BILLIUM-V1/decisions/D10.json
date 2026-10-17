@@ -1,0 +1,72 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:decision:v1",
+  "id": "D10",
+  "title": "Область execution journal: узкий PHP-журнал исполнения (build)",
+  "date": "2026-10-17",
+  "status": "accepted",
+  "question": "Чем Billium исполняет собственные платежи и возвраты: своим журналом, Kill Bill за ACL или PHP gateway-библиотекой?",
+  "options": [
+    {
+      "id": "A",
+      "text": "Собственный модуль execution ядра: operation, attempt, frozen binding, inbox, lease/fence, lookup через PaymentDrivers; Commerz journal и Kill Bill payment/transaction/attempt + Janitor — donors идей",
+      "pros": "Один исполнитель на операцию, refund lock на исходном charge, embedded без сервера, MoneyWire"
+    },
+    {
+      "id": "B",
+      "text": "Kill Bill как remote execution engine за ACL (K4)",
+      "cons": "Java-сервис; lock на уровне account, а не charge; decimal major units; tenant ≠ seller не доказан; RU-плагинов нет; embedded невозможен"
+    },
+    {
+      "id": "C",
+      "text": "Omnipay/Payum как журнал исполнения",
+      "cons": "Stateless gateway / storage моделей без fingerprint, inbox и unknown-recovery"
+    },
+    {
+      "id": "D",
+      "text": "Платёжный контур Lago",
+      "cons": "Закрытый набор PSP в коде, ручные/частичные оплаты — Premium, AGPL"
+    }
+  ],
+  "context": "Billium исполняет только свои операции в remote-billium и standalone-billium; драйверы — PaymentDrivers.",
+  "decision": "build: выбрана A. Execution — внутренний модуль billium-core; драйверы подключаются только через payment-drivers/contracts; Kill Bill и Commerz — образцы, не зависимости. Модуль включается только в профилях, где Billium — исполнитель, и при выполнении REQ-PROF-21.",
+  "rationale": "DR01-24 (account lock), DR01-21 (decimal), DR01-17 (закрытые PSP), DR01-36 (нет recovery у Payum/Omnipay) отсекают B–D; DR01-20 и DR01-23 подтверждают ценность разделения operation/attempt и lookup-Janitor как образца.",
+  "consequences": [
+    "Отклонены B–D по причинам в options.",
+    "Первая поставка — библиотека obligations/invoice/allocation (REQ-PROF-20); execution — после P5.",
+    "Lease/fencing и lookup до повтора (M-51, M-56, M-57) — нормы модуля."
+  ],
+  "applies_to": [
+    "P1.6"
+  ],
+  "global": false,
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "kind": "repo",
+      "ref": "knowledge/research/DR-01.md",
+      "note": "DR01-17, DR01-20, DR01-21, DR01-23, DR01-24, DR01-36"
+    },
+    {
+      "kind": "repo",
+      "ref": "knowledge/audit-matrix.md",
+      "note": "CL-03, CL-20, CL-37, CL-44, CL-66, CL-90"
+    },
+    {
+      "kind": "repo",
+      "ref": "knowledge/methods.json",
+      "note": "M-51, M-56, M-57"
+    },
+    {
+      "kind": "repo",
+      "ref": "docs/requirements.md",
+      "note": "REQ-OWN-08, REQ-CON-23, INV-02, INV-07"
+    }
+  ],
+  "actor": {
+    "provider": "anthropic",
+    "model": "claude-opus-5-5",
+    "effort": "high"
+  },
+  "answered_by": "agent"
+}
