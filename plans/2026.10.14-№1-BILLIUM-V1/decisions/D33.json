@@ -1,0 +1,54 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:decision:v1",
+  "id": "D33",
+  "title": "Toolchain P2: один Docker-образ PHP 8.4 + Dart + Python; инфраструктурные файлы вне target-structure",
+  "date": "2026-10-17",
+  "status": "accepted",
+  "question": "Как исполнять PHP 8.4 / Dart 3.x / tooling-проверки P2 и где лежат инфраструктурные файлы, которых нет в knowledge/target-structure.md (M-36)?",
+  "options": [
+    {
+      "id": "A",
+      "text": "Один образ docker/toolchain/Dockerfile (php:8.4-cli-bookworm + bcmath, intl, gmp, zip; composer 2; Dart SDK 3.13.5 из dart-archive; python3 + pinned jsonschema) и сервис toolchain в compose.yaml; все проверки — docker compose run --rm toolchain …; tooling (runner, JCS-оракул, spec-lint, генераторы) — Python 3, SDK — PHP и Dart; доп. пути: compose.yaml, docker/toolchain/, .github/workflows/ci.yml, composer.json/composer.lock корня (dev-workspace), spec/identities.json, spec/type-map.json, scripts/spec/, scripts/phpstan/, scripts/smoke/",
+      "pros": "на машине PHP 8.3 и нет Dart — образ даёт D16-версии одинаково локально и в CI; один носитель гейта (M-33)"
+    },
+    {
+      "id": "B",
+      "text": "Нативные PHP 8.4 и Dart на хосте и в CI (setup-php, setup-dart)",
+      "cons": "хост владельца: PHP 8.3, Dart отсутствует; локальный и CI-прогон расходятся"
+    },
+    {
+      "id": "C",
+      "text": "Отдельные сервисы php и dart в compose, runner на хосте",
+      "cons": "runner запускает адаптеры через docker из хоста; два образа и разные окружения для одного гейта"
+    }
+  ],
+  "context": "Наблюдение 2026-10-17: php 8.3.35, composer 2.8.2, dart отсутствует, docker 29.8.2, python 3.12.3. D16 требует PHP ≥ 8.4 и Dart 3.x. target-structure.md перечисляет spec/, fixtures/, conformance/, packages/, docs/, scripts/, tests/zones.json; изменение раскладки — D# (M-36).",
+  "decision": "A — Один образ docker/toolchain/Dockerfile (php:8.4-cli-bookworm + bcmath, intl, gmp, zip; composer 2; Dart SDK 3.13.5 из dart-archive; python3 + pinned jsonschema) и сервис toolchain в compose.yaml; все проверки — docker compose run --rm toolchain …; tooling (runner, JCS-оракул, spec-lint, генераторы) — Python 3, SDK — PHP и Dart; доп. пути: compose.yaml, docker/toolchain/, .github/workflows/ci.yml, composer.json/composer.lock корня (dev-workspace), spec/identities.json, spec/type-map.json, scripts/spec/, scripts/phpstan/, scripts/smoke/",
+  "rationale": "Единственная альтернатива, дающая версии D16 одинаково на машине владельца (PHP 8.3, без Dart) и в CI; один образ и один скрипт scripts/ci.sh — носитель гейта M-33. Python уже инструмент плана (check-p1.py) и даёт stdlib-runner и эталонный JCS cyberphone без зависимости от SDK-кода.",
+  "applies_to": [
+    "P2"
+  ],
+  "evidence": [
+    {
+      "kind": "repo",
+      "ref": "decisions/D16.json",
+      "note": "PHP 8.4, Dart 3.13.5"
+    },
+    {
+      "kind": "repo",
+      "ref": "knowledge/target-structure.md",
+      "note": "M-36"
+    },
+    {
+      "kind": "repo",
+      "ref": "artifacts/P1-methods/methods.json",
+      "note": "M-33, M-09, M-15"
+    }
+  ],
+  "actor": {
+    "provider": "claude-code",
+    "model": "claude-opus-5-5",
+    "effort": "high"
+  },
+  "answered_by": "agent"
+}

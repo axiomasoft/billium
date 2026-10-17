@@ -1,0 +1,32 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:unit:v1",
+  "id": "U2",
+  "item": "P2.5",
+  "title": "Envelopes, Codec, JCS, ProblemCode и остальной корпус",
+  "goal": "Envelopes ревизии, Codec decode/encode/canonicalize/digest, ProblemCode, атрибуты Api/Spi; весь корпус fixtures с профилем php зелёный при пустом baseline.",
+  "files": [
+    "packages/contracts/src/**",
+    "packages/contracts/resources/**",
+    "packages/contracts/tests/**",
+    "conformance/adapters/php/**",
+    "conformance/baseline/php.json",
+    "scripts/spec/export-php.py"
+  ],
+  "depends_on": [
+    "U1"
+  ],
+  "checks": [
+    "V1",
+    "V2",
+    "V3"
+  ],
+  "route": {
+    "class": "implementation",
+    "effort": "high"
+  },
+  "mode": "either",
+  "status": "todo",
+  "outcome": null,
+  "updated_at": "2026-10-17T12:02:33Z",
+  "kind": "implementation"
+}

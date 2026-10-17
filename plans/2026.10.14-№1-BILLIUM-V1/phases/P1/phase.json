@@ -14,7 +14,7 @@
     "produces": [
       "docs/requirements.md и knowledge/corpus-ledger.md",
       "knowledge/audit-matrix.md и knowledge/research/DR-*.md",
-      "knowledge/methods.json",
+      "artifacts/P1-methods/methods.json",
       "docs/architecture/target-architecture.md, docs/architecture/data-model.md, knowledge/target-structure.md",
       "docs/contracts/billium-contracts-v1.md и docs/acceptance-catalog.md",
       "knowledge/roadmap-proposal.md, knowledge/owner-questions.md, knowledge/brain-updates.md",
@@ -88,7 +88,9 @@
     "P1.6",
     "P1.7",
     "P1.8",
-    "P1.9"
+    "P1.9",
+    "P1.10",
+    "P1.11"
   ],
   "batches": [
     {
@@ -142,17 +144,22 @@
       "note": "проектирование одним батчем: D# и модель данных читаются один раз"
     },
     {
+      "id": "B-P1-FIX",
+      "items": [
+        "P1.10",
+        "P1.11"
+      ],
+      "mode": "recommended",
+      "note": "корректировка по RED P1.9 одной сессией: D# P1.10 читаются P1.11 сразу"
+    },
+    {
       "id": "B6",
       "items": [
         "P1.9"
       ],
       "mode": "required",
-      "note": "независимый read-only verdict в свежей сессии; совмещать с исполнением нельзя"
+      "note": "повторный независимый read-only verdict в свежей сессии, не исполнявшей P1.10/P1.11"
     }
   ],
-  "closed": {
-    "at": "2026-10-17T11:30:51Z",
-    "result": "blocked",
-    "summary": "9 item(s): 5 done, 3 done_with_deviations, 1 blocked"
-  }
+  "closed": null
 }

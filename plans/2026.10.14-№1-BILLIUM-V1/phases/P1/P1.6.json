@@ -36,7 +36,7 @@
     {
       "why": "Практики (P1.5)",
       "required": true,
-      "path": "@plan/knowledge/methods.json"
+      "path": "@plan/artifacts/P1-methods/methods.json"
     },
     {
       "why": "Что проверяет checker P1.6",
@@ -190,5 +190,5 @@
       }
     ]
   },
-  "updated_at": "2026-10-17T11:03:38Z"
+  "updated_at": "2026-10-17T11:51:17Z"
 }

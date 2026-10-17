@@ -2,28 +2,137 @@
   "$schema": "urn:swissknifeman:task:plan:phase:v1",
   "id": "P2",
   "title": "P2 — Bootstrap репозитория и `billium-contracts` PHP+Dart",
-  "design": "skeleton",
-  "goal": "Bootstrap монорепо по target-structure P1.6, CI (PHPStan max, Pint, Rector, Dart analyze/test), пакет billium-contracts для PHP и Dart, language-neutral fixtures и conformance runner.",
-  "context": "SKELETON — не детализирована. Детализация: design-сессия plan-design Pn после P1 и roadmap-proposal (D1). Состав провизорен до P1.8.",
+  "design": "detailed",
+  "goal": "Монорепо по knowledge/target-structure.md + D33, один CI-гейт scripts/ci.sh (M-33), датированная ревизия спеки spec/revisions/2026-10, language-neutral fixtures, conformance runner с JCS-оракулом, пакеты axiomasoft/billium-contracts (PHP) и billium_contracts (Dart) зелёные на общем корпусе; выбор PHP money-библиотеки по прогону fixtures (CL-117); реестр identities и type-map.",
+  "context": "Вход — артефакты P1 после корректировки P1.10/P1.11 и GREEN повторного P1.9: docs/contracts/billium-contracts-v1.md (форма envelopes, ошибки, план fixtures), docs/acceptance-catalog.md (PB-15), knowledge/target-structure.md, artifacts/P1-methods/methods.json (M-01…M-59 с phase P2), D9, D16, D17, D19, D29, D30, D31 (receipt policy), D32 (digest), D33 (toolchain). Дизайн-решения фазы — knowledge/p2-contracts-design (разделы читаются по ссылкам из items).\n\nОкружение (наблюдение 2026-10-17): хост — PHP 8.3, нет Dart, Docker 29.8.2, Python 3.12; все проверки идут в образе toolchain (D33): `docker compose run --rm toolchain …`. PostgreSQL в P2 не нужен.\n\nПоследовательность: P2.1 → P2.2 → (P2.3 ∥ P2.4) → (P2.5 ∥ P2.6) → P2.7 → P2.8. Push, публикация пакетов и запуск GitHub CI — только по запросу владельца.",
   "contract": {
     "consumes": [
-      "выход P1"
+      "docs/contracts/billium-contracts-v1.md (после P1.11)",
+      "docs/acceptance-catalog.md: PB-15",
+      "knowledge/target-structure.md",
+      "artifacts/P1-methods/methods.json",
+      "decisions D9, D16, D17, D19, D29, D30, D31, D32, D33"
     ],
-    "produces": [],
-    "boundaries": []
+    "produces": [
+      "compose.yaml, docker/toolchain/, .github/workflows/ci.yml, scripts/ci.sh, tests/zones.json",
+      "spec/revisions/2026-10/ (документы правил, schema/, problem-codes.json, currencies.json, rules.json, revision.lock.json)",
+      "fixtures/ (vectors, golden, coverage.json)",
+      "conformance/ (runner, oracles/jcs, adapters php/dart, baseline)",
+      "packages/contracts (PHP), packages/contracts-dart (Dart), packages/core (skeleton для CL-116)",
+      "spec/identities.json, spec/type-map.json",
+      "D# выбора PHP money-библиотеки (CL-117)"
+    ],
+    "boundaries": [
+      "Ни один пакет P2 не пишет денежное state и не содержит persistence или provider SDK (D9).",
+      "Dart — клиент контрактов (REQ-OWN-18, REQ-CON-37).",
+      "Модули ядра, server, testkit, sdk-dart, finbridge не создаются (D17)."
+    ]
   },
   "scope": {
     "include": [
-      "Bootstrap монорепо по target-structure P1.6, CI (PHPStan max, Pint, Rector, Dart analyze/test), пакет billium-contracts для PHP и Dart, language-neutral fixtures и conformance runner."
+      "toolchain и CI-гейт",
+      "ревизия спеки 2026-10 и генераторы производных",
+      "fixtures money/*, canon/digest, payment/*, usage/fact (codec), errors/codes, compat/pilot",
+      "conformance runner, JCS-оракул, baseline, lockstep",
+      "PHP и Dart billium-contracts с адаптерами",
+      "identities, type-map, запрет float/double",
+      "consumer install smoke, PB-15, документация команд"
     ],
-    "exclude": []
+    "exclude": [
+      "ledger/conservation и поведенческие векторы idempotency/admission/outcome (P3, P5)",
+      "схема БД, OperationRunner, модули ядра (P3+)",
+      "публикация пакетов и выбор платности (I-02)",
+      "API manifest и BC-gate (M-34, P10)"
+    ]
   },
   "depends_on": [
     "P1"
   ],
-  "pitfalls": [],
-  "validation": [],
-  "deliverables": [],
-  "items": [],
-  "batches": []
+  "pitfalls": [
+    "Golden создаёт только оракул; регенерация golden выводом SDK делает conformance тавтологией (M-15).",
+    "JSON number для суммы теряет точность в JCS и в Dart web (DR04-12, DR04-13): суммы и quantity — только строки, decode проверяет тип до значения.",
+    "Слой гейта без предмета — красный, а не пропуск (M-33); baseline с исчезнувшим вектором — ошибка (M-11).",
+    "Контракт может измениться в P1.11 (observation, receipt policy): схемы строятся по docs после P1.11, а не по памяти дизайна.",
+    "Файлы, созданные в контейнере под root, ломают git на хосте — compose.yaml задаёт user UID:GID."
+  ],
+  "validation": [
+    {
+      "id": "V90",
+      "cmd": "docker compose run --rm toolchain bash scripts/ci.sh",
+      "expect": "exit 0; сводка lint, derived, php, dart, conformance: PASS",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V91",
+      "cmd": "python3 -I .swissknifeman/launcher.py planner check 2026.10.14-№1-BILLIUM-V1",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V92",
+      "cmd": "git diff --check",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    }
+  ],
+  "deliverables": [
+    "Зелёный полный гейт scripts/ci.sh в образе toolchain",
+    "Ревизия спеки 2026-10 (draft) с fixtures и conformance PHP/Dart",
+    "PB-15 зелёный; CL-116 и CL-117 закрыты evidence и D#"
+  ],
+  "items": [
+    "P2.1",
+    "P2.2",
+    "P2.3",
+    "P2.4",
+    "P2.5",
+    "P2.6",
+    "P2.7",
+    "P2.8"
+  ],
+  "batches": [
+    {
+      "id": "B1",
+      "items": [
+        "P2.1"
+      ],
+      "mode": "recommended",
+      "note": "toolchain — предпосылка всех проверок"
+    },
+    {
+      "id": "B2",
+      "items": [
+        "P2.2"
+      ],
+      "mode": "recommended",
+      "note": "нормативная спека, frontier"
+    },
+    {
+      "id": "B3",
+      "items": [
+        "P2.3",
+        "P2.4"
+      ],
+      "mode": "recommended",
+      "note": "runner+оракул, затем fixtures (golden требует оракул)"
+    },
+    {
+      "id": "B4",
+      "items": [
+        "P2.5",
+        "P2.6"
+      ],
+      "mode": "recommended",
+      "note": "PHP и Dart параллельно: task_files не пересекаются"
+    },
+    {
+      "id": "B5",
+      "items": [
+        "P2.7",
+        "P2.8"
+      ],
+      "mode": "recommended",
+      "note": "identities/type-map и закрытие фазы"
+    }
+  ]
 }

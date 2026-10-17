@@ -113,7 +113,7 @@ class CheckerRegression(unittest.TestCase):
             for n, topic in enumerate(self.c.METHOD_TOPICS, 1)],
             'sources_reviewed': [{'path': path.rstrip('/'), 'practices': ['M-01'], 'note': ''}
                                  for path in self.c.source_map_paths((6, 7))]}
-        self.put('knowledge/methods.json', json.dumps(data, ensure_ascii=False))
+        self.put('artifacts/P1-methods/methods.json', json.dumps(data, ensure_ascii=False))
         for n in range(9, 19):
             self.put(f'decisions/D{n}.json', json.dumps({
                 'id': f'D{n}', 'status': 'accepted', 'applies_to': ['P1.6'],
@@ -254,11 +254,11 @@ class CheckerRegression(unittest.TestCase):
         self.red('P1.4', 'verified без URL')
 
     def test_missing_method_topic_fails(self):
-        self.change('knowledge/methods.json', '"jcs-oracle"', '"spec-revisions"')
+        self.change('artifacts/P1-methods/methods.json', '"jcs-oracle"', '"spec-revisions"')
         self.red('P1.5', 'jcs-oracle')
 
     def test_methods_non_object_returns_red(self):
-        self.put('knowledge/methods.json', '[]')
+        self.put('artifacts/P1-methods/methods.json', '[]')
         self.red('P1.5', 'корень JSON не объект')
 
     def test_missing_stack_layout_profile_decisions_fails(self):

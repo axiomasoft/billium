@@ -1,0 +1,166 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:item:v1",
+  "id": "P2.4",
+  "title": "Корпус fixtures P2: vectors, golden, coverage и lint-vectors",
+  "status": "todo",
+  "summary": "fixtures/vectors и fixtures/golden для наборов money/scale, money/bounds, money/allocation, money/rounding, canon/digest, payment/execute, payment/admission, payment/outcome, usage/fact, errors/codes, compat/pilot; golden создаются JCS-оракулом/генератором и авторитетны; fixtures/coverage.json и scripts/spec/lint-vectors.py (схема вектора, разрешимость spec_refs, покрытие правил M-10, отрицательный вектор неизвестного поля M-05).",
+  "why": "Корпус — единственное общее между PHP и Dart (REQ-CON-03); REQ-ACC-13 требует точности валют, int64, > 2^53, allocation одной minor unit и отказа на неизвестной схеме. Риск: golden, сгенерированный SDK, превращает conformance в тавтологию (M-15); правило без вектора остаётся непроверенным (M-10).",
+  "scope": {
+    "include": [
+      "fixtures/README.md (формат, наборы, отложенные поведенческие векторы с фазой)",
+      "vectors всех наборов раздела fixture-sets с минимумом из таблицы",
+      "golden: canon/* — только оракулом conformance/oracles/jcs (P2.3) через scripts/spec/build-golden.py; errors/registry.json — генератором из problem-codes.json",
+      "fixtures/coverage.json",
+      "scripts/spec/lint-vectors.py, scripts/spec/build-golden.py; слой lint вызывает lint-vectors.py"
+    ],
+    "exclude": [
+      "ledger/conservation (P3)",
+      "поведенческие векторы idempotency/admission/outcome (P3, P5)",
+      "runner (P2.3) и адаптеры (P2.5, P2.6)"
+    ]
+  },
+  "depends_on": [
+    "P2.2",
+    "P2.3"
+  ],
+  "decisions": [
+    "D29",
+    "D31",
+    "D32"
+  ],
+  "skills": [
+    "quality:test-strategy"
+  ],
+  "reads": [
+    {
+      "ref": "knowledge/p2-contracts-design#vectors",
+      "why": "Формат вектора, golden, coverage",
+      "required": true
+    },
+    {
+      "ref": "knowledge/p2-contracts-design#fixture-sets",
+      "why": "Минимальный состав каждого набора",
+      "required": true
+    },
+    {
+      "ref": "knowledge/p2-contracts-design#ops",
+      "why": "ops и форма args/outputs",
+      "required": true
+    },
+    {
+      "ref": "knowledge/p2-contracts-design#money-wire",
+      "why": "Ожидания money-векторов и worked examples",
+      "required": true
+    },
+    {
+      "ref": "knowledge/p2-contracts-design#digest",
+      "why": "Обязательные canon-векторы и worked example digest",
+      "required": true
+    },
+    {
+      "path": "spec/revisions/2026-10/schema/conformance/vector.json",
+      "why": "Схема вектора (P2.2)",
+      "required": true
+    },
+    {
+      "path": "spec/revisions/2026-10/rules.json",
+      "why": "Маркеры для spec_refs и покрытия",
+      "required": true
+    },
+    {
+      "path": "docs/acceptance-catalog.md",
+      "why": "PB-15 и REQ-ACC-13",
+      "required": true,
+      "section": "Пилот PB"
+    }
+  ],
+  "task_files": [
+    {
+      "path": "fixtures/**",
+      "change": "create"
+    },
+    {
+      "path": "scripts/spec/lint-vectors.py",
+      "change": "create"
+    },
+    {
+      "path": "scripts/spec/build-golden.py",
+      "change": "create"
+    },
+    {
+      "path": "scripts/ci.sh",
+      "change": "modify",
+      "note": "слой lint: lint-vectors.py"
+    },
+    {
+      "path": "scripts/spec/tests/test_lint_vectors.py",
+      "change": "create",
+      "note": "lint-vectors: невалидный вектор, неразрешимый spec_ref, непокрытое правило, команда без вектора неизвестного поля"
+    }
+  ],
+  "rules": [
+    "Ожидание вектора выводится из спеки и раздела money-wire/digest, не из вывода PHP или Dart.",
+    "Golden canon/* пишет только оракул (scripts/spec/build-golden.py вызывает conformance/oracles/jcs); golden errors/registry.json — генератор из problem-codes.json; ручная правка golden запрещена.",
+    "Каждый вектор валиден по schema/conformance/vector.json; каждый spec_ref разрешим; каждое правило rules.json покрыто или в coverage.json с причиной.",
+    "Контрольный вектор canon/digest/control-wrong-golden обязателен (M-16)."
+  ],
+  "guidance": "Порядок: money/* → payment/*, usage/fact → errors/codes → compat/pilot → canon/digest (golden через build-golden.py, вызывающий conformance/oracles/jcs/oracle.py из P2.3) → coverage.json → lint-vectors.py. compat/pilot берёт образцы пилота из Brain SRC-005 (BRAIN=/home/vostrikov/Vaults/Brain, Infrastructure/Workspace/Pilot-Commerz-Billium-Payment-Boundary.md § Command envelope, § Outcome envelope) с конкретными значениями вместо плейсхолдеров; вне машины владельца — поля из docs/contracts/billium-contracts-v1.md § Оплаты и возвраты.",
+  "validation": [
+    {
+      "id": "V1",
+      "cmd": "docker compose run --rm toolchain python3 scripts/spec/lint-vectors.py",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V2",
+      "cmd": "docker compose run --rm toolchain bash scripts/ci.sh --layer lint",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V3",
+      "cmd": "docker compose run --rm toolchain sh -c 'python3 scripts/spec/build-golden.py && git diff --exit-code fixtures/golden'",
+      "expect": "exit 0 (golden воспроизводимы оракулом)",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V4",
+      "cmd": "sh -c 'for s in money/scale money/bounds money/allocation money/rounding canon/digest payment/execute payment/admission payment/outcome usage/fact errors/codes compat/pilot; do ls fixtures/vectors/$s/*.json >/dev/null || exit 1; done'",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V6",
+      "cmd": "docker compose run --rm toolchain python3 -m unittest discover -s scripts/spec/tests -p test_lint_vectors.py -v",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V5",
+      "cmd": "git diff --check",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    }
+  ],
+  "deliverables": [
+    "fixtures/ с 11 наборами P2, golden и coverage.json",
+    "scripts/spec/lint-vectors.py, build-golden.py"
+  ],
+  "route": {
+    "class": "implementation",
+    "effort": "high"
+  },
+  "review": {
+    "mode": "none"
+  },
+  "authority": {
+    "kind": "routine"
+  },
+  "rag": {
+    "need": "none",
+    "status": "not_needed"
+  },
+  "result": null,
+  "updated_at": "2026-10-17T12:02:57Z"
+}

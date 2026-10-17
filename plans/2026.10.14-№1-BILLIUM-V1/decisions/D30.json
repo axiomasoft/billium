@@ -42,7 +42,7 @@
     },
     {
       "kind": "repo",
-      "ref": "knowledge/methods.json",
+      "ref": "artifacts/P1-methods/methods.json",
       "note": "M-04, M-05, M-52"
     }
   ],

@@ -190,7 +190,7 @@ def known_ids() -> frozenset[str]:
         body = body_of(file_text(KNOW / "research" / name), "Утверждения") or ""
         known |= set(first_column_ids(body))
     try:
-        methods = json.loads(file_text(KNOW / "methods.json") or "{}")
+        methods = json.loads(file_text(PLAN / "artifacts" / "P1-methods" / "methods.json") or "{}")
         known |= {str(p.get("id")) for p in methods.get("practices", []) if isinstance(p, dict)}
     except json.JSONDecodeError:
         pass
@@ -553,8 +553,8 @@ METHOD_REPOS = {"agentools", "chatom", "azguard", "commerz", "vaulter", "erp-sdk
 
 
 def check_methods(r: Report) -> None:
-    where = "knowledge/methods.json"
-    raw = read(KNOW / "methods.json", r)
+    where = "artifacts/P1-methods/methods.json"
+    raw = read(PLAN / "artifacts" / "P1-methods" / "methods.json", r)
     if raw is None:
         return
     try:

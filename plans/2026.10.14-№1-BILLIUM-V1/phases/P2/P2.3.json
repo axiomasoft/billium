@@ -1,0 +1,141 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:item:v1",
+  "id": "P2.3",
+  "title": "Conformance runner, вендоренный JCS-оракул, baseline и lockstep",
+  "status": "todo",
+  "summary": "conformance/runner/run.py по протоколу start → config → run × N → stop, закрытые статусы без skip, baseline с проверкой устаревания, control must-fail, lockstep spec_rev; вендоренный cyberphone JCS-оракул с PROVENANCE.md; conformance/adapters.json; самотесты на фейковом адаптере.",
+  "why": "M-09/M-11/M-12/M-16 — единственный механизм, доказывающий паритет PHP и Dart. Риски: runner, принимающий любой вывод (нет control-вектора), baseline, скрывающий регрессии, и расхождение ревизии корпуса с манифестами SDK.",
+  "scope": {
+    "include": [
+      "conformance/runner/run.py (+ модули в conformance/runner/)",
+      "conformance/oracles/jcs/ (Python cyberphone/json-canonicalization: файл канонизации, LICENSE, PROVENANCE.md с URL, commit, датой, sha256)",
+      "conformance/adapters.json",
+      "conformance/tests/ (unittest + fake_adapter.py) по списку самопроверок раздела adapter-protocol",
+      "conformance/README.md",
+      "слой conformance в scripts/ci.sh: run.py --adapter php и --adapter dart + проверка golden оракулом",
+      "conformance/oracles/jcs/oracle.py — обёртка `canonicalize(text) -> bytes` для build-golden.py (P2.4) и проверки golden в слое conformance"
+    ],
+    "exclude": [
+      "PHP и Dart адаптеры (P2.5, P2.6)",
+      "векторы (P2.4)"
+    ]
+  },
+  "depends_on": [
+    "P2.2"
+  ],
+  "decisions": [
+    "D32",
+    "D33"
+  ],
+  "skills": [
+    "quality:test-strategy"
+  ],
+  "reads": [
+    {
+      "ref": "knowledge/p2-contracts-design#adapter-protocol",
+      "why": "Протокол, статусы, baseline, lockstep, отчёт, самотесты",
+      "required": true
+    },
+    {
+      "ref": "knowledge/p2-contracts-design#vectors",
+      "why": "Формат вектора и правила сравнения",
+      "required": true
+    },
+    {
+      "ref": "knowledge/p2-contracts-design#digest",
+      "why": "Требования к оракулу и control-вектору",
+      "required": true
+    },
+    {
+      "path": "spec/revisions/2026-10/schema/conformance/adapter-message.json",
+      "why": "Схема сообщений (P2.2)",
+      "required": true
+    },
+    {
+      "path": "spec/revisions/2026-10/schema/conformance/vector.json",
+      "why": "Схема вектора (P2.2)",
+      "required": true
+    }
+  ],
+  "task_files": [
+    {
+      "path": "conformance/runner/**",
+      "change": "create"
+    },
+    {
+      "path": "conformance/oracles/jcs/**",
+      "change": "create"
+    },
+    {
+      "path": "conformance/tests/**",
+      "change": "create"
+    },
+    {
+      "path": "conformance/adapters.json",
+      "change": "create"
+    },
+    {
+      "path": "conformance/README.md",
+      "change": "create"
+    },
+    {
+      "path": "scripts/ci.sh",
+      "change": "modify",
+      "note": "слой conformance"
+    }
+  ],
+  "rules": [
+    "Runner не передаёт expect адаптеру; статусы только pass|fail|error.",
+    "Baseline: множество не-pass == множество записей; лишняя или исчезнувшая запись — красный прогон.",
+    "Pass control-вектора — красный прогон.",
+    "Оракул вендорится с пином commit; код оракула не правится (только обёртка вызова в conformance/oracles/jcs/oracle.py).",
+    "Без адаптера слой conformance красный (M-33)."
+  ],
+  "guidance": "Оракул: `git ls-remote https://github.com/cyberphone/json-canonicalization HEAD` даёт commit; скачать python3-реализацию (каталог python3/src/org/webpki/json/ репозитория) и LICENSE по этому commit через raw.githubusercontent.com; обёртка oracle.py: `canonicalize(text:str)->bytes`. Runner: subprocess.Popen с stdin/stdout PIPE, построчное чтение с таймаутом (selectors), валидация каждого сообщения по adapter-message.json. Сравнение: частичный матч объектов, полное сравнение массивов, golden — байты файла без завершающего LF.",
+  "validation": [
+    {
+      "id": "V1",
+      "cmd": "docker compose run --rm toolchain python3 -m unittest discover -s conformance/tests -v",
+      "expect": "exit 0; покрыты pass, fail, error, timeout, unknown op, stale baseline, control must-fail, lockstep mismatch",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V2",
+      "cmd": "docker compose run --rm toolchain python3 -c \"import sys;sys.path.insert(0,'conformance/oracles/jcs');import oracle;assert oracle.canonicalize('{\\\"b\\\":1,\\\"a\\\":\\\"x\\\"}')==b'{\\\"a\\\":\\\"x\\\",\\\"b\\\":1}'\"",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V3",
+      "cmd": "grep -E '^(Commit|commit): [0-9a-f]{7,40}' conformance/oracles/jcs/PROVENANCE.md",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V4",
+      "cmd": "git diff --check",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    }
+  ],
+  "deliverables": [
+    "conformance/runner, oracles/jcs, tests, adapters.json, README",
+    "слой conformance в scripts/ci.sh"
+  ],
+  "route": {
+    "class": "implementation",
+    "effort": "high"
+  },
+  "review": {
+    "mode": "none"
+  },
+  "authority": {
+    "kind": "routine"
+  },
+  "rag": {
+    "need": "none",
+    "status": "not_needed"
+  },
+  "result": null,
+  "updated_at": "2026-10-17T12:02:08Z"
+}

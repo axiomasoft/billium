@@ -2,22 +2,23 @@
   "$schema": "urn:swissknifeman:task:plan:item:v1",
   "id": "P1.9",
   "title": "Review P1 — независимый verdict",
-  "status": "blocked",
-  "summary": "Независимый read-only review всей P1 в свежей сессии, не авторской: обоснованность схемы и модели данных, границы канона, трассировка, качество доказательств; выпустить verdict.",
+  "status": "todo",
+  "summary": "Повторный независимый read-only review P1 после одной корректировки (P1.10, P1.11) в свежей сессии, не исполнявшей P1.6–P1.11: проверить закрытие каждого finding P19-F01…F09 и отсутствие регрессий; выпустить verdict r2.",
   "why": "P1 фиксирует архитектуру денежной системы, которую к 1.0 будет трудно менять. Структурный checker (D3) не доказывает, что выбор верен и инварианты защищены. RAG: repo-grounded (D3).",
   "scope": {
     "include": [
-      "reviews/P1-review.md: строка **Verdict:** GREEN или RED; таблица ID | Severity | Где | Суть | Owning item (blocker|major|minor); заголовки ### <ID> — … по findings; ## Проверено",
-      "Обязательные проверки: (1) каждое решение области имеет D# с ≥ 2 альтернативами и опирается на факты P1.4 или явный риск; (2) INV-01…INV-08 имеют enforcement без очевидного обхода, разобраны два исполнителя, lost response и restore; (3) ни одно решение не нарушает plan.md §2; (4) каталог трассируется на REQ/INV, контракты совместимы с пилотом; (5) ≥ 5 внешних фактов перепроверено по URL из P1.4; (6) вопросы владельцу не подменены фактами; (7) происхождение: ≥ 30 случайных нормативных утверждений из docs/ и knowledge/; (8) полнота: ≥ 15 случайных ID из P1-corpus и ≥ 15 из P1-audit-inventory"
+      "Перед записью: `git mv plans/2026.10.14-№1-BILLIUM-V1/reviews/P1-review.md plans/2026.10.14-№1-BILLIUM-V1/reviews/P1-review-r1.md` — verdict r1 неизменен",
+      "reviews/P1-review.md (r2): строка **Verdict:** GREEN или RED; таблица ID | Severity | Где | Суть | Owning item (blocker|major|minor), новые findings с префиксом P19R2-; заголовки ### <ID> — … по findings; ## Закрытие r1 — таблица Finding r1 | Статус (закрыт|частично|не закрыт|отклонён с D#) | Где исправлено | Проверка; ## Проверено",
+      "Обязательные проверки r2: (1) каждый P19-F01…F09 — по ожидаемому исправлению из reviews/P1-review-r1.md; (2) новые D# P1.10/P1.11 — ≥ 2 альтернативы, evidence разрешимо, не нарушают plan.md §2; (3) INV-02 после F01: внешний допуск writer закрывает сырой клон без процедуры restore; (4) F02: нет денежной мутации без commandKey, отказ refund admission не оставляет снятую allocation; (5) регрессии: check-p1.py pre-review GREEN, трассировка каталога на REQ/INV полна, контракты совместимы с пилотом (payment.execute.v1/payment.outcome.v1 без breaking); (6) происхождение: ≥ 15 случайных нормативных утверждений из изменённых разделов"
     ],
     "exclude": [
-      "правка любых артефактов P1",
-      "новые исследования сверх выборочной перепроверки",
+      "правка любых артефактов P1, кроме git mv r1",
+      "вторая корректировка (policy.corrections_max = 1): при RED — blocked с эскалацией владельцу",
       "детализация P2"
     ]
   },
   "depends_on": [
-    "P1.8"
+    "P1.11"
   ],
   "decisions": [
     "D3",
@@ -65,11 +66,32 @@
   ],
   "task_files": [
     {
+      "path": "@plan/reviews/P1-review-r1.md",
+      "change": "create",
+      "note": "git mv из P1-review.md"
+    },
+    {
       "path": "@plan/reviews/P1-review.md",
-      "change": "create"
+      "change": "create",
+      "note": "verdict r2"
     }
   ],
   "artifacts": [
+    {
+      "path": "@plan/reviews/P1-review.md",
+      "role": "input",
+      "note": "verdict r1 (до git mv) — findings P19-F01…F09 и ожидаемые исправления"
+    },
+    {
+      "path": "@plan/knowledge/P1.6-self-check.md",
+      "role": "input",
+      "note": "§ Корректировка P19 (P1.10)"
+    },
+    {
+      "path": "@plan/knowledge/P1.7-self-check.md",
+      "role": "input",
+      "note": "§ Корректировка P19 (P1.11)"
+    },
     {
       "path": "@plan/knowledge/owner-questions.md",
       "role": "input",
@@ -79,7 +101,10 @@
   "rules": [
     "Сначала check-p1.py pre-review (P1.1–P1.8); RED — verdict RED с finding на owning item.",
     "Severity: blocker — нарушение канона или незащищённый денежный инвариант; major — решение без доказательной базы или пропуск покрытия; minor — форма.",
-    "Рецензент не переписывает решения, а описывает дефект и ожидаемое исправление. Review только читает."
+    "Рецензент не переписывает решения, а описывает дефект и ожидаемое исправление. Review только читает.",
+    "Исполнитель r2 — сессия, не исполнявшая P1.6, P1.7, P1.10, P1.11; сессии r1 и авторов перечислить в шапке.",
+    "Owning item новых findings — P1.1…P1.8 (формат check-p1.py); корректировка P1.10 указывается как P1.6, P1.11 — как P1.7.",
+    "RED r2 — finish --status blocked с escalation владельцу: вторая корректировка запрещена без решения владельца (D8, policy.corrections_max = 1)."
   ],
   "guidance": "Finding — конкретное место (файл + раздел), сценарий отказа и ожидаемое исправление. ## Проверено перечисляет проверенное, в том числе без findings.",
   "validation": [
@@ -97,13 +122,25 @@
     },
     {
       "id": "V3",
+      "cmd": "grep -c 'P19-F0[1-9]' plans/2026.10.14-№1-BILLIUM-V1/reviews/P1-review.md",
+      "expect": "вывод ≥ 9 (каждый finding r1 в ## Закрытие r1)",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V4",
+      "cmd": "test -f plans/2026.10.14-№1-BILLIUM-V1/reviews/P1-review-r1.md",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V5",
       "cmd": "git diff --check",
       "expect": "exit 0",
       "kind": "acceptance"
     }
   ],
   "deliverables": [
-    "reviews/P1-review.md с verdict и findings, привязанными к owning items; при GREEN фаза закрывается, при RED — одна корректировка и повторный P1.9"
+    "reviews/P1-review-r1.md (неизменённый r1) и reviews/P1-review.md (r2) с verdict, ## Закрытие r1 и findings; при GREEN фаза P1 закрывается, при RED — blocked и эскалация владельцу"
   ],
   "route": {
     "class": "frontier",
@@ -119,34 +156,6 @@
     "need": "none",
     "status": "not_needed"
   },
-  "result": {
-    "started_at": "2026-10-17T11:19:29Z",
-    "finished_at": "2026-10-17T11:30:51Z",
-    "executor": {
-      "provider": "anthropic",
-      "model": "claude-opus-5-5",
-      "effort": "high",
-      "session": "c124bef1-ff2a-4408-825f-aa9c09490264"
-    },
-    "notes": "reviews/P1-review.md: Verdict RED. Pre-review P1.1–P1.8 GREEN. Findings: blocker F01 (P1.6), major F02 (P1.6), F03/F04/F05 (P1.7), minor F06–F08 (P1.6), F09 (P1.7). Проверено: 12 внешних фактов по URL (все подтверждены), 37 нормативных утверждений, 32 ID корпуса/аудита. V1/V2 RED только по строке verdict (D8): 'reviews/P1-review.md: verdict RED — P1.9 не закрыта'.",
-    "escalation": "Владельцу: разрешить одну корректировку закрытых P1.6 (F01, F02, F06–F08) и P1.7 (F03–F05, F09) — переоткрыть items или design-delta — и затем повторный P1.9 в свежей сессии. Blocker F01 требует D# о внешнем допуске writer (lease вне БД) для restore/clone.",
-    "checks": [
-      {
-        "id": "V1",
-        "exit": 1,
-        "at": "2026-10-17T11:30:51Z"
-      },
-      {
-        "id": "V2",
-        "exit": 1,
-        "at": "2026-10-17T11:30:51Z"
-      },
-      {
-        "id": "V3",
-        "exit": 0,
-        "at": "2026-10-17T11:30:51Z"
-      }
-    ]
-  },
-  "updated_at": "2026-10-17T11:30:51Z"
+  "result": null,
+  "updated_at": "2026-10-17T11:50:24Z"
 }

@@ -38,7 +38,7 @@
   "evidence": [
     {
       "kind": "repo",
-      "ref": "knowledge/methods.json",
+      "ref": "artifacts/P1-methods/methods.json",
       "note": "M-21, M-22, M-23, M-36, M-37, M-38"
     },
     {

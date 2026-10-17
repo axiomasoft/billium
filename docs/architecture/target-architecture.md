@@ -2,7 +2,7 @@
 
 Статус: решение PLAN1.P1.6 (2026-10-17). Нормативная основа — `docs/requirements.md` (REQ/INV),
 первичные факты — `plans/2026.10.14-№1-BILLIUM-V1/knowledge/research/DR-0*.md` (DR0N-NN), практики —
-`knowledge/methods.json` (M-NN), решения — `decisions/D9.json`…`D28.json`. Модель данных и инварианты —
+`artifacts/P1-methods/methods.json` (M-NN), решения — `decisions/D9.json`…`D28.json`. Модель данных и инварианты —
 [`data-model.md`](data-model.md); раскладка каталогов и freeze — `knowledge/target-structure.md` плана.
 
 Правила документа: каждое решение ссылается на D# с альтернативами (D7); внешний факт — через DR-ID с

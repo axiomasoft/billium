@@ -1,0 +1,45 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:decision:v1",
+  "id": "D31",
+  "title": "Receipt policy problem-кодов: validation не сохраняется (P19-F04)",
+  "date": "2026-10-17",
+  "status": "accepted",
+  "question": "Сохраняется ли отказ billium.validation.* (и прочие ошибки формы) как receipt commandKey, или следует M-45 и не сохраняется?",
+  "options": [
+    {
+      "id": "A",
+      "text": "Политика M-45 без отступления: receipt сохраняют только бизнес-отказы по состоянию (например billium.refund.capacity_exceeded, billium.invoice.frozen, billium.policy.unknown); validation, schema, money-формат, auth, in_flight, transient, lookup.unavailable, 5xx — receipt не сохраняется, claim ключа откатывается",
+      "pros": "совпадает с M-45 и vaulter ADR-0029 п. 4; исправленный envelope с тем же ключом обрабатывается заново"
+    },
+    {
+      "id": "B",
+      "text": "Отступление от M-45: validation сохраняется как receipt ключа",
+      "cons": "нет источника; исправленный envelope с тем же ключом получает billium.idempotency.conflict; требует D# с причиной"
+    }
+  ],
+  "context": "P19-F04 (reviews/P1-review.md): docs/contracts/billium-contracts-v1.md § Ошибки приписывает M-45 кэширование validation, M-45 говорит обратное. Fixtures errors/codes (P2) зависят от выбранной нормы.",
+  "decision": "A — Политика M-45 без отступления: receipt сохраняют только бизнес-отказы по состоянию (например billium.refund.capacity_exceeded, billium.invoice.frozen, billium.policy.unknown); validation, schema, money-формат, auth, in_flight, transient, lookup.unavailable, 5xx — receipt не сохраняется, claim ключа откатывается",
+  "rationale": "M-45 (accept) и источник vaulter ADR-0029 п. 4 прямо исключают validation из сохраняемых receipt; отступление B не имеет источника (D7). Действие клиента у billium.validation.invalid: исправить envelope; тот же ключ допустим, так как receipt не сохранён.",
+  "applies_to": [
+    "P1.11",
+    "P2"
+  ],
+  "evidence": [
+    {
+      "kind": "repo",
+      "ref": "artifacts/P1-methods/methods.json",
+      "note": "M-45"
+    },
+    {
+      "kind": "repo",
+      "ref": "reviews/P1-review.md",
+      "note": "P19-F04"
+    }
+  ],
+  "actor": {
+    "provider": "claude-code",
+    "model": "claude-opus-5-5",
+    "effort": "high"
+  },
+  "answered_by": "agent"
+}

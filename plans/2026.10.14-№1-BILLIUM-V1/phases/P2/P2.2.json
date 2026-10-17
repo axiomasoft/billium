@@ -1,0 +1,193 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:item:v1",
+  "id": "P2.2",
+  "title": "Ревизия спеки 2026-10: документы правил, JSON Schema, problem-codes, currencies, генераторы и lint",
+  "status": "todo",
+  "summary": "spec/revisions/2026-10 с документами правил (маркеры BC-*), JSON Schema 2020-12 всех envelopes v1 по contracts v1 после P1.11, problem-codes.json по D31, currencies.json из ISO 4217 List One, схемы вектора и протокола адаптера; генераторы rules.json, revision.lock.json, docs/contracts/problem-codes.md и lint (M-01…M-05, M-44…M-46). Слои lint и derived зелёные.",
+  "why": "Схемы и коды P2 замораживаются к 1.0 (target-structure § Что замораживается); PHP и Dart сверяются только через спеку и fixtures, не через общий код (REQ-CON-03). Риск: схема, расходящаяся с docs/contracts (особенно payment.observation.v1 и receipt policy после P1.11), разведёт PHP и Dart и сломает пилот (REQ-CON-04, REQ-CON-09).",
+  "scope": {
+    "include": [
+      "spec/revisions/2026-10/README.md и 01…06 документы правил с маркерами [BC-<AREA>-<NN>] и ссылками D7",
+      "schema/** по списку раздела spec-revision, включая conformance/vector.json и conformance/adapter-message.json",
+      "problem-codes.json (все коды § Ошибки контракта; receipt по D31)",
+      "currencies.json + sources/list-one.xml + scripts/spec/build-currencies.py",
+      "scripts/spec/build-rules.py, build-lock.py, build-codes-index.py (каждый с --check), scripts/spec/lint.py",
+      "docs/contracts/problem-codes.md (генерируется)",
+      "слои lint и derived в scripts/ci.sh указывают на эти скрипты"
+    ],
+    "exclude": [
+      "fixtures и lint-vectors.py (P2.4)",
+      "runner (P2.3)",
+      "identities и type-map (P2.7)",
+      "изменение docs/contracts/billium-contracts-v1.md, кроме исправления расхождений через D#"
+    ]
+  },
+  "depends_on": [
+    "P2.1"
+  ],
+  "decisions": [
+    "D9",
+    "D29",
+    "D30",
+    "D31",
+    "D32"
+  ],
+  "skills": [
+    "architect:api-design"
+  ],
+  "reads": [
+    {
+      "ref": "knowledge/p2-contracts-design#spec-revision",
+      "why": "Состав ревизии, конвенции схем, генераторы",
+      "required": true
+    },
+    {
+      "ref": "knowledge/p2-contracts-design#money-wire",
+      "why": "Нормы MoneyWire для 01-money-wire.md и схемы money-wire",
+      "required": true
+    },
+    {
+      "ref": "knowledge/p2-contracts-design#digest",
+      "why": "Норма digest для 02-idempotency-digest.md",
+      "required": true
+    },
+    {
+      "ref": "knowledge/p2-contracts-design#vectors",
+      "why": "Схема вектора conformance/vector.json",
+      "required": true
+    },
+    {
+      "ref": "knowledge/p2-contracts-design#adapter-protocol",
+      "why": "Схема сообщений conformance/adapter-message.json",
+      "required": true
+    },
+    {
+      "ref": "knowledge/p2-contracts-design#ops",
+      "why": "Перечень ops и порядок ошибок decode",
+      "required": true
+    },
+    {
+      "path": "docs/contracts/billium-contracts-v1.md",
+      "why": "Источник полей, кодов и семантики envelopes (после P1.11)",
+      "required": true
+    },
+    {
+      "path": "docs/requirements.md",
+      "why": "REQ/INV для ссылок правил",
+      "required": true,
+      "section": "REQ-CON-01…REQ-CON-39"
+    }
+  ],
+  "task_files": [
+    {
+      "path": "spec/revisions/2026-10/**",
+      "change": "create"
+    },
+    {
+      "path": "scripts/spec/lint.py",
+      "change": "create"
+    },
+    {
+      "path": "scripts/spec/build-rules.py",
+      "change": "create"
+    },
+    {
+      "path": "scripts/spec/build-lock.py",
+      "change": "create"
+    },
+    {
+      "path": "scripts/spec/build-codes-index.py",
+      "change": "create"
+    },
+    {
+      "path": "scripts/spec/build-currencies.py",
+      "change": "create"
+    },
+    {
+      "path": "docs/contracts/problem-codes.md",
+      "change": "create"
+    },
+    {
+      "path": "scripts/ci.sh",
+      "change": "modify",
+      "note": "слои lint, derived"
+    },
+    {
+      "path": "scripts/spec/tests/test_spec_tools.py",
+      "change": "create",
+      "note": "генераторы rules/lock/codes-index/currencies и lint: детерминизм, --check на рассинхроне, отказ lint на нормативном слове в description и на неразрешимом $ref"
+    }
+  ],
+  "rules": [
+    "Каждая нормативная строка документов ревизии несёт маркер BC-* и ≥ 1 ссылку REQ/INV/D#/M (D7); правило без источника не пишется.",
+    "Имена полей пилота payment.execute.v1 и payment.outcome.v1 не меняются (REQ-CON-04, REQ-CON-09); расхождение схемы с docs/contracts — D#.",
+    "Суммы и количества в схемах — только string; JSON number для них запрещён схемой.",
+    "currencies.json фиксирует URL, дату Pblshd и sha256 исходного XML; без сети — blocked с эскалацией, не ручная таблица.",
+    "Генераторы детерминированы: два запуска --write дают побайтно тот же файл; --check не пишет."
+  ],
+  "guidance": "Порядок: common/defs.json и common/money-wire.json → problem/problem.json → envelopes payment/* → usage/*, obligation/*, occurrence/*, collection/*, query/*, event/* → conformance/* → problem-codes.json → currencies (скачать List One curl-ом в sources/, затем build-currencies.py) → документы правил → генераторы → lint. lint.py проверяет конвенции 1–8 раздела spec-revision через jsonschema.Draft202012Validator.check_schema и referencing.Registry с ресурсами ревизии (без сети). build-rules.py ищет маркеры регулярным выражением `\\[(BC-[A-Z]+-\\d{2})\\]` и ссылки `(REQ|INV|D|M|SRC)-?\\d+` в той же строке.",
+  "validation": [
+    {
+      "id": "V1",
+      "cmd": "docker compose run --rm toolchain bash scripts/ci.sh --layer lint",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V2",
+      "cmd": "docker compose run --rm toolchain bash scripts/ci.sh --layer derived",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V3",
+      "cmd": "docker compose run --rm toolchain python3 -c \"import json;c={x['code']:x['scale'] for x in json.load(open('spec/revisions/2026-10/currencies.json'))['currencies']};assert (c['RUB'],c['JPY'],c['KWD'],c['USD'])==(2,0,3,2)\"",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V4",
+      "cmd": "docker compose run --rm toolchain python3 -c \"import json;r={x['code']:x['receipt'] for x in json.load(open('spec/revisions/2026-10/problem-codes.json'))};assert r['billium.validation.invalid']=='none' and r['billium.refund.capacity_exceeded']=='stored'\"",
+      "expect": "exit 0 (D31)",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V5",
+      "cmd": "docker compose run --rm toolchain sh -c 'python3 scripts/spec/build-lock.py && python3 scripts/spec/build-rules.py && git diff --exit-code spec/'",
+      "expect": "exit 0 (генераторы детерминированы)",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V7",
+      "cmd": "docker compose run --rm toolchain python3 -m unittest discover -s scripts/spec/tests -p test_spec_tools.py -v",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V6",
+      "cmd": "git diff --check",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    }
+  ],
+  "deliverables": [
+    "spec/revisions/2026-10 (draft) со схемами, кодами, валютами, rules.json, revision.lock.json",
+    "scripts/spec/* генераторы и lint; docs/contracts/problem-codes.md"
+  ],
+  "route": {
+    "class": "frontier",
+    "effort": "high"
+  },
+  "review": {
+    "mode": "none"
+  },
+  "authority": {
+    "kind": "routine"
+  },
+  "rag": {
+    "need": "none",
+    "status": "not_needed"
+  },
+  "result": null,
+  "updated_at": "2026-10-17T12:02:55Z"
+}

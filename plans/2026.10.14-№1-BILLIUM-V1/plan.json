@@ -5,7 +5,7 @@
   "title": "Plan №1 — Billium: целевая архитектура и реализация биллинга",
   "status": "active",
   "created": "2026-10-14",
-  "updated_at": "2026-10-17T07:28:24Z",
+  "updated_at": "2026-10-17T12:03:39Z",
   "repository": "billium",
   "owner": "Dmitry Vostrikov",
   "authoring": {
@@ -52,6 +52,7 @@
     "design_audit": "none",
     "scout": "off",
     "language": "ru",
-    "evidence": "optional"
+    "evidence": "optional",
+    "context_pack": "scoped"
   }
 }

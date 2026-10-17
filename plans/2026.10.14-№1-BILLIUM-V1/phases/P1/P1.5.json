@@ -3,11 +3,11 @@
   "id": "P1.5",
   "title": "Методы разработки: methods.json",
   "status": "done_with_deviations",
-  "summary": "Изучить AgenTools, Chatom, AzGuard, Commerz (инварианты), Vaulter (idempotency ADR); записать knowledge/methods.json с вердиктом accept | adapt | reject по каждой практике.",
+  "summary": "Изучить AgenTools, Chatom, AzGuard, Commerz (инварианты), Vaulter (idempotency ADR); записать artifacts/P1-methods/methods.json с вердиктом accept | adapt | reject по каждой практике.",
   "why": "Billium, как AgenTools, — PHP+Dart с общими контрактами. Chatom и AzGuard прошли заморозку API/SPI/схемы до 1.0. Без явного списка каждая фаза заново изобретает процесс. RAG: repo-grounded (brief/00 §1 п.2, §3 п.4; research/P1-sources.md §6).",
   "scope": {
     "include": [
-      "knowledge/methods.json по схеме billium-methods/v1: practices[] (id M-NN, topic из enum, practice, source{repo, path}, verdict, reason, billium, phase) и sources_reviewed[] (path, practices, note)",
+      "artifacts/P1-methods/methods.json по схеме billium-methods/v1: practices[] (id M-NN, topic из enum, practice, source{repo, path}, verdict, reason, billium, phase) и sources_reviewed[] (path, practices, note)",
       "покрыть каждый путь research/P1-sources.md §6 и §7; каждое значение topic — хотя бы одна практика",
       "topic: spec-revisions, json-schema, vectors-golden, conformance-runner, jcs-oracle, php-sdk, dart-sdk, minimal-core-modules, api-spi-attributes, type-map, identities, upgrade-map, release-gate, target-structure, lock-model, outbox-inbox, problem-codes, money-invariants, idempotency, test-affected-only, mutation-testing, load-testing"
     ],
@@ -40,7 +40,7 @@
   ],
   "task_files": [
     {
-      "path": "@plan/knowledge/methods.json",
+      "path": "@plan/artifacts/P1-methods/methods.json",
       "change": "create"
     }
   ],
@@ -73,7 +73,7 @@
     }
   ],
   "deliverables": [
-    "knowledge/methods.json — валиден, все topic покрыты, у каждой практики источник, вердикт и причина"
+    "artifacts/P1-methods/methods.json — валиден, все topic покрыты, у каждой практики источник, вердикт и причина"
   ],
   "route": {
     "class": "frontier",
@@ -115,5 +115,5 @@
       }
     ]
   },
-  "updated_at": "2026-10-17T10:47:52Z"
+  "updated_at": "2026-10-17T11:51:26Z"
 }

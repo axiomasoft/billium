@@ -1,0 +1,174 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:item:v1",
+  "id": "P2.7",
+  "title": "Identities, type-map, запрет float/double и arch-тесты",
+  "status": "todo",
+  "summary": "spec/identities.json со снапшотами, spec/type-map.json, генераторы с --check в слое derived; PHPStan-правило NoFloatTypeRule, Pest arch-тесты (без float/Eloquent в публичных сигнатурах, #[Api] вне Internal, снапшоты identities), scripts/lint/no-double.py в слое dart.",
+  "why": "Identities и публичные типы замораживаются к 1.0 и меняются только major-версией (M-27, M-28, target-structure § Что замораживается); без реестра с P2 незаметное переименование кода ошибки или поля ломает потребителей. Float в денежной сигнатуре — нарушение D19 и M-48, которое ловится только автоматически.",
+  "scope": {
+    "include": [
+      "spec/identities.json, spec/identities/snapshots/*.json, scripts/spec/identities.py (--write/--check)",
+      "spec/type-map.json, scripts/spec/type-map.py (--check)",
+      "scripts/phpstan/src/NoFloatTypeRule.php + регистрация в phpstan.neon.dist и autoload-dev корня",
+      "packages/contracts/tests/Arch/*.php (Pest arch + сверка снапшотов)",
+      "packages/contracts-dart/test/identities_test.dart",
+      "scripts/lint/no-double.py; scripts/ci.sh: derived (identities, type-map), dart (no-double)"
+    ],
+    "exclude": [
+      "API manifest и BC-gate (M-34, P10)",
+      "identities миграций, routes, config (появятся в P3+; kinds присутствуют пустыми)"
+    ]
+  },
+  "depends_on": [
+    "P2.5",
+    "P2.6"
+  ],
+  "decisions": [
+    "D17"
+  ],
+  "skills": [
+    "php:static-analysis"
+  ],
+  "reads": [
+    {
+      "ref": "knowledge/p2-contracts-design#identities-typemap",
+      "why": "Формат реестра, снапшоты, type-map, правила arch/PHPStan/no-double",
+      "required": true
+    },
+    {
+      "ref": "knowledge/p2-contracts-design#ci-gate",
+      "why": "Куда встроить проверки",
+      "required": true
+    },
+    {
+      "path": "spec/revisions/2026-10/problem-codes.json",
+      "why": "Источник identities кодов",
+      "required": true
+    },
+    {
+      "path": "spec/revisions/2026-10/schema/common/defs.json",
+      "why": "Источник статусов",
+      "required": true
+    }
+  ],
+  "task_files": [
+    {
+      "path": "spec/identities.json",
+      "change": "create"
+    },
+    {
+      "path": "spec/identities/snapshots/**",
+      "change": "create"
+    },
+    {
+      "path": "spec/type-map.json",
+      "change": "create"
+    },
+    {
+      "path": "scripts/spec/identities.py",
+      "change": "create"
+    },
+    {
+      "path": "scripts/spec/type-map.py",
+      "change": "create"
+    },
+    {
+      "path": "scripts/phpstan/src/NoFloatTypeRule.php",
+      "change": "create"
+    },
+    {
+      "path": "scripts/lint/no-double.py",
+      "change": "create"
+    },
+    {
+      "path": "phpstan.neon.dist",
+      "change": "modify"
+    },
+    {
+      "path": "composer.json",
+      "change": "modify",
+      "note": "autoload-dev Billium\\Tooling\\"
+    },
+    {
+      "path": "composer.lock",
+      "change": "modify"
+    },
+    {
+      "path": "packages/contracts/tests/Arch/**",
+      "change": "create"
+    },
+    {
+      "path": "packages/contracts-dart/test/identities_test.dart",
+      "change": "create"
+    },
+    {
+      "path": "scripts/ci.sh",
+      "change": "modify"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "@plan/knowledge/target-structure.md",
+      "role": "input",
+      "note": "§ Identities и § Что замораживается"
+    }
+  ],
+  "rules": [
+    "Все записи identities в P2 — status new; удаление записи без retired — ошибка --check.",
+    "Каждая проверка доказана отрицательным случаем: временная правка (float-параметр, переименованный код, double в Dart) краснеет, затем откатывается; результат описывается в finish notes.",
+    "Arch-тесты используют только публичный API и reflection, не правят код пакетов."
+  ],
+  "guidance": "NoFloatTypeRule: PHPStan Rule<Node\\FunctionLike> + Rule<Node\\Stmt\\Property>, сообщение `billium.float-forbidden: <symbol>`; identifier `billium.floatForbidden`. type-map.py для PHP вызывает `php -r` с autoload и ReflectionClass по каждому FQCN; для Dart — регулярное выражение по `export`-строкам и объявлениям классов в lib/.",
+  "validation": [
+    {
+      "id": "V1",
+      "cmd": "docker compose run --rm toolchain bash scripts/ci.sh --layer derived",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V2",
+      "cmd": "docker compose run --rm toolchain bash scripts/ci.sh --layer php",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V3",
+      "cmd": "docker compose run --rm toolchain bash scripts/ci.sh --layer dart",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V4",
+      "cmd": "docker compose run --rm toolchain python3 -c \"import json;e=json.load(open('spec/identities.json'))['entries'];k={x['kind'] for x in e};assert {'envelope','envelope-field','problem-code','event-type','operation-status','invoice-status','spec-revision'}<=k\"",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V5",
+      "cmd": "git diff --check",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    }
+  ],
+  "deliverables": [
+    "spec/identities.json + снапшоты, spec/type-map.json",
+    "NoFloatTypeRule, arch-тесты, no-double.py в гейте"
+  ],
+  "route": {
+    "class": "implementation",
+    "effort": "medium"
+  },
+  "review": {
+    "mode": "none"
+  },
+  "authority": {
+    "kind": "routine"
+  },
+  "rag": {
+    "need": "none",
+    "status": "not_needed"
+  },
+  "result": null,
+  "updated_at": "2026-10-17T12:02:11Z"
+}

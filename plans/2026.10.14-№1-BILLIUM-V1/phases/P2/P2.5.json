@@ -1,0 +1,181 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:item:v1",
+  "id": "P2.5",
+  "title": "PHP axiomasoft/billium-contracts, PHP-адаптер и выбор money-библиотеки (CL-117)",
+  "status": "todo",
+  "summary": "Пакет packages/contracts: Money/Currency/MoneyMath, ProblemCode, envelopes ревизии 2026-10, Codec с JCS и digest (D32), атрибуты Api/Spi; PHP conformance-адаптер; полный корпус fixtures зелёный в PHP (baseline пуст для наборов P2); D# выбора MoneyPHP или Brick Money по прогону money/*.",
+  "why": "PHP — единственный денежный writer (D16); ошибка parse/allocation/digest здесь проникает во все фазы. CL-117 и DR04-24 открыты: MoneyPHP раздаёт остаток через float (DR04-03), что нарушает REQ-CON-30 и M-48 — выбор только по прогону, не по документации.",
+  "scope": {
+    "include": [
+      "packages/contracts/src/** по разделу php-package; resources/ с данными ревизии (валюты, коды) через генератор scripts/spec/export-php.py",
+      "две реализации MoneyMath (MoneyPHP, Brick Money) в unit U1, прогон money/*, D# (plan.py add-decision/decide, ≥ 2 альтернатив), удаление проигравшей и её зависимости",
+      "packages/contracts/tests/** (Pest): граничные случаи вне векторов",
+      "conformance/adapters/php/bin/adapter.php (+ src/), conformance/baseline/php.json (пустой entries для наборов P2)",
+      "composer.json пакета и composer.lock корня"
+    ],
+    "exclude": [
+      "Dart (P2.6)",
+      "identities/type-map/PHPStan-правило float (P2.7)",
+      "Laravel-зависимость в contracts (REQ-CON-01)"
+    ]
+  },
+  "depends_on": [
+    "P2.3",
+    "P2.4"
+  ],
+  "decisions": [
+    "D9",
+    "D19",
+    "D29",
+    "D31",
+    "D32"
+  ],
+  "skills": [
+    "php:code-style-spatie",
+    "php:named-arguments",
+    "php:php-patterns",
+    "php:static-analysis"
+  ],
+  "reads": [
+    {
+      "ref": "knowledge/p2-contracts-design#php-package",
+      "why": "Классы, namespaces, Codec, JCS в PHP",
+      "required": true
+    },
+    {
+      "ref": "knowledge/p2-contracts-design#money-wire",
+      "why": "Алгоритмы parse/allocate/round и процедура выбора библиотеки",
+      "required": true
+    },
+    {
+      "ref": "knowledge/p2-contracts-design#digest",
+      "why": "D32 и worked example",
+      "required": true
+    },
+    {
+      "ref": "knowledge/p2-contracts-design#ops",
+      "why": "ops, которые реализует адаптер",
+      "required": true
+    },
+    {
+      "ref": "knowledge/p2-contracts-design#adapter-protocol",
+      "why": "Протокол адаптера",
+      "required": true
+    },
+    {
+      "path": "spec/revisions/2026-10/README.md",
+      "why": "Набор envelopes ревизии",
+      "required": true
+    },
+    {
+      "path": "spec/revisions/2026-10/problem-codes.json",
+      "why": "Реестр кодов",
+      "required": true
+    }
+  ],
+  "task_files": [
+    {
+      "path": "packages/contracts/**",
+      "change": "any"
+    },
+    {
+      "path": "conformance/adapters/php/**",
+      "change": "create"
+    },
+    {
+      "path": "conformance/baseline/php.json",
+      "change": "create"
+    },
+    {
+      "path": "scripts/spec/export-php.py",
+      "change": "create"
+    },
+    {
+      "path": "composer.lock",
+      "change": "modify"
+    },
+    {
+      "path": "scripts/spec/tests/test_export_php.py",
+      "change": "create",
+      "note": "export-php.py: детерминизм и --check на рассинхроне"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "@plan/knowledge/research/DR-04.md",
+      "role": "input",
+      "note": "DR04-01…DR04-09 и § Выводы для Billium: свойства MoneyPHP и Brick Money (CL-117)"
+    }
+  ],
+  "rules": [
+    "Публичные сигнатуры без float и без Eloquent (REQ-CON-31, M-48); всё вне Internal помечено #[Api].",
+    "Decode отвергает JSON number на месте суммы до разбора значения (REQ-CON-02).",
+    "Пакет не читает файлы ревизии вне себя после установки: данные экспортируются в packages/contracts/resources/ генератором, производная проверяется в слое derived (`export-php.py --check`).",
+    "Baseline php.json для наборов P2 пуст; не-pass вектор чинится, а не вносится в baseline.",
+    "Изменение спеки или fixtures из этого item запрещено; найденный дефект спеки — эскалация с описанием, не правка."
+  ],
+  "guidance": "Сначала U1 (выбор библиотеки), затем остальное. Адаптер: читает stdin построчно (`fgets(STDIN)`), отвечает `fwrite(STDOUT, json_encode($msg, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE).\"\\n\")`, ошибки ProblemException → `{\"error\":{\"code\":…}}`. JCS в PHP: json_encode строк с `JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE` даёт экранирование, совместимое с RFC 8785, кроме управляющих символов — их экранировать как `\\u00XX` lowercase hex; проверять canon-векторами.",
+  "validation": [
+    {
+      "id": "V1",
+      "cmd": "docker compose run --rm toolchain bash scripts/ci.sh --layer php",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V2",
+      "cmd": "docker compose run --rm toolchain python3 conformance/runner/run.py --adapter php",
+      "expect": "exit 0; 0 fail, 0 error, baseline пуст",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V3",
+      "cmd": "docker compose run --rm toolchain bash scripts/ci.sh --layer derived",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V4",
+      "cmd": "docker compose run --rm toolchain python3 -c \"import json;r=json.load(open('packages/contracts/composer.json')).get('require',{});assert sum(k in r for k in ('moneyphp/money','brick/money'))<=1\"",
+      "expect": "exit 0 (проигравшая библиотека удалена; D# CL-117 записан)",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V6",
+      "cmd": "docker compose run --rm toolchain python3 -m unittest discover -s scripts/spec/tests -p test_export_php.py -v",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V5",
+      "cmd": "git diff --check",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    }
+  ],
+  "deliverables": [
+    "packages/contracts с Codec, MoneyMath, ProblemCode, envelopes",
+    "PHP-адаптер, baseline php.json",
+    "D# CL-117 с таблицей pass/fail"
+  ],
+  "route": {
+    "class": "implementation",
+    "effort": "high"
+  },
+  "review": {
+    "mode": "none"
+  },
+  "authority": {
+    "kind": "routine"
+  },
+  "rag": {
+    "need": "none",
+    "status": "not_needed"
+  },
+  "units": [
+    "U1",
+    "U2"
+  ],
+  "result": null,
+  "updated_at": "2026-10-17T12:02:58Z"
+}

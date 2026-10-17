@@ -1,0 +1,178 @@
+{
+  "$schema": "urn:swissknifeman:task:plan:item:v1",
+  "id": "P1.11",
+  "title": "Корректировка P1.7 по review P19 (F03–F05, F09) и последствия P1.10",
+  "status": "todo",
+  "summary": "Одна корректировка выходов P1.7 (и roadmap P1.8 по P19-F09) по findings P19-F03, P19-F04, P19-F05, P19-F09 и по последствиям P1.10: полная таблица полей payment.observation.v1 по REQ-CON-27, receipt policy по D31, отображение PE-01…PE-09 на каталог с новыми сценариями, приёмка INV-07/INV-14 в фазах реализации. check-p1.py P1.7 и P1.8 зелёные.",
+  "why": "P2 замораживает схемы envelopes и fixtures errors/codes по docs/contracts/billium-contracts-v1.md (D9, target-structure § Что замораживается). P19-F03: payment.observation.v1 без sellerRef, currency, eventId, sourceSequence — получатель в P3 не обнаружит пропуск sequence, restore источника и чужого продавца (REQ-FAIL-13, REQ-FAIL-23, INV-14), а добавление обязательных полей после P2 — breaking (REQ-CON-20). P19-F04: PHP и Dart fixtures разойдутся по receipt policy. P19-F05/F09: регрессии ротации credentials и приёмка INV-07/INV-14 не попадают в фазы, реализующие механизм.",
+  "scope": {
+    "include": [
+      "P19-F03: docs/contracts/billium-contracts-v1.md — подраздел ### payment.observation.v1 с таблицей Поле | Тип wire | Обязательно | Семантика | REQ-CON-27; каждое поле REQ-CON-27 (schemaVersion, eventId, contentDigest, sourceAuthority, sourceLineage, partitionRef, sourceSequence, operationRef, operationKind, originalPaymentRef, businessIntentRef, operationRevision, state, currency, cumulative totals в MoneyWire, providerAccountRef, evidenceRef, lineage discrepancy) плюс sellerRef в scope (INV-14); правила dedupe: eventId, (operationRef, operationRevision), пропуск/регресс partitionRef+sourceSequence → billium.observation.parked или billium.recovery.required; строку applyPaymentObservation в § Obligations и invoices сослать на подраздел",
+      "P19-F03: проверить согласованность фазы приёмки feed (PF-13, PF-14, ACC-CON-16 в P9) с первой поставкой embedded ledger (P3, REQ-PROF-20, REQ-OWN-11): либо строка приёмки наблюдения в P3 (каталог), либо D# о переносе; при изменении фаз — правка knowledge/roadmap-proposal.md",
+      "P19-F04: § Ошибки — колонка Receipt (stored | none) в таблице кодов по D31; абзац receipt policy под таблицей переписать по D31 со ссылкой на M-45 и D31; «Действие клиента» у billium.validation.invalid — «исправить envelope; тот же ключ допустим (receipt не сохраняется)»",
+      "P19-F05: docs/acceptance-catalog.md — таблица ### PE → каталог (PE | Суть по SRC-006 §9 | Строки каталога | Покрытие полное/частичное); для непокрытых (минимум PE-08 и PE-04 «late success после replacement refund») — новые строки ACC-CON или ACC-RST с фазой P5 в существующем формате раздела; строка REQ-ACC-03 в § Покрытие требований перечисляет фактические строки",
+      "P19-F09: строка P5 «смена маршрута, затем refund старого charge» (INV-07) и строка P3 «allocation платежа продавца A на obligation продавца B» (INV-14) в ## Concurrency или ## Restore по смыслу; MG-10: фаза P5 с зависимостью P5 → P4 в roadmap-proposal.md либо перенос MG-10 в фазу после P4 (одно из двух, с записью в self-check)",
+      "Последствия P1.10: ACC-RST-04 дополнить сырым клоном без процедуры restore (P19-F01); строки каталога и контракта, затронутые новыми D# P1.10 (порядок refund ↔ ledger, binding, attempt), выровнять",
+      "knowledge/P1.7-self-check.md: раздел ## Корректировка P19 — по строке на P19-F03, F04, F05, F09 и на каждое последствие P1.10: что изменено (файл § раздел), D#"
+    ],
+    "exclude": [
+      "findings P1.6 (P19-F01, F02, F06–F08) — сделаны в P1.10; здесь только отражение их в каталоге и контракте",
+      "JSON Schema-файлы, fixtures и код (P2)",
+      "переименование существующих ID сценариев и требований",
+      "правка reviews/P1-review.md",
+      "изменение envelopes пилота payment.execute.v1/payment.outcome.v1 (breaking — только D# с предложением)"
+    ]
+  },
+  "depends_on": [
+    "P1.10"
+  ],
+  "decisions": [
+    "D7",
+    "D8",
+    "D9",
+    "D29",
+    "D30",
+    "D31"
+  ],
+  "skills": [
+    "architect:api-design"
+  ],
+  "reads": [
+    {
+      "path": "docs/contracts/billium-contracts-v1.md",
+      "why": "Исправляемый артефакт",
+      "required": true
+    },
+    {
+      "path": "docs/acceptance-catalog.md",
+      "why": "Исправляемый артефакт",
+      "required": true
+    },
+    {
+      "path": "docs/requirements.md",
+      "section": "REQ-CON-27, REQ-ACC-03, REQ-PROF-20, REQ-OWN-11, REQ-FAIL-13, REQ-FAIL-23",
+      "why": "Поля конверта наблюдения и требование PE",
+      "required": true
+    },
+    {
+      "path": "@plan/artifacts/P1-design/check-p1.py",
+      "section": "check_contracts, check_roadmap",
+      "why": "Что проверяют V1 и V2",
+      "required": true
+    }
+  ],
+  "task_files": [
+    {
+      "path": "docs/contracts/billium-contracts-v1.md",
+      "change": "modify"
+    },
+    {
+      "path": "docs/acceptance-catalog.md",
+      "change": "modify"
+    },
+    {
+      "path": "@plan/knowledge/roadmap-proposal.md",
+      "change": "modify",
+      "note": "только при переносе фаз (F03, F09)"
+    },
+    {
+      "path": "@plan/knowledge/P1.7-self-check.md",
+      "change": "modify"
+    },
+    {
+      "path": "@plan/decisions/D*.json",
+      "change": "any",
+      "note": "только через plan.py add-decision/decide"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "@plan/reviews/P1-review.md",
+      "role": "input",
+      "note": "Дефект и ожидаемое исправление — норма корректировки (раздел: P19-F03, P19-F04, P19-F05, P19-F09)"
+    },
+    {
+      "path": "@plan/knowledge/P1.6-self-check.md",
+      "role": "input",
+      "note": "Что изменил P1.10 и какие D# появились — источник последствий для контракта и каталога (раздел: Корректировка P19)"
+    },
+    {
+      "path": "@plan/knowledge/roadmap-proposal.md",
+      "role": "input",
+      "note": "Фазы приёмки feed и зависимость MG-10 (раздел: P3, P5, P9)"
+    }
+  ],
+  "rules": [
+    "risk-class: data-integrity. Имена полей пилота сохраняются; поле REQ-CON-27 вне конверта — только с D# и причиной.",
+    "Новые сценарии каталога — новые ID в продолжение нумерации раздела (ACC-CON-18…, ACC-RST-12…); существующие ID не переименовываются; формат строки — как у соседних строк раздела (N, барьеры, начальные данные, допустимые исходы, INV, DB proof для ACC-CON; checkpoint, потерянный effect/reply, recovery barrier, условие возобновления для ACC-RST).",
+    "Receipt policy — единственный носитель таблица кодов (M-45); абзац ниже таблицы не противоречит колонке.",
+    "Каждое изменённое нормативное утверждение ссылается на ID с владельцем (D7).",
+    "Каждый finding закрыт или отклонён с D# в self-check; молчаливый пропуск — RED повторного review."
+  ],
+  "guidance": "Порядок: F04 (механически по D31) → F03 → последствия P1.10 → F05 → F09. Таблицу payment.observation.v1 строить по образцу ### payment.execute.v1 (Поле | Тип wire | Обязательно | Семантика) с дополнительной колонкой REQ-CON-27. Суммы — MoneyWire (D29), время — RFC 3339 UTC. Если для PE нет источника вне машины владельца, отображение строить по REQ-ACC-03 и цитатам finding P19-F05 (PE-01 ≈ ACC-CON-01, PE-03 ≈ PF-03, PE-06 ≈ PB-23, PE-07 ≈ ACC-RST-08), отметив в self-check. Источник PE и конверта — SRC-006 (research/P1-corpus.md): BRAIN=/home/vostrikov/Vaults/Brain, файл Infrastructure/Workspace/Domains/Billing/Payment-Execution-Passport.md §4, §9; вне машины владельца — цитаты docs/requirements.md и knowledge/corpus-ledger.md.",
+  "validation": [
+    {
+      "id": "V1",
+      "cmd": "python3 plans/2026.10.14-№1-BILLIUM-V1/artifacts/P1-design/check-p1.py P1.7",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V2",
+      "cmd": "python3 plans/2026.10.14-№1-BILLIUM-V1/artifacts/P1-design/check-p1.py P1.8",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V3",
+      "cmd": "grep -c -E 'sourceSequence|partitionRef|eventId|sellerRef|providerAccountRef' docs/contracts/billium-contracts-v1.md",
+      "expect": "вывод ≥ 5",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V4",
+      "cmd": "grep -n 'PE-08' docs/acceptance-catalog.md",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V5",
+      "cmd": "grep -c 'P19-F0[3459]' plans/2026.10.14-№1-BILLIUM-V1/knowledge/P1.7-self-check.md",
+      "expect": "вывод ≥ 4",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V6",
+      "cmd": "python3 -I .swissknifeman/launcher.py planner check 2026.10.14-№1-BILLIUM-V1",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    },
+    {
+      "id": "V7",
+      "cmd": "git diff --check",
+      "expect": "exit 0",
+      "kind": "acceptance"
+    }
+  ],
+  "deliverables": [
+    "contracts v1: ### payment.observation.v1, колонка Receipt в § Ошибки по D31",
+    "acceptance-catalog: таблица PE → каталог, новые строки PE-08/PE-04/INV-07/INV-14, ACC-RST-04 с сырым клоном",
+    "roadmap-proposal.md при переносе фаз; knowledge/P1.7-self-check.md § Корректировка P19"
+  ],
+  "route": {
+    "class": "frontier",
+    "effort": "high"
+  },
+  "review": {
+    "mode": "none"
+  },
+  "authority": {
+    "kind": "routine"
+  },
+  "rag": {
+    "need": "none",
+    "status": "not_needed"
+  },
+  "result": null,
+  "updated_at": "2026-10-17T11:50:24Z"
+}
