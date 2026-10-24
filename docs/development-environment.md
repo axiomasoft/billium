@@ -6,9 +6,17 @@ core skeleton `packages/core`; domain code, persistence and billing APIs start i
 
 ## Toolchain and checks
 
-The host has PHP 8.3 and no Dart SDK, so every check runs in the `toolchain` image (D33): PHP 8.4,
+Every check can run in the `toolchain` image (D33): PHP 8.4,
 Composer, Dart SDK 3.13.5 and the pinned Python tooling. `compose.yaml` runs it as `UID:GID` of the host user
 so files created in the container stay owned by you. PostgreSQL is not needed before P3.
+
+Plans exist only in the SwissKnifeman workspace `axioma` (see [planning](planning.md)).
+Before running the gate, clone or sync that workspace. Compose mounts the directory containing
+workspaces at `/skm-workspaces` read-only and sets `SKM_WORKSPACES` inside the container.
+On the host it honors `SKM_WORKSPACES_ROOT`, then `SKM_WORKSPACES`, then
+`$SKM_HOME/workspaces`, otherwise `~/.local/share/swissknifeman/workspaces`.
+For example, if the workspace checkout is `/srv/workspaces/axioma`, export
+`SKM_WORKSPACES=/srv/workspaces`. Missing workspace directories fail instead of being created.
 
 ```bash
 docker compose build toolchain
@@ -22,6 +30,11 @@ docker compose run --rm toolchain bash scripts/smoke/consumer-install.sh [php|da
 `scripts/ci.sh` is the single carrier of the gate composition and `.github/workflows/ci.yml` calls it unchanged.
 A layer without its subject, or a missing tool, is red, never skipped. Regenerate derived files with the
 script that `--check` names (for example `python3 scripts/spec/identities.py`).
+
+GitHub Actions checks out the product into `billium/` and the workspace repository
+`academici/swissknifeman-axioma-workspace` into `workspaces/axioma/`, then installs Composer
+dependencies before the gate. Configure the repository secret `SKM_WORKSPACE_TOKEN` with read
+access to that private workspace repository. The workspace checkout stays separate from the product.
 
 Identities (`spec/identities.json`, snapshots in `spec/identities/snapshots/`) and `spec/type-map.json` are
 frozen to 1.0 by major versions only: an entry that disappears must be kept with status `retired`.

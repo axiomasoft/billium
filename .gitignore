@@ -19,8 +19,6 @@
 .swissknifeman/state/
 .swissknifeman/orch/
 .swissknifeman/instruction-adopt/
-plans/*/.plan-cache/
-plans/*/artifacts/**/*.jsonl
 .claude/runs/
 .claude/analyze/
 .claude/worktrees/

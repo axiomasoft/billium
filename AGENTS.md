@@ -15,6 +15,9 @@
   `docs/`; run the relevant PHP/Dart checks once their tooling exists.
 - Preserve unrelated worktree changes. Keep credentials and machine-specific
   agent settings out of Git.
+- Plans exist only in the SwissKnifeman workspace named by
+  `.swissknifeman/project.json`; resolve them with `python3 scripts/spec/workspace.py`.
+  Never read or create a repository-local plan store. See `docs/planning.md`.
 - Skills use the swissknifeman connect channel. Project memory is accessed
   explicitly through mAInd in scope `project:billium`; code navigation uses
   Serena with PHP and Dart language servers.

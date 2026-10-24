@@ -4,8 +4,10 @@ Billing for the software seller of the Axioma ecosystem, implemented in **PHP**.
 **Dart** is the contracts client and SDK: it builds commands and reads outcomes, but never writes
 money state.
 
-The repository contains the executable plan `plans/2026.10.14-№1-BILLIUM-V1`, the P1 design,
-the contracts spec revision [`spec/revisions/2026-10`](spec/revisions/2026-10/README.md) (draft),
+Plans live exclusively in the SwissKnifeman workspace `axioma`, under
+`projects/billium/plans/2026.10.14-№1-BILLIUM-V1/`; see [planning](docs/planning.md).
+The repository contains the P1 design, the contracts spec revision
+[`spec/revisions/2026-10`](spec/revisions/2026-10/README.md) (draft),
 language-neutral [`fixtures/`](fixtures/README.md), the `conformance/` runner with the JCS oracle,
 and the `billium-contracts` packages for PHP and Dart. Domain code (core, persistence) starts in P3.
 
@@ -22,7 +24,9 @@ Stack: PHP 8.4+, Laravel 13, PostgreSQL 16+; packages `axiomasoft/billium-*` in 
 
 ## Development
 
-All checks run in the `toolchain` image (PHP 8.4, Composer, Dart SDK, Python tooling); the host needs only Docker.
+All checks run in the `toolchain` image (PHP 8.4, Composer, Dart SDK, Python tooling).
+The host needs Docker and the `axioma` workspace checkout. Compose mounts the workspace read-only;
+set `SKM_WORKSPACES` to its parent directory when it is outside the default SwissKnifeman machine home.
 
 ```bash
 docker compose build toolchain

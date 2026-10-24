@@ -7,7 +7,21 @@ on:
 jobs:
   gate:
     runs-on: ubuntu-latest
+    env:
+      SKM_WORKSPACES: ${{ github.workspace }}/workspaces
+    defaults:
+      run:
+        working-directory: billium
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: billium
+      - uses: actions/checkout@v4
+        with:
+          repository: academici/swissknifeman-axioma-workspace
+          path: workspaces/axioma
+          token: ${{ secrets.SKM_WORKSPACE_TOKEN }}
+          persist-credentials: false
       - run: docker compose build toolchain
+      - run: docker compose run --rm toolchain composer install --no-interaction --prefer-dist
       - run: docker compose run --rm toolchain bash scripts/ci.sh
