@@ -2,6 +2,300 @@
   "revision": "2026-10",
   "entries": [
     {
+      "kind": "config-key",
+      "id": "billium.connection",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.feed.bootstrap_batch",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.feed.bootstrap_lease_seconds",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.feed.drain_batch",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.feed.signing_key",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.financial_session.seal_lock_timeout_ms",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.idempotency.lock_timeout_ms",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.inbox.handler_compatibility",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.inbox.retention_floor_seconds",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.inbox.retry_backoff_seconds",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.inbox.retry_budget",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.installation_ref",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.ledger.refund_reconcile_after_seconds",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.modules.composition",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.modules.enabled",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.outbox.claim_seconds",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.outbox.delivery_backoff_seconds",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.outbox.delivery_budget",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.outbox.maintenance_connection",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.outbox.relay_batch",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.outbox.retention_floor_seconds",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.runner.max_attempts",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.runner.root_deadline_ms",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.runtime_role.preflight",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.composition_forbidden",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.composition_required",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.composition_unknown",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.core_api_unsupported",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.dependency_cycle",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.dependency_missing",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.dependency_range",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.duplicate_id",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.event_contract_conflict",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.historical_reader_missing",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.migration_unapplied",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.ownership_conflict",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.port_forbidden",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.port_missing",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.port_unknown",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.schema_read_unsupported",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.schema_write_unsupported",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.unknown",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
       "kind": "envelope",
       "id": "allocation.reallocate.v1",
       "status": "new",
@@ -1906,6 +2200,237 @@
       "source": "spec/revisions/2026-10/schema/usage/receipt.v1.json"
     },
     {
+      "kind": "event-type",
+      "id": "allocation.applied.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "event-type",
+      "id": "credit_note.issued.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "event-type",
+      "id": "discrepancy.recorded.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "event-type",
+      "id": "invoice.issued.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "event-type",
+      "id": "obligation.adjusted.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "event-type",
+      "id": "obligation.created.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "event-type",
+      "id": "payment.effect.outcome.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/event-catalogs/events-2026-10-v2.json"
+    },
+    {
+      "kind": "event-type",
+      "id": "payment.outcome.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "invoice-status",
+      "id": "discarded",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "invoice-status",
+      "id": "draft",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "invoice-status",
+      "id": "issued",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "invoice-status",
+      "id": "paid",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "invoice-status",
+      "id": "partially_paid",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "invoice-status",
+      "id": "uncollectible",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "invoice-status",
+      "id": "void",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_20_000001_create_billium_append_only_function",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_20_000002_create_billium_idempotency_receipt_table",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_20_000003_create_billium_outbox_event_table",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_20_000004_create_billium_outbox_watermark_table",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_20_000005_create_billium_money_commit_log_table",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_20_000006_create_billium_installation_state_table",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_20_000007_create_billium_financial_session_table",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_20_000008_create_billium_financial_session_event_table",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_20_000009_create_billium_module_state_table",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_20_000010_create_billium_module_transitions_table",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_21_000001_create_billium_ledger",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_21_000002_guard_billium_ledger",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_28_000011_create_billium_event_protocol",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "operation-status",
+      "id": "accepted-unknown",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "operation-status",
+      "id": "cancelled",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "operation-status",
+      "id": "failed-terminal",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "operation-status",
+      "id": "pending",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "operation-status",
+      "id": "succeeded",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
       "kind": "problem-code",
       "id": "billium.allocation.exceeds_available",
       "status": "new",
@@ -2074,522 +2599,11 @@
       "source": "spec/revisions/2026-10/problem-codes.json"
     },
     {
-      "kind": "event-type",
-      "id": "allocation.applied.v1",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/revisions/2026-10/schema/common/defs.json"
-    },
-    {
-      "kind": "event-type",
-      "id": "credit_note.issued.v1",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/revisions/2026-10/schema/common/defs.json"
-    },
-    {
-      "kind": "event-type",
-      "id": "discrepancy.recorded.v1",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/revisions/2026-10/schema/common/defs.json"
-    },
-    {
-      "kind": "event-type",
-      "id": "invoice.issued.v1",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/revisions/2026-10/schema/common/defs.json"
-    },
-    {
-      "kind": "event-type",
-      "id": "obligation.adjusted.v1",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/revisions/2026-10/schema/common/defs.json"
-    },
-    {
-      "kind": "event-type",
-      "id": "obligation.created.v1",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/revisions/2026-10/schema/common/defs.json"
-    },
-    {
-      "kind": "event-type",
-      "id": "payment.effect.outcome.v1",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/revisions/2026-10/event-catalogs/events-2026-10-v2.json"
-    },
-    {
-      "kind": "event-type",
-      "id": "payment.outcome.v1",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/revisions/2026-10/schema/common/defs.json"
-    },
-    {
-      "kind": "operation-status",
-      "id": "accepted-unknown",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/revisions/2026-10/schema/common/defs.json"
-    },
-    {
-      "kind": "operation-status",
-      "id": "cancelled",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/revisions/2026-10/schema/common/defs.json"
-    },
-    {
-      "kind": "operation-status",
-      "id": "failed-terminal",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/revisions/2026-10/schema/common/defs.json"
-    },
-    {
-      "kind": "operation-status",
-      "id": "pending",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/revisions/2026-10/schema/common/defs.json"
-    },
-    {
-      "kind": "operation-status",
-      "id": "succeeded",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/revisions/2026-10/schema/common/defs.json"
-    },
-    {
-      "kind": "invoice-status",
-      "id": "discarded",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/revisions/2026-10/schema/common/defs.json"
-    },
-    {
-      "kind": "invoice-status",
-      "id": "draft",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/revisions/2026-10/schema/common/defs.json"
-    },
-    {
-      "kind": "invoice-status",
-      "id": "issued",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/revisions/2026-10/schema/common/defs.json"
-    },
-    {
-      "kind": "invoice-status",
-      "id": "paid",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/revisions/2026-10/schema/common/defs.json"
-    },
-    {
-      "kind": "invoice-status",
-      "id": "partially_paid",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/revisions/2026-10/schema/common/defs.json"
-    },
-    {
-      "kind": "invoice-status",
-      "id": "uncollectible",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/revisions/2026-10/schema/common/defs.json"
-    },
-    {
-      "kind": "invoice-status",
-      "id": "void",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/revisions/2026-10/schema/common/defs.json"
-    },
-    {
       "kind": "spec-revision",
       "id": "2026-10",
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/README.md"
-    },
-    {
-      "kind": "config-key",
-      "id": "billium.connection",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "config-key",
-      "id": "billium.feed.bootstrap_batch",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "config-key",
-      "id": "billium.feed.bootstrap_lease_seconds",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "config-key",
-      "id": "billium.feed.drain_batch",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "config-key",
-      "id": "billium.feed.signing_key",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "config-key",
-      "id": "billium.financial_session.seal_lock_timeout_ms",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "config-key",
-      "id": "billium.idempotency.lock_timeout_ms",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "config-key",
-      "id": "billium.inbox.handler_compatibility",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "config-key",
-      "id": "billium.inbox.retention_floor_seconds",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "config-key",
-      "id": "billium.inbox.retry_backoff_seconds",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "config-key",
-      "id": "billium.inbox.retry_budget",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "config-key",
-      "id": "billium.installation_ref",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "config-key",
-      "id": "billium.ledger.refund_reconcile_after_seconds",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "config-key",
-      "id": "billium.modules.composition",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "config-key",
-      "id": "billium.modules.enabled",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "config-key",
-      "id": "billium.outbox.claim_seconds",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "config-key",
-      "id": "billium.outbox.delivery_backoff_seconds",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "config-key",
-      "id": "billium.outbox.delivery_budget",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "config-key",
-      "id": "billium.outbox.maintenance_connection",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "config-key",
-      "id": "billium.outbox.relay_batch",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "config-key",
-      "id": "billium.outbox.retention_floor_seconds",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "config-key",
-      "id": "billium.runner.max_attempts",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "config-key",
-      "id": "billium.runner.root_deadline_ms",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "config-key",
-      "id": "billium.runtime_role.preflight",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "migration",
-      "id": "2026_10_20_000001_create_billium_append_only_function",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "migration",
-      "id": "2026_10_20_000002_create_billium_idempotency_receipt_table",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "migration",
-      "id": "2026_10_20_000003_create_billium_outbox_event_table",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "migration",
-      "id": "2026_10_20_000004_create_billium_outbox_watermark_table",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "migration",
-      "id": "2026_10_20_000005_create_billium_money_commit_log_table",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "migration",
-      "id": "2026_10_20_000006_create_billium_installation_state_table",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "migration",
-      "id": "2026_10_20_000007_create_billium_financial_session_table",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "migration",
-      "id": "2026_10_20_000008_create_billium_financial_session_event_table",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "migration",
-      "id": "2026_10_20_000009_create_billium_module_state_table",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "migration",
-      "id": "2026_10_20_000010_create_billium_module_transitions_table",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "migration",
-      "id": "2026_10_28_000011_create_billium_event_protocol",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "doctor-finding",
-      "id": "module.composition_forbidden",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "doctor-finding",
-      "id": "module.composition_required",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "doctor-finding",
-      "id": "module.composition_unknown",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "doctor-finding",
-      "id": "module.core_api_unsupported",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "doctor-finding",
-      "id": "module.dependency_cycle",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "doctor-finding",
-      "id": "module.dependency_missing",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "doctor-finding",
-      "id": "module.dependency_range",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "doctor-finding",
-      "id": "module.duplicate_id",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "doctor-finding",
-      "id": "module.event_contract_conflict",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "doctor-finding",
-      "id": "module.historical_reader_missing",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "doctor-finding",
-      "id": "module.migration_unapplied",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "doctor-finding",
-      "id": "module.ownership_conflict",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "doctor-finding",
-      "id": "module.port_forbidden",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "doctor-finding",
-      "id": "module.port_missing",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "doctor-finding",
-      "id": "module.port_unknown",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "doctor-finding",
-      "id": "module.schema_read_unsupported",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "doctor-finding",
-      "id": "module.schema_write_unsupported",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
-    },
-    {
-      "kind": "doctor-finding",
-      "id": "module.unknown",
-      "status": "new",
-      "since": "2026-10",
-      "source": "spec/modules.json"
     }
   ]
 }

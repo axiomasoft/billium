@@ -317,14 +317,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "ledger",
-      "currentSchemaVersion": 0,
+      "currentSchemaVersion": 2,
       "supportedSchemaReadRange": {
-        "min": 0,
-        "max": 0
+        "min": 2,
+        "max": 2
       },
       "supportedSchemaWriteRange": {
-        "min": 0,
-        "max": 0
+        "min": 2,
+        "max": 2
       },
       "requiresModules": [
         {
@@ -350,11 +350,40 @@
         "obligation.prepare.v1",
         "payment.observation.v1"
       ],
-      "ownedTables": [],
+      "ownedTables": [
+        "billium_allocation_receipt",
+        "billium_invoice",
+        "billium_obligation",
+        "billium_adjustment",
+        "billium_customer_credit",
+        "billium_settlement_intent",
+        "billium_settlement_target",
+        "billium_settlement_intent_closure",
+        "billium_observed_payment",
+        "billium_observed_payment_revision",
+        "billium_payment",
+        "billium_payment_revision",
+        "billium_allocation",
+        "billium_invoice_line",
+        "billium_credit_note",
+        "billium_ledger_discrepancy",
+        "billium_discrepancy_event"
+      ],
       "configKeys": [
         "billium.ledger.refund_reconcile_after_seconds"
       ],
-      "migrationIdentities": [],
+      "migrationIdentities": [
+        {
+          "id": "2026_10_21_000001_create_billium_ledger",
+          "version": 1,
+          "checksum": "sha256:52361eefc1774b6b3ac1d38f189c8affbdbd1777039252da60499a0a79f7c132"
+        },
+        {
+          "id": "2026_10_21_000002_guard_billium_ledger",
+          "version": 2,
+          "checksum": "sha256:cb53662fa8235dab5f180840b5cb58ff97067da5829a240227ba857930cec324"
+        }
+      ],
       "disablePolicy": {
         "dependents": "block",
         "keeps": [

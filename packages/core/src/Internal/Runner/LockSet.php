@@ -36,10 +36,11 @@ final class LockSet
             if (isset($groups[$group])) {
                 $previous = $groups[$group];
                 if ($previous->table !== $request->table || $previous->keyColumn !== $request->keyColumn
-                    || $previous->scope !== $request->scope || $previous->shared !== $request->shared) {
+                    || $previous->scope !== $request->scope || $previous->shared !== $request->shared
+                    || $previous->guardedRoutine !== $request->guardedRoutine) {
                     throw new LockOrderViolation("Rank segment {$group} admits one table and one mode per request");
                 }
-                $request = new LockRequest($request->rank, $request->table, [...$previous->keys, ...$request->keys], $request->shared, $request->scope, $request->keyColumn, $request->segment);
+                $request = new LockRequest($request->rank, $request->table, [...$previous->keys, ...$request->keys], $request->shared, $request->scope, $request->keyColumn, $request->segment, $request->guardedRoutine);
             }
             $groups[$group] = $request;
         }
@@ -124,6 +125,13 @@ final class LockSet
             static fn (int|string $key): string => $text ? '"'.addcslashes((string) $key, '"\\').'"' : (string) $key,
             $keys,
         )).'}';
+        // D60: PostgreSQL FOR UPDATE itself requires UPDATE privilege. Protected owners expose lock-only routines.
+        if ($request->guardedRoutine !== null) {
+            return [
+                'SELECT lock_key FROM public."'.$request->guardedRoutine.'"(?::bigint[], ?::text, ?::text, ?::boolean)',
+                [$literal, $this->caller->sellerRef, $this->caller->environment, $request->shared],
+            ];
+        }
         $sql = 'SELECT '.$column.' AS lock_key FROM public."'.$request->table.'" WHERE '.$column.' = ANY(?::'.($text ? 'text' : 'bigint').'[])';
         $bindings = [$literal];
         if ($request->scope === LockScope::Seller) {

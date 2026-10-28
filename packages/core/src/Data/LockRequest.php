@@ -29,6 +29,7 @@ final readonly class LockRequest
         public LockScope $scope = LockScope::Seller,
         public string $keyColumn = 'id',
         public int $segment = 0,
+        public ?string $guardedRoutine = null,
     ) {
         if ($rank === LockRank::Claim) {
             throw new InvalidArgumentException('The claim is an insert, not a row lock');
@@ -38,6 +39,11 @@ final readonly class LockRequest
         }
         if ($segment < 0 || $segment > 9) {
             throw new InvalidArgumentException('Lock segment out of range');
+        }
+        if ($guardedRoutine !== null && ($guardedRoutine !== 'billium_lock_'.substr($table, strlen('billium_'))
+            || $scope !== LockScope::Seller || $keyColumn !== 'id'
+            || count(array_filter($keys, is_int(...))) !== count($keys))) {
+            throw new InvalidArgumentException('A guarded lock uses scoped ids and a narrow billium_lock_ routine');
         }
         if ($keys === []) {
             throw new InvalidArgumentException('A lock request names at least one key');

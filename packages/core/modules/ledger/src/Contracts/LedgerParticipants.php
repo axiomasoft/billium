@@ -20,7 +20,7 @@ use Billium\Ledger\Data\RecordObligation;
  * Typed ledger participants of a root transaction owned by another module (D60, transaction-participants). Each method
  * receives the CURRENT TransactionContext, requires `ledger` in its admitted closure and the same runner/connection/
  * session, takes only predeclared locks through that context and never starts a runner; public Ledger mutations remain
- * root-only. No method exposes SQL, a connection or foreign tables. Implementation and proofs: P3.8.
+ * root-only. No method exposes SQL, a connection or foreign tables. Record/adjust/declare implementation: P3.6; invoice: P3.7; credit note and closure proof boundary: P3.8.
  */
 #[Api]
 #[Spi(SpiKind::Call)]

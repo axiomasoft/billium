@@ -7,7 +7,7 @@ namespace Billium\Ledger\Data;
 use Billium\Contracts\Attributes\Api;
 use Billium\Contracts\Data\Money;
 
-/** Append a correction without changing the original terms. Owning validation and mutation belong to P3.8. */
+/** Signed Money appends an increase (>0) or decrease (<0); the journal stores a positive magnitude (INV-12). */
 #[Api]
 final readonly class AdjustObligation
 {
