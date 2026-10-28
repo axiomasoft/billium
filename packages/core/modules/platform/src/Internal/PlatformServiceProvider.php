@@ -17,6 +17,7 @@ use Billium\Core\Contracts\OperationRunner;
 use Billium\Platform\Contracts\CommandOutbox;
 use Billium\Platform\Contracts\EventContractRegistrar;
 use Billium\Platform\Contracts\EventFeed;
+use Billium\Platform\Contracts\FeedPartitions;
 use Billium\Platform\Contracts\IdempotencyStore;
 use Billium\Platform\Contracts\Installation;
 use Billium\Platform\Contracts\Outbox;
@@ -28,7 +29,11 @@ use Billium\Platform\Internal\Console\PruneCommand;
 use Billium\Platform\Internal\Console\RegisterEventContractsCommand;
 use Billium\Platform\Internal\Console\RelayCommand;
 use Billium\Platform\Internal\EventContracts\DatabaseEventContractRegistrar;
+use Billium\Platform\Internal\Feed\BootstrapCoordinator;
+use Billium\Platform\Internal\Feed\DatabaseFeedPartitions;
+use Billium\Platform\Internal\Feed\PartitionStore;
 use Billium\Platform\Internal\Idempotency\DatabaseIdempotencyStore;
+use Billium\Platform\Internal\Inbox\CustodyProcessor;
 use Billium\Platform\Internal\Installation\DatabaseInstallation;
 use Billium\Platform\Internal\Installation\InitInstallationCommand;
 use Billium\Platform\Internal\Installation\PlatformRootAdmission;
@@ -71,6 +76,14 @@ final class PlatformServiceProvider extends ServiceProvider
                 static fn (): CallerContext => $app->make(CallerContext::class),
                 static fn (): iterable => self::sources($app), self::int('billium.feed.bootstrap_lease_seconds', 60));
         });
+        $this->app->singleton(PartitionStore::class, static fn (Application $app): PartitionStore => new PartitionStore($app->make(DatabaseManager::class)));
+        $this->app->singleton(FeedPartitions::class, static fn (Application $app): DatabaseFeedPartitions => new DatabaseFeedPartitions(
+            new CustodyProcessor(
+                $app->make(PartitionStore::class), static fn (): OperationRunner => $app->make(OperationRunner::class),
+                self::int('billium.inbox.retry_backoff_seconds', 5), self::int('billium.inbox.retry_budget', 10),
+            ),
+            new BootstrapCoordinator($app->make(PartitionStore::class), static fn (): OperationRunner => $app->make(OperationRunner::class)),
+        ));
         $this->app->singleton(OutboxPruner::class, static function (Application $app): OutboxPruner {
             $maintenance = config('billium.outbox.maintenance_connection');
             $floor = config('billium.outbox.retention_floor_seconds');

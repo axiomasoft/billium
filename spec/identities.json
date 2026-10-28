@@ -2460,6 +2460,27 @@
     },
     {
       "kind": "migration",
+      "id": "2026_10_20_000101_create_billium_feed_partition_table",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_20_000102_create_billium_inbox_message_table",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_20_000103_create_billium_inbox_conflict_table",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
       "id": "2026_10_21_000001_create_billium_ledger",
       "status": "new",
       "since": "2026-10",

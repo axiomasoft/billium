@@ -11,7 +11,7 @@ return new class extends Migration
     {
         // Shared backstop of immutable platform history (outbox events, commit log, transitions): no UPDATE/DELETE.
         DB::unprepared(<<<'SQL'
-            CREATE FUNCTION public.billium_append_only() RETURNS trigger
+            CREATE OR REPLACE FUNCTION public.billium_append_only() RETURNS trigger
             LANGUAGE plpgsql SET search_path = pg_catalog, public AS $$
             BEGIN
                 RAISE EXCEPTION 'billium: % is append-only (% refused)', TG_TABLE_NAME, TG_OP USING ERRCODE = '55000';

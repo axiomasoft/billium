@@ -32,7 +32,7 @@ return new class extends Migration
                 )
             );
 
-            CREATE FUNCTION public.billium_idempotency_receipt_guard() RETURNS trigger
+            CREATE OR REPLACE FUNCTION public.billium_idempotency_receipt_guard() RETURNS trigger
             LANGUAGE plpgsql SET search_path = pg_catalog, public AS $$
             BEGIN
                 IF TG_OP = 'DELETE' THEN

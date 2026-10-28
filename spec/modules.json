@@ -161,14 +161,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "platform",
-      "currentSchemaVersion": 11,
+      "currentSchemaVersion": 14,
       "supportedSchemaReadRange": {
         "min": 10,
-        "max": 11
+        "max": 14
       },
       "supportedSchemaWriteRange": {
         "min": 10,
-        "max": 11
+        "max": 14
       },
       "requiresModules": [],
       "requiresPorts": [],
@@ -192,7 +192,12 @@
         "billium_outbox_command",
         "billium_outbox_command_delivery",
         "billium_feed_subscription",
-        "billium_feed_bootstrap_lease"
+        "billium_feed_bootstrap_lease",
+        "billium_feed_partition",
+        "billium_feed_bootstrap_session",
+        "billium_feed_bootstrap_item",
+        "billium_inbox_message",
+        "billium_inbox_conflict"
       ],
       "configKeys": [
         "billium.connection",
@@ -223,12 +228,12 @@
         {
           "id": "2026_10_20_000001_create_billium_append_only_function",
           "version": 1,
-          "checksum": "sha256:04578bed692e7a955c095e35ebc48483488cb7c935ab9081cd458229df906f34"
+          "checksum": "sha256:9bb81a1faf85c36ab76e69ea3f5f7848f9ce70d82ff78ce149295c880e4385a5"
         },
         {
           "id": "2026_10_20_000002_create_billium_idempotency_receipt_table",
           "version": 2,
-          "checksum": "sha256:fe1b110d5deb41f94be0d8813a90d4a87d6182b60c80e6bb3535e87e33b865ff"
+          "checksum": "sha256:ec7530f8271f8f9e1296330211fd147a94aa9d42c24afc88fc32580468edd963"
         },
         {
           "id": "2026_10_20_000003_create_billium_outbox_event_table",
@@ -253,7 +258,7 @@
         {
           "id": "2026_10_20_000007_create_billium_financial_session_table",
           "version": 7,
-          "checksum": "sha256:2f1f267ccd25a05852189eb8f5016a917a8f51e829b0d751664ea747f526f532"
+          "checksum": "sha256:e0b1ffc48d87b52a5c2839594c3ab68fa2a80e78abc5655873d565ac77890505"
         },
         {
           "id": "2026_10_20_000008_create_billium_financial_session_event_table",
@@ -263,7 +268,7 @@
         {
           "id": "2026_10_20_000009_create_billium_module_state_table",
           "version": 9,
-          "checksum": "sha256:871985769cd0a508f1b131fe3622b997d6c4651db7072411a628fc93f934b997"
+          "checksum": "sha256:8f5286fb62f0e497c73aad934588eaac7cca6c5cb175db3136b2498fe31453d0"
         },
         {
           "id": "2026_10_20_000010_create_billium_module_transitions_table",
@@ -273,7 +278,22 @@
         {
           "id": "2026_10_28_000011_create_billium_event_protocol",
           "version": 11,
-          "checksum": "sha256:72569f0986e02331d0ba3f29a7ec7a82505f561cd31e060c6ce8889250b8665a"
+          "checksum": "sha256:e00c4cb61aa2bbe06b577cb8f2e239504bfd6323bb6295785cac2508fff7445e"
+        },
+        {
+          "id": "2026_10_20_000101_create_billium_feed_partition_table",
+          "version": 12,
+          "checksum": "sha256:28f159bfa329823a3b9ebd6cf633393a1bea9a91eeb4d1665305d497c25bdcd5"
+        },
+        {
+          "id": "2026_10_20_000102_create_billium_inbox_message_table",
+          "version": 13,
+          "checksum": "sha256:ff74ff876e758afba68be11dd5f506f596091c20f83afbc35e8677c3b5d5d0ef"
+        },
+        {
+          "id": "2026_10_20_000103_create_billium_inbox_conflict_table",
+          "version": 14,
+          "checksum": "sha256:a5515bc471c69534423dabaa8405780f6a527ba493ea8d968249bb65fe6609d9"
         }
       ],
       "disablePolicy": {
@@ -872,7 +892,7 @@
         {
           "eventType": "payment.effect.outcome.v1",
           "envelopeSchema": "billium.event.v2",
-          "payloadSchemaRef": "urn:billium:spec:2026-10:payment/effect-outcome.v1.json",
+          "payloadSchemaRef": "spec/revisions/2026-10/schema/payment/effect-outcome.v1.json",
           "payloadSchemaDigest": "sha256:296b8117fe17c02b1853ccf5d6de2467a583588e83e6e2eedfcb1c020dd84fc5",
           "bootstrapMode": "replay_only",
           "retentionPolicyRef": "financial-permanent",

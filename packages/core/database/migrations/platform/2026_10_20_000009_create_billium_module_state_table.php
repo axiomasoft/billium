@@ -25,7 +25,7 @@ return new class extends Migration
                 CONSTRAINT billium_module_state_module_key UNIQUE (installation_ref, module_id)
             );
 
-            CREATE FUNCTION public.billium_module_state_guard() RETURNS trigger
+            CREATE OR REPLACE FUNCTION public.billium_module_state_guard() RETURNS trigger
             LANGUAGE plpgsql SET search_path = pg_catalog, public AS $$
             BEGIN
                 IF TG_OP = 'DELETE' THEN

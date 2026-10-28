@@ -33,7 +33,7 @@ return new class extends Migration
             CREATE UNIQUE INDEX billium_financial_session_one_live ON public.billium_financial_session (installation_ref)
                 WHERE state IN ('active', 'sealing');
 
-            CREATE FUNCTION public.billium_financial_session_guard() RETURNS trigger
+            CREATE OR REPLACE FUNCTION public.billium_financial_session_guard() RETURNS trigger
             LANGUAGE plpgsql SET search_path = pg_catalog, public AS $$
             BEGIN
                 IF TG_OP = 'DELETE' THEN
