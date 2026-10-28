@@ -2,7 +2,8 @@
 """Build spec/identities.json and spec/identities/snapshots/<kind>.json from a spec revision (M-27, M-28).
 
 The registry is the frozen-identity ledger: every envelope, envelope field, problem code, event type,
-operation status, invoice status and the spec revision itself. Entries are appended with status "new";
+operation status, invoice status and the spec revision itself; config keys, migration identities and doctor
+findings come from spec/modules.json (P3.13). Entries are appended with status "new";
 an entry that disappears from the sources must be kept with status "retired" by hand, otherwise
 the check fails. Snapshots are sorted id lists of the live (not retired) entries per kind.
 
@@ -22,6 +23,7 @@ from export_common import ENVELOPES, DEFAULT_REVISION, ExportError, Revision  # 
 ROOT = Path(__file__).resolve().parents[2]
 REGISTRY = ROOT / "spec/identities.json"
 SNAPSHOTS = ROOT / "spec/identities/snapshots"
+MODULES = ROOT / "spec/modules.json"
 
 KINDS = (
     "envelope",
@@ -71,6 +73,17 @@ def collect(directory: Path) -> dict[tuple[str, str], dict[str, str]]:
         for identity in defs[name]["enum"]:  # type: ignore[index]
             add(kind, identity, f"{base}/schema/common/defs.json")
     add("spec-revision", rev, f"{base}/README.md")
+    modules = MODULES.read_text(encoding="utf-8") if MODULES.is_file() else None
+    if modules is not None:
+        registry = json.loads(modules)
+        source = "spec/modules.json"
+        for module in registry["modules"]:
+            for key in module["configKeys"]:
+                add("config-key", key, source)
+            for migration in module["migrationIdentities"]:
+                add("migration", migration["id"], source)
+        for code in registry["findingCodes"]:
+            add("doctor-finding", code, source)
     return found
 
 

@@ -7,6 +7,7 @@ namespace Billium\Core\Tests\Arch;
 use Billium\Contracts\Attributes\Api;
 use Billium\Contracts\Attributes\Spi;
 use Billium\Core\BilliumCoreServiceProvider;
+use Billium\Core\Internal\Modules\ModuleCatalog;
 use Billium\Ledger\Internal\LedgerServiceProvider;
 use Billium\Platform\Internal\PlatformServiceProvider;
 use Illuminate\Support\Facades\DB;
@@ -88,6 +89,110 @@ final class ModuleBoundariesTest extends TestCase
                 }
             }
         }
+    }
+
+    public function test_core_public_categories_carry_api_or_spi_and_stay_free_of_internal_types(): void
+    {
+        $root = dirname(__DIR__, 2).'/src';
+        $categories = array_map(basename(...), glob($root.'/*', GLOB_ONLYDIR) ?: []);
+        sort($categories);
+        self::assertSame([], array_diff($categories, ['Contracts', 'Data', 'Enums', 'Events', 'Exceptions', 'Internal']), 'unsupported public category (M-38)');
+
+        $violations = [];
+        foreach (['Contracts', 'Data', 'Enums', 'Events', 'Exceptions'] as $category) {
+            if (! is_dir($root.'/'.$category)) {
+                continue;
+            }
+            foreach (self::phpFiles($root.'/'.$category) as $file) {
+                $class = 'Billium\\Core\\'.str_replace('/', '\\', substr($file, strlen($root) + 1, -4));
+                $reflection = new ReflectionClass($class);
+                if ($reflection->getAttributes(Api::class) === [] && $reflection->getAttributes(Spi::class) === []) {
+                    $violations[] = $class.': public type needs #[Api] or #[Spi] (M-38)';
+                }
+                $violations = array_merge($violations, self::internalSignatureTypes($reflection));
+            }
+        }
+        self::assertSame([], $violations);
+    }
+
+    public function test_module_public_types_do_not_expose_internal_types(): void
+    {
+        $violations = [];
+        $root = dirname(__DIR__, 2).'/modules';
+        foreach (self::phpFiles($root) as $file) {
+            if (preg_match('~^modules/([^/]+)/src/(Contracts|Data|Enums|Events|Exceptions)/(.+)\.php$~', substr($file, strlen(dirname(__DIR__, 2)) + 1), $match) === 1) {
+                $violations = array_merge($violations, self::internalSignatureTypes(new ReflectionClass(
+                    'Billium\\'.ucfirst($match[1]).'\\'.$match[2].'\\'.str_replace('/', '\\', $match[3]),
+                )));
+            }
+        }
+        self::assertSame([], $violations);
+    }
+
+    public function test_module_contracts_are_static_and_hold_no_persistence(): void
+    {
+        // P3.13 contracts claim no race safety: persistence and the root-Tx seal are P3.3.
+        $violations = [];
+        foreach (['src/Internal/Modules', 'src/Contracts/Modules', 'src/Data/Modules', 'src/Enums/Modules'] as $directory) {
+            foreach (self::phpFiles(dirname(__DIR__, 2).'/'.$directory) as $file) {
+                $source = (string) file_get_contents($file);
+                if (preg_match('/Illuminate\\\\(?:Database|Support\\\\Facades\\\\(?:DB|Schema))|\bPDO\b|file_put_contents|\bSchema::/', $source) === 1) {
+                    $violations[] = $file.': module contracts must not touch storage';
+                }
+            }
+        }
+        self::assertSame([], $violations);
+    }
+
+    public function test_every_module_directory_has_a_descriptor_and_a_psr4_root(): void
+    {
+        $root = dirname(__DIR__, 2);
+        $descriptors = array_map(
+            static fn ($module): string => $module->moduleId,
+            ModuleCatalog::packaged()->manifest()->modules,
+        );
+        $composer = json_decode((string) file_get_contents($root.'/composer.json'), true, 16, JSON_THROW_ON_ERROR);
+        self::assertIsArray($composer);
+        foreach (glob($root.'/modules/*', GLOB_ONLYDIR) ?: [] as $directory) {
+            $module = basename($directory);
+            self::assertContains($module, $descriptors, "{$module} has no module descriptor");
+            self::assertSame('modules/'.$module.'/src/', $composer['autoload']['psr-4']['Billium\\'.ucfirst($module).'\\'] ?? null);
+        }
+    }
+
+    public function test_boundary_checker_rejects_core_internal_use_from_public_data_of_a_module(): void
+    {
+        self::assertNotEmpty(self::violations('<?php use Billium\Core\Internal\Modules\Shape;', 'modules/platform/src/Data/Bad.php'));
+        self::assertNotEmpty(self::violations('<?php use Illuminate\Database\Connection;', 'modules/platform/src/Data/Bad.php'));
+    }
+
+    /**
+     * @param  ReflectionClass<object>  $reflection
+     * @return list<string>
+     */
+    private static function internalSignatureTypes(ReflectionClass $reflection): array
+    {
+        $types = [];
+        foreach ($reflection->getProperties() as $property) {
+            $types[] = $property->getType();
+        }
+        foreach ($reflection->getMethods() as $method) {
+            if ($method->isPrivate()) {
+                continue;
+            }
+            $types[] = $method->getReturnType();
+            foreach ($method->getParameters() as $parameter) {
+                $types[] = $parameter->getType();
+            }
+        }
+        $violations = [];
+        foreach ($types as $type) {
+            if ($type !== null && preg_match('/\\\\Internal\\\\/', '\\'.$type) === 1) {
+                $violations[] = $reflection->getName().': public signature exposes Internal type '.$type;
+            }
+        }
+
+        return $violations;
     }
 
     /** @return list<string> */

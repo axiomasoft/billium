@@ -1540,6 +1540,272 @@
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/README.md"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.connection",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.feed.bootstrap_batch",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.feed.bootstrap_lease_seconds",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.feed.drain_batch",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.idempotency.lock_timeout_ms",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.inbox.handler_compatibility",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.inbox.retention_floor_seconds",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.inbox.retry_backoff_seconds",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.inbox.retry_budget",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.installation_ref",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.ledger.refund_reconcile_after_seconds",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.modules.composition",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.modules.enabled",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.outbox.claim_seconds",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.outbox.delivery_backoff_seconds",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.outbox.delivery_budget",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.outbox.relay_batch",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.outbox.retention_floor_seconds",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.runner.max_attempts",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.runtime_role.preflight",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.composition_forbidden",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.composition_required",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.composition_unknown",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.core_api_unsupported",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.dependency_cycle",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.dependency_missing",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.dependency_range",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.duplicate_id",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.event_contract_conflict",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.historical_reader_missing",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.migration_unapplied",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.ownership_conflict",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.port_forbidden",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.port_missing",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.port_unknown",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.schema_read_unsupported",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.schema_write_unsupported",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "doctor-finding",
+      "id": "module.unknown",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
     }
   ]
 }

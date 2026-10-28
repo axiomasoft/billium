@@ -28,4 +28,9 @@ return [
     ],
     'runtime_role' => ['preflight' => true],
     'ledger' => ['refund_reconcile_after_seconds' => 3600],
+    // D55: desired module set; unlisted optional modules create no routes, workers or tables.
+    'modules' => [
+        'composition' => 'embedded-commerz',
+        'enabled' => ['platform', 'ledger'],
+    ],
 ];
