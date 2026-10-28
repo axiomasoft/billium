@@ -51,9 +51,13 @@ return new class extends Migration
                 END IF;
             END $$;
             ALTER TABLE public.billium_outbox_event DISABLE TRIGGER billium_outbox_event_append_only;
+            -- Written in the RFC 8785 form FeedScope::key() produces (members sorted, no whitespace), not as jsonb text.
             UPDATE public.billium_outbox_event SET source_scope = (
-                SELECT jsonb_build_object('installationRef',installation_ref,'channel','events','sourceAuthority','billium',
-                    'sellerRef',billium_outbox_event.seller_ref,'environment',billium_outbox_event.environment,'lineage',incarnation::text)::text
+                SELECT '{"channel":"events","environment":' || to_jsonb(billium_outbox_event.environment)::text
+                    || ',"installationRef":' || to_jsonb(installation_ref)::text
+                    || ',"lineage":' || to_jsonb(incarnation::text)::text
+                    || ',"sellerRef":' || to_jsonb(billium_outbox_event.seller_ref)::text
+                    || ',"sourceAuthority":"billium"}'
                 FROM public.billium_installation_state LIMIT 1
             );
             ALTER TABLE public.billium_outbox_event ENABLE TRIGGER billium_outbox_event_append_only;
@@ -141,6 +145,9 @@ return new class extends Migration
                 IF (NEW.floor_tx_id,NEW.floor_id) < (OLD.floor_tx_id,OLD.floor_id) THEN
                     RAISE EXCEPTION 'consumer floor cannot regress; open a new subscription' USING ERRCODE = '23514';
                 END IF;
+                IF OLD.closed_at IS NOT NULL AND NEW.closed_at IS DISTINCT FROM OLD.closed_at THEN
+                    RAISE EXCEPTION 'closed subscription cannot reopen; open a new subscription' USING ERRCODE = '23514';
+                END IF;
                 RETURN NEW;
             END $$;
             CREATE TRIGGER billium_feed_floor_monotonic BEFORE UPDATE ON public.billium_feed_subscription
@@ -193,7 +200,8 @@ return new class extends Migration
             RuntimeGrants::grant('SELECT, INSERT, UPDATE', 'public.'.$table);
         }
         RuntimeGrants::grant('SELECT, INSERT', 'public.billium_feed_subscription');
-        RuntimeGrants::grant('UPDATE (floor_tx_id, floor_id)', 'public.billium_feed_subscription');
+        // closed_at is one-way (trigger); closing releases the subscription's prune pin.
+        RuntimeGrants::grant('UPDATE (floor_tx_id, floor_id, closed_at)', 'public.billium_feed_subscription');
         RuntimeGrants::grant('SELECT, INSERT', 'public.billium_feed_bootstrap_lease');
         RuntimeGrants::grant('UPDATE (snapshot_digest, cursor_token, state, acknowledged_at)', 'public.billium_feed_bootstrap_lease');
     }

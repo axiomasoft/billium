@@ -35,6 +35,26 @@ final class OutboxBackoffTest extends OutboxTestCase
         self::assertSame(2, $this->integer($this->value('SELECT attempts FROM billium_outbox_delivery')));
     }
 
+    public function test_repeated_claim_expiry_counts_as_failure_and_parks_at_the_budget(): void
+    {
+        config(['billium.outbox.delivery_budget' => 2]);
+        $this->events(1);
+        $this->publisher();
+        $expire = fn () => $this->owner()->update("UPDATE billium_outbox_delivery SET claim_until = clock_timestamp() - interval '1 second'");
+        self::assertCount(1, $this->relay()->claim(1));
+        $expire();
+        $second = $this->relay()->claim(1);
+        self::assertCount(1, $second);
+        self::assertSame(1, $second[0]['failures']);
+        self::assertSame('claim_expired', $this->value('SELECT last_error_class FROM billium_outbox_delivery'));
+        $expire();
+        self::assertSame([], $this->relay()->claim(1), 'a message that keeps killing its worker is parked, not reclaimed forever');
+        self::assertSame('parked', $this->value('SELECT status FROM billium_outbox_delivery'));
+        self::assertSame('delivery_budget_exhausted', $this->value('SELECT park_reason FROM billium_outbox_delivery'));
+        self::assertSame(2, $this->integer($this->value('SELECT consecutive_failures FROM billium_outbox_delivery')));
+        self::assertTrue($this->relay()->requeue(self::text($this->value('SELECT event_id FROM billium_outbox_delivery')), 'default'));
+    }
+
     public function test_poison_backoff_parks_without_starving_later_work_and_requeue_preserves_bytes(): void
     {
         config(['billium.outbox.delivery_budget' => 2]);
@@ -66,6 +86,30 @@ final class OutboxBackoffTest extends OutboxTestCase
         $this->application()->forgetInstance(OutboxRelay::class);
         self::assertSame(1, $this->relay()->relay(2)->delivered);
         self::assertSame($digest, $this->value('SELECT digest FROM billium_outbox_event WHERE event_id = ?', [$poison]));
+    }
+
+    public function test_replay_of_a_row_with_noncanonical_legacy_scope_text_is_not_a_conflict(): void
+    {
+        $modules = $this->application()->make(ModuleRegistry::class);
+        $ledger = $modules->descriptor('ledger') ?? self::fail('missing ledger descriptor');
+        $event = new RegisteredPublicEvent(EventContractRegistration::from('ledger', $ledger->publicEvents[0]),
+            self::event((string) Str::ulid(), 'obligation:legacy'), ['default']);
+        $record = function () use ($event): void {
+            $this->runner()->run($this->spec(), function (TransactionContext $context) use ($event): Receipt {
+                $this->application()->make(Outbox::class)->record($context, $event);
+
+                return self::receipt();
+            });
+        };
+        $record();
+        // The pre-canonical migration wrote jsonb text (spaces, jsonb key order) for existing rows.
+        $owner = $this->owner();
+        $owner->statement('ALTER TABLE billium_outbox_event DISABLE TRIGGER billium_outbox_event_append_only');
+        $owner->update('UPDATE billium_outbox_event SET source_scope = source_scope::jsonb::text');
+        $owner->statement('ALTER TABLE billium_outbox_event ENABLE TRIGGER billium_outbox_event_append_only');
+        self::assertNotSame(1, preg_match('/^\{"channel":"events","environment":"test","installationRef"/', self::text($this->value('SELECT source_scope FROM billium_outbox_event'))));
+        $record();
+        self::assertSame(1, $this->rows('billium_outbox_event'));
     }
 
     public function test_relay_refuses_a_wrapping_transaction_before_claim_or_transport(): void

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Internal\Outbox;
 
+use Billium\Contracts\Contracts\Codec;
 use Billium\Core\Contracts\TransactionContext;
 use Billium\Platform\Data\Feed\FeedScope;
 use Billium\Platform\Internal\Installation\Rows;
@@ -18,6 +19,23 @@ final class EventRows
         $row = $db->selectOne('SELECT incarnation FROM public.billium_installation_state WHERE installation_ref = ?', [$caller->installationRef]);
 
         return new FeedScope($caller->installationRef, $caller->sellerRef, $caller->environment, (string) Rows::int(Rows::field($row, 'incarnation')));
+    }
+
+    /**
+     * Source scopes are compared by value, as SQL does with ::jsonb; rows written before D63 may hold a non-canonical text form.
+     */
+    public static function sameScope(mixed $stored, FeedScope $scope): bool
+    {
+        if (! is_string($stored)) {
+            return false;
+        }
+        try {
+            $codec = new Codec;
+
+            return $codec->canonicalize(json_decode($stored, false, 512, JSON_THROW_ON_ERROR)) === $scope->key();
+        } catch (\JsonException) {
+            return false;
+        }
     }
 
     /** @param list<string> $destinations */

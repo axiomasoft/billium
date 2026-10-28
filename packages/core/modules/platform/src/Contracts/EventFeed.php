@@ -32,4 +32,7 @@ interface EventFeed
 
     /** Advance an explicitly required consumer's floor only after durable custody. */
     public function acknowledgeCursor(FeedSelection $selection, string $cursor): void;
+
+    /** Release the subscription: its floor and bootstrap pins stop holding the outbox tail. Irreversible; open a new feed to resume. */
+    public function closeFeed(FeedSelection $selection): void;
 }

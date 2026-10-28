@@ -24,6 +24,8 @@ use LogicException;
 
 final readonly class EventFeedReader implements EventFeed
 {
+    public const int MAX_OPEN_REQUIRED = 16;
+
     /**
      * @param  Closure(): CallerContext  $callers
      * @param  Closure(): iterable<SnapshotSource>  $sources
@@ -66,6 +68,13 @@ final readonly class EventFeedReader implements EventFeed
         $ref = (string) Str::ulid();
         $this->db->transaction(function () use ($ref, $scope, $digest, $body, $required, $codec): void {
             self::barrier($this->db);
+            // A required subscription pins prune for its scope; bound them so an abandoned or hostile caller cannot exhaust the scope.
+            if ($required) {
+                $open = $this->db->selectOne('SELECT count(*) AS open FROM public.billium_feed_subscription WHERE source_scope::jsonb = ?::jsonb AND required AND closed_at IS NULL', [$scope->key()]);
+                if (Rows::int(Rows::field($open, 'open')) >= self::MAX_OPEN_REQUIRED) {
+                    throw new ProblemException(ProblemCode::ValidationInvalid, 'Too many open required feeds for this scope; close unused feeds');
+                }
+            }
             $this->db->insert('INSERT INTO public.billium_feed_subscription(subscription_ref,source_scope,selection_digest,selection,required) VALUES (?,?,?,?::jsonb,?)',
                 [$ref, $scope->key(), $digest, $codec->canonicalize($body), $required]);
         });
@@ -143,6 +152,19 @@ final readonly class EventFeedReader implements EventFeed
 
             return $floor;
         });
+        try {
+            return $this->snapshot($selection, $contracts, $replay, $pin, $leaseRef, $snapshotRef);
+        } catch (\Throwable $error) {
+            // A failed snapshot must not keep the tail pinned until the lease runs out.
+            $this->db->update("UPDATE public.billium_feed_bootstrap_lease SET state = 'expired' WHERE lease_ref = ? AND state = 'active'", [$leaseRef]);
+
+            throw $error;
+        }
+    }
+
+    /** @param list<mixed> $contracts */
+    private function snapshot(FeedSelection $selection, array $contracts, bool $replay, FeedPosition $pin, string $leaseRef, string $snapshotRef): FeedBootstrap
+    {
         $snapshots = [];
         $cursor = $this->db->transaction(function () use ($selection, $contracts, $replay, $pin, $leaseRef, &$snapshots): FeedCursor {
             $this->db->statement('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY');
@@ -217,6 +239,17 @@ final readonly class EventFeedReader implements EventFeed
                 $this->lease($selection, $lease);
             }
             $this->advanceFloor($selection, $position);
+        });
+    }
+
+    public function closeFeed(FeedSelection $selection): void
+    {
+        $this->outsideTransaction();
+        $this->validateSelection($selection);
+        $this->db->transaction(function () use ($selection): void {
+            self::barrier($this->db);
+            $this->db->update("UPDATE public.billium_feed_bootstrap_lease SET state = 'expired' WHERE subscription_ref = ? AND state = 'active'", [$selection->subscriptionRef]);
+            $this->db->update('UPDATE public.billium_feed_subscription SET closed_at = clock_timestamp() WHERE subscription_ref = ? AND closed_at IS NULL', [$selection->subscriptionRef]);
         });
     }
 

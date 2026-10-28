@@ -29,8 +29,10 @@ final class RelayCommand extends Command
             $this->line("claimed={$report->claimed} delivered={$report->delivered} failed={$report->failed} stale={$report->stale}");
 
             return self::SUCCESS;
-        } catch (Throwable) {
-            $this->error('Relay unavailable; verify host publisher and outbox configuration');
+        } catch (Throwable $error) {
+            // The console shows only the class; the message may carry credentials or payloads, so it goes to the host log handler.
+            report($error);
+            $this->error('Relay unavailable ('.$error::class.'); verify host publisher and outbox configuration');
 
             return self::FAILURE;
         }

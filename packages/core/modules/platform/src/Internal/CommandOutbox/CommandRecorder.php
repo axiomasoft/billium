@@ -46,7 +46,7 @@ final readonly class CommandRecorder implements CommandOutbox
             $row = $db->selectOne('SELECT * FROM public.billium_outbox_command WHERE command_ref = ?', [$command->commandRef]);
             $same = $row !== null && Rows::field($row, 'business_ref') === $command->businessRef
                 && Rows::field($row, 'owner_module_id') === $command->ownerModuleId && Rows::field($row, 'command_schema') === $command->commandSchema
-                && Rows::field($row, 'command_type') === $command->commandType && Rows::field($row, 'source_scope') === EventRows::scope($db, $context)->key()
+                && Rows::field($row, 'command_type') === $command->commandType && EventRows::sameScope(Rows::field($row, 'source_scope'), EventRows::scope($db, $context))
                 && Rows::field($row, 'payload_digest') === 'sha256:'.hash('sha256', $payload);
             if (! $same) {
                 throw new ProblemException(ProblemCode::IdempotencyConflict, 'Command ref already has different immutable content');

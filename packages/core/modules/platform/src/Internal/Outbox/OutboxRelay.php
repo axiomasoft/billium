@@ -61,7 +61,7 @@ final readonly class OutboxRelay
 
         return $this->db->transaction(function () use ($limit, $content, $delivery, $key): array {
             $rows = $this->db->select(<<<SQL
-                SELECT e.*,d.id AS delivery_id,d.destination_ref,d.consecutive_failures FROM public.{$delivery} d
+                SELECT e.*,d.id AS delivery_id,d.destination_ref,d.consecutive_failures,d.status AS delivery_status FROM public.{$delivery} d
                 JOIN public.{$content} e ON e.{$key} = d.event_id
                 WHERE (d.status = 'pending' AND d.available_at <= clock_timestamp())
                    OR (d.status = 'in_flight' AND d.claim_until <= clock_timestamp())
@@ -71,8 +71,19 @@ final readonly class OutboxRelay
             foreach ($rows as $row) {
                 $token = bin2hex(random_bytes(24));
                 $id = Rows::int(Rows::field($row, 'delivery_id'));
-                $this->db->update("UPDATE public.{$delivery} SET status = 'in_flight',claim_token = ?,claim_until = clock_timestamp() + (? * interval '1 second'),attempts = attempts + 1 WHERE id = ?",
-                    [$token, $this->claimSeconds, $id]);
+                $failures = Rows::int(Rows::field($row, 'consecutive_failures'));
+                if (Rows::field($row, 'delivery_status') === 'in_flight') {
+                    // The previous claim expired without an outcome: a worker that dies or hangs on a message counts as a failure.
+                    $failures++;
+                    if ($failures >= $this->budget) {
+                        $this->db->update("UPDATE public.{$delivery} SET status = 'parked',claim_token = NULL,claim_until = NULL,attempts = attempts + 1,consecutive_failures = ?,last_error_class = 'claim_expired',park_reason = 'delivery_budget_exhausted' WHERE id = ?",
+                            [$failures, $id]);
+
+                        continue;
+                    }
+                }
+                $this->db->update("UPDATE public.{$delivery} SET status = 'in_flight',claim_token = ?,claim_until = clock_timestamp() + (? * interval '1 second'),attempts = attempts + 1,consecutive_failures = ?,last_error_class = CASE WHEN ? > consecutive_failures THEN 'claim_expired' ELSE last_error_class END WHERE id = ?",
+                    [$token, $this->claimSeconds, $failures, $failures, $id]);
                 $message = $this->lane === 'event' ? EventRows::envelope($row) : [
                     'schema' => Rows::string(Rows::field($row, 'command_schema')), 'commandRef' => Rows::string(Rows::field($row, 'command_ref')),
                     'businessRef' => Rows::string(Rows::field($row, 'business_ref')), 'commandType' => Rows::string(Rows::field($row, 'command_type')),
@@ -80,7 +91,7 @@ final readonly class OutboxRelay
                     'payload' => json_decode(Rows::string(Rows::field($row, 'payload')), false, 512, JSON_THROW_ON_ERROR),
                 ];
                 $claims[] = ['id' => $id, 'token' => $token, 'destination' => Rows::string(Rows::field($row, 'destination_ref')),
-                    'message' => $message, 'failures' => Rows::int(Rows::field($row, 'consecutive_failures'))];
+                    'message' => $message, 'failures' => $failures];
             }
 
             return $claims;

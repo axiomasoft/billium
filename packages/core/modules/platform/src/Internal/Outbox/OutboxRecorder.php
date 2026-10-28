@@ -70,7 +70,8 @@ final readonly class OutboxRecorder implements Outbox
                 throw new LogicException('Public effect source scope/identity differs from authenticated root');
             }
         }
-        $scope = EventRows::scope($db, $context)->key();
+        $feedScope = EventRows::scope($db, $context);
+        $scope = $feedScope->key();
         $conflictClause = $registered === null ? '' : ' ON CONFLICT DO NOTHING';
         $row = $db->selectOne(<<<SQL
             INSERT INTO public.billium_outbox_event
@@ -84,7 +85,7 @@ final readonly class OutboxRecorder implements Outbox
         ]);
         if ($row === null) {
             $existing = $db->selectOne('SELECT * FROM public.billium_outbox_event WHERE event_id = ?', [$event->eventId]);
-            if ($existing === null || Rows::field($existing, 'source_scope') !== $scope || Rows::field($existing, 'owner_module_id') !== $contract->ownerModuleId
+            if ($existing === null || ! EventRows::sameScope(Rows::field($existing, 'source_scope'), $feedScope) || Rows::field($existing, 'owner_module_id') !== $contract->ownerModuleId
                 || $this->codec->canonicalize(EventRows::envelope($existing)) !== $this->codec->canonicalize($wire)) {
                 throw new ProblemException(ProblemCode::IdempotencyConflict, 'Public event identity/revision has different immutable content');
             }
