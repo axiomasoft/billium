@@ -83,7 +83,7 @@ final class OperationRunnerTest extends PlatformTestCase
             $this->runner()->run($this->spec(key: 'k-unbalanced'), function (TransactionContext $context) use ($imbalance, $refuse, &$callbacks): Receipt {
                 self::effect($context, 'unbalanced');
                 $this->application()->make(Outbox::class)->record($context, new OutboxEvent(
-                    'evt-unbalanced', 'ledger.unbalanced', 'billium.event.v1', 'x:1', 1, new DateTimeImmutable, [],
+                    '2F0KAKV3DPPEMP9HXV300WF6C0', 'obligation.created.v1', 'billium.event.v1', 'x:1', 1, new DateTimeImmutable, [],
                 ));
                 $context->afterCommit(static function () use (&$callbacks): void {
                     $callbacks++;

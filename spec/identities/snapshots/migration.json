@@ -8,5 +8,6 @@
   "2026_10_20_000007_create_billium_financial_session_table",
   "2026_10_20_000008_create_billium_financial_session_event_table",
   "2026_10_20_000009_create_billium_module_state_table",
-  "2026_10_20_000010_create_billium_module_transitions_table"
+  "2026_10_20_000010_create_billium_module_transitions_table",
+  "2026_10_28_000011_create_billium_event_protocol"
 ]

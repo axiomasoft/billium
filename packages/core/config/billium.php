@@ -16,11 +16,14 @@ return [
         'retention_floor_seconds' => null,
         'delivery_backoff_seconds' => 5,
         'delivery_budget' => 10,
+        'maintenance_connection' => null,
     ],
     'feed' => [
         'drain_batch' => 100,
         'bootstrap_lease_seconds' => 60,
         'bootstrap_batch' => 100,
+        // D63: host-provisioned, independent of copied database state; app.key is the fallback.
+        'signing_key' => null,
     ],
     'inbox' => [
         'retry_backoff_seconds' => 5,

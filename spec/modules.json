@@ -79,6 +79,10 @@
     {
       "id": "TaxSnapshotPort",
       "providedBy": "host"
+    },
+    {
+      "id": "EventPublisher",
+      "providedBy": "host"
     }
   ],
   "compositions": [
@@ -157,18 +161,20 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "platform",
-      "currentSchemaVersion": 10,
+      "currentSchemaVersion": 11,
       "supportedSchemaReadRange": {
         "min": 10,
-        "max": 10
+        "max": 11
       },
       "supportedSchemaWriteRange": {
         "min": 10,
-        "max": 10
+        "max": 11
       },
       "requiresModules": [],
       "requiresPorts": [],
-      "optionalPorts": [],
+      "optionalPorts": [
+        "EventPublisher"
+      ],
       "emits": [],
       "consumes": [],
       "ownedTables": [
@@ -180,7 +186,13 @@
         "billium_financial_session",
         "billium_financial_session_event",
         "billium_module_state",
-        "billium_module_transitions"
+        "billium_module_transitions",
+        "billium_event_contract",
+        "billium_outbox_delivery",
+        "billium_outbox_command",
+        "billium_outbox_command_delivery",
+        "billium_feed_subscription",
+        "billium_feed_bootstrap_lease"
       ],
       "configKeys": [
         "billium.connection",
@@ -203,7 +215,9 @@
         "billium.inbox.retention_floor_seconds",
         "billium.runtime_role.preflight",
         "billium.modules.composition",
-        "billium.modules.enabled"
+        "billium.modules.enabled",
+        "billium.feed.signing_key",
+        "billium.outbox.maintenance_connection"
       ],
       "migrationIdentities": [
         {
@@ -255,6 +269,11 @@
           "id": "2026_10_20_000010_create_billium_module_transitions_table",
           "version": 10,
           "checksum": "sha256:64fb3c887430c86d9e733a2bd9bb44c36dc5105fd0a9ccf576c0ba3646d2e840"
+        },
+        {
+          "id": "2026_10_28_000011_create_billium_event_protocol",
+          "version": 11,
+          "checksum": "sha256:72569f0986e02331d0ba3f29a7ec7a82505f561cd31e060c6ce8889250b8665a"
         }
       ],
       "disablePolicy": {
@@ -768,7 +787,9 @@
       "optionalPorts": [],
       "emits": [
         "payment.observation.v1",
-        "payment.outcome.v1"
+        "payment.outcome.v1",
+        "payment.effect.outcome.v1",
+        "billium.event.v2"
       ],
       "consumes": [
         "payment.admission.v1",
@@ -813,7 +834,17 @@
         "purge": "privileged_retention_operation"
       },
       "retentionClass": "financial-permanent",
-      "publicEvents": [],
+      "publicEvents": [
+        {
+          "eventType": "payment.effect.outcome.v1",
+          "envelopeSchema": "billium.event.v2",
+          "payloadSchemaRef": "urn:billium:spec:2026-10:payment/effect-outcome.v1.json",
+          "payloadSchemaDigest": "sha256:296b8117fe17c02b1853ccf5d6de2467a583588e83e6e2eedfcb1c020dd84fc5",
+          "bootstrapMode": "replay_only",
+          "retentionPolicyRef": "financial-permanent",
+          "eventContractRevision": "events-2026-10-v2"
+        }
+      ],
       "internalCommands": []
     },
     {

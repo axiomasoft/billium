@@ -77,7 +77,7 @@ final readonly class RetirementEvidenceScenario implements Scenario
                 usleep(10_000);
             } while (true);
             $app->make(Outbox::class)->record($context, new OutboxEvent(
-                'evt-late-recovery', 'ledger.recovery', 'billium.event.v1', 'x:1', 1, new DateTimeImmutable, [],
+                '6JYHEE84XV4DZPXY5HP39QSKBR', 'obligation.created.v1', 'billium.event.v1', 'x:1', 1, new DateTimeImmutable, [],
             ));
 
             return PlatformTestCase::receipt(['retirement_waited' => true]);

@@ -20,8 +20,11 @@ use stdClass;
  * Strict decode and canonical encode of the envelopes of the spec revision, plus the digest of D32.
  */
 #[Api]
-final class Codec
+final readonly class Codec
 {
+    /** @param list<string>|null $supportedSchemas Explicit client capabilities; null uses this generated revision. */
+    public function __construct(private ?array $supportedSchemas = null) {}
+
     private const string ENVELOPES = 'Billium\\Contracts\\Data\\Envelopes\\';
 
     private const string PROBLEM_SCHEMA = 'urn:billium:spec:2026-10:problem/problem.json';
@@ -37,12 +40,28 @@ final class Codec
         if (! $value instanceof stdClass || ! is_string($value->schema ?? null)) {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'an envelope is an object with a string schema');
         }
+        if ($this->supportedSchemas !== null && ! in_array($value->schema, $this->supportedSchemas, true)) {
+            throw new ProblemException(ProblemCode::SchemaUnsupported, 'Schema is outside the pinned client capabilities');
+        }
         $entry = Spec::envelopes()[$value->schema]
             ?? throw new ProblemException(ProblemCode::SchemaUnsupported, "schema '{$value->schema}' is not in the revision");
+
+        if ($value->schema === 'billium.event.v2' && ($value->eventContractRevision ?? null) !== 'events-2026-10-v2') {
+            throw new ProblemException(ProblemCode::SchemaUnsupported, 'unknown pinned event catalog');
+        }
 
         $problem = new SchemaValidator(Spec::schemas())->check($entry['schemaId'], $value);
         if ($problem !== null) {
             throw new ProblemException($problem, "the object does not match {$value->schema}");
+        }
+
+        $effect = $value->schema === 'payment.effect.outcome.v1' ? $value : ($value->schema === 'billium.event.v2' ? $value->payload : null);
+        if ($effect instanceof stdClass && $effect->operationRef === $effect->originalOperationRef) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'effect operationRef must differ from its root');
+        }
+        if ($value->schema === 'billium.event.v2' && $effect instanceof stdClass
+            && ($value->sellerRef !== $effect->sellerRef || $value->aggregateRef !== $effect->operationRef || $value->revision !== $effect->revision)) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'effect envelope identity differs from its payload');
         }
 
         $variant = $entry['variants'][0];
@@ -55,6 +74,12 @@ final class Codec
         $member = $variant['digestMember'];
         if ($variant['verifyDigest'] && property_exists($value, $member) && $value->{$member} !== $this->digest($value, $member)) {
             throw new ProblemException(ProblemCode::ValidationInvalid, "{$member} differs from the digest of the canonical form");
+        }
+        if ($value->schema === 'billium.feed.page.v1' && is_array($value->events)) {
+            foreach ($value->events as $event) {
+                // D63: a page cannot bypass the event codec's semantics or this client's negotiated capabilities.
+                $this->decode(Jcs::canonicalize($event));
+            }
         }
 
         /** @var class-string<Envelope> $class */

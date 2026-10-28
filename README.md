@@ -49,3 +49,5 @@ See [development environment](docs/development-environment.md) for setup and
 verification commands.
 
 See [planning and design checks](docs/planning.md) for the current P1 plan and its validation commands.
+
+Platform outbox delivery, feed subscriptions and retention setup: [operations guide](docs/operations/outbox-feed.md) (D52/D60/D63).

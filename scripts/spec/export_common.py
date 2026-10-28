@@ -7,6 +7,7 @@ and the envelope descriptors behind the generated envelope classes (P2.5, P2.6).
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 import sys
 from dataclasses import dataclass
@@ -39,9 +40,15 @@ ENVELOPES = (
     ("PaymentStatus", "ledger.payment_status.v1", "query/payment-status.v1.json", None),
     ("DueObligations", "ledger.due_obligations.v1", "query/due-obligations.v1.json", None),
     ("EventEnvelope", "billium.event.v1", "event/event.v1.json", None),
+    ("PaymentEffectOutcome", "payment.effect.outcome.v1", "payment/effect-outcome.v1.json", None),
+    ("EventCatalog", "billium.event.catalog.v1", "event/catalog.v1.json", None),
+    ("EventEnvelopeV2", "billium.event.v2", "event/event.v2.json", None),
+    ("FeedSelection", "billium.feed.selection.v1", "feed/selection.v1.json", None),
+    ("FeedPage", "billium.feed.page.v1", "feed/page.v1.json", None),
+    ("FeedBootstrap", "billium.feed.bootstrap.v1", "feed/bootstrap.v1.json", None),
 )
 
-KINDS = {"integer": "int", "string": "string", "object": "object"}
+KINDS = {"integer": "int", "string": "string", "object": "object", "array": "list", "boolean": "bool"}
 
 # A oneOf schema picks its envelope class by the presence of this member.
 VARIANT_SELECTOR = {"payment.find.v1": ("status", "response")}
@@ -96,6 +103,33 @@ class Revision:
             if document.get("$id") != expected:  # type: ignore[union-attr]
                 raise ExportError(f"{relative}: $id is not {expected}")
             self.documents[expected] = document  # type: ignore[assignment]
+        self.validate_catalogs()
+
+    def validate_catalogs(self) -> None:
+        """D63: exports must agree with the exact pinned catalog and canonical payload-schema digest."""
+        for path in sorted((self.directory / "event-catalogs").glob("*.json")):
+            catalog = load(path)
+            if not isinstance(catalog, dict) or not isinstance(catalog.get("events"), list):
+                raise ExportError(f"{path.name}: invalid event catalog")
+            entries = catalog["events"]
+            if not entries or len({e["eventType"] for e in entries}) != len(entries):
+                raise ExportError(f"{path.name}: empty or duplicate catalog types")
+            for event in entries:
+                _, payload = self.resolve("", event["payloadSchemaRef"])
+                canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+                digest = "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+                if event["payloadSchemaDigest"] != digest:
+                    raise ExportError(f"{path.name}: payload schema digest differs for {event['eventType']}")
+                source = next((source for _, schema, source, _ in ENVELOPES if schema == event["envelopeSchema"]), None)
+                if source is None:
+                    raise ExportError(f"{path.name}: catalog envelope is not enrolled")
+                properties = self.documents[self.document_id(source)]["properties"]
+                if properties["eventContractRevision"].get("const") != catalog["eventContractRevision"]:
+                    raise ExportError(f"{path.name}: envelope catalog revision differs")
+                if properties["eventType"].get("enum") != [e["eventType"] for e in entries]:
+                    raise ExportError(f"{path.name}: envelope type-set differs")
+                if len(entries) == 1 and properties["payload"].get("$ref") != event["payloadSchemaRef"]:
+                    raise ExportError(f"{path.name}: envelope payload schema differs")
 
     def document_id(self, relative: str) -> str:
         return SCHEMA_BASE.format(revision=self.name, path=relative)

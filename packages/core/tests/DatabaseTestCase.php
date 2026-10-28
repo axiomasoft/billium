@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Billium\Core\Tests;
 
 use Billium\Core\BilliumCoreServiceProvider;
+use Billium\Core\Contracts\Modules\ModuleRegistry;
+use Billium\Platform\Internal\EventContracts\DatabaseEventContractRegistrar;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Orchestra\Testbench\TestCase;
@@ -49,6 +51,15 @@ abstract class DatabaseTestCase extends TestCase
         if ($tables !== []) {
             $names = array_map(static fn (object $table): string => '"public"."'.str_replace('"', '""', $table->tablename).'"', $tables);
             $owner->unprepared('TRUNCATE '.implode(', ', $names).' RESTART IDENTITY CASCADE');
+        }
+        // Restore only the fixed v1 migration backfill after fixture TRUNCATE; no runtime boot registration.
+        if ($owner->getSchemaBuilder()->hasTable('billium_event_contract')) {
+            $modules = $this->app->make(ModuleRegistry::class);
+            $ledger = $modules->descriptor('ledger');
+            if ($ledger !== null) {
+                $registrar = new DatabaseEventContractRegistrar($owner, $modules);
+                $registrar->register($registrar->plan($ledger, true));
+            }
         }
     }
 }

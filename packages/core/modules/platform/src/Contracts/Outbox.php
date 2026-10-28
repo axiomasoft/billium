@@ -8,6 +8,7 @@ use Billium\Contracts\Attributes\Api;
 use Billium\Contracts\Attributes\Spi;
 use Billium\Contracts\Attributes\SpiKind;
 use Billium\Core\Contracts\TransactionContext;
+use Billium\Platform\Data\EventContracts\RegisteredPublicEvent;
 use Billium\Platform\Data\OutboxEvent;
 
 /**
@@ -24,5 +25,5 @@ interface Outbox
      *
      * @throws \LogicException for a stale/foreign context or a payload beyond the size bound
      */
-    public function record(TransactionContext $context, OutboxEvent $event): int;
+    public function record(TransactionContext $context, OutboxEvent|RegisteredPublicEvent $event): int;
 }

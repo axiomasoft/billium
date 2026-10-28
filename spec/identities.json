@@ -10,10 +10,45 @@
     },
     {
       "kind": "envelope",
+      "id": "billium.event.catalog.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/event/catalog.v1.json"
+    },
+    {
+      "kind": "envelope",
       "id": "billium.event.v1",
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/event/event.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "billium.event.v2",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/event/event.v2.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "billium.feed.bootstrap.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "billium.feed.page.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/page.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "billium.feed.selection.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/selection.v1.json"
     },
     {
       "kind": "envelope",
@@ -70,6 +105,13 @@
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/payment/cancel.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "payment.effect.outcome.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/effect-outcome.v1.json"
     },
     {
       "kind": "envelope",
@@ -185,6 +227,34 @@
     },
     {
       "kind": "envelope-field",
+      "id": "billium.event.catalog.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/event/catalog.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.catalog.v1#/properties/eventContractRevision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/event/catalog.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.catalog.v1#/properties/events",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/event/catalog.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.catalog.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/event/catalog.v1.json"
+    },
+    {
+      "kind": "envelope-field",
       "id": "billium.event.v1#/properties/aggregateRef",
       "status": "new",
       "since": "2026-10",
@@ -245,6 +315,286 @@
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/event/event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v2#/properties/aggregateRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/event/event.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v2#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/event/event.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v2#/properties/eventContractRevision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/event/event.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v2#/properties/eventId",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/event/event.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v2#/properties/eventType",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/event/event.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v2#/properties/occurredAt",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/event/event.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v2#/properties/payload",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/event/event.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v2#/properties/revision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/event/event.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v2#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/event/event.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v2#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/event/event.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap.v1#/properties/eventContractRevision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap.v1#/properties/expiresAt",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap.v1#/properties/leaseRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap.v1#/properties/nextCursor",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap.v1#/properties/scope",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap.v1#/properties/selectionDigest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap.v1#/properties/snapshotDigest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap.v1#/properties/snapshotRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap.v1#/properties/snapshots",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap.v1#/properties/subscriptionRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.page.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/page.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.page.v1#/properties/events",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/page.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.page.v1#/properties/hasMore",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/page.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.page.v1#/properties/nextCursor",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/page.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.page.v1#/properties/replayFloor",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/page.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.page.v1#/properties/scannedThrough",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/page.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.page.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/page.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.page.v1#/properties/selectionDigest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/page.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.page.v1#/properties/subscriptionRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/page.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.selection.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/selection.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.selection.v1#/properties/envelopeSchemas",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/selection.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.selection.v1#/properties/eventContractRevision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/selection.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.selection.v1#/properties/eventTypes",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/selection.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.selection.v1#/properties/nextCursor",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/selection.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.selection.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/selection.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.selection.v1#/properties/scope",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/selection.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.selection.v1#/properties/selectionDigest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/selection.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.selection.v1#/properties/subscriptionRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/selection.v1.json"
     },
     {
       "kind": "envelope-field",
@@ -693,6 +1043,118 @@
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/payment/cancel.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.effect.outcome.v1#/properties/bindingRevision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/effect-outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.effect.outcome.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/effect-outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.effect.outcome.v1#/properties/effectTotal",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/effect-outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.effect.outcome.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/effect-outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.effect.outcome.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/effect-outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.effect.outcome.v1#/properties/merchantAccountRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/effect-outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.effect.outcome.v1#/properties/money",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/effect-outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.effect.outcome.v1#/properties/occurredAt",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/effect-outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.effect.outcome.v1#/properties/operationKind",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/effect-outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.effect.outcome.v1#/properties/operationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/effect-outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.effect.outcome.v1#/properties/originalOperationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/effect-outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.effect.outcome.v1#/properties/providerEvidenceRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/effect-outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.effect.outcome.v1#/properties/revision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/effect-outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.effect.outcome.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/effect-outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.effect.outcome.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/effect-outcome.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.effect.outcome.v1#/properties/status",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/effect-outcome.v1.json"
     },
     {
       "kind": "envelope-field",
@@ -1655,6 +2117,13 @@
     },
     {
       "kind": "event-type",
+      "id": "payment.effect.outcome.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/event-catalogs/events-2026-10-v2.json"
+    },
+    {
+      "kind": "event-type",
       "id": "payment.outcome.v1",
       "status": "new",
       "since": "2026-10",
@@ -1781,6 +2250,13 @@
     },
     {
       "kind": "config-key",
+      "id": "billium.feed.signing_key",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
       "id": "billium.financial_session.seal_lock_timeout_ms",
       "status": "new",
       "since": "2026-10",
@@ -1866,6 +2342,13 @@
     {
       "kind": "config-key",
       "id": "billium.outbox.delivery_budget",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.outbox.maintenance_connection",
       "status": "new",
       "since": "2026-10",
       "source": "spec/modules.json"
@@ -1971,6 +2454,13 @@
     {
       "kind": "migration",
       "id": "2026_10_20_000010_create_billium_module_transitions_table",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_28_000011_create_billium_event_protocol",
       "status": "new",
       "since": "2026-10",
       "source": "spec/modules.json"

@@ -403,6 +403,37 @@
     ]
   },
   {
+    "id": "BC-ENV-30",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:b45171b935f7e4fbbb5d57b279f46067b0b383a99951898e8be047ebb5455836",
+    "refs": [
+      "D57",
+      "D60",
+      "D63",
+      "INV-06"
+    ]
+  },
+  {
+    "id": "BC-ENV-31",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:c3e7b9a5feb449d367937020612a5f06348ced6e56d362f4bb9018e4a2d6b180",
+    "refs": [
+      "D63",
+      "REQ-CON-20"
+    ]
+  },
+  {
+    "id": "BC-ENV-32",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:2928f4b3acd19b14fe1845e3aabaa04df4234f921548c0e23c9cff795ea34575",
+    "refs": [
+      "D52",
+      "D60",
+      "D63",
+      "REQ-FAIL-22"
+    ]
+  },
+  {
     "id": "BC-ERR-01",
     "doc": "04-errors.md",
     "line_digest": "sha256:1c56ad1fcc4ec0766dc65959b7adab804f61264728fa37dd53d282b638547a23",

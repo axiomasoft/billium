@@ -48,7 +48,7 @@ final class RuntimeGrantsTest extends PlatformTestCase
             self::assertSame('pgsql', $context->connectionName());
             self::effect($context, 'default runtime');
             $this->application()->make(Outbox::class)->record($context, new OutboxEvent(
-                'evt-default-runtime', 'ledger.default_runtime', 'billium.event.v1', 'x:1', 1, new DateTimeImmutable, [],
+                '5YEK0E8CSKRGX66B8H3BENGTX7', 'obligation.created.v1', 'billium.event.v1', 'x:1', 1, new DateTimeImmutable, [],
             ));
 
             return self::receipt();

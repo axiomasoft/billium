@@ -1,0 +1,29 @@
+{
+  "id": "feed/v1-page-valid",
+  "spec_refs": [
+    "BC-ENV-30",
+    "BC-ENV-31",
+    "BC-ENV-32"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"digest\":\"sha256:b0135e22d9302fd415ba2d237e57091a71bcbd9131f832e275696a6f4c6b1416\",\"events\":[{\"aggregateRef\":\"op-1\",\"digest\":\"sha256:3826a109fda3df6a814e4e2ba3c3ae2e7dd0f8023cbaae3c65f2b8705cabaa39\",\"eventId\":\"01JBX5Q0Z8M3N4P7R9S2T6V1WB\",\"eventType\":\"payment.outcome.v1\",\"occurredAt\":\"2026-10-17T12:03:41Z\",\"payload\":{\"operationRef\":\"op-1\",\"status\":\"succeeded\"},\"revision\":3,\"schema\":\"billium.event.v1\",\"sellerRef\":\"seller-1\"}],\"hasMore\":false,\"nextCursor\":\"opaque.source.token\",\"replayFloor\":{\"id\":\"0\",\"txId\":\"0\"},\"scannedThrough\":{\"id\":\"9223372036854775807\",\"txId\":\"18446744073709551615\"},\"schema\":\"billium.feed.page.v1\",\"selectionDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"subscriptionRef\":\"subscription:1\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "billium.feed.page.v1",
+        "digest": "sha256:b0135e22d9302fd415ba2d237e57091a71bcbd9131f832e275696a6f4c6b1416"
+      }
+    }
+  ]
+}

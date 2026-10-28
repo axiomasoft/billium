@@ -158,7 +158,7 @@ final class ModuleAdmissionTransitionTest extends PlatformTestCase
         $results = ConcurrencyStand::run(RetirementEvidenceScenario::class, 2, ['barrier' => random_int(1, 2_147_483_647)]);
         self::assertSame(['accepted' => true, 'retirement_waited' => true], self::ok($results[0]));
         self::assertSame(['refused' => 'blocked', 'blockers' => ['outbox_inbox_gaps']], self::ok($results[1]));
-        self::assertSame(1, $this->rows('billium_outbox_event', "event_id = 'evt-late-recovery'"));
+        self::assertSame(1, $this->rows('billium_outbox_event', "event_id = '6JYHEE84XV4DZPXY5HP39QSKBR'"));
         self::assertSame(['state' => 'recovery_only', 'generation' => 3, 'last_transition_ref' => 'recover-for-retirement'],
             $this->row("SELECT state, generation, last_transition_ref FROM billium_module_state WHERE module_id = 'ledger'"));
         self::assertSame(0, $this->rows('billium_module_transitions', "transition_ref = 'retire-after-recovery'"));

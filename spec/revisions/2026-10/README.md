@@ -45,6 +45,12 @@ envelopes, `ERR` — ошибки, `EVT` — события и receipts, `CNF` �
 | `ledger.payment_status.v1` | `schema/query/payment-status.v1.json` | ответ |
 | `ledger.due_obligations.v1` | `schema/query/due-obligations.v1.json` | ответ |
 | `billium.event.v1` | `schema/event/event.v1.json` | событие |
+| `payment.effect.outcome.v1` | `schema/payment/effect-outcome.v1.json` | исход child (D63) |
+| `billium.event.catalog.v1` | `schema/event/catalog.v1.json` | pinned catalog (D63) |
+| `billium.event.v2` | `schema/event/event.v2.json` | negotiated событие (D63) |
+| `billium.feed.selection.v1` | `schema/feed/selection.v1.json` | pinned подписка (D63) |
+| `billium.feed.page.v1` | `schema/feed/page.v1.json` | страница safe feed (D52, D63) |
+| `billium.feed.bootstrap.v1` | `schema/feed/bootstrap.v1.json` | snapshot с retention pin (D60, D63) |
 
 Общие узлы: `schema/common/defs.json` (идентификаторы, время, digest, все перечисления),
 `schema/common/money-wire.json`, `schema/problem/problem.json`. Формат conformance:

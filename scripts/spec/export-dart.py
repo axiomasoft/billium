@@ -35,8 +35,12 @@ HELPERS = {
     ("money", False): "optionalMoney",
     ("object", True): "requireObject",
     ("object", False): "optionalObject",
+    ("list", True): "requireList",
+    ("list", False): "optionalList",
+    ("bool", True): "requireBool",
+    ("bool", False): "optionalBool",
 }
-DART_TYPES = {"string": "String", "int": "int", "money": "Money", "object": "Map<String, Object?>"}
+DART_TYPES = {"string": "String", "int": "int", "money": "Money", "object": "Map<String, Object?>", "list": "List<Object?>", "bool": "bool"}
 
 
 def header(revision: Revision, source: str) -> str:

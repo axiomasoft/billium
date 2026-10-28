@@ -1,0 +1,26 @@
+{
+  "id": "feed/has-more-invalid",
+  "spec_refs": [
+    "BC-ENV-32"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"digest\":\"sha256:0872978de99367ff696c4cbcfc6935bdc1c3d0878ea86b1a27b7cd7ba330c59a\",\"events\":[{\"aggregateRef\":\"capture:1\",\"digest\":\"sha256:4f612b138d255b13c1e564c029289a063dad375f8717f119fe68cb9861007d94\",\"eventContractRevision\":\"events-2026-10-v2\",\"eventId\":\"01JBX5Q0Z8M3N4P7R9S2T6V1WB\",\"eventType\":\"payment.effect.outcome.v1\",\"occurredAt\":\"2026-10-28T10:00:00Z\",\"payload\":{\"bindingRevision\":\"binding:original\",\"digest\":\"sha256:9f99f86b3a9aa78115dc19a51c4b95fb9377ca38156e670867678174280291cd\",\"effectTotal\":\"12.00\",\"environment\":\"test\",\"installationRef\":\"inst-test\",\"merchantAccountRef\":\"merchant:original\",\"money\":{\"amount\":\"10.00\",\"currency\":\"RUB\"},\"occurredAt\":\"2026-10-28T10:00:00Z\",\"operationKind\":\"capture\",\"operationRef\":\"capture:1\",\"originalOperationRef\":\"charge:1\",\"providerEvidenceRef\":\"evidence:1\",\"revision\":1,\"schema\":\"payment.effect.outcome.v1\",\"sellerRef\":\"seller-a\",\"status\":\"succeeded\"},\"revision\":1,\"schema\":\"billium.event.v2\",\"sellerRef\":\"seller-a\"}],\"hasMore\":\"false\",\"nextCursor\":\"opaque.source.token\",\"replayFloor\":{\"id\":\"0\",\"txId\":\"0\"},\"scannedThrough\":{\"id\":\"9223372036854775807\",\"txId\":\"18446744073709551615\"},\"schema\":\"billium.feed.page.v1\",\"selectionDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"subscriptionRef\":\"subscription:1\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

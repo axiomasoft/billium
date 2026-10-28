@@ -81,6 +81,32 @@ abstract readonly class Envelope
         return $value instanceof stdClass ? $value : throw self::wrongType($key, 'object');
     }
 
+    /** @return list<mixed> */
+    final protected static function list(stdClass $raw, string $key): array
+    {
+        return self::optList($raw, $key) ?? throw self::missing($key);
+    }
+
+    /** @return list<mixed>|null */
+    final protected static function optList(stdClass $raw, string $key): ?array
+    {
+        $value = self::member($raw, $key);
+
+        return $value === null ? null : (is_array($value) && array_is_list($value) ? $value : throw self::wrongType($key, 'array'));
+    }
+
+    final protected static function bool(stdClass $raw, string $key): bool
+    {
+        return self::optBool($raw, $key) ?? throw self::missing($key);
+    }
+
+    final protected static function optBool(stdClass $raw, string $key): ?bool
+    {
+        $value = self::member($raw, $key);
+
+        return $value === null ? null : (is_bool($value) ? $value : throw self::wrongType($key, 'boolean'));
+    }
+
     private static function member(stdClass $raw, string $key): mixed
     {
         return property_exists($raw, $key) ? $raw->{$key} : null;

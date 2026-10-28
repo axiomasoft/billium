@@ -60,7 +60,7 @@ final class ParticipantContextIsolationTest extends PlatformTestCase
         $outcome = $this->runner()->run($this->spec(key: 'k-compose', modules: ['documents', 'ledger', 'platform']), function (TransactionContext $context): Receipt {
             $obligation = $this->participant('ledger', $context, 'obligation');
             $number = $this->participant('documents', $context, 'legal number');
-            $this->application()->make(Outbox::class)->record($context, new OutboxEvent('evt-compose', 'ledger.invoice_issued', 'billium.event.v1', 'invoice:1', 1, new DateTimeImmutable, ['number' => $number]));
+            $this->application()->make(Outbox::class)->record($context, new OutboxEvent('592CRECWGJF5QEGBY35D1HF2J9', 'invoice.issued.v1', 'billium.event.v1', 'invoice:1', 1, new DateTimeImmutable, ['number' => $number]));
 
             return self::receipt(['obligation' => $obligation, 'number' => $number, 'generations' => $context->admittedModules()]);
         });
@@ -174,7 +174,7 @@ final class ParticipantContextIsolationTest extends PlatformTestCase
                 $this->expectRefusal('Stale or foreign TransactionContext', fn () => $this->runner()->assertCurrent($context));
                 $this->expectRefusal('Stale or foreign TransactionContext', fn () => $this->participant('ledger', $context, 'stale'));
                 $this->expectRefusal('Stale or foreign TransactionContext', fn () => $this->application()->make(Outbox::class)->record(
-                    $context, new OutboxEvent('evt-stale', 'ledger.stale', 'billium.event.v1', 'x:1', 1, new DateTimeImmutable, []),
+                    $context, new OutboxEvent('2BDYD2CNSX9JRCTF2MJ4JV779V', 'ledger.stale', 'billium.event.v1', 'x:1', 1, new DateTimeImmutable, []),
                 ));
 
                 // Even if the body swallows every capability refusal, the runner cannot accept its replacement Tx.
@@ -294,7 +294,7 @@ final class ParticipantContextIsolationTest extends PlatformTestCase
             // A look-alike that waves every check through is still not the live root of the runner.
             $this->expectRefusal('Stale or foreign TransactionContext', fn () => $this->participant('ledger', $forged, 'forged'));
             $this->expectRefusal('Stale or foreign TransactionContext', fn () => $this->application()->make(Outbox::class)->record(
-                $forged, new OutboxEvent('evt-forged', 'ledger.forged', 'billium.event.v1', 'x:1', 1, new DateTimeImmutable, []),
+                $forged, new OutboxEvent('0A1WMK60N6W2PR5YQ0YAVY7D1B', 'ledger.forged', 'billium.event.v1', 'x:1', 1, new DateTimeImmutable, []),
             ));
 
             return self::receipt();

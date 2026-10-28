@@ -35,7 +35,7 @@ final class OutboxRecordTest extends PlatformTestCase
     {
         $this->runner()->run($this->spec(key: 'k-event'), function (TransactionContext $context): Receipt {
             $effect = self::effect($context, 'state');
-            $this->outbox()->record($context, self::event('evt-1', $effect));
+            $this->outbox()->record($context, self::event('3V82FS6B9CH3MQY30QCXP8886K', $effect));
             // A crash between commit and dispatch: only the afterCommit wake-up is lost, never the event.
             $context->afterCommit(static fn () => throw new RuntimeException('process died before dispatch'));
 
@@ -43,9 +43,9 @@ final class OutboxRecordTest extends PlatformTestCase
         });
 
         // A fresh connection (restart) still sees the committed event with every durable column (COV-086..089).
-        $statement = TestEnvironment::pdo()->query("SELECT * FROM billium_outbox_event WHERE event_id = 'evt-1'");
+        $statement = TestEnvironment::pdo()->query("SELECT * FROM billium_outbox_event WHERE event_id = '3V82FS6B9CH3MQY30QCXP8886K'");
         $row = $statement === false ? [] : (array) $statement->fetch();
-        self::assertSame('ledger.obligation_recorded', $row['type']);
+        self::assertSame('obligation.created.v1', $row['type']);
         self::assertSame('billium.event.v1', $row['schema_version']);
         self::assertSame('obligation:1', $row['aggregate_ref']);
         self::assertSame(3, $row['aggregate_revision']);
@@ -62,7 +62,7 @@ final class OutboxRecordTest extends PlatformTestCase
     {
         try {
             $this->runner()->run($this->spec(key: 'k-fail'), function (TransactionContext $context): Receipt {
-                $this->outbox()->record($context, self::event('evt-fail', self::effect($context, 'state')));
+                $this->outbox()->record($context, self::event('4XJG5HZSCYX0X56N9G5DHRC85Y', self::effect($context, 'state')));
 
                 throw new ProblemException(ProblemCode::TransportUnavailable);
             });
@@ -75,7 +75,7 @@ final class OutboxRecordTest extends PlatformTestCase
 
         // A stored refusal rolls the event back with the body and keeps only the receipt.
         $refused = $this->runner()->run($this->spec(key: 'k-refused'), function (TransactionContext $context): Receipt {
-            $this->outbox()->record($context, self::event('evt-refused', self::effect($context, 'state')));
+            $this->outbox()->record($context, self::event('5D3AMRQTGP7WJXN0P3VX3QY6T1', self::effect($context, 'state')));
 
             throw new ProblemException(ProblemCode::InvoiceFrozen);
         });
@@ -93,7 +93,7 @@ final class OutboxRecordTest extends PlatformTestCase
         });
         self::assertInstanceOf(TransactionContext::class, $stale);
         try {
-            $this->outbox()->record($stale, self::event('evt-stale', 1));
+            $this->outbox()->record($stale, self::event('2BDYD2CNSX9JRCTF2MJ4JV779V', 1));
             self::fail('a stale context cannot write');
         } catch (LogicException $exception) {
             self::assertStringContainsString('Stale', $exception->getMessage());
@@ -101,7 +101,7 @@ final class OutboxRecordTest extends PlatformTestCase
 
         try {
             $this->runner()->run($this->spec(mode: FinancialMode::RawCustody, modules: []), function (TransactionContext $context): Receipt {
-                $this->outbox()->record($context, self::event('evt-closure', 1));
+                $this->outbox()->record($context, self::event('0Z58ZJ4W6K5ZZ5A6E0BSFMASN4', 1));
 
                 return self::receipt();
             });
@@ -115,17 +115,17 @@ final class OutboxRecordTest extends PlatformTestCase
     public function test_content_is_immutable_unique_and_bounded(): void
     {
         $this->runner()->run($this->spec(), function (TransactionContext $context): Receipt {
-            $this->outbox()->record($context, self::event('evt-once', 1));
+            $this->outbox()->record($context, self::event('1CQGEJRCJE8N31G3NSSG3XS9HA', 1));
 
             return self::receipt();
         });
-        self::assertSame('55000', self::sqlState(TestEnvironment::pdo(owner: true), "UPDATE billium_outbox_event SET payload = '{}' WHERE event_id = 'evt-once'"));
-        self::assertSame('55000', self::sqlState(TestEnvironment::pdo(owner: true), "DELETE FROM billium_outbox_event WHERE event_id = 'evt-once'"));
-        self::assertSame('42501', self::sqlState(TestEnvironment::pdo(), "UPDATE billium_outbox_event SET type = 'x.y' WHERE event_id = 'evt-once'"));
+        self::assertSame('55000', self::sqlState(TestEnvironment::pdo(owner: true), "UPDATE billium_outbox_event SET payload = '{}' WHERE event_id = '1CQGEJRCJE8N31G3NSSG3XS9HA'"));
+        self::assertSame('55000', self::sqlState(TestEnvironment::pdo(owner: true), "DELETE FROM billium_outbox_event WHERE event_id = '1CQGEJRCJE8N31G3NSSG3XS9HA'"));
+        self::assertSame('42501', self::sqlState(TestEnvironment::pdo(), "UPDATE billium_outbox_event SET type = 'x.y' WHERE event_id = '1CQGEJRCJE8N31G3NSSG3XS9HA'"));
 
         try {
             $this->runner()->run($this->spec(), function (TransactionContext $context): Receipt {
-                $this->outbox()->record($context, self::event('evt-once', 2));
+                $this->outbox()->record($context, self::event('1CQGEJRCJE8N31G3NSSG3XS9HA', 2));
 
                 return self::receipt();
             });
@@ -136,7 +136,7 @@ final class OutboxRecordTest extends PlatformTestCase
 
         try {
             $this->runner()->run($this->spec(), function (TransactionContext $context): Receipt {
-                $this->outbox()->record($context, new OutboxEvent('evt-big', 'ledger.big', 'billium.event.v1', 'a:1', 1, new DateTimeImmutable, ['blob' => str_repeat('x', 70_000)]));
+                $this->outbox()->record($context, new OutboxEvent('3Y04G13WFY53WTDAQNY3TFJBP6', 'obligation.created.v1', 'billium.event.v1', 'a:1', 1, new DateTimeImmutable, ['blob' => str_repeat('x', 70_000)]));
 
                 return self::receipt();
             });
@@ -145,7 +145,7 @@ final class OutboxRecordTest extends PlatformTestCase
             self::assertStringContainsString('exceeds', $exception->getMessage());
         }
         $this->expectException(InvalidArgumentException::class);
-        new OutboxEvent('evt-bad', 'NotAType', 'billium.event.v1', 'a:1', 1, new DateTimeImmutable, []);
+        new OutboxEvent('06X10QWVT7ZGSY74Y76B2FXJJ3', 'NotAType', 'billium.event.v1', 'a:1', 1, new DateTimeImmutable, []);
     }
 
     private function outbox(): Outbox
@@ -155,6 +155,6 @@ final class OutboxRecordTest extends PlatformTestCase
 
     private static function event(string $id, int $effect): OutboxEvent
     {
-        return new OutboxEvent($id, 'ledger.obligation_recorded', 'billium.event.v1', 'obligation:'.$effect, 3, new DateTimeImmutable('2026-10-28T10:00:00Z'), ['currency' => 'RUB', 'amount' => 100]);
+        return new OutboxEvent($id, 'obligation.created.v1', 'billium.event.v1', 'obligation:'.$effect, 3, new DateTimeImmutable('2026-10-28T10:00:00Z'), ['currency' => 'RUB', 'amount' => 100]);
     }
 }

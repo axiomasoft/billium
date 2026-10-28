@@ -1,0 +1,57 @@
+{
+  "$id": "urn:billium:spec:2026-10:feed/page.v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "billium.feed.page.v1"
+    },
+    "subscriptionRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "selectionDigest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "urn:billium:spec:2026-10:event/event.v1.json"
+          },
+          {
+            "$ref": "urn:billium:spec:2026-10:event/event.v2.json"
+          }
+        ]
+      }
+    },
+    "nextCursor": {
+      "type": "string",
+      "minLength": 1
+    },
+    "scannedThrough": {
+      "$ref": "urn:billium:spec:2026-10:feed/defs.json#/$defs/position"
+    },
+    "hasMore": {
+      "type": "boolean"
+    },
+    "replayFloor": {
+      "$ref": "urn:billium:spec:2026-10:feed/defs.json#/$defs/position"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    }
+  },
+  "required": [
+    "schema",
+    "subscriptionRef",
+    "selectionDigest",
+    "events",
+    "nextCursor",
+    "scannedThrough",
+    "hasMore",
+    "replayFloor",
+    "digest"
+  ],
+  "additionalProperties": false
+}

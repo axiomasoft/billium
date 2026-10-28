@@ -18,8 +18,9 @@ final readonly class EventContractRegistrationPlan
      * @param  list<EventContractRegistration>  $toRegister
      * @param  list<EventContractRegistration>  $unchanged
      * @param  list<EventContractConflict>  $conflicts
+     * @param  list<EventContractRegistration>  $toHistorical
      */
-    public function __construct(public array $toRegister, public array $unchanged, public array $conflicts) {}
+    public function __construct(public array $toRegister, public array $unchanged, public array $conflicts, public array $toHistorical = []) {}
 
     public function isApplicable(): bool
     {
@@ -42,6 +43,7 @@ final readonly class EventContractRegistrationPlan
         $toRegister = [];
         $unchanged = [];
         $conflicts = [];
+        $historical = [];
         foreach ($descriptor->publicEvents as $declaration) {
             $wanted = EventContractRegistration::from($descriptor->moduleId, $declaration);
             $existing = $byKey[$wanted->key()] ?? null;
@@ -50,6 +52,11 @@ final readonly class EventContractRegistrationPlan
             } elseif ($existing !== null) {
                 if ($existing->sameContract($wanted)) {
                     $unchanged[] = $existing;
+                    if (! $enabled) {
+                        $historical[] = $existing;
+                    } elseif ($existing->status === EventContractRegistration::HISTORICAL) {
+                        $toRegister[] = $wanted;
+                    }
                 } else {
                     $conflicts[] = new EventContractConflict($wanted->key(), $descriptor->moduleId, EventContractConflict::CHANGED_CONTRACT);
                 }
@@ -58,6 +65,6 @@ final readonly class EventContractRegistrationPlan
             }
         }
 
-        return new self($toRegister, $unchanged, $conflicts);
+        return new self($toRegister, $unchanged, $conflicts, $historical);
     }
 }

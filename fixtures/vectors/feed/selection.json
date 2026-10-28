@@ -1,0 +1,27 @@
+{
+  "id": "feed/selection",
+  "spec_refs": [
+    "BC-ENV-32"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"digest\":\"sha256:185cffdb05e63fe33cc093edb847859a5c86e5e25256b1112f3d66c794e2a931\",\"envelopeSchemas\":[\"billium.event.v2\"],\"eventContractRevision\":\"events-2026-10-v2\",\"eventTypes\":[\"payment.effect.outcome.v1\"],\"nextCursor\":\"opaque.source.token\",\"schema\":\"billium.feed.selection.v1\",\"scope\":{\"channel\":\"events\",\"environment\":\"test\",\"installationRef\":\"inst-test\",\"lineage\":\"1\",\"sellerRef\":\"seller-a\",\"sourceAuthority\":\"billium\"},\"selectionDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"subscriptionRef\":\"subscription:1\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "billium.feed.selection.v1",
+        "digest": "sha256:185cffdb05e63fe33cc093edb847859a5c86e5e25256b1112f3d66c794e2a931"
+      }
+    }
+  ]
+}

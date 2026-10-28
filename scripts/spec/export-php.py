@@ -35,8 +35,12 @@ HELPERS = {
     ("money", False): "optMoney",
     ("object", True): "object",
     ("object", False): "optObject",
+    ("list", True): "list",
+    ("list", False): "optList",
+    ("bool", True): "bool",
+    ("bool", False): "optBool",
 }
-PHP_TYPES = {"string": "string", "int": "int", "money": "Money", "object": "\\stdClass"}
+PHP_TYPES = {"string": "string", "int": "int", "money": "Money", "object": "\\stdClass", "list": "array", "bool": "bool"}
 
 
 def header(revision: Revision, source: str) -> str:
@@ -97,6 +101,8 @@ def render_envelope(revision: Revision, envelope: Envelope) -> str:
         uses.add("Billium\\Contracts\\Data\\Money")
     use_lines = "".join(f"use {name};\n" for name in sorted(uses))
 
+    list_docs = [f"     * @param  list<mixed>  ${m.name}" for m in ordered if m.kind == "list"]
+    constructor_doc = "    /**\n" + "\n".join(list_docs) + "\n     */\n" if list_docs else ""
     params = "".join(
         f"        public {'' if m.required else '?'}{PHP_TYPES[m.kind]} ${m.name}{'' if m.required else ' = null'},\n"
         for m in ordered
@@ -110,7 +116,7 @@ def render_envelope(revision: Revision, envelope: Envelope) -> str:
         f"/**\n * {header(revision, 'schema/' + envelope.source)}\n */\n"
         f"#[Api]\nfinal readonly class {envelope.class_name} extends Envelope\n{{\n"
         f"    public const string SCHEMA = '{envelope.schema}';\n\n"
-        f"    public function __construct(\n        \\stdClass $raw,\n{params}    ) {{\n"
+        f"{constructor_doc}    public function __construct(\n        \\stdClass $raw,\n{params}    ) {{\n"
         "        parent::__construct(raw: $raw, schema: self::SCHEMA);\n    }\n\n"
         "    public static function fromRaw(\\stdClass $raw): self\n    {\n"
         f"        return new self(\n            raw: $raw,\n{arguments}        );\n    }}\n}}\n"

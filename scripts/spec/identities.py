@@ -72,6 +72,9 @@ def collect(directory: Path) -> dict[tuple[str, str], dict[str, str]]:
     ):
         for identity in defs[name]["enum"]:  # type: ignore[index]
             add(kind, identity, f"{base}/schema/common/defs.json")
+    for catalog in sorted((directory / 'event-catalogs').glob('*.json')):
+        for event in json.loads(catalog.read_text(encoding='utf-8'))['events']:
+            add('event-type', event['eventType'], f'{base}/event-catalogs/{catalog.name}')
     add("spec-revision", rev, f"{base}/README.md")
     modules = MODULES.read_text(encoding="utf-8") if MODULES.is_file() else None
     if modules is not None:

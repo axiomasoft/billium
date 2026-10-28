@@ -174,5 +174,65 @@
         "verifyDigest": false
       }
     ]
+  },
+  "payment.effect.outcome.v1": {
+    "schemaId": "urn:billium:spec:2026-10:payment/effect-outcome.v1.json",
+    "variants": [
+      {
+        "class": "PaymentEffectOutcome",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "billium.event.catalog.v1": {
+    "schemaId": "urn:billium:spec:2026-10:event/catalog.v1.json",
+    "variants": [
+      {
+        "class": "EventCatalog",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "billium.event.v2": {
+    "schemaId": "urn:billium:spec:2026-10:event/event.v2.json",
+    "variants": [
+      {
+        "class": "EventEnvelopeV2",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "billium.feed.selection.v1": {
+    "schemaId": "urn:billium:spec:2026-10:feed/selection.v1.json",
+    "variants": [
+      {
+        "class": "FeedSelection",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "billium.feed.page.v1": {
+    "schemaId": "urn:billium:spec:2026-10:feed/page.v1.json",
+    "variants": [
+      {
+        "class": "FeedPage",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "billium.feed.bootstrap.v1": {
+    "schemaId": "urn:billium:spec:2026-10:feed/bootstrap.v1.json",
+    "variants": [
+      {
+        "class": "FeedBootstrap",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
   }
 }

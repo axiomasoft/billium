@@ -126,6 +126,48 @@
     "category": "Data"
   },
   {
+    "schema": "payment.effect.outcome.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\PaymentEffectOutcome",
+    "dart": "PaymentEffectOutcome",
+    "category": "Data"
+  },
+  {
+    "schema": "billium.event.catalog.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\EventCatalog",
+    "dart": "EventCatalog",
+    "category": "Data"
+  },
+  {
+    "schema": "billium.event.v2",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\EventEnvelopeV2",
+    "dart": "EventEnvelopeV2",
+    "category": "Data"
+  },
+  {
+    "schema": "billium.feed.selection.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\FeedSelection",
+    "dart": "FeedSelection",
+    "category": "Data"
+  },
+  {
+    "schema": "billium.feed.page.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\FeedPage",
+    "dart": "FeedPage",
+    "category": "Data"
+  },
+  {
+    "schema": "billium.feed.bootstrap.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\FeedBootstrap",
+    "dart": "FeedBootstrap",
+    "category": "Data"
+  },
+  {
     "schema": null,
     "variant": null,
     "php": "Billium\\Contracts\\Data\\Money",

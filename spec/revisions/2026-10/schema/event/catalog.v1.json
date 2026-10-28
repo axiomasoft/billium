@@ -1,0 +1,67 @@
+{
+  "$id": "urn:billium:spec:2026-10:event/catalog.v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "billium.event.catalog.v1"
+    },
+    "eventContractRevision": {
+      "const": "events-2026-10-v2"
+    },
+    "events": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "eventType": {
+            "const": "payment.effect.outcome.v1"
+          },
+          "ownerModuleId": {
+            "const": "execution"
+          },
+          "envelopeSchema": {
+            "const": "billium.event.v2"
+          },
+          "payloadSchemaRef": {
+            "const": "urn:billium:spec:2026-10:payment/effect-outcome.v1.json"
+          },
+          "payloadSchemaDigest": {
+            "const": "sha256:296b8117fe17c02b1853ccf5d6de2467a583588e83e6e2eedfcb1c020dd84fc5"
+          },
+          "bootstrapMode": {
+            "const": "replay_only"
+          },
+          "snapshotSourceKey": {
+            "const": null
+          },
+          "retentionPolicyRef": {
+            "const": "financial-permanent"
+          }
+        },
+        "required": [
+          "eventType",
+          "ownerModuleId",
+          "envelopeSchema",
+          "payloadSchemaRef",
+          "payloadSchemaDigest",
+          "bootstrapMode",
+          "snapshotSourceKey",
+          "retentionPolicyRef"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    }
+  },
+  "required": [
+    "schema",
+    "eventContractRevision",
+    "events",
+    "digest"
+  ],
+  "additionalProperties": false
+}

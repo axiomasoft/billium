@@ -1,0 +1,27 @@
+{
+  "id": "payment/effects/pending-zero",
+  "spec_refs": [
+    "BC-ENV-30"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"bindingRevision\":\"binding:original\",\"digest\":\"sha256:4d0769fb200a0238865f460795f773cf2d7de7b10049b20cb16edd99dcf0bd6f\",\"effectTotal\":\"0.00\",\"environment\":\"test\",\"installationRef\":\"inst-test\",\"merchantAccountRef\":\"merchant:original\",\"money\":{\"amount\":\"10.00\",\"currency\":\"RUB\"},\"occurredAt\":\"2026-10-28T10:00:00Z\",\"operationKind\":\"capture\",\"operationRef\":\"capture:1\",\"originalOperationRef\":\"charge:1\",\"providerEvidenceRef\":\"evidence:1\",\"revision\":1,\"schema\":\"payment.effect.outcome.v1\",\"sellerRef\":\"seller-a\",\"status\":\"pending\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "payment.effect.outcome.v1",
+        "digest": "sha256:4d0769fb200a0238865f460795f773cf2d7de7b10049b20cb16edd99dcf0bd6f"
+      }
+    }
+  ]
+}
