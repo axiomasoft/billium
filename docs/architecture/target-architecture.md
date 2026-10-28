@@ -1,6 +1,6 @@
 # Billium — целевая архитектура
 
-Статус: решение PLAN1.P1.6 (2026-10-17). Нормативная основа — `docs/requirements.md` (REQ/INV),
+Статус: исходное решение PLAN1.P1.6 (2026-10-17), уточнено D53–D63 (2026-10-24). Дизайн P3–P10 ещё не реализован. Полнота и границы поставки — [design-coverage.md](design-coverage.md). Нормативная основа — `docs/requirements.md` (REQ/INV),
 первичные факты — `knowledge/research/DR-0*.md` плана `2026.10.14-№1-BILLIUM-V1`
 в [workspace](../planning.md) (DR0N-NN), практики —
 `artifacts/P1-methods/methods.json` (M-NN), решения — `decisions/D9.json`…`D28.json`. Модель данных и инварианты —
@@ -11,14 +11,12 @@ URL, датой и версией в DR-файле; непроверенное �
 
 ## Итог
 
-Billium строится как **собственное PHP-ядро с внутренними модулями** (build) и одной hybrid-областью —
-документы, где рендер и хранение подключаются портами. Ни один server engine аудита не становится
-основой: Lago требует коммерческой edition для ручных/частичных оплат и credit notes и закрыт по PSP
-(DR01-08, DR01-10, DR01-17), Kill Bill сериализует по account и хранит decimal major units (DR01-21,
-DR01-24), OpenMeter требует Kafka + ClickHouse и не даёт reserve (DR01-31, DR01-33). Все три —
-серверы, а канон требует лёгкий embedded-путь без сервера (REQ-PROF-02). Их паттерны взяты как идеи:
-operation/attempt и lookup-Janitor Kill Bill (DR01-20, DR01-23), семантика метрик OpenMeter (DR01-29,
-DR01-30), seller scoping Lago (DR01-11).
+Billium строится как **собственное PHP-ядро с внутренними модулями** и портами для внешних
+драйверов, документов, источников usage и интеграций. Выбор build сохраняет обязательный embedded-путь,
+единый PHP writer и существующие границы ответственности. Lago, Kill Bill и OpenMeter остаются
+архитектурными референсами и условными будущими адаптерами; их конкретные edition, лицензия,
+concurrency и recovery требуют отдельной квалификации при выборе backend. Исследовательское сравнение
+не является свидетельством готовой поддержки или обязательной зависимости (D53, D55, D58).
 
 ## Решения по областям
 
@@ -94,14 +92,30 @@ flowchart LR
    переключает старые операции (REQ-PROF-05, INV-02).
 3. Embedded и server — один код и одна схема; различаются составом модулей, не правилами расчёта
    (M-22). Лёгкий профиль не ослабляет инварианты (REQ-PROF-22).
-4. Где модуль execution включён (`remote-billium`, `standalone-billium`), хост или deployment реализует
-   порт `WriterAdmission` (SPI Implement): authority вне БД Billium выдаёт исключительный lease на
-   (`installation_ref`, incarnation), ротирует `writer_checkpoint` на каждый dispatch-пакет и принимает
-   `acquire`, `renew`, `release` с водяным знаком `commit_no` журнала `money_commit_log`: захват lease без
-   предшествующего `release` открывает recovery без отправок и collection до активации оператором, `commit_no`
-   копии ниже `released_commit_no` — quarantine; без адаптера execution не стартует, отказ — quarantine с
-   `billium.installation.quarantined` (INV-02, REQ-FAIL-15, D34, D39). В embedded — адаптер хоста, в server — сервис deployment; учётные данные authority
-   в БД не хранятся. В `embedded-commerz` execution выключен и порт не нужен.
+4. Где включён execution, хост/deployment реализует `WriterAdmission` от authority **вне**
+   копируемой БД и подтверждает остановку/изоляцию старых отправителей. Каждая смена deployment owner session,
+   restore, release/acquire или потеря непрерывного lease открывает recovery. `release` запечатывает
+   session после закрытия admission и drain; он не активирует recovery. Activation — отдельная
+   привилегированная команда с RetirementProof, reconciliation coverage и сертификатом выбранной
+   lineage/epoch. Равенство `max(commit_no)` не доказывает свежесть БД и не разрешает dispatch (D54,
+   заменяет D39 и закрывает перенесённый D42 design gap; runtime proof — P3/P5).
+5. В каждой root financial Tx `financial_session` держится FOR SHARE до commit; seal берёт FOR UPDATE.
+   Raw custody callback/response может продолжаться после seal, но old session не применяет финансовые
+   изменения. Recovery reducers работают с новым допущенным epoch. Уже отправленный запрос PSP
+   локальный fence не отзывает: pending/unknown сохраняет identity и reserve (D54, D57, D60).
+6. Manifest модулей валидирует зависимости и API/schema/event версии. Ledger может учитывать
+   obligation/payment/allocation без documents/render, collection или execution. Disable сохраняет
+   history/recovery, uninstall не выполняет purge; extraction нового пакета требует named consumer (D55).
+7. OwnerSession относится к deployment generation, а не к одному FPM/queue worker. Workers получают
+   краткоживущие host tokens и могут перезапускаться/масштабироваться внутри active session. Во всех
+   денежных профилях `FinancialSessionAdmission` хоста задаёт expected epoch/DB attachment вне backup;
+   execution дополнительно требует WriterAdmission. Contracts-only не требуют этих портов. Неконтролируемый
+   in-place rollback БД под живым deployment без host restore barrier не считается безопасным restore (D62).
+8. Server ledger-only с внешним исполнителем допускается без execution/collection/WriterAdmission;
+   денежные observations аутентифицируются по seller/environment/sourceAuthority. Это delivery=server
+   при external-owner semantics, а не новый wire executionProfile. Optional production Dart SDK при
+   отсутствии named consumer получает явную non-extraction диспозицию; обязательные transport tests
+   PHP/Dart не пропускаются и остальные фазы не блокируются (D61).
 
 ## Стек
 
@@ -120,8 +134,8 @@ flowchart LR
 - Денежный writer — только PostgreSQL ≥ 16: partial unique, `NOT VALID`, `SKIP LOCKED` и
   N-процессные доказательства (REQ-ACC-11, REQ-FAIL-29). SQLite для writer в 1.0 не поддерживается.
 - Внутренние деньги — bigint minor units + currency, exponent из версионированной таблицы ISO 4217
-  (D19, DR04-11). Money-библиотека PHP (MoneyPHP или Brick) выбирается в P2 прогоном fixtures
-  (CL-117, DR04-24); общего money-пакета нет (REQ-OUT-14).
+  (D19, DR04-11). В P2 принят Brick Money (D44); wire и cross-language fixtures остаются источником совместимости.
+  Общего money-пакета нет (REQ-OUT-14).
 
 ## Пакеты
 
@@ -166,10 +180,8 @@ server, Commerz, Tariffler, AiFina или конкретного драйвер�
 
 - `unverified`: concurrency vendor-схем не проверялась прогоном (DR01-39) — не влияет на build, но
   исключает «adopt по аналогии».
-- `unverified`: совместимость PHP-зависимостей с Laravel 13 подтверждена только manifest-ом (DR01-35,
-  DR03-04; CL-116) — composer resolver запускается в P2.
-- `unverified`: паритет MoneyPHP/Brick/`axioma_contracts` не прогонялся (DR04-24) — выбор библиотеки в
-  P2; до него спецификация MoneyWire опирается на ISO 4217 List One (DR04-11).
+- P2 завершил contracts/toolchain этап и выбрал Brick Money (D44); фактические результаты и
+  deviations сохранены в P2. Это не квалификация будущего core или реального PSP.
 - Открыто у провайдеров: ротация credentials (DR-02 DR02-T05), restore refund без ответа у
   CloudPayments (DR02-11), `uuid` при ошибке 33 АТОЛ (DR02-17) — драйверы и execution сохраняют
   provider ID до сети и не трактуют пустой lookup как absent (REQ-FAIL-08).

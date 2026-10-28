@@ -14,6 +14,8 @@ and the `billium-contracts` packages for PHP and Dart. Domain code (core, persis
 - [Requirements and traceability](docs/requirements.md)
 - [Target architecture](docs/architecture/target-architecture.md) and
   [data model](docs/architecture/data-model.md)
+- [Design coverage and delivery boundaries](docs/architecture/design-coverage.md): module composition,
+  remaining implementation scope, recovery and production qualification
 - [billium-contracts v1](docs/contracts/billium-contracts-v1.md)
 - [Acceptance catalog](docs/acceptance-catalog.md)
 - [PHP contracts package](packages/contracts/README.md): `Codec`, `Money`, `MoneyMath`, envelopes
@@ -52,4 +54,4 @@ are enabled in `.swissknife.json`.
 See [development environment](docs/development-environment.md) for setup and
 verification commands.
 
-See [planning and design checks](docs/planning.md) for the current P1 plan and its validation commands.
+See [planning and design checks](docs/planning.md) for PLAN1, its execution state and validation commands.

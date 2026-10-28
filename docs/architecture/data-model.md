@@ -1,5 +1,9 @@
 # Billium — модель данных
 
+Уточнение 2026-10-24: D54, D57 и D60–D63 заменяют прежние допущения restore, bounded provider
+facts и части platform/ledger алгоритмов. Это целевая модель; P3–P10 не реализованы.
+[Полнота дизайна](design-coverage.md) задаёт поддерживаемые границы.
+
 Статус: PLAN1.P1.6 (2026-10-17), корректировка PLAN1.P1.10 по review P1.9. Модель построена от владения
 (`docs/requirements.md` § Владение) и инвариантов, а не от таблиц кандидатов аудита. Сущности соседей
 (соглашение хоста, PlanVersion Tariffler, заказ Commerz, книга AiFina) — только строковые ссылки `*_ref`.
@@ -137,16 +141,16 @@ erDiagram
 
 | ID | Инвариант | Constraint | Lock | Обход, который закрыт | Тест-идея | Источник |
 |:--|:--|:--|:--|:--|:--|:--|
-| INV-01 | Один writer на сущность | Реестр владения таблиц; arch-тест: запись только из `Internal` модуля-владельца; в server — GRANT по ролям модулей | Мутации только через OperationRunner модуля (корневая транзакция) | Прямой SQL/Eloquent хоста или соседнего модуля | Arch-тест записи; в server — отказ БД на чужую роль | INV-01, REQ-OWN-16, REQ-OWN-17, D17 |
-| INV-02 | Один исполнитель на операцию на всю жизнь | `execution_profile`, `binding_id` NOT NULL и неизменяемы (триггер); UNIQUE (`operation_id`) на attempt (D37). Внешний допуск: Tx B требует ticket порта `WriterAdmission` от authority вне БД — `ticket.incarnation = installation_state.incarnation`, `ticket.checkpoint_prev = installation_state.writer_checkpoint`, ticket не истёк — и записывает `checkpoint_next`, `lease_epoch` (D34). Захват lease без `release` предыдущего держателя — recovery-режим, `presented commit_no` меньше `released_commit_no` — копия (D39) | `installation_state` FOR UPDATE в Tx B dispatch-пакета (CAS checkpoint), FOR SHARE при admission; `money_operation` FOR SHARE в Tx B перед CAS attempt (D40); каждая корневая денежная Tx вставляет строку `money_commit_log` без lock (D39); CAS `lease_token`/`fence_epoch` на attempt; отказ authority или несовпадение → Tx quarantine: `dispatch_enabled = false`, `billium.installation.quarantined` | Второй worker после lease; restore без процедуры (incarnation у authority поднята — ticket не выдаётся); сырой клон в чужом deployment (нет учётных данных authority); клон рядом с живым writer (lease занят, checkpoint ротирован его dispatch); копия после остановки writer, который менял деньги без dispatch (cancel, исход, allocation, шаг collection): штатная остановка оставляет `released_commit_no` — копия старше, quarantine; нештатная — recovery без отправок до активации оператором (D39); смена профиля посреди жизни. Копия не хранит учётных данных authority и in-memory держателя lease, поэтому скопированные `dispatch_enabled`, incarnation и epoch fence не дают | Два worker-а + просроченный lease; клон prod в staging и рядом с prod; restore без процедуры с workers до сверки — 0 отправок, quarantine; cancel или allocation после снятия копии без dispatch, затем копия берёт lease — 0 отправок и 0 collection step | INV-02, REQ-PROF-05, REQ-FAIL-14, REQ-FAIL-15, REQ-FAIL-19, D26, D27, D34, D39, D40 |
+| INV-01 | Один writer на сущность | Реестр владельцев таблиц; production application role не меняет защищённые allocation/counter поля напрямую: guarded DB routines, миграции под отдельной ролью | OperationRunner + scoped TransactionContext participants; каждый модуль меняет свои данные | Nested root Tx, cross-module SQL, bypass counters от application role; DBA bypass вне модели | Direct DML denied; foreign context rejected; allocation journals = counters после гонок | INV-01, D17, D60 |
+| INV-02 | Один исполнитель на операцию на всю жизнь | Frozen execution_profile/binding, одна logical attempt; external WriterAdmission и RetirementProof/ActivationCertificate | financial_session FOR SHARE для root Tx, seal FOR UPDATE; tickets/CAS в dispatch; внешний hard fence старых отправителей | Любая смена владельца открывает recovery; release или совпадение max(identity) не активируют; old session не пишет после seal | Post-release mutation; recovery-release-acquire bypass; out-of-order commit_no; paused old worker; clone same checkpoint: 0 новых effects до квалифицированной activation | INV-02, REQ-FAIL-15, D26, D34, D37, D40, D54, D60 |
 | INV-03 | Сетевой вызов вне транзакции | Правило приложения: gateway драйвера, renderer и доставка отвергают вызов при открытой транзакции | Tx B (lease attempt) коммитится до вызова; finish — отдельная Tx C | Вызов внутри Tx при pinned connection хоста | Double драйвера проверяет уровень транзакции = 0 | INV-03, D10, D27 |
 | INV-04 | `unknown` разрешается lookup-ом | CHECK: `failed-terminal` только с `outcome_evidence_id` или `absence_certificate_ref`; одна attempt на операцию — UNIQUE (`operation_id`), второй attempt нет; повтор после terminal — новая операция по новому основанию через admission (D37) | Операция FOR UPDATE при применении исхода lookup/callback | Повтор новым ключом после timeout/404; таймер вместо lookup; повторная отправка той же операции | Timeout → нет новой отправки до ответа lookup; вставка второй attempt → UNIQUE-отказ | INV-04, REQ-FAIL-02, REQ-FAIL-08, D28, D37 |
 | INV-05 | Ключ + digest; тот же ключ с другим payload — conflict | UNIQUE (`environment`, `seller_ref`, `command_kind`, `command_key`) на `idempotency_receipt` (installation — БД инсталляции); сравнение `digest` | Claim — первая запись корневой Tx (блокировка уникального индекса), до locks агрегатов | check-then-insert; повтор с изменённым телом | N процессов: тот же ключ, разные digest | INV-05, REQ-CON-32, REQ-FAIL-06, D22 |
-| INV-06 | Cumulative totals не складываются | CHECK `0 ≤ refunded_total ≤ captured_total`; UNIQUE (`operation_id`, `revision`); totals присваиваются из исхода, не прибавляются | Операция (или payment-проекция) FOR UPDATE; применяется только revision > applied | Сложение повторного callback как дельты | Дубли и обратный порядок исходов с одинаковыми totals | INV-06, REQ-FAIL-13, D28 |
+| INV-06 | Cumulative totals присваиваются, не суммируются | UNIQUE economic revision/digest; обычная applied projection имеет bounded totals; immutable observed effects сохраняются отдельно, включая отклонения | Operation/payment lock, compare material economic digest | Повтор callback как дельта; потеря overrefund из-за bounded CHECK | Duplicate/shuffled observations; actual refund140 при capture100 сохраняет exposure40+hold, applied остаётся last-consistent | INV-06, REQ-FAIL-10, D28, D57, D60 |
 | INV-07 | Refund — к исполнителю исходного charge | FK (`seller_ref`, `original_operation_id`) на charge; триггер копирует `binding_id` charge в refund, иной binding отвергается | Charge FOR UPDATE при admission refund | Refund через новый маршрут, merchant или драйвер по умолчанию | Смена маршрута, затем refund старого charge | INV-07, REQ-OWN-20, REQ-OWN-21, D26 |
 | INV-08 | Транспортный ACK — не бизнес-receipt | `inbox_message.status` (received → applied/quarantined) отделён от ACK; receipts — отдельные типы с ссылкой на применённую revision | Вставка inbox ON CONFLICT DO NOTHING; применение — под lock операции | Ответ 200 / ACK relay принят за применение | ACK, затем crash до apply → повторное применение без дубля | INV-08, REQ-CON-10, REQ-FAIL-26, D28 |
-| INV-09 | Сохранение денег: open = due − allocated; allocation ≤ captured − refunded | CHECK `allocated_minor + credited_minor ≤ amount_due_minor` (obligation); CHECK `reallocation_required = (allocated_minor > captured_minor − refunded_minor)` (payment, флаг выводится, не ставится руками); триггер `allocation_guard`: положительная allocation из payment только если после неё `allocated_minor ≤ captured_minor − refunded_minor`, при `reallocation_required` — отказ; allocation `amount_minor > 0` или reversal с UNIQUE `reverses_id`. Ledger меняется только по подтверждённому refund через наблюдение (D35) | obligation (по id asc) → invoice → payment/customer_credit FOR UPDATE | Параллельные allocation одного платежа; refund уменьшает net без policy; reversal до исхода refund (отказ admission оставляет долг открытым); новая allocation из платежа с `reallocation_required` | N процессов allocation одного платежа на две obligations; refund отклонён admission → ledger без изменений; refund succeeded → флаг, allocation из платежа отвергнута до reversal/credit note | INV-09, REQ-FAIL-20, REQ-FAIL-19, D11, D27, D35 |
-| INV-10 | Ёмкость refund ≤ captured − confirmed − reserved | CHECK `refunded_total + refund_reserved ≤ captured_total` на charge; резерв освобождается только terminal-исходом refund | Charge FOR UPDATE при admission и при исходе refund | Два refund с разными ключами; освобождение резерва по таймеру | N параллельных refund одного charge; unknown refund не освобождает | INV-10, REQ-FAIL-09, D27 |
+| INV-09 | Сохранение receivable и allocatable funds | Guarded DB routine владеет journal+counter mutation; приложение не увеличивает counters повторно; account/seller/currency совпадают; financialHold запрещает новые allocations | Полный lock plan: obligation → invoice → payment/customer_credit, ids ascending | Concurrent raw application DML, cross-customer allocation, inconsistent counter increment | Counter/journal equality; direct application INSERT rejected; normal refund reallocation, exceptional evidence preserved under hold | INV-09, D11, D27, D35, D57, D60 |
+| INV-10 | Admission refund ≤ фактически доступная captured ёмкость минус confirmed/pending/unknown refunds | Nonnegative reserve; admission predicate под lock исходного charge; actual provider evidence не ограничивается этим predicate и при нарушении создаёт discrepancy+hold | Charge lock при reserve/reduce; unknown reserve не освобождается по таймеру | Конкурирующие refunds, потерянный поздний внешний факт, повтор after TTL | Concurrent partial refunds; late original success после replacement: actual excess сохранён, spendable=0, автоматических новых effects нет | INV-10, REQ-FAIL-09, REQ-FAIL-10, D27, D57 |
 | INV-11 | Уникальность occurrence — бизнес-идентичность | EXCLUDE USING gist (`seller_ref`, `component_ref`, `purpose`, `tstzrange(interval)` &&) WHERE status ≠ superseded; UNIQUE (`seller_ref`, `basis_ref`) на obligation | Schedule FOR UPDATE при материализации и supersession | Две revisions расписания; повтор scheduler job | Две revisions одного периода; двойной job | INV-11, REQ-ACC-09, D12 |
 | INV-12 | Денежные условия неизменяемы | Триггер отвергает UPDATE суммы, валюты, `price_version_id`, `terms_digest` obligation после создания; изменение — строка `adjustment` | Obligation FOR UPDATE при adjustment | Пересчёт по новой PriceVersion | Смена цены после obligation → adjustment, не пересчёт | INV-12, REQ-CON-33, D12 |
 | INV-13 | Invoice после выпуска неизменяем | Триггер: при `status ≠ draft` UPDATE замороженных колонок и изменения `invoice_line` отвергаются; metadata — allow-list; UNIQUE номер в `legal_document` | Invoice FOR UPDATE; series FOR UPDATE при выпуске | Правка строк напрямую; смена номера при перерендере | Правка issued invoice → отказ; перерендер сохраняет номер | INV-13, REQ-CON-38, D20 |
@@ -154,7 +158,9 @@ erDiagram
 
 ## FSM денежной операции
 
-Одна FSM для `kind ∈ {charge, refund}` (D28). Totals — cumulative атрибуты, не состояния.
+Базовая FSM sale/refund сохраняет v1 (D28). D57 добавляет отдельные authorize/capture/provider-void
+commands и effect observations; local payment.cancel не становится PSP void. Totals — cumulative
+атрибуты. Actual observed effects и bounded applied projection разделены; discrepancy удерживает hold.
 
 ```mermaid
 stateDiagram-v2
@@ -241,32 +247,27 @@ open amount в той же транзакции, что и allocation (INV-09).
   нет (REQ-FAIL-25).
 - Новый потребитель feed после prune: snapshot + committed cursor + tail (REQ-FAIL-22); историческая
   allocation не восстанавливается из текущих цен.
-- Restore и clone (D34, D39): `installation_state` хранит `incarnation`, `routing_epoch`, `dispatch_enabled`,
-  `writer_checkpoint`, `lease_epoch`, но fence — не они: всё это копируется вместе с БД. Допуск writer
-  выдаёт authority вне БД через порт хоста `WriterAdmission` (SPI Implement): исключительный lease на
-  (`installation_ref`, incarnation) с монотонным `lease_epoch`; при каждом dispatch-пакете authority
-  принимает текущий `writer_checkpoint` и выдаёт новый, который Tx B записывает CAS-ом; acquire, renew
-  и release несут `commit_no` из `money_commit_log` (D39). Учётные данные
-  authority живут в deployment/хосте, не в БД. Запуск collection требует действующего lease той же
-  incarnation.
-- Отказ authority (нет учётных данных, иная incarnation, lease занят, checkpoint устарел) или истёкший
-  ticket → Tx quarantine: `dispatch_enabled = false`, команды допуска получают `billium.installation.quarantined`;
-  отправки, replay, замены и новые collection step выключены (REQ-FAIL-15, REQ-FAIL-19).
-- Restore по процедуре: оператор поднимает `active_incarnation` у authority; restored-БД со старой
-  incarnation получает отказ и стоит в quarantine до сверки inventory провайдера; привилегированная
-  команда активации с audit записывает новую incarnation от authority и `dispatch_enabled = true`
-  (REQ-FAIL-10).
-- Restore без процедуры и сырой клон: копия в чужом deployment не получает ticket (нет учётных данных);
-  копия рядом с живым writer не получает lease, а после первого dispatch writer её checkpoint устарел
-  навсегда. Копия после остановки writer без последующих dispatch **не** эквивалентна ему: cancel,
-  применение исхода, allocation и шаг collection не меняют checkpoint (D39). Поэтому каждая корневая
-  денежная Tx вставляет строку `money_commit_log`; при штатной остановке (drain) writer вызывает
-  `release(commit_no)`, authority хранит `released_commit_no`. Acquire копии с `commit_no` ниже
-  `released_commit_no` → quarantine; acquire без предшествующего release (crash, kill, потеря связи)
-  → recovery: dispatch, replay, замены и новые collection step выключены, lookup и применение исходов
-  разрешены, выход — привилегированная активация оператором с audit (REQ-FAIL-10), которая фиксирует
-  выбранную БД и её `commit_no` как baseline. Неподтверждённую ротацию (Tx B откатилась после ответа
-  authority) повторяет только держатель lease (секрет держателя в памяти процесса, не в БД).
+- Restore/clone и смена ownership (D54): `installation_state` и `money_commit_log` копируются
+  с БД, поэтому не доказывают freshness или право отправки. External authority выдаёт исключительную
+  session. Любое новое acquire, в том числе после clean release, открывает recovery. Продолжить active
+  может та же deployment owner session с непрерывным lease. Обычный worker получает новый process token
+  и присоединяется к ней без recovery; expected epoch и attachment берутся из host authority, не из БД (D62).
+- Seal: остановить admission/collection/tickets; exclusive lock `financial_session` ждёт завершения
+  уже допущенных root financial Tx и фиксирует sealed. Old epoch не может применить новые изменения.
+  Raw authenticated callbacks/responses продолжают custody без изменения sealed projection.
+- RetirementProof от deployment подтверждает прекращение старых отправителей и их исходящего PSP
+  доступа; lease timeout или copied flag недостаточны. Уже принятые PSP запросы могут завершиться позднее.
+- Recovery сверяет локальные admitted/pending/unknown и provider inventory от backup horizon до
+  подтверждённого completeness watermark, включая потерянные после snapshot операции. Восстанавливаются
+  original refs, receipts/tombstones, source-feed и accounting/fiscal discrepancies. Unsupported lookup
+  или неполное inventory оставляет namespace закрытым; отсутствие записи не становится новым intent.
+- ActivationCertificate связывает selected DB lineage/session/epoch, RetirementProof, per-namespace
+  coverage watermarks, unresolved dispositions, projection checks, actor/verdict, expiry и one-use nonce.
+  Отдельная привилегированная activation CAS допускает только перечисленные reconciled namespaces.
+  Release/reacquire не заменяет activation. Никакого сравнения max(identity) для auto-active нет.
+- Raw evidence и observed actual totals сохраняют late overcapture/overrefund. Bounded applied projection
+  остаётся last-consistent; financialHold даёт spendable=0, discrepancy показывает actual exposure,
+  repair имеет отдельное разрешение/receipt. Значения не обрезаются молча (D57, D60).
 - Recovery barrier: операции `admitted|dispatching|pending|unknown` из restored-копии проходят lookup
   до любого dispatch; отсутствие записи — не свежее намерение (REQ-FAIL-25).
 - Источник feed восстановлен ниже применённой revision → `feed_partition.state = recovery_required`
@@ -302,20 +303,37 @@ open amount в той же транзакции, что и allocation (INV-09).
 | FS-23 | Allocation и credit note по компоненту, без переоценки | `allocation`, `credit_note` | REQ-OWN-13, REQ-OWN-19 |
 | FS-24 | Transactional outbox в той же Tx | `outbox_event` | REQ-CON-18, INV-08 |
 | FS-25 | Expand/contract, text-статусы, совместимые workers | все таблицы | REQ-FAIL-29, D21 |
-| FS-26 | Внешний допуск writer (`WriterAdmission`: lease, ротация checkpoint, `commit_no` и release, recovery при захвате без release), quarantine incarnation, lookup до dispatch, rebootstrap | `installation_state`, `feed_partition`, порт хоста | REQ-FAIL-15, REQ-FAIL-23, D25, D34, D39 |
+| FS-26 | WriterAdmission: каждая смена owner — recovery; session seal, external retirement proof, inventory reconciliation и отдельный activation certificate; release/commit_no не разрешают auto-active | financial_session, feed_partition, external authority/deployment | REQ-FAIL-15, REQ-FAIL-23, D25, D54, D60 |
 
 ## Операции и блокировки
 
-Глобальный порядок — один и нормативный (D27): **claim идемпотентности** (первая запись корневой Tx) →
-`installation_state` (FOR SHARE; FOR UPDATE только в Tx B dispatch-пакета и restore) → `feed_partition`
-→ `billing_schedule` → `billing_occurrence` → `dunning_case` → `obligation` (id asc) → `invoice` (id
-asc) → `payment` / `customer_credit` (id asc) → `money_operation` charge → refund → `attempt` →
-`document_series`. Операция берёт только нужные звенья, не меняя их порядок. Вставки в `outbox_event`,
-`inbox_message`, `usage_fact` — без явного lock (уникальный индекс). READ COMMITTED; повтор всей попытки
-только при 40001/40P01 и только для БД-шагов. Вызов authority `WriterAdmission` — вне Tx (INV-03), до
-Tx B или до запуска collection job (D34). Каждая корневая денежная Tx (admission, cancel, применение
-исхода и наблюдения, allocation и reallocate, credit note, шаг collection, Tx B) добавляет вставку в
-`money_commit_log` — последним звеном, без явного lock (D39).
+Глобальный порядок (D27, уточнения D55/D60): claim идемпотентности → `financial_session` FOR SHARE
+→ `installation_state` (административные изменения) → `module_state` FOR SHARE (rank 25)
+→ `feed_partition` → `billing_schedule` → `billing_occurrence` → `dunning_case`
+→ `settlement_intent` (rank 65, id asc) → `obligation` (id asc) → `invoice` (id asc) → `payment`/`customer_credit` (id asc) → charge → refund
+→ attempt → document_series. Seal берёт exclusive session lock и не получает domain locks после него.
+Полный LockSet вычисляется до мутаций; изменившийся набор требует restart root Tx. READ COMMITTED;
+40001/40P01 повторяет только локальную Tx. Сеть/authority/PSP/renderer — вне Tx.
+
+Один root OperationRunner выдаёт unforgeable TransactionContext с connection/session/LockSet. Typed
+participant port позволяет владельцу ledger участвовать в root Tx documents/collection/rating;
+обычный public Ledger API остаётся root-only и не вызывается вложенно. Ни один participant не получает
+права писать чужие таблицы. Counters allocation изменяет только guarded DB routine, приложение их не
+инкрементирует повторно. Production application role не имеет прямого DML на защищённые данные;
+privileged DBA bypass не входит в гарантию. `money_commit_log` сохраняется для диагностики (D54/D60).
+
+Закрытие settlement intent без эффекта сохраняет append-only `settlement_intent_closure` через
+guarded `billium_close_settlement_intent_no_effect`. Scoped UNIQUE допускает одно terminal closure,
+targets и исторические receipts не меняются. P3.6 владеет DDL/routine, P3.8 — participant и тестами.
+Closure и economic application сериализуются lock intent до obligations. Проверка актуального
+no-effect proof принадлежит collection participant в той же Tx; поздний реальный факт всё равно
+сохраняется с discrepancy/hold и не открывает автоматическую allocation.
+
+Platform хранит `module_state` и append-only `module_transitions`. Runner заранее определяет все
+участвующие модули, проверяет их operation-class capabilities и удерживает shared locks до commit;
+transition берёт exclusive locks в том же порядке module_id. Disable и admission имеют единую
+границу сериализации. Draining/recovery сохраняют предусмотренные completion, refund и evidence
+lanes; receipt replay проверяет текущие права, но не требует разрешения на новое намерение.
 
 | Операция | Read/write | Locks (явные и неявные) | Tx и commit point | Внешний вызов | Recovery |
 |:--|:--|:--|:--|:--|:--|
@@ -330,12 +348,12 @@ Tx B или до запуска collection job (D34). Каждая корнев�
 | Policy reallocation после refund | allocation, credit_note, obligation, invoice, payment | claim → obligation → invoice → payment; только при `reallocation_required` после succeeded refund | одна Tx + receipt; режим `credit_note` — reversal (`cause = refund`) и credit note на ту же сумму вместе, режим `reversal` — только reversal; флаг снимается CHECK-ом той же Tx | — | ключ команды ledger (INV-05, D35) |
 | Admission charge | idempotency, operation, binding, attempt | claim → installation FOR SHARE; UNIQUE business binding без seller, иной seller → conflict (D36) | Tx A + outbox | — | ключ/intent → исходная операция |
 | Admission refund | то же + charge | claim → installation FOR SHARE → charge FOR UPDATE (резерв); ledger не меняется (D35) | Tx A + outbox | — | то же |
-| Dispatch | installation_state, attempt | ticket `WriterAdmission` вне Tx → installation_state FOR UPDATE (CAS incarnation, `writer_checkpoint`, dispatch_enabled) → money_operation FOR SHARE (не cancelled) → CAS lease attempt (`state = admitted`, epoch) (D40) | Tx B до сети | authority (до Tx), драйвер | отказ authority → Tx quarantine (`billium.installation.quarantined`); lookup worker (D34) |
-| Finish / callback / lookup apply | operation, revision, evidence, inbox | evidence вне fence; operation FOR UPDATE; CAS lease для finish | Tx C + outbox | — | quarantine при конфликте |
+| Dispatch | financial_session, authorization guard, attempt | validated deployment/process token → session shared guard → collection authorization participant при необходимости → root operation → attempt CAS; без глобального UPDATE installation на каждый send | Tx B dispatch-start до сети, точка линеаризации отмены | authority (до Tx), драйвер после commit | revoked/stale guard до Tx B даёт 0 sends; уже отправленный effect сохраняется; D62, D63 |
+| Finish / callback / lookup apply | operation, revision, evidence, inbox | raw custody отдельно; financial_session FOR SHARE → operation FOR UPDATE; CAS epoch/lease для reduce | Tx C + outbox | — | quarantine при конфликте |
 | Cancel | operation, attempt | money_operation FOR UPDATE → чтение attempt: `dispatching|sent` → отказ (D40) | одна Tx + `money_commit_log` | — | отправленное не отменяется |
-| Collection step | dunning_case, step, operation | claim ключа шага (детерминирован из case и step_no) → installation FOR SHARE → case → obligation FOR UPDATE (open > 0, не открыта reversal с `cause = refund`) → money_operation; UNIQUE (case, step) | одна Tx: шаг + admission charge + outbox | lease `WriterAdmission` до старта job (вне Tx) | повтор job → тот же claim/UNIQUE; нет lease → job не стартует (D34) |
+| Collection step | dunning_case, step, operation | claim ключа шага (детерминирован из case и step_no) → installation FOR SHARE → case → obligation FOR UPDATE (open > 0, не открыта reversal с `cause = refund`) → money_operation; UNIQUE (case, step) | одна Tx: step + ledger settlement-intent participant + command outbox; execution admission позже | lease `WriterAdmission` до старта job (вне Tx) | повтор job → тот же claim/UNIQUE; нет lease → job не стартует (D34) |
 | Outbox relay | outbox_event | FOR UPDATE SKIP LOCKED | короткие Tx, доставка вне Tx | брокер/HTTP | at-least-once, dedupe по event_id |
-| Prune / restore | outbox, tombstones, installation, money_commit_log | installation FOR UPDATE; новая incarnation — только от authority; prune журнала commit оставляет последнюю строку и строки выше `released_commit_no` | одна Tx | authority (активация, до Tx) | quarantine incarnation (D34); recovery без release (D39) |
+| Prune / restore | outbox, tombstones, installation, money_commit_log | installation FOR UPDATE; новая incarnation — только от authority; prune уважает retention pins и незавершённые reconciliation manifests | одна Tx | authority (активация, до Tx) | новая owner session всегда recovery; explicit activation certificate (D54) |
 
 Матрица пар с общим изменяемым ресурсом (включая self-pairs):
 
@@ -348,7 +366,7 @@ Tx B или до запуска collection job (D34). Каждая корнев�
 | callback × lookup apply | operation | lock + монотонная revision; конфликт digest → quarantine | INV-06, REQ-FAIL-04 |
 | finish × stale worker | attempt | CAS lease; проигравший пишет только evidence | INV-02, REQ-FAIL-17 |
 | dispatch × cancel | money_operation | Tx B берёт FOR SHARE, cancel — FOR UPDATE; исходов ровно два: cancel до Tx B (0 отправок) или Tx B до cancel (cancel отказан, отправленное не отменяется) | REQ-CON-07, D40 |
-| dispatch × restore | installation_state | FOR UPDATE обеих сторон; новая incarnation от authority выключает dispatch копии | REQ-FAIL-15, D34 |
+| dispatch × restore | external owner session + financial_session | всякая передача ownership — recovery; hard-fence proof и reconciliation certificate до activation | INV-02, D54 |
 | allocation × allocation | obligation, payment | порядок obligation → invoice → payment; CHECK backstop | INV-09 |
 | allocation × credit note | obligation, invoice | obligation → invoice | INV-09, INV-13 |
 | allocation × observation apply | payment | lock payment; allocation читает net под lock | INV-09 |
@@ -364,17 +382,17 @@ Tx B или до запуска collection job (D34). Каждая корнев�
 | prune × bootstrap | outbox_event | retention floor; bootstrap по snapshot + cursor | REQ-FAIL-22 |
 | feed apply × feed apply | feed_partition | lock partition; sequence монотонна | REQ-FAIL-13, REQ-FAIL-23 |
 | tombstone prune × replay старого ключа | intent_tombstone | после горизонта — `expired` | REQ-FAIL-25 |
-| fiscal × fiscal (одна операция) | fiscal_receipt | UNIQUE (operation, kind); стабильный `external_id` | REQ-CON-24 |
+| fiscal × fiscal (один эффект/вид/коррекция) | fiscal_receipt | UNIQUE (seller,economic_effect_ref,receipt_kind,correction_revision); один stable external_id на повтор | REQ-CON-24, D63 |
 | кросс-seller команда | любые | составной FK отвергает | INV-14 |
 | admission × admission (тот же intent, иной seller) | business binding | UNIQUE → `billium.idempotency.conflict` без раскрытия чужой операции | INV-14, REQ-FAIL-07, D36 |
 | dispatch × сырой клон в чужом deployment | ticket authority (вне БД) | у копии нет учётных данных authority → отказ, quarantine; 0 отправок | REQ-FAIL-15, INV-02, D34 |
-| dispatch × клон рядом с живым writer | lease и `writer_checkpoint` у authority | lease исключителен; первый dispatch writer ротирует checkpoint — копия устарела навсегда → quarantine | INV-02, REQ-FAIL-15, D34 |
-| restore без процедуры × workers до сверки | `writer_checkpoint` и `released_commit_no` у authority | checkpoint копии старше последнего dispatch или `commit_no` ниже released → отказ, quarantine; захват без release → recovery без отправок | REQ-FAIL-15, REQ-FAIL-19, D34, D39 |
-| cancel / allocation / шаг collection writer × копия после его остановки без dispatch | `money_commit_log`, release у authority | писатель вставил строку журнала; штатный release фиксирует `commit_no` — копия старше → quarantine; нештатная остановка → recovery: 0 отправок и 0 collection step до активации | REQ-FAIL-15, REQ-FAIL-19, INV-02, D39 |
-| acquire lease × acquire lease (копия и writer) | lease у authority | исключителен; захват после истечения без release не продлевает прежнего держателя, а открывает recovery | INV-02, D39 |
+| dispatch × клон рядом с живым writer | внешний deployment OwnerSession и attachment generation | копия БД без действительного process/dispatch token не допускается; старое поколение остаётся recovery, checkpoint не служит доказательством и не ротируется каждым dispatch | INV-02, REQ-FAIL-15, D54, D62 |
+| restore без процедуры × workers до сверки | external authority session | recovery/quarantine; ни release, ни одинаковый checkpoint не разрешают sends | D54 |
+| cancel / allocation / шаг collection writer × копия после остановки | external session + retirement proof | новое acquire всегда recovery; raw custody не открывает sealed финансовую session | D54, D60 |
+| acquire lease × acquire lease (копия и writer) | authority | исключительный session owner; новый owner только recovery до explicit activation | D54 |
 | collection start × quarantine или клон | lease authority | job не стартует без действующего lease той же incarnation | REQ-FAIL-19, D34 |
-| dispatch-пакет × dispatch-пакет | installation_state | FOR UPDATE сериализует CAS checkpoint | INV-02, D34 |
-| dispatch-пакет × admission | installation_state | FOR UPDATE против FOR SHARE: admission ждёт короткую Tx B | D27, D34 |
+| dispatch × dispatch | per-operation attempt и scoped authorization | разные root не сериализуются глобальным checkpoint; один attempt CAS допускает один dispatch-start | INV-02, D62 |
+| dispatch × seal | financial_session / deployment admissions | closing прекращает новые admissions, bounded drain; timeout оставляет recovery, не разрешает effects | D62 |
 | refund admission × reversal allocation | нет общей записи | admission не трогает ledger; reversal — только после succeeded refund через наблюдение | INV-09, INV-10, D35 |
 | collection step × refund | obligation | refund не открывает долг до исхода; reversal с `cause = refund` не создаёт шаг; lock obligation | REQ-FAIL-19, INV-09, D35 |
 | observation apply (refund) × allocation | payment | lock payment; флаг выводится CHECK, `allocation_guard` отвергает новую allocation до reallocation | INV-09, D35 |
@@ -398,18 +416,23 @@ Tx B или до запуска collection job (D34). Каждая корнев�
 | `customer_credit` | ledger | `customer_ref`, `source_ref`, `amount_minor`, `remaining_minor` | CHECK remaining ≥ 0 |
 | `allocation` | ledger | `obligation_id`, `payment_id` / `customer_credit_id`, `amount_minor`, `reverses_id`, `cause` (`payment`, `credit`, `correction`, `refund`), `receipt_ref` | ровно один источник; UNIQUE reverses_id; триггер `allocation_guard` (INV-09, D35) |
 | `money_operation` | execution | `operation_ref`, `kind`, `original_operation_id`, `source_context`, `business_intent_ref`, `command_key`, `digest`, `execution_profile`, `binding_id`, `status`, `revision`, totals | UNIQUE (seller_ref, operation_ref); business binding UNIQUE (source_context, business_intent_ref, kind) без seller, иной seller → conflict (D36); CHECK INV-06, INV-10 |
-| `execution_binding` | execution | `merchant_account_ref`, `environment`, `driver_ref`, `driver_contract_version`, `binding_revision`, `credential_ref`, `routing_epoch` | неизменяема (REQ-OWN-21) |
+| `execution_binding`, `merchant_configuration_version` | execution | `merchant_account_ref`, `environment`, `driver_ref`, `driver_contract_version`, `binding_revision`, `credential_ref`, `routing_epoch`, validity, predecessor, recovery_access_policy | immutable identity and provider/API version; disabled_for_new не перенаправляет historical lookup/refund (D57) |
 | `attempt` | execution | `operation_id`, `provider_reference`, `state`, `lease_token uuid`, `fence_epoch bigint`, `dispatched_at` | UNIQUE provider_reference; UNIQUE operation_id — одна attempt на операцию (D37) |
 | `operation_revision`, `provider_evidence`, `discrepancy` | execution | `revision`, `digest`, `provider_operation_id`, `payload jsonb` (санитизирован) | append-only |
-| `fiscal_receipt` | execution | `receipt_kind`, `external_id`, `provider_document_ref`, `status` | UNIQUE (operation_id, receipt_kind) |
-| `document_series`, `legal_document`, `render_record` | documents | `series`, `period`, `next_number`, `number`, `economic_ref`, `template_version`, `renderer_version`, `input_digest`, `output_digest` | UNIQUE (seller_ref, series, period, number); UNIQUE (seller_ref, doc_type, economic_ref) |
+| `fiscal_receipt` | execution | `economic_effect_ref`, `receipt_kind`, `correction_revision`, `original_receipt_ref`, `external_id`, `input_digest`, `fiscal_profile_revision`, `provider_document_ref`, `status`, `next_lookup_at` | UNIQUE (seller_ref,economic_effect_ref,receipt_kind,correction_revision); due index (seller_ref,status,next_lookup_at,id) |
+| `document_series`, `legal_document`, `render_record` | documents | `series`, `period`, `next_number`, `number`, `economic_ref`, `document_revision`, `template_version`, `renderer_version`, `input_digest`, `output_digest` | UNIQUE (seller_ref,series,period,number); UNIQUE (seller_ref,doc_type,economic_ref,document_revision); render identity дополнительно template/renderer/locale |
 | `dunning_case`, `collection_step` | collection | `obligation_id`, `policy_version`, `step_no`, `operation_id` | UNIQUE (dunning_case_id, step_no) |
 | `idempotency_receipt` | platform | `environment`, `command_kind`, `command_key`, `digest`, `canonicalization_version`, `result_ref`, `expires_at` | UNIQUE (environment, seller_ref, command_kind, command_key) |
 | `intent_tombstone` | platform | `business_intent_ref`, `operation_ref`, `digest`, `closed_at` | до горизонта REQ-FAIL-16 |
-| `inbox_message` | platform | `provider`, `merchant_account_ref`, `environment`, `external_event_id`, `digest`, `verification`, `status` | UNIQUE (provider, merchant_account_ref, environment, external_event_id) |
-| `outbox_event` | platform | `event_id`, `aggregate_ref`, `aggregate_revision`, `event_type`, `schema_version`, `digest`, `sequence`, `delivered_at` | UNIQUE event_id |
-| `feed_partition` | platform | `source_lineage`, `partition_ref`, `applied_sequence`, `state` | UNIQUE (source_lineage, partition_ref) |
-| `money_commit_log` | platform | `commit_no bigint identity`, `kind`, `occurred_at` | append-only; INSERT в каждой корневой денежной Tx без lock; `max(commit_no)` — водяной знак для `WriterAdmission` (D39) |
+| `inbox_message` | platform | source_authority, provider, seller/environment, merchant context, external_event_id, material digest, verification; separate processing attempt/handler_version/next_attempt_at/error | compound authenticated source namespace; raw custody distinct from application state (D60) |
+| `outbox_event`, `outbox_delivery` | platform | immutable event_id/aggregate/revision/type/version/digest; delivery destination, available_at, lease/fence, attempts, error_class, parked_at | UNIQUE event_id; UNIQUE(event_id,destination_ref); bounded backoff/requeue preserves event identity (D60) |
+| `feed_partition`, `bootstrap_session` | platform | source_authority, seller/environment, source_lineage, partition_ref, custody/applied frontiers; snapshot stage + retention pin | scoped source namespace; one economic event per root Tx; atomic adoption after full stage (D60) |
+| `money_commit_log` | platform | `commit_no bigint identity`, `session_epoch`, `kind`, `occurred_at` | append-only audit cursor; не freshness/activation proof (D54) |
+| `financial_session`, `session_event` | platform | owner/session ref, epoch, state active/recovery/sealed, seal receipt, activation certificate ref | local Tx seal barrier; external authority остаётся вне копируемой БД (D54, D60) |
+| `provider_effect` | execution | immutable observed provider effect/evidence, root/child operation refs | один provider-effect writer; published observations проецируются ledger (D57) |
+| `observed_payment`, `observed_payment_revision`, `financial_hold`, `exposure` | ledger | authoritative source totals/evidence; hold reason/discrepancy; overCaptured/overRefunded | работает и без execution; actual observation не теряется по bounded applied CHECK, held spendable=0 (D57, D60, D63) |
+| `credit_note_line` | ledger | original invoice line/component/tax snapshot/rounding version, quantity, net/tax/gross minor, correction basis | line net+tax=gross; sums=note; cumulative component correction bound; documents фиксирует отдельный legal snapshot через owner port (D56) |
+| obligation due policy | ledger | nullable due_at, due_policy_ref/version, customer/account scope | null запрещает auto due collection; index (seller_ref,status,due_at,id); manual authorization отдельно (D60) |
 | `installation_state` | platform | `installation_ref`, `incarnation`, `routing_epoch`, `dispatch_enabled`, `writer_checkpoint text`, `lease_epoch bigint` | одна строка на инсталляцию; не fence сама по себе — допуск у authority `WriterAdmission` (D34) |
 
 ## Диспозиции новых требований
