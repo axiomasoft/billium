@@ -1,6 +1,14 @@
 {
   "not_testable": [
     {
+      "rule": "BC-ENV-28",
+      "reason": "PHP-only ledger command DTO boundary, not a wire codec operation; positive/negative account and due-provenance cases are in packages/core/modules/ledger/tests/Contract/LedgerQueryShapeTest.php. Guarded monetary application belongs to P3.6–P3.8."
+    },
+    {
+      "rule": "BC-ENV-29",
+      "reason": "Material revision normalization/deduplication is the ledger consumer contract for P3.8 ObservationMaterialDigestTest, not transport codec digest behavior; document the exact normalized fields before those apply tests. Economic conflict and evidence-only duplicate tests require the future owning reducer; P3.2 adds no ledger behavior."
+    },
+    {
       "rule": "BC-CNF-01",
       "reason": "организация репозитория (пакеты не делят код), а не поведение кодека; проверяется структурой packages/ и consumer smoke P2.7"
     },

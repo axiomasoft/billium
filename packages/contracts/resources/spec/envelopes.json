@@ -75,6 +75,16 @@
       }
     ]
   },
+  "allocation.reallocate.v1": {
+    "schemaId": "urn:billium:spec:2026-10:allocation/reallocate.v1.json",
+    "variants": [
+      {
+        "class": "ReallocatePayment",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
   "usage.fact.v1": {
     "schemaId": "urn:billium:spec:2026-10:usage/fact.v1.json",
     "variants": [
@@ -130,6 +140,26 @@
     "variants": [
       {
         "class": "BilliumQuery",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "ledger.payment_status.v1": {
+    "schemaId": "urn:billium:spec:2026-10:query/payment-status.v1.json",
+    "variants": [
+      {
+        "class": "PaymentStatus",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "ledger.due_obligations.v1": {
+    "schemaId": "urn:billium:spec:2026-10:query/due-obligations.v1.json",
+    "variants": [
+      {
+        "class": "DueObligations",
         "digestMember": "digest",
         "verifyDigest": false
       }

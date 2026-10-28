@@ -1,0 +1,28 @@
+{
+  "id": "query/read/payment-status-money-number",
+  "spec_refs": [
+    "BC-ENV-27",
+    "BC-ENV-25",
+    "INV-14"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"ledger.payment_status.v1\",\"installationRef\":\"inst-1\",\"environment\":\"test\",\"sellerRef\":\"seller-1\",\"result\":{\"paymentRef\":\"op-1\",\"sourceAuthority\":\"embedded-commerz\",\"providerAccountRef\":\"ma-1\",\"billingAccountRef\":\"account-1\",\"applied\":{\"revision\":2,\"state\":\"succeeded\",\"requested\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"authorizedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"capturedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"refundedTotal\":{\"amount\":\"70.00\",\"currency\":\"RUB\"},\"allocated\":{\"amount\":\"20.00\",\"currency\":\"RUB\"},\"unallocated\":{\"amount\":\"10.00\",\"currency\":\"RUB\"}},\"observed\":{\"revision\":3,\"authorizedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"capturedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"refundedTotal\":{\"amount\":140,\"currency\":\"RUB\"},\"voidedTotal\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"evidenceRefs\":[\"ev-1\"],\"observedAt\":\"2026-10-28T09:00:00Z\"},\"financialHold\":{\"active\":true,\"reasonCodes\":[\"over_refunded\"],\"discrepancyRefs\":[\"disc-1\"]},\"exposure\":{\"currency\":\"RUB\",\"overCaptured\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"overRefunded\":{\"amount\":\"40.00\",\"currency\":\"RUB\"}},\"spendable\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"projectionStatus\":\"held_discrepancy\",\"bootstrap\":{\"status\":\"not_started\"},\"reconciliation\":{\"status\":\"pending\"}}}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.money.scale_invalid"
+      }
+    }
+  ]
+}

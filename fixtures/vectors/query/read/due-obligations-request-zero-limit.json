@@ -1,0 +1,28 @@
+{
+  "id": "query/read/due-obligations-request-zero-limit",
+  "spec_refs": [
+    "BC-ENV-27",
+    "BC-ENV-25",
+    "INV-14"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"billium.query.v1\",\"installationRef\":\"inst-1\",\"environment\":\"test\",\"sellerRef\":\"seller-1\",\"query\":\"dueObligations\",\"selector\":{\"billingAccountRef\":\"account-1\"},\"asOf\":\"2026-10-28T09:00:00Z\",\"limit\":0}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

@@ -56,6 +56,13 @@
     "category": "Data"
   },
   {
+    "schema": "allocation.reallocate.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\ReallocatePayment",
+    "dart": "ReallocatePayment",
+    "category": "Data"
+  },
+  {
     "schema": "usage.fact.v1",
     "variant": null,
     "php": "Billium\\Contracts\\Data\\Envelopes\\UsageFact",
@@ -95,6 +102,20 @@
     "variant": null,
     "php": "Billium\\Contracts\\Data\\Envelopes\\BilliumQuery",
     "dart": "BilliumQuery",
+    "category": "Data"
+  },
+  {
+    "schema": "ledger.payment_status.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\PaymentStatus",
+    "dart": "PaymentStatus",
+    "category": "Data"
+  },
+  {
+    "schema": "ledger.due_obligations.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\DueObligations",
+    "dart": "DueObligations",
     "category": "Data"
   },
   {

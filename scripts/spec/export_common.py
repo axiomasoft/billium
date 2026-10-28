@@ -29,12 +29,15 @@ ENVELOPES = (
     ("PaymentAdmission", "payment.admission.v1", "payment/admission.v1.json", None),
     ("PaymentOutcome", "payment.outcome.v1", "payment/outcome.v1.json", None),
     ("PaymentObservation", "payment.observation.v1", "payment/observation.v1.json", None),
+    ("ReallocatePayment", "allocation.reallocate.v1", "allocation/reallocate.v1.json", None),
     ("UsageFact", "usage.fact.v1", "usage/fact.v1.json", None),
     ("UsageReceipt", "usage.receipt.v1", "usage/receipt.v1.json", None),
     ("PrepareObligation", "obligation.prepare.v1", "obligation/prepare.v1.json", None),
     ("EnsureBillingOccurrence", "occurrence.ensure.v1", "occurrence/ensure.v1.json", None),
     ("AuthorizeCollection", "collection.authorize.v1", "collection/authorize.v1.json", None),
     ("BilliumQuery", "billium.query.v1", "query/query.v1.json", None),
+    ("PaymentStatus", "ledger.payment_status.v1", "query/payment-status.v1.json", None),
+    ("DueObligations", "ledger.due_obligations.v1", "query/due-obligations.v1.json", None),
     ("EventEnvelope", "billium.event.v1", "event/event.v1.json", None),
 )
 

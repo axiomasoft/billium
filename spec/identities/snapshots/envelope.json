@@ -1,7 +1,10 @@
 [
+  "allocation.reallocate.v1",
   "billium.event.v1",
   "billium.query.v1",
   "collection.authorize.v1",
+  "ledger.due_obligations.v1",
+  "ledger.payment_status.v1",
   "obligation.prepare.v1",
   "occurrence.ensure.v1",
   "payment.admission.v1",

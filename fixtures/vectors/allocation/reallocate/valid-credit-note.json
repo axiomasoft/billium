@@ -1,0 +1,29 @@
+{
+  "id": "allocation/reallocate/valid-credit-note",
+  "spec_refs": [
+    "BC-ENV-26",
+    "BC-ENV-04",
+    "BC-ID-17"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"allocation.reallocate.v1\",\"commandKey\":\"9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d\",\"installationRef\":\"inst-1\",\"environment\":\"test\",\"sellerRef\":\"seller-1\",\"paymentRef\":\"op-1\",\"policyVersion\":\"refund/1\",\"mode\":\"credit_note\",\"digest\":\"sha256:88a5dbf955b7c1fc20ca49cee87184bd356d4ffd568b1db1aa05706dc75bb4a6\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "allocation.reallocate.v1",
+        "digest": "sha256:88a5dbf955b7c1fc20ca49cee87184bd356d4ffd568b1db1aa05706dc75bb4a6"
+      }
+    }
+  ]
+}

@@ -32,6 +32,10 @@ enum ProblemCode: string
     case AllocationReallocationRequired = 'billium.allocation.reallocation_required';
     case InstallationQuarantined = 'billium.installation.quarantined';
     case TransportUnavailable = 'billium.transport.unavailable';
+    case AllocationExceedsOpen = 'billium.allocation.exceeds_open';
+    case AllocationExceedsAvailable = 'billium.allocation.exceeds_available';
+    case InvoiceTransitionInvalid = 'billium.invoice.transition_invalid';
+    case ReferenceUnknown = 'billium.reference.unknown';
 
     public function category(): string
     {
@@ -56,6 +60,10 @@ enum ProblemCode: string
             self::AllocationReallocationRequired => 'allocation',
             self::InstallationQuarantined => 'installation',
             self::TransportUnavailable => 'transport',
+            self::AllocationExceedsOpen => 'allocation',
+            self::AllocationExceedsAvailable => 'allocation',
+            self::InvoiceTransitionInvalid => 'invoice',
+            self::ReferenceUnknown => 'reference',
         };
     }
 
@@ -82,6 +90,10 @@ enum ProblemCode: string
             self::AllocationReallocationRequired => false,
             self::InstallationQuarantined => false,
             self::TransportUnavailable => true,
+            self::AllocationExceedsOpen => false,
+            self::AllocationExceedsAvailable => false,
+            self::InvoiceTransitionInvalid => false,
+            self::ReferenceUnknown => true,
         };
     }
 
@@ -108,6 +120,10 @@ enum ProblemCode: string
             self::AllocationReallocationRequired => false,
             self::InstallationQuarantined => true,
             self::TransportUnavailable => true,
+            self::AllocationExceedsOpen => false,
+            self::AllocationExceedsAvailable => false,
+            self::InvoiceTransitionInvalid => false,
+            self::ReferenceUnknown => true,
         };
     }
 
@@ -134,6 +150,10 @@ enum ProblemCode: string
             self::AllocationReallocationRequired => 'stored',
             self::InstallationQuarantined => 'none',
             self::TransportUnavailable => 'none',
+            self::AllocationExceedsOpen => 'stored',
+            self::AllocationExceedsAvailable => 'stored',
+            self::InvoiceTransitionInvalid => 'stored',
+            self::ReferenceUnknown => 'none',
         };
     }
 }

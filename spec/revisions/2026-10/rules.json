@@ -352,9 +352,54 @@
   {
     "id": "BC-ENV-25",
     "doc": "03-envelopes.md",
-    "line_digest": "sha256:70a40344a517ebf54772d06079a8d73137132212b4082ceb4e55a96979b53552",
+    "line_digest": "sha256:fdf2aa90eb14b1c701d094bf5e26880a372b9f5e7dc1b7fe87d7303641dde415",
     "refs": [
-      "REQ-CON-14"
+      "REQ-CON-14",
+      "D60"
+    ]
+  },
+  {
+    "id": "BC-ENV-26",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:4a09403ee643927c909a3e9678daf9bf3f59ffc4ff252b7cb0f05966d7593bb7",
+    "refs": [
+      "INV-09",
+      "REQ-FAIL-19",
+      "REQ-CON-20",
+      "REQ-CON-21",
+      "D35",
+      "D47"
+    ]
+  },
+  {
+    "id": "BC-ENV-27",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:ba472760302eba54074c3e1c4e0c99511f58551f61da10f8f0f767a6eee4e72a",
+    "refs": [
+      "REQ-CON-14",
+      "REQ-CON-20",
+      "INV-14",
+      "D60"
+    ]
+  },
+  {
+    "id": "BC-ENV-28",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:a72b30f3076a6037df5f501404609e219176d1a984c4dabc16af71246b75fae9",
+    "refs": [
+      "INV-14",
+      "REQ-CON-14",
+      "D60"
+    ]
+  },
+  {
+    "id": "BC-ENV-29",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:b65501e401f642e9fa22aacf9f16921520988203c3404709e656e1a825199ca0",
+    "refs": [
+      "INV-06",
+      "REQ-CON-27",
+      "D60"
     ]
   },
   {

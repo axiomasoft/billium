@@ -3,6 +3,13 @@
   "entries": [
     {
       "kind": "envelope",
+      "id": "allocation.reallocate.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/allocation/reallocate.v1.json"
+    },
+    {
+      "kind": "envelope",
       "id": "billium.event.v1",
       "status": "new",
       "since": "2026-10",
@@ -21,6 +28,20 @@
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/collection/authorize.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "ledger.due_obligations.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/due-obligations.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "ledger.payment_status.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/payment-status.v1.json"
     },
     {
       "kind": "envelope",
@@ -101,6 +122,69 @@
     },
     {
       "kind": "envelope-field",
+      "id": "allocation.reallocate.v1#/properties/commandKey",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/allocation/reallocate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "allocation.reallocate.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/allocation/reallocate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "allocation.reallocate.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/allocation/reallocate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "allocation.reallocate.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/allocation/reallocate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "allocation.reallocate.v1#/properties/mode",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/allocation/reallocate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "allocation.reallocate.v1#/properties/paymentRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/allocation/reallocate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "allocation.reallocate.v1#/properties/policyVersion",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/allocation/reallocate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "allocation.reallocate.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/allocation/reallocate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "allocation.reallocate.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/allocation/reallocate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
       "id": "billium.event.v1#/properties/aggregateRef",
       "status": "new",
       "since": "2026-10",
@@ -164,6 +248,20 @@
     },
     {
       "kind": "envelope-field",
+      "id": "billium.query.v1#/properties/asOf",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/query.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.query.v1#/properties/cursor",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/query.v1.json"
+    },
+    {
+      "kind": "envelope-field",
       "id": "billium.query.v1#/properties/environment",
       "status": "new",
       "since": "2026-10",
@@ -172,6 +270,13 @@
     {
       "kind": "envelope-field",
       "id": "billium.query.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/query.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.query.v1#/properties/limit",
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/query/query.v1.json"
@@ -266,6 +371,76 @@
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/collection/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.due_obligations.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/due-obligations.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.due_obligations.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/due-obligations.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.due_obligations.v1#/properties/result",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/due-obligations.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.due_obligations.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/due-obligations.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.due_obligations.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/due-obligations.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.payment_status.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/payment-status.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.payment_status.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/payment-status.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.payment_status.v1#/properties/result",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/payment-status.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.payment_status.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/payment-status.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.payment_status.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/payment-status.v1.json"
     },
     {
       "kind": "envelope-field",
@@ -1270,6 +1445,20 @@
     },
     {
       "kind": "problem-code",
+      "id": "billium.allocation.exceeds_available",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.allocation.exceeds_open",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
       "id": "billium.allocation.reallocation_required",
       "status": "new",
       "since": "2026-10",
@@ -1306,6 +1495,13 @@
     {
       "kind": "problem-code",
       "id": "billium.invoice.frozen",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.invoice.transition_invalid",
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/problem-codes.json"
@@ -1369,6 +1565,13 @@
     {
       "kind": "problem-code",
       "id": "billium.recovery.required",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.reference.unknown",
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/problem-codes.json"
@@ -1488,6 +1691,13 @@
     {
       "kind": "operation-status",
       "id": "succeeded",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/common/defs.json"
+    },
+    {
+      "kind": "invoice-status",
+      "id": "discarded",
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/common/defs.json"
