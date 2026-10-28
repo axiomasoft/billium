@@ -4,8 +4,13 @@ declare(strict_types=1);
 
 namespace Billium\Ledger\Tests\Feature;
 
+use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Data\Money;
+use Billium\Contracts\Enums\ProblemCode;
+use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Core\Data\Caller;
 use Billium\Core\Tests\TestEnvironment;
+use Billium\Ledger\Contracts\LedgerQueries;
 use Billium\Ledger\Data\ObligationDuePolicy;
 use Billium\Ledger\Data\RecordObligation;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
@@ -13,6 +18,57 @@ use DateTimeImmutable;
 
 final class ObligationDuePolicyTest extends LedgerTestCase
 {
+    public function test_due_query_uses_explicit_policy_boundaries_account_scope_and_keyset(): void
+    {
+        $due = new DateTimeImmutable('2026-10-28T10:00:00Z');
+        $later = new DateTimeImmutable('2026-10-29T10:00:00Z');
+        foreach (['first', 'second', 'delayed', 'other-account'] as $ref) {
+            $policy = new ObligationDuePolicy($due, 'host/1', 'host-policy', self::digest(), $ref === 'delayed' ? $later : null);
+            $this->ledger()->recordObligation(new RecordObligation('key-'.$ref, $this->account($ref === 'other-account' ? 'account-b' : 'account-a'), $ref,
+                'basis-'.$ref, 'customer', 'component', Money::parse('1.00', 'RUB'), self::digest(), duePolicy: $policy))->orThrow();
+        }
+        $this->obligation('no-due');
+        $q = $this->application()->make(LedgerQueries::class);
+        self::assertSame([], $q->dueObligations('account-a', $due->modify('-1 microsecond'))['obligations']);
+        $page = $q->dueObligations('account-a', $due, 1);
+        self::assertSame(['first'], array_column(self::arr($page['obligations']), 'obligationRef'));
+        $next = $q->dueObligations('account-a', $due, 1, self::text($page['nextCursor']));
+        self::assertSame(['second'], array_column(self::arr($next['obligations']), 'obligationRef'));
+        self::assertArrayNotHasKey('nextCursor', $next);
+        self::assertSame(['first', 'second', 'delayed'], array_column(self::arr($q->dueObligations('account-a', new DateTimeImmutable('2099-01-01Z'))['obligations']), 'obligationRef'));
+        self::assertSame(['other-account'], array_column(self::arr($q->dueObligations('account-b', $due)['obligations']), 'obligationRef'));
+        foreach (['bad-cursor', self::text($page['nextCursor'])] as $cursor) {
+            try {
+                $q->dueObligations('account-b', $due, 1, $cursor);
+                self::fail('Cursor cannot cross account or contain arbitrary data');
+            } catch (ProblemException $error) {
+                self::assertSame(ProblemCode::ValidationInvalid, $error->problem);
+            }
+        }
+        $wire = $q->dispatch(json_encode(['schema' => 'billium.query.v1', 'installationRef' => self::INSTALLATION, 'sellerRef' => 'seller-a', 'environment' => 'test',
+            'query' => 'dueObligations', 'selector' => ['billingAccountRef' => 'account-a'], 'asOf' => '2026-10-28T10:00:00Z', 'limit' => 2], JSON_THROW_ON_ERROR));
+        (new Codec)->decode(json_encode($wire, JSON_THROW_ON_ERROR));
+        $old = $this->queriesReceipt('obligation:basis-first');
+        // Model a keyed producer amendment as owner fixture: this item only owns its read projection.
+        $this->owner()->update("UPDATE billium_obligation SET due_at=NULL,due_policy_version='host/2',source_policy_ref='disabled-policy',source_policy_snapshot_digest=?,revision=revision+1 WHERE obligation_ref='first'", [self::digest('b')]);
+        self::assertSame($old, $this->queriesReceipt('obligation:basis-first'));
+        self::assertSame('host/2', $q->obligation('first')['duePolicyVersion']);
+        self::assertSame(['second'], array_column(self::arr($q->dueObligations('account-a', $due)['obligations']), 'obligationRef'));
+        $this->callers->set(new Caller('seller-b', 'test', self::INSTALLATION, 'actor'));
+        try {
+            $q->dueObligations('account-a', $due);
+            self::fail('Foreign billing account must be hidden');
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::ReferenceUnknown, $error->problem);
+        }
+    }
+
+    /** @return array<string, mixed> */
+    private function queriesReceipt(string $ref): array
+    {
+        return $this->application()->make(LedgerQueries::class)->receipt($ref);
+    }
+
     public function test_null_due_date_never_becomes_automatic_and_explicit_boundary_is_retained(): void
     {
         $this->obligation('no-due');

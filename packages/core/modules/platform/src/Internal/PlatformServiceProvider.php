@@ -18,6 +18,7 @@ use Billium\Platform\Contracts\CommandOutbox;
 use Billium\Platform\Contracts\EventContractRegistrar;
 use Billium\Platform\Contracts\EventFeed;
 use Billium\Platform\Contracts\FeedPartitions;
+use Billium\Platform\Contracts\FeedRecoveryQueries;
 use Billium\Platform\Contracts\IdempotencyStore;
 use Billium\Platform\Contracts\Installation;
 use Billium\Platform\Contracts\Outbox;
@@ -31,6 +32,7 @@ use Billium\Platform\Internal\Console\RelayCommand;
 use Billium\Platform\Internal\EventContracts\DatabaseEventContractRegistrar;
 use Billium\Platform\Internal\Feed\BootstrapCoordinator;
 use Billium\Platform\Internal\Feed\DatabaseFeedPartitions;
+use Billium\Platform\Internal\Feed\DatabaseFeedRecoveryQueries;
 use Billium\Platform\Internal\Feed\PartitionStore;
 use Billium\Platform\Internal\Idempotency\DatabaseIdempotencyStore;
 use Billium\Platform\Internal\Inbox\CustodyProcessor;
@@ -51,6 +53,7 @@ final class PlatformServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->bind(FeedRecoveryQueries::class, DatabaseFeedRecoveryQueries::class);
         $this->app->singleton(EventContractRegistrar::class, static fn (Application $app): DatabaseEventContractRegistrar => new DatabaseEventContractRegistrar(
             $app->make(DatabaseManager::class)->connection(self::connection()), $app->make(ModuleRegistry::class),
         ));

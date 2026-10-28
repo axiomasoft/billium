@@ -51,3 +51,5 @@ verification commands.
 See [planning and design checks](docs/planning.md) for the current P1 plan and its validation commands.
 
 Platform outbox delivery, feed subscriptions and retention setup: [operations guide](docs/operations/outbox-feed.md) (D52/D60/D63).
+
+Authenticated ledger queries, receipt recovery and ledger bootstrap streams: [query guide](docs/contracts/ledger-queries.md) (REQ-CON-14, D35, D60).

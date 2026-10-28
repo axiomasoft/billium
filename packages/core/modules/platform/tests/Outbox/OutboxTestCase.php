@@ -79,8 +79,8 @@ abstract class OutboxTestCase extends PlatformTestCase
     protected function source(string $key = 'ledger.obligations'): TestSnapshotSource
     {
         $source = new TestSnapshotSource($key);
-        $this->application()->instance($key, $source);
-        $this->application()->tag($key, 'billium.snapshot_sources');
+        // Replace the production ledger stream, rather than registering a second source with the same key.
+        $this->application()->instance('billium.snapshot.'.$key, $source);
 
         return $source;
     }

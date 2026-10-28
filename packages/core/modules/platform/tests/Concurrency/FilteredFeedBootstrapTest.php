@@ -8,6 +8,7 @@ use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Platform\Data\Feed\FeedScope;
 use Billium\Platform\Tests\Outbox\OutboxTestCase;
+use Billium\Platform\Tests\Outbox\TestSnapshotSource;
 use PHPUnit\Framework\Attributes\Group;
 
 #[Group('EVT-05')]
@@ -35,6 +36,8 @@ final class FilteredFeedBootstrapTest extends OutboxTestCase
 
     public function test_missing_selected_historical_source_fails_closed(): void
     {
+        // Production now registers this stream. Model its historical key being unavailable explicitly.
+        $this->application()->instance('billium.snapshot.ledger.obligations', new TestSnapshotSource('ledger.unavailable'));
         try {
             $this->feed()->bootstrap($this->selection());
             self::fail('Cannot synthesize an empty ledger snapshot');
