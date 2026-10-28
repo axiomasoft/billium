@@ -5,8 +5,8 @@ ARG DART_VERSION=3.13.5
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         git unzip python3 python3-venv ca-certificates curl \
-        libicu-dev libgmp-dev libzip-dev \
-    && docker-php-ext-install bcmath intl gmp zip \
+        libicu-dev libgmp-dev libzip-dev libpq-dev \
+    && docker-php-ext-install bcmath intl gmp zip pdo_pgsql \
     && apt-get clean
 
 COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer

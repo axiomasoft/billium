@@ -3,6 +3,7 @@ parameters:
     paths:
         - packages/contracts/src
         - packages/core/src
+        - packages/core/modules
     ignoreErrors:
         # JSON Schema keyword bounds (minLength, minimum, ...) are schema numbers, never money.
         -

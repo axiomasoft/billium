@@ -47,10 +47,11 @@
             "dist": {
                 "type": "path",
                 "url": "packages/core",
-                "reference": "14594880c73ee061f3c0ed9875a04722b499a947"
+                "reference": "06826b8dd6255223e6eca87e633f209fd714bb95"
             },
             "require": {
                 "axiomasoft/billium-contracts": "^0.1",
+                "ext-pdo_pgsql": "*",
                 "laravel/framework": "^13.0",
                 "php": "^8.4"
             },
@@ -64,13 +65,15 @@
             },
             "autoload": {
                 "psr-4": {
-                    "Billium\\Core\\": "src/"
+                    "Billium\\Core\\": "src/",
+                    "Billium\\Platform\\": "modules/platform/src/",
+                    "Billium\\Ledger\\": "modules/ledger/src/"
                 }
             },
             "license": [
                 "proprietary"
             ],
-            "description": "Billium core skeleton: Laravel 13 service provider (modules arrive from P3).",
+            "description": "Billium core: Laravel 13 platform and ledger modules.",
             "transport-options": {
                 "symlink": true,
                 "relative": true

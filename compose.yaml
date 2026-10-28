@@ -1,16 +1,63 @@
 services:
+  postgres:
+    image: postgres:16.15-bookworm
+    environment:
+      POSTGRES_DB: billium_test
+      POSTGRES_USER: billium
+      POSTGRES_PASSWORD: billium
+    configs:
+      - source: test-database-roles
+        target: /docker-entrypoint-initdb.d/01-billium-roles.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U billium -d billium_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
   toolchain:
     build: docker/toolchain
     user: "${UID:-1000}:${GID:-1000}"
     working_dir: /workspace
+    depends_on:
+      postgres:
+        condition: service_healthy
     volumes:
       - .:/workspace
+      # Resolve the managed external plans symlink for spec source-reference checks.
+      - type: bind
+        source: ./plans
+        target: /workspace/plans
+        read_only: true
+        bind:
+          create_host_path: false
       - composer-cache:/tmp/composer
       - pub-cache:/tmp/pub-cache
     environment:
       HOME: /tmp/home
       COMPOSER_HOME: /tmp/composer
       PUB_CACHE: /tmp/pub-cache
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: billium_test
+      DB_USERNAME: billium_runtime
+      DB_PASSWORD: billium_runtime
+      DB_OWNER_USERNAME: billium
+      DB_OWNER_PASSWORD: billium
+
+configs:
+  test-database-roles:
+    content: |
+      -- Throwaway test credentials only. D60: fixture owner and runtime are distinct.
+      CREATE ROLE billium_runtime LOGIN PASSWORD 'billium_runtime'
+        NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS;
+      REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+      REVOKE TEMPORARY ON DATABASE billium_test FROM PUBLIC;
+      GRANT CONNECT ON DATABASE billium_test TO billium_runtime;
+      GRANT USAGE ON SCHEMA public TO billium_runtime;
+      ALTER DEFAULT PRIVILEGES FOR ROLE billium IN SCHEMA public
+        GRANT SELECT ON TABLES TO billium_runtime;
+      ALTER DEFAULT PRIVILEGES FOR ROLE billium IN SCHEMA public
+        REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
 
 volumes:
   composer-cache:

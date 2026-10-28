@@ -22,7 +22,7 @@
     },
     {
       "id": "php-core",
-      "paths": ["packages/core/**", "composer.json", "composer.lock", "phpstan.neon.dist", "pint.json", "rector.php", "phpunit.xml.dist", "tests/**"],
+      "paths": ["packages/core/**", "packages/core/modules/**", "packages/core/database/**", "packages/core/config/**", "scripts/db/**", "scripts/lint/test-discovery.py", "scripts/lint/tests/**", "composer.json", "composer.lock", "phpstan.neon.dist", "pint.json", "rector.php", "phpunit.xml.dist", "tests/**"],
       "layers": ["php"]
     },
     {

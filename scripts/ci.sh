@@ -65,6 +65,10 @@ layer_php() {
     vendor/bin/pint --test
     vendor/bin/phpstan analyse --memory-limit=1G
     vendor/bin/rector process --dry-run
+    need_path scripts/db/preflight.php
+    php scripts/db/preflight.php
+    python3 -m unittest discover -s scripts/lint/tests -p test_test_discovery.py
+    python3 scripts/lint/test-discovery.py
     vendor/bin/pest
     need_path scripts/smoke/consumer-install.sh
     bash scripts/smoke/consumer-install.sh php
