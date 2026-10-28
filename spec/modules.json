@@ -337,14 +337,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "ledger",
-      "currentSchemaVersion": 4,
+      "currentSchemaVersion": 5,
       "supportedSchemaReadRange": {
         "min": 2,
-        "max": 4
+        "max": 5
       },
       "supportedSchemaWriteRange": {
         "min": 2,
-        "max": 4
+        "max": 5
       },
       "requiresModules": [
         {
@@ -387,7 +387,8 @@
         "billium_invoice_line",
         "billium_credit_note",
         "billium_ledger_discrepancy",
-        "billium_discrepancy_event"
+        "billium_discrepancy_event",
+        "billium_observation_park"
       ],
       "configKeys": [
         "billium.ledger.refund_reconcile_after_seconds"
@@ -412,6 +413,11 @@
           "id": "2026_10_21_000004_allocation_routines_billium_ledger",
           "version": 4,
           "checksum": "sha256:3e8a132d29a95c49d59be1a5d82a1064cc0f09bdc157ca786c7691d3875f07d7"
+        },
+        {
+          "id": "2026_10_21_000005_observation_routines_billium_ledger",
+          "version": 5,
+          "checksum": "sha256:7b1255c3f26c4376a657a2a40bb206177b8826d2d1480c91c632ba4eb5577b7b"
         }
       ],
       "disablePolicy": {

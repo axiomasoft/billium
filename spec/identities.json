@@ -2509,6 +2509,13 @@
     },
     {
       "kind": "migration",
+      "id": "2026_10_21_000005_observation_routines_billium_ledger",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
       "id": "2026_10_28_000011_create_billium_event_protocol",
       "status": "new",
       "since": "2026-10",

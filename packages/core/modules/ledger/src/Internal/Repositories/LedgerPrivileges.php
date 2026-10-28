@@ -40,7 +40,13 @@ final readonly class LedgerPrivileges
         $tables = ['obligation', 'adjustment', 'customer_credit', 'settlement_intent', 'settlement_target', 'settlement_intent_closure',
             'invoice', 'invoice_line', 'observed_payment', 'observed_payment_revision', 'payment', 'payment_revision', 'allocation',
             'allocation_receipt', 'credit_note', 'ledger_discrepancy', 'discrepancy_event'];
-        foreach ($tables as $table) {
+        // Tables of later migrations of the stream, granted once the migration that creates them runs.
+        $stagedTables = array_filter(['observation_park'], static function (string $table): bool {
+            $row = DB::selectOne('SELECT to_regclass(?) IS NOT NULL AS present', ['public.billium_'.$table]);
+
+            return is_object($row) && ($row->present ?? false) === true;
+        });
+        foreach ([...$tables, ...$stagedTables] as $table) {
             DB::unprepared('REVOKE ALL ON TABLE public.billium_'.$table.' FROM PUBLIC, '.$role);
             DB::unprepared('GRANT SELECT ON TABLE public.billium_'.$table.' TO '.$role);
             // REVOKE cannot remove privileges inherited from other roles. Check table and column capabilities.
@@ -64,8 +70,10 @@ final readonly class LedgerPrivileges
         // Routines of later migrations of the stream: earlier migrations run grant() before they exist and the migration
         // that creates them grants again. InvoiceCommandsTest asserts their runtime EXECUTE grants.
         $staged = ['billium_create_invoice', 'billium_update_invoice_metadata', 'billium_issue_invoice', 'billium_close_invoice', 'billium_mark_invoice_uncollectible',
-            'billium_reverse_allocation', 'billium_issue_credit_note', 'billium_reallocate_payment'];
-        $stagedPrivate = ['billium_invoice_replay', 'billium_ledger_lock_scope', 'billium_ledger_release'];
+            'billium_reverse_allocation', 'billium_issue_credit_note', 'billium_reallocate_payment',
+            'billium_record_observation', 'billium_project_payment', 'billium_record_refund_detail', 'billium_park_observation',
+            'billium_release_observation_park', 'billium_reconcile_refund_basis'];
+        $stagedPrivate = ['billium_invoice_replay', 'billium_ledger_lock_scope', 'billium_ledger_release', 'billium_observation_park_guard'];
         $present = static fn (string $name): bool => DB::selectOne("SELECT 1 AS present FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname=?", [$name]) !== null;
         $names = [...$names, ...array_filter($staged, $present)];
         $private = [...$private, ...array_filter($stagedPrivate, $present)];
