@@ -1781,6 +1781,13 @@
     },
     {
       "kind": "config-key",
+      "id": "billium.financial_session.seal_lock_timeout_ms",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
       "id": "billium.idempotency.lock_timeout_ms",
       "status": "new",
       "since": "2026-10",
@@ -1886,7 +1893,84 @@
     },
     {
       "kind": "config-key",
+      "id": "billium.runner.root_deadline_ms",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "config-key",
       "id": "billium.runtime_role.preflight",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_20_000001_create_billium_append_only_function",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_20_000002_create_billium_idempotency_receipt_table",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_20_000003_create_billium_outbox_event_table",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_20_000004_create_billium_outbox_watermark_table",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_20_000005_create_billium_money_commit_log_table",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_20_000006_create_billium_installation_state_table",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_20_000007_create_billium_financial_session_table",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_20_000008_create_billium_financial_session_event_table",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_20_000009_create_billium_module_state_table",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/modules.json"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_20_000010_create_billium_module_transitions_table",
       "status": "new",
       "since": "2026-10",
       "source": "spec/modules.json"

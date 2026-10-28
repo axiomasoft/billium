@@ -28,8 +28,17 @@ abstract class DatabaseTestCase extends TestCase
         self::assertNotContains(RefreshDatabase::class, $traits);
         self::assertNotContains(DatabaseTransactions::class, $traits);
         parent::setUp();
+        // D50: without a wrapper trait nothing else closes this application's connections; left to the cycle
+        // collector they outlive the test, pile up across the suite and exhaust PostgreSQL connection slots.
+        $databases = $this->app['db'];
+        $this->beforeApplicationDestroyed(static function () use ($databases): void {
+            foreach (array_keys($databases->getConnections()) as $name) {
+                $databases->purge($name);
+            }
+        });
 
         TestEnvironment::preflight();
+        TestEnvironment::acquireSuiteLease();
         $this->artisan('migrate', ['--database' => 'billium_owner', '--force' => true])->assertExitCode(0);
         TestEnvironment::assertRuntimeSafe($this->app['db']->connection('pgsql')->getPdo());
 

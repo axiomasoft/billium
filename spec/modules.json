@@ -157,25 +157,37 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "platform",
-      "currentSchemaVersion": 0,
+      "currentSchemaVersion": 10,
       "supportedSchemaReadRange": {
-        "min": 0,
-        "max": 0
+        "min": 10,
+        "max": 10
       },
       "supportedSchemaWriteRange": {
-        "min": 0,
-        "max": 0
+        "min": 10,
+        "max": 10
       },
       "requiresModules": [],
       "requiresPorts": [],
       "optionalPorts": [],
       "emits": [],
       "consumes": [],
-      "ownedTables": [],
+      "ownedTables": [
+        "billium_idempotency_receipt",
+        "billium_outbox_event",
+        "billium_outbox_watermark",
+        "billium_money_commit_log",
+        "billium_installation_state",
+        "billium_financial_session",
+        "billium_financial_session_event",
+        "billium_module_state",
+        "billium_module_transitions"
+      ],
       "configKeys": [
         "billium.connection",
         "billium.installation_ref",
         "billium.runner.max_attempts",
+        "billium.runner.root_deadline_ms",
+        "billium.financial_session.seal_lock_timeout_ms",
         "billium.idempotency.lock_timeout_ms",
         "billium.outbox.relay_batch",
         "billium.outbox.claim_seconds",
@@ -193,7 +205,58 @@
         "billium.modules.composition",
         "billium.modules.enabled"
       ],
-      "migrationIdentities": [],
+      "migrationIdentities": [
+        {
+          "id": "2026_10_20_000001_create_billium_append_only_function",
+          "version": 1,
+          "checksum": "sha256:04578bed692e7a955c095e35ebc48483488cb7c935ab9081cd458229df906f34"
+        },
+        {
+          "id": "2026_10_20_000002_create_billium_idempotency_receipt_table",
+          "version": 2,
+          "checksum": "sha256:fe1b110d5deb41f94be0d8813a90d4a87d6182b60c80e6bb3535e87e33b865ff"
+        },
+        {
+          "id": "2026_10_20_000003_create_billium_outbox_event_table",
+          "version": 3,
+          "checksum": "sha256:1e276842c58496184fff2b8a5979465b05aa34f0584457fc342034a7ebaf9133"
+        },
+        {
+          "id": "2026_10_20_000004_create_billium_outbox_watermark_table",
+          "version": 4,
+          "checksum": "sha256:9e58d0605790857d741cf35c89ea11651f787db9af5fe78678d455e984818ee0"
+        },
+        {
+          "id": "2026_10_20_000005_create_billium_money_commit_log_table",
+          "version": 5,
+          "checksum": "sha256:d09c31927a188b992f462eec3de464f57fce8deb372b0fe3a6fbe3fa70fb450a"
+        },
+        {
+          "id": "2026_10_20_000006_create_billium_installation_state_table",
+          "version": 6,
+          "checksum": "sha256:9459536679f957bc9d61502c8f40447dea6a3260eb2bf6701607a5e1c639ae04"
+        },
+        {
+          "id": "2026_10_20_000007_create_billium_financial_session_table",
+          "version": 7,
+          "checksum": "sha256:2f1f267ccd25a05852189eb8f5016a917a8f51e829b0d751664ea747f526f532"
+        },
+        {
+          "id": "2026_10_20_000008_create_billium_financial_session_event_table",
+          "version": 8,
+          "checksum": "sha256:5715325544c3d74be3fe454941b4ec8f36f9d7b1b1528ffb5adc21116ed0dbc6"
+        },
+        {
+          "id": "2026_10_20_000009_create_billium_module_state_table",
+          "version": 9,
+          "checksum": "sha256:871985769cd0a508f1b131fe3622b997d6c4651db7072411a628fc93f934b997"
+        },
+        {
+          "id": "2026_10_20_000010_create_billium_module_transitions_table",
+          "version": 10,
+          "checksum": "sha256:64fb3c887430c86d9e733a2bd9bb44c36dc5105fd0a9ccf576c0ba3646d2e840"
+        }
+      ],
       "disablePolicy": {
         "dependents": "block",
         "keeps": [

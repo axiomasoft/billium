@@ -21,5 +21,7 @@ final readonly class ModuleState
         public int $configRevision,
         public int $schemaVersion,
         public ?string $lastTransitionRef = null,
+        // Incremented by every applied transition; a context binds it, and dispatch re-checks it (D55).
+        public int $generation = 1,
     ) {}
 }

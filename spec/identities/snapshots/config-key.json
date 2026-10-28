@@ -3,6 +3,7 @@
   "billium.feed.bootstrap_batch",
   "billium.feed.bootstrap_lease_seconds",
   "billium.feed.drain_batch",
+  "billium.financial_session.seal_lock_timeout_ms",
   "billium.idempotency.lock_timeout_ms",
   "billium.inbox.handler_compatibility",
   "billium.inbox.retention_floor_seconds",
@@ -18,5 +19,6 @@
   "billium.outbox.relay_batch",
   "billium.outbox.retention_floor_seconds",
   "billium.runner.max_attempts",
+  "billium.runner.root_deadline_ms",
   "billium.runtime_role.preflight"
 ]

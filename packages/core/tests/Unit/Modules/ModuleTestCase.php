@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Billium\Core\Tests\Unit\Modules;
 
 use Billium\Core\Data\Modules\CompatibilityInput;
+use Billium\Core\Data\Modules\InstalledCheckpoint;
 use Billium\Core\Data\Modules\ModuleManifest;
 use Billium\Core\Data\Modules\ModuleState;
 use Billium\Core\Enums\Modules\ModuleLifecycleState;
@@ -66,7 +67,29 @@ abstract class ModuleTestCase extends TestCase
      */
     protected static function input(string $composition, array $enabled, array $ports = self::LEDGER_PORTS): CompatibilityInput
     {
-        return new CompatibilityInput($composition, $enabled, $ports);
+        return new CompatibilityInput($composition, $enabled, $ports, self::migrated(...$enabled));
+    }
+
+    /**
+     * Checkpoints of an installation that applied every packaged migration of these modules (P3.3+ ship SQL).
+     *
+     * @return array<string, InstalledCheckpoint>
+     */
+    protected static function migrated(string ...$modules): array
+    {
+        $checkpoints = [];
+        foreach ($modules as $module) {
+            $descriptor = self::catalog()->descriptor($module);
+            if ($descriptor !== null) {
+                $checkpoints[$module] = new InstalledCheckpoint(
+                    $module,
+                    $descriptor->currentSchemaVersion,
+                    array_map(static fn ($migration): string => $migration->id, $descriptor->migrationIdentities),
+                );
+            }
+        }
+
+        return $checkpoints;
     }
 
     protected static function state(string $moduleId, ModuleLifecycleState $state): ModuleState

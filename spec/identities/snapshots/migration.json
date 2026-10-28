@@ -1,1 +1,12 @@
-[]
+[
+  "2026_10_20_000001_create_billium_append_only_function",
+  "2026_10_20_000002_create_billium_idempotency_receipt_table",
+  "2026_10_20_000003_create_billium_outbox_event_table",
+  "2026_10_20_000004_create_billium_outbox_watermark_table",
+  "2026_10_20_000005_create_billium_money_commit_log_table",
+  "2026_10_20_000006_create_billium_installation_state_table",
+  "2026_10_20_000007_create_billium_financial_session_table",
+  "2026_10_20_000008_create_billium_financial_session_event_table",
+  "2026_10_20_000009_create_billium_module_state_table",
+  "2026_10_20_000010_create_billium_module_transitions_table"
+]

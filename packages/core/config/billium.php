@@ -6,7 +6,9 @@ declare(strict_types=1);
 return [
     'connection' => null,
     'installation_ref' => env('BILLIUM_INSTALLATION_REF'),
-    'runner' => ['max_attempts' => 3],
+    // D62: every root Tx has a hard deadline; a seal waits for admitted roots only up to its lock timeout.
+    'runner' => ['max_attempts' => 3, 'root_deadline_ms' => 30000],
+    'financial_session' => ['seal_lock_timeout_ms' => 5000],
     'idempotency' => ['lock_timeout_ms' => 5000],
     'outbox' => [
         'relay_batch' => 100,

@@ -15,7 +15,7 @@ final class ModuleCompositionTest extends ModuleTestCase
     public function test_default_desired_config_is_a_valid_minimal_platform_ledger_composition(): void
     {
         $config = require dirname(__DIR__, 3).'/config/billium.php';
-        $report = self::catalog()->check(CompatibilityInput::fromConfig($config['modules'], self::LEDGER_PORTS));
+        $report = self::catalog()->check(CompatibilityInput::fromConfig($config['modules'], self::LEDGER_PORTS, self::migrated('platform', 'ledger')));
 
         self::assertTrue($report->isReady(), json_encode($report->findings, JSON_THROW_ON_ERROR));
         self::assertSame(['platform', 'ledger'], $report->bootOrder);
@@ -145,7 +145,7 @@ final class ModuleCompositionTest extends ModuleTestCase
         ]));
         $applied = ['2026_10_30_000001_a', '2026_10_30_000002_b'];
         $check = static fn (InstalledCheckpoint $checkpoint) => $catalog->check(
-            new CompatibilityInput('embedded-commerz', ['platform', 'ledger'], self::LEDGER_PORTS, ['ledger' => $checkpoint]),
+            new CompatibilityInput('embedded-commerz', ['platform', 'ledger'], self::LEDGER_PORTS, ['ledger' => $checkpoint] + self::migrated('platform')),
         );
 
         self::assertTrue($check(new InstalledCheckpoint('ledger', 2, $applied))->isReady());

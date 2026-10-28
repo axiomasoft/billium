@@ -12,6 +12,13 @@ use RuntimeException;
 
 final class TestEnvironment
 {
+    /** Two-int advisory key ('BILL', 'TEST'): objsubid 2 never collides with the single-key ConcurrencyStand barrier. */
+    public const int LEASE_CLASS = 0x42494C4C;
+
+    public const int LEASE_OBJECT = 0x54455354;
+
+    private static ?PDO $suiteLease = null;
+
     public static function configure(Application $app): void
     {
         $app['config']->set('database.default', 'pgsql');
@@ -88,6 +95,28 @@ final class TestEnvironment
             throw new RuntimeException('D60: runtime and fixture owner must be different roles');
         }
         self::assertRuntimeSafe($runtime);
+    }
+
+    /**
+     * D50: one test run per database. Committed-data isolation TRUNCATEs and drops fixtures, so a second runner
+     * on the same database (parallel checks, another shell) would destroy this run's state and exhaust its
+     * connection slots. The first DatabaseTestCase of a process waits for this session-level advisory lock and
+     * keeps it until the process exits; ConcurrencyStand workers belong to the holder's run and never take it.
+     */
+    public static function acquireSuiteLease(int $timeoutSeconds = 1800): void
+    {
+        if (self::$suiteLease !== null) {
+            return;
+        }
+        $lease = self::pdo(owner: true);
+        $lease->exec("SET lock_timeout = '{$timeoutSeconds}s'");
+        try {
+            $lease->query('SELECT pg_advisory_lock('.self::LEASE_CLASS.', '.self::LEASE_OBJECT.')');
+        } catch (PDOException $exception) {
+            throw new RuntimeException("D50: another test run kept the test database for {$timeoutSeconds}s", previous: $exception);
+        }
+        $lease->exec('SET lock_timeout = 0');
+        self::$suiteLease = $lease;
     }
 
     /** @param list<string>|null $protectedTables */
