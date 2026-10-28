@@ -65,4 +65,50 @@ final class AllocationBackstopTest extends LedgerTestCase
         self::assertSame(2, $this->rows('billium_allocation'));
         self::assertSame('55000', self::sqlState(TestEnvironment::pdo(owner: true), 'DELETE FROM billium_allocation'));
     }
+
+    public function test_runtime_mutates_allocations_credit_notes_and_counters_only_through_guarded_routines(): void
+    {
+        $o = $this->obligation();
+        $p = $this->payment();
+        $this->allocate($o, $p, null, 100);
+        $runtime = TestEnvironment::pdo();
+        foreach ([
+            "INSERT INTO billium_allocation(installation_ref,seller_ref,environment,billing_account_ref,currency,obligation_id,payment_id,amount_minor,cause,policy_version,receipt_ref) VALUES('inst-test','seller-a','test','account-a','RUB',{$o},{$p},1,'raw','x','allocation-a')",
+            "INSERT INTO billium_credit_note(installation_ref,seller_ref,environment,billing_account_ref,currency,credit_note_ref,obligation_id,amount_minor,reason,mode,receipt_ref) VALUES('inst-test','seller-a','test','account-a','RUB','raw',{$o},1,'raw','open_only','allocation-a')",
+            'UPDATE billium_obligation SET allocated_minor=0,revision=revision+1',
+            'UPDATE billium_payment SET allocated_minor=0',
+            'UPDATE billium_customer_credit SET remaining_minor=0',
+            'DELETE FROM billium_allocation',
+        ] as $sql) {
+            self::assertSame('42501', self::sqlState($runtime, $sql), $sql);
+        }
+        // Private helpers are not runtime capabilities; the public surfaces are fixed-path SECURITY DEFINER routines.
+        self::assertSame('42501', self::sqlState($runtime, "SELECT public.billium_ledger_release('inst-test','seller-a','test','account-a','RUB',{$o},NULL,1,'raw','allocation-a',true)"));
+        self::assertSame('42501', self::sqlState($runtime, "SELECT public.billium_ledger_lock_scope('seller-a','test','{}','{}','{}','{}','{}')"));
+        $rows = $this->table("SELECT p.proname,p.prosecdef,p.proconfig::text AS config,has_function_privilege(?,p.oid,'EXECUTE') AS runtime FROM pg_proc p WHERE p.pronamespace='public'::regnamespace AND p.proname IN ('billium_reverse_allocation','billium_issue_credit_note','billium_reallocate_payment') ORDER BY p.proname",
+            [self::text(self::pdoValue($runtime, 'SELECT current_user'))]);
+        self::assertSame(['billium_issue_credit_note', 'billium_reallocate_payment', 'billium_reverse_allocation'], array_column($rows, 'proname'));
+        foreach ($rows as $row) {
+            self::assertTrue($row['prosecdef']);
+            self::assertTrue($row['runtime']);
+            self::assertStringContainsString('search_path=pg_catalog, pg_temp', self::text($row['config']));
+        }
+        self::assertSame(1, $this->rows('billium_allocation'));
+        self::assertSame(100, self::integer($this->value('SELECT allocated_minor FROM billium_payment')));
+    }
+
+    public function test_concurrent_reversals_of_one_original_leave_exactly_one_linked_negative_row(): void
+    {
+        $o = $this->obligation();
+        $p = $this->payment();
+        $this->allocate($o, $p, null, 600, 'allocation:original');
+        $original = self::integer($this->value('SELECT id FROM billium_allocation'));
+        $results = ConcurrencyStand::run(ReversalRaceScenario::class, 4, ['allocation' => $original]);
+        self::assertCount(1, array_filter($results, static fn (array $r): bool => isset($r['ok'])));
+        self::assertCount(3, array_filter($results, static fn (array $r): bool => ($r['error']['code'] ?? '') === 'billium.idempotency.conflict'));
+        self::assertSame(1, $this->rows('billium_allocation', 'reverses_id=?', [$original]));
+        self::assertSame(0, self::integer($this->value('SELECT allocated_minor FROM billium_obligation')));
+        self::assertSame(0, self::integer($this->value('SELECT allocated_minor FROM billium_payment')));
+        self::assertSame(0, self::integer($this->value('SELECT sum(amount_minor) FROM billium_allocation')));
+    }
 }

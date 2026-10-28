@@ -5,19 +5,23 @@ declare(strict_types=1);
 namespace Billium\Ledger\Data;
 
 use Billium\Contracts\Attributes\Api;
-use Billium\Contracts\Data\Money;
 
-/** Credit an issued invoice without rewriting it. Owning validation and mutation belong to P3.8. */
+/**
+ * Credits an issued invoice without rewriting it (COV-167, COV-174). `creditNoteRef` is the business identity; the
+ * legal reference stays null until P6 numbering supplies it through the participant in the same root Tx.
+ */
 #[Api]
 final readonly class IssueCreditNote
 {
+    /** @param list<CreditNoteLine> $lines */
     public function __construct(
         public string $commandKey,
         public BillingAccountScope $scope,
         public string $creditNoteRef,
         public string $invoiceRef,
-        public Money $money,
+        public CreditNoteMode $mode,
+        public array $lines,
         public string $reason,
-        public string $legalDocumentRef,
+        public ?string $legalDocumentRef = null,
     ) {}
 }

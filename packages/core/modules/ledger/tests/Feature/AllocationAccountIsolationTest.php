@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace Billium\Ledger\Tests\Feature;
 
 use Billium\Contracts\Data\Money;
+use Billium\Contracts\Enums\ProblemCode;
+use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Tests\TestEnvironment;
+use Billium\Ledger\Data\Allocate;
 use Billium\Ledger\Data\DeclareSettlementIntent;
 use Billium\Ledger\Data\RecordCustomerCredit;
+use Billium\Ledger\Data\ReverseAllocation;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
 use PDOException;
 
@@ -49,5 +53,36 @@ final class AllocationAccountIsolationTest extends LedgerTestCase
         self::assertSame(0, $this->rows('billium_allocation'));
         self::assertSame(0, self::integer($this->value('SELECT allocated_minor FROM billium_obligation')));
         self::assertSame(1000, self::integer($this->value("SELECT remaining_minor FROM billium_customer_credit WHERE credit_ref='credit-a'")));
+    }
+
+    public function test_commands_never_cross_billing_account_or_currency(): void
+    {
+        $this->obligation('o-a', 1000);
+        $this->obligation('o-b', 1000, 'account-b');
+        $this->credit('credit-b', 1000, 'account-b');
+        $this->ledger()->recordCustomerCredit(new RecordCustomerCredit('usd-credit', $this->account(), 'usd-credit', 'usd-source', Money::parse('10.00', 'USD')));
+        foreach ([
+            'account-b credit to an account-a obligation' => new Allocate('k1', $this->account(), 'x1', 'o-a', Money::parse('1.00', 'RUB'), customerCreditRef: 'credit-b'),
+            'account-b scope naming an account-a obligation' => new Allocate('k2', $this->account('account-b'), 'x2', 'o-a', Money::parse('1.00', 'RUB'), customerCreditRef: 'credit-b'),
+            'USD credit to a RUB obligation' => new Allocate('k3', $this->account(), 'x3', 'o-a', Money::parse('1.00', 'USD'), customerCreditRef: 'usd-credit'),
+        ] as $case => $command) {
+            try {
+                $this->ledger()->allocate($command);
+                self::fail($case);
+            } catch (ProblemException $e) {
+                self::assertSame(ProblemCode::ReferenceUnknown, $e->problem, $case);
+            }
+        }
+        // The same-account allocation passes; reversing it from another account's scope is unknown.
+        self::assertTrue($this->ledger()->allocate(new Allocate('k4', $this->account('account-b'), 'x4', 'o-b', Money::parse('1.00', 'RUB'), customerCreditRef: 'credit-b'))->accepted);
+        try {
+            $this->ledger()->reverseAllocation(new ReverseAllocation('k5', $this->account(), 'r5', 'x4', 'wrong account'));
+            self::fail('reversal from another account');
+        } catch (ProblemException $e) {
+            self::assertSame(ProblemCode::ReferenceUnknown, $e->problem);
+        }
+        self::assertSame(1, $this->rows('billium_allocation'));
+        self::assertSame(0, self::integer($this->value("SELECT allocated_minor FROM billium_obligation WHERE obligation_ref='o-a'")));
+        self::assertSame(1000, self::integer($this->value("SELECT remaining_minor FROM billium_customer_credit WHERE credit_ref='usd-credit'")));
     }
 }

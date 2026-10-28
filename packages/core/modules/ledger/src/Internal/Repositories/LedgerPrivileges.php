@@ -63,8 +63,9 @@ final readonly class LedgerPrivileges
             'billium_credit_note_guard', 'billium_adjustment_guard', 'billium_payment_intent_guard'];
         // Routines of later migrations of the stream: earlier migrations run grant() before they exist and the migration
         // that creates them grants again. InvoiceCommandsTest asserts their runtime EXECUTE grants.
-        $staged = ['billium_create_invoice', 'billium_update_invoice_metadata', 'billium_issue_invoice', 'billium_close_invoice', 'billium_mark_invoice_uncollectible'];
-        $stagedPrivate = ['billium_invoice_replay'];
+        $staged = ['billium_create_invoice', 'billium_update_invoice_metadata', 'billium_issue_invoice', 'billium_close_invoice', 'billium_mark_invoice_uncollectible',
+            'billium_reverse_allocation', 'billium_issue_credit_note', 'billium_reallocate_payment'];
+        $stagedPrivate = ['billium_invoice_replay', 'billium_ledger_lock_scope', 'billium_ledger_release'];
         $present = static fn (string $name): bool => DB::selectOne("SELECT 1 AS present FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname=?", [$name]) !== null;
         $names = [...$names, ...array_filter($staged, $present)];
         $private = [...$private, ...array_filter($stagedPrivate, $present)];

@@ -21,6 +21,9 @@ use Billium\Ledger\Data\RecordObligation;
  * receives the CURRENT TransactionContext, requires `ledger` in its admitted closure and the same runner/connection/
  * session, takes only predeclared locks through that context and never starts a runner; public Ledger mutations remain
  * root-only. No method exposes SQL, a connection or foreign tables. Record/adjust/declare implementation: P3.6; issueInvoice: P3.7; credit note and closure proof boundary: P3.8.
+ * P4 corrections (D63/F01): a draft obligation is adjusted (adjustObligation refuses a frozen invoice); a finalized one
+ * gets a positive delta as recordObligation with CorrectionBasis::derive(original basis, correction identity, revision)
+ * and a negative delta as issueCreditNote. The original obligation is never overwritten.
  */
 #[Api]
 #[Spi(SpiKind::Call)]
@@ -39,8 +42,9 @@ interface LedgerParticipants
     public function adjustObligation(TransactionContext $context, AdjustObligation $command): Receipt;
 
     /**
-     * Appends a no-effect closure revision (D63/F04). Refuses missing proof, a stale/foreign context, a committed
-     * dispatch permit, a pending/unknown external effect or an existing economic application.
+     * Appends a no-effect closure revision (D63/F04). Refuses missing proof, a stale/foreign context or proof of another
+     * root, a committed dispatch permit, a pending/unknown/sent external effect, a stale revision or an existing
+     * economic application. Exact replay returns the saved closure receipt.
      */
     public function closeSettlementIntentNoEffect(TransactionContext $context, CloseSettlementIntentNoEffect $command): Receipt;
 }
