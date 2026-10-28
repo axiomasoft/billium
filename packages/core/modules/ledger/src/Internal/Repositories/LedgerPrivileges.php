@@ -61,6 +61,13 @@ final readonly class LedgerPrivileges
             'billium_obligation_terms_immutable', 'billium_invoice_freeze', 'billium_invoice_line_freeze',
             'billium_settlement_intent_guard', 'billium_allocation_guard', 'billium_funds_identity_guard',
             'billium_credit_note_guard', 'billium_adjustment_guard', 'billium_payment_intent_guard'];
+        // Routines of later migrations of the stream: earlier migrations run grant() before they exist and the migration
+        // that creates them grants again. InvoiceCommandsTest asserts their runtime EXECUTE grants.
+        $staged = ['billium_create_invoice', 'billium_update_invoice_metadata', 'billium_issue_invoice', 'billium_close_invoice', 'billium_mark_invoice_uncollectible'];
+        $stagedPrivate = ['billium_invoice_replay'];
+        $present = static fn (string $name): bool => DB::selectOne("SELECT 1 AS present FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname=?", [$name]) !== null;
+        $names = [...$names, ...array_filter($staged, $present)];
+        $private = [...$private, ...array_filter($stagedPrivate, $present)];
         foreach ($private as $name) {
             $row = DB::selectOne("SELECT p.oid::regprocedure::text AS signature FROM pg_proc p WHERE p.pronamespace='public'::regnamespace AND p.proname=?", [$name]);
             $signature = is_object($row) && is_string($row->signature ?? null) ? $row->signature : throw new LogicException('Missing ledger guard '.$name);

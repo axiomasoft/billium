@@ -11,5 +11,6 @@
   "2026_10_20_000010_create_billium_module_transitions_table",
   "2026_10_21_000001_create_billium_ledger",
   "2026_10_21_000002_guard_billium_ledger",
+  "2026_10_21_000003_invoice_routines_billium_ledger",
   "2026_10_28_000011_create_billium_event_protocol"
 ]

@@ -6,7 +6,7 @@ namespace Billium\Ledger\Data;
 
 use Billium\Contracts\Attributes\Api;
 
-/** Issue an existing draft; legal numbering is supplied by the composing root. Owning validation belongs to P3.8. */
+/** Issue an existing draft; legal numbering is supplied by the composing root through LedgerParticipants (D49). */
 #[Api]
 final readonly class IssueInvoice
 {

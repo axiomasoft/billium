@@ -95,7 +95,7 @@ final readonly class LedgerRepository
     }
 
     /** @param list<mixed> $bindings */
-    private function call(Connection $connection, string $routine, array $bindings, string $kind): LedgerReceipt
+    public function call(Connection $connection, string $routine, array $bindings, string $kind): LedgerReceipt
     {
         // A PL/pgSQL refusal aborts its statement. Restore a local savepoint before converting it to a D31 refusal;
         // the runner must still be able to validate the live root and save the business receipt.

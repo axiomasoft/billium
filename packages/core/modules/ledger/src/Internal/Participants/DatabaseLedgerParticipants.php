@@ -16,12 +16,13 @@ use Billium\Ledger\Data\IssueInvoice;
 use Billium\Ledger\Data\RecordObligation;
 use Billium\Ledger\Internal\Commands\AdjustObligationCommand;
 use Billium\Ledger\Internal\Commands\DeclareSettlementIntentCommand;
+use Billium\Ledger\Internal\Commands\IssueInvoiceCommand;
 use Billium\Ledger\Internal\Commands\RecordObligationCommand;
 use LogicException;
 
 final readonly class DatabaseLedgerParticipants implements LedgerParticipants
 {
-    public function __construct(private OperationRunner $runner, private RecordObligationCommand $obligations, private AdjustObligationCommand $adjustments, private DeclareSettlementIntentCommand $intents) {}
+    public function __construct(private OperationRunner $runner, private RecordObligationCommand $obligations, private AdjustObligationCommand $adjustments, private DeclareSettlementIntentCommand $intents, private IssueInvoiceCommand $invoiceIssues) {}
 
     public function recordObligation(TransactionContext $context, RecordObligation $command): Receipt
     {
@@ -40,8 +41,7 @@ final readonly class DatabaseLedgerParticipants implements LedgerParticipants
 
     public function issueInvoice(TransactionContext $context, IssueInvoice $command, string $legalDocumentRef): Receipt
     {
-        $this->runner->assertCurrent($context, 'ledger');
-        throw new LogicException('Invoice participant belongs to P3.7');
+        return $this->invoiceIssues->execute($context, $command, $legalDocumentRef);
     }
 
     public function issueCreditNote(TransactionContext $context, IssueCreditNote $command): Receipt
