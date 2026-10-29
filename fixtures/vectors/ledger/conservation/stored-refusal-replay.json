@@ -1,0 +1,212 @@
+{
+  "id": "ledger/conservation/stored-refusal-replay",
+  "description": "BC-ID-08: stored exceeds_available repeats after another credit allocation changes capacity.",
+  "spec_refs": [
+    "BC-CNF-10",
+    "REQ-ACC-10",
+    "D60",
+    "BC-ID-05",
+    "BC-ID-08"
+  ],
+  "profiles": [
+    "php"
+  ],
+  "given": {
+    "caller": {
+      "sellerRef": "seller-a",
+      "environment": "test",
+      "installationRef": "inst-test",
+      "sourceAuthorities": [
+        "embedded-commerz"
+      ]
+    }
+  },
+  "script": [
+    {
+      "op": "ledger.reset",
+      "args": {}
+    },
+    {
+      "op": "ledger.obligation.record",
+      "args": {
+        "commandKey": "key-o1",
+        "billingAccountRef": "account-a",
+        "obligationRef": "o1",
+        "basisRef": "basis-o1",
+        "customerRef": "customer-a",
+        "componentRef": "component-o1",
+        "amount": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "termsDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "taxSnapshotRef": "tax-o1"
+      }
+    },
+    {
+      "op": "ledger.credit.record",
+      "args": {
+        "commandKey": "key-credit-a",
+        "billingAccountRef": "account-a",
+        "creditRef": "credit-a",
+        "sourceRef": "source-credit-a",
+        "amount": {
+          "amount": "10.00",
+          "currency": "RUB"
+        }
+      }
+    },
+    {
+      "op": "ledger.allocate",
+      "args": {
+        "commandKey": "key-a1",
+        "billingAccountRef": "account-a",
+        "allocationRef": "a1",
+        "obligationRef": "o1",
+        "amount": {
+          "amount": "20.00",
+          "currency": "RUB"
+        },
+        "customerCreditRef": "credit-a"
+      }
+    },
+    {
+      "op": "ledger.allocate",
+      "args": {
+        "commandKey": "key-a2",
+        "billingAccountRef": "account-a",
+        "allocationRef": "a2",
+        "obligationRef": "o1",
+        "amount": {
+          "amount": "5.00",
+          "currency": "RUB"
+        },
+        "customerCreditRef": "credit-a"
+      }
+    },
+    {
+      "op": "ledger.allocate",
+      "args": {
+        "commandKey": "key-a1",
+        "billingAccountRef": "account-a",
+        "allocationRef": "a1",
+        "obligationRef": "o1",
+        "amount": {
+          "amount": "20.00",
+          "currency": "RUB"
+        },
+        "customerCreditRef": "credit-a"
+      }
+    },
+    {
+      "op": "ledger.query",
+      "args": {
+        "query": "obligation",
+        "selector": {
+          "obligationRef": "o1"
+        }
+      }
+    },
+    {
+      "op": "ledger.allocate",
+      "args": {
+        "commandKey": "retry-none",
+        "billingAccountRef": "account-a",
+        "allocationRef": "none-a",
+        "obligationRef": "missing",
+        "amount": {
+          "amount": "1.00",
+          "currency": "RUB"
+        },
+        "customerCreditRef": "credit-a"
+      }
+    },
+    {
+      "op": "ledger.allocate",
+      "args": {
+        "commandKey": "retry-none",
+        "billingAccountRef": "account-a",
+        "allocationRef": "none-a",
+        "obligationRef": "o1",
+        "amount": {
+          "amount": "1.00",
+          "currency": "RUB"
+        },
+        "customerCreditRef": "credit-a"
+      }
+    },
+    {
+      "op": "ledger.query",
+      "args": {
+        "query": "obligation",
+        "selector": {
+          "obligationRef": "o1"
+        }
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {}
+    },
+    {
+      "ok": {}
+    },
+    {
+      "ok": {}
+    },
+    {
+      "error": {
+        "code": "billium.allocation.exceeds_available"
+      }
+    },
+    {
+      "ok": {}
+    },
+    {
+      "error": {
+        "code": "billium.allocation.exceeds_available"
+      }
+    },
+    {
+      "ok": {
+        "allocated": {
+          "amount": "5.00",
+          "currency": "RUB"
+        },
+        "credited": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "open": {
+          "amount": "95.00",
+          "currency": "RUB"
+        }
+      }
+    },
+    {
+      "error": {
+        "code": "billium.reference.unknown"
+      }
+    },
+    {
+      "ok": {}
+    },
+    {
+      "ok": {
+        "allocated": {
+          "amount": "6.00",
+          "currency": "RUB"
+        },
+        "credited": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "open": {
+          "amount": "94.00",
+          "currency": "RUB"
+        }
+      }
+    }
+  ]
+}

@@ -19,7 +19,7 @@
     "schema/common/defs.json": "sha256:dd52fdc6f72c133e3967791c0e8c663b0d7630e818f689bd3838da87a2fab5cf",
     "schema/common/money-wire.json": "sha256:56effedd8c80562f9b29454e6b34009961d645d163d8a9b3a184de5b7a928f6e",
     "schema/conformance/adapter-message.json": "sha256:79dbfa4aedc4eed1387cefbe13ddf96ba5f5ed1f9c46919995afb41779e578ff",
-    "schema/conformance/vector.json": "sha256:5de18fd405e10711cc5b44aa72887698c3dcee47176d106b1488505c74ad66dc",
+    "schema/conformance/vector.json": "sha256:21b345f938ed21889327871666ccc518b3324bf610ba9e109564ec4fd4c27373",
     "schema/event/catalog.v1.json": "sha256:d90716ef266465793f3c1fb5cc7c7462ee950016fd7f0dd6ad3f1bfe6e30231b",
     "schema/event/event.v1.json": "sha256:bf56a2486207510fef4354dd32b400ed656520b0d075c4cdd46ecac0878df92f",
     "schema/event/event.v2.json": "sha256:6feb7792ee3bacbd10b0fe2c0fa27579dd6ded3f81d6481618a3127d931c8aec",

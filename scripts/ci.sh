@@ -92,12 +92,13 @@ layer_dart() {
 
 layer_conformance() {
     need_tool python3
+    need_tool php
     need_path conformance/runner/run.py
     need_path conformance/adapters.json
     need_path conformance/oracles/jcs/oracle.py
     python3 -m unittest discover -s conformance/tests
     python3 conformance/runner/run.py --check-golden
-    python3 conformance/runner/run.py --adapter php
+    php conformance/adapters/php/bin/with-database-lease.php python3 conformance/runner/run.py --adapter php
     python3 conformance/runner/run.py --adapter dart
 }
 

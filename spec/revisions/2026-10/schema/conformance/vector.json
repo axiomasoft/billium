@@ -79,7 +79,25 @@
         "envelope.decode",
         "envelope.roundtrip",
         "problem.decode",
-        "codes.registry"
+        "codes.registry",
+        "ledger.reset",
+        "ledger.caller",
+        "ledger.obligation.record",
+        "ledger.intent.declare",
+        "ledger.credit.record",
+        "ledger.invoice.create",
+        "ledger.invoice.issue",
+        "ledger.invoice.void",
+        "ledger.invoice.metadata",
+        "ledger.allocate",
+        "ledger.reverse",
+        "ledger.credit_note",
+        "ledger.reallocate",
+        "ledger.observe",
+        "ledger.drain",
+        "ledger.reconcile_refunds",
+        "ledger.query",
+        "ledger.bootstrap"
       ]
     },
     "step": {

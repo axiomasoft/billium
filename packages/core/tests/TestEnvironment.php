@@ -19,6 +19,10 @@ final class TestEnvironment
 
     private static ?PDO $suiteLease = null;
 
+    private static ?string $suiteLeaseToken = null;
+
+    private const string SUITE_LEASE_ENV = 'BILLIUM_TEST_SUITE_LEASE';
+
     public static function configure(Application $app): void
     {
         $app['config']->set('database.default', 'pgsql');
@@ -108,6 +112,12 @@ final class TestEnvironment
         if (self::$suiteLease !== null) {
             return;
         }
+        $inherited = getenv(self::SUITE_LEASE_ENV);
+        if (is_string($inherited) && $inherited !== '') {
+            self::assertInheritedSuiteLease($inherited);
+
+            return;
+        }
         $lease = self::pdo(owner: true);
         $lease->exec("SET lock_timeout = '{$timeoutSeconds}s'");
         try {
@@ -117,6 +127,54 @@ final class TestEnvironment
         }
         $lease->exec('SET lock_timeout = 0');
         self::$suiteLease = $lease;
+    }
+
+    /**
+     * D50: the parent waits before starting a timed runner; its child adapters join that same exclusive run.
+     * The claim is checked against a live advisory lock and a random holder token, never a bare skip flag.
+     *
+     * @return array<string, string>
+     */
+    public static function suiteLeaseEnvironment(): array
+    {
+        self::acquireSuiteLease();
+        if (self::$suiteLease === null) {
+            return [self::SUITE_LEASE_ENV => self::required(self::SUITE_LEASE_ENV)];
+        }
+        if (self::$suiteLeaseToken === null) {
+            self::$suiteLeaseToken = 'billium-suite:'.bin2hex(random_bytes(16));
+            $statement = self::$suiteLease->prepare("SELECT set_config('application_name', ?, false)");
+            $statement->execute([self::$suiteLeaseToken]);
+        }
+        $statement = self::$suiteLease->query('SELECT pg_backend_pid()');
+        if ($statement === false) {
+            throw new RuntimeException('D50: cannot identify the test database lease holder');
+        }
+        $pid = $statement->fetchColumn();
+
+        return [self::SUITE_LEASE_ENV => json_encode([
+            'database' => self::databaseName(), 'pid' => $pid, 'token' => self::$suiteLeaseToken,
+        ], JSON_THROW_ON_ERROR)];
+    }
+
+    private static function assertInheritedSuiteLease(string $claim): void
+    {
+        $holder = json_decode($claim, true);
+        if (! is_array($holder) || ($holder['database'] ?? null) !== self::databaseName()
+            || ! is_int($holder['pid'] ?? null) || ! is_string($holder['token'] ?? null)) {
+            throw new RuntimeException('D50: invalid inherited test database lease');
+        }
+        $statement = self::pdo(owner: true)->prepare(<<<'SQL'
+            SELECT 1 WHERE EXISTS (SELECT 1 FROM pg_locks l JOIN pg_stat_activity a ON a.pid=l.pid
+                WHERE l.locktype='advisory' AND l.granted AND l.objsubid=2
+                  AND l.classid=? AND l.objid=? AND l.pid=?
+                  AND l.database=(SELECT oid FROM pg_database WHERE datname=current_database())
+                  AND a.usename=current_user AND a.application_name=?)
+            SQL);
+        $statement->execute([self::LEASE_CLASS, self::LEASE_OBJECT, $holder['pid'], $holder['token']]);
+        if ($statement->fetchColumn() !== 1) {
+            throw new RuntimeException('D50: inherited test database lease is no longer held or does not match');
+        }
     }
 
     /** @param list<string>|null $protectedTables */

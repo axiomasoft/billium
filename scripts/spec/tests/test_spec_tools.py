@@ -12,6 +12,10 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import lint as spec_lint
 
 ROOT = Path(__file__).resolve().parents[3]
 SPEC = ROOT / "scripts/spec"
@@ -168,6 +172,40 @@ class LintTest(RevisionCopy):
     def test_receipt_policy_of_validation(self) -> None:
         self.edit_json("problem-codes.json", lambda d: d[0].update(receipt="stored"))
         self.assert_refused("keeps no receipt")
+
+
+class SchemaEnvelopeConventionsTest(unittest.TestCase):
+    """Convention 7 against the six acceptance findings, without unrelated rule/plan checks."""
+
+    def check(self, documents: dict, envelopes: dict) -> list[str]:
+        checker = spec_lint.Lint(REV, ROOT)
+        checker.schemas = documents
+        with patch.object(spec_lint, "CLOSED", set()), patch.object(spec_lint, "OPEN", set()):
+            checker.check_envelopes(envelopes)
+        return checker.errors
+
+    def test_adopted_namespaces_and_feed_definitions_pass(self) -> None:
+        envelopes = {
+            "billium.event.catalog.v1": "event/catalog.v1.json",
+            "billium.feed.bootstrap.v1": "feed/bootstrap.v1.json",
+            "billium.feed.page.v1": "feed/page.v1.json",
+            "billium.feed.selection.v1": "feed/selection.v1.json",
+            "payment.effect.outcome.v1": "payment/effect-outcome.v1.json",
+        }
+        paths = [*envelopes.values(), "feed/defs.json"]
+        documents = {path: json.loads((REV / "schema" / path).read_text()) for path in paths}
+        self.assertEqual([], self.check(documents, envelopes))
+
+    def test_malformed_namespaced_names_are_still_rejected(self) -> None:
+        for name in ["billium..feed.page.v1", "Billium.feed.page.v1", "billium.feed.page.v0", "page.v1"]:
+            with self.subTest(name=name):
+                document = {"properties": {"schema": {"const": name}}}
+                errors = self.check({"feed/page.v1.json": document}, {name: "feed/page.v1.json"})
+                self.assertTrue(any("schema const" in error for error in errors), errors)
+
+    def test_feed_envelope_without_schema_is_still_rejected(self) -> None:
+        errors = self.check({"feed/page.v1.json": {"type": "object"}}, {})
+        self.assertTrue(any("no properties.schema.const" in error for error in errors), errors)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,151 @@
+{
+  "id": "ledger/conservation/idempotent-replay-same-receipt",
+  "description": "BC-ID-05/06/07: same key and amount replay original receipt; changed amount conflicts.",
+  "spec_refs": [
+    "BC-CNF-10",
+    "REQ-ACC-10",
+    "D60",
+    "BC-ID-05",
+    "BC-ID-06"
+  ],
+  "profiles": [
+    "php"
+  ],
+  "given": {
+    "caller": {
+      "sellerRef": "seller-a",
+      "environment": "test",
+      "installationRef": "inst-test",
+      "sourceAuthorities": [
+        "embedded-commerz"
+      ]
+    }
+  },
+  "script": [
+    {
+      "op": "ledger.reset",
+      "args": {}
+    },
+    {
+      "op": "ledger.obligation.record",
+      "args": {
+        "commandKey": "key-o1",
+        "billingAccountRef": "account-a",
+        "obligationRef": "o1",
+        "basisRef": "basis-o1",
+        "customerRef": "customer-a",
+        "componentRef": "component-o1",
+        "amount": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "termsDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "taxSnapshotRef": "tax-o1"
+      }
+    },
+    {
+      "op": "ledger.credit.record",
+      "args": {
+        "commandKey": "key-credit-a",
+        "billingAccountRef": "account-a",
+        "creditRef": "credit-a",
+        "sourceRef": "source-credit-a",
+        "amount": {
+          "amount": "50.00",
+          "currency": "RUB"
+        }
+      }
+    },
+    {
+      "op": "ledger.allocate",
+      "args": {
+        "commandKey": "key-a1",
+        "billingAccountRef": "account-a",
+        "allocationRef": "a1",
+        "obligationRef": "o1",
+        "amount": {
+          "amount": "20.00",
+          "currency": "RUB"
+        },
+        "customerCreditRef": "credit-a"
+      }
+    },
+    {
+      "op": "ledger.allocate",
+      "args": {
+        "commandKey": "key-a1",
+        "billingAccountRef": "account-a",
+        "allocationRef": "a1",
+        "obligationRef": "o1",
+        "amount": {
+          "amount": "20.00",
+          "currency": "RUB"
+        },
+        "customerCreditRef": "credit-a"
+      }
+    },
+    {
+      "op": "ledger.query",
+      "args": {
+        "query": "obligation",
+        "selector": {
+          "obligationRef": "o1"
+        }
+      }
+    },
+    {
+      "op": "ledger.query",
+      "args": {
+        "query": "receipt",
+        "selector": {
+          "receiptRef": "allocation:a1"
+        }
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {}
+    },
+    {
+      "ok": {}
+    },
+    {
+      "ok": {}
+    },
+    {
+      "ok": {
+        "receipt_ref": "allocation:a1",
+        "replayed": false
+      }
+    },
+    {
+      "ok": {
+        "receipt_ref": "allocation:a1",
+        "replayed": true
+      }
+    },
+    {
+      "ok": {
+        "allocated": {
+          "amount": "20.00",
+          "currency": "RUB"
+        },
+        "credited": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "open": {
+          "amount": "80.00",
+          "currency": "RUB"
+        }
+      }
+    },
+    {
+      "ok": {
+        "receipt_ref": "allocation:a1",
+        "amount_minor": "2000"
+      }
+    }
+  ]
+}

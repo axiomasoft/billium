@@ -1,0 +1,757 @@
+{
+  "id": "payment/observation/apply-staged-bootstrap-resume",
+  "description": "D60/PF-13: stage two snapshot items, apply one, restage/resume; no early adoption or double allocation.",
+  "spec_refs": [
+    "BC-CNF-10",
+    "REQ-ACC-10",
+    "D60",
+    "REQ-FAIL-23",
+    "INV-06"
+  ],
+  "profiles": [
+    "php"
+  ],
+  "given": {
+    "caller": {
+      "sellerRef": "seller-a",
+      "environment": "test",
+      "installationRef": "inst-test",
+      "sourceAuthorities": [
+        "embedded-commerz"
+      ]
+    }
+  },
+  "script": [
+    {
+      "op": "ledger.reset",
+      "args": {}
+    },
+    {
+      "op": "money.allocate",
+      "args": {
+        "total": {
+          "amount": "30.00",
+          "currency": "RUB"
+        },
+        "ratios": [
+          "10000"
+        ]
+      }
+    },
+    {
+      "op": "ledger.obligation.record",
+      "args": {
+        "commandKey": "key-o1",
+        "billingAccountRef": "account-a",
+        "obligationRef": "o1",
+        "basisRef": "basis-o1",
+        "customerRef": "customer-a",
+        "componentRef": "component-o1",
+        "amount": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "termsDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "taxSnapshotRef": "tax-o1"
+      }
+    },
+    {
+      "op": "ledger.intent.declare",
+      "args": {
+        "commandKey": "key-intent-a",
+        "billingAccountRef": "account-a",
+        "businessIntentRef": "intent-a",
+        "currency": "RUB",
+        "obligationRefs": [
+          "o1"
+        ],
+        "policyVersion": "pro_rata_open/1"
+      }
+    },
+    {
+      "op": "ledger.bootstrap",
+      "args": {
+        "action": "stage",
+        "bootstrapRef": "boot-a",
+        "sourceAuthority": "embedded-commerz",
+        "sourceLineage": "L1",
+        "partitionRef": "part-1",
+        "cursorSequence": 2,
+        "sourceRetentionLeaseRef": "lease-boot-a",
+        "items": [
+          {
+            "schema": "payment.observation.v1",
+            "eventId": "01JBX5Q0Z8M3N4P7R9S2000001",
+            "sourceAuthority": "embedded-commerz",
+            "sourceLineage": "L1",
+            "partitionRef": "part-1",
+            "sourceSequence": 1,
+            "installationRef": "inst-test",
+            "environment": "test",
+            "sellerRef": "seller-a",
+            "operationRef": "op-1",
+            "operationKind": "charge",
+            "businessIntentRef": "intent-a",
+            "operationRevision": 1,
+            "state": "succeeded",
+            "currency": "RUB",
+            "requested": {
+              "amount": "100.00",
+              "currency": "RUB"
+            },
+            "authorizedTotal": {
+              "amount": "100.00",
+              "currency": "RUB"
+            },
+            "capturedTotal": {
+              "amount": "30.00",
+              "currency": "RUB"
+            },
+            "refundedTotal": {
+              "amount": "0.00",
+              "currency": "RUB"
+            },
+            "providerAccountRef": "pa-1",
+            "evidenceRef": "ev-1",
+            "observedAt": "2026-10-29T10:00:00Z",
+            "recordedAt": "2026-10-29T10:00:01Z",
+            "contentDigest": "sha256:b9d992d05db4abac74960a7bea1926e01f6c32ef3b43bc56dfea39fe45b6d81d"
+          },
+          {
+            "schema": "payment.observation.v1",
+            "eventId": "01JBX5Q0Z8M3N4P7R9S2000002",
+            "sourceAuthority": "embedded-commerz",
+            "sourceLineage": "L1",
+            "partitionRef": "part-1",
+            "sourceSequence": 2,
+            "installationRef": "inst-test",
+            "environment": "test",
+            "sellerRef": "seller-a",
+            "operationRef": "op-2",
+            "operationKind": "charge",
+            "businessIntentRef": "intent-a",
+            "operationRevision": 1,
+            "state": "succeeded",
+            "currency": "RUB",
+            "requested": {
+              "amount": "100.00",
+              "currency": "RUB"
+            },
+            "authorizedTotal": {
+              "amount": "100.00",
+              "currency": "RUB"
+            },
+            "capturedTotal": {
+              "amount": "20.00",
+              "currency": "RUB"
+            },
+            "refundedTotal": {
+              "amount": "0.00",
+              "currency": "RUB"
+            },
+            "providerAccountRef": "pa-1",
+            "evidenceRef": "ev-2",
+            "observedAt": "2026-10-29T10:00:00Z",
+            "recordedAt": "2026-10-29T10:00:01Z",
+            "contentDigest": "sha256:d737ff57658d9944c4f1e63a00c0292dd3f4f8d209bcfcd4719d5779fb93e5c7"
+          }
+        ],
+        "expectedItemCount": 3
+      }
+    },
+    {
+      "op": "ledger.bootstrap",
+      "args": {
+        "action": "stage",
+        "bootstrapRef": "boot-a",
+        "sourceAuthority": "embedded-commerz",
+        "sourceLineage": "L1",
+        "partitionRef": "part-1",
+        "cursorSequence": 2,
+        "sourceRetentionLeaseRef": "lease-boot-a",
+        "items": [
+          {
+            "schema": "payment.observation.v1",
+            "eventId": "01JBX5Q0Z8M3N4P7R9S2000001",
+            "sourceAuthority": "embedded-commerz",
+            "sourceLineage": "L1",
+            "partitionRef": "part-1",
+            "sourceSequence": 1,
+            "installationRef": "inst-test",
+            "environment": "test",
+            "sellerRef": "seller-a",
+            "operationRef": "op-1",
+            "operationKind": "charge",
+            "businessIntentRef": "intent-a",
+            "operationRevision": 1,
+            "state": "succeeded",
+            "currency": "RUB",
+            "requested": {
+              "amount": "100.00",
+              "currency": "RUB"
+            },
+            "authorizedTotal": {
+              "amount": "100.00",
+              "currency": "RUB"
+            },
+            "capturedTotal": {
+              "amount": "30.00",
+              "currency": "RUB"
+            },
+            "refundedTotal": {
+              "amount": "0.00",
+              "currency": "RUB"
+            },
+            "providerAccountRef": "pa-1",
+            "evidenceRef": "ev-1",
+            "observedAt": "2026-10-29T10:00:00Z",
+            "recordedAt": "2026-10-29T10:00:01Z",
+            "contentDigest": "sha256:b9d992d05db4abac74960a7bea1926e01f6c32ef3b43bc56dfea39fe45b6d81d"
+          },
+          {
+            "schema": "payment.observation.v1",
+            "eventId": "01JBX5Q0Z8M3N4P7R9S2000002",
+            "sourceAuthority": "embedded-commerz",
+            "sourceLineage": "L1",
+            "partitionRef": "part-1",
+            "sourceSequence": 2,
+            "installationRef": "inst-test",
+            "environment": "test",
+            "sellerRef": "seller-a",
+            "operationRef": "op-2",
+            "operationKind": "charge",
+            "businessIntentRef": "intent-a",
+            "operationRevision": 1,
+            "state": "succeeded",
+            "currency": "RUB",
+            "requested": {
+              "amount": "100.00",
+              "currency": "RUB"
+            },
+            "authorizedTotal": {
+              "amount": "100.00",
+              "currency": "RUB"
+            },
+            "capturedTotal": {
+              "amount": "20.00",
+              "currency": "RUB"
+            },
+            "refundedTotal": {
+              "amount": "0.00",
+              "currency": "RUB"
+            },
+            "providerAccountRef": "pa-1",
+            "evidenceRef": "ev-2",
+            "observedAt": "2026-10-29T10:00:00Z",
+            "recordedAt": "2026-10-29T10:00:01Z",
+            "contentDigest": "sha256:d737ff57658d9944c4f1e63a00c0292dd3f4f8d209bcfcd4719d5779fb93e5c7"
+          }
+        ]
+      }
+    },
+    {
+      "op": "ledger.bootstrap",
+      "args": {
+        "action": "step",
+        "bootstrapRef": "boot-a",
+        "sourceAuthority": "embedded-commerz",
+        "sourceLineage": "L1",
+        "partitionRef": "part-1",
+        "cursorSequence": 2,
+        "sourceRetentionLeaseRef": "lease-boot-a",
+        "items": [
+          {
+            "schema": "payment.observation.v1",
+            "eventId": "01JBX5Q0Z8M3N4P7R9S2000001",
+            "sourceAuthority": "embedded-commerz",
+            "sourceLineage": "L1",
+            "partitionRef": "part-1",
+            "sourceSequence": 1,
+            "installationRef": "inst-test",
+            "environment": "test",
+            "sellerRef": "seller-a",
+            "operationRef": "op-1",
+            "operationKind": "charge",
+            "businessIntentRef": "intent-a",
+            "operationRevision": 1,
+            "state": "succeeded",
+            "currency": "RUB",
+            "requested": {
+              "amount": "100.00",
+              "currency": "RUB"
+            },
+            "authorizedTotal": {
+              "amount": "100.00",
+              "currency": "RUB"
+            },
+            "capturedTotal": {
+              "amount": "30.00",
+              "currency": "RUB"
+            },
+            "refundedTotal": {
+              "amount": "0.00",
+              "currency": "RUB"
+            },
+            "providerAccountRef": "pa-1",
+            "evidenceRef": "ev-1",
+            "observedAt": "2026-10-29T10:00:00Z",
+            "recordedAt": "2026-10-29T10:00:01Z",
+            "contentDigest": "sha256:b9d992d05db4abac74960a7bea1926e01f6c32ef3b43bc56dfea39fe45b6d81d"
+          },
+          {
+            "schema": "payment.observation.v1",
+            "eventId": "01JBX5Q0Z8M3N4P7R9S2000002",
+            "sourceAuthority": "embedded-commerz",
+            "sourceLineage": "L1",
+            "partitionRef": "part-1",
+            "sourceSequence": 2,
+            "installationRef": "inst-test",
+            "environment": "test",
+            "sellerRef": "seller-a",
+            "operationRef": "op-2",
+            "operationKind": "charge",
+            "businessIntentRef": "intent-a",
+            "operationRevision": 1,
+            "state": "succeeded",
+            "currency": "RUB",
+            "requested": {
+              "amount": "100.00",
+              "currency": "RUB"
+            },
+            "authorizedTotal": {
+              "amount": "100.00",
+              "currency": "RUB"
+            },
+            "capturedTotal": {
+              "amount": "20.00",
+              "currency": "RUB"
+            },
+            "refundedTotal": {
+              "amount": "0.00",
+              "currency": "RUB"
+            },
+            "providerAccountRef": "pa-1",
+            "evidenceRef": "ev-2",
+            "observedAt": "2026-10-29T10:00:00Z",
+            "recordedAt": "2026-10-29T10:00:01Z",
+            "contentDigest": "sha256:d737ff57658d9944c4f1e63a00c0292dd3f4f8d209bcfcd4719d5779fb93e5c7"
+          }
+        ]
+      }
+    },
+    {
+      "op": "ledger.query",
+      "args": {
+        "query": "obligation",
+        "selector": {
+          "obligationRef": "o1"
+        }
+      }
+    },
+    {
+      "op": "ledger.bootstrap",
+      "args": {
+        "action": "stage",
+        "bootstrapRef": "boot-a",
+        "sourceAuthority": "embedded-commerz",
+        "sourceLineage": "L1",
+        "partitionRef": "part-1",
+        "cursorSequence": 2,
+        "sourceRetentionLeaseRef": "lease-boot-a",
+        "items": [
+          {
+            "schema": "payment.observation.v1",
+            "eventId": "01JBX5Q0Z8M3N4P7R9S2000001",
+            "sourceAuthority": "embedded-commerz",
+            "sourceLineage": "L1",
+            "partitionRef": "part-1",
+            "sourceSequence": 1,
+            "installationRef": "inst-test",
+            "environment": "test",
+            "sellerRef": "seller-a",
+            "operationRef": "op-1",
+            "operationKind": "charge",
+            "businessIntentRef": "intent-a",
+            "operationRevision": 1,
+            "state": "succeeded",
+            "currency": "RUB",
+            "requested": {
+              "amount": "100.00",
+              "currency": "RUB"
+            },
+            "authorizedTotal": {
+              "amount": "100.00",
+              "currency": "RUB"
+            },
+            "capturedTotal": {
+              "amount": "30.00",
+              "currency": "RUB"
+            },
+            "refundedTotal": {
+              "amount": "0.00",
+              "currency": "RUB"
+            },
+            "providerAccountRef": "pa-1",
+            "evidenceRef": "ev-1",
+            "observedAt": "2026-10-29T10:00:00Z",
+            "recordedAt": "2026-10-29T10:00:01Z",
+            "contentDigest": "sha256:b9d992d05db4abac74960a7bea1926e01f6c32ef3b43bc56dfea39fe45b6d81d"
+          },
+          {
+            "schema": "payment.observation.v1",
+            "eventId": "01JBX5Q0Z8M3N4P7R9S2000002",
+            "sourceAuthority": "embedded-commerz",
+            "sourceLineage": "L1",
+            "partitionRef": "part-1",
+            "sourceSequence": 2,
+            "installationRef": "inst-test",
+            "environment": "test",
+            "sellerRef": "seller-a",
+            "operationRef": "op-2",
+            "operationKind": "charge",
+            "businessIntentRef": "intent-a",
+            "operationRevision": 1,
+            "state": "succeeded",
+            "currency": "RUB",
+            "requested": {
+              "amount": "100.00",
+              "currency": "RUB"
+            },
+            "authorizedTotal": {
+              "amount": "100.00",
+              "currency": "RUB"
+            },
+            "capturedTotal": {
+              "amount": "20.00",
+              "currency": "RUB"
+            },
+            "refundedTotal": {
+              "amount": "0.00",
+              "currency": "RUB"
+            },
+            "providerAccountRef": "pa-1",
+            "evidenceRef": "ev-2",
+            "observedAt": "2026-10-29T10:00:00Z",
+            "recordedAt": "2026-10-29T10:00:01Z",
+            "contentDigest": "sha256:d737ff57658d9944c4f1e63a00c0292dd3f4f8d209bcfcd4719d5779fb93e5c7"
+          }
+        ]
+      }
+    },
+    {
+      "op": "ledger.bootstrap",
+      "args": {
+        "action": "resume",
+        "bootstrapRef": "boot-a",
+        "sourceAuthority": "embedded-commerz",
+        "sourceLineage": "L1",
+        "partitionRef": "part-1",
+        "cursorSequence": 2,
+        "sourceRetentionLeaseRef": "lease-boot-a",
+        "items": [
+          {
+            "schema": "payment.observation.v1",
+            "eventId": "01JBX5Q0Z8M3N4P7R9S2000001",
+            "sourceAuthority": "embedded-commerz",
+            "sourceLineage": "L1",
+            "partitionRef": "part-1",
+            "sourceSequence": 1,
+            "installationRef": "inst-test",
+            "environment": "test",
+            "sellerRef": "seller-a",
+            "operationRef": "op-1",
+            "operationKind": "charge",
+            "businessIntentRef": "intent-a",
+            "operationRevision": 1,
+            "state": "succeeded",
+            "currency": "RUB",
+            "requested": {
+              "amount": "100.00",
+              "currency": "RUB"
+            },
+            "authorizedTotal": {
+              "amount": "100.00",
+              "currency": "RUB"
+            },
+            "capturedTotal": {
+              "amount": "30.00",
+              "currency": "RUB"
+            },
+            "refundedTotal": {
+              "amount": "0.00",
+              "currency": "RUB"
+            },
+            "providerAccountRef": "pa-1",
+            "evidenceRef": "ev-1",
+            "observedAt": "2026-10-29T10:00:00Z",
+            "recordedAt": "2026-10-29T10:00:01Z",
+            "contentDigest": "sha256:b9d992d05db4abac74960a7bea1926e01f6c32ef3b43bc56dfea39fe45b6d81d"
+          },
+          {
+            "schema": "payment.observation.v1",
+            "eventId": "01JBX5Q0Z8M3N4P7R9S2000002",
+            "sourceAuthority": "embedded-commerz",
+            "sourceLineage": "L1",
+            "partitionRef": "part-1",
+            "sourceSequence": 2,
+            "installationRef": "inst-test",
+            "environment": "test",
+            "sellerRef": "seller-a",
+            "operationRef": "op-2",
+            "operationKind": "charge",
+            "businessIntentRef": "intent-a",
+            "operationRevision": 1,
+            "state": "succeeded",
+            "currency": "RUB",
+            "requested": {
+              "amount": "100.00",
+              "currency": "RUB"
+            },
+            "authorizedTotal": {
+              "amount": "100.00",
+              "currency": "RUB"
+            },
+            "capturedTotal": {
+              "amount": "20.00",
+              "currency": "RUB"
+            },
+            "refundedTotal": {
+              "amount": "0.00",
+              "currency": "RUB"
+            },
+            "providerAccountRef": "pa-1",
+            "evidenceRef": "ev-2",
+            "observedAt": "2026-10-29T10:00:00Z",
+            "recordedAt": "2026-10-29T10:00:01Z",
+            "contentDigest": "sha256:d737ff57658d9944c4f1e63a00c0292dd3f4f8d209bcfcd4719d5779fb93e5c7"
+          }
+        ]
+      }
+    },
+    {
+      "op": "ledger.query",
+      "args": {
+        "query": "obligation",
+        "selector": {
+          "obligationRef": "o1"
+        }
+      }
+    },
+    {
+      "op": "ledger.bootstrap",
+      "args": {
+        "action": "resume",
+        "bootstrapRef": "boot-a",
+        "sourceAuthority": "embedded-commerz",
+        "sourceLineage": "L1",
+        "partitionRef": "part-1",
+        "cursorSequence": 2,
+        "sourceRetentionLeaseRef": "lease-boot-a",
+        "items": [
+          {
+            "schema": "payment.observation.v1",
+            "eventId": "01JBX5Q0Z8M3N4P7R9S2000001",
+            "sourceAuthority": "embedded-commerz",
+            "sourceLineage": "L1",
+            "partitionRef": "part-1",
+            "sourceSequence": 1,
+            "installationRef": "inst-test",
+            "environment": "test",
+            "sellerRef": "seller-a",
+            "operationRef": "op-1",
+            "operationKind": "charge",
+            "businessIntentRef": "intent-a",
+            "operationRevision": 1,
+            "state": "succeeded",
+            "currency": "RUB",
+            "requested": {
+              "amount": "100.00",
+              "currency": "RUB"
+            },
+            "authorizedTotal": {
+              "amount": "100.00",
+              "currency": "RUB"
+            },
+            "capturedTotal": {
+              "amount": "30.00",
+              "currency": "RUB"
+            },
+            "refundedTotal": {
+              "amount": "0.00",
+              "currency": "RUB"
+            },
+            "providerAccountRef": "pa-1",
+            "evidenceRef": "ev-1",
+            "observedAt": "2026-10-29T10:00:00Z",
+            "recordedAt": "2026-10-29T10:00:01Z",
+            "contentDigest": "sha256:b9d992d05db4abac74960a7bea1926e01f6c32ef3b43bc56dfea39fe45b6d81d"
+          },
+          {
+            "schema": "payment.observation.v1",
+            "eventId": "01JBX5Q0Z8M3N4P7R9S2000002",
+            "sourceAuthority": "embedded-commerz",
+            "sourceLineage": "L1",
+            "partitionRef": "part-1",
+            "sourceSequence": 2,
+            "installationRef": "inst-test",
+            "environment": "test",
+            "sellerRef": "seller-a",
+            "operationRef": "op-2",
+            "operationKind": "charge",
+            "businessIntentRef": "intent-a",
+            "operationRevision": 1,
+            "state": "succeeded",
+            "currency": "RUB",
+            "requested": {
+              "amount": "100.00",
+              "currency": "RUB"
+            },
+            "authorizedTotal": {
+              "amount": "100.00",
+              "currency": "RUB"
+            },
+            "capturedTotal": {
+              "amount": "20.00",
+              "currency": "RUB"
+            },
+            "refundedTotal": {
+              "amount": "0.00",
+              "currency": "RUB"
+            },
+            "providerAccountRef": "pa-1",
+            "evidenceRef": "ev-2",
+            "observedAt": "2026-10-29T10:00:00Z",
+            "recordedAt": "2026-10-29T10:00:01Z",
+            "contentDigest": "sha256:d737ff57658d9944c4f1e63a00c0292dd3f4f8d209bcfcd4719d5779fb93e5c7"
+          }
+        ]
+      }
+    },
+    {
+      "op": "ledger.query",
+      "args": {
+        "query": "obligation",
+        "selector": {
+          "obligationRef": "o1"
+        }
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {}
+    },
+    {
+      "ok": {
+        "parts": [
+          {
+            "amount": "30.00",
+            "currency": "RUB"
+          }
+        ]
+      }
+    },
+    {
+      "ok": {}
+    },
+    {
+      "ok": {}
+    },
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    },
+    {
+      "ok": {
+        "items": 2,
+        "status": "verified",
+        "staged": 2,
+        "applied": 0,
+        "newPartitionId": null
+      }
+    },
+    {
+      "ok": {
+        "items": 2,
+        "status": "applying",
+        "staged": 1,
+        "applied": 1,
+        "newPartitionId": null
+      }
+    },
+    {
+      "ok": {
+        "allocated": {
+          "amount": "30.00",
+          "currency": "RUB"
+        },
+        "credited": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "open": {
+          "amount": "70.00",
+          "currency": "RUB"
+        }
+      }
+    },
+    {
+      "ok": {
+        "items": 2,
+        "status": "applying",
+        "staged": 1,
+        "applied": 1,
+        "newPartitionId": null
+      }
+    },
+    {
+      "ok": {
+        "status": "adopted",
+        "items": 2,
+        "staged": 0,
+        "applied": 2
+      }
+    },
+    {
+      "ok": {
+        "allocated": {
+          "amount": "50.00",
+          "currency": "RUB"
+        },
+        "credited": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "open": {
+          "amount": "50.00",
+          "currency": "RUB"
+        }
+      }
+    },
+    {
+      "ok": {
+        "status": "adopted",
+        "items": 2,
+        "staged": 0,
+        "applied": 2
+      }
+    },
+    {
+      "ok": {
+        "allocated": {
+          "amount": "50.00",
+          "currency": "RUB"
+        },
+        "credited": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "open": {
+          "amount": "50.00",
+          "currency": "RUB"
+        }
+      }
+    }
+  ]
+}

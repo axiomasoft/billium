@@ -30,6 +30,7 @@
     ],
     "autoload-dev": {
         "psr-4": {
+            "BilliumConformance\\": "conformance/adapters/php/src/",
             "Billium\\Core\\Tests\\": "packages/core/tests/",
             "Billium\\Platform\\Tests\\": "packages/core/modules/platform/tests/",
             "Billium\\Ledger\\Tests\\": "packages/core/modules/ledger/tests/",

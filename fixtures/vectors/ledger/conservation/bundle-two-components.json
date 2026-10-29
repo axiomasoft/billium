@@ -1,0 +1,287 @@
+{
+  "id": "ledger/conservation/bundle-two-components",
+  "description": "D46/SB-07 Hamilton example: first50 -> 3334/1666 (tie index0); second50 -> 3333/1667.",
+  "spec_refs": [
+    "BC-CNF-10",
+    "REQ-ACC-10",
+    "D60",
+    "INV-09",
+    "REQ-CON-30"
+  ],
+  "profiles": [
+    "php"
+  ],
+  "given": {
+    "caller": {
+      "sellerRef": "seller-a",
+      "environment": "test",
+      "installationRef": "inst-test",
+      "sourceAuthorities": [
+        "embedded-commerz"
+      ]
+    }
+  },
+  "script": [
+    {
+      "op": "ledger.reset",
+      "args": {}
+    },
+    {
+      "op": "money.allocate",
+      "args": {
+        "total": {
+          "amount": "50.00",
+          "currency": "RUB"
+        },
+        "ratios": [
+          "6667",
+          "3333"
+        ]
+      }
+    },
+    {
+      "op": "ledger.obligation.record",
+      "args": {
+        "commandKey": "key-o1",
+        "billingAccountRef": "account-a",
+        "obligationRef": "o1",
+        "basisRef": "basis-o1",
+        "customerRef": "customer-a",
+        "componentRef": "component-o1",
+        "amount": {
+          "amount": "66.67",
+          "currency": "RUB"
+        },
+        "termsDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "taxSnapshotRef": "tax-o1"
+      }
+    },
+    {
+      "op": "ledger.obligation.record",
+      "args": {
+        "commandKey": "key-o2",
+        "billingAccountRef": "account-a",
+        "obligationRef": "o2",
+        "basisRef": "basis-o2",
+        "customerRef": "customer-a",
+        "componentRef": "component-o2",
+        "amount": {
+          "amount": "33.33",
+          "currency": "RUB"
+        },
+        "termsDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "taxSnapshotRef": "tax-o2"
+      }
+    },
+    {
+      "op": "ledger.intent.declare",
+      "args": {
+        "commandKey": "key-intent-a",
+        "billingAccountRef": "account-a",
+        "businessIntentRef": "intent-a",
+        "currency": "RUB",
+        "obligationRefs": [
+          "o1",
+          "o2"
+        ],
+        "policyVersion": "pro_rata_open/1"
+      }
+    },
+    {
+      "op": "ledger.observe",
+      "args": {
+        "json_text": "{\"schema\":\"payment.observation.v1\",\"eventId\":\"01JBX5Q0Z8M3N4P7R9S2000001\",\"sourceAuthority\":\"embedded-commerz\",\"sourceLineage\":\"L1\",\"partitionRef\":\"part-1\",\"sourceSequence\":1,\"installationRef\":\"inst-test\",\"environment\":\"test\",\"sellerRef\":\"seller-a\",\"operationRef\":\"op-1\",\"operationKind\":\"charge\",\"businessIntentRef\":\"intent-a\",\"operationRevision\":1,\"state\":\"succeeded\",\"currency\":\"RUB\",\"requested\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"authorizedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"capturedTotal\":{\"amount\":\"50.00\",\"currency\":\"RUB\"},\"refundedTotal\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"providerAccountRef\":\"pa-1\",\"evidenceRef\":\"ev-1\",\"observedAt\":\"2026-10-29T10:00:00Z\",\"recordedAt\":\"2026-10-29T10:00:01Z\",\"contentDigest\":\"sha256:33cd0e25b2268984aff473904b3af482d4ea5913fb67de2f4e59bd05a2d73109\"}"
+      }
+    },
+    {
+      "op": "ledger.query",
+      "args": {
+        "query": "obligation",
+        "selector": {
+          "obligationRef": "o1"
+        }
+      }
+    },
+    {
+      "op": "ledger.query",
+      "args": {
+        "query": "obligation",
+        "selector": {
+          "obligationRef": "o2"
+        }
+      }
+    },
+    {
+      "op": "money.allocate",
+      "args": {
+        "total": {
+          "amount": "50.00",
+          "currency": "RUB"
+        },
+        "ratios": [
+          "3333",
+          "1667"
+        ]
+      }
+    },
+    {
+      "op": "ledger.observe",
+      "args": {
+        "json_text": "{\"schema\":\"payment.observation.v1\",\"eventId\":\"01JBX5Q0Z8M3N4P7R9S2000002\",\"sourceAuthority\":\"embedded-commerz\",\"sourceLineage\":\"L1\",\"partitionRef\":\"part-1\",\"sourceSequence\":2,\"installationRef\":\"inst-test\",\"environment\":\"test\",\"sellerRef\":\"seller-a\",\"operationRef\":\"op-1\",\"operationKind\":\"charge\",\"businessIntentRef\":\"intent-a\",\"operationRevision\":2,\"state\":\"succeeded\",\"currency\":\"RUB\",\"requested\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"authorizedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"capturedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"refundedTotal\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"providerAccountRef\":\"pa-1\",\"evidenceRef\":\"ev-2\",\"observedAt\":\"2026-10-29T10:00:00Z\",\"recordedAt\":\"2026-10-29T10:00:01Z\",\"contentDigest\":\"sha256:c42ab8b5ad344b9aeca55ff108912f64a56f1f772d4df1c1a20aeeee3b385d6b\"}"
+      }
+    },
+    {
+      "op": "ledger.query",
+      "args": {
+        "query": "obligation",
+        "selector": {
+          "obligationRef": "o1"
+        }
+      }
+    },
+    {
+      "op": "ledger.query",
+      "args": {
+        "query": "obligation",
+        "selector": {
+          "obligationRef": "o2"
+        }
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {}
+    },
+    {
+      "ok": {
+        "parts": [
+          {
+            "amount": "33.34",
+            "currency": "RUB"
+          },
+          {
+            "amount": "16.66",
+            "currency": "RUB"
+          }
+        ]
+      }
+    },
+    {
+      "ok": {}
+    },
+    {
+      "ok": {}
+    },
+    {
+      "ok": {}
+    },
+    {
+      "ok": {
+        "allocations": [
+          {
+            "obligation_ref": "o1",
+            "amount_minor": "3334"
+          },
+          {
+            "obligation_ref": "o2",
+            "amount_minor": "1666"
+          }
+        ],
+        "allocated_minor": "5000"
+      }
+    },
+    {
+      "ok": {
+        "allocated": {
+          "amount": "33.34",
+          "currency": "RUB"
+        },
+        "credited": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "open": {
+          "amount": "33.33",
+          "currency": "RUB"
+        }
+      }
+    },
+    {
+      "ok": {
+        "allocated": {
+          "amount": "16.66",
+          "currency": "RUB"
+        },
+        "credited": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "open": {
+          "amount": "16.67",
+          "currency": "RUB"
+        }
+      }
+    },
+    {
+      "ok": {
+        "parts": [
+          {
+            "amount": "33.33",
+            "currency": "RUB"
+          },
+          {
+            "amount": "16.67",
+            "currency": "RUB"
+          }
+        ]
+      }
+    },
+    {
+      "ok": {
+        "allocations": [
+          {
+            "obligation_ref": "o1",
+            "amount_minor": "3333"
+          },
+          {
+            "obligation_ref": "o2",
+            "amount_minor": "1667"
+          }
+        ]
+      }
+    },
+    {
+      "ok": {
+        "allocated": {
+          "amount": "66.67",
+          "currency": "RUB"
+        },
+        "credited": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "open": {
+          "amount": "0.00",
+          "currency": "RUB"
+        }
+      }
+    },
+    {
+      "ok": {
+        "allocated": {
+          "amount": "33.33",
+          "currency": "RUB"
+        },
+        "credited": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "open": {
+          "amount": "0.00",
+          "currency": "RUB"
+        }
+      }
+    }
+  ]
+}

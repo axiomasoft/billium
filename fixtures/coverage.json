@@ -1,14 +1,6 @@
 {
   "not_testable": [
     {
-      "rule": "BC-ENV-28",
-      "reason": "PHP-only ledger command DTO boundary, not a wire codec operation; positive/negative account and due-provenance cases are in packages/core/modules/ledger/tests/Contract/LedgerQueryShapeTest.php. Guarded monetary application belongs to P3.6–P3.8."
-    },
-    {
-      "rule": "BC-ENV-29",
-      "reason": "Material revision normalization/deduplication is the ledger consumer contract for P3.8 ObservationMaterialDigestTest, not transport codec digest behavior; document the exact normalized fields before those apply tests. Economic conflict and evidence-only duplicate tests require the future owning reducer; P3.2 adds no ledger behavior."
-    },
-    {
       "rule": "BC-CNF-01",
       "reason": "организация репозитория (пакеты не делят код), а не поведение кодека; проверяется структурой packages/ и consumer smoke P2.7"
     },
@@ -37,10 +29,6 @@
       "reason": "правило сравнения expect проверяют самотесты runner conformance/tests (CompareTest)"
     },
     {
-      "rule": "BC-CNF-10",
-      "reason": "в P2 поведенческих денежных векторов нет (все векторы — codec); правило применяется с первыми поведенческими векторами P3/P5"
-    },
-    {
       "rule": "BC-CNF-11",
       "reason": "протокол адаптера проверяют самотесты runner на fake_adapter (conformance/tests)"
     },
@@ -61,24 +49,12 @@
       "reason": "утверждение об отчёте runner (без exactly-once, без паритета); проверяется форматом отчёта и review, не вектором"
     },
     {
-      "rule": "BC-ENV-10",
-      "reason": "сверка sellerRef, environment и installationRef с аутентифицированным контекстом: нужен auth-контекст сервера; проверяется ACC в P5/P8"
-    },
-    {
       "rule": "BC-ENV-14",
       "reason": "семантика cancel (запрет новых отправок, cancelled при доказанном отсутствии эффекта) требует state machine операции; проверяется в P5"
     },
     {
       "rule": "BC-ENV-16",
       "reason": "неполный lookup отвечает кодом, а не absent: требует состояния реплики и retention; проверяется в P5"
-    },
-    {
-      "rule": "BC-ENV-19",
-      "reason": "quarantine при совпадении revision и разном digest — поведение потребителя с хранилищем; проверяется в P5/P6"
-    },
-    {
-      "rule": "BC-ENV-21",
-      "reason": "дедупликация наблюдений по eventId, ключу операции и sourceSequence требует хранилища потребителя; проверяется в P6"
     },
     {
       "rule": "BC-ERR-07",
@@ -93,24 +69,16 @@
       "reason": "процессная норма новой ревизии для новых кодов; проверяется review ревизии"
     },
     {
-      "rule": "BC-EVT-01",
-      "reason": "outbox в транзакции изменения state — свойство ядра; проверяется в P3/P6"
-    },
-    {
       "rule": "BC-EVT-04",
-      "reason": "идентичность повторной доставки и дедупликация потребителя требуют outbox и inbox; проверяются в P6"
+      "reason": "P5: payment command admission, execution lifecycle and transport receipts; P3 ledger apply vectors cover the ledger consumer only."
     },
     {
       "rule": "BC-EVT-05",
-      "reason": "транспортный ACK не является receipt: поведение транспорта и потребителя; проверяется в P6"
+      "reason": "P5: payment command admission, execution lifecycle and transport receipts; P3 ledger apply vectors cover the ledger consumer only."
     },
     {
       "rule": "BC-EVT-07",
       "reason": "CommandAccepted подтверждает сохранение identity, но не эффект: требует admission с хранилищем; проверяется в P5"
-    },
-    {
-      "rule": "BC-EVT-08",
-      "reason": "AllocationReceipt подтверждает распределение на obligation: требует ledger; проверяется в P4/P5"
     },
     {
       "rule": "BC-EVT-09",
@@ -118,35 +86,19 @@
     },
     {
       "rule": "BC-ID-02",
-      "reason": "scope ключа платёжной команды: поведенческая норма: проверка требует хранилища и жизненного цикла команды; поведенческие векторы появляются с P3/P5 (fixtures/README.md, раздел «Отложенные векторы»)"
+      "reason": "P5: payment command admission, execution lifecycle and transport receipts; P3 ledger apply vectors cover the ledger consumer only."
     },
     {
       "rule": "BC-ID-03",
-      "reason": "seller в scope каждого ключа и бизнес-ключа: поведенческая норма: проверка требует хранилища и жизненного цикла команды; поведенческие векторы появляются с P3/P5 (fixtures/README.md, раздел «Отложенные векторы»)"
+      "reason": "P5: payment command admission, execution lifecycle and transport receipts; P3 ledger apply vectors cover the ledger consumer only."
     },
     {
       "rule": "BC-ID-04",
-      "reason": "business binding без sellerRef и конфликт между продавцами: поведенческая норма: проверка требует хранилища и жизненного цикла команды; поведенческие векторы появляются с P3/P5 (fixtures/README.md, раздел «Отложенные векторы»)"
-    },
-    {
-      "rule": "BC-ID-05",
-      "reason": "claim ключа в корневой транзакции вместе с digest: поведенческая норма: проверка требует хранилища и жизненного цикла команды; поведенческие векторы появляются с P3/P5 (fixtures/README.md, раздел «Отложенные векторы»)"
-    },
-    {
-      "rule": "BC-ID-06",
-      "reason": "повтор с тем же ключом и digest возвращает сохранённый receipt: поведенческая норма: проверка требует хранилища и жизненного цикла команды; поведенческие векторы появляются с P3/P5 (fixtures/README.md, раздел «Отложенные векторы»)"
-    },
-    {
-      "rule": "BC-ID-07",
-      "reason": "тот же ключ с иным digest даёт billium.idempotency.conflict: поведенческая норма: проверка требует хранилища и жизненного цикла команды; поведенческие векторы появляются с P3/P5 (fixtures/README.md, раздел «Отложенные векторы»)"
-    },
-    {
-      "rule": "BC-ID-08",
-      "reason": "сохранение receipt для принятой команды и кодов stored, откат claim при none: поведенческая норма: проверка требует хранилища и жизненного цикла команды; поведенческие векторы появляются с P3/P5 (fixtures/README.md, раздел «Отложенные векторы»)"
+      "reason": "P5: payment command admission, execution lifecycle and transport receipts; P3 ledger apply vectors cover the ledger consumer only."
     },
     {
       "rule": "BC-ID-09",
-      "reason": "повтор тем же ключом после timeout и разрешение неизвестного исхода через find: поведенческая норма: проверка требует хранилища и жизненного цикла команды; поведенческие векторы появляются с P3/P5 (fixtures/README.md, раздел «Отложенные векторы»)"
+      "reason": "P5: payment command admission, execution lifecycle and transport receipts; P3 ledger apply vectors cover the ledger consumer only."
     },
     {
       "rule": "BC-ID-11",
