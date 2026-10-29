@@ -58,6 +58,31 @@ final class ObservationBackstopTest extends ObservationTestCase
             self::integer($this->paymentRow()['applied_revision'])]);
     }
 
+    public function test_the_granted_projection_routine_refuses_over_capture_and_keeps_applied_totals(): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $this->observe(ObservationFactory::charge('op-1', 1, 1000, sequence: 1));
+        $observed = self::integer($this->observedRow()['id']);
+        $intent = self::integer($this->value('SELECT id FROM billium_settlement_intent'));
+        $this->routine('record_observation', ['inst-test', 'seller-a', 'test', 'embedded-commerz', 'L1', 'op-1', 'charge', null, 2, self::digest('b'),
+            'succeeded', 'RUB', 1000, 1000, 1500, 0, 'pa-1', 'ev-x', '{}']);
+
+        try {
+            $this->routine('project_payment', [...$this->scopeArguments(), $observed, 2, 'op-1', $intent, 'assign', '[]', null, 'observation:op-1#2', self::digest('b')]);
+            self::fail('an over-capture cannot be assigned by the runtime role');
+        } catch (PDOException $exception) {
+            self::assertStringContainsString('billium.observation.conflict', $exception->getMessage());
+        }
+        $payment = $this->paymentRow();
+        self::assertSame([1000, 1000, 0, 1], [self::integer($payment['authorized_minor']), self::integer($payment['captured_minor']),
+            self::integer($payment['refunded_minor']), self::integer($payment['applied_revision'])]);
+        self::assertSame(1000, $this->allocated('o1'));
+        self::assertSame(1500, self::integer($this->observedRow()['captured_minor']), 'the actual fact is retained');
+        self::assertSame(1, $this->rows('billium_payment_revision'));
+        self::assertSame(0, $this->rows('billium_allocation_receipt', "receipt_ref = 'observation:op-1#2'"));
+    }
+
     public function test_a_parked_marker_is_released_once_and_never_edited(): void
     {
         $this->attempt(ObservationFactory::charge('op-1', 1, 1000, sequence: 1));

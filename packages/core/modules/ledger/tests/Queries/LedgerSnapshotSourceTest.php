@@ -11,6 +11,7 @@ use Billium\Core\Tests\Support\ObservationFactory;
 use Billium\Ledger\Internal\Snapshot\LedgerSnapshotSource;
 use Billium\Platform\Contracts\EventFeed;
 use Billium\Platform\Data\Feed\FeedScope;
+use Illuminate\Support\Str;
 use LogicException;
 
 final class LedgerSnapshotSourceTest extends QueryTestCase
@@ -81,6 +82,43 @@ final class LedgerSnapshotSourceTest extends QueryTestCase
         $feed->acknowledgeBootstrap($selection, $snapshot->leaseRef, $snapshot->snapshotDigest);
         $tail = $feed->read($selection, $snapshot->cursor->token);
         self::assertCount(1, $tail->events);
+    }
+
+    public function test_a_refund_only_revision_after_bootstrap_emits_one_payment_event_and_replay_emits_none(): void
+    {
+        $this->debt('o1', 10000);
+        $this->intent('intent-a', ['o1']);
+        $this->observe(ObservationFactory::charge('op-1', 1, 10000, sequence: 1));
+        self::assertSame(10000, $this->allocated('o1'));
+        config(['billium.feed.signing_key' => str_repeat('k', 32)]);
+        $feed = $this->application()->make(EventFeed::class);
+        $selection = $feed->openFeed(new FeedScope(self::INSTALLATION, 'seller-a', 'test', '1'),
+            'events-2026-10-v1', ['billium.event.v1'], ['payment.outcome.v1']);
+        $snapshot = $feed->bootstrap($selection);
+        $feed->acknowledgeBootstrap($selection, $snapshot->leaseRef, $snapshot->snapshotDigest);
+        self::assertCount(0, $feed->read($selection, $snapshot->cursor->token)->events);
+        $allocationEvents = $this->rows('billium_outbox_event', "type = 'allocation.applied.v1'");
+
+        $refund = ObservationFactory::charge('op-1', 2, 10000, 3000, sequence: 2);
+        $receipt = $this->observe($refund);
+        self::assertSame('assign', $receipt->mode());
+        self::assertSame([], $receipt->body['allocations']);
+        self::assertNull($receipt->body['discrepancy']);
+        self::assertTrue($receipt->body['reallocation_required']);
+        self::assertSame(3000, self::integer($this->paymentRow()['refunded_minor']));
+        self::assertSame($allocationEvents, $this->rows('billium_outbox_event', "type = 'allocation.applied.v1'"));
+        $tail = $feed->read($selection, $snapshot->cursor->token);
+        self::assertCount(1, $tail->events);
+        self::assertSame(['payment.outcome.v1', 'op-1', 2], [$tail->events[0]['eventType'], $tail->events[0]['aggregateRef'], $tail->events[0]['revision']]);
+        self::assertSame((new Codec)->canonicalize($receipt->body), (new Codec)->canonicalize($tail->events[0]['payload']));
+        self::assertSame(1, $this->rows('billium_outbox_event', "type = 'payment.outcome.v1' AND aggregate_revision = 2"));
+
+        self::assertSame($receipt->body, $this->observe($refund)->body, 'delivery replay');
+        $replay = $this->observe(ObservationFactory::with($refund, ['eventId' => (string) Str::ulid(), 'sourceSequence' => 3]));
+        self::assertSame($receipt->receiptRef, $replay->receiptRef, 'economic replay under a new delivery');
+        self::assertSame($receipt->body, $replay->body);
+        self::assertSame((new Codec)->canonicalize($tail->events), (new Codec)->canonicalize($feed->read($selection, $snapshot->cursor->token)->events));
+        self::assertSame(1, $this->rows('billium_outbox_event', "type = 'payment.outcome.v1' AND aggregate_revision = 2"));
     }
 
     public function test_source_requires_feed_read_only_transaction_and_authenticated_scope(): void

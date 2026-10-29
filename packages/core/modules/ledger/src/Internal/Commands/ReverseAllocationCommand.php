@@ -25,7 +25,10 @@ final readonly class ReverseAllocationCommand
     public static function validate(ReverseAllocation $command): void
     {
         AllocatePayload::text($command->commandKey, $command->scope->sellerRef, $command->scope->environment, $command->scope->billingAccountRef,
-            $command->reversalRef, $command->allocationRef, $command->causeRef);
+            $command->reversalRef, is_string($command->allocationRef) ? $command->allocationRef : null, $command->causeRef);
+        if (is_int($command->allocationRef) && $command->allocationRef <= 0) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'an allocation journal id is positive');
+        }
         AllocatePayload::environment($command->scope->environment);
         if ($command->remainder !== null) {
             AllocatePayload::positive($command->remainder);
@@ -52,8 +55,10 @@ final readonly class ReverseAllocationCommand
         $read = function () use ($connection, $caller, $command): array {
             $rows = $connection->table('billium_allocation as a')->join('billium_obligation as o', 'o.id', '=', 'a.obligation_id')
                 ->where('a.seller_ref', $caller->sellerRef)->where('a.environment', $caller->environment)
-                ->where('a.receipt_ref', 'allocation:'.$command->allocationRef)->whereNull('a.reverses_id')->where('a.amount_minor', '>', 0)
-                ->get(['a.id', 'a.obligation_id', 'a.payment_id', 'a.customer_credit_id', 'a.settlement_intent_id', 'a.currency', 'o.obligation_ref', 'o.billed_invoice_id']);
+                ->where(is_int($command->allocationRef) ? 'a.id' : 'a.receipt_ref',
+                    is_int($command->allocationRef) ? $command->allocationRef : 'allocation:'.$command->allocationRef)
+                ->whereNull('a.reverses_id')->where('a.amount_minor', '>', 0)
+                ->get(['a.id', 'a.receipt_ref', 'a.obligation_id', 'a.payment_id', 'a.customer_credit_id', 'a.settlement_intent_id', 'a.currency', 'o.obligation_ref', 'o.billed_invoice_id']);
             if (count($rows) !== 1) {
                 throw new ProblemException(ProblemCode::ReferenceUnknown, 'unknown original allocation');
             }
@@ -61,6 +66,7 @@ final readonly class ReverseAllocationCommand
 
             return [
                 'id' => AllocationReceiptWriter::int($row->id),
+                'receipt_ref' => is_string($row->receipt_ref) ? $row->receipt_ref : '',
                 'obligation' => AllocationReceiptWriter::int($row->obligation_id),
                 'obligation_ref' => is_string($row->obligation_ref) ? $row->obligation_ref : '',
                 'invoice' => $row->billed_invoice_id === null ? null : AllocationReceiptWriter::int($row->billed_invoice_id),
@@ -90,7 +96,7 @@ final readonly class ReverseAllocationCommand
             $invoice = $before['invoice'] === null ? null : ($invoices[$before['invoice']] ?? null);
             $this->writer->event($context, 'allocation.applied.v1', $before['obligation_ref'], AllocationReceiptWriter::int($revision), [
                 'receipt_ref' => $receiptRef,
-                'reverses_receipt_ref' => 'allocation:'.$command->allocationRef,
+                'reverses_receipt_ref' => $before['receipt_ref'],
                 'obligation_ref' => $before['obligation_ref'],
                 'billing_account_ref' => $command->scope->billingAccountRef,
                 'amount_minor' => '-'.(is_string($body['reversed_minor'] ?? null) ? $body['reversed_minor'] : ''),

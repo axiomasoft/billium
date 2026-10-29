@@ -125,7 +125,8 @@ final class LedgerAdapter
                 $args->paymentRef ?? null, $args->customerCreditRef ?? null, $args->cause ?? 'manual',
             )),
             'ledger.reverse' => $ledger->reverseAllocation(new ReverseAllocation(
-                $key(), $scope(), self::text($args, 'reversalRef'), self::text($args, 'allocationRef'), self::text($args, 'causeRef'),
+                $key(), $scope(), self::text($args, 'reversalRef'),
+                is_int($args->allocationRef ?? null) ? $args->allocationRef : self::text($args, 'allocationRef'), self::text($args, 'causeRef'),
                 isset($args->remainder) ? Money::fromWire($args->remainder) : null,
             )),
             'ledger.credit_note' => $ledger->issueCreditNote(new IssueCreditNote(

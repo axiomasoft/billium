@@ -40,7 +40,7 @@ trait AllocationFixtures
             Money::parse($amount, 'RUB'), $credit === null ? $payment : null, $credit));
     }
 
-    protected function reverse(string $reversalRef, string $allocationRef, ?string $remainder = null, ?string $key = null): StoredOutcome
+    protected function reverse(string $reversalRef, string|int $allocationRef, ?string $remainder = null, ?string $key = null): StoredOutcome
     {
         return $this->ledger()->reverseAllocation(new ReverseAllocation($key ?? 'rev-'.$reversalRef, $this->account(), $reversalRef, $allocationRef, 'correction',
             $remainder === null ? null : Money::parse($remainder, 'RUB')));

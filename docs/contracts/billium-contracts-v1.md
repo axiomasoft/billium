@@ -258,6 +258,19 @@ identity и содержимое; потребитель дедуплициру�
 `invoice.issued.v1`, `credit_note.issued.v1`, `allocation.applied.v1`, `discrepancy.recorded.v1`;
 экспорт в учёт — факты для `billium-finbridge` (REQ-CON-22, REQ-CON-35) со стабильным `sourceFactRef`.
 
+Ledger публикует `payment.outcome.v1` в оболочке `billium.event.v1` в той же транзакции,
+что и первое применение charge observation в режиме `assign` или `hold`. `aggregateRef` —
+operationRef платежа, `revision` — revision наблюдения, `payload` — сохранённое тело
+AllocationReceipt этого применения. Это включает изменение только refundedTotal без новых
+allocations и discrepancy; replay и `stale` не создают событие повторно.
+
+`ReverseAllocation.allocationRef` принимает исходную строковую ссылку `Allocate` либо целочисленный
+id положительной строки журнала. Частичный reversal возвращает этот id в
+`remainder_allocation_ref` своего immutable receipt; при отсутствии остатка поле равно `null`.
+Возвращённый id можно передать следующему `ReverseAllocation`, сохраняя проверки seller,
+environment, billing account и уникальность reversal исходной строки. Числовая строка остаётся
+строковой ссылкой `Allocate`, поэтому прежние ссылки не меняют значения.
+
 ## Ошибки
 
 | Код | Когда | Повторяемо | Действие клиента | Receipt | Основание |

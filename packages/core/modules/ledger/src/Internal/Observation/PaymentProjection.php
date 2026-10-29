@@ -295,6 +295,9 @@ final readonly class PaymentProjection
      */
     private function events(TransactionContext $context, Connection $db, PaymentObservation $o, array $body, array $parts, array $targets, array $invoices, string $account): void
     {
+        if (($body['mode'] ?? null) !== self::MODE_STALE) {
+            $this->writer->event($context, 'payment.outcome.v1', $o->operationRef, $o->operationRevision, $body);
+        }
         $invoiceOf = array_column($targets, 'invoice', 'id');
         foreach ($parts as $part) {
             $obligation = $db->table('billium_obligation')->where('id', $part['obligation_id'])->first(['obligation_ref', 'revision'])

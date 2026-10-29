@@ -9,6 +9,7 @@ use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Ledger\Data\Allocate;
 use Billium\Ledger\Data\DeclareSettlementIntent;
+use Billium\Ledger\Data\ReverseAllocation;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
 
 /** allocate and reverseAllocation through the public root (INV-09, COV-166, COV-289): receipts, refusals, replay, events. */
@@ -193,6 +194,74 @@ final class AllocationCommandsTest extends LedgerTestCase
         self::assertTrue($this->reverse('r5', 'a2')->accepted);
         self::assertSame('partially_paid', $this->invoiceStatus());
         self::assertSame(6000, $this->obligationState('obligation-a')['allocated']);
+    }
+
+    public function test_positive_remainders_can_be_reversed_through_the_returned_journal_identity_until_zero(): void
+    {
+        $this->obligation('o1', 10000);
+        $this->payWith();
+        $this->allocateFrom('a1', 'o1', '100.00')->orThrow();
+        $first = $this->reverse('r1', 'a1', '60.00')->orThrow();
+        $remainder = $first->body['remainder_allocation_ref'] ?? null;
+        self::assertIsInt($remainder);
+        self::assertSame(['6000', 'reversal:r1'], [$first->body['remainder_minor'],
+            $this->value('SELECT receipt_ref FROM billium_allocation WHERE id = ?', [$remainder])]);
+        self::assertSame(6000, $this->obligationState('o1')['allocated']);
+        $second = $this->reverse('r2', $remainder, '20.00')->orThrow();
+        self::assertSame(['6000', '2000', 'reversal:r1'], [$second->body['reversed_minor'], $second->body['remainder_minor'], $second->body['reverses_receipt_ref']]);
+        $last = $second->body['remainder_allocation_ref'] ?? null;
+        self::assertIsInt($last);
+        $final = $this->reverse('r3', $last)->orThrow();
+        self::assertNull($final->body['remainder_allocation_ref']);
+        self::assertSame(['2000', '0'], [$final->body['reversed_minor'], $final->body['remainder_minor']]);
+        self::assertSame(0, $this->obligationState('o1')['allocated']);
+        self::assertSame(['allocated' => 0, 'flag' => false], $this->paymentState());
+        self::assertSame(0, self::integer($this->value('SELECT sum(amount_minor) FROM billium_allocation')));
+        self::assertSame(3, $this->rows('billium_allocation', 'reverses_id IS NOT NULL'));
+        self::assertSame($first->body, $this->reverse('r1', 'a1', '60.00', 'again-r1')->body);
+        self::assertSame($second->body, $this->reverse('r2', $remainder, '20.00', 'again-r2')->body);
+        self::assertSame($final->body, $this->reverse('r3', $last, key: 'again-r3')->body);
+        try {
+            $this->reverse('another-reversal', $remainder);
+            self::fail('a remainder is reversed at most once');
+        } catch (ProblemException $e) {
+            self::assertSame(ProblemCode::IdempotencyConflict, $e->problem);
+        }
+        self::assertSame(4, $this->rows('billium_outbox_event', "type = 'allocation.applied.v1'"));
+        $event = json_decode(self::text($this->value("SELECT payload FROM billium_outbox_event WHERE type = 'allocation.applied.v1' ORDER BY id DESC LIMIT 1")), true, 8, JSON_THROW_ON_ERROR);
+        self::assertIsArray($event);
+        self::assertSame('reversal:r2', $event['reverses_receipt_ref']);
+    }
+
+    public function test_journal_identity_preserves_scope_checks_and_numeric_string_allocation_references(): void
+    {
+        $this->obligation('o1', 10000);
+        $this->obligation('o2', 1000);
+        $this->payWith(captured: 11000);
+        $this->allocateFrom('a1', 'o1', '100.00')->orThrow();
+        $first = $this->reverse('r1', 'a1', '60.00')->orThrow();
+        $remainder = $first->body['remainder_allocation_ref'] ?? null;
+        self::assertIsInt($remainder);
+        $this->allocateFrom((string) $remainder, 'o2', '10.00')->orThrow();
+        $this->reverse('numeric-reference', (string) $remainder)->orThrow();
+        self::assertSame(0, $this->obligationState('o2')['allocated']);
+        self::assertSame(6000, $this->obligationState('o1')['allocated']);
+        try {
+            $this->ledger()->reverseAllocation(new ReverseAllocation('wrong-account', $this->account('account-b'), 'foreign', $remainder, 'correction'));
+            self::fail('a journal id does not bypass the bound billing account');
+        } catch (ProblemException $e) {
+            self::assertSame(ProblemCode::ReferenceUnknown, $e->problem);
+        }
+        foreach ([0, -1] as $id) {
+            try {
+                $this->reverse('invalid-'.$id, $id);
+                self::fail('journal identities must be positive');
+            } catch (ProblemException $e) {
+                self::assertSame(ProblemCode::ValidationInvalid, $e->problem);
+            }
+        }
+        $this->reverse('valid-remainder', $remainder)->orThrow();
+        self::assertSame(0, $this->obligationState('o1')['allocated']);
     }
 
     public function test_reversal_of_a_remainder_validates_its_bound(): void
