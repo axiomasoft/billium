@@ -41,7 +41,7 @@ final class SealedSessionCustodyTest extends ObservationTestCase
         self::assertCount(1, $drained);
         self::assertSame('applied', $this->inboxStatus(self::eventId($charge)));
         self::assertSame(1000, $this->allocated('o1'));
-        self::assertSame('observation:op-1#1', $this->observe($charge)->receiptRef);
+        self::assertSame('observation:embedded-commerz:op-1#1', $this->observe($charge)->receiptRef);
         self::assertSame(1, $this->rows('billium_allocation'));
         self::assertSame([], $this->drainer()->drainPartition(self::integer($this->partition()['id'])));
     }

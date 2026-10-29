@@ -6,6 +6,7 @@ namespace Billium\Ledger\Tests\Feature;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Core\Tests\Support\ObservationFactory;
+use Billium\Core\Tests\TestEnvironment;
 use Billium\Ledger\Tests\Observation\ObservationTestCase;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Group;
@@ -19,6 +20,63 @@ use PHPUnit\Framework\Attributes\Group;
 #[Group('ACC-RST-07')]
 final class FeedRecoveryTest extends ObservationTestCase
 {
+    public function test_a_retired_namespace_holds_sequence_one_until_another_bootstrap_is_adopted(): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $this->observe(ObservationFactory::charge('op-1', 1, 300));
+        // A ready recovery that is retired then abandoned models the legacy no-live-partition state.
+        $this->owner()->unprepared(<<<'SQL'
+            INSERT INTO billium_feed_bootstrap_session(bootstrap_ref,channel,source_authority,source_lineage,seller_ref,environment,
+                partition_ref,cursor_sequence,snapshot_digest,item_count,source_retention_lease_ref,status,old_partition_id)
+            SELECT 'abandoned','payment.observation','embedded-commerz','L2','seller-a','test','part-1',1,
+                'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',0,'lease-abandoned','ready',id FROM billium_feed_partition;
+            UPDATE billium_feed_partition SET state='retired';
+            SQL);
+        // Ready evidence permits retirement, but the replacement cannot commit without adoption in the same Tx.
+        self::assertSame('55000', self::sqlState(TestEnvironment::pdo(), <<<'SQL'
+            INSERT INTO billium_feed_partition(channel,source_authority,source_lineage,seller_ref,environment,partition_ref,generation,state,custody_sequence,accounted_sequence)
+            VALUES('payment.observation','embedded-commerz','L2','seller-a','test','part-1',2,'active',1,1)
+            SQL));
+        $this->owner()->update("UPDATE billium_feed_bootstrap_session SET status='failed'");
+        self::assertSame('55000', self::sqlState(TestEnvironment::pdo(), <<<'SQL'
+            INSERT INTO billium_feed_partition(channel,source_authority,source_lineage,seller_ref,environment,partition_ref,generation,state)
+            VALUES('payment.observation','embedded-commerz','L2','seller-a','test','part-1',2,'active')
+            SQL));
+        $restored = ObservationFactory::charge('op-1', 2, 600, fields: ['sourceLineage' => 'L2']);
+        self::assertSame(ProblemCode::RecoveryRequired->value, $this->attempt($restored));
+        self::assertSame(1, $this->rows('billium_feed_partition'));
+        self::assertSame('held_recovery', $this->inboxStatus(self::eventId($restored)));
+        self::assertSame(300, $this->allocated('o1'));
+        self::assertSame('adopted', $this->bootstrapper()->execute($this->snapshot('boot-retired', 'L2', 1, [$restored]))->status);
+        self::assertSame(600, $this->allocated('o1'));
+        self::assertSame(2, self::integer($this->partition()['generation']));
+    }
+
+    public function test_recovery_cannot_be_cleared_by_retiring_and_reopening_at_sequence_one(): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $charge = ObservationFactory::charge('op-1', 1, 300);
+        $this->observe($charge);
+        $restored = ObservationFactory::charge('op-1', 2, 600, fields: ['sourceLineage' => 'L2']);
+        self::assertSame(ProblemCode::RecoveryRequired->value, $this->attempt($restored));
+        $runtime = TestEnvironment::pdo();
+        self::assertSame('55000', self::sqlState($runtime, "UPDATE billium_feed_partition SET state='retired'"));
+        self::assertSame('recovery_required', $this->partition()['state']);
+        self::assertSame('23505', self::sqlState($runtime, <<<'SQL'
+            INSERT INTO billium_feed_partition(channel,source_authority,source_lineage,seller_ref,environment,partition_ref,generation,state)
+            VALUES('payment.observation','embedded-commerz','L2','seller-a','test','part-1',2,'active')
+            SQL));
+        self::assertSame(ProblemCode::RecoveryRequired->value, $this->attempt(ObservationFactory::with($restored, ['eventId' => (string) Str::ulid()])));
+        self::assertSame(300, $this->allocated('o1'));
+        self::assertSame(1, $this->rows('billium_feed_partition'));
+        $status = $this->bootstrapper()->execute($this->snapshot('boot-recovery', 'L2', 1, [$restored]));
+        self::assertSame('adopted', $status->status);
+        self::assertSame(600, $this->allocated('o1'));
+        self::assertSame('active', $this->partition()['state']);
+    }
+
     public function test_a_changed_lineage_requires_recovery_and_bootstrap_resumes_without_doubling(): void
     {
         $this->debt('o1', 5000);

@@ -112,14 +112,10 @@ final class InboxSourceIsolationTest extends InboxTestCase
             INSERT INTO billium_feed_partition (channel, source_authority, source_lineage, seller_ref, environment, partition_ref)
             VALUES ('payment.observation', 'embedded-commerz', 'L9', 'seller-a', 'test', 'part-1')
             SQL));
-        // Once retired, a successor generation may take the namespace.
-        $owner->exec("UPDATE billium_feed_partition SET state = 'retired'");
-        self::assertNull(self::sqlState($owner, <<<'SQL'
-            INSERT INTO billium_feed_partition (channel, source_authority, source_lineage, seller_ref, environment, partition_ref, generation)
-            VALUES ('payment.observation', 'embedded-commerz', 'L1', 'seller-a', 'test', 'part-1', 2)
-            SQL));
+        // Retirement itself requires a ready bootstrap; keeping the old namespace prevents a replacement bypass.
+        self::assertSame('55000', self::sqlState($owner, "UPDATE billium_feed_partition SET state = 'retired'"));
 
-        $this->custody($this->envelope(6), new JournalHandler); // the successor generation is at 0: sequence 6 waits in custody
+        $this->custody($this->envelope(6), new JournalHandler);
         self::assertSame('23505', self::sqlState($owner, <<<'SQL'
             INSERT INTO billium_inbox_message (channel, source_authority, source_lineage, seller_ref, environment, external_event_id, content_digest, payload, partition_ref, source_sequence, operation_ref, operation_revision, status)
             VALUES ('payment.observation', 'embedded-commerz', 'L1', 'seller-a', 'test', 'evt-forged', 'sha256:

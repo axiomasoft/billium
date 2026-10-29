@@ -11,13 +11,37 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Data\Caller;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Ledger\Contracts\LedgerQueries;
+use Billium\Ledger\Data\AmendObligationDuePolicy;
 use Billium\Ledger\Data\ObligationDuePolicy;
 use Billium\Ledger\Data\RecordObligation;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
 use DateTimeImmutable;
+use PDOException;
 
 final class ObligationDuePolicyTest extends LedgerTestCase
 {
+    public function test_amendment_requires_the_obligations_account_and_complete_provenance_in_the_guarded_routine(): void
+    {
+        $id = $this->obligation('scoped');
+        $policy = new ObligationDuePolicy(null, 'host/2', 'policy', self::digest());
+        try {
+            $this->ledger()->amendObligationDuePolicy(new AmendObligationDuePolicy('wrong-account', $this->account('account-b'), 'scoped', $policy));
+            self::fail('An amendment cannot cross billing accounts');
+        } catch (ProblemException $refused) {
+            self::assertSame(ProblemCode::ReferenceUnknown, $refused->problem);
+        }
+        try {
+            $this->routine('amend_obligation_due_policy', [self::INSTALLATION, 'seller-a', 'test', 'account-a', $id,
+                null, 'host/2', null, self::digest(), null, 'invalid-policy-receipt', self::digest()]);
+            self::fail('A direct runtime command cannot disable due collection without complete provenance');
+        } catch (PDOException $error) {
+            self::assertStringContainsString(ProblemCode::ValidationInvalid->value, $error->getMessage());
+        }
+        self::assertSame(1, $this->value("SELECT revision FROM billium_obligation WHERE obligation_ref='scoped'"));
+        self::assertSame(0, $this->rows('billium_allocation_receipt', "kind='obligation_due_policy'"));
+        self::assertSame(0, $this->rows('billium_outbox_event', "type='obligation.adjusted.v1'"));
+    }
+
     public function test_due_query_uses_explicit_policy_boundaries_account_scope_and_keyset(): void
     {
         $due = new DateTimeImmutable('2026-10-28T10:00:00Z');
@@ -49,11 +73,34 @@ final class ObligationDuePolicyTest extends LedgerTestCase
             'query' => 'dueObligations', 'selector' => ['billingAccountRef' => 'account-a'], 'asOf' => '2026-10-28T10:00:00Z', 'limit' => 2], JSON_THROW_ON_ERROR));
         (new Codec)->decode(json_encode($wire, JSON_THROW_ON_ERROR));
         $old = $this->queriesReceipt('obligation:basis-first');
-        // Model a keyed producer amendment as owner fixture: this item only owns its read projection.
-        $this->owner()->update("UPDATE billium_obligation SET due_at=NULL,due_policy_version='host/2',source_policy_ref='disabled-policy',source_policy_snapshot_digest=?,revision=revision+1 WHERE obligation_ref='first'", [self::digest('b')]);
+        $command = new AmendObligationDuePolicy('disable-first', $this->account(), 'first',
+            new ObligationDuePolicy(null, 'host/2', 'disabled-policy', self::digest('b')));
+        $amended = $this->ledger()->amendObligationDuePolicy($command)->orThrow();
+        $replay = $this->ledger()->amendObligationDuePolicy($command)->orThrow();
+        self::assertTrue($replay->replayed);
+        self::assertSame($amended->body, $replay->body);
+        self::assertSame(2, $amended->body['revision']);
+        self::assertSame('disabled-policy', $amended->body['source_policy_ref']);
+        self::assertSame(self::digest('b'), $amended->body['source_policy_snapshot_digest']);
+        self::assertNull($amended->body['due_at']);
+        self::assertSame(1, $this->rows('billium_allocation_receipt', "kind='obligation_due_policy'"));
+        self::assertSame(1, $this->rows('billium_outbox_event', "type='obligation.adjusted.v1'"));
+        try {
+            $this->ledger()->amendObligationDuePolicy(new AmendObligationDuePolicy('disable-first', $this->account(), 'first',
+                new ObligationDuePolicy($due, 'host/3', 'another-policy', self::digest())));
+            self::fail('A reused key cannot replace its original policy');
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::IdempotencyConflict, $error->problem);
+        }
         self::assertSame($old, $this->queriesReceipt('obligation:basis-first'));
         self::assertSame('host/2', $q->obligation('first')['duePolicyVersion']);
         self::assertSame(['second'], array_column(self::arr($q->dueObligations('account-a', $due)['obligations']), 'obligationRef'));
+        $enable = $this->ledger()->amendObligationDuePolicy(new AmendObligationDuePolicy('enable-first', $this->account(), 'first',
+            new ObligationDuePolicy($due, 'host/3', 'enabled-policy', self::digest(), $later)))->orThrow();
+        self::assertSame(3, $enable->body['revision']);
+        self::assertSame($amended->body, $this->ledger()->amendObligationDuePolicy($command)->orThrow()->body, 'old command replays after a later amendment');
+        self::assertSame(['second'], array_column(self::arr($q->dueObligations('account-a', $due)['obligations']), 'obligationRef'));
+        self::assertSame(['first', 'second', 'delayed'], array_column(self::arr($q->dueObligations('account-a', $later)['obligations']), 'obligationRef'));
         $this->callers->set(new Caller('seller-b', 'test', self::INSTALLATION, 'actor'));
         try {
             $q->dueObligations('account-a', $due);

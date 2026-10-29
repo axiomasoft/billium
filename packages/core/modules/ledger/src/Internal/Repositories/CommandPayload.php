@@ -10,6 +10,7 @@ use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Ledger\Data\AdjustObligation;
+use Billium\Ledger\Data\AmendObligationDuePolicy;
 use Billium\Ledger\Data\DeclareSettlementIntent;
 use Billium\Ledger\Data\ObligationDuePolicy;
 use Billium\Ledger\Data\RecordCustomerCredit;
@@ -18,7 +19,7 @@ use Billium\Ledger\Data\RecordObligation;
 final class CommandPayload
 {
     /** @return array<string, mixed> */
-    public static function values(RecordObligation|AdjustObligation|RecordCustomerCredit|DeclareSettlementIntent $command): array
+    public static function values(RecordObligation|AdjustObligation|AmendObligationDuePolicy|RecordCustomerCredit|DeclareSettlementIntent $command): array
     {
         $values = get_object_vars($command);
         unset($values['commandKey']);
@@ -47,12 +48,12 @@ final class CommandPayload
         return $payload;
     }
 
-    public static function digest(RecordObligation|AdjustObligation|RecordCustomerCredit|DeclareSettlementIntent $command): string
+    public static function digest(RecordObligation|AdjustObligation|AmendObligationDuePolicy|RecordCustomerCredit|DeclareSettlementIntent $command): string
     {
         return 'sha256:'.hash('sha256', (new Codec)->canonicalize(self::values($command)));
     }
 
-    public static function validate(RecordObligation|AdjustObligation|RecordCustomerCredit|DeclareSettlementIntent $command): void
+    public static function validate(RecordObligation|AdjustObligation|AmendObligationDuePolicy|RecordCustomerCredit|DeclareSettlementIntent $command): void
     {
         foreach ([$command->scope->sellerRef, $command->scope->environment, $command->scope->billingAccountRef] as $value) {
             if (strlen($value) > 200) {
@@ -75,7 +76,7 @@ final class CommandPayload
                 throw new ProblemException(ProblemCode::ValidationInvalid, 'invalid currency');
             }
             Currency::of($command->currency);
-        } else {
+        } elseif (! $command instanceof AmendObligationDuePolicy) {
             if (Currency::of($command->money->currency->code)->scale !== $command->money->currency->scale) {
                 throw new ProblemException(ProblemCode::MoneyScaleInvalid, 'currency scale differs from the frozen exponent table');
             }

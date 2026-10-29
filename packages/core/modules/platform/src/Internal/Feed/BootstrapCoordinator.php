@@ -57,9 +57,26 @@ final readonly class BootstrapCoordinator
             throw new ProblemException(ProblemCode::ValidationInvalid, 'The bootstrap snapshot is incomplete or altered');
         }
         $old = $this->partitions->live($db, $snapshot->channel, $snapshot->sourceAuthority, $snapshot->sellerRef, $snapshot->environment, $snapshot->partitionRef);
+        if ($old === null) {
+            // A pre-upgrade retirement must still be recoverable through bootstrap, never through first-delivery creation.
+            $retired = $db->selectOne(<<<'SQL'
+                SELECT * FROM public.billium_feed_partition
+                WHERE channel=? AND source_authority=? AND seller_ref=? AND environment=? AND partition_ref=? AND state='retired'
+                ORDER BY generation DESC, id DESC LIMIT 1
+                SQL, [$snapshot->channel, $snapshot->sourceAuthority, $snapshot->sellerRef, $snapshot->environment, $snapshot->partitionRef]);
+            if ($retired !== null) {
+                $old = PartitionRow::from($retired);
+                $context->lock(new LockRequest(LockRank::FeedPartition, 'billium_feed_partition', [$old->id]));
+                if ($this->partitions->live($db, $snapshot->channel, $snapshot->sourceAuthority, $snapshot->sellerRef, $snapshot->environment, $snapshot->partitionRef) !== null) {
+                    throw new LockPlanChanged('A partition appeared while staging recovery');
+                }
+            }
+        }
         if ($old !== null) {
-            $old = $this->partitions->lock($context, $old);
-            $this->partitions->requireRecovery($db, $old, 'bootstrap_staged'); // hold the tail while staging
+            if ($old->state !== 'retired') {
+                $old = $this->partitions->lock($context, $old);
+                $this->partitions->requireRecovery($db, $old, 'bootstrap_staged'); // hold the tail while staging
+            }
         }
         $session = $db->selectOne(<<<'SQL'
             INSERT INTO public.billium_feed_bootstrap_session

@@ -12,6 +12,7 @@ use Billium\Core\Data\LockRequest;
 use Billium\Core\Enums\LockRank;
 use Billium\Core\Exceptions\LockPlanChanged;
 use Billium\Ledger\Data\AdjustObligation;
+use Billium\Ledger\Data\AmendObligationDuePolicy;
 use Billium\Ledger\Data\DeclareSettlementIntent;
 use Billium\Ledger\Data\LedgerReceipt;
 use Billium\Ledger\Data\RecordCustomerCredit;
@@ -26,7 +27,7 @@ final readonly class LedgerRepository
 {
     public function __construct(private DatabaseManager $databases, private OperationRunner $runner) {}
 
-    public function execute(TransactionContext $context, RecordObligation|AdjustObligation|RecordCustomerCredit|DeclareSettlementIntent $command): LedgerReceipt
+    public function execute(TransactionContext $context, RecordObligation|AdjustObligation|AmendObligationDuePolicy|RecordCustomerCredit|DeclareSettlementIntent $command): LedgerReceipt
     {
         $this->runner->assertCurrent($context, 'ledger');
         CommandPayload::validate($command);
@@ -44,6 +45,19 @@ final readonly class LedgerRepository
                 $command->obligationRef, $command->basisRef, $command->customerRef, $command->componentRef, $command->money->minor,
                 $command->termsDigest, $command->priceVersionRef, $command->taxSnapshotRef, $p->dueAt?->format('Y-m-d\TH:i:s.uP'),
                 $p->duePolicyVersion, $p->sourcePolicyRef, $p->sourcePolicySnapshotDigest, $p->collectionEligibleAt?->format('Y-m-d\TH:i:s.uP'), $digest], 'ledger.obligation');
+        }
+        if ($command instanceof AmendObligationDuePolicy) {
+            $id = $connection->table('billium_obligation')->where('seller_ref', $caller->sellerRef)->where('environment', $caller->environment)
+                ->where('billing_account_ref', $command->scope->billingAccountRef)->where('obligation_ref', $command->obligationRef)->value('id');
+            if ($id === null) {
+                throw new ProblemException(ProblemCode::ReferenceUnknown, 'unknown obligation');
+            }
+            $context->lock(new LockRequest(LockRank::Obligation, 'billium_obligation', [self::id($id)], guardedRoutine: 'billium_lock_obligation'));
+            $p = $command->duePolicy;
+
+            return $this->call($connection, 'amend_obligation_due_policy', [...$prefix, self::id($id),
+                $p->dueAt?->format('Y-m-d\TH:i:s.uP'), $p->duePolicyVersion, $p->sourcePolicyRef, $p->sourcePolicySnapshotDigest,
+                $p->collectionEligibleAt?->format('Y-m-d\TH:i:s.uP'), 'due-policy:'.hash('sha256', $command->commandKey), $digest], 'ledger.obligation_due_policy');
         }
         if ($command instanceof AdjustObligation) {
             $query = $connection->table('billium_obligation')->where('seller_ref', $caller->sellerRef)->where('environment', $caller->environment)->where('obligation_ref', $command->obligationRef);

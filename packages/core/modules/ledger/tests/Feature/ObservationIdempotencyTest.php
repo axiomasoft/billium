@@ -34,7 +34,7 @@ final class ObservationIdempotencyTest extends ObservationTestCase
             'recordedAt' => '2026-10-29T11:00:00Z', 'providerOperationId' => 'psp-77']);
         $other = $this->observe($redelivery);
 
-        self::assertSame('observation:op-1#1', $first->receiptRef);
+        self::assertSame('observation:embedded-commerz:op-1#1', $first->receiptRef);
         self::assertFalse($first->replayed);
         self::assertSame($first->receiptRef, $again->receiptRef);
         self::assertTrue($again->replayed);
@@ -81,7 +81,7 @@ final class ObservationIdempotencyTest extends ObservationTestCase
         $retry = $this->observe($charge);
         $replay = $this->observe($charge);
 
-        self::assertSame('observation:op-1#1', $retry->receiptRef);
+        self::assertSame('observation:embedded-commerz:op-1#1', $retry->receiptRef);
         self::assertSame($retry->receiptRef, $replay->receiptRef);
         self::assertSame(1, $this->rows('billium_allocation'));
         self::assertSame(6000, $this->allocated('o1'));

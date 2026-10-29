@@ -13,6 +13,7 @@ use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Ledger\Contracts\Ledger;
 use Billium\Ledger\Data\AdjustObligation;
 use Billium\Ledger\Data\Allocate;
+use Billium\Ledger\Data\AmendObligationDuePolicy;
 use Billium\Ledger\Data\CreateInvoice;
 use Billium\Ledger\Data\DeclareSettlementIntent;
 use Billium\Ledger\Data\DiscardInvoice;
@@ -27,6 +28,7 @@ use Billium\Ledger\Data\UpdateInvoiceMetadata;
 use Billium\Ledger\Data\VoidInvoice;
 use Billium\Ledger\Internal\Commands\AdjustObligationCommand;
 use Billium\Ledger\Internal\Commands\AllocateCommand;
+use Billium\Ledger\Internal\Commands\AmendObligationDuePolicyCommand;
 use Billium\Ledger\Internal\Commands\CreateInvoiceCommand;
 use Billium\Ledger\Internal\Commands\DeclareSettlementIntentCommand;
 use Billium\Ledger\Internal\Commands\DiscardInvoiceCommand;
@@ -48,6 +50,7 @@ final readonly class LedgerFacade implements Ledger
         private OperationRunner $runner,
         private RecordObligationCommand $obligations,
         private AdjustObligationCommand $adjustments,
+        private AmendObligationDuePolicyCommand $duePolicies,
         private RecordCustomerCreditCommand $credits,
         private DeclareSettlementIntentCommand $intents,
         private CreateInvoiceCommand $invoiceDrafts,
@@ -75,6 +78,11 @@ final readonly class LedgerFacade implements Ledger
     public function recordCustomerCredit(RecordCustomerCredit $command): StoredOutcome
     {
         return $this->runner->run($this->spec('record_customer_credit', $command), fn (TransactionContext $context) => $this->credits->execute($context, $command));
+    }
+
+    public function amendObligationDuePolicy(AmendObligationDuePolicy $command): StoredOutcome
+    {
+        return $this->runner->run($this->spec('amend_obligation_due_policy', $command), fn (TransactionContext $context) => $this->duePolicies->execute($context, $command));
     }
 
     public function declareSettlementIntent(DeclareSettlementIntent $command): StoredOutcome
@@ -149,10 +157,10 @@ final readonly class LedgerFacade implements Ledger
         return new OperationSpec('ledger.'.$kind, $seller, $environment, FinancialMode::Active, ModuleOperationClass::NewIntent, ['ledger', 'platform'], $key, $digest, 'ledger.'.$kind);
     }
 
-    private function spec(string $kind, RecordObligation|AdjustObligation|RecordCustomerCredit|DeclareSettlementIntent|CreateInvoice|UpdateInvoiceMetadata|IssueInvoice|DiscardInvoice|VoidInvoice|MarkUncollectible $command): OperationSpec
+    private function spec(string $kind, RecordObligation|AdjustObligation|AmendObligationDuePolicy|RecordCustomerCredit|DeclareSettlementIntent|CreateInvoice|UpdateInvoiceMetadata|IssueInvoice|DiscardInvoice|VoidInvoice|MarkUncollectible $command): OperationSpec
     {
         if (! (
-            $command instanceof RecordObligation || $command instanceof AdjustObligation
+            $command instanceof RecordObligation || $command instanceof AdjustObligation || $command instanceof AmendObligationDuePolicy
             || $command instanceof RecordCustomerCredit || $command instanceof DeclareSettlementIntent
         )) {
             InvoicePayload::validate($command);

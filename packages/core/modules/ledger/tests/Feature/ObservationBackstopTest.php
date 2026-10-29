@@ -25,6 +25,7 @@ final class ObservationBackstopTest extends ObservationTestCase
             "INSERT INTO billium_observation_park(installation_ref,seller_ref,environment,observed_payment_id,revision,dependency_kind,dependency_ref) VALUES('inst-test','seller-a','test',1,1,'settlement_intent','x')",
             'UPDATE billium_payment SET refunded_minor = 0',
             'UPDATE billium_observed_payment SET captured_minor = 0',
+            'UPDATE billium_refund_reconcile_progress SET compared_at = now()',
             "INSERT INTO billium_ledger_discrepancy(installation_ref,seller_ref,environment,fingerprint,comparison_basis_digest,observed_payment_id,observed_revision,expected_minor,actual_minor,reason) VALUES('inst-test','seller-a','test','f','sha256:".str_repeat('a', 64)."',1,1,0,0,'x')",
         ] as $sql) {
             self::assertSame('42501', self::sqlState($runtime, $sql), $sql);

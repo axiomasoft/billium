@@ -56,7 +56,7 @@ final class MissingIntentPaymentVisibilityTest extends ObservationTestCase
         self::assertSame([], $this->drainer()->retryParked());
 
         $replay = $this->observe($charge);
-        self::assertSame('observation:op-1#1', $replay->receiptRef);
+        self::assertSame('observation:embedded-commerz:op-1#1', $replay->receiptRef);
         self::assertSame(2, $this->rows('billium_allocation'), 'exactly one effect per payment');
     }
 

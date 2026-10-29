@@ -7,6 +7,8 @@ namespace Billium\Ledger\Tests\Feature;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Core\Tests\Support\ObservationFactory;
 use Billium\Ledger\Data\AllocationReceipt;
+use Billium\Ledger\Internal\Observation\EconomicDigest;
+use Billium\Ledger\Internal\Observation\ObservationHandler;
 use Billium\Ledger\Tests\Observation\ObservationTestCase;
 use Illuminate\Support\Str;
 
@@ -17,6 +19,72 @@ use Illuminate\Support\Str;
  */
 final class ObservationApplyTest extends ObservationTestCase
 {
+    public function test_pre_upgrade_receipts_keep_their_identity_when_replayed(): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $charge = ObservationFactory::charge('op-1', 1, 1000);
+        $refund = ObservationFactory::refund('refund-1', 'op-1', 1, 100, sequence: 2);
+        foreach ([$charge, $refund] as $envelope) {
+            $o = ObservationHandler::decode($envelope) ?? self::fail('valid observation');
+            $material = EconomicDigest::of($o);
+            $recorded = $this->routine('record_observation', [self::INSTALLATION, 'seller-a', 'test', $o->sourceAuthority, $o->sourceLineage,
+                $o->operationRef, $o->operationKind, $o->originalPaymentRef, 1, $material, 'succeeded', 'RUB', $o->requested->minor,
+                $o->authorizedTotal->minor, $o->capturedTotal->minor, $o->refundedTotal->minor, $o->providerAccountRef, $o->evidenceRef,
+                ObservationFactory::json($envelope)]);
+            $observed = self::integer(self::arr($recorded['body'])['observed_id']);
+            if ($o->operationKind === 'charge') {
+                $legacy = $this->routine('project_payment', [...$this->scopeArguments(), $observed, 1, 'op-1',
+                    self::integer($this->value('SELECT id FROM billium_settlement_intent')), 'assign', '[]', null, 'observation:op-1#1', $material]);
+            } else {
+                $legacy = $this->routine('record_refund_detail', [self::INSTALLATION, 'seller-a', 'test', $observed, 1,
+                    self::integer($this->paymentRow()['id']), 'refund-detail:refund-1#1', $material]);
+            }
+            $replayed = $this->observe($envelope);
+            self::assertSame(self::arr($legacy['body'])['receipt_ref'], $replayed->receiptRef);
+            self::assertEquals($legacy['body'], $replayed->body);
+        }
+        self::assertSame(1, $this->rows('billium_payment_revision'));
+        self::assertSame(2, $this->rows('billium_allocation_receipt', "kind IN ('payment_observation','refund_detail')"));
+        self::assertSame(0, $this->allocated('o1'));
+    }
+
+    public function test_authorities_apply_identical_operation_refs_independently_and_refunds_never_cross_sources(): void
+    {
+        $receipts = [];
+        foreach (['embedded-commerz', 'remote-billium'] as $index => $authority) {
+            $this->debt('o'.$index, 1000);
+            $this->intent('intent-'.$index, ['o'.$index]);
+            $fields = ['sourceAuthority' => $authority, 'businessIntentRef' => 'intent-'.$index];
+            // The second source's refund arrives before its own charge, while the first charge already exists.
+            if ($index === 1) {
+                self::assertSame(ProblemCode::ObservationParked->value,
+                    $this->attempt(ObservationFactory::refund('same-refund', 'same-charge', 1, 200, sequence: 1, fields: $fields)));
+            }
+            $charge = ObservationFactory::charge('same-charge', 1, 1000, 200, sequence: $index === 0 ? 1 : 2, fields: $fields);
+            $first = $this->observe($charge);
+            self::assertSame('assign', $first->mode());
+            self::assertSame(800, $this->allocated('o'.$index));
+            $receipts[] = $first->receiptRef;
+            $next = $index === 0 ? 2 : 3;
+            $detail = $this->observe(ObservationFactory::refund('same-refund', 'same-charge', 1, 200, sequence: $next++, fields: $fields));
+            self::assertSame('refund_detail', $detail->mode());
+            $receipts[] = $detail->receiptRef;
+            $replay = $this->observe(ObservationFactory::with($charge, ['eventId' => (string) Str::ulid(), 'sourceSequence' => $next++]));
+            self::assertSame($first->receiptRef, $replay->receiptRef);
+            self::assertEquals($first->body, $replay->body);
+            $refundReplay = $this->observe(ObservationFactory::refund('same-refund', 'same-charge', 1, 200, sequence: $next, fields: $fields));
+            self::assertSame($detail->receiptRef, $refundReplay->receiptRef);
+        }
+        self::assertCount(4, array_unique($receipts));
+        self::assertSame(2, $this->rows('billium_payment'));
+        self::assertSame(4, $this->rows('billium_observed_payment'));
+        self::assertSame(2, $this->rows('billium_allocation'));
+        self::assertSame(4, $this->rows('billium_allocation_receipt', "kind IN ('payment_observation','refund_detail')"));
+        self::assertSame(0, $this->reconciler()->reconcile(0)['recorded']);
+        self::assertSame(0, $this->rows('billium_ledger_discrepancy'));
+    }
+
     public function test_partial_payments_allocate_the_available_delta_of_each_assigned_revision(): void
     {
         $this->debt('o1', 1000);
@@ -47,7 +115,7 @@ final class ObservationApplyTest extends ObservationTestCase
         $stale = $this->observe(ObservationFactory::charge('op-1', 2, 600, sequence: 3));
 
         self::assertSame('stale', $stale->mode());
-        self::assertSame('observation:op-1#2', $stale->receiptRef);
+        self::assertSame('observation:embedded-commerz:op-1#2', $stale->receiptRef);
         self::assertSame([], $stale->body['allocations']);
         self::assertSame(1000, $this->allocated('o1'));
         self::assertSame(3, self::integer($this->paymentRow()['applied_revision']));

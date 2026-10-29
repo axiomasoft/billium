@@ -103,11 +103,12 @@ final readonly class PaymentProjection
         }
     }
 
-    public static function receiptRef(string $prefix, string $operationRef, int $revision): string
+    public static function receiptRef(string $prefix, string $authority, string $operationRef, int $revision): string
     {
-        $ref = $prefix.':'.$operationRef.'#'.$revision;
+        $identity = rawurlencode($authority).':'.rawurlencode($operationRef);
+        $ref = $prefix.':'.$identity.'#'.$revision;
 
-        return strlen($ref) <= 200 ? $ref : $prefix.':sha256:'.hash('sha256', $operationRef).'#'.$revision;
+        return strlen($ref) <= 200 ? $ref : $prefix.':sha256:'.hash('sha256', $identity).'#'.$revision;
     }
 
     private function charge(TransactionContext $context, Connection $db, Caller $caller, PaymentObservation $o, int $observedId, string $material, ?int $inboxId): HandlerOutcome
@@ -116,7 +117,7 @@ final readonly class PaymentProjection
             $intent = $db->table('billium_settlement_intent')->where('seller_ref', $caller->sellerRef)->where('environment', $caller->environment)
                 ->where('business_intent_ref', $o->businessIntentRef)->first(['id', 'billing_account_ref', 'currency', 'status']);
             $payment = $db->table('billium_payment')->where('seller_ref', $caller->sellerRef)->where('environment', $caller->environment)
-                ->where('payment_ref', $o->operationRef)->first(['id', 'billing_account_ref', 'currency', 'settlement_intent_id', 'kind']);
+                ->where('source_authority', $o->sourceAuthority)->where('payment_ref', $o->operationRef)->first(['id', 'billing_account_ref', 'currency', 'settlement_intent_id', 'kind']);
             $targets = [];
             if ($intent !== null) {
                 foreach ($db->table('billium_settlement_target as t')->join('billium_obligation as o', 'o.id', '=', 't.obligation_id')
@@ -177,7 +178,7 @@ final readonly class PaymentProjection
             $mode = $exceptional !== null || ($applied['hold'] ?? false) ? self::MODE_HOLD : self::MODE_ASSIGN;
         }
         $parts = $mode === self::MODE_ASSIGN ? $this->parts($db, $o, $applied, $targets) : [];
-        $receiptRef = self::receiptRef('observation', $o->operationRef, $revision);
+        $receiptRef = self::receiptRef('observation', $o->sourceAuthority, $o->operationRef, $revision);
         [$receipt, $invoices] = $this->writer->apply($context, $db, 'project_payment', [
             $caller->installationRef, $caller->sellerRef, $caller->environment, $account, $o->currency, $observedId, $revision, $o->operationRef,
             $intentId, $mode, json_encode($parts, JSON_THROW_ON_ERROR),
@@ -187,25 +188,25 @@ final readonly class PaymentProjection
             $this->events($context, $db, $o, $receipt->body(), $parts, $targets, $invoices, $account);
         }
 
-        return HandlerOutcome::applied($receiptRef);
+        return HandlerOutcome::applied(self::text($receipt->body()['receipt_ref'] ?? null));
     }
 
     private function refund(Connection $db, Caller $caller, PaymentObservation $o, int $observedId, string $material, ?int $inboxId): HandlerOutcome
     {
         $original = $o->originalPaymentRef ?? throw new LogicException('A refund names its original charge');
         $payment = $db->table('billium_payment')->where('seller_ref', $caller->sellerRef)->where('environment', $caller->environment)
-            ->where('payment_ref', $original)->where('kind', 'charge')->value('id');
+            ->where('source_authority', $o->sourceAuthority)->where('payment_ref', $original)->where('kind', 'charge')->value('id');
         if ($payment === null) {
             // Refund detail before its charge: observed and parked on the linkage, no ledger effect (REQ-FAIL-12).
             return $this->park($db, $caller, $o, $observedId, $inboxId, 'original_charge', $original);
         }
-        $receiptRef = self::receiptRef('refund-detail', $o->operationRef, $o->operationRevision);
+        $receiptRef = self::receiptRef('refund-detail', $o->sourceAuthority, $o->operationRef, $o->operationRevision);
         // D41: the child never touches payment.refunded_minor; RefundReconciler compares it after the window (D48).
-        $this->routines->call($db, 'record_refund_detail', [
+        $receipt = $this->routines->call($db, 'record_refund_detail', [
             $caller->installationRef, $caller->sellerRef, $caller->environment, $observedId, $o->operationRevision, self::int($payment), $receiptRef, $material,
         ], 'ledger.refund_detail');
 
-        return HandlerOutcome::applied($receiptRef);
+        return HandlerOutcome::applied(self::text($receipt->body()['receipt_ref'] ?? null));
     }
 
     private function park(Connection $db, Caller $caller, PaymentObservation $o, int $observedId, ?int $inboxId, string $kind, string $ref): HandlerOutcome
@@ -264,7 +265,7 @@ final readonly class PaymentProjection
     {
         $captured = $o->capturedTotal->minor;
         $refunded = $o->refundedTotal->minor;
-        $at = $o->operationRef.'#'.$o->operationRevision;
+        $at = self::receiptRef('source', $o->sourceAuthority, $o->operationRef, $o->operationRevision);
         [$reason, $expected, $actual] = match (true) {
             $closed && ($captured > 0 || $refunded > 0) => ['closed_intent_effect', 0, $captured],
             $binding => ['binding_changed', $applied['captured'] ?? 0, $captured],
@@ -279,7 +280,7 @@ final readonly class PaymentProjection
             return null;
         }
         $fingerprint = $reason === 'source_reported'
-            ? 'source_reported:'.$o->operationRef.':'.self::scalar($o->discrepancy?->discrepancyRef).'#'.self::scalar($o->discrepancy?->revision)
+            ? 'source_reported:'.rawurlencode($o->sourceAuthority).':'.rawurlencode($o->operationRef).':'.self::scalar($o->discrepancy?->discrepancyRef).'#'.self::scalar($o->discrepancy?->revision)
             : 'held:'.$reason.':'.$at;
 
         return ['fingerprint' => $fingerprint, 'reason' => $reason, 'expected_minor' => (string) $expected, 'actual_minor' => (string) $actual,

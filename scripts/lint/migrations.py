@@ -13,7 +13,7 @@ PROTECTED = {
         'obligation', 'adjustment', 'customer_credit', 'settlement_intent', 'settlement_target',
         'settlement_intent_closure', 'invoice', 'invoice_line', 'observed_payment',
         'observed_payment_revision', 'payment', 'payment_revision', 'allocation',
-        'allocation_receipt', 'credit_note', 'ledger_discrepancy', 'discrepancy_event', 'observation_park',
+        'allocation_receipt', 'credit_note', 'ledger_discrepancy', 'discrepancy_event', 'observation_park', 'refund_reconcile_progress',
     )
 }
 

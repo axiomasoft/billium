@@ -71,7 +71,7 @@ final class LedgerOnlyRestoreAdmissionTest extends PlatformTestCase
         } catch (TransitionRefused $refused) {
             self::assertSame('not_the_current_epoch', $refused->reason);
         }
-        self::assertSame('55000', self::sqlState(TestEnvironment::pdo(), "UPDATE billium_financial_session SET state = 'active' WHERE epoch = 1"));
+        self::assertSame('42501', self::sqlState(TestEnvironment::pdo(), "UPDATE billium_financial_session SET state = 'active' WHERE epoch = 1"));
 
         $this->installation()->activateSession('activate-restore', 2, 'certificate:restore', 'admission:restore', 'evidence:reconciled');
         $this->tokens->set(FixedSessionAdmission::token(self::INSTALLATION, attachmentGeneration: 2, authorityEpoch: 2));

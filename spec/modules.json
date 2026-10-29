@@ -161,14 +161,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "platform",
-      "currentSchemaVersion": 14,
+      "currentSchemaVersion": 15,
       "supportedSchemaReadRange": {
         "min": 10,
-        "max": 14
+        "max": 15
       },
       "supportedSchemaWriteRange": {
         "min": 10,
-        "max": 14
+        "max": 15
       },
       "requiresModules": [],
       "requiresPorts": [],
@@ -294,6 +294,11 @@
           "id": "2026_10_20_000103_create_billium_inbox_conflict_table",
           "version": 14,
           "checksum": "sha256:a5515bc471c69534423dabaa8405780f6a527ba493ea8d968249bb65fe6609d9"
+        },
+        {
+          "id": "2026_10_29_000012_guard_billium_session_and_partition_admission",
+          "version": 15,
+          "checksum": "sha256:d0c5ee326df883425dde0d4a15681aa7b101873a944f761544832e8588229f2b"
         }
       ],
       "disablePolicy": {
@@ -337,14 +342,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "ledger",
-      "currentSchemaVersion": 5,
+      "currentSchemaVersion": 6,
       "supportedSchemaReadRange": {
         "min": 2,
-        "max": 5
+        "max": 6
       },
       "supportedSchemaWriteRange": {
         "min": 2,
-        "max": 5
+        "max": 6
       },
       "requiresModules": [
         {
@@ -388,7 +393,8 @@
         "billium_credit_note",
         "billium_ledger_discrepancy",
         "billium_discrepancy_event",
-        "billium_observation_park"
+        "billium_observation_park",
+        "billium_refund_reconcile_progress"
       ],
       "configKeys": [
         "billium.ledger.refund_reconcile_after_seconds"
@@ -418,6 +424,11 @@
           "id": "2026_10_21_000005_observation_routines_billium_ledger",
           "version": 5,
           "checksum": "sha256:7b1255c3f26c4376a657a2a40bb206177b8826d2d1480c91c632ba4eb5577b7b"
+        },
+        {
+          "id": "2026_10_29_000006_close_billium_ledger_review_gaps",
+          "version": 6,
+          "checksum": "sha256:f68ba047ba87c6d8d47f7760161b96ec6d9e02a7c3ac881fa073c796ad428ef0"
         }
       ],
       "disablePolicy": {

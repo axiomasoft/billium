@@ -125,7 +125,7 @@
     },
     {
       "ok": {
-        "receiptRef": "observation:op-1#1",
+        "receiptRef": "observation:embedded-commerz:op-1#1",
         "allocations": [
           {
             "obligation_ref": "o1",

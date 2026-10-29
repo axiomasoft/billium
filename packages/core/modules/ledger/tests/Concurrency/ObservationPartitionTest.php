@@ -42,7 +42,7 @@ final class ObservationPartitionTest extends ObservationTestCase
             $ok = self::ok($result);
             self::assertContains($ok['problem'], [null, ProblemCode::ObservationParked->value], json_encode($result, JSON_THROW_ON_ERROR));
             if ($ok['receipt'] !== null) {
-                self::assertContains($ok['receipt'], ['observation:op-1#1', 'observation:op-1#2']);
+                self::assertContains($ok['receipt'], ['observation:embedded-commerz:op-1#1', 'observation:embedded-commerz:op-1#2']);
             }
         }
         self::assertSame([3000, 7000], array_map(static fn (array $row): int => self::integer($row['amount_minor']), $this->table('SELECT amount_minor FROM billium_allocation ORDER BY id')));

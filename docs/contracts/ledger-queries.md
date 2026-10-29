@@ -51,6 +51,18 @@ environment, account and `asOf`. A null due date never falls back to creation or
 account with no candidates returns an empty list; an account absent from ledger obligations is an unknown
 reference. Candidates grant no collection authorization (D60).
 
+`Ledger::amendObligationDuePolicy(AmendObligationDuePolicy)` replaces the existing policy through a keyed
+Active root command. The command requires the obligation's billing account and complete policy provenance,
+including when `dueAt` is null. It increments the obligation revision and stores the policy in an immutable
+receipt with an `obligation.adjusted.v1` outbox event in the same transaction. Replays return that receipt even
+after later amendments; a reused key with another policy conflicts. The creation receipt remains unchanged.
+
+Payment projections use `(seller, environment, sourceAuthority, operationRef)` across accepted lineage changes.
+New observation and refund-detail receipts include the URL-encoded source authority and operation reference;
+long identities use a SHA-256 key. Existing receipts retain their identity on replay. Refund details resolve only
+their own authority's original charge. Refund reconciliation persists each payment's last comparison time and
+selects the least recently compared eligible payments first, so bounded runs advance and revisit changed bases.
+
 The ledger registers five `billium.snapshot_sources` keys already declared by the event catalog:
 `ledger.obligations`, `ledger.invoices`, `ledger.allocations`, `ledger.payments`, and
 `ledger.discrepancies`. Sources read on the feed's supplied consistent read-only connection, retain stable

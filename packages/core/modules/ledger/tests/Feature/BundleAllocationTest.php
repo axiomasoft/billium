@@ -37,7 +37,7 @@ final class BundleAllocationTest extends ObservationTestCase
         self::assertSame('0', $second->body['unallocated_minor']);
         foreach ($this->table('SELECT a.policy_version, a.receipt_ref, a.cause, a.settlement_intent_id, o.component_ref FROM billium_allocation a JOIN billium_obligation o ON o.id = a.obligation_id') as $row) {
             self::assertSame('pro_rata_open/1', $row['policy_version']);
-            self::assertContains($row['receipt_ref'], ['observation:op-1#1', 'observation:op-2#1']);
+            self::assertContains($row['receipt_ref'], ['observation:embedded-commerz:op-1#1', 'observation:embedded-commerz:op-2#1']);
             self::assertSame('observation', $row['cause']);
             self::assertNotNull($row['settlement_intent_id']);
             self::assertNotSame('', $row['component_ref']);

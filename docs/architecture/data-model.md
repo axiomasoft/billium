@@ -98,6 +98,8 @@ Missing intent не скрывает observed/payment и не блокирует
 drain dependency выполняется в новой root Tx. Refund detail не меняет charge.refunded_minor.
 Сверка суммы refund-деталей с charge basis выполняется job после consistency window, а не при apply:
 порядок refund→charge не создаёт ложную discrepancy (D41/D48/D57/D60).
+`billium_refund_reconcile_progress` хранит время последней сверки payment: bounded worker выбирает
+сначала ещё не проверенные, затем давно проверенные строки и повторно проверяет изменившийся basis.
 
 `LedgerQueries::dueObligations(account, asOf, limit, cursor)` использует только явные
 `due_at IS NOT NULL AND due_at <= asOf`, статус open, положительный open amount и
@@ -121,6 +123,12 @@ cursor привязан к authenticated scope/account/asOf и `(due_at,id)` (D6
 | `billium_feed_partition` | channel, authority, seller/environment, partition_ref, lineage/generation, custody/accounted sequences, active/recovery_required/retired; UNIQUE live namespace WHERE state <> retired | D60 |
 | `billium_inbox_message`, `billium_inbox_conflict` | raw dedupe/digest, lineage/sequence, custody/frontier, park/error/quarantine и конфликтующее evidence | INV-08, D60 |
 | `billium_feed_bootstrap_session`, `billium_feed_bootstrap_item` | staged manifest/digest/count/cursor/source-retention lease; per-item applied/parked/discrepancy disposition; atomic adoption | D60 |
+
+Runtime открывает financial session только в recovery через guarded routine; activation/sealing/seal и
+соответствующий session event записываются одной routine в одной Tx. Прямые INSERT и UPDATE состояния,
+certificate/sealed_at закрыты; UPDATE(updated_at) оставлен только для PostgreSQL row locks.
+Retirement feed partition и его замена требуют ready bootstrap с завершёнными item dispositions;
+sequence 1 не открывает новую active partition поверх retired namespace без bootstrap adoption (ACC-RST-07).
 
 Миграция `2026_10_20_000101_create_billium_feed_partition_table` создаёт partition **и обе** staged
 bootstrap tables. Import проверяет manifest, применяет items отдельными roots, затем атомарно retired-ит

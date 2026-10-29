@@ -29,7 +29,7 @@ final class ObservationConnectionTest extends ObservationTestCase
         $config->set('database.default', 'host');
 
         $receipt = $this->observe(ObservationFactory::charge('op-1', 1, 1000, sequence: 1));
-        self::assertSame('observation:op-1#1', $receipt->receiptRef);
+        self::assertSame('observation:embedded-commerz:op-1#1', $receipt->receiptRef);
         self::assertSame('1000', self::arr($receipt->body['applied'])['captured_minor']);
 
         $late = ObservationFactory::charge('op-2', 1, 500, sequence: 2, fields: ['businessIntentRef' => 'intent-late']);

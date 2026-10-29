@@ -2522,6 +2522,20 @@
       "source": "packages/core/database/migrations/platform/2026_10_28_000011_create_billium_event_protocol.php"
     },
     {
+      "kind": "migration",
+      "id": "2026_10_29_000006_close_billium_ledger_review_gaps",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/ledger/2026_10_29_000006_close_billium_ledger_review_gaps.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_10_29_000012_guard_billium_session_and_partition_admission",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/platform/2026_10_29_000012_guard_billium_session_and_partition_admission.php"
+    },
+    {
       "kind": "doctor-finding",
       "id": "module.composition_forbidden",
       "status": "new",

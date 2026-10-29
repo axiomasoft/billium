@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Billium\Ledger\Tests\Feature;
 
+use Billium\Contracts\Contracts\Codec;
 use Billium\Core\Tests\Support\ObservationFactory;
+use Billium\Ledger\Internal\Observation\RefundReconciler;
 use Billium\Ledger\Tests\Observation\ObservationTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -18,6 +20,76 @@ use PHPUnit\Framework\Attributes\Group;
 #[Group('D60')]
 final class RefundReconcileBasisTest extends ObservationTestCase
 {
+    public function test_a_pre_upgrade_mismatch_is_reused_and_resolved_without_duplicate_history(): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $this->observe(ObservationFactory::charge('op-1', 1, 1000, 300));
+        $this->observe(ObservationFactory::refund('op-r1', 'op-1', 1, 400, sequence: 2));
+        $basis = (new Codec)->digest((object) ['normalization' => RefundReconciler::BASIS, 'paymentRef' => 'op-1', 'chargeRevision' => 1,
+            'chargeRefunded' => '300', 'refunds' => [['operationRef' => 'op-r1', 'revision' => 1, 'captured' => '400']]], 'basisDigest');
+        $fingerprint = 'refund_basis:op-1:'.$basis;
+        $this->owner()->insert(<<<'SQL'
+            INSERT INTO billium_ledger_discrepancy(installation_ref,seller_ref,environment,fingerprint,comparison_basis_digest,
+                observed_payment_id,observed_revision,charge_revision,refund_revision,expected_minor,actual_minor,hold,reason)
+            VALUES('inst-test','seller-a','test',?,?,?,1,1,1,300,400,false,'refund_basis_mismatch')
+            SQL, [$fingerprint, $basis, self::integer($this->observedRow()['id'])]);
+        self::assertSame(0, $this->reconciler()->reconcile(0)['recorded']);
+        self::assertSame(1, $this->rows('billium_ledger_discrepancy'));
+        self::assertSame($fingerprint, $this->value('SELECT fingerprint FROM billium_ledger_discrepancy'));
+        $this->observe(ObservationFactory::refund('op-r1', 'op-1', 2, 300, sequence: 3));
+        self::assertSame(1, $this->reconciler()->reconcile(0)['resolved']);
+        self::assertSame(1, $this->rows('billium_ledger_discrepancy'));
+    }
+
+    public function test_identical_refund_bases_in_two_authorities_record_independent_discrepancies(): void
+    {
+        foreach (['embedded-commerz', 'remote-billium'] as $index => $authority) {
+            $this->debt('o'.$index, 1000);
+            $this->intent('intent-'.$index, ['o'.$index]);
+            $fields = ['sourceAuthority' => $authority, 'businessIntentRef' => 'intent-'.$index];
+            $this->observe(ObservationFactory::charge('same-charge', 1, 1000, 300, fields: $fields));
+            $this->observe(ObservationFactory::refund('same-refund', 'same-charge', 1, 400, sequence: 2, fields: $fields));
+        }
+        self::assertSame(2, $this->reconciler()->reconcile(0)['recorded']);
+        self::assertSame(0, $this->reconciler()->reconcile(0)['recorded']);
+        self::assertSame(2, $this->rows('billium_ledger_discrepancy'));
+        self::assertSame(2, $this->rows('billium_outbox_event', "type='discrepancy.recorded.v1'"));
+        self::assertSame(1, self::integer($this->value('SELECT count(DISTINCT comparison_basis_digest) FROM billium_ledger_discrepancy')));
+    }
+
+    public function test_a_bounded_worker_reaches_later_charges_and_revisits_changed_details(): void
+    {
+        $this->debt('o1', 1000);
+        $this->debt('o2', 1000);
+        $this->intent('intent-a', ['o1']);
+        $this->intent('intent-b', ['o2']);
+        $this->observe(ObservationFactory::charge('op-1', 1, 1000, 200, sequence: 1));
+        $this->observe(ObservationFactory::refund('refund-1', 'op-1', 1, 200, sequence: 2));
+        $this->observe(ObservationFactory::charge('op-2', 1, 1000, 300, sequence: 3, fields: ['businessIntentRef' => 'intent-b']));
+        $this->observe(ObservationFactory::refund('refund-2', 'op-2', 1, 400, sequence: 4));
+        self::assertSame(0, $this->reconciler()->reconcile(0, 1)['recorded']);
+        self::assertSame(1, $this->reconciler()->reconcile(0, 1)['recorded']);
+        for ($i = 0; $i < 4; $i++) {
+            self::assertSame(0, $this->reconciler()->reconcile(0, 1)['recorded']);
+        }
+        self::assertSame(1, $this->rows('billium_ledger_discrepancy'));
+        $this->observe(ObservationFactory::refund('refund-2', 'op-2', 2, 500, sequence: 5));
+        $recorded = 0;
+        for ($i = 0; $i < 2; $i++) {
+            $recorded += $this->reconciler()->reconcile(0, 1)['recorded'];
+        }
+        self::assertSame(1, $recorded);
+        $this->observe(ObservationFactory::refund('refund-2', 'op-2', 3, 300, sequence: 6));
+        $resolved = 0;
+        for ($i = 0; $i < 2; $i++) {
+            $resolved += $this->reconciler()->reconcile(0, 1)['resolved'];
+        }
+        self::assertSame(2, $resolved);
+        self::assertSame(2, $this->rows('billium_discrepancy_event', "kind='resolved'"));
+        self::assertSame(2, $this->rows('billium_payment'));
+    }
+
     public function test_the_ordinary_refund_before_charge_order_records_no_discrepancy(): void
     {
         $this->debt('o1', 1000);
@@ -45,7 +117,7 @@ final class RefundReconcileBasisTest extends ObservationTestCase
         $first = $this->row("SELECT * FROM billium_ledger_discrepancy WHERE reason = 'refund_basis_mismatch'");
         self::assertSame([300, 400, 2, 1, false], [self::integer($first['expected_minor']), self::integer($first['actual_minor']),
             self::integer($first['charge_revision']), self::integer($first['refund_revision']), $first['hold']]);
-        self::assertSame('refund_basis:op-1:'.self::text($first['comparison_basis_digest']), $first['fingerprint']);
+        self::assertSame('refund_basis:embedded-commerz:op-1:'.self::text($first['comparison_basis_digest']), $first['fingerprint']);
         self::assertSame(1, $this->rows('billium_outbox_event', "type = 'discrepancy.recorded.v1'"));
 
         // The detail changes, the charge revision does not: the new mismatch basis is visible on its own row.

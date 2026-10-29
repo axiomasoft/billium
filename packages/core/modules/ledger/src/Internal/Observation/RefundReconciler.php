@@ -46,6 +46,7 @@ final readonly class RefundReconciler
         $caller = $this->callers->current();
         $candidates = $this->roots->connection()->select(<<<'SQL'
             SELECT p.id FROM public.billium_payment p
+            LEFT JOIN public.billium_refund_reconcile_progress progress ON progress.payment_id = p.id
             WHERE p.seller_ref = ? AND p.environment = ? AND p.kind = 'charge' AND (
                 p.refunded_minor > 0
                 OR EXISTS (SELECT 1 FROM public.billium_observed_payment r WHERE r.seller_ref = p.seller_ref AND r.environment = p.environment
@@ -61,7 +62,7 @@ final readonly class RefundReconciler
                    WHERE r.seller_ref = p.seller_ref AND r.environment = p.environment AND r.kind = 'refund' AND r.original_ref = p.payment_ref
                      AND r.source_authority = p.source_authority),
                   p.created_at) <= now() - make_interval(secs => ?)
-            ORDER BY p.id LIMIT ?
+            ORDER BY progress.compared_at NULLS FIRST, p.id LIMIT ?
             SQL, [$caller->sellerRef, $caller->environment, $window, $limit]);
         $report = ['compared' => 0, 'recorded' => 0, 'resolved' => 0];
         foreach ($candidates as $candidate) {

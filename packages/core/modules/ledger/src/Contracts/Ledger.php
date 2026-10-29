@@ -8,6 +8,7 @@ use Billium\Contracts\Attributes\Api;
 use Billium\Core\Data\StoredOutcome;
 use Billium\Ledger\Data\AdjustObligation;
 use Billium\Ledger\Data\Allocate;
+use Billium\Ledger\Data\AmendObligationDuePolicy;
 use Billium\Ledger\Data\CreateInvoice;
 use Billium\Ledger\Data\DeclareSettlementIntent;
 use Billium\Ledger\Data\DiscardInvoice;
@@ -28,6 +29,8 @@ interface Ledger
     public function recordObligation(RecordObligation $command): StoredOutcome;
 
     public function adjustObligation(AdjustObligation $command): StoredOutcome;
+
+    public function amendObligationDuePolicy(AmendObligationDuePolicy $command): StoredOutcome;
 
     public function recordCustomerCredit(RecordCustomerCredit $command): StoredOutcome;
 

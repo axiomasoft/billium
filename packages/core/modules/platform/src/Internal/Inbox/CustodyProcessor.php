@@ -51,7 +51,7 @@ final readonly class CustodyProcessor
         $partition = $this->partitions->live($db, $e->channel, $e->sourceAuthority, $e->sellerRef, $e->environment, $e->partitionRef);
         if ($partition !== null) {
             $partition = $this->partitions->lock($context, $partition);
-        } elseif ($e->sourceSequence === 1 && ! $this->bootstrapOpen($db, $e)) {
+        } elseif ($e->sourceSequence === 1 && ! $this->bootstrapOpen($db, $e) && ! $this->retiredNamespace($db, $e)) {
             // The first delivery of a namespace opens its partition (cursor 0); anything later waits for earlier sequences.
             $partition = $this->partitions->create($db, $e->channel, $e->sourceAuthority, $e->sourceLineage, $e->sellerRef, $e->environment, $e->partitionRef);
             if ($partition === null) {
@@ -235,7 +235,7 @@ final readonly class CustodyProcessor
               AND source_sequence = ? AND status NOT IN ('held_recovery', 'quarantined')
             SQL, [$e->channel, $e->sourceAuthority, $e->sourceLineage, $e->sellerRef, $e->environment, $e->partitionRef, $e->sourceSequence]);
         if ($partition === null) {
-            return $taken === null ? 'parked_gap' : 'held_recovery';
+            return $taken === null && ! $this->retiredNamespace($db, $e) ? 'parked_gap' : 'held_recovery';
         }
         if ($partition->state === 'recovery_required') {
             return 'held_recovery'; // custody continues, the tail waits for the adopted bootstrap
@@ -289,6 +289,14 @@ final readonly class CustodyProcessor
             SELECT 1 AS open FROM public.billium_feed_bootstrap_session
             WHERE channel = ? AND source_authority = ? AND seller_ref = ? AND environment = ? AND partition_ref = ?
               AND status IN ('loading', 'verified', 'applying', 'ready')
+            SQL, [$e->channel, $e->sourceAuthority, $e->sellerRef, $e->environment, $e->partitionRef]) !== null;
+    }
+
+    private function retiredNamespace(Connection $db, InboxEnvelope $e): bool
+    {
+        return $db->selectOne(<<<'SQL'
+            SELECT 1 FROM public.billium_feed_partition
+            WHERE channel = ? AND source_authority = ? AND seller_ref = ? AND environment = ? AND partition_ref = ? AND state = 'retired'
             SQL, [$e->channel, $e->sourceAuthority, $e->sellerRef, $e->environment, $e->partitionRef]) !== null;
     }
 

@@ -112,19 +112,11 @@ final readonly class DatabaseInstallation implements Installation, ModuleStateRe
 
         return $this->sessionOperation('open', $transitionRef, $args, function (TransactionContext $context, Connection $db) use ($transitionRef, $ownerSessionRef, $deploymentGeneration, $attachmentGeneration, $authorityEpoch, $evidenceRef): FinancialSessionView {
             $installation = $context->caller()->installationRef;
-            $current = $this->lockCurrentSession($context, $db);
-            if ($current !== null && in_array($current->state, ['active', 'sealing'], true)) {
-                // A new owner without a seal: the old epoch is superseded into recovery, never treated as sealed (D54).
-                $this->setSessionState($db, $installation, $current->epoch, 'recovery');
-                $this->sessionEvent($db, $context, $current->epoch, $transitionRef, 'superseded', null, $evidenceRef);
-            }
-            $epoch = ($current->epoch ?? 0) + 1;
-            $db->insert(<<<'SQL'
-                INSERT INTO public.billium_financial_session (installation_ref, epoch, external_owner_session_ref, deployment_generation,
-                    external_attachment_generation, authority_epoch, state)
-                VALUES (?, ?, ?, ?, ?, ?, 'recovery')
-                SQL, [$installation, $epoch, $ownerSessionRef, $deploymentGeneration, $attachmentGeneration, $authorityEpoch]);
-            $this->sessionEvent($db, $context, $epoch, $transitionRef, 'opened', null, $evidenceRef);
+            $this->lockCurrentSession($context, $db);
+            $db->selectOne('SELECT public.billium_open_financial_session(?,?,?,?,?,?,?,?)', [
+                $installation, $ownerSessionRef, $deploymentGeneration, $attachmentGeneration, $authorityEpoch,
+                $transitionRef, $evidenceRef, $context->caller()->actorRef,
+            ]);
 
             return Sessions::current($db, $installation) ?? throw new LogicException('opened session vanished');
         });
@@ -136,11 +128,7 @@ final readonly class DatabaseInstallation implements Installation, ModuleStateRe
 
         return $this->sessionOperation('activate', $transitionRef, $args, function (TransactionContext $context, Connection $db) use ($transitionRef, $epoch, $activationCertificateRef, $externalAdmissionRef, $evidenceRef): FinancialSessionView {
             $current = $this->expectSession($this->lockCurrentSession($context, $db), $epoch, ['recovery']);
-            $db->update(
-                "UPDATE public.billium_financial_session SET state = 'active', activation_certificate_ref = ?, updated_at = now() WHERE installation_ref = ? AND epoch = ?",
-                [$activationCertificateRef, $current->installationRef, $epoch],
-            );
-            $this->sessionEvent($db, $context, $epoch, $transitionRef, 'activated', $externalAdmissionRef, $evidenceRef);
+            $this->transitionSession($db, $context, $epoch, 'active', $transitionRef, $activationCertificateRef, $externalAdmissionRef, $evidenceRef);
 
             return Sessions::current($db, $current->installationRef) ?? throw new LogicException('activated session vanished');
         });
@@ -150,8 +138,7 @@ final readonly class DatabaseInstallation implements Installation, ModuleStateRe
     {
         return $this->sessionOperation('sealing', $transitionRef, [$epoch], function (TransactionContext $context, Connection $db) use ($transitionRef, $epoch): FinancialSessionView {
             $current = $this->expectSession($this->lockCurrentSession($context, $db), $epoch, ['active']);
-            $this->setSessionState($db, $current->installationRef, $epoch, 'sealing');
-            $this->sessionEvent($db, $context, $epoch, $transitionRef, 'sealing', null, null);
+            $this->transitionSession($db, $context, $epoch, 'sealing', $transitionRef);
 
             return Sessions::current($db, $current->installationRef) ?? throw new LogicException('sealing session vanished');
         });
@@ -166,11 +153,7 @@ final readonly class DatabaseInstallation implements Installation, ModuleStateRe
                 $current = $this->lockCurrentSession($context, $db);
                 $db->statement('SET LOCAL lock_timeout = 0');
                 $current = $this->expectSession($current, $epoch, ['active', 'sealing']);
-                $db->update(
-                    "UPDATE public.billium_financial_session SET state = 'sealed', sealed_at = now(), updated_at = now() WHERE installation_ref = ? AND epoch = ?",
-                    [$current->installationRef, $epoch],
-                );
-                $this->sessionEvent($db, $context, $epoch, $transitionRef, 'sealed', null, null);
+                $this->transitionSession($db, $context, $epoch, 'sealed', $transitionRef);
 
                 return Sessions::current($db, $current->installationRef) ?? throw new LogicException('sealed session vanished');
             });
@@ -347,17 +330,11 @@ final readonly class DatabaseInstallation implements Installation, ModuleStateRe
         return $current;
     }
 
-    private function setSessionState(Connection $db, string $installation, int $epoch, string $state): void
+    private function transitionSession(Connection $db, TransactionContext $context, int $epoch, string $state, string $transitionRef, ?string $certificateRef = null, ?string $admissionRef = null, ?string $evidenceRef = null): void
     {
-        $db->update('UPDATE public.billium_financial_session SET state = ?, updated_at = now() WHERE installation_ref = ? AND epoch = ?', [$state, $installation, $epoch]);
-    }
-
-    private function sessionEvent(Connection $db, TransactionContext $context, int $epoch, string $transitionRef, string $transition, ?string $admissionRef, ?string $evidenceRef): void
-    {
-        $db->insert(<<<'SQL'
-            INSERT INTO public.billium_financial_session_event (session_id, transition_ref, transition, external_admission_ref, evidence_ref, actor_ref)
-            SELECT id, ?, ?, ?, ?, ? FROM public.billium_financial_session WHERE installation_ref = ? AND epoch = ?
-            SQL, [$transitionRef, $transition, $admissionRef, $evidenceRef, $context->caller()->actorRef, $context->caller()->installationRef, $epoch]);
+        $db->selectOne('SELECT public.billium_transition_financial_session(?,?,?,?,?,?,?,?)', [
+            $context->caller()->installationRef, $epoch, $state, $certificateRef, $transitionRef, $admissionRef, $evidenceRef, $context->caller()->actorRef,
+        ]);
     }
 
     /** @return list<string> modules that depend on `$moduleId`, transitively */

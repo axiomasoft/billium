@@ -71,6 +71,7 @@ class MigrationTests(unittest.TestCase):
         for sql in [
             'GRANT INSERT, UPDATE ON TABLE public.billium_allocation TO billium_runtime;',
             'GRANT UPDATE (amount_minor) ON billium_payment TO billium_runtime;',
+            'GRANT UPDATE (compared_at) ON public.billium_refund_reconcile_progress TO billium_runtime;',
             'ALTER DEFAULT PRIVILEGES GRANT ALL ON TABLES TO billium_runtime;',
             'GRANT ALL ON ALL TABLES IN SCHEMA public TO billium_runtime;',
             'ALTER SCHEMA public OWNER TO billium_runtime;',
