@@ -10,6 +10,7 @@ use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Ledger\Data\AdjustObligation;
+use Billium\Ledger\Data\Allocate;
 use Billium\Ledger\Data\BillingAccountScope;
 use Billium\Ledger\Data\CreateInvoice;
 use Billium\Ledger\Data\DiscardInvoice;
@@ -106,6 +107,64 @@ final class InvoiceCommandsTest extends LedgerTestCase
             self::assertSame(ProblemCode::MoneyCurrencyMismatch, $e->problem);
         }
         self::assertSame(0, $this->rows('billium_invoice'));
+    }
+
+    public function test_adjusted_draft_accepts_allocation_of_the_new_total_and_replays_once(): void
+    {
+        $this->obligation('obligation-a', 1000);
+        $this->credit('credit-a', 1200);
+        $this->draft(['obligation-a' => 200]);
+        $adjustment = new AdjustObligation('adjust-draft', $this->account(), 'adjustment-a', 'obligation-a', Money::parse('2.00', 'RUB'), 'correction');
+        $adjusted = $this->ledger()->adjustObligation($adjustment);
+        self::assertTrue($adjusted->accepted);
+        $draft = $this->invoiceRow();
+        self::assertSame([1200, 1000, 200, 1200], [self::integer($draft['total_minor']), self::integer($draft['subtotal_minor']), self::integer($draft['tax_minor']), self::integer($draft['open_minor'])]);
+
+        $allocation = new Allocate('allocate-draft', $this->account(), 'allocation-a', 'obligation-a', Money::parse('12.00', 'RUB'), customerCreditRef: 'credit-a');
+        $allocated = $this->ledger()->allocate($allocation);
+        self::assertTrue($allocated->accepted);
+        $row = $this->invoiceRow();
+        self::assertSame(['draft', 1200, 1000, 200, 1200, 0], [$row['status'], self::integer($row['total_minor']), self::integer($row['subtotal_minor']), self::integer($row['tax_minor']), self::integer($row['allocated_minor']), self::integer($row['open_minor'])]);
+
+        foreach ([$adjustment, new AdjustObligation('adjust-draft-again', $this->account(), 'adjustment-a', 'obligation-a', Money::parse('2.00', 'RUB'), 'correction')] as $index => $command) {
+            $replay = $this->ledger()->adjustObligation($command);
+            self::assertTrue($replay->accepted);
+            self::assertSame($index === 0, $replay->replayed, 'only the repeated command key replays the root outcome');
+            self::assertSame($adjusted->body, $replay->body);
+        }
+        foreach ([$allocation, new Allocate('allocate-draft-again', $this->account(), 'allocation-a', 'obligation-a', Money::parse('12.00', 'RUB'), customerCreditRef: 'credit-a')] as $index => $command) {
+            $replay = $this->ledger()->allocate($command);
+            self::assertTrue($replay->accepted);
+            self::assertSame($index === 0, $replay->replayed, 'only the repeated command key replays the root outcome');
+            self::assertSame($allocated->body, $replay->body);
+        }
+        self::assertSame($row, $this->invoiceRow(), 'replay changes neither totals nor revision');
+        self::assertSame(200, self::integer($this->value('SELECT adjusted_minor FROM billium_obligation')));
+        self::assertSame(1, $this->rows('billium_adjustment'));
+        self::assertSame(1, $this->rows('billium_allocation'));
+        self::assertSame(1, $this->rows('billium_outbox_event', "type='obligation.adjusted.v1'"));
+        self::assertSame(1, $this->rows('billium_outbox_event', "type='allocation.applied.v1'"));
+    }
+
+    public function test_draft_decrease_updates_totals_across_lines_and_issue_freezes_them(): void
+    {
+        $this->obligation('obligation-a', 1000);
+        $this->obligation('obligation-b', 500);
+        $this->draft(['obligation-a' => 200, 'obligation-b' => 100]);
+        $adjusted = $this->ledger()->adjustObligation(new AdjustObligation('decrease-draft', $this->account(), 'decrease-a', 'obligation-a', Money::parse('-2.00', 'RUB'), 'correction'));
+        self::assertTrue($adjusted->accepted);
+        $row = $this->invoiceRow();
+        self::assertSame(['draft', 1300, 1000, 300], [$row['status'], self::integer($row['total_minor']), self::integer($row['subtotal_minor']), self::integer($row['tax_minor'])]);
+
+        self::assertTrue($this->issue()->accepted);
+        $issued = $this->invoiceRow();
+        self::assertSame(['issued', 1300, 1000, 300], [$issued['status'], self::integer($issued['total_minor']), self::integer($issued['subtotal_minor']), self::integer($issued['tax_minor'])]);
+        self::assertSame([800, 500], array_map(static fn (array $line): int => self::integer($line['amount_minor']), $this->table('SELECT amount_minor FROM billium_invoice_line ORDER BY position')));
+
+        $refused = $this->ledger()->adjustObligation(new AdjustObligation('decrease-issued', $this->account(), 'decrease-b', 'obligation-b', Money::parse('-1.00', 'RUB'), 'correction'));
+        self::assertSame(ProblemCode::InvoiceFrozen, $refused->problem);
+        self::assertSame($issued, $this->invoiceRow());
+        self::assertSame(1, $this->rows('billium_adjustment'));
     }
 
     public function test_issue_freezes_with_current_amounts_no_legal_number_and_exactly_one_event(): void

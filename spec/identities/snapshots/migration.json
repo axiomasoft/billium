@@ -21,6 +21,7 @@
   "2026_10_29_000006_close_billium_ledger_review_gaps",
   "2026_10_29_000007_bind_billium_payment_receipts_and_creation_replay",
   "2026_10_29_000008_close_billium_projection_and_reversal_tails",
+  "2026_10_29_000009_sync_billium_draft_invoice_adjustments",
   "2026_10_29_000012_guard_billium_session_and_partition_admission",
   "2026_10_29_000013_bind_billium_bootstrap_items_to_manifest"
 ]
