@@ -2225,301 +2225,301 @@
       "id": "billium.connection",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/config/billium.php"
     },
     {
       "kind": "config-key",
       "id": "billium.feed.bootstrap_batch",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/config/billium.php"
     },
     {
       "kind": "config-key",
       "id": "billium.feed.bootstrap_lease_seconds",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/config/billium.php"
     },
     {
       "kind": "config-key",
       "id": "billium.feed.drain_batch",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/config/billium.php"
     },
     {
       "kind": "config-key",
       "id": "billium.feed.signing_key",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/config/billium.php"
     },
     {
       "kind": "config-key",
       "id": "billium.financial_session.seal_lock_timeout_ms",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/config/billium.php"
     },
     {
       "kind": "config-key",
       "id": "billium.idempotency.lock_timeout_ms",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/config/billium.php"
     },
     {
       "kind": "config-key",
       "id": "billium.inbox.handler_compatibility",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/config/billium.php"
     },
     {
       "kind": "config-key",
       "id": "billium.inbox.retention_floor_seconds",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/config/billium.php"
     },
     {
       "kind": "config-key",
       "id": "billium.inbox.retry_backoff_seconds",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/config/billium.php"
     },
     {
       "kind": "config-key",
       "id": "billium.inbox.retry_budget",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/config/billium.php"
     },
     {
       "kind": "config-key",
       "id": "billium.installation_ref",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/config/billium.php"
     },
     {
       "kind": "config-key",
       "id": "billium.ledger.refund_reconcile_after_seconds",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/config/billium.php"
     },
     {
       "kind": "config-key",
       "id": "billium.modules.composition",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/config/billium.php"
     },
     {
       "kind": "config-key",
       "id": "billium.modules.enabled",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/config/billium.php"
     },
     {
       "kind": "config-key",
       "id": "billium.outbox.claim_seconds",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/config/billium.php"
     },
     {
       "kind": "config-key",
       "id": "billium.outbox.delivery_backoff_seconds",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/config/billium.php"
     },
     {
       "kind": "config-key",
       "id": "billium.outbox.delivery_budget",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/config/billium.php"
     },
     {
       "kind": "config-key",
       "id": "billium.outbox.maintenance_connection",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/config/billium.php"
     },
     {
       "kind": "config-key",
       "id": "billium.outbox.relay_batch",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/config/billium.php"
     },
     {
       "kind": "config-key",
       "id": "billium.outbox.retention_floor_seconds",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/config/billium.php"
     },
     {
       "kind": "config-key",
       "id": "billium.runner.max_attempts",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/config/billium.php"
     },
     {
       "kind": "config-key",
       "id": "billium.runner.root_deadline_ms",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/config/billium.php"
     },
     {
       "kind": "config-key",
       "id": "billium.runtime_role.preflight",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/config/billium.php"
     },
     {
       "kind": "migration",
       "id": "2026_10_20_000001_create_billium_append_only_function",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/database/migrations/platform/2026_10_20_000001_create_billium_append_only_function.php"
     },
     {
       "kind": "migration",
       "id": "2026_10_20_000002_create_billium_idempotency_receipt_table",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/database/migrations/platform/2026_10_20_000002_create_billium_idempotency_receipt_table.php"
     },
     {
       "kind": "migration",
       "id": "2026_10_20_000003_create_billium_outbox_event_table",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/database/migrations/platform/2026_10_20_000003_create_billium_outbox_event_table.php"
     },
     {
       "kind": "migration",
       "id": "2026_10_20_000004_create_billium_outbox_watermark_table",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/database/migrations/platform/2026_10_20_000004_create_billium_outbox_watermark_table.php"
     },
     {
       "kind": "migration",
       "id": "2026_10_20_000005_create_billium_money_commit_log_table",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/database/migrations/platform/2026_10_20_000005_create_billium_money_commit_log_table.php"
     },
     {
       "kind": "migration",
       "id": "2026_10_20_000006_create_billium_installation_state_table",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/database/migrations/platform/2026_10_20_000006_create_billium_installation_state_table.php"
     },
     {
       "kind": "migration",
       "id": "2026_10_20_000007_create_billium_financial_session_table",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/database/migrations/platform/2026_10_20_000007_create_billium_financial_session_table.php"
     },
     {
       "kind": "migration",
       "id": "2026_10_20_000008_create_billium_financial_session_event_table",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/database/migrations/platform/2026_10_20_000008_create_billium_financial_session_event_table.php"
     },
     {
       "kind": "migration",
       "id": "2026_10_20_000009_create_billium_module_state_table",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/database/migrations/platform/2026_10_20_000009_create_billium_module_state_table.php"
     },
     {
       "kind": "migration",
       "id": "2026_10_20_000010_create_billium_module_transitions_table",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/database/migrations/platform/2026_10_20_000010_create_billium_module_transitions_table.php"
     },
     {
       "kind": "migration",
       "id": "2026_10_20_000101_create_billium_feed_partition_table",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/database/migrations/platform/2026_10_20_000101_create_billium_feed_partition_table.php"
     },
     {
       "kind": "migration",
       "id": "2026_10_20_000102_create_billium_inbox_message_table",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/database/migrations/platform/2026_10_20_000102_create_billium_inbox_message_table.php"
     },
     {
       "kind": "migration",
       "id": "2026_10_20_000103_create_billium_inbox_conflict_table",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/database/migrations/platform/2026_10_20_000103_create_billium_inbox_conflict_table.php"
     },
     {
       "kind": "migration",
       "id": "2026_10_21_000001_create_billium_ledger",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/database/migrations/ledger/2026_10_21_000001_create_billium_ledger.php"
     },
     {
       "kind": "migration",
       "id": "2026_10_21_000002_guard_billium_ledger",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/database/migrations/ledger/2026_10_21_000002_guard_billium_ledger.php"
     },
     {
       "kind": "migration",
       "id": "2026_10_21_000003_invoice_routines_billium_ledger",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/database/migrations/ledger/2026_10_21_000003_invoice_routines_billium_ledger.php"
     },
     {
       "kind": "migration",
       "id": "2026_10_21_000004_allocation_routines_billium_ledger",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/database/migrations/ledger/2026_10_21_000004_allocation_routines_billium_ledger.php"
     },
     {
       "kind": "migration",
       "id": "2026_10_21_000005_observation_routines_billium_ledger",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/database/migrations/ledger/2026_10_21_000005_observation_routines_billium_ledger.php"
     },
     {
       "kind": "migration",
       "id": "2026_10_28_000011_create_billium_event_protocol",
       "status": "new",
       "since": "2026-10",
-      "source": "spec/modules.json"
+      "source": "packages/core/database/migrations/platform/2026_10_28_000011_create_billium_event_protocol.php"
     },
     {
       "kind": "doctor-finding",

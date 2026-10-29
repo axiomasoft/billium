@@ -56,4 +56,40 @@ final class EventContractRegistryTest extends OutboxTestCase
         }
         self::assertSame($row->payloadSchemaDigest, $this->value("SELECT payload_schema_digest FROM billium_event_contract WHERE owner_module_id = 'execution'"));
     }
+
+    public function test_outbox_foreign_keys_enforce_new_rows_and_validate_separately(): void
+    {
+        $this->events(1);
+        $constraints = $this->table(<<<'SQL'
+            SELECT conname FROM pg_constraint
+            WHERE conrelid='public.billium_outbox_event'::regclass AND contype='f'
+            ORDER BY conname
+            SQL);
+        self::assertCount(2, $constraints);
+        foreach (['contract_revision' => 'missing-contract', 'owner_module_id' => 'wrong-owner'] as $field => $value) {
+            // Clone a valid committed event, changing only one FK component and the row/event identities.
+            self::assertSame('23503', self::sqlState(TestEnvironment::pdo(owner: true), <<<SQL
+                INSERT INTO public.billium_outbox_event OVERRIDING SYSTEM VALUE
+                SELECT (jsonb_populate_record(NULL::public.billium_outbox_event,
+                    to_jsonb(e) || jsonb_build_object('id',e.id+1000,'event_id','01K7M6JX1H25Y2HF8WR2E9F4ZP',
+                        '{$field}','{$value}'))).*
+                FROM public.billium_outbox_event e LIMIT 1
+                SQL));
+        }
+        $owner = $this->owner();
+        $owner->beginTransaction();
+        try {
+            foreach ($constraints as $constraint) {
+                $name = str_replace('"', '""', self::text($constraint['conname']));
+                $owner->statement('ALTER TABLE public.billium_outbox_event VALIDATE CONSTRAINT "'.$name.'"');
+            }
+            self::assertSame(2, self::integer($this->value(<<<'SQL'
+                SELECT count(*) FROM pg_constraint
+                WHERE conrelid='public.billium_outbox_event'::regclass AND contype='f' AND convalidated
+                SQL)));
+        } finally {
+            // Restore its initial state: older installations may already have validated these FKs.
+            $owner->rollBack();
+        }
+    }
 }

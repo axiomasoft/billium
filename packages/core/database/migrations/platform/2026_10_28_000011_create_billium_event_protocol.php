@@ -185,10 +185,10 @@ return new class extends Migration
         DB::unprepared(<<<'SQL'
             ALTER TABLE public.billium_outbox_event ADD CONSTRAINT billium_outbox_event_contract_fk
                 FOREIGN KEY (contract_revision,schema_version,type)
-                REFERENCES public.billium_event_contract(contract_revision,envelope_schema,event_type);
+                REFERENCES public.billium_event_contract(contract_revision,envelope_schema,event_type) NOT VALID;
             ALTER TABLE public.billium_event_contract ADD UNIQUE (contract_revision,envelope_schema,event_type,owner_module_id);
             ALTER TABLE public.billium_outbox_event ADD FOREIGN KEY (contract_revision,schema_version,type,owner_module_id)
-                REFERENCES public.billium_event_contract(contract_revision,envelope_schema,event_type,owner_module_id);
+                REFERENCES public.billium_event_contract(contract_revision,envelope_schema,event_type,owner_module_id) NOT VALID;
             CREATE UNIQUE INDEX billium_public_effect_revision ON public.billium_outbox_event
                 (source_scope,type,aggregate_ref,aggregate_revision) WHERE schema_version = 'billium.event.v2';
             INSERT INTO public.billium_outbox_delivery(event_id,destination_ref)

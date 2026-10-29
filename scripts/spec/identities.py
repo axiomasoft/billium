@@ -3,7 +3,8 @@
 
 The registry is the frozen-identity ledger: every envelope, envelope field, problem code, event type,
 operation status, invoice status and the spec revision itself; config keys, migration identities and doctor
-findings come from spec/modules.json (P3.13). Entries are appended with status "new";
+findings are also tracked. Migration/config identities come from their product files, doctor
+findings from spec/modules.json (P3.13). Entries are appended with status "new";
 an entry that disappears from the sources must be kept with status "retired" by hand, otherwise
 the check fails. Snapshots are sorted id lists of the live (not retired) entries per kind.
 
@@ -13,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -24,6 +26,32 @@ ROOT = Path(__file__).resolve().parents[2]
 REGISTRY = ROOT / "spec/identities.json"
 SNAPSHOTS = ROOT / "spec/identities/snapshots"
 MODULES = ROOT / "spec/modules.json"
+
+
+def product_identities(root: Path) -> dict[tuple[str, str], str]:
+    """Read real migration basenames and flattened PHP config, never drill migrations (M-28)."""
+    found: dict[tuple[str, str], str] = {}
+    for path in sorted((root / 'packages/core/database/migrations').rglob('*.php')):
+        key = ('migration', path.stem)
+        if key in found:
+            raise IdentityError(f'duplicate migration identity {path.stem}: {found[key]} and {path.relative_to(root)}')
+        found[key] = path.relative_to(root).as_posix()
+    config = 'packages/core/config/billium.php'
+    # Standalone config may call Laravel env(); bootstrap the same helper without booting an application.
+    result = subprocess.run(['php', '-r', 'require "vendor/autoload.php"; echo json_encode(require "' + config + '", JSON_THROW_ON_ERROR);'],
+                            cwd=root, capture_output=True, text=True, check=True)
+
+    def walk(value: object, prefix: str) -> None:
+        if isinstance(value, dict) and value:
+            for key, item in value.items():
+                walk(item, prefix + '.' + key)
+        else:
+            # Lists are values (enabled modules, allow-lists), not public numeric config keys.
+            found[("config-key", prefix)] = config
+
+    walk(json.loads(result.stdout), 'billium')
+    return found
+
 
 KINDS = (
     "envelope",
@@ -80,13 +108,10 @@ def collect(directory: Path) -> dict[tuple[str, str], dict[str, str]]:
     if modules is not None:
         registry = json.loads(modules)
         source = "spec/modules.json"
-        for module in registry["modules"]:
-            for key in module["configKeys"]:
-                add("config-key", key, source)
-            for migration in module["migrationIdentities"]:
-                add("migration", migration["id"], source)
         for code in registry["findingCodes"]:
             add("doctor-finding", code, source)
+    for (kind, identity), source in product_identities(ROOT).items():
+        add(kind, identity, source)
     return found
 
 
@@ -100,7 +125,10 @@ def merge(found: dict[tuple[str, str], dict[str, str]], previous: list[dict[str,
     entries = []
     for key in sorted(set(found) | set(old), key=lambda k: (KINDS.index(k[0]), k[1])):
         if key in old:
-            entries.append(old[key])
+            entry = dict(old[key])
+            if key in found and key[0] in ('migration', 'config-key'):
+                entry['source'] = found[key]['source']
+            entries.append(entry)
         else:
             entries.append({"kind": key[0], "id": key[1], "status": "new", **found[key]})
     return entries
@@ -132,7 +160,7 @@ def main() -> int:
             raise IdentityError(f"{REGISTRY.relative_to(ROOT)} is missing")
         directory = args.rev.resolve()
         entries = merge(collect(directory), previous)
-    except (OSError, ExportError, IdentityError, KeyError) as error:
+    except (OSError, ExportError, IdentityError, KeyError, subprocess.CalledProcessError, json.JSONDecodeError) as error:
         print(f"identities: {error}", file=sys.stderr)
         return 1
 

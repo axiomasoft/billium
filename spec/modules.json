@@ -278,7 +278,7 @@
         {
           "id": "2026_10_28_000011_create_billium_event_protocol",
           "version": 11,
-          "checksum": "sha256:e00c4cb61aa2bbe06b577cb8f2e239504bfd6323bb6295785cac2508fff7445e"
+          "checksum": "sha256:86a702195ef8733726b6e673be3874db2e2ae8a65272ba14e2ea9ee0240ab95f"
         },
         {
           "id": "2026_10_20_000101_create_billium_feed_partition_table",

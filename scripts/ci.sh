@@ -38,6 +38,11 @@ layer_lint() {
     need_path scripts/spec/lint-vectors.py
     python3 -m unittest discover -s scripts/spec/tests -p test_lint_vectors.py
     python3 scripts/spec/lint-vectors.py
+    python3 -m unittest discover -s scripts/lint/tests -p 'test_migrations.py'
+    python3 scripts/lint/migrations.py
+    python3 -m unittest discover -s scripts/lint/tests -p 'test_acceptance_groups.py'
+    python3 scripts/lint/acceptance-groups.py --phase P3
+    python3 -m unittest discover -s scripts/lint/tests -p 'test_product_identities.py'
 }
 
 layer_derived() {

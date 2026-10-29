@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Billium\Core\Tests\Feature;
 
+use Billium\Core\Tests\Arch\MigrationTables;
 use Billium\Core\Tests\DatabaseTestCase;
 use Billium\Core\Tests\TestEnvironment;
+use Illuminate\Database\DatabaseManager;
 use PDO;
 use PDOException;
 use PHPUnit\Framework\Attributes\Group;
@@ -35,10 +37,11 @@ final class RuntimeRoleGrantsTest extends DatabaseTestCase
     public function test_setup_truncates_owner_fixtures_and_restarts_identity(): void
     {
         $owner = TestEnvironment::pdo(owner: true);
-        self::assertSame(0, $owner->query('SELECT count(*) FROM billium_truncate_probe')->fetchColumn());
-        self::assertSame(1, $owner->query('INSERT INTO billium_truncate_probe DEFAULT VALUES RETURNING id')->fetchColumn());
-        self::assertSame(0, $this->app['db']->connection('pgsql')->transactionLevel());
-        self::assertSame('migrations', $owner->query("SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename = 'migrations'")->fetchColumn());
+        self::assertSame(0, self::scalar($owner, 'SELECT count(*) FROM billium_truncate_probe'));
+        self::assertSame(1, self::scalar($owner, 'INSERT INTO billium_truncate_probe DEFAULT VALUES RETURNING id'));
+        self::assertNotNull($this->app);
+        self::assertSame(0, $this->app->make(DatabaseManager::class)->connection('pgsql')->transactionLevel());
+        self::assertSame('migrations', self::scalar($owner, "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename = 'migrations'"));
     }
 
     public function test_runtime_has_no_owner_powers(): void
@@ -46,8 +49,8 @@ final class RuntimeRoleGrantsTest extends DatabaseTestCase
         $runtime = TestEnvironment::pdo();
         TestEnvironment::assertRuntimeSafe($runtime);
         self::assertNotSame(
-            TestEnvironment::pdo(owner: true)->query('SELECT current_user')->fetchColumn(),
-            $runtime->query('SELECT current_user')->fetchColumn(),
+            self::scalar(TestEnvironment::pdo(owner: true), 'SELECT current_user'),
+            self::scalar($runtime, 'SELECT current_user'),
         );
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('D60: runtime must not own');
@@ -58,7 +61,9 @@ final class RuntimeRoleGrantsTest extends DatabaseTestCase
     {
         $owner = TestEnvironment::pdo(owner: true);
         $runtime = TestEnvironment::pdo();
-        $role = '"'.str_replace('"', '""', $runtime->query('SELECT current_user')->fetchColumn()).'"';
+        $name = self::scalar($runtime, 'SELECT current_user');
+        self::assertIsString($name);
+        $role = '"'.str_replace('"', '""', $name).'"';
         try {
             $owner->exec('CREATE TABLE billium_p3_role_probe (id integer PRIMARY KEY, value integer NOT NULL)');
             $owner->exec('INSERT INTO billium_p3_role_probe VALUES (1, 0)');
@@ -83,14 +88,14 @@ final class RuntimeRoleGrantsTest extends DatabaseTestCase
             ] as $sql) {
                 $this->assertPermissionDenied($runtime, $sql);
             }
-            self::assertSame(7, $runtime->query('SELECT public.billium_p3_role_probe_apply(7)')->fetchColumn());
+            self::assertSame(7, self::scalar($runtime, 'SELECT public.billium_p3_role_probe_apply(7)'));
             try {
                 $runtime->query('SELECT public.billium_p3_role_probe_apply(-1)');
                 self::fail('Guarded routine must reject invalid input');
             } catch (PDOException $exception) {
                 self::assertSame('22023', $exception->getCode());
             }
-            self::assertSame(7, $runtime->query('SELECT value FROM public.billium_p3_role_probe WHERE id = 1')->fetchColumn());
+            self::assertSame(7, self::scalar($runtime, 'SELECT value FROM public.billium_p3_role_probe WHERE id = 1'));
             $owner->exec('GRANT UPDATE (value) ON public.billium_p3_role_probe TO '.$role);
             $this->expectException(RuntimeException::class);
             $this->expectExceptionMessage('direct DML grants');
@@ -118,6 +123,44 @@ final class RuntimeRoleGrantsTest extends DatabaseTestCase
         }
     }
 
+    public function test_actual_ledger_tables_deny_raw_writes_and_routines_have_safe_owners(): void
+    {
+        $runtime = TestEnvironment::pdo();
+        $owner = TestEnvironment::pdo(owner: true);
+        foreach (MigrationTables::ownership(dirname(__DIR__, 2).'/database/migrations') as $table => $module) {
+            if ($module !== 'ledger') {
+                continue;
+            }
+            foreach ([
+                'INSERT INTO public.'.$table.' DEFAULT VALUES',
+                'UPDATE public.'.$table.' SET seller_ref=seller_ref WHERE false',
+                'DELETE FROM public.'.$table.' WHERE false',
+                'TRUNCATE public.'.$table.' CASCADE',
+            ] as $sql) {
+                $this->assertPermissionDenied($runtime, $sql);
+            }
+        }
+        $query = $owner->prepare(<<<'SQL'
+            SELECT p.proname, p.proconfig, r.rolname AS owner,
+                EXISTS (SELECT FROM aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a
+                        WHERE a.grantee=0 AND a.privilege_type='EXECUTE') AS public_execute
+            FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace JOIN pg_roles r ON r.oid=p.proowner
+            WHERE n.nspname='public' AND p.proname LIKE 'billium_%' AND p.prosecdef
+            SQL);
+        $query->execute();
+        $routines = $query->fetchAll(PDO::FETCH_ASSOC);
+        self::assertNotEmpty($routines);
+        $role = self::scalar($runtime, 'SELECT current_user');
+        foreach ($routines as $routine) {
+            self::assertIsArray($routine);
+            self::assertIsString($routine['proname']);
+            self::assertIsString($routine['proconfig']);
+            self::assertNotSame($role, $routine['owner'], $routine['proname']);
+            self::assertStringContainsString('search_path=pg_catalog, pg_temp', $routine['proconfig'], $routine['proname']);
+            self::assertFalse($routine['public_execute'], $routine['proname']);
+        }
+    }
+
     private function assertPermissionDenied(PDO $runtime, string $sql): void
     {
         try {
@@ -126,5 +169,13 @@ final class RuntimeRoleGrantsTest extends DatabaseTestCase
         } catch (PDOException $exception) {
             self::assertSame('42501', $exception->getCode());
         }
+    }
+
+    private static function scalar(PDO $pdo, string $sql): mixed
+    {
+        $statement = $pdo->prepare($sql);
+        $statement->execute();
+
+        return $statement->fetchColumn();
     }
 }
