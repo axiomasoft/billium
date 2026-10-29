@@ -54,19 +54,17 @@ final readonly class LedgerReader
     /** @return array<string, mixed> */
     public function payment(string $ref, ?string $authority = null): array
     {
-        $payment = $this->scoped('billium_payment')->where('payment_ref', $ref)->first();
         $query = $this->scoped('billium_observed_payment')->where('operation_ref', $ref)->where('kind', 'charge');
-        if ($authority !== null || $payment !== null) {
-            $query->where('source_authority', $authority ?? $payment->source_authority);
+        if ($authority !== null) {
+            $query->where('source_authority', $authority);
         }
         $observations = $query->orderBy('id')->limit(2)->get();
-        if ($observations->count() !== 1) {
-            throw self::unknown();
+        if ($observations->count() > 1) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'Ambiguous payment reference; specify sourceAuthority');
         }
         $observed = $observations->first() ?? throw self::unknown();
-        if ($payment !== null && $payment->source_authority !== $observed->source_authority) {
-            $payment = null;
-        }
+        $payment = $this->scoped('billium_payment')->where('source_authority', $observed->source_authority)
+            ->where('operation_ref', $observed->operation_ref)->where('kind', 'charge')->first();
         $money = static fn (mixed $amount): array => View::money($amount, $observed->currency);
         $revisions = $this->scoped('billium_observed_payment_revision')->where('observed_payment_id', $observed->id)->orderBy('revision')->get();
         $evidence = [];
@@ -141,13 +139,22 @@ final readonly class LedgerReader
     public function allocations(string $operation, ?string $authority = null): array
     {
         $status = $this->payment($operation, $authority);
-        $payment = $this->scoped('billium_payment')->where('payment_ref', $operation)->where('source_authority', $status['sourceAuthority'])->first();
+        $payment = $this->scoped('billium_payment')->where('operation_ref', $operation)->where('source_authority', $status['sourceAuthority'])->first();
         $receipts = [];
         if ($payment !== null) {
-            $receiptIds = $this->scoped('billium_allocation')->where('payment_id', $payment->id)->pluck('receipt_ref');
-            foreach ($this->scoped('billium_allocation_receipt')->where(static function (Builder $q) use ($receiptIds, $operation): void {
-                $q->whereIn('receipt_ref', $receiptIds)->orWhereRaw("body->>'operation_ref' = ?", [$operation]);
-            })->orderBy('id')->get() as $receipt) {
+            $observed = $this->scoped('billium_observed_payment')->where('operation_ref', $operation)->where('source_authority', $payment->source_authority)->first()
+                ?? throw self::unknown();
+            $receiptIds = $this->scoped('billium_allocation')->where('payment_id', $payment->id)
+                ->where('billing_account_ref', $payment->billing_account_ref)->pluck('receipt_ref')->all();
+            $receiptIds = [...$receiptIds, ...$this->scoped('billium_payment_revision')->where('payment_id', $payment->id)->pluck('receipt_ref')->all()];
+            $digests = $this->scoped('billium_observed_payment_revision')->where('observed_payment_id', $observed->id)->pluck('material_digest')->all();
+            foreach ($this->scoped('billium_allocation_receipt')->where('billing_account_ref', $payment->billing_account_ref)
+                ->where('currency', $payment->currency)->where(static function (Builder $q) use ($receiptIds, $digests): void {
+                    // Economic digests include authority. This also associates legacy zero-part/held receipts, whose
+                    // old receipt refs omitted authority, with the selected observed payment's immutable revisions.
+                    $q->whereIn('receipt_ref', $receiptIds)->orWhere(static fn (Builder $observation): Builder => $observation
+                        ->where('kind', 'payment_observation')->whereIn('semantic_digest', $digests));
+                })->orderBy('id')->get() as $receipt) {
                 $receipts[] = View::json($receipt->body);
             }
         }

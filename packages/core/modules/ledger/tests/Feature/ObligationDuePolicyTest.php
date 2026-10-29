@@ -20,6 +20,35 @@ use PDOException;
 
 final class ObligationDuePolicyTest extends LedgerTestCase
 {
+    public function test_creation_basis_replays_after_due_policy_amendment_but_changed_creation_payload_conflicts(): void
+    {
+        $original = new ObligationDuePolicy(new DateTimeImmutable('2026-10-28T10:00:00Z'), 'host/1', 'original-policy', self::digest());
+        $make = fn (string $key, ObligationDuePolicy $policy, string $amount = '10.00'): RecordObligation => new RecordObligation(
+            $key, $this->account(), 'replayable', 'creation-basis', 'customer', 'component', Money::parse($amount, 'RUB'), self::digest(), duePolicy: $policy);
+        $created = $this->ledger()->recordObligation($make('creation', $original))->orThrow();
+        $amended = new ObligationDuePolicy(new DateTimeImmutable('2026-11-10T00:00:00Z'), 'host/2', 'amended-policy', self::digest('b'),
+            new DateTimeImmutable('2026-11-12T00:00:00Z'));
+        $this->ledger()->amendObligationDuePolicy(new AmendObligationDuePolicy('amend', $this->account(), 'replayable', $amended))->orThrow();
+        $before = $this->row("SELECT * FROM billium_obligation WHERE obligation_ref='replayable'");
+
+        $replay = $this->ledger()->recordObligation($make('creation-new-key', $original))->orThrow();
+        self::assertTrue($replay->accepted);
+        self::assertSame($created->body, $replay->body);
+        foreach ([[$amended, '10.00'], [$original, '11.00']] as $index => [$policy, $amount]) {
+            try {
+                $this->ledger()->recordObligation($make('changed-'.$index, $policy, $amount));
+                self::fail('Changed creation payload must conflict even if it matches live due policy');
+            } catch (ProblemException $error) {
+                self::assertSame(ProblemCode::IdempotencyConflict, $error->problem);
+            }
+        }
+        self::assertSame($before, $this->row("SELECT * FROM billium_obligation WHERE obligation_ref='replayable'"));
+        self::assertSame(2, $before['revision']);
+        self::assertSame('amended-policy', $before['source_policy_ref']);
+        self::assertSame(1, $this->rows('billium_allocation_receipt', "kind='obligation'"));
+        self::assertSame(1, $this->rows('billium_outbox_event', "type='obligation.created.v1'"));
+    }
+
     public function test_amendment_requires_the_obligations_account_and_complete_provenance_in_the_guarded_routine(): void
     {
         $id = $this->obligation('scoped');

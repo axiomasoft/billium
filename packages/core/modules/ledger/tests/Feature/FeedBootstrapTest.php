@@ -6,8 +6,10 @@ namespace Billium\Ledger\Tests\Feature;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Core\Contracts\TransactionContext;
 use Billium\Core\Tests\Support\ObservationFactory;
 use Billium\Ledger\Tests\Observation\ObservationTestCase;
+use Billium\Platform\Contracts\FeedPartitions;
 use Billium\Platform\Data\Inbox\BootstrapPartition;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -20,6 +22,66 @@ use PHPUnit\Framework\Attributes\Group;
 #[Group('PF-13')]
 final class FeedBootstrapTest extends ObservationTestCase
 {
+    public function test_manifest_namespace_and_item_namespace_are_verified_before_staging_or_resuming(): void
+    {
+        $this->debt('o1', 10000);
+        $this->intent('intent-a', ['o1']);
+        $valid = $this->snapshot('namespace', 'L1', 20, [ObservationFactory::charge('op-1', 1, 1000)]);
+        foreach (['partitionRef' => 'part-2', 'sourceAuthority' => 'remote-billium', 'sourceLineage' => 'L2', 'channel' => 'another.channel'] as $field => $value) {
+            $changed = self::withManifest($valid, $field, $value);
+            try {
+                $this->bootstrapper()->execute($changed);
+                self::fail('A manifest change cannot retain the original snapshot digest: '.$field);
+            } catch (ProblemException $error) {
+                self::assertSame(ProblemCode::ValidationInvalid, $error->problem);
+            }
+        }
+        // Recomputing the digest cannot bless a payload belonging to another authorized source or lineage.
+        foreach (['partitionRef' => 'part-2', 'sourceAuthority' => 'remote-billium', 'sourceLineage' => 'L2'] as $field => $value) {
+            $changed = self::withManifest($valid, $field, $value);
+            $changed = self::withManifest($changed, 'snapshotDigest', BootstrapPartition::digestOf($changed->cursorSequence, $changed->items, $changed->namespace()));
+            try {
+                $this->bootstrapper()->execute($changed);
+                self::fail('Every item must match its manifest: '.$field);
+            } catch (ProblemException $error) {
+                self::assertSame(ProblemCode::ValidationInvalid, $error->problem);
+            }
+        }
+        self::assertSame(0, $this->rows('billium_feed_bootstrap_session'));
+        self::assertSame(0, $this->rows('billium_feed_bootstrap_item'));
+        self::assertSame(0, $this->rows('billium_observed_payment'));
+        self::assertSame(0, $this->rows('billium_feed_partition'));
+
+        $feed = $this->application()->make(FeedPartitions::class);
+        $session = $this->drainer()->root(fn (TransactionContext $context): int => $feed->stageBootstrap($context, $valid));
+        foreach (['partitionRef' => 'part-2', 'sourceAuthority' => 'remote-billium', 'sourceLineage' => 'L2', 'channel' => 'another.channel',
+            'sourceRetentionLeaseRef' => 'another-lease'] as $field => $value) {
+            $changed = self::withManifest($valid, $field, $value);
+            try {
+                $this->drainer()->root(fn (TransactionContext $context): int => $feed->stageBootstrap($context, $changed));
+                self::fail('Resume must retain the complete manifest identity: '.$field);
+            } catch (ProblemException $error) {
+                self::assertSame(ProblemCode::ObservationConflict, $error->problem);
+            }
+        }
+        self::assertSame('verified', $this->value('SELECT status FROM billium_feed_bootstrap_session WHERE id=?', [$session]));
+        self::assertSame(0, $this->rows('billium_observed_payment'));
+        self::assertSame(0, $this->rows('billium_feed_partition'));
+        $adopted = $this->bootstrapper()->execute($valid);
+        self::assertSame('adopted', $adopted->status);
+        self::assertSame(20, self::integer($this->partition()['accounted_sequence']));
+        self::assertSame(1000, $this->allocated('o1'));
+    }
+
+    private static function withManifest(BootstrapPartition $snapshot, string $field, string $value): BootstrapPartition
+    {
+        return new BootstrapPartition($snapshot->bootstrapRef, $field === 'channel' ? $value : $snapshot->channel,
+            $field === 'sourceAuthority' ? $value : $snapshot->sourceAuthority, $field === 'sourceLineage' ? $value : $snapshot->sourceLineage,
+            $snapshot->sellerRef, $snapshot->environment, $field === 'partitionRef' ? $value : $snapshot->partitionRef,
+            $snapshot->cursorSequence, $field === 'snapshotDigest' ? $value : $snapshot->snapshotDigest,
+            $field === 'sourceRetentionLeaseRef' ? $value : $snapshot->sourceRetentionLeaseRef, $snapshot->expectedItemCount, $snapshot->items);
+    }
+
     public function test_a_snapshot_at_cursor_twenty_is_adopted_and_the_tail_follows(): void
     {
         $this->debt('o1', 10000);

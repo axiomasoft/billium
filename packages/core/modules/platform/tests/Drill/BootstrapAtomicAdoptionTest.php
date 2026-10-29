@@ -106,7 +106,7 @@ final class BootstrapAtomicAdoptionTest extends InboxTestCase
         $items = $good->items;
 
         $incomplete = new BootstrapPartition('bs-1', 'payment.observation', self::AUTHORITY, 'L2', 'seller-a', 'test', 'part-1', 20,
-            BootstrapPartition::digestOf(20, $items), 'lease-1', 4, $items);
+            BootstrapPartition::digestOf(20, $items, $good->namespace()), 'lease-1', 4, $items);
         $altered = new BootstrapPartition('bs-2', 'payment.observation', self::AUTHORITY, 'L2', 'seller-a', 'test', 'part-1', 20,
             $good->snapshotDigest, 'lease-1', 3, [...array_slice($items, 0, 2), new BootstrapItem('op-3', 1, 'sha256:'.str_repeat('f', 64), new stdClass)]);
         $foreign = new BootstrapPartition('bs-3', 'payment.observation', 'remote-billium', 'L2', 'seller-a', 'test', 'part-1', 20,
@@ -127,7 +127,7 @@ final class BootstrapAtomicAdoptionTest extends InboxTestCase
         $session = $this->stage($good);
         self::assertSame($session, $this->stage($good));
         $other = new BootstrapPartition($good->bootstrapRef, 'payment.observation', self::AUTHORITY, 'L2', 'seller-a', 'test', 'part-1', 21,
-            BootstrapPartition::digestOf(21, $items), 'lease-1', 3, $items);
+            BootstrapPartition::digestOf(21, $items, $good->namespace()), 'lease-1', 3, $items);
         $this->expectException(ProblemException::class);
         $this->stage($other);
     }
@@ -148,15 +148,38 @@ final class BootstrapAtomicAdoptionTest extends InboxTestCase
         self::assertSame('55000', self::sqlState($owner, 'DELETE FROM billium_feed_bootstrap_item'));
     }
 
+    public function test_the_database_rejects_cross_namespace_items_and_verification_of_an_incomplete_manifest(): void
+    {
+        $this->seedPartition(10);
+        $session = $this->stage($this->snapshot(cursor: 20));
+        $owner = TestEnvironment::pdo(owner: true);
+        $loading = self::integer($this->value(<<<'SQL'
+            INSERT INTO billium_feed_bootstrap_session(bootstrap_ref,channel,source_authority,source_lineage,seller_ref,environment,
+                partition_ref,cursor_sequence,snapshot_digest,item_count,source_retention_lease_ref)
+            SELECT 'guarded-manifest',channel,source_authority,source_lineage,seller_ref,environment,'part-2',cursor_sequence,
+                snapshot_digest,item_count,source_retention_lease_ref FROM billium_feed_bootstrap_session WHERE id=? RETURNING id
+            SQL, [$session]));
+        self::assertSame('23514', self::sqlState($owner, "INSERT INTO billium_feed_bootstrap_item(session_id,operation_ref,revision,material_digest,payload)
+            SELECT {$loading},operation_ref,revision,material_digest,payload FROM billium_feed_bootstrap_item WHERE session_id={$session} LIMIT 1"));
+        self::assertSame('23514', self::sqlState($owner, "UPDATE billium_feed_bootstrap_session SET status='verified' WHERE id={$loading}"));
+        self::assertSame('loading', $this->value('SELECT status FROM billium_feed_bootstrap_session WHERE id=?', [$loading]));
+        self::assertSame(0, $this->rows('billium_feed_bootstrap_item', 'session_id='.$loading));
+    }
+
     private function snapshot(int $cursor, string $ref = 'bs-1'): BootstrapPartition
     {
         $items = [];
         foreach (['op-1', 'op-2', 'op-3'] as $operation) {
-            $items[] = new BootstrapItem($operation, 1, 'sha256:'.hash('sha256', $operation), (object) ['operationRef' => $operation, 'capturedTotal' => '10.00']);
+            $items[] = new BootstrapItem($operation, 1, 'sha256:'.hash('sha256', $operation), (object) [
+                'installationRef' => self::INSTALLATION, 'sourceAuthority' => self::AUTHORITY, 'sourceLineage' => 'L2',
+                'sellerRef' => 'seller-a', 'environment' => 'test', 'partitionRef' => 'part-1',
+                'operationRef' => $operation, 'operationRevision' => 1, 'capturedTotal' => '10.00',
+            ]);
         }
 
         return new BootstrapPartition($ref, 'payment.observation', self::AUTHORITY, 'L2', 'seller-a', 'test', 'part-1', $cursor,
-            BootstrapPartition::digestOf($cursor, $items), 'lease-1', count($items), $items);
+            BootstrapPartition::digestOf($cursor, $items, ['channel' => 'payment.observation', 'sourceAuthority' => self::AUTHORITY,
+                'sourceLineage' => 'L2', 'sellerRef' => 'seller-a', 'environment' => 'test', 'partitionRef' => 'part-1']), 'lease-1', count($items), $items);
     }
 
     private function stage(BootstrapPartition $snapshot): int

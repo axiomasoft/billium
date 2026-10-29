@@ -19,5 +19,7 @@
   "2026_10_21_000005_observation_routines_billium_ledger",
   "2026_10_28_000011_create_billium_event_protocol",
   "2026_10_29_000006_close_billium_ledger_review_gaps",
-  "2026_10_29_000012_guard_billium_session_and_partition_admission"
+  "2026_10_29_000007_bind_billium_payment_receipts_and_creation_replay",
+  "2026_10_29_000012_guard_billium_session_and_partition_admission",
+  "2026_10_29_000013_bind_billium_bootstrap_items_to_manifest"
 ]

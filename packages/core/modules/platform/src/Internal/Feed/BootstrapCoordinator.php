@@ -47,14 +47,19 @@ final readonly class BootstrapCoordinator
         $existing = $db->selectOne('SELECT * FROM public.billium_feed_bootstrap_session WHERE bootstrap_ref = ?', [$snapshot->bootstrapRef]);
         if ($existing !== null) {
             if (Rows::field($existing, 'snapshot_digest') !== $snapshot->snapshotDigest || Rows::field($existing, 'seller_ref') !== $caller->sellerRef
-                || Rows::field($existing, 'environment') !== $caller->environment || Rows::field($existing, 'source_authority') !== $snapshot->sourceAuthority) {
+                || Rows::field($existing, 'environment') !== $caller->environment || Rows::field($existing, 'source_authority') !== $snapshot->sourceAuthority
+                || Rows::field($existing, 'channel') !== $snapshot->channel || Rows::field($existing, 'source_lineage') !== $snapshot->sourceLineage
+                || Rows::field($existing, 'partition_ref') !== $snapshot->partitionRef || Rows::field($existing, 'cursor_sequence') !== $snapshot->cursorSequence
+                || Rows::field($existing, 'item_count') !== $snapshot->expectedItemCount
+                || Rows::field($existing, 'source_retention_lease_ref') !== $snapshot->sourceRetentionLeaseRef) {
                 throw new ProblemException(ProblemCode::ObservationConflict, 'The bootstrap reference names another snapshot');
             }
-
-            return Rows::int(Rows::field($existing, 'id')); // resume
         }
-        if (! $snapshot->verifies()) {
+        if (! $snapshot->verifies() || array_any($snapshot->items, static fn (BootstrapItem $item): bool => ($item->payload->installationRef ?? null) !== $caller->installationRef)) {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'The bootstrap snapshot is incomplete or altered');
+        }
+        if ($existing !== null) {
+            return Rows::int(Rows::field($existing, 'id')); // resume only an identical, complete manifest
         }
         $old = $this->partitions->live($db, $snapshot->channel, $snapshot->sourceAuthority, $snapshot->sellerRef, $snapshot->environment, $snapshot->partitionRef);
         if ($old === null) {
@@ -118,12 +123,21 @@ final readonly class BootstrapCoordinator
         }
         $record = $db->selectOne("SELECT * FROM public.billium_feed_bootstrap_item WHERE session_id = ? AND state = 'staged' ORDER BY id LIMIT 1", [$sessionId]);
         if ($record !== null) {
-            $db->update("UPDATE public.billium_feed_bootstrap_session SET status = 'applying', updated_at = now() WHERE id = ? AND status = 'verified'", [$sessionId]);
             $payload = json_decode(Rows::string(Rows::field($record, 'payload')), false, 64, JSON_THROW_ON_ERROR);
-            $outcome = $handler->apply($context, new BootstrapItem(
+            $item = new BootstrapItem(
                 Rows::string(Rows::field($record, 'operation_ref')), Rows::int(Rows::field($record, 'revision')), Rows::string(Rows::field($record, 'material_digest')),
                 $payload instanceof \stdClass ? $payload : new \stdClass, Rows::int(Rows::field($record, 'id')), $sessionId,
-            ));
+            );
+            $namespace = [];
+            foreach (['sourceAuthority' => 'source_authority', 'sourceLineage' => 'source_lineage', 'sellerRef' => 'seller_ref',
+                'environment' => 'environment', 'partitionRef' => 'partition_ref'] as $field => $column) {
+                $namespace[$field] = Rows::string(Rows::field($session, $column));
+            }
+            if (! BootstrapPartition::contains($item, $namespace) || ($item->payload->installationRef ?? null) !== $context->caller()->installationRef) {
+                throw new ProblemException(ProblemCode::ValidationInvalid, 'The bootstrap item is outside its manifest namespace');
+            }
+            $db->update("UPDATE public.billium_feed_bootstrap_session SET status = 'applying', updated_at = now() WHERE id = ? AND status = 'verified'", [$sessionId]);
+            $outcome = $handler->apply($context, $item);
             [$state, $ref] = match ($outcome->kind) {
                 HandlerOutcomeKind::Applied => ['applied', $outcome->reference],
                 HandlerOutcomeKind::ParkedDependency => ['parked', $outcome->dependencyKind.':'.$outcome->reference],

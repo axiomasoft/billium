@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Billium\Ledger\Tests\Commands;
 
+use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Ledger\Data\ReallocatePayment;
 use Billium\Ledger\Data\ReallocationMode;
+use Billium\Ledger\Internal\Commands\ReallocatePaymentCommand;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
 
 /** allocation.reallocate.v1 (D35, INV-09): LIFO reversal with cause = refund, credit_note vs reversal policy, replay. */
@@ -37,13 +39,13 @@ final class ReallocatePaymentTest extends LedgerTestCase
         self::assertTrue($this->paymentState()['flag']);
         $outcome = $this->reallocate(ReallocationMode::CreditNote);
         self::assertTrue($outcome->accepted, json_encode($outcome->result(), JSON_THROW_ON_ERROR));
-        self::assertSame(['reallocation:payment-a@3000', '3000', 'refund'], [$outcome->body['receipt_ref'] ?? null, $outcome->body['excess_minor'] ?? null, $outcome->body['cause'] ?? null]);
+        self::assertSame(['reallocation:payment:authority-a:payment-a@3000', '3000', 'refund'], [$outcome->body['receipt_ref'] ?? null, $outcome->body['excess_minor'] ?? null, $outcome->body['cause'] ?? null]);
         self::assertSame([[6000, 'manual'], [4000, 'manual'], [-4000, 'refund'], [1000, 'refund']],
             array_map(static fn (array $r): array => [self::integer($r['amount_minor']), $r['cause']], $this->table('SELECT amount_minor,cause FROM billium_allocation ORDER BY id')));
         self::assertSame(['allocated' => 6000, 'credited' => 0, 'open' => 0, 'status' => 'settled'], $this->obligationState('o1'));
         self::assertSame(['allocated' => 1000, 'credited' => 3000, 'open' => 0, 'status' => 'settled'], $this->obligationState('o2'));
         self::assertSame(['allocated' => 7000, 'flag' => false], $this->paymentState());
-        self::assertSame([['reallocation:payment-a@3000#1', 3000, 'refund', 'open_only']],
+        self::assertSame([['reallocation:payment:authority-a:payment-a@3000#1', 3000, 'refund', 'open_only']],
             array_map(static fn (array $r): array => [$r['credit_note_ref'], self::integer($r['amount_minor']), $r['reason'], $r['mode']], $this->table('SELECT * FROM billium_credit_note')));
         self::assertSame('paid', $this->invoiceStatus());
         self::assertSame(1, $this->rows('billium_outbox_event', "type='credit_note.issued.v1' AND aggregate_ref='payment-a'"));
@@ -75,6 +77,49 @@ final class ReallocatePaymentTest extends LedgerTestCase
         self::assertSame('partially_paid', $this->invoiceStatus());
         self::assertSame(0, $this->rows('billium_outbox_event', "type='credit_note.issued.v1'"));
         self::assertSame([], self::arr($outcome->body['credit_notes'] ?? null));
+    }
+
+    public function test_a_legacy_reallocation_receipt_replays_only_through_its_source_bound_release_journal(): void
+    {
+        $this->paidInvoice();
+        $this->refunded('payment-a', 3000);
+        $payment = self::integer($this->value("SELECT id FROM billium_payment WHERE payment_ref='payment-a'"));
+        $reference = 'reallocation:payment-a@3000';
+        $arguments = [...$this->scopeArguments(), null, $payment, 3000, 'refund', $reference];
+        $plan = json_decode(self::text($this->value('SELECT public.billium_ledger_release(?,?,?,?,?,?,?,?,?,?,false)', $arguments)), true, 64, JSON_THROW_ON_ERROR);
+        $body = ['receipt_ref' => $reference, 'reallocation_ref' => 'payment-a@3000', 'payment_ref' => 'payment-a', 'mode' => 'reversal',
+            'policy_version' => 'refund/1', 'cause' => 'refund', 'currency' => 'RUB', 'billing_account_ref' => 'account-a',
+            'excess_minor' => '3000', 'reversals' => $plan, 'credit_notes' => []];
+        $command = new ReallocatePayment('legacy', self::INSTALLATION, 'seller-a', 'test', 'payment-a', 'refund/1', ReallocationMode::Reversal);
+        $this->value('SELECT public.billium_ledger_receipt(?,?,?,?,?,?,?,?,?)', [...$this->scopeArguments(), $reference,
+            'reallocation', ReallocatePaymentCommand::digest($command), json_encode($body, JSON_THROW_ON_ERROR)]);
+        $this->value('SELECT public.billium_ledger_release(?,?,?,?,?,?,?,?,?,?,true)', $arguments);
+        $journal = $this->rows('billium_allocation');
+        $stored = json_decode(self::text($this->value('SELECT body FROM billium_allocation_receipt WHERE receipt_ref=?', [$reference])), true, 64, JSON_THROW_ON_ERROR);
+
+        $replay = $this->reallocate(ReallocationMode::Reversal, key: 'lost-legacy-reply')->orThrow();
+        self::assertSame((new Codec)->canonicalize($stored), (new Codec)->canonicalize($replay->body));
+        self::assertSame($journal, $this->rows('billium_allocation'));
+        self::assertSame(1, $this->rows('billium_allocation_receipt', "kind='reallocation'"));
+        self::assertSame(['allocated' => 7000, 'flag' => false], $this->paymentState());
+        try {
+            $this->reallocate(ReallocationMode::CreditNote, key: 'legacy-other-mode');
+            self::fail('A changed legacy reallocation payload must still conflict');
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::IdempotencyConflict, $error->problem);
+        }
+
+        $other = self::integer($this->value(<<<'SQL'
+            INSERT INTO billium_payment(installation_ref,seller_ref,environment,billing_account_ref,currency,payment_ref,source_authority,source_lineage,operation_ref,kind,captured_minor)
+            VALUES('inst-test','seller-a','test','account-a','RUB','payment-a','authority-b','lineage-a','operation-payment-a','charge',4000) RETURNING id
+            SQL));
+        $this->allocateFrom('sibling', 'o2', '30.00', 'payment:authority-b:payment-a')->orThrow();
+        $this->owner()->update('UPDATE billium_payment SET refunded_minor=3000,reallocation_required=true WHERE id=?', [$other]);
+        $sibling = $this->reallocate(ReallocationMode::Reversal, 'payment:authority-b:payment-a', 'legacy-sibling')->orThrow();
+        self::assertSame($other, $sibling->body['payment_id']);
+        self::assertSame('authority-b', $sibling->body['source_authority']);
+        self::assertSame('2000', $sibling->body['excess_minor']);
+        self::assertSame(2, $this->rows('billium_allocation_receipt', "kind='reallocation'"));
     }
 
     public function test_reallocation_refusals(): void

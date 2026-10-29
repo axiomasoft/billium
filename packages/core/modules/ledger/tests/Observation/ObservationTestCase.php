@@ -134,7 +134,8 @@ abstract class ObservationTestCase extends LedgerTestCase
         }
 
         return new BootstrapPartition($ref, ParkedDrainer::CHANNEL, $authority, $lineage, 'seller-a', 'test', $partition, $cursor,
-            BootstrapPartition::digestOf($cursor, $items), 'lease-'.$ref, count($items), $items);
+            BootstrapPartition::digestOf($cursor, $items, ['channel' => ParkedDrainer::CHANNEL, 'sourceAuthority' => $authority,
+                'sourceLineage' => $lineage, 'sellerRef' => 'seller-a', 'environment' => 'test', 'partitionRef' => $partition]), 'lease-'.$ref, count($items), $items);
     }
 
     /** @return array<string, mixed> */

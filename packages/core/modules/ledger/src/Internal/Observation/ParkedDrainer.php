@@ -155,8 +155,9 @@ final readonly class ParkedDrainer
                     SELECT 1 FROM public.billium_settlement_intent i
                     WHERE i.seller_ref = k.seller_ref AND i.environment = k.environment AND i.business_intent_ref = k.dependency_ref))
                 OR (k.dependency_kind = 'original_charge' AND EXISTS (
-                    SELECT 1 FROM public.billium_payment p
-                    WHERE p.seller_ref = k.seller_ref AND p.environment = k.environment AND p.payment_ref = k.dependency_ref AND p.kind = 'charge')))
+                    SELECT 1 FROM public.billium_payment p JOIN public.billium_observed_payment o ON o.id = k.observed_payment_id
+                    WHERE p.seller_ref = k.seller_ref AND p.environment = k.environment AND p.payment_ref = k.dependency_ref AND p.kind = 'charge'
+                      AND o.seller_ref = k.seller_ref AND o.environment = k.environment AND p.source_authority = o.source_authority)))
             ORDER BY k.id LIMIT ?
             SQL, [$caller->sellerRef, $caller->environment, $limit]);
         $statuses = [];

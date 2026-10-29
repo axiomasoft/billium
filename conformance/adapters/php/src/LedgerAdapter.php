@@ -272,7 +272,11 @@ final class LedgerAdapter
         $caller = $this->callers->current();
         $snapshot = new BootstrapPartition(self::text($args, 'bootstrapRef'), ParkedDrainer::CHANNEL,
             self::text($args, 'sourceAuthority'), self::text($args, 'sourceLineage'), $caller->sellerRef, $caller->environment,
-            self::text($args, 'partitionRef'), $args->cursorSequence, $args->snapshotDigest ?? BootstrapPartition::digestOf($args->cursorSequence, $items),
+            self::text($args, 'partitionRef'), $args->cursorSequence, $args->snapshotDigest ?? BootstrapPartition::digestOf($args->cursorSequence, $items, [
+                'channel' => ParkedDrainer::CHANNEL, 'sourceAuthority' => self::text($args, 'sourceAuthority'),
+                'sourceLineage' => self::text($args, 'sourceLineage'), 'sellerRef' => $caller->sellerRef,
+                'environment' => $caller->environment, 'partitionRef' => self::text($args, 'partitionRef'),
+            ]),
             self::text($args, 'sourceRetentionLeaseRef'), $args->expectedItemCount ?? count($items), $items);
         if ($action === 'resume') {
             $status = $app->make(BootstrapPartitionCommand::class)->execute($snapshot);

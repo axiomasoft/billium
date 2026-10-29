@@ -161,14 +161,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "platform",
-      "currentSchemaVersion": 15,
+      "currentSchemaVersion": 16,
       "supportedSchemaReadRange": {
         "min": 10,
-        "max": 15
+        "max": 16
       },
       "supportedSchemaWriteRange": {
         "min": 10,
-        "max": 15
+        "max": 16
       },
       "requiresModules": [],
       "requiresPorts": [],
@@ -299,6 +299,11 @@
           "id": "2026_10_29_000012_guard_billium_session_and_partition_admission",
           "version": 15,
           "checksum": "sha256:d0c5ee326df883425dde0d4a15681aa7b101873a944f761544832e8588229f2b"
+        },
+        {
+          "id": "2026_10_29_000013_bind_billium_bootstrap_items_to_manifest",
+          "version": 16,
+          "checksum": "sha256:83ef3ccb8ad131d39ea94dc0e5509ac8856d1f27b2ca1f27ea7f072dd3899f12"
         }
       ],
       "disablePolicy": {
@@ -342,14 +347,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "ledger",
-      "currentSchemaVersion": 6,
+      "currentSchemaVersion": 7,
       "supportedSchemaReadRange": {
         "min": 2,
-        "max": 6
+        "max": 7
       },
       "supportedSchemaWriteRange": {
         "min": 2,
-        "max": 6
+        "max": 7
       },
       "requiresModules": [
         {
@@ -429,6 +434,11 @@
           "id": "2026_10_29_000006_close_billium_ledger_review_gaps",
           "version": 6,
           "checksum": "sha256:f68ba047ba87c6d8d47f7760161b96ec6d9e02a7c3ac881fa073c796ad428ef0"
+        },
+        {
+          "id": "2026_10_29_000007_bind_billium_payment_receipts_and_creation_replay",
+          "version": 7,
+          "checksum": "sha256:9b5a481596e1116477a154e3c479564665483099256f313f4ad326fadee75c4b"
         }
       ],
       "disablePolicy": {

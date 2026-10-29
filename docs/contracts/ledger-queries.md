@@ -18,6 +18,11 @@ ACC-RST-05).
 and environment against the caller. Mismatches return `billium.auth.denied`. Selector names are
 `paymentRef`, `obligationRef`, `invoiceRef`, `operationRef` for `allocationByOperation`, and
 `billingAccountRef` for `dueObligations`. An optional `sourceAuthority` disambiguates a payment/operation.
+An authority-free selector matching multiple sources returns `billium.validation.invalid`; it never chooses
+an arbitrary source. Applied state, spendable funds and receipt associations use the selected source throughout.
+`allocationByOperation` includes only receipts linked by the selected payment's journal/revision rows or its
+observation's immutable economic digest, within the payment's account and currency. This includes legacy
+zero-part receipts: economic digests include authority. A bare operation reference is insufficient.
 `readRender` returns `billium.validation.invalid` here; rendering belongs to P6. The v1 `queryKind` enum
 does not contain receipt: receipt retrieval uses the direct `receipt` method (REQ-CON-14, INV-14;
 `spec/revisions/2026-10/schema/query/query.v1.json`, `common/defs.json#/$defs/queryKind`).
@@ -56,12 +61,32 @@ Active root command. The command requires the obligation's billing account and c
 including when `dueAt` is null. It increments the obligation revision and stores the policy in an immutable
 receipt with an `obligation.adjusted.v1` outbox event in the same transaction. Replays return that receipt even
 after later amendments; a reused key with another policy conflicts. The creation receipt remains unchanged.
+Replaying the original `RecordObligation` payload under another key returns its original creation receipt after
+an amendment. Creation replay compares the immutable creation digest and identity; a changed creation payload
+conflicts even when it happens to match the amended live policy.
 
 Payment projections use `(seller, environment, sourceAuthority, operationRef)` across accepted lineage changes.
 New observation and refund-detail receipts include the URL-encoded source authority and operation reference;
 long identities use a SHA-256 key. Existing receipts retain their identity on replay. Refund details resolve only
 their own authority's original charge. Refund reconciliation persists each payment's last comparison time and
 selects the least recently compared eligible payments first, so bounded runs advance and revisit changed bases.
+Dependency retries likewise wait for the original charge of the refund's own authority. Another authority's
+same-ref charge does not consume the parked refund's retry budget.
+
+`Allocate.paymentRef` and `ReallocatePayment.paymentRef` accept the source identity
+`payment:<URL-encoded sourceAuthority>:<URL-encoded paymentRef>`, for example
+`payment:remote-billium:op-1`. A bare reference still works when exactly one payment matches. Ambiguous
+selectors return `billium.validation.invalid`. This uses the existing v1 string field; wire fields and strict
+decoding are unchanged. Reallocation receipt identity and semantic digest include the resolved source and
+refund total; receipt bodies retain `payment_id`, `payment_ref` and `source_authority`.
+Older reallocation receipts replay only when their release journal identifies the selected payment uniquely.
+
+Observation partition bootstrap digests cover the complete manifest namespace (channel, authority, lineage,
+seller, environment and partition), cursor and all ordered items. `BootstrapPartition::digestOf` requires
+that namespace as its third argument. Every item's namespace, operation and revision must match the manifest;
+installation must match the caller. Verification precedes staging and also applies to resume. Resume additionally
+checks the retention lease, count and cursor. Database guards reject cross-namespace items, late inserts and
+advancement of an incomplete manifest. A valid matching snapshot can then apply its items and adopt its cursor.
 
 The ledger registers five `billium.snapshot_sources` keys already declared by the event catalog:
 `ledger.obligations`, `ledger.invoices`, `ledger.allocations`, `ledger.payments`, and

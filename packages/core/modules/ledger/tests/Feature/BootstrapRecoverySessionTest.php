@@ -51,7 +51,7 @@ final class BootstrapRecoverySessionTest extends ObservationTestCase
         $this->debt('o1', 5000);
         $this->intent('intent-a', ['o1']);
         $this->recoverySession();
-        $snapshot = $this->snapshot('boot-empty', 'L1', 4, [ObservationFactory::charge('op-9', 1, 700, sequence: 4)], partition: 'part-2');
+        $snapshot = $this->snapshot('boot-empty', 'L1', 4, [ObservationFactory::charge('op-9', 1, 700, sequence: 4, fields: ['partitionRef' => 'part-2'])], partition: 'part-2');
 
         $status = $this->bootstrapper()->execute($snapshot, FinancialMode::Recovery);
         $again = $this->bootstrapper()->execute($snapshot, FinancialMode::Recovery);

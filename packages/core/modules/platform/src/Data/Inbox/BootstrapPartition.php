@@ -10,7 +10,7 @@ use InvalidArgumentException;
 
 /**
  * A complete source snapshot for one partition at `cursorSequence`, pinned by the source retention lease. The snapshot
- * digest covers the cursor and every item in (operationRef, revision) order, so a partial or altered snapshot never
+ * digest covers the complete source namespace, cursor and every item in (operationRef, revision) order, so an altered snapshot never
  * verifies (D60, inbox-feed).
  */
 #[Api]
@@ -46,11 +46,15 @@ final readonly class BootstrapPartition
         $this->items = $items;
     }
 
-    /** @param list<BootstrapItem> $items */
-    public static function digestOf(int $cursorSequence, array $items): string
+    /**
+     * @param  list<BootstrapItem>  $items
+     * @param  array{channel: string, sourceAuthority: string, sourceLineage: string, sellerRef: string, environment: string, partitionRef: string}  $namespace
+     */
+    public static function digestOf(int $cursorSequence, array $items, array $namespace): string
     {
         usort($items, static fn (BootstrapItem $a, BootstrapItem $b): int => [$a->operationRef, $a->revision] <=> [$b->operationRef, $b->revision]);
         $body = (object) [
+            'namespace' => (object) $namespace,
             'cursor' => $cursorSequence,
             'items' => array_map(static fn (BootstrapItem $item): \stdClass => (object) [
                 'operationRef' => $item->operationRef, 'revision' => $item->revision,
@@ -61,15 +65,38 @@ final readonly class BootstrapPartition
         return (new Codec)->digest($body);
     }
 
+    /** @return array{channel: string, sourceAuthority: string, sourceLineage: string, sellerRef: string, environment: string, partitionRef: string} */
+    public function namespace(): array
+    {
+        return ['channel' => $this->channel, 'sourceAuthority' => $this->sourceAuthority, 'sourceLineage' => $this->sourceLineage,
+            'sellerRef' => $this->sellerRef, 'environment' => $this->environment, 'partitionRef' => $this->partitionRef];
+    }
+
+    /** @param array<string, string> $namespace */
+    public static function contains(BootstrapItem $item, array $namespace): bool
+    {
+        foreach (['sourceAuthority', 'sourceLineage', 'sellerRef', 'environment', 'partitionRef'] as $field) {
+            if (($item->payload->{$field} ?? null) !== $namespace[$field]) {
+                return false;
+            }
+        }
+
+        return ($item->payload->operationRef ?? null) === $item->operationRef
+            && ($item->payload->operationRevision ?? null) === $item->revision;
+    }
+
     /** The snapshot is complete and untampered: declared count, unique items, digest over everything. */
     public function verifies(): bool
     {
         $keys = [];
         foreach ($this->items as $item) {
+            if (! self::contains($item, $this->namespace())) {
+                return false;
+            }
             $keys[$item->operationRef.'#'.$item->revision] = true;
         }
 
         return count($this->items) === $this->expectedItemCount && count($keys) === count($this->items)
-            && hash_equals($this->snapshotDigest, self::digestOf($this->cursorSequence, $this->items));
+            && hash_equals($this->snapshotDigest, self::digestOf($this->cursorSequence, $this->items, $this->namespace()));
     }
 }

@@ -11,6 +11,7 @@ use Billium\Core\Contracts\TransactionContext;
 use Billium\Core\Exceptions\LockPlanChanged;
 use Billium\Ledger\Data\Allocate;
 use Billium\Ledger\Data\LedgerReceipt;
+use Billium\Ledger\Internal\PaymentSource;
 use Billium\Ledger\Internal\Receipts\AllocationReceiptWriter;
 use Illuminate\Database\DatabaseManager;
 
@@ -58,8 +59,8 @@ final readonly class AllocateCommand
             $obligation = $connection->table('billium_obligation')->where('seller_ref', $caller->sellerRef)->where('environment', $caller->environment)
                 ->where('obligation_ref', $command->obligationRef)->first(['id', 'billed_invoice_id']);
             $source = $command->paymentRef !== null
-                ? $connection->table('billium_payment')->where('seller_ref', $caller->sellerRef)->where('environment', $caller->environment)
-                    ->where('payment_ref', $command->paymentRef)->first(['id', 'settlement_intent_id'])
+                ? PaymentSource::resolve($connection->table('billium_payment')->where('installation_ref', $caller->installationRef)
+                    ->where('seller_ref', $caller->sellerRef)->where('environment', $caller->environment), $command->paymentRef)
                 : $connection->table('billium_customer_credit')->where('seller_ref', $caller->sellerRef)->where('environment', $caller->environment)
                     ->where('credit_ref', $command->customerCreditRef)->first(['id']);
             if ($obligation === null || $source === null) {
