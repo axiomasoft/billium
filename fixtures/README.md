@@ -58,6 +58,44 @@ Valid by `spec/revisions/2026-10/schema/conformance/vector.json`:
 | `problem.decode` | `json_text` | `{code, category, retryable, sameKey, receipt}` |
 | `codes.registry` | — | `{codes: […]}` in `problem-codes.json` order |
 
+The PHP behavior host boots Testbench and PostgreSQL only on the first `ledger.*` op (BC-CNF-10).
+It uses `DB_HOST`, `DB_PORT`, `DB_DATABASE` (ending in `_test`), `DB_USERNAME`, `DB_PASSWORD`,
+`DB_OWNER_USERNAME` and `DB_OWNER_PASSWORD` from the test environment. Runtime and owner roles must differ
+(D60); missing database configuration or an unavailable database is an adapter `error` (BC-CNF-12).
+Every behavior vector starts with `ledger.reset` and supplies
+`given.caller: {sellerRef, environment, installationRef, sourceAuthorities: [...]}` (BC-ENV-10).
+Reset takes the database test lease, migrates once, and TRUNCATEs Billium tables between vectors without a
+transaction wrapper (D50). The adapter is a test host; monetary writes use the real guarded runtime routines (D60).
+
+For a PHP conformance run alongside database tests, use
+`php conformance/adapters/php/bin/with-database-lease.php python3 conformance/runner/run.py --adapter php`
+(also used by the CI conformance layer). The parent reserves the test database before starting the runner;
+adapters verify and join its live lease. Waiting for another suite therefore precedes the 10-second vector
+deadline, while committed-data isolation remains exclusive (D50, BC-CNF-12).
+
+| PHP behavior op | args | ok output |
+|:--|:--|:--|
+| `ledger.reset` | — | `{}` |
+| `ledger.caller` | `sellerRef`, `environment`, `installationRef`, `sourceAuthorities` | `{}` |
+| `ledger.obligation.record` | `commandKey`, `billingAccountRef`, `obligationRef`, `basisRef`, `customerRef`, `componentRef`, `amount` (MoneyWire), `termsDigest`; optional price/tax refs and due-policy provenance | ObligationRecorded body |
+| `ledger.intent.declare` | `commandKey`, `billingAccountRef`, `businessIntentRef`, `currency`, ordered `obligationRefs`, `policyVersion` | SettlementIntentDeclared body |
+| `ledger.credit.record` | `commandKey`, `billingAccountRef`, `creditRef`, `sourceRef`, `amount` | CustomerCreditRecorded body |
+| `ledger.invoice.create` | `commandKey`, `billingAccountRef`, `invoiceRef`, `customerRef`, `lines: [{obligationRef, taxMinor?, snapshot?}]`, `snapshot?` | InvoiceReceipt body |
+| `ledger.invoice.issue` / `.void` / `.metadata` | `commandKey`, `billingAccountRef`, `invoiceRef`; void: `causeRef`; metadata: `updateRef`, `metadata` | InvoiceReceipt body |
+| `ledger.allocate` | `commandKey`, `billingAccountRef`, `allocationRef`, `obligationRef`, `amount`, exactly one of `paymentRef` / `customerCreditRef`, `cause?` | AllocationReceipt body |
+| `ledger.reverse` | `commandKey`, `billingAccountRef`, `reversalRef`, `allocationRef`, `causeRef`, optional `remainder` MoneyWire | AllocationReceipt body |
+| `ledger.credit_note` | `commandKey`, `billingAccountRef`, `creditNoteRef`, `invoiceRef`, `mode`, `lines: [{obligationRef, amount}]`, `reason`, `legalDocumentRef?` | AllocationReceipt body |
+| `ledger.reallocate` | `json_text` (`allocation.reallocate.v1`) | AllocationReceipt body |
+| `ledger.observe` | `json_text` (`payment.observation.v1`) | AllocationReceipt body plus `receiptRef`, `replayed`, or problem code |
+| `ledger.drain` | — | `{drained}`: dependency retries reaching applied |
+| `ledger.reconcile_refunds` | optional `after_seconds` consistency window | `{discrepancies}`: newly recorded comparisons |
+| `ledger.query` | `query`, `selector`; due queries also `asOf`, `limit`, optional `cursor` | `billium.query.v1` result; `query: receipt` uses `selector.receiptRef` |
+| `ledger.bootstrap` | `action: stage/step/resume`, `bootstrapRef`, `sourceAuthority`, `sourceLineage`, `partitionRef`, `cursorSequence`, `sourceRetentionLeaseRef`, `items` (observation objects), optional `snapshotDigest`, `expectedItemCount` | BootstrapStatus (D60, REQ-FAIL-23) |
+
+Root command bodies also expose `receiptClass`, `receiptId`, `replayed` for immutable receipt checks
+(BC-ID-05…08). Command amounts use MoneyWire. Bootstrap `step` stages/resumes and disposes one item in
+its own root; `resume` completes remaining items, adopts the cursor and drains the tail (D60).
+
 Decode checks in order: JSON syntax → `schema` → fields → amounts (BC-ENV-03). A syntax error, a missing or non-string
 `schema` and a field violation give `billium.validation.invalid`; a `schema` outside the revision gives
 `billium.schema.unsupported`; a MoneyWire form violation with otherwise valid fields, and a malformed `payment.outcome.v1`
@@ -76,6 +114,8 @@ of an open envelope (outcome, admission, receipt, event) is computed over the re
 | `errors/codes` | registry golden and `problem.decode` of every code (receipt policy D31) |
 | `compat/pilot` | pilot (SRC-005) forms with concrete values: PB-15 |
 | `obligation/prepare`, `occurrence/ensure`, `collection/authorize`, `payment/observation`, `query/read`, `event/envelope` | decode of the remaining envelopes of the revision, each closed command with an unknown-member vector (M-05) |
+| `ledger/conservation` (PHP) | invoice partial payments, overpayment, refund reallocation, prepaid credits, bundle Hamilton tie, credit notes, frozen metadata, idempotent receipt/refusal replay and seller/account isolation (REQ-ACC-10, INV-09, INV-14) |
+| `payment/observation/apply-*` (PHP) | custody/revision dedupe, contiguous sequence and recovery, staged bootstrap/resume, missing-intent observed visibility, assigned totals, last-consistent held projection and delayed refund comparison bases (INV-06, D41, D48, D60) |
 
 ## Golden
 
@@ -85,15 +125,22 @@ PHP or Dart output and never edited by hand; the layer `derived` runs `build-gol
 oracle digest with its last hex digit changed. Golden of any set whose value the oracle can derive lives under `golden/canon/`
 (`canon/digest/<vector>-canonical.txt`, `-digest.txt`).
 
+Behavioral monetary expectations live directly in `expect` and come from the independent worked examples
+(REQ-ACC-10, M-15): 30.00 then cumulative 100.00 allocates 30.00 + 70.00; 120.00 against 100.00 leaves
+20.00; credit 50.00 funds 20.00 + 30.00; bundle 6667/3333 splits 5000 into 3334/1666, then 3333/1667.
+Each pro-rata example checks `money.allocate` before the ledger operations (D46).
+The exceptional refund example preserves observed 140.00 and applied capture100/refund70, with exposure40
+and spendable0 (D60). No expectation is copied from the PHP adapter, and `conformance/baseline/php.json`
+remains empty (BC-CNF-08, BC-CNF-13).
+
 ## Deferred vectors
 
 Behavioral vectors need storage and the command life cycle; they are written in the phase that builds it and are
-not in the P2 corpus. Their rules are listed in `coverage.json` with the reason.
+not in the P2 codec corpus. P3 ledger behavior is now included in the PHP profile (BC-CNF-10).
+Remaining deferred rules are listed in `coverage.json` with the reason.
 
 | Vectors | Phase |
 |:--|:--|
-| `ledger/conservation` | P3 |
 | `payment/admission` duplicate, conflict, expired, in_flight; idempotency scope and receipt replay (BC-ID-02…09) | P5 |
 | `payment/outcome` monotonic `revision`, quarantine of the same revision with another digest | P5 |
-| `payment/observation` deduplication and `sourceSequence` partitions (BC-ENV-21) | P6 |
 | `usage/fact` identity: duplicate and `billium.usage.conflict` (BC-ID-11) | P5 |

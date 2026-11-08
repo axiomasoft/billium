@@ -24,7 +24,7 @@ from workspace import WorkspaceError, plans_root
 
 ROOT = Path(__file__).resolve().parents[2]
 DRAFT = "https://json-schema.org/draft/2020-12/schema"
-SCHEMA_NAME = re.compile(r"^[a-z][a-z_]*\.[a-z][a-z_]*\.v[1-9][0-9]*$")
+SCHEMA_NAME = re.compile(r"^[a-z][a-z_]*(?:\.[a-z][a-z_]*)+\.v[1-9][0-9]*$")
 
 # Conventions 4 and 5: (schema name, JSON pointer of its node in the schema file).
 CLOSED = {
@@ -46,6 +46,7 @@ OPEN = {
     ("billium.event.v1", ""),
 }
 NON_ENVELOPE_DIRS = {"common", "problem", "conformance"}
+NON_ENVELOPE_FILES = {"feed/defs.json"}
 
 NORMATIVE = re.compile(r"\b(MUST|SHALL|SHOULD)\b|\b(долж(ен|на|но|ны)|обязан(а|о|ы)?)\b", re.IGNORECASE)
 AMOUNT_KEY = re.compile(r"^(amount|quantity|money|requested)$|Total$")
@@ -176,10 +177,10 @@ class Lint:
         files: dict[str, set[str]] = {}
         for (name, pointer), (rel, node) in nodes.items():
             if not isinstance(name, str) or not SCHEMA_NAME.match(name):
-                self.error(f"schema/{rel}#{pointer}", f"schema const {name!r} is not <family>.<name>.v<N> (convention 7)")
+                self.error(f"schema/{rel}#{pointer}", f"schema const {name!r} is not <namespace>.<name>.v<N> (convention 7)")
             files.setdefault(rel, set()).add(name)
         for rel, document in self.schemas.items():
-            if rel.split("/")[0] in NON_ENVELOPE_DIRS:
+            if rel.split("/")[0] in NON_ENVELOPE_DIRS or rel in NON_ENVELOPE_FILES:
                 continue
             if rel not in files:
                 self.error(f"schema/{rel}", "envelope schema has no properties.schema.const (convention 7)")

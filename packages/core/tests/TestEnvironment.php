@@ -1,0 +1,233 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Billium\Core\Tests;
+
+use Billium\Core\Tests\Arch\MigrationTables;
+use Illuminate\Foundation\Application;
+use PDO;
+use PDOException;
+use RuntimeException;
+
+final class TestEnvironment
+{
+    /** Two-int advisory key ('BILL', 'TEST'): objsubid 2 never collides with the single-key ConcurrencyStand barrier. */
+    public const int LEASE_CLASS = 0x42494C4C;
+
+    public const int LEASE_OBJECT = 0x54455354;
+
+    private static ?PDO $suiteLease = null;
+
+    private static ?string $suiteLeaseToken = null;
+
+    private const string SUITE_LEASE_ENV = 'BILLIUM_TEST_SUITE_LEASE';
+
+    public static function configure(Application $app): void
+    {
+        $app['config']->set('database.default', 'pgsql');
+        $app['config']->set('database.connections.pgsql', self::connection());
+        $app['config']->set('database.connections.billium_owner', self::connection(owner: true));
+        $app['config']->set('billium.connection', 'pgsql');
+    }
+
+    public static function databaseName(): string
+    {
+        $database = self::required('DB_DATABASE');
+        if (! str_ends_with($database, '_test')) {
+            throw new RuntimeException('D50: DB_DATABASE must end in _test');
+        }
+
+        return $database;
+    }
+
+    /** @return array<string, mixed> */
+    public static function connection(bool $owner = false): array
+    {
+        return [
+            'driver' => 'pgsql',
+            'host' => self::required('DB_HOST'),
+            'port' => self::required('DB_PORT'),
+            'database' => self::databaseName(),
+            'username' => self::required($owner ? 'DB_OWNER_USERNAME' : 'DB_USERNAME'),
+            'password' => self::required($owner ? 'DB_OWNER_PASSWORD' : 'DB_PASSWORD'),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'search_path' => 'public',
+            'sslmode' => 'prefer',
+        ];
+    }
+
+    public static function pdo(bool $owner = false): PDO
+    {
+        $config = self::connection($owner);
+
+        return new PDO(
+            "pgsql:host={$config['host']};port={$config['port']};dbname={$config['database']};connect_timeout=2",
+            $config['username'],
+            $config['password'],
+            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_EMULATE_PREPARES => false, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC],
+        );
+    }
+
+    public static function preflight(int $timeoutSeconds = 30): void
+    {
+        self::databaseName();
+        self::connection();
+        self::connection(owner: true);
+        if (! extension_loaded('pdo_pgsql')) {
+            throw new RuntimeException('D50/M-33: pdo_pgsql is required');
+        }
+        $deadline = microtime(true) + $timeoutSeconds;
+        do {
+            try {
+                $runtime = self::pdo();
+                $owner = self::pdo(owner: true);
+                break;
+            } catch (PDOException $exception) {
+                if (microtime(true) >= $deadline) {
+                    throw new RuntimeException('M-33: PostgreSQL test database unavailable', previous: $exception);
+                }
+                usleep(200_000);
+            }
+        } while (true);
+
+        if ((int) $runtime->query("SELECT current_setting('server_version_num')")->fetchColumn() < 160000) {
+            throw new RuntimeException('D50: PostgreSQL 16 or newer is required');
+        }
+        if ($runtime->query('SELECT current_user')->fetchColumn() === $owner->query('SELECT current_user')->fetchColumn()) {
+            throw new RuntimeException('D60: runtime and fixture owner must be different roles');
+        }
+        self::assertRuntimeSafe($runtime);
+    }
+
+    /**
+     * D50: one test run per database. Committed-data isolation TRUNCATEs and drops fixtures, so a second runner
+     * on the same database (parallel checks, another shell) would destroy this run's state and exhaust its
+     * connection slots. The first DatabaseTestCase of a process waits for this session-level advisory lock and
+     * keeps it until the process exits; ConcurrencyStand workers belong to the holder's run and never take it.
+     */
+    public static function acquireSuiteLease(int $timeoutSeconds = 1800): void
+    {
+        if (self::$suiteLease !== null) {
+            return;
+        }
+        $inherited = getenv(self::SUITE_LEASE_ENV);
+        if (is_string($inherited) && $inherited !== '') {
+            self::assertInheritedSuiteLease($inherited);
+
+            return;
+        }
+        $lease = self::pdo(owner: true);
+        $lease->exec("SET lock_timeout = '{$timeoutSeconds}s'");
+        try {
+            $lease->query('SELECT pg_advisory_lock('.self::LEASE_CLASS.', '.self::LEASE_OBJECT.')');
+        } catch (PDOException $exception) {
+            throw new RuntimeException("D50: another test run kept the test database for {$timeoutSeconds}s", previous: $exception);
+        }
+        $lease->exec('SET lock_timeout = 0');
+        self::$suiteLease = $lease;
+    }
+
+    /**
+     * D50: the parent waits before starting a timed runner; its child adapters join that same exclusive run.
+     * The claim is checked against a live advisory lock and a random holder token, never a bare skip flag.
+     *
+     * @return array<string, string>
+     */
+    public static function suiteLeaseEnvironment(): array
+    {
+        self::acquireSuiteLease();
+        if (self::$suiteLease === null) {
+            return [self::SUITE_LEASE_ENV => self::required(self::SUITE_LEASE_ENV)];
+        }
+        if (self::$suiteLeaseToken === null) {
+            self::$suiteLeaseToken = 'billium-suite:'.bin2hex(random_bytes(16));
+            $statement = self::$suiteLease->prepare("SELECT set_config('application_name', ?, false)");
+            $statement->execute([self::$suiteLeaseToken]);
+        }
+        $statement = self::$suiteLease->query('SELECT pg_backend_pid()');
+        if ($statement === false) {
+            throw new RuntimeException('D50: cannot identify the test database lease holder');
+        }
+        $pid = $statement->fetchColumn();
+
+        return [self::SUITE_LEASE_ENV => json_encode([
+            'database' => self::databaseName(), 'pid' => $pid, 'token' => self::$suiteLeaseToken,
+        ], JSON_THROW_ON_ERROR)];
+    }
+
+    private static function assertInheritedSuiteLease(string $claim): void
+    {
+        $holder = json_decode($claim, true);
+        if (! is_array($holder) || ($holder['database'] ?? null) !== self::databaseName()
+            || ! is_int($holder['pid'] ?? null) || ! is_string($holder['token'] ?? null)) {
+            throw new RuntimeException('D50: invalid inherited test database lease');
+        }
+        $statement = self::pdo(owner: true)->prepare(<<<'SQL'
+            SELECT 1 WHERE EXISTS (SELECT 1 FROM pg_locks l JOIN pg_stat_activity a ON a.pid=l.pid
+                WHERE l.locktype='advisory' AND l.granted AND l.objsubid=2
+                  AND l.classid=? AND l.objid=? AND l.pid=?
+                  AND l.database=(SELECT oid FROM pg_database WHERE datname=current_database())
+                  AND a.usename=current_user AND a.application_name=?)
+            SQL);
+        $statement->execute([self::LEASE_CLASS, self::LEASE_OBJECT, $holder['pid'], $holder['token']]);
+        if ($statement->fetchColumn() !== 1) {
+            throw new RuntimeException('D50: inherited test database lease is no longer held or does not match');
+        }
+    }
+
+    /** @param list<string>|null $protectedTables */
+    public static function assertRuntimeSafe(PDO $runtime, ?array $protectedTables = null): void
+    {
+        $unsafe = $runtime->query(<<<'SQL'
+            SELECT EXISTS (
+                SELECT 1 FROM pg_roles r
+                WHERE pg_has_role(current_user, r.oid, 'MEMBER')
+                  AND (r.rolsuper OR r.rolcreatedb OR r.rolcreaterole OR r.rolreplication OR r.rolbypassrls
+                       OR r.rolname = 'pg_write_all_data')
+            ) OR EXISTS (
+                SELECT 1 FROM pg_namespace n WHERE n.nspname = 'public'
+                  AND pg_has_role(current_user, n.nspowner, 'MEMBER')
+            ) OR EXISTS (
+                SELECT 1 FROM pg_database d WHERE d.datname = current_database()
+                  AND pg_has_role(current_user, d.datdba, 'MEMBER')
+            ) OR EXISTS (
+                SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = 'public' AND pg_has_role(current_user, c.relowner, 'MEMBER')
+            ) OR has_schema_privilege(current_user, 'public', 'CREATE')
+              OR has_database_privilege(current_user, current_database(), 'CREATE')
+              OR has_database_privilege(current_user, current_database(), 'TEMP')
+            SQL)->fetchColumn();
+        if ($unsafe) {
+            throw new RuntimeException('D60: runtime must not own schema/objects, inherit owner powers or create objects');
+        }
+
+        $protectedTables ??= array_keys(array_filter(
+            MigrationTables::ownership(dirname(__DIR__).'/database/migrations'),
+            static fn (string $module): bool => $module === 'ledger',
+        ));
+        $probe = $runtime->prepare(<<<'SQL'
+            SELECT has_table_privilege(current_user, c.oid, 'INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+                OR has_any_column_privilege(current_user, c.oid, 'INSERT,UPDATE,REFERENCES')
+            FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public' AND c.relname = :table
+            SQL);
+        foreach ($protectedTables as $table) {
+            $probe->execute(['table' => $table]);
+            if ($probe->fetchColumn()) {
+                throw new RuntimeException("D60: runtime has direct DML grants on protected ledger table {$table}");
+            }
+        }
+    }
+
+    private static function required(string $name): string
+    {
+        $value = $_ENV[$name] ?? $_SERVER[$name] ?? getenv($name);
+        if (! is_string($value) || $value === '') {
+            throw new RuntimeException("M-33: required test database environment missing: {$name}");
+        }
+
+        return $value;
+    }
+}

@@ -1,0 +1,61 @@
+{
+  "$id": "urn:billium:spec:2026-10:feed/selection.v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "billium.feed.selection.v1"
+    },
+    "subscriptionRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "scope": {
+      "$ref": "urn:billium:spec:2026-10:feed/defs.json#/$defs/scope"
+    },
+    "eventContractRevision": {
+      "enum": [
+        "events-2026-10-v1",
+        "events-2026-10-v2"
+      ]
+    },
+    "envelopeSchemas": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "enum": [
+          "billium.event.v1",
+          "billium.event.v2"
+        ]
+      }
+    },
+    "eventTypes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "selectionDigest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    },
+    "nextCursor": {
+      "type": "string",
+      "minLength": 1
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    }
+  },
+  "required": [
+    "schema",
+    "subscriptionRef",
+    "scope",
+    "eventContractRevision",
+    "envelopeSchemas",
+    "eventTypes",
+    "selectionDigest",
+    "nextCursor",
+    "digest"
+  ],
+  "additionalProperties": false
+}

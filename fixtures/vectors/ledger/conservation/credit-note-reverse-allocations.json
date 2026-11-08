@@ -1,0 +1,183 @@
+{
+  "id": "ledger/conservation/credit-note-reverse-allocations",
+  "description": "D60: credit note30 against invoice100; allocated70 + credited30 + open0.",
+  "spec_refs": [
+    "BC-CNF-10",
+    "REQ-ACC-10",
+    "D60",
+    "INV-09",
+    "INV-13"
+  ],
+  "profiles": [
+    "php"
+  ],
+  "given": {
+    "caller": {
+      "sellerRef": "seller-a",
+      "environment": "test",
+      "installationRef": "inst-test",
+      "sourceAuthorities": [
+        "embedded-commerz"
+      ]
+    }
+  },
+  "script": [
+    {
+      "op": "ledger.reset",
+      "args": {}
+    },
+    {
+      "op": "money.allocate",
+      "args": {
+        "total": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "ratios": [
+          "10000"
+        ]
+      }
+    },
+    {
+      "op": "ledger.obligation.record",
+      "args": {
+        "commandKey": "key-o1",
+        "billingAccountRef": "account-a",
+        "obligationRef": "o1",
+        "basisRef": "basis-o1",
+        "customerRef": "customer-a",
+        "componentRef": "component-o1",
+        "amount": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "termsDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "taxSnapshotRef": "tax-o1"
+      }
+    },
+    {
+      "op": "ledger.intent.declare",
+      "args": {
+        "commandKey": "key-intent-a",
+        "billingAccountRef": "account-a",
+        "businessIntentRef": "intent-a",
+        "currency": "RUB",
+        "obligationRefs": [
+          "o1"
+        ],
+        "policyVersion": "pro_rata_open/1"
+      }
+    },
+    {
+      "op": "ledger.invoice.create",
+      "args": {
+        "commandKey": "invoice-create",
+        "billingAccountRef": "account-a",
+        "invoiceRef": "invoice-a",
+        "customerRef": "customer-a",
+        "lines": [
+          {
+            "obligationRef": "o1"
+          }
+        ],
+        "snapshot": {
+          "buyer": "customer-a"
+        }
+      }
+    },
+    {
+      "op": "ledger.invoice.issue",
+      "args": {
+        "commandKey": "invoice-issue",
+        "billingAccountRef": "account-a",
+        "invoiceRef": "invoice-a"
+      }
+    },
+    {
+      "op": "ledger.observe",
+      "args": {
+        "json_text": "{\"schema\":\"payment.observation.v1\",\"eventId\":\"01JBX5Q0Z8M3N4P7R9S2000001\",\"sourceAuthority\":\"embedded-commerz\",\"sourceLineage\":\"L1\",\"partitionRef\":\"part-1\",\"sourceSequence\":1,\"installationRef\":\"inst-test\",\"environment\":\"test\",\"sellerRef\":\"seller-a\",\"operationRef\":\"op-1\",\"operationKind\":\"charge\",\"businessIntentRef\":\"intent-a\",\"operationRevision\":1,\"state\":\"succeeded\",\"currency\":\"RUB\",\"requested\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"authorizedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"capturedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"refundedTotal\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"providerAccountRef\":\"pa-1\",\"evidenceRef\":\"ev-1\",\"observedAt\":\"2026-10-29T10:00:00Z\",\"recordedAt\":\"2026-10-29T10:00:01Z\",\"contentDigest\":\"sha256:086a280c314cd529984bcb32032507f95dcfef1bbbe5ab971d95f4f7b4a50aec\"}"
+      }
+    },
+    {
+      "op": "ledger.credit_note",
+      "args": {
+        "commandKey": "note-key",
+        "billingAccountRef": "account-a",
+        "creditNoteRef": "note-a",
+        "invoiceRef": "invoice-a",
+        "mode": "reverse_allocations",
+        "lines": [
+          {
+            "obligationRef": "o1",
+            "amount": {
+              "amount": "30.00",
+              "currency": "RUB"
+            }
+          }
+        ],
+        "reason": "goodwill"
+      }
+    },
+    {
+      "op": "ledger.query",
+      "args": {
+        "query": "obligation",
+        "selector": {
+          "obligationRef": "o1"
+        }
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {}
+    },
+    {
+      "ok": {
+        "parts": [
+          {
+            "amount": "100.00",
+            "currency": "RUB"
+          }
+        ]
+      }
+    },
+    {
+      "ok": {}
+    },
+    {
+      "ok": {}
+    },
+    {
+      "ok": {}
+    },
+    {
+      "ok": {}
+    },
+    {
+      "ok": {}
+    },
+    {
+      "ok": {
+        "mode": "reverse_allocations"
+      }
+    },
+    {
+      "ok": {
+        "allocated": {
+          "amount": "70.00",
+          "currency": "RUB"
+        },
+        "credited": {
+          "amount": "30.00",
+          "currency": "RUB"
+        },
+        "open": {
+          "amount": "0.00",
+          "currency": "RUB"
+        }
+      }
+    }
+  ]
+}

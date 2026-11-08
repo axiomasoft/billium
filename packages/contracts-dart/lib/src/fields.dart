@@ -38,6 +38,24 @@ Map<String, Object?>? optionalObject(Map<String, Object?> raw, String key) {
   return value is Map ? value.cast() : throw _wrongType(key, 'object');
 }
 
+List<Object?> requireList(Map<String, Object?> raw, String key) =>
+    optionalList(raw, key) ?? (throw _missing(key));
+
+List<Object?>? optionalList(Map<String, Object?> raw, String key) {
+  final value = raw[key];
+  if (value == null) return null;
+  return value is List ? value.cast<Object?>() : throw _wrongType(key, 'array');
+}
+
+bool requireBool(Map<String, Object?> raw, String key) =>
+    optionalBool(raw, key) ?? (throw _missing(key));
+
+bool? optionalBool(Map<String, Object?> raw, String key) {
+  final value = raw[key];
+  if (value == null) return null;
+  return value is bool ? value : throw _wrongType(key, 'boolean');
+}
+
 ProblemException _missing(String key) => ProblemException(
   ProblemCode.validationInvalid,
   "member '$key' is required",

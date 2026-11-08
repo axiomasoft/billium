@@ -54,7 +54,7 @@ class ExportPhpTest(unittest.TestCase):
         self.assertIn("resources/currencies.php", files)
         self.assertIn("src/Enums/ProblemCode.php", files)
         envelopes = [name for name in files if name.startswith("src/Data/Envelopes/")]
-        self.assertEqual(len(envelopes), 15)
+        self.assertEqual(len(envelopes), 24)
         registry = json.loads(files["resources/spec/envelopes.json"])
         self.assertEqual(
             [entry["class"] for entry in registry["payment.find.v1"]["variants"]],
@@ -105,7 +105,7 @@ class ExportPhpTest(unittest.TestCase):
     def test_unmappable_member_is_refused(self) -> None:
         path = self.rev / "schema/payment/cancel.v1.json"
         document = json.loads(path.read_text(encoding="utf-8"))
-        document["properties"]["operationRef"] = {"type": "array"}
+        document["properties"]["operationRef"] = {"type": "number"}
         path.write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         result = self.export()
         self.assertEqual(result.returncode, 1)

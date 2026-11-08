@@ -166,7 +166,9 @@ reallocation, которая потребуется после succeeded refund;
 поля `payment.outcome.v1` отображаются так: `revision` → `operationRevision`, `status` → `state`,
 `merchantAccountRef` → `providerAccountRef`, `providerEvidenceRef` → `evidenceRef`. Суммы — MoneyWire
 (D29), время — RFC 3339 UTC. Наблюдение не несёт `commandKey`: identity — `eventId`, экономическая
-identity — (`sellerRef`, `operationRef`, `operationRevision`).
+identity — (`installationRef`, `environment`, `sellerRef`, `sourceAuthority`, `providerAccountRef`,
+`operationRef`, `operationRevision`), уточнение scope по D60. Экономический materialDigest отделён
+от полного transport contentDigest; точная нормализация `ledger-material/1` — BC-ENV-29 ревизии (D60).
 
 | Поле | Тип wire | Обязательно | Семантика | REQ-CON-27 |
 |:--|:--|:--|:--|:--|
@@ -198,8 +200,9 @@ Dedupe и порядок у получателя (одна Tx: inbox → про�
 
 1. `eventId`: тот же `contentDigest` — duplicate, исходный receipt; иной — `billium.observation.conflict`,
    quarantine (REQ-FAIL-04).
-2. (`sellerRef`, `operationRef`, `operationRevision`): та же revision с иным содержимым —
-   `billium.observation.conflict`; revision ≤ применённой — без эффекта, totals не понижаются (REQ-FAIL-13).
+2. Economic identity в полном source scope выше: та же revision с иным materialDigest —
+   `billium.observation.conflict`; тот же materialDigest с новым delivery/evidence — без повторного
+   эффекта. Совместимая revision ≤ применённой не понижает totals (REQ-FAIL-13, D60).
 3. (`sourceLineage`, `partitionRef`, `sourceSequence`): применяется `applied_sequence + 1`; пропуск — custody
    и hold, `billium.observation.parked`, запрос пропуска у источника; `sourceSequence` ≤ применённой с иным
    `eventId` или регресс lineage (источник восстановлен ниже применённой revision) — partition
@@ -222,6 +225,19 @@ Dedupe и порядок у получателя (одна Tx: inbox → про�
 allow-list metadata, не меняются (INV-13). Credit note — отдельный документ со своим номером и
 ссылкой на invoice (REQ-CON-25). Queries только читают и не выдают нерешённое за успех.
 
+### Ledger read-ответы и due-policy (D60)
+
+Аддитивные `ledger.payment_status.v1` и `ledger.due_obligations.v1` определены в ревизии 2026-10,
+BC-ENV-27. paymentStatus различает observed actual и последнюю согласованную applied проекцию,
+возвращает financialHold/exposure/spendable/projectionStatus/pendingAllocationReason/bootstrap/reconciliation.
+Деньги — MoneyWire; hold или отсутствие applied означает spendable=0, даже при видимом captured actual.
+Сверка consistent не является доказательством полноты источника (REQ-CON-14, D48, D57, D60, D63).
+
+dueObligations принимает selector.billingAccountRef/asOf/limit и необязательный cursor; ответ содержит
+кандидатов account в порядке (due_at,id), а не разрешение collection. dueAt=null исключает автоматический
+выбор без fallback к createdAt. Ненулевые dueAt/collectionEligibleAt имеют version/source-ref/snapshot-digest;
+изменение политики, включая отключение auto-due, — отдельная keyed команда с provenance (INV-14, D60).
+
 ## События и receipts
 
 Событие — outbox той же транзакции (REQ-CON-18): `eventId` (ULID), `eventType`, `schemaVersion`,
@@ -241,6 +257,19 @@ identity и содержимое; потребитель дедуплициру�
 Типы событий v1: `payment.outcome.v1`, `obligation.created.v1`, `obligation.adjusted.v1`,
 `invoice.issued.v1`, `credit_note.issued.v1`, `allocation.applied.v1`, `discrepancy.recorded.v1`;
 экспорт в учёт — факты для `billium-finbridge` (REQ-CON-22, REQ-CON-35) со стабильным `sourceFactRef`.
+
+Ledger публикует `payment.outcome.v1` в оболочке `billium.event.v1` в той же транзакции,
+что и первое применение charge observation в режиме `assign` или `hold`. `aggregateRef` —
+operationRef платежа, `revision` — revision наблюдения, `payload` — сохранённое тело
+AllocationReceipt этого применения. Это включает изменение только refundedTotal без новых
+allocations и discrepancy; replay и `stale` не создают событие повторно.
+
+`ReverseAllocation.allocationRef` принимает исходную строковую ссылку `Allocate` либо целочисленный
+id положительной строки журнала. Частичный reversal возвращает этот id в
+`remainder_allocation_ref` своего immutable receipt; при отсутствии остатка поле равно `null`.
+Возвращённый id можно передать следующему `ReverseAllocation`, сохраняя проверки seller,
+environment, billing account и уникальность reversal исходной строки. Числовая строка остаётся
+строковой ссылкой `Allocate`, поэтому прежние ссылки не меняют значения.
 
 ## Ошибки
 
@@ -266,6 +295,10 @@ identity и содержимое; потребитель дедуплициру�
 | `billium.allocation.reallocation_required` | новая allocation из платежа с `reallocation_required` после refund | нет | выполнить `allocation.reallocate.v1`, затем новый ключ | stored | INV-09, D35, D31 |
 | `billium.installation.quarantined` | нет допуска writer `WriterAdmission`: restore, клон, иная incarnation, lease занят | нет | ждать допуска writer | none | REQ-FAIL-15, INV-02, D34 |
 | `billium.transport.unavailable` | сервер недоступен / timeout | да, тем же ключом | повторить тот же envelope | none | REQ-CON-05, INV-04, M-45 |
+| `billium.allocation.exceeds_open` | сумма allocation или credit note больше открытой суммы obligation; уменьшение obligation ниже распределённого | нет | уменьшить сумму или пересмотреть распределения; новый ключ | stored | REQ-CON-20, D31, D47 |
+| `billium.allocation.exceeds_available` | сумма allocation больше доступного остатка платежа или customer credit | нет | уменьшить сумму или дождаться доступного остатка; новый ключ | stored | REQ-CON-20, D31, D47 |
+| `billium.invoice.transition_invalid` | команда недопустима в текущем статусе invoice или allocation | нет | выбрать допустимую для текущего статуса команду; новый ключ | stored | REQ-CON-20, D31, D47 |
+| `billium.reference.unknown` | ссылка на obligation, invoice, payment, credit или allocation не найдена в scope seller; чужой seller не раскрывается | да, тем же ключом | проверить ссылку в scope seller или дождаться зависимости; повторить тем же ключом | none | REQ-CON-20, INV-14, D31, D47 |
 
 Receipt policy — только колонка Receipt (M-45, D31). У наблюдений ключа команды нет: receipt — по `eventId` (`stored по eventId`: повтор доставки с тем же digest возвращает его, иной digest — `billium.observation.conflict`); `parked` — состояние custody, не терминальный receipt: повторная доставка получает текущий статус custody или, после прихода зависимости, исход применения. `stored` — отказ по бизнес-состоянию сохраняется
 как receipt ключа: повтор того же envelope возвращает его, другой digest — `billium.idempotency.conflict`.

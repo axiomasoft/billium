@@ -22,7 +22,11 @@ enum ProblemCode {
   invoiceFrozen('billium.invoice.frozen', 'invoice', false, false, 'stored'),
   allocationReallocationRequired('billium.allocation.reallocation_required', 'allocation', false, false, 'stored'),
   installationQuarantined('billium.installation.quarantined', 'installation', false, true, 'none'),
-  transportUnavailable('billium.transport.unavailable', 'transport', true, true, 'none');
+  transportUnavailable('billium.transport.unavailable', 'transport', true, true, 'none'),
+  allocationExceedsOpen('billium.allocation.exceeds_open', 'allocation', false, false, 'stored'),
+  allocationExceedsAvailable('billium.allocation.exceeds_available', 'allocation', false, false, 'stored'),
+  invoiceTransitionInvalid('billium.invoice.transition_invalid', 'invoice', false, false, 'stored'),
+  referenceUnknown('billium.reference.unknown', 'reference', true, true, 'none');
 
   const ProblemCode(
     this.value,

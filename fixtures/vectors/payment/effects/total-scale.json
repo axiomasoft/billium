@@ -1,0 +1,26 @@
+{
+  "id": "payment/effects/total-scale",
+  "spec_refs": [
+    "BC-ENV-30"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"bindingRevision\":\"binding:original\",\"digest\":\"sha256:bec884a2c15a682fe061660b8ea0520d06f8d21b8df96bfa1d644cc3bb32dbac\",\"effectTotal\":\"1.0\",\"environment\":\"test\",\"installationRef\":\"inst-test\",\"merchantAccountRef\":\"merchant:original\",\"money\":{\"amount\":\"10.00\",\"currency\":\"RUB\"},\"occurredAt\":\"2026-10-28T10:00:00Z\",\"operationKind\":\"capture\",\"operationRef\":\"capture:1\",\"originalOperationRef\":\"charge:1\",\"providerEvidenceRef\":\"evidence:1\",\"revision\":1,\"schema\":\"payment.effect.outcome.v1\",\"sellerRef\":\"seller-a\",\"status\":\"succeeded\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.money.scale_invalid"
+      }
+    }
+  ]
+}

@@ -75,6 +75,16 @@
       }
     ]
   },
+  "allocation.reallocate.v1": {
+    "schemaId": "urn:billium:spec:2026-10:allocation/reallocate.v1.json",
+    "variants": [
+      {
+        "class": "ReallocatePayment",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
   "usage.fact.v1": {
     "schemaId": "urn:billium:spec:2026-10:usage/fact.v1.json",
     "variants": [
@@ -135,6 +145,26 @@
       }
     ]
   },
+  "ledger.payment_status.v1": {
+    "schemaId": "urn:billium:spec:2026-10:query/payment-status.v1.json",
+    "variants": [
+      {
+        "class": "PaymentStatus",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "ledger.due_obligations.v1": {
+    "schemaId": "urn:billium:spec:2026-10:query/due-obligations.v1.json",
+    "variants": [
+      {
+        "class": "DueObligations",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
   "billium.event.v1": {
     "schemaId": "urn:billium:spec:2026-10:event/event.v1.json",
     "variants": [
@@ -142,6 +172,66 @@
         "class": "EventEnvelope",
         "digestMember": "digest",
         "verifyDigest": false
+      }
+    ]
+  },
+  "payment.effect.outcome.v1": {
+    "schemaId": "urn:billium:spec:2026-10:payment/effect-outcome.v1.json",
+    "variants": [
+      {
+        "class": "PaymentEffectOutcome",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "billium.event.catalog.v1": {
+    "schemaId": "urn:billium:spec:2026-10:event/catalog.v1.json",
+    "variants": [
+      {
+        "class": "EventCatalog",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "billium.event.v2": {
+    "schemaId": "urn:billium:spec:2026-10:event/event.v2.json",
+    "variants": [
+      {
+        "class": "EventEnvelopeV2",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "billium.feed.selection.v1": {
+    "schemaId": "urn:billium:spec:2026-10:feed/selection.v1.json",
+    "variants": [
+      {
+        "class": "FeedSelection",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "billium.feed.page.v1": {
+    "schemaId": "urn:billium:spec:2026-10:feed/page.v1.json",
+    "variants": [
+      {
+        "class": "FeedPage",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "billium.feed.bootstrap.v1": {
+    "schemaId": "urn:billium:spec:2026-10:feed/bootstrap.v1.json",
+    "variants": [
+      {
+        "class": "FeedBootstrap",
+        "digestMember": "digest",
+        "verifyDigest": true
       }
     ]
   }

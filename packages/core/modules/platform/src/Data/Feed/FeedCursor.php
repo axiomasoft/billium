@@ -1,0 +1,14 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Billium\Platform\Data\Feed;
+
+use Billium\Contracts\Attributes\Api;
+
+/** D63: only the source authenticates this token; positions are diagnostic, not authority. */
+#[Api]
+final readonly class FeedCursor
+{
+    public function __construct(public string $token, public FeedPosition $position) {}
+}

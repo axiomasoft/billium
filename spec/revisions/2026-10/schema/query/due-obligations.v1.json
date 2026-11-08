@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-10:query/due-obligations.v1.json",
+  "title": "DueObligations",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "ledger.due_obligations.v1"
+    },
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "billingAccountRef": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+        },
+        "asOf": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/timestamp"
+        },
+        "obligations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "obligationRef": {
+                "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+              },
+              "billingAccountRef": {
+                "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+              },
+              "dueAt": {
+                "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/timestamp"
+              },
+              "duePolicyVersion": {
+                "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+              },
+              "sourcePolicyRef": {
+                "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+              },
+              "sourcePolicySnapshotDigest": {
+                "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+              },
+              "collectionEligibleAt": {
+                "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/timestamp"
+              },
+              "open": {
+                "$ref": "urn:billium:spec:2026-10:common/money-wire.json#/$defs/positive"
+              },
+              "revision": {
+                "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/counter"
+              }
+            },
+            "required": [
+              "obligationRef",
+              "billingAccountRef",
+              "dueAt",
+              "duePolicyVersion",
+              "sourcePolicyRef",
+              "sourcePolicySnapshotDigest",
+              "open",
+              "revision"
+            ]
+          }
+        },
+        "nextCursor": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+        }
+      },
+      "required": [
+        "billingAccountRef",
+        "asOf",
+        "obligations"
+      ]
+    }
+  },
+  "required": [
+    "schema",
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "result"
+  ]
+}

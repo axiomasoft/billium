@@ -1,0 +1,148 @@
+{
+  "id": "ledger/conservation/overpayment-unallocated",
+  "description": "D46: capture 120.00, due 100.00; exact 20.00 remains spendable.",
+  "spec_refs": [
+    "BC-CNF-10",
+    "REQ-ACC-10",
+    "D60",
+    "INV-09"
+  ],
+  "profiles": [
+    "php"
+  ],
+  "given": {
+    "caller": {
+      "sellerRef": "seller-a",
+      "environment": "test",
+      "installationRef": "inst-test",
+      "sourceAuthorities": [
+        "embedded-commerz"
+      ]
+    }
+  },
+  "script": [
+    {
+      "op": "ledger.reset",
+      "args": {}
+    },
+    {
+      "op": "money.allocate",
+      "args": {
+        "total": {
+          "amount": "120.00",
+          "currency": "RUB"
+        },
+        "ratios": [
+          "10000"
+        ]
+      }
+    },
+    {
+      "op": "ledger.obligation.record",
+      "args": {
+        "commandKey": "key-o1",
+        "billingAccountRef": "account-a",
+        "obligationRef": "o1",
+        "basisRef": "basis-o1",
+        "customerRef": "customer-a",
+        "componentRef": "component-o1",
+        "amount": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "termsDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "taxSnapshotRef": "tax-o1"
+      }
+    },
+    {
+      "op": "ledger.intent.declare",
+      "args": {
+        "commandKey": "key-intent-a",
+        "billingAccountRef": "account-a",
+        "businessIntentRef": "intent-a",
+        "currency": "RUB",
+        "obligationRefs": [
+          "o1"
+        ],
+        "policyVersion": "pro_rata_open/1"
+      }
+    },
+    {
+      "op": "ledger.observe",
+      "args": {
+        "json_text": "{\"schema\":\"payment.observation.v1\",\"eventId\":\"01JBX5Q0Z8M3N4P7R9S2000001\",\"sourceAuthority\":\"embedded-commerz\",\"sourceLineage\":\"L1\",\"partitionRef\":\"part-1\",\"sourceSequence\":1,\"installationRef\":\"inst-test\",\"environment\":\"test\",\"sellerRef\":\"seller-a\",\"operationRef\":\"op-1\",\"operationKind\":\"charge\",\"businessIntentRef\":\"intent-a\",\"operationRevision\":1,\"state\":\"succeeded\",\"currency\":\"RUB\",\"requested\":{\"amount\":\"120.00\",\"currency\":\"RUB\"},\"authorizedTotal\":{\"amount\":\"120.00\",\"currency\":\"RUB\"},\"capturedTotal\":{\"amount\":\"120.00\",\"currency\":\"RUB\"},\"refundedTotal\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"providerAccountRef\":\"pa-1\",\"evidenceRef\":\"ev-1\",\"observedAt\":\"2026-10-29T10:00:00Z\",\"recordedAt\":\"2026-10-29T10:00:01Z\",\"contentDigest\":\"sha256:319efcc964e5a77c28ab6692506f7ef47effe10fab63f61a3aee6b665dd0d728\"}"
+      }
+    },
+    {
+      "op": "ledger.query",
+      "args": {
+        "query": "obligation",
+        "selector": {
+          "obligationRef": "o1"
+        }
+      }
+    },
+    {
+      "op": "ledger.query",
+      "args": {
+        "query": "paymentStatus",
+        "selector": {
+          "paymentRef": "op-1"
+        }
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {}
+    },
+    {
+      "ok": {
+        "parts": [
+          {
+            "amount": "120.00",
+            "currency": "RUB"
+          }
+        ]
+      }
+    },
+    {
+      "ok": {}
+    },
+    {
+      "ok": {}
+    },
+    {
+      "ok": {
+        "allocated_minor": "10000",
+        "unallocated_minor": "2000",
+        "spendable_minor": "2000"
+      }
+    },
+    {
+      "ok": {
+        "allocated": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "credited": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "open": {
+          "amount": "0.00",
+          "currency": "RUB"
+        }
+      }
+    },
+    {
+      "ok": {
+        "spendable": {
+          "amount": "20.00",
+          "currency": "RUB"
+        },
+        "reallocationRequired": false
+      }
+    }
+  ]
+}

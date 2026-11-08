@@ -129,7 +129,8 @@
         "partially_paid",
         "paid",
         "uncollectible",
-        "void"
+        "void",
+        "discarded"
       ]
     },
     "receiptKind": {
@@ -164,7 +165,8 @@
         "invoice",
         "allocationByOperation",
         "refundAuthorization",
-        "readRender"
+        "readRender",
+        "dueObligations"
       ]
     },
     "roundingMode": {
@@ -196,7 +198,11 @@
         "billium.invoice.frozen",
         "billium.allocation.reallocation_required",
         "billium.installation.quarantined",
-        "billium.transport.unavailable"
+        "billium.transport.unavailable",
+        "billium.allocation.exceeds_open",
+        "billium.allocation.exceeds_available",
+        "billium.invoice.transition_invalid",
+        "billium.reference.unknown"
       ]
     },
     "problemCategory": {
@@ -214,6 +220,7 @@
         "operation",
         "policy",
         "recovery",
+        "reference",
         "refund",
         "schema",
         "transport",
@@ -226,6 +233,33 @@
       "enum": [
         "stored",
         "none"
+      ]
+    },
+    "projectionStatus": {
+      "enum": [
+        "current",
+        "allocation_pending",
+        "held_discrepancy",
+        "recovery_required"
+      ]
+    },
+    "reconciliationStatus": {
+      "enum": [
+        "not_started",
+        "pending",
+        "consistent",
+        "discrepancy"
+      ]
+    },
+    "bootstrapStatus": {
+      "enum": [
+        "not_started",
+        "loading",
+        "verified",
+        "applying",
+        "ready",
+        "adopted",
+        "failed"
       ]
     },
     "commandSource": {

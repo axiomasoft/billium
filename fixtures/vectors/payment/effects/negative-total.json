@@ -1,0 +1,26 @@
+{
+  "id": "payment/effects/negative-total",
+  "spec_refs": [
+    "BC-ENV-30"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"bindingRevision\":\"binding:original\",\"digest\":\"sha256:3933b1e23e1b4a44719e71340d91a8be20ce653c9f7d20f6ca5cdb3e15bb30ba\",\"effectTotal\":\"-1.00\",\"environment\":\"test\",\"installationRef\":\"inst-test\",\"merchantAccountRef\":\"merchant:original\",\"money\":{\"amount\":\"10.00\",\"currency\":\"RUB\"},\"occurredAt\":\"2026-10-28T10:00:00Z\",\"operationKind\":\"capture\",\"operationRef\":\"capture:1\",\"originalOperationRef\":\"charge:1\",\"providerEvidenceRef\":\"evidence:1\",\"revision\":1,\"schema\":\"payment.effect.outcome.v1\",\"sellerRef\":\"seller-a\",\"status\":\"succeeded\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.money.scale_invalid"
+      }
+    }
+  ]
+}

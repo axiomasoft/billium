@@ -138,5 +138,33 @@
     "retryable": true,
     "sameKey": true,
     "receipt": "none"
+  },
+  {
+    "code": "billium.allocation.exceeds_open",
+    "category": "allocation",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored"
+  },
+  {
+    "code": "billium.allocation.exceeds_available",
+    "category": "allocation",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored"
+  },
+  {
+    "code": "billium.invoice.transition_invalid",
+    "category": "invoice",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored"
+  },
+  {
+    "code": "billium.reference.unknown",
+    "category": "reference",
+    "retryable": true,
+    "sameKey": true,
+    "receipt": "none"
   }
 ]

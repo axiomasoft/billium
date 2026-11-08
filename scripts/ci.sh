@@ -40,6 +40,11 @@ layer_lint() {
     need_path scripts/spec/lint-vectors.py
     python3 -m unittest discover -s scripts/spec/tests -p test_lint_vectors.py
     python3 scripts/spec/lint-vectors.py
+    python3 -m unittest discover -s scripts/lint/tests -p 'test_migrations.py'
+    python3 scripts/lint/migrations.py
+    python3 -m unittest discover -s scripts/lint/tests -p 'test_acceptance_groups.py'
+    python3 scripts/lint/acceptance-groups.py --phase P3
+    python3 -m unittest discover -s scripts/lint/tests -p 'test_product_identities.py'
 }
 
 layer_derived() {
@@ -67,6 +72,10 @@ layer_php() {
     vendor/bin/pint --test
     vendor/bin/phpstan analyse --memory-limit=1G
     vendor/bin/rector process --dry-run
+    need_path scripts/db/preflight.php
+    php scripts/db/preflight.php
+    python3 -m unittest discover -s scripts/lint/tests -p test_test_discovery.py
+    python3 scripts/lint/test-discovery.py
     vendor/bin/pest
     need_path scripts/smoke/consumer-install.sh
     bash scripts/smoke/consumer-install.sh php
@@ -90,12 +99,13 @@ layer_dart() {
 
 layer_conformance() {
     need_tool python3
+    need_tool php
     need_path conformance/runner/run.py
     need_path conformance/adapters.json
     need_path conformance/oracles/jcs/oracle.py
     python3 -m unittest discover -s conformance/tests
     python3 conformance/runner/run.py --check-golden
-    python3 conformance/runner/run.py --adapter php
+    php conformance/adapters/php/bin/with-database-lease.php python3 conformance/runner/run.py --adapter php
     python3 conformance/runner/run.py --adapter dart
 }
 

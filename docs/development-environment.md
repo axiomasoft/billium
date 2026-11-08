@@ -1,14 +1,16 @@
 # Development environment
 
 Billium uses the AgenTools agent environment with PHP and Dart enabled.
-Only the contracts packages exist so far (`packages/contracts`, `packages/contracts-dart`) plus the
-core skeleton `packages/core`; domain code, persistence and billing APIs start in P3.
+The contracts packages (`packages/contracts`, `packages/contracts-dart`) and P3 platform/ledger in
+`packages/core` are implemented. Module lifecycle and authority boundaries follow D55/D60/D62;
+PSP execution and legal documents are later modules, not qualified live capabilities (D59).
 
 ## Toolchain and checks
 
-Every check can run in the `toolchain` image (D33): PHP 8.4,
+The reproducible check environment is the `toolchain` image (D33/D50): PHP 8.4,
 Composer, Dart SDK 3.13.5 and the pinned Python tooling. `compose.yaml` runs it as `UID:GID` of the host user
-so files created in the container stay owned by you. PostgreSQL is not needed before P3.
+so files created in the container stay owned by you. Compose includes PostgreSQL 16 with distinct
+fixture/migration owner and unprivileged runtime roles (D50/D60); its credentials are throwaway test values.
 
 Plans exist only in the SwissKnifeman workspace `axioma` (see [planning](planning.md)).
 Before running the gate, clone or sync that workspace. Compose mounts the directory containing
@@ -21,6 +23,8 @@ For example, if the workspace checkout is `/srv/workspaces/axioma`, export
 ```bash
 docker compose build toolchain
 docker compose run --rm toolchain composer install --no-interaction
+docker compose up -d postgres
+docker compose run --rm toolchain php scripts/db/preflight.php
 docker compose run --rm toolchain bash scripts/ci.sh                  # full gate
 docker compose run --rm toolchain bash scripts/ci.sh --layer <lint|derived|php|dart|conformance>
 docker compose run --rm toolchain bash scripts/ci.sh --list           # layers and their subjects
@@ -44,6 +48,44 @@ frozen to 1.0 by major versions only: an entry that disappears must be kept with
 The consumer install smoke installs each package by copy into an empty project (no dev dependencies,
 no `laravel/framework`) and decodes the pilot `payment.execute.v1`. PB-15 (the previous-minor consumer reads
 `payment.outcome.v1`) is proved by the `compat/pilot` vectors in the `conformance` layer for both adapters.
+
+## PostgreSQL proofs and host commands (D21/D50/D60/D62)
+
+`scripts/db/preflight.php` fails on missing pdo_pgsql, PostgreSQL <16, unsafe runtime privileges,
+missing owner/runtime credentials or a database name without `_test`. Tests migrate with the owner,
+then use TRUNCATE isolation and real runtime transactions. RefreshDatabase/DatabaseTransactions are
+forbidden for these proofs; the suite lease serializes independent test runs against the same database.
+Four/six-worker drill processes do not take separate suite leases and are supervised by the owning test.
+
+```bash
+docker compose run --rm toolchain vendor/bin/pest --group ACC-RST-10
+docker compose run --rm toolchain vendor/bin/pest packages/core/tests/Feature/RuntimeRoleGrantsTest.php
+docker compose run --rm toolchain vendor/bin/pest --group ACC-CON-08,ACC-CON-09,ACC-CON-19
+docker compose run --rm toolchain vendor/bin/pest --group D60,D62
+```
+
+ACC-RST-10 uses 4 old workers, expand, 2 new workers alongside the old ones, interrupted/restarted
+backfill, separate constraint validation and old-code replay. PostgreSQL concurrency and committed rows
+are real; application generations and authority admission are test doubles. Contract DROP COLUMN waits
+until the rollback window; live deployment/PSP qualification and P10 load measurements remain separate (D59).
+
+In an installed host Laravel application, use these commands (the package repository has no host artisan):
+
+```bash
+php artisan billium:installation:init --installation-ref=your-installation
+php artisan billium:outbox:relay --limit=100
+php artisan billium:outbox:prune
+php artisan billium:ledger:drain-parked --limit=100
+php artisan billium:ledger:reconcile-refunds --limit=100 --after=3600
+```
+
+Init does not open an active financial session; activation/seal need the host authority/session procedure,
+not a comparison of commit numbers. Before prune, configure an explicit RET-01
+`billium.outbox.retention_floor_seconds` and the maintenance connection; unset floor refuses pruning.
+Required subscriptions and live snapshot retention pins also constrain prune. Reconciliation runs after
+the consistency window; dependency draining opens a fresh economic root per event (D48/D54/D60).
+See [outbox-feed operations](operations/outbox-feed.md), [data model](architecture/data-model.md)
+and [lock/invariant proofs](architecture/lock-model.md).
 
 ## Skills and providers
 
@@ -74,7 +116,7 @@ Shared namespaces are not enabled for memory access.
 Serena uses both `php` and `dart` language servers, configured in
 `.serena/project.yml`. The default PHP-oriented exclusion of `packages/`
 was removed for this repository, so future first-party packages can be indexed.
-There is no application source to index yet.
+Core platform/ledger source is available for indexing.
 
 MCP provides mAInd, Serena, and the local Perplexity service to Claude Code,
 Codex, and Cursor. Grok receives mAInd and Perplexity. Machine-specific paths
@@ -118,7 +160,7 @@ On another machine, establish provider trust before enabling local settings.
   read-only command payload.
 - Managed MCP and skills were checked for drift after setup; repeat sync
   reported no changes.
-- Application tests are pending application code and manifests.
+- P3 committed-data tests use PostgreSQL and TRUNCATE isolation (D50).
 
 The current `maind health` output still labels manual memory as
 `[FAIL] memory hook MODE=maind (manual)`, even though manual mode is the

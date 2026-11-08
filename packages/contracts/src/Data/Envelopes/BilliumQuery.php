@@ -22,6 +22,9 @@ final readonly class BilliumQuery extends Envelope
         public string $sellerRef,
         public string $query,
         public \stdClass $selector,
+        public ?string $asOf = null,
+        public ?int $limit = null,
+        public ?string $cursor = null,
     ) {
         parent::__construct(raw: $raw, schema: self::SCHEMA);
     }
@@ -35,6 +38,9 @@ final readonly class BilliumQuery extends Envelope
             sellerRef: self::string($raw, 'sellerRef'),
             query: self::string($raw, 'query'),
             selector: self::object($raw, 'selector'),
+            asOf: self::optString($raw, 'asOf'),
+            limit: self::optInt($raw, 'limit'),
+            cursor: self::optString($raw, 'cursor'),
         );
     }
 }

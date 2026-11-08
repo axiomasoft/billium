@@ -352,9 +352,85 @@
   {
     "id": "BC-ENV-25",
     "doc": "03-envelopes.md",
-    "line_digest": "sha256:70a40344a517ebf54772d06079a8d73137132212b4082ceb4e55a96979b53552",
+    "line_digest": "sha256:fdf2aa90eb14b1c701d094bf5e26880a372b9f5e7dc1b7fe87d7303641dde415",
     "refs": [
-      "REQ-CON-14"
+      "REQ-CON-14",
+      "D60"
+    ]
+  },
+  {
+    "id": "BC-ENV-26",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:4a09403ee643927c909a3e9678daf9bf3f59ffc4ff252b7cb0f05966d7593bb7",
+    "refs": [
+      "INV-09",
+      "REQ-FAIL-19",
+      "REQ-CON-20",
+      "REQ-CON-21",
+      "D35",
+      "D47"
+    ]
+  },
+  {
+    "id": "BC-ENV-27",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:ba472760302eba54074c3e1c4e0c99511f58551f61da10f8f0f767a6eee4e72a",
+    "refs": [
+      "REQ-CON-14",
+      "REQ-CON-20",
+      "INV-14",
+      "D60"
+    ]
+  },
+  {
+    "id": "BC-ENV-28",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:a72b30f3076a6037df5f501404609e219176d1a984c4dabc16af71246b75fae9",
+    "refs": [
+      "INV-14",
+      "REQ-CON-14",
+      "D60"
+    ]
+  },
+  {
+    "id": "BC-ENV-29",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:b65501e401f642e9fa22aacf9f16921520988203c3404709e656e1a825199ca0",
+    "refs": [
+      "INV-06",
+      "REQ-CON-27",
+      "D60"
+    ]
+  },
+  {
+    "id": "BC-ENV-30",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:b45171b935f7e4fbbb5d57b279f46067b0b383a99951898e8be047ebb5455836",
+    "refs": [
+      "D57",
+      "D60",
+      "D63",
+      "INV-06"
+    ]
+  },
+  {
+    "id": "BC-ENV-31",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:c3e7b9a5feb449d367937020612a5f06348ced6e56d362f4bb9018e4a2d6b180",
+    "refs": [
+      "D63",
+      "REQ-CON-20"
+    ]
+  },
+  {
+    "id": "BC-ENV-32",
+    "doc": "03-envelopes.md",
+    "line_digest": "sha256:2928f4b3acd19b14fe1845e3aabaa04df4234f921548c0e23c9cff795ea34575",
+    "refs": [
+      "D52",
+      "D60",
+      "D63",
+      "REQ-FAIL-22"
     ]
   },
   {

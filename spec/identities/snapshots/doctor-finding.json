@@ -1,1 +1,20 @@
-[]
+[
+  "module.composition_forbidden",
+  "module.composition_required",
+  "module.composition_unknown",
+  "module.core_api_unsupported",
+  "module.dependency_cycle",
+  "module.dependency_missing",
+  "module.dependency_range",
+  "module.duplicate_id",
+  "module.event_contract_conflict",
+  "module.historical_reader_missing",
+  "module.migration_unapplied",
+  "module.ownership_conflict",
+  "module.port_forbidden",
+  "module.port_missing",
+  "module.port_unknown",
+  "module.schema_read_unsupported",
+  "module.schema_write_unsupported",
+  "module.unknown"
+]

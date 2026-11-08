@@ -1,0 +1,56 @@
+{
+  "$id": "urn:billium:spec:2026-10:feed/defs.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "position": {
+      "type": "object",
+      "properties": {
+        "txId": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)$"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)$"
+        }
+      },
+      "required": [
+        "txId",
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "installationRef": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+        },
+        "channel": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+        },
+        "sourceAuthority": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+        },
+        "sellerRef": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+        },
+        "environment": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+        },
+        "lineage": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+        }
+      },
+      "required": [
+        "installationRef",
+        "channel",
+        "sourceAuthority",
+        "sellerRef",
+        "environment",
+        "lineage"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "id": "query/read/due-obligations-null-date",
+  "spec_refs": [
+    "BC-ENV-27",
+    "BC-ENV-25",
+    "INV-14"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"ledger.due_obligations.v1\",\"installationRef\":\"inst-1\",\"environment\":\"test\",\"sellerRef\":\"seller-1\",\"result\":{\"billingAccountRef\":\"account-1\",\"asOf\":\"2026-10-28T09:00:00Z\",\"obligations\":[{\"obligationRef\":\"obl-1\",\"billingAccountRef\":\"account-1\",\"dueAt\":null,\"duePolicyVersion\":\"host-due/1\",\"sourcePolicyRef\":\"host-policy-1\",\"sourcePolicySnapshotDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"open\":{\"amount\":\"10.00\",\"currency\":\"RUB\"},\"revision\":1}],\"nextCursor\":\"opaque-account-bound-page-2\"}}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

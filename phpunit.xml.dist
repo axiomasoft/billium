@@ -5,10 +5,14 @@
          colors="true"
          cacheDirectory=".phpunit.cache"
          failOnWarning="true"
+         failOnEmptyTestSuite="true"
          failOnRisky="true">
     <testsuites>
         <testsuite name="packages">
             <directory>packages/*/tests</directory>
+        </testsuite>
+        <testsuite name="core-modules">
+            <directory>packages/core/modules/*/tests</directory>
         </testsuite>
     </testsuites>
 </phpunit>

@@ -15,13 +15,22 @@ const Map<String, Envelope Function(Map<String, Object?>)> envelopeBuilders = {
   'PaymentAdmission': PaymentAdmission.fromRaw,
   'PaymentOutcome': PaymentOutcome.fromRaw,
   'PaymentObservation': PaymentObservation.fromRaw,
+  'ReallocatePayment': ReallocatePayment.fromRaw,
   'UsageFact': UsageFact.fromRaw,
   'UsageReceipt': UsageReceipt.fromRaw,
   'PrepareObligation': PrepareObligation.fromRaw,
   'EnsureBillingOccurrence': EnsureBillingOccurrence.fromRaw,
   'AuthorizeCollection': AuthorizeCollection.fromRaw,
   'BilliumQuery': BilliumQuery.fromRaw,
+  'PaymentStatus': PaymentStatus.fromRaw,
+  'DueObligations': DueObligations.fromRaw,
   'EventEnvelope': EventEnvelope.fromRaw,
+  'PaymentEffectOutcome': PaymentEffectOutcome.fromRaw,
+  'EventCatalog': EventCatalog.fromRaw,
+  'EventEnvelopeV2': EventEnvelopeV2.fromRaw,
+  'FeedSelection': FeedSelection.fromRaw,
+  'FeedPage': FeedPage.fromRaw,
+  'FeedBootstrap': FeedBootstrap.fromRaw,
 };
 
 /// `payment.execute.v1`.
@@ -414,6 +423,45 @@ final class PaymentObservation extends Envelope {
   final Map<String, Object?>? discrepancy;
 }
 
+/// `allocation.reallocate.v1`.
+final class ReallocatePayment extends Envelope {
+  static const String schemaName = 'allocation.reallocate.v1';
+
+  ReallocatePayment({
+    required super.raw,
+    required this.commandKey,
+    required this.environment,
+    required this.installationRef,
+    required this.mode,
+    required this.paymentRef,
+    required this.policyVersion,
+    required this.sellerRef,
+    this.digest,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory ReallocatePayment.fromRaw(Map<String, Object?> raw) => ReallocatePayment(
+        raw: raw,
+        commandKey: requireString(raw, 'commandKey'),
+        environment: requireString(raw, 'environment'),
+        installationRef: requireString(raw, 'installationRef'),
+        mode: requireString(raw, 'mode'),
+        paymentRef: requireString(raw, 'paymentRef'),
+        policyVersion: requireString(raw, 'policyVersion'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        digest: optionalString(raw, 'digest'),
+      );
+
+  final String commandKey;
+  final String environment;
+  final String installationRef;
+  final String mode;
+  final String paymentRef;
+  final String policyVersion;
+  final String sellerRef;
+  final String? digest;
+}
+
 /// `usage.fact.v1`.
 final class UsageFact extends Envelope {
   static const String schemaName = 'usage.fact.v1';
@@ -647,6 +695,9 @@ final class BilliumQuery extends Envelope {
     required this.sellerRef,
     required this.query,
     required this.selector,
+    this.asOf,
+    this.limit,
+    this.cursor,
   }) : super(schema: schemaName);
 
   /// Builds the typed envelope from an object that passed the schema of the revision.
@@ -657,6 +708,9 @@ final class BilliumQuery extends Envelope {
         sellerRef: requireString(raw, 'sellerRef'),
         query: requireString(raw, 'query'),
         selector: requireObject(raw, 'selector'),
+        asOf: optionalString(raw, 'asOf'),
+        limit: optionalInt(raw, 'limit'),
+        cursor: optionalString(raw, 'cursor'),
       );
 
   final String installationRef;
@@ -664,6 +718,63 @@ final class BilliumQuery extends Envelope {
   final String sellerRef;
   final String query;
   final Map<String, Object?> selector;
+  final String? asOf;
+  final int? limit;
+  final String? cursor;
+}
+
+/// `ledger.payment_status.v1`.
+final class PaymentStatus extends Envelope {
+  static const String schemaName = 'ledger.payment_status.v1';
+
+  PaymentStatus({
+    required super.raw,
+    required this.installationRef,
+    required this.environment,
+    required this.sellerRef,
+    required this.result,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory PaymentStatus.fromRaw(Map<String, Object?> raw) => PaymentStatus(
+        raw: raw,
+        installationRef: requireString(raw, 'installationRef'),
+        environment: requireString(raw, 'environment'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        result: requireObject(raw, 'result'),
+      );
+
+  final String installationRef;
+  final String environment;
+  final String sellerRef;
+  final Map<String, Object?> result;
+}
+
+/// `ledger.due_obligations.v1`.
+final class DueObligations extends Envelope {
+  static const String schemaName = 'ledger.due_obligations.v1';
+
+  DueObligations({
+    required super.raw,
+    required this.installationRef,
+    required this.environment,
+    required this.sellerRef,
+    required this.result,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory DueObligations.fromRaw(Map<String, Object?> raw) => DueObligations(
+        raw: raw,
+        installationRef: requireString(raw, 'installationRef'),
+        environment: requireString(raw, 'environment'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        result: requireObject(raw, 'result'),
+      );
+
+  final String installationRef;
+  final String environment;
+  final String sellerRef;
+  final Map<String, Object?> result;
 }
 
 /// `billium.event.v1`.
@@ -703,4 +814,256 @@ final class EventEnvelope extends Envelope {
   final String occurredAt;
   final String digest;
   final Map<String, Object?> payload;
+}
+
+/// `payment.effect.outcome.v1`.
+final class PaymentEffectOutcome extends Envelope {
+  static const String schemaName = 'payment.effect.outcome.v1';
+
+  PaymentEffectOutcome({
+    required super.raw,
+    required this.bindingRevision,
+    required this.digest,
+    required this.effectTotal,
+    required this.environment,
+    required this.installationRef,
+    required this.merchantAccountRef,
+    required this.money,
+    required this.occurredAt,
+    required this.operationKind,
+    required this.operationRef,
+    required this.originalOperationRef,
+    required this.providerEvidenceRef,
+    required this.revision,
+    required this.sellerRef,
+    required this.status,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory PaymentEffectOutcome.fromRaw(Map<String, Object?> raw) => PaymentEffectOutcome(
+        raw: raw,
+        bindingRevision: requireString(raw, 'bindingRevision'),
+        digest: requireString(raw, 'digest'),
+        effectTotal: requireString(raw, 'effectTotal'),
+        environment: requireString(raw, 'environment'),
+        installationRef: requireString(raw, 'installationRef'),
+        merchantAccountRef: requireString(raw, 'merchantAccountRef'),
+        money: requireMoney(raw, 'money'),
+        occurredAt: requireString(raw, 'occurredAt'),
+        operationKind: requireString(raw, 'operationKind'),
+        operationRef: requireString(raw, 'operationRef'),
+        originalOperationRef: requireString(raw, 'originalOperationRef'),
+        providerEvidenceRef: requireString(raw, 'providerEvidenceRef'),
+        revision: requireInt(raw, 'revision'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        status: requireString(raw, 'status'),
+      );
+
+  final String bindingRevision;
+  final String digest;
+  final String effectTotal;
+  final String environment;
+  final String installationRef;
+  final String merchantAccountRef;
+  final Money money;
+  final String occurredAt;
+  final String operationKind;
+  final String operationRef;
+  final String originalOperationRef;
+  final String providerEvidenceRef;
+  final int revision;
+  final String sellerRef;
+  final String status;
+}
+
+/// `billium.event.catalog.v1`.
+final class EventCatalog extends Envelope {
+  static const String schemaName = 'billium.event.catalog.v1';
+
+  EventCatalog({
+    required super.raw,
+    required this.eventContractRevision,
+    required this.events,
+    required this.digest,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory EventCatalog.fromRaw(Map<String, Object?> raw) => EventCatalog(
+        raw: raw,
+        eventContractRevision: requireString(raw, 'eventContractRevision'),
+        events: requireList(raw, 'events'),
+        digest: requireString(raw, 'digest'),
+      );
+
+  final String eventContractRevision;
+  final List<Object?> events;
+  final String digest;
+}
+
+/// `billium.event.v2`.
+final class EventEnvelopeV2 extends Envelope {
+  static const String schemaName = 'billium.event.v2';
+
+  EventEnvelopeV2({
+    required super.raw,
+    required this.eventId,
+    required this.eventType,
+    required this.sellerRef,
+    required this.aggregateRef,
+    required this.revision,
+    required this.occurredAt,
+    required this.digest,
+    required this.payload,
+    required this.eventContractRevision,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory EventEnvelopeV2.fromRaw(Map<String, Object?> raw) => EventEnvelopeV2(
+        raw: raw,
+        eventId: requireString(raw, 'eventId'),
+        eventType: requireString(raw, 'eventType'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        aggregateRef: requireString(raw, 'aggregateRef'),
+        revision: requireInt(raw, 'revision'),
+        occurredAt: requireString(raw, 'occurredAt'),
+        digest: requireString(raw, 'digest'),
+        payload: requireObject(raw, 'payload'),
+        eventContractRevision: requireString(raw, 'eventContractRevision'),
+      );
+
+  final String eventId;
+  final String eventType;
+  final String sellerRef;
+  final String aggregateRef;
+  final int revision;
+  final String occurredAt;
+  final String digest;
+  final Map<String, Object?> payload;
+  final String eventContractRevision;
+}
+
+/// `billium.feed.selection.v1`.
+final class FeedSelection extends Envelope {
+  static const String schemaName = 'billium.feed.selection.v1';
+
+  FeedSelection({
+    required super.raw,
+    required this.subscriptionRef,
+    required this.scope,
+    required this.eventContractRevision,
+    required this.envelopeSchemas,
+    required this.eventTypes,
+    required this.selectionDigest,
+    required this.nextCursor,
+    required this.digest,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory FeedSelection.fromRaw(Map<String, Object?> raw) => FeedSelection(
+        raw: raw,
+        subscriptionRef: requireString(raw, 'subscriptionRef'),
+        scope: requireObject(raw, 'scope'),
+        eventContractRevision: requireString(raw, 'eventContractRevision'),
+        envelopeSchemas: requireList(raw, 'envelopeSchemas'),
+        eventTypes: requireList(raw, 'eventTypes'),
+        selectionDigest: requireString(raw, 'selectionDigest'),
+        nextCursor: requireString(raw, 'nextCursor'),
+        digest: requireString(raw, 'digest'),
+      );
+
+  final String subscriptionRef;
+  final Map<String, Object?> scope;
+  final String eventContractRevision;
+  final List<Object?> envelopeSchemas;
+  final List<Object?> eventTypes;
+  final String selectionDigest;
+  final String nextCursor;
+  final String digest;
+}
+
+/// `billium.feed.page.v1`.
+final class FeedPage extends Envelope {
+  static const String schemaName = 'billium.feed.page.v1';
+
+  FeedPage({
+    required super.raw,
+    required this.subscriptionRef,
+    required this.selectionDigest,
+    required this.events,
+    required this.nextCursor,
+    required this.scannedThrough,
+    required this.hasMore,
+    required this.replayFloor,
+    required this.digest,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory FeedPage.fromRaw(Map<String, Object?> raw) => FeedPage(
+        raw: raw,
+        subscriptionRef: requireString(raw, 'subscriptionRef'),
+        selectionDigest: requireString(raw, 'selectionDigest'),
+        events: requireList(raw, 'events'),
+        nextCursor: requireString(raw, 'nextCursor'),
+        scannedThrough: requireObject(raw, 'scannedThrough'),
+        hasMore: requireBool(raw, 'hasMore'),
+        replayFloor: requireObject(raw, 'replayFloor'),
+        digest: requireString(raw, 'digest'),
+      );
+
+  final String subscriptionRef;
+  final String selectionDigest;
+  final List<Object?> events;
+  final String nextCursor;
+  final Map<String, Object?> scannedThrough;
+  final bool hasMore;
+  final Map<String, Object?> replayFloor;
+  final String digest;
+}
+
+/// `billium.feed.bootstrap.v1`.
+final class FeedBootstrap extends Envelope {
+  static const String schemaName = 'billium.feed.bootstrap.v1';
+
+  FeedBootstrap({
+    required super.raw,
+    required this.subscriptionRef,
+    required this.selectionDigest,
+    required this.scope,
+    required this.eventContractRevision,
+    required this.leaseRef,
+    required this.snapshotRef,
+    required this.snapshotDigest,
+    required this.snapshots,
+    required this.nextCursor,
+    required this.expiresAt,
+    required this.digest,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory FeedBootstrap.fromRaw(Map<String, Object?> raw) => FeedBootstrap(
+        raw: raw,
+        subscriptionRef: requireString(raw, 'subscriptionRef'),
+        selectionDigest: requireString(raw, 'selectionDigest'),
+        scope: requireObject(raw, 'scope'),
+        eventContractRevision: requireString(raw, 'eventContractRevision'),
+        leaseRef: requireString(raw, 'leaseRef'),
+        snapshotRef: requireString(raw, 'snapshotRef'),
+        snapshotDigest: requireString(raw, 'snapshotDigest'),
+        snapshots: requireObject(raw, 'snapshots'),
+        nextCursor: requireString(raw, 'nextCursor'),
+        expiresAt: requireString(raw, 'expiresAt'),
+        digest: requireString(raw, 'digest'),
+      );
+
+  final String subscriptionRef;
+  final String selectionDigest;
+  final Map<String, Object?> scope;
+  final String eventContractRevision;
+  final String leaseRef;
+  final String snapshotRef;
+  final String snapshotDigest;
+  final Map<String, Object?> snapshots;
+  final String nextCursor;
+  final String expiresAt;
+  final String digest;
 }

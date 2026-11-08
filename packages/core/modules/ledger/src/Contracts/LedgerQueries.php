@@ -1,0 +1,38 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Billium\Ledger\Contracts;
+
+use Billium\Contracts\Attributes\Api;
+use Billium\Contracts\Data\Money;
+use DateTimeImmutable;
+
+/** Authenticated, side-effect-free recovery reads (REQ-CON-14, INV-14, D35, D60). All amounts are MoneyWire. */
+#[Api]
+interface LedgerQueries
+{
+    /** @return array<string, mixed> */
+    public function paymentStatus(string $paymentRef, ?string $sourceAuthority = null): array;
+
+    /** @return array<string, mixed> */
+    public function obligation(string $obligationRef): array;
+
+    /** @return array<string, mixed> */
+    public function invoice(string $invoiceRef): array;
+
+    /** @return array<string, mixed> Original immutable receipts, including a known operation with no allocation yet. */
+    public function allocationByOperation(string $operationRef, ?string $sourceAuthority = null): array;
+
+    /** @return array<string, mixed> Original immutable business receipt body (ACC-RST-05). */
+    public function receipt(string $receiptRef): array;
+
+    /** @return array<string, mixed> Advisory D35 capacity; null amount asks about refunding all remaining normal capacity. */
+    public function refundAuthorization(string $paymentRef, ?Money $amount = null): array;
+
+    /** @return array<string, mixed> D60 eligibility candidates; never collection authorization. */
+    public function dueObligations(string $billingAccountRef, DateTimeImmutable $asOf, int $limit = 100, ?string $cursor = null): array;
+
+    /** @return array<string, mixed> Validated billium.query.v1 dispatch. readRender belongs to documents (P6). */
+    public function dispatch(string $json): array;
+}

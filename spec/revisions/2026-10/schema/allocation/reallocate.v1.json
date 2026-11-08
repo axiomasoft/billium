@@ -1,0 +1,47 @@
+{
+  "$id": "urn:billium:spec:2026-10:allocation/reallocate.v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "commandKey": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/commandKey"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "mode": {
+      "enum": ["credit_note", "reversal"]
+    },
+    "paymentRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "policyVersion": {
+      "type": "string",
+      "pattern": "^[a-z_]+/[0-9]+$"
+    },
+    "schema": {
+      "const": "allocation.reallocate.v1"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    }
+  },
+  "required": [
+    "schema",
+    "commandKey",
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "paymentRef",
+    "policyVersion",
+    "mode"
+  ],
+  "title": "ReallocatePayment",
+  "type": "object"
+}

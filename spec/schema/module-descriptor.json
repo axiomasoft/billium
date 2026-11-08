@@ -1,0 +1,260 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:modules:v1",
+  "title": "Реестр модулей ядра Billium (D55)",
+  "description": "Нормативная форма spec/modules.json. Только собственные модули Billium и проверяемые host bindings; секретов и исполняемых callback нет.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["specVersion", "coreApiVersion", "findingCodes", "retentionPolicies", "ports", "compositions", "modules"],
+  "properties": {
+    "specVersion": {"const": 1},
+    "coreApiVersion": {"$ref": "#/$defs/semver"},
+    "findingCodes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^module\\.[a-z_]+$"}
+    },
+    "retentionPolicies": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/retentionPolicy"}
+    },
+    "ports": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/port"}
+    },
+    "compositions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/composition"}
+    },
+    "modules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/module"}
+    }
+  },
+  "$defs": {
+    "semver": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"},
+    "moduleId": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+    "portId": {"type": "string", "pattern": "^[A-Z][A-Za-z0-9]*$"},
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "counter": {"type": "integer", "minimum": 0},
+    "presence": {"enum": ["M", "O", "X"]},
+    "operationClass": {
+      "enum": [
+        "new_intent",
+        "frozen_intent_completion",
+        "original_owner_refund",
+        "receipt_replay",
+        "historical_read",
+        "unknown_resolution",
+        "callback_custody",
+        "observed_fact_recording"
+      ]
+    },
+    "blockerCode": {
+      "enum": [
+        "pending_operations",
+        "unknown_effects",
+        "feed_gaps",
+        "unexported_facts",
+        "outbox_inbox_gaps",
+        "historical_reader_missing",
+        "dependent_module_active",
+        "active_bindings",
+        "secret_recovery_dependency",
+        "retention_floor"
+      ]
+    },
+    "apiRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["min", "maxExclusive"],
+      "properties": {
+        "min": {"$ref": "#/$defs/semver"},
+        "maxExclusive": {"$ref": "#/$defs/semver"}
+      }
+    },
+    "schemaRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["min", "max"],
+      "properties": {
+        "min": {"$ref": "#/$defs/counter"},
+        "max": {"$ref": "#/$defs/counter"}
+      }
+    },
+    "retentionPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "purge"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+        "purge": {"enum": ["never_automatic", "floor_bounded", "none"]}
+      }
+    },
+    "port": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "providedBy"],
+      "properties": {
+        "id": {"$ref": "#/$defs/portId"},
+        "providedBy": {"type": "string", "pattern": "^(host|[a-z][a-z0-9_]*)$"}
+      }
+    },
+    "composition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "modules", "server", "ports"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+        "modules": {
+          "type": "object",
+          "propertyNames": {"$ref": "#/$defs/moduleId"},
+          "additionalProperties": {"$ref": "#/$defs/presence"}
+        },
+        "server": {"$ref": "#/$defs/presence"},
+        "ports": {
+          "type": "object",
+          "propertyNames": {"$ref": "#/$defs/portId"},
+          "additionalProperties": {"const": "X"}
+        }
+      }
+    },
+    "dependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["moduleId", "apiRange"],
+      "properties": {
+        "moduleId": {"$ref": "#/$defs/moduleId"},
+        "apiRange": {"$ref": "#/$defs/apiRange"}
+      }
+    },
+    "migration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "checksum"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[0-9]{4}_[0-9]{2}_[0-9]{2}_[0-9]{6}_[a-z0-9_]+$"},
+        "version": {"type": "integer", "minimum": 1},
+        "checksum": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "publicEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eventType",
+        "envelopeSchema",
+        "eventContractRevision",
+        "payloadSchemaRef",
+        "payloadSchemaDigest",
+        "bootstrapMode",
+        "retentionPolicyRef"
+      ],
+      "properties": {
+        "eventType": {"type": "string", "pattern": "^[a-z][a-z0-9_.]*\\.v[0-9]+$"},
+        "envelopeSchema": {"type": "string", "pattern": "^billium\\.event\\.v[0-9]+$"},
+        "eventContractRevision": {"type": "string", "pattern": "^events-[0-9]{4}-[0-9]{2}-v[0-9]+$"},
+        "payloadSchemaRef": {"type": "string", "minLength": 1},
+        "payloadSchemaDigest": {"$ref": "#/$defs/digest"},
+        "bootstrapMode": {"enum": ["snapshot", "replay_only", "non_bootstrappable"]},
+        "snapshotSourceKey": {"type": "string", "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$"},
+        "retentionPolicyRef": {"type": "string", "minLength": 1}
+      },
+      "if": {"properties": {"bootstrapMode": {"const": "snapshot"}}},
+      "then": {"required": ["snapshotSourceKey"]},
+      "else": {"not": {"required": ["snapshotSourceKey"]}}
+    },
+    "internalCommand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commandType", "commandSchema", "payloadSchemaRef", "payloadSchemaDigest"],
+      "properties": {
+        "commandType": {"type": "string", "pattern": "^[a-z][a-z0-9_.]*\\.v[0-9]+$"},
+        "commandSchema": {"type": "string", "pattern": "^billium\\.command\\.v[0-9]+$"},
+        "payloadSchemaRef": {"type": "string", "minLength": 1},
+        "payloadSchemaDigest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "module": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "moduleId",
+        "schemaNamespace",
+        "moduleApiVersion",
+        "coreApiRange",
+        "migrationStream",
+        "currentSchemaVersion",
+        "supportedSchemaReadRange",
+        "supportedSchemaWriteRange",
+        "requiresModules",
+        "requiresPorts",
+        "optionalPorts",
+        "emits",
+        "consumes",
+        "ownedTables",
+        "configKeys",
+        "migrationIdentities",
+        "disablePolicy",
+        "retirementPolicy",
+        "uninstallPolicy",
+        "retentionClass",
+        "publicEvents",
+        "internalCommands"
+      ],
+      "properties": {
+        "moduleId": {"$ref": "#/$defs/moduleId"},
+        "schemaNamespace": {"type": "string", "pattern": "^billium\\.[a-z][a-z0-9_]*$"},
+        "moduleApiVersion": {"$ref": "#/$defs/semver"},
+        "coreApiRange": {"$ref": "#/$defs/apiRange"},
+        "migrationStream": {"$ref": "#/$defs/moduleId"},
+        "currentSchemaVersion": {"$ref": "#/$defs/counter"},
+        "supportedSchemaReadRange": {"$ref": "#/$defs/schemaRange"},
+        "supportedSchemaWriteRange": {"$ref": "#/$defs/schemaRange"},
+        "requiresModules": {"type": "array", "items": {"$ref": "#/$defs/dependency"}},
+        "requiresPorts": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/portId"}},
+        "optionalPorts": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/portId"}},
+        "emits": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_.]*\\.v[0-9]+$"}},
+        "consumes": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_.]*\\.v[0-9]+$"}},
+        "ownedTables": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^billium_[a-z0-9_]+$"}},
+        "configKeys": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^billium\\.[a-z_]+(\\.[a-z_]+)*$"}},
+        "migrationIdentities": {"type": "array", "items": {"$ref": "#/$defs/migration"}},
+        "disablePolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["dependents", "keeps", "hostObservationGuard"],
+          "properties": {
+            "dependents": {"enum": ["cascade", "block"]},
+            "keeps": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/operationClass"}},
+            "hostObservationGuard": {"type": "boolean"}
+          }
+        },
+        "retirementPolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["blockers"],
+          "properties": {
+            "blockers": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/blockerCode"}}
+          }
+        },
+        "uninstallPolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["readBundleRequiredWithHistory", "schemaPurge", "purge"],
+          "properties": {
+            "readBundleRequiredWithHistory": {"const": true},
+            "schemaPurge": {"const": "never_automatic"},
+            "purge": {"const": "privileged_retention_operation"}
+          }
+        },
+        "retentionClass": {"type": "string", "minLength": 1},
+        "publicEvents": {"type": "array", "items": {"$ref": "#/$defs/publicEvent"}},
+        "internalCommands": {"type": "array", "items": {"$ref": "#/$defs/internalCommand"}}
+      }
+    }
+  }
+}

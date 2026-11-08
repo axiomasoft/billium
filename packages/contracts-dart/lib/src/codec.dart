@@ -16,8 +16,10 @@ const _problemSchema = 'urn:billium:spec:2026-10:problem/problem.json';
 
 /// Strict decode and canonical encode of the envelopes of the spec revision, plus the digest of D32.
 final class Codec {
-  /// Creates a codec; it holds no state.
-  const Codec();
+  /// Creates a codec, optionally pinned to explicitly negotiated client capabilities.
+  const Codec({this.supportedSchemas});
+
+  final List<String>? supportedSchemas;
 
   /// Decodes a JSON text. Checks run in order: JSON syntax, `schema`, fields, amounts (BC-ENV-03).
   ///
@@ -33,6 +35,12 @@ final class Codec {
     }
     final raw = value.cast<String, Object?>();
     final schema = raw['schema']! as String;
+    if (supportedSchemas != null && !supportedSchemas!.contains(schema)) {
+      throw const ProblemException(
+        ProblemCode.schemaUnsupported,
+        'Schema is outside the pinned client capabilities',
+      );
+    }
     final entry = envelopeRegistry[schema];
     if (entry == null) {
       throw ProblemException(
@@ -41,11 +49,38 @@ final class Codec {
       );
     }
 
+    if (schema == 'billium.event.v2' &&
+        raw['eventContractRevision'] != 'events-2026-10-v2') {
+      throw const ProblemException(
+        ProblemCode.schemaUnsupported,
+        'unknown pinned event catalog',
+      );
+    }
     final problem = SchemaValidator(schemas).check(entry.schemaId, raw);
     if (problem != null) {
       throw ProblemException(problem, 'the object does not match $schema');
     }
 
+    final effect = schema == 'payment.effect.outcome.v1'
+        ? raw
+        : (schema == 'billium.event.v2' ? raw['payload'] : null);
+    if (effect is Map &&
+        effect['operationRef'] == effect['originalOperationRef']) {
+      throw const ProblemException(
+        ProblemCode.validationInvalid,
+        'effect operationRef must differ from its root',
+      );
+    }
+    if (schema == 'billium.event.v2' &&
+        effect is Map &&
+        (raw['sellerRef'] != effect['sellerRef'] ||
+            raw['aggregateRef'] != effect['operationRef'] ||
+            raw['revision'] != effect['revision'])) {
+      throw const ProblemException(
+        ProblemCode.validationInvalid,
+        'effect envelope identity differs from its payload',
+      );
+    }
     final variant = entry.variants.firstWhere(
       (candidate) =>
           candidate.requires == null || raw.containsKey(candidate.requires),
@@ -59,6 +94,12 @@ final class Codec {
         ProblemCode.validationInvalid,
         '$member differs from the digest of the canonical form',
       );
+    }
+    if (schema == 'billium.feed.page.v1' && raw['events'] is List) {
+      for (final event in raw['events']! as List) {
+        // D63: nested events retain the same semantic and negotiated capability checks.
+        decode(canonicalizeValue(event));
+      }
     }
     return envelopeBuilders[variant.className]!(raw);
   }

@@ -1,0 +1,1024 @@
+{
+  "specVersion": 1,
+  "coreApiVersion": "1.0.0",
+  "findingCodes": [
+    "module.duplicate_id",
+    "module.unknown",
+    "module.dependency_cycle",
+    "module.dependency_missing",
+    "module.dependency_range",
+    "module.port_unknown",
+    "module.port_missing",
+    "module.port_forbidden",
+    "module.core_api_unsupported",
+    "module.schema_read_unsupported",
+    "module.schema_write_unsupported",
+    "module.migration_unapplied",
+    "module.composition_unknown",
+    "module.composition_forbidden",
+    "module.composition_required",
+    "module.historical_reader_missing",
+    "module.ownership_conflict",
+    "module.event_contract_conflict"
+  ],
+  "retentionPolicies": [
+    {
+      "id": "financial-permanent",
+      "purge": "never_automatic"
+    },
+    {
+      "id": "operational-floor",
+      "purge": "floor_bounded"
+    }
+  ],
+  "ports": [
+    {
+      "id": "AuthContext",
+      "providedBy": "host"
+    },
+    {
+      "id": "SellerContext",
+      "providedBy": "host"
+    },
+    {
+      "id": "AuthorizationVerdict",
+      "providedBy": "host"
+    },
+    {
+      "id": "FinancialSessionAdmission",
+      "providedBy": "host"
+    },
+    {
+      "id": "WriterAdmission",
+      "providedBy": "host"
+    },
+    {
+      "id": "PaymentDrivers",
+      "providedBy": "host"
+    },
+    {
+      "id": "PaymentObservationSink",
+      "providedBy": "ledger"
+    },
+    {
+      "id": "CollectionConsentGuard",
+      "providedBy": "host"
+    },
+    {
+      "id": "DocumentRenderer",
+      "providedBy": "host"
+    },
+    {
+      "id": "DocumentStorage",
+      "providedBy": "host"
+    },
+    {
+      "id": "DocumentDelivery",
+      "providedBy": "host"
+    },
+    {
+      "id": "TaxSnapshotPort",
+      "providedBy": "host"
+    },
+    {
+      "id": "EventPublisher",
+      "providedBy": "host"
+    }
+  ],
+  "compositions": [
+    {
+      "id": "embedded-commerz",
+      "modules": {
+        "platform": "M",
+        "ledger": "M",
+        "usage": "O",
+        "rating": "O",
+        "schedule": "O",
+        "documents": "O",
+        "execution": "X",
+        "collection": "X"
+      },
+      "server": "O",
+      "ports": {
+        "WriterAdmission": "X"
+      }
+    },
+    {
+      "id": "standalone-billium",
+      "modules": {
+        "platform": "M",
+        "ledger": "M",
+        "usage": "O",
+        "rating": "O",
+        "schedule": "O",
+        "documents": "O",
+        "execution": "O",
+        "collection": "O"
+      },
+      "server": "X",
+      "ports": {}
+    },
+    {
+      "id": "remote-billium",
+      "modules": {
+        "platform": "M",
+        "ledger": "M",
+        "usage": "O",
+        "rating": "O",
+        "schedule": "O",
+        "documents": "O",
+        "execution": "M",
+        "collection": "O"
+      },
+      "server": "M",
+      "ports": {}
+    },
+    {
+      "id": "ledger-only",
+      "modules": {
+        "platform": "M",
+        "ledger": "M",
+        "usage": "O",
+        "rating": "O",
+        "schedule": "O",
+        "documents": "O",
+        "execution": "X",
+        "collection": "X"
+      },
+      "server": "M",
+      "ports": {
+        "WriterAdmission": "X"
+      }
+    }
+  ],
+  "modules": [
+    {
+      "moduleId": "platform",
+      "schemaNamespace": "billium.platform",
+      "moduleApiVersion": "1.0.0",
+      "coreApiRange": {
+        "min": "1.0.0",
+        "maxExclusive": "2.0.0"
+      },
+      "migrationStream": "platform",
+      "currentSchemaVersion": 16,
+      "supportedSchemaReadRange": {
+        "min": 10,
+        "max": 16
+      },
+      "supportedSchemaWriteRange": {
+        "min": 10,
+        "max": 16
+      },
+      "requiresModules": [],
+      "requiresPorts": [],
+      "optionalPorts": [
+        "EventPublisher"
+      ],
+      "emits": [],
+      "consumes": [],
+      "ownedTables": [
+        "billium_idempotency_receipt",
+        "billium_outbox_event",
+        "billium_outbox_watermark",
+        "billium_money_commit_log",
+        "billium_installation_state",
+        "billium_financial_session",
+        "billium_financial_session_event",
+        "billium_module_state",
+        "billium_module_transitions",
+        "billium_event_contract",
+        "billium_outbox_delivery",
+        "billium_outbox_command",
+        "billium_outbox_command_delivery",
+        "billium_feed_subscription",
+        "billium_feed_bootstrap_lease",
+        "billium_feed_partition",
+        "billium_feed_bootstrap_session",
+        "billium_feed_bootstrap_item",
+        "billium_inbox_message",
+        "billium_inbox_conflict"
+      ],
+      "configKeys": [
+        "billium.connection",
+        "billium.installation_ref",
+        "billium.runner.max_attempts",
+        "billium.runner.root_deadline_ms",
+        "billium.financial_session.seal_lock_timeout_ms",
+        "billium.idempotency.lock_timeout_ms",
+        "billium.outbox.relay_batch",
+        "billium.outbox.claim_seconds",
+        "billium.outbox.retention_floor_seconds",
+        "billium.outbox.delivery_backoff_seconds",
+        "billium.outbox.delivery_budget",
+        "billium.feed.drain_batch",
+        "billium.feed.bootstrap_lease_seconds",
+        "billium.feed.bootstrap_batch",
+        "billium.inbox.retry_backoff_seconds",
+        "billium.inbox.retry_budget",
+        "billium.inbox.handler_compatibility",
+        "billium.inbox.retention_floor_seconds",
+        "billium.runtime_role.preflight",
+        "billium.modules.composition",
+        "billium.modules.enabled",
+        "billium.feed.signing_key",
+        "billium.outbox.maintenance_connection"
+      ],
+      "migrationIdentities": [
+        {
+          "id": "2026_10_20_000001_create_billium_append_only_function",
+          "version": 1,
+          "checksum": "sha256:9bb81a1faf85c36ab76e69ea3f5f7848f9ce70d82ff78ce149295c880e4385a5"
+        },
+        {
+          "id": "2026_10_20_000002_create_billium_idempotency_receipt_table",
+          "version": 2,
+          "checksum": "sha256:ec7530f8271f8f9e1296330211fd147a94aa9d42c24afc88fc32580468edd963"
+        },
+        {
+          "id": "2026_10_20_000003_create_billium_outbox_event_table",
+          "version": 3,
+          "checksum": "sha256:1e276842c58496184fff2b8a5979465b05aa34f0584457fc342034a7ebaf9133"
+        },
+        {
+          "id": "2026_10_20_000004_create_billium_outbox_watermark_table",
+          "version": 4,
+          "checksum": "sha256:9e58d0605790857d741cf35c89ea11651f787db9af5fe78678d455e984818ee0"
+        },
+        {
+          "id": "2026_10_20_000005_create_billium_money_commit_log_table",
+          "version": 5,
+          "checksum": "sha256:d09c31927a188b992f462eec3de464f57fce8deb372b0fe3a6fbe3fa70fb450a"
+        },
+        {
+          "id": "2026_10_20_000006_create_billium_installation_state_table",
+          "version": 6,
+          "checksum": "sha256:9459536679f957bc9d61502c8f40447dea6a3260eb2bf6701607a5e1c639ae04"
+        },
+        {
+          "id": "2026_10_20_000007_create_billium_financial_session_table",
+          "version": 7,
+          "checksum": "sha256:e0b1ffc48d87b52a5c2839594c3ab68fa2a80e78abc5655873d565ac77890505"
+        },
+        {
+          "id": "2026_10_20_000008_create_billium_financial_session_event_table",
+          "version": 8,
+          "checksum": "sha256:5715325544c3d74be3fe454941b4ec8f36f9d7b1b1528ffb5adc21116ed0dbc6"
+        },
+        {
+          "id": "2026_10_20_000009_create_billium_module_state_table",
+          "version": 9,
+          "checksum": "sha256:8f5286fb62f0e497c73aad934588eaac7cca6c5cb175db3136b2498fe31453d0"
+        },
+        {
+          "id": "2026_10_20_000010_create_billium_module_transitions_table",
+          "version": 10,
+          "checksum": "sha256:64fb3c887430c86d9e733a2bd9bb44c36dc5105fd0a9ccf576c0ba3646d2e840"
+        },
+        {
+          "id": "2026_10_28_000011_create_billium_event_protocol",
+          "version": 11,
+          "checksum": "sha256:86a702195ef8733726b6e673be3874db2e2ae8a65272ba14e2ea9ee0240ab95f"
+        },
+        {
+          "id": "2026_10_20_000101_create_billium_feed_partition_table",
+          "version": 12,
+          "checksum": "sha256:28f159bfa329823a3b9ebd6cf633393a1bea9a91eeb4d1665305d497c25bdcd5"
+        },
+        {
+          "id": "2026_10_20_000102_create_billium_inbox_message_table",
+          "version": 13,
+          "checksum": "sha256:ff74ff876e758afba68be11dd5f506f596091c20f83afbc35e8677c3b5d5d0ef"
+        },
+        {
+          "id": "2026_10_20_000103_create_billium_inbox_conflict_table",
+          "version": 14,
+          "checksum": "sha256:a5515bc471c69534423dabaa8405780f6a527ba493ea8d968249bb65fe6609d9"
+        },
+        {
+          "id": "2026_10_29_000012_guard_billium_session_and_partition_admission",
+          "version": 15,
+          "checksum": "sha256:d0c5ee326df883425dde0d4a15681aa7b101873a944f761544832e8588229f2b"
+        },
+        {
+          "id": "2026_10_29_000013_bind_billium_bootstrap_items_to_manifest",
+          "version": 16,
+          "checksum": "sha256:83ef3ccb8ad131d39ea94dc0e5509ac8856d1f27b2ca1f27ea7f072dd3899f12"
+        }
+      ],
+      "disablePolicy": {
+        "dependents": "block",
+        "keeps": [
+          "receipt_replay",
+          "historical_read",
+          "unknown_resolution",
+          "callback_custody",
+          "observed_fact_recording"
+        ],
+        "hostObservationGuard": false
+      },
+      "retirementPolicy": {
+        "blockers": [
+          "pending_operations",
+          "unknown_effects",
+          "feed_gaps",
+          "unexported_facts",
+          "outbox_inbox_gaps",
+          "historical_reader_missing",
+          "dependent_module_active",
+          "retention_floor"
+        ]
+      },
+      "uninstallPolicy": {
+        "readBundleRequiredWithHistory": true,
+        "schemaPurge": "never_automatic",
+        "purge": "privileged_retention_operation"
+      },
+      "retentionClass": "operational-floor",
+      "publicEvents": [],
+      "internalCommands": []
+    },
+    {
+      "moduleId": "ledger",
+      "schemaNamespace": "billium.ledger",
+      "moduleApiVersion": "1.0.0",
+      "coreApiRange": {
+        "min": "1.0.0",
+        "maxExclusive": "2.0.0"
+      },
+      "migrationStream": "ledger",
+      "currentSchemaVersion": 8,
+      "supportedSchemaReadRange": {
+        "min": 2,
+        "max": 8
+      },
+      "supportedSchemaWriteRange": {
+        "min": 2,
+        "max": 8
+      },
+      "requiresModules": [
+        {
+          "moduleId": "platform",
+          "apiRange": {
+            "min": "1.0.0",
+            "maxExclusive": "2.0.0"
+          }
+        }
+      ],
+      "requiresPorts": [
+        "AuthContext",
+        "SellerContext",
+        "AuthorizationVerdict",
+        "FinancialSessionAdmission"
+      ],
+      "optionalPorts": [],
+      "emits": [
+        "billium.event.v1"
+      ],
+      "consumes": [
+        "billium.query.v1",
+        "obligation.prepare.v1",
+        "payment.observation.v1"
+      ],
+      "ownedTables": [
+        "billium_allocation_receipt",
+        "billium_invoice",
+        "billium_obligation",
+        "billium_adjustment",
+        "billium_customer_credit",
+        "billium_settlement_intent",
+        "billium_settlement_target",
+        "billium_settlement_intent_closure",
+        "billium_observed_payment",
+        "billium_observed_payment_revision",
+        "billium_payment",
+        "billium_payment_revision",
+        "billium_allocation",
+        "billium_invoice_line",
+        "billium_credit_note",
+        "billium_ledger_discrepancy",
+        "billium_discrepancy_event",
+        "billium_observation_park",
+        "billium_refund_reconcile_progress"
+      ],
+      "configKeys": [
+        "billium.ledger.refund_reconcile_after_seconds"
+      ],
+      "migrationIdentities": [
+        {
+          "id": "2026_10_21_000001_create_billium_ledger",
+          "version": 1,
+          "checksum": "sha256:52361eefc1774b6b3ac1d38f189c8affbdbd1777039252da60499a0a79f7c132"
+        },
+        {
+          "id": "2026_10_21_000002_guard_billium_ledger",
+          "version": 2,
+          "checksum": "sha256:cb53662fa8235dab5f180840b5cb58ff97067da5829a240227ba857930cec324"
+        },
+        {
+          "id": "2026_10_21_000003_invoice_routines_billium_ledger",
+          "version": 3,
+          "checksum": "sha256:9e802b33f8c4f5c29be1da80d289c2453bdbddad912d374b96938ef94d13b532"
+        },
+        {
+          "id": "2026_10_21_000004_allocation_routines_billium_ledger",
+          "version": 4,
+          "checksum": "sha256:3e8a132d29a95c49d59be1a5d82a1064cc0f09bdc157ca786c7691d3875f07d7"
+        },
+        {
+          "id": "2026_10_21_000005_observation_routines_billium_ledger",
+          "version": 5,
+          "checksum": "sha256:7b1255c3f26c4376a657a2a40bb206177b8826d2d1480c91c632ba4eb5577b7b"
+        },
+        {
+          "id": "2026_10_29_000006_close_billium_ledger_review_gaps",
+          "version": 6,
+          "checksum": "sha256:f68ba047ba87c6d8d47f7760161b96ec6d9e02a7c3ac881fa073c796ad428ef0"
+        },
+        {
+          "id": "2026_10_29_000007_bind_billium_payment_receipts_and_creation_replay",
+          "version": 7,
+          "checksum": "sha256:9b5a481596e1116477a154e3c479564665483099256f313f4ad326fadee75c4b"
+        },
+        {
+          "id": "2026_10_29_000008_close_billium_projection_and_reversal_tails",
+          "version": 8,
+          "checksum": "sha256:77a32bbf48aadf0fcd4dc8f6312efef37e0fc65bfc73b6ecac84614b15f4fa92"
+        }
+      ],
+      "disablePolicy": {
+        "dependents": "block",
+        "keeps": [
+          "frozen_intent_completion",
+          "original_owner_refund",
+          "receipt_replay",
+          "historical_read",
+          "unknown_resolution",
+          "callback_custody",
+          "observed_fact_recording"
+        ],
+        "hostObservationGuard": true
+      },
+      "retirementPolicy": {
+        "blockers": [
+          "pending_operations",
+          "unknown_effects",
+          "feed_gaps",
+          "unexported_facts",
+          "outbox_inbox_gaps",
+          "historical_reader_missing",
+          "dependent_module_active",
+          "retention_floor"
+        ]
+      },
+      "uninstallPolicy": {
+        "readBundleRequiredWithHistory": true,
+        "schemaPurge": "never_automatic",
+        "purge": "privileged_retention_operation"
+      },
+      "retentionClass": "financial-permanent",
+      "publicEvents": [
+        {
+          "eventType": "obligation.created.v1",
+          "envelopeSchema": "billium.event.v1",
+          "eventContractRevision": "events-2026-10-v1",
+          "payloadSchemaRef": "spec/revisions/2026-10/schema/event/event.v1.json#/properties/payload",
+          "payloadSchemaDigest": "sha256:a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+          "bootstrapMode": "snapshot",
+          "snapshotSourceKey": "ledger.obligations",
+          "retentionPolicyRef": "financial-permanent"
+        },
+        {
+          "eventType": "obligation.adjusted.v1",
+          "envelopeSchema": "billium.event.v1",
+          "eventContractRevision": "events-2026-10-v1",
+          "payloadSchemaRef": "spec/revisions/2026-10/schema/event/event.v1.json#/properties/payload",
+          "payloadSchemaDigest": "sha256:a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+          "bootstrapMode": "snapshot",
+          "snapshotSourceKey": "ledger.obligations",
+          "retentionPolicyRef": "financial-permanent"
+        },
+        {
+          "eventType": "invoice.issued.v1",
+          "envelopeSchema": "billium.event.v1",
+          "eventContractRevision": "events-2026-10-v1",
+          "payloadSchemaRef": "spec/revisions/2026-10/schema/event/event.v1.json#/properties/payload",
+          "payloadSchemaDigest": "sha256:a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+          "bootstrapMode": "snapshot",
+          "snapshotSourceKey": "ledger.invoices",
+          "retentionPolicyRef": "financial-permanent"
+        },
+        {
+          "eventType": "credit_note.issued.v1",
+          "envelopeSchema": "billium.event.v1",
+          "eventContractRevision": "events-2026-10-v1",
+          "payloadSchemaRef": "spec/revisions/2026-10/schema/event/event.v1.json#/properties/payload",
+          "payloadSchemaDigest": "sha256:a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+          "bootstrapMode": "snapshot",
+          "snapshotSourceKey": "ledger.invoices",
+          "retentionPolicyRef": "financial-permanent"
+        },
+        {
+          "eventType": "allocation.applied.v1",
+          "envelopeSchema": "billium.event.v1",
+          "eventContractRevision": "events-2026-10-v1",
+          "payloadSchemaRef": "spec/revisions/2026-10/schema/event/event.v1.json#/properties/payload",
+          "payloadSchemaDigest": "sha256:a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+          "bootstrapMode": "snapshot",
+          "snapshotSourceKey": "ledger.allocations",
+          "retentionPolicyRef": "financial-permanent"
+        },
+        {
+          "eventType": "payment.outcome.v1",
+          "envelopeSchema": "billium.event.v1",
+          "eventContractRevision": "events-2026-10-v1",
+          "payloadSchemaRef": "spec/revisions/2026-10/schema/event/event.v1.json#/properties/payload",
+          "payloadSchemaDigest": "sha256:a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+          "bootstrapMode": "snapshot",
+          "snapshotSourceKey": "ledger.payments",
+          "retentionPolicyRef": "financial-permanent"
+        },
+        {
+          "eventType": "discrepancy.recorded.v1",
+          "envelopeSchema": "billium.event.v1",
+          "eventContractRevision": "events-2026-10-v1",
+          "payloadSchemaRef": "spec/revisions/2026-10/schema/event/event.v1.json#/properties/payload",
+          "payloadSchemaDigest": "sha256:a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+          "bootstrapMode": "snapshot",
+          "snapshotSourceKey": "ledger.discrepancies",
+          "retentionPolicyRef": "financial-permanent"
+        }
+      ],
+      "internalCommands": []
+    },
+    {
+      "moduleId": "usage",
+      "schemaNamespace": "billium.usage",
+      "moduleApiVersion": "1.0.0",
+      "coreApiRange": {
+        "min": "1.0.0",
+        "maxExclusive": "2.0.0"
+      },
+      "migrationStream": "usage",
+      "currentSchemaVersion": 0,
+      "supportedSchemaReadRange": {
+        "min": 0,
+        "max": 0
+      },
+      "supportedSchemaWriteRange": {
+        "min": 0,
+        "max": 0
+      },
+      "requiresModules": [
+        {
+          "moduleId": "platform",
+          "apiRange": {
+            "min": "1.0.0",
+            "maxExclusive": "2.0.0"
+          }
+        }
+      ],
+      "requiresPorts": [],
+      "optionalPorts": [],
+      "emits": [
+        "usage.receipt.v1"
+      ],
+      "consumes": [
+        "usage.fact.v1"
+      ],
+      "ownedTables": [],
+      "configKeys": [],
+      "migrationIdentities": [],
+      "disablePolicy": {
+        "dependents": "block",
+        "keeps": [
+          "receipt_replay",
+          "historical_read"
+        ],
+        "hostObservationGuard": false
+      },
+      "retirementPolicy": {
+        "blockers": [
+          "pending_operations",
+          "unknown_effects",
+          "feed_gaps",
+          "unexported_facts",
+          "outbox_inbox_gaps",
+          "historical_reader_missing",
+          "dependent_module_active"
+        ]
+      },
+      "uninstallPolicy": {
+        "readBundleRequiredWithHistory": true,
+        "schemaPurge": "never_automatic",
+        "purge": "privileged_retention_operation"
+      },
+      "retentionClass": "financial-permanent",
+      "publicEvents": [],
+      "internalCommands": []
+    },
+    {
+      "moduleId": "rating",
+      "schemaNamespace": "billium.rating",
+      "moduleApiVersion": "1.0.0",
+      "coreApiRange": {
+        "min": "1.0.0",
+        "maxExclusive": "2.0.0"
+      },
+      "migrationStream": "rating",
+      "currentSchemaVersion": 0,
+      "supportedSchemaReadRange": {
+        "min": 0,
+        "max": 0
+      },
+      "supportedSchemaWriteRange": {
+        "min": 0,
+        "max": 0
+      },
+      "requiresModules": [
+        {
+          "moduleId": "platform",
+          "apiRange": {
+            "min": "1.0.0",
+            "maxExclusive": "2.0.0"
+          }
+        },
+        {
+          "moduleId": "ledger",
+          "apiRange": {
+            "min": "1.0.0",
+            "maxExclusive": "2.0.0"
+          }
+        }
+      ],
+      "requiresPorts": [],
+      "optionalPorts": [],
+      "emits": [],
+      "consumes": [],
+      "ownedTables": [],
+      "configKeys": [],
+      "migrationIdentities": [],
+      "disablePolicy": {
+        "dependents": "block",
+        "keeps": [
+          "frozen_intent_completion",
+          "receipt_replay",
+          "historical_read"
+        ],
+        "hostObservationGuard": false
+      },
+      "retirementPolicy": {
+        "blockers": [
+          "pending_operations",
+          "unknown_effects",
+          "feed_gaps",
+          "unexported_facts",
+          "outbox_inbox_gaps",
+          "historical_reader_missing",
+          "dependent_module_active"
+        ]
+      },
+      "uninstallPolicy": {
+        "readBundleRequiredWithHistory": true,
+        "schemaPurge": "never_automatic",
+        "purge": "privileged_retention_operation"
+      },
+      "retentionClass": "financial-permanent",
+      "publicEvents": [],
+      "internalCommands": []
+    },
+    {
+      "moduleId": "schedule",
+      "schemaNamespace": "billium.schedule",
+      "moduleApiVersion": "1.0.0",
+      "coreApiRange": {
+        "min": "1.0.0",
+        "maxExclusive": "2.0.0"
+      },
+      "migrationStream": "schedule",
+      "currentSchemaVersion": 0,
+      "supportedSchemaReadRange": {
+        "min": 0,
+        "max": 0
+      },
+      "supportedSchemaWriteRange": {
+        "min": 0,
+        "max": 0
+      },
+      "requiresModules": [
+        {
+          "moduleId": "platform",
+          "apiRange": {
+            "min": "1.0.0",
+            "maxExclusive": "2.0.0"
+          }
+        },
+        {
+          "moduleId": "rating",
+          "apiRange": {
+            "min": "1.0.0",
+            "maxExclusive": "2.0.0"
+          }
+        },
+        {
+          "moduleId": "ledger",
+          "apiRange": {
+            "min": "1.0.0",
+            "maxExclusive": "2.0.0"
+          }
+        }
+      ],
+      "requiresPorts": [],
+      "optionalPorts": [],
+      "emits": [],
+      "consumes": [
+        "occurrence.ensure.v1"
+      ],
+      "ownedTables": [],
+      "configKeys": [],
+      "migrationIdentities": [],
+      "disablePolicy": {
+        "dependents": "block",
+        "keeps": [
+          "frozen_intent_completion",
+          "receipt_replay",
+          "historical_read"
+        ],
+        "hostObservationGuard": false
+      },
+      "retirementPolicy": {
+        "blockers": [
+          "pending_operations",
+          "unknown_effects",
+          "feed_gaps",
+          "unexported_facts",
+          "outbox_inbox_gaps",
+          "historical_reader_missing",
+          "dependent_module_active"
+        ]
+      },
+      "uninstallPolicy": {
+        "readBundleRequiredWithHistory": true,
+        "schemaPurge": "never_automatic",
+        "purge": "privileged_retention_operation"
+      },
+      "retentionClass": "financial-permanent",
+      "publicEvents": [],
+      "internalCommands": []
+    },
+    {
+      "moduleId": "documents",
+      "schemaNamespace": "billium.documents",
+      "moduleApiVersion": "1.0.0",
+      "coreApiRange": {
+        "min": "1.0.0",
+        "maxExclusive": "2.0.0"
+      },
+      "migrationStream": "documents",
+      "currentSchemaVersion": 0,
+      "supportedSchemaReadRange": {
+        "min": 0,
+        "max": 0
+      },
+      "supportedSchemaWriteRange": {
+        "min": 0,
+        "max": 0
+      },
+      "requiresModules": [
+        {
+          "moduleId": "platform",
+          "apiRange": {
+            "min": "1.0.0",
+            "maxExclusive": "2.0.0"
+          }
+        },
+        {
+          "moduleId": "ledger",
+          "apiRange": {
+            "min": "1.0.0",
+            "maxExclusive": "2.0.0"
+          }
+        }
+      ],
+      "requiresPorts": [
+        "DocumentRenderer"
+      ],
+      "optionalPorts": [
+        "DocumentStorage",
+        "DocumentDelivery",
+        "TaxSnapshotPort"
+      ],
+      "emits": [],
+      "consumes": [],
+      "ownedTables": [],
+      "configKeys": [],
+      "migrationIdentities": [],
+      "disablePolicy": {
+        "dependents": "block",
+        "keeps": [
+          "frozen_intent_completion",
+          "receipt_replay",
+          "historical_read"
+        ],
+        "hostObservationGuard": false
+      },
+      "retirementPolicy": {
+        "blockers": [
+          "pending_operations",
+          "unknown_effects",
+          "feed_gaps",
+          "unexported_facts",
+          "outbox_inbox_gaps",
+          "historical_reader_missing",
+          "dependent_module_active",
+          "retention_floor"
+        ]
+      },
+      "uninstallPolicy": {
+        "readBundleRequiredWithHistory": true,
+        "schemaPurge": "never_automatic",
+        "purge": "privileged_retention_operation"
+      },
+      "retentionClass": "financial-permanent",
+      "publicEvents": [],
+      "internalCommands": []
+    },
+    {
+      "moduleId": "execution",
+      "schemaNamespace": "billium.execution",
+      "moduleApiVersion": "1.0.0",
+      "coreApiRange": {
+        "min": "1.0.0",
+        "maxExclusive": "2.0.0"
+      },
+      "migrationStream": "execution",
+      "currentSchemaVersion": 0,
+      "supportedSchemaReadRange": {
+        "min": 0,
+        "max": 0
+      },
+      "supportedSchemaWriteRange": {
+        "min": 0,
+        "max": 0
+      },
+      "requiresModules": [
+        {
+          "moduleId": "platform",
+          "apiRange": {
+            "min": "1.0.0",
+            "maxExclusive": "2.0.0"
+          }
+        }
+      ],
+      "requiresPorts": [
+        "PaymentDrivers",
+        "WriterAdmission",
+        "PaymentObservationSink"
+      ],
+      "optionalPorts": [],
+      "emits": [
+        "payment.observation.v1",
+        "payment.outcome.v1",
+        "payment.effect.outcome.v1",
+        "billium.event.v2"
+      ],
+      "consumes": [
+        "payment.admission.v1",
+        "payment.cancel.v1",
+        "payment.execute.v1",
+        "payment.find.v1",
+        "payment.refund.v1"
+      ],
+      "ownedTables": [],
+      "configKeys": [],
+      "migrationIdentities": [],
+      "disablePolicy": {
+        "dependents": "cascade",
+        "keeps": [
+          "frozen_intent_completion",
+          "original_owner_refund",
+          "receipt_replay",
+          "historical_read",
+          "unknown_resolution",
+          "callback_custody",
+          "observed_fact_recording"
+        ],
+        "hostObservationGuard": false
+      },
+      "retirementPolicy": {
+        "blockers": [
+          "pending_operations",
+          "unknown_effects",
+          "feed_gaps",
+          "unexported_facts",
+          "outbox_inbox_gaps",
+          "historical_reader_missing",
+          "dependent_module_active",
+          "active_bindings",
+          "secret_recovery_dependency",
+          "retention_floor"
+        ]
+      },
+      "uninstallPolicy": {
+        "readBundleRequiredWithHistory": true,
+        "schemaPurge": "never_automatic",
+        "purge": "privileged_retention_operation"
+      },
+      "retentionClass": "financial-permanent",
+      "publicEvents": [
+        {
+          "eventType": "payment.effect.outcome.v1",
+          "envelopeSchema": "billium.event.v2",
+          "payloadSchemaRef": "spec/revisions/2026-10/schema/payment/effect-outcome.v1.json",
+          "payloadSchemaDigest": "sha256:296b8117fe17c02b1853ccf5d6de2467a583588e83e6e2eedfcb1c020dd84fc5",
+          "bootstrapMode": "replay_only",
+          "retentionPolicyRef": "financial-permanent",
+          "eventContractRevision": "events-2026-10-v2"
+        }
+      ],
+      "internalCommands": []
+    },
+    {
+      "moduleId": "collection",
+      "schemaNamespace": "billium.collection",
+      "moduleApiVersion": "1.0.0",
+      "coreApiRange": {
+        "min": "1.0.0",
+        "maxExclusive": "2.0.0"
+      },
+      "migrationStream": "collection",
+      "currentSchemaVersion": 0,
+      "supportedSchemaReadRange": {
+        "min": 0,
+        "max": 0
+      },
+      "supportedSchemaWriteRange": {
+        "min": 0,
+        "max": 0
+      },
+      "requiresModules": [
+        {
+          "moduleId": "platform",
+          "apiRange": {
+            "min": "1.0.0",
+            "maxExclusive": "2.0.0"
+          }
+        },
+        {
+          "moduleId": "ledger",
+          "apiRange": {
+            "min": "1.0.0",
+            "maxExclusive": "2.0.0"
+          }
+        },
+        {
+          "moduleId": "execution",
+          "apiRange": {
+            "min": "1.0.0",
+            "maxExclusive": "2.0.0"
+          }
+        }
+      ],
+      "requiresPorts": [
+        "CollectionConsentGuard"
+      ],
+      "optionalPorts": [],
+      "emits": [],
+      "consumes": [
+        "collection.authorize.v1"
+      ],
+      "ownedTables": [],
+      "configKeys": [],
+      "migrationIdentities": [],
+      "disablePolicy": {
+        "dependents": "block",
+        "keeps": [
+          "frozen_intent_completion",
+          "receipt_replay",
+          "historical_read"
+        ],
+        "hostObservationGuard": false
+      },
+      "retirementPolicy": {
+        "blockers": [
+          "pending_operations",
+          "unknown_effects",
+          "feed_gaps",
+          "unexported_facts",
+          "outbox_inbox_gaps",
+          "historical_reader_missing",
+          "dependent_module_active",
+          "active_bindings"
+        ]
+      },
+      "uninstallPolicy": {
+        "readBundleRequiredWithHistory": true,
+        "schemaPurge": "never_automatic",
+        "purge": "privileged_retention_operation"
+      },
+      "retentionClass": "financial-permanent",
+      "publicEvents": [],
+      "internalCommands": []
+    }
+  ]
+}

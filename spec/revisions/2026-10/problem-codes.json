@@ -292,5 +292,49 @@
       "INV-04",
       "M-45"
     ]
+  },
+  {
+    "code": "billium.allocation.exceeds_open",
+    "category": "allocation",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored",
+    "producer": "ledger",
+    "when": "сумма allocation или credit note больше открытой суммы obligation; уменьшение obligation ниже распределённого",
+    "clientAction": "уменьшить сумму или пересмотреть распределения; новый ключ",
+    "basis": ["REQ-CON-20", "D31", "D47"]
+  },
+  {
+    "code": "billium.allocation.exceeds_available",
+    "category": "allocation",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored",
+    "producer": "ledger",
+    "when": "сумма allocation больше доступного остатка платежа или customer credit",
+    "clientAction": "уменьшить сумму или дождаться доступного остатка; новый ключ",
+    "basis": ["REQ-CON-20", "D31", "D47"]
+  },
+  {
+    "code": "billium.invoice.transition_invalid",
+    "category": "invoice",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored",
+    "producer": "ledger",
+    "when": "команда недопустима в текущем статусе invoice или allocation",
+    "clientAction": "выбрать допустимую для текущего статуса команду; новый ключ",
+    "basis": ["REQ-CON-20", "D31", "D47"]
+  },
+  {
+    "code": "billium.reference.unknown",
+    "category": "reference",
+    "retryable": true,
+    "sameKey": true,
+    "receipt": "none",
+    "producer": "ledger",
+    "when": "ссылка на obligation, invoice, payment, credit или allocation не найдена в scope seller (чужой seller не раскрывается)",
+    "clientAction": "проверить ссылку в scope seller или дождаться зависимости; повторить тем же ключом",
+    "basis": ["REQ-CON-20", "INV-14", "D31", "D47"]
   }
 ]

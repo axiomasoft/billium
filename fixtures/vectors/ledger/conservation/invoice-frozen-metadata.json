@@ -1,0 +1,163 @@
+{
+  "id": "ledger/conservation/invoice-frozen-metadata",
+  "description": "INV-13: issue freezes buyer/tax snapshot; allowed note metadata remains editable.",
+  "spec_refs": [
+    "BC-CNF-10",
+    "REQ-ACC-10",
+    "D60",
+    "INV-13"
+  ],
+  "profiles": [
+    "php"
+  ],
+  "given": {
+    "caller": {
+      "sellerRef": "seller-a",
+      "environment": "test",
+      "installationRef": "inst-test",
+      "sourceAuthorities": [
+        "embedded-commerz"
+      ]
+    }
+  },
+  "script": [
+    {
+      "op": "ledger.reset",
+      "args": {}
+    },
+    {
+      "op": "ledger.obligation.record",
+      "args": {
+        "commandKey": "key-o1",
+        "billingAccountRef": "account-a",
+        "obligationRef": "o1",
+        "basisRef": "basis-o1",
+        "customerRef": "customer-a",
+        "componentRef": "component-o1",
+        "amount": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "termsDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "taxSnapshotRef": "tax-o1"
+      }
+    },
+    {
+      "op": "ledger.invoice.create",
+      "args": {
+        "commandKey": "invoice-create",
+        "billingAccountRef": "account-a",
+        "invoiceRef": "invoice-a",
+        "customerRef": "customer-a",
+        "lines": [
+          {
+            "obligationRef": "o1"
+          }
+        ],
+        "snapshot": {
+          "buyer": "customer-a"
+        }
+      }
+    },
+    {
+      "op": "ledger.invoice.issue",
+      "args": {
+        "commandKey": "invoice-issue",
+        "billingAccountRef": "account-a",
+        "invoiceRef": "invoice-a"
+      }
+    },
+    {
+      "op": "ledger.invoice.metadata",
+      "args": {
+        "commandKey": "meta-1",
+        "billingAccountRef": "account-a",
+        "updateRef": "update-1",
+        "invoiceRef": "invoice-a",
+        "metadata": {
+          "note": "changed"
+        }
+      }
+    },
+    {
+      "op": "ledger.invoice.metadata",
+      "args": {
+        "commandKey": "meta-2",
+        "billingAccountRef": "account-a",
+        "updateRef": "update-2",
+        "invoiceRef": "invoice-a",
+        "metadata": {
+          "buyer": "another"
+        }
+      }
+    },
+    {
+      "op": "ledger.query",
+      "args": {
+        "query": "invoice",
+        "selector": {
+          "invoiceRef": "invoice-a"
+        }
+      }
+    },
+    {
+      "op": "ledger.invoice.void",
+      "args": {
+        "commandKey": "void-invoice",
+        "billingAccountRef": "account-a",
+        "invoiceRef": "invoice-a",
+        "causeRef": "cancelled"
+      }
+    },
+    {
+      "op": "ledger.query",
+      "args": {
+        "query": "invoice",
+        "selector": {
+          "invoiceRef": "invoice-a"
+        }
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {}
+    },
+    {
+      "ok": {}
+    },
+    {
+      "ok": {}
+    },
+    {
+      "ok": {}
+    },
+    {
+      "ok": {}
+    },
+    {
+      "error": {
+        "code": "billium.invoice.frozen"
+      }
+    },
+    {
+      "ok": {
+        "snapshot": {
+          "buyer": "customer-a"
+        },
+        "metadata": {
+          "note": "changed"
+        },
+        "status": "issued"
+      }
+    },
+    {
+      "ok": {}
+    },
+    {
+      "ok": {
+        "status": "void"
+      }
+    }
+  ]
+}

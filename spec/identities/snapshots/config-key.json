@@ -1,1 +1,26 @@
-[]
+[
+  "billium.connection",
+  "billium.feed.bootstrap_batch",
+  "billium.feed.bootstrap_lease_seconds",
+  "billium.feed.drain_batch",
+  "billium.feed.signing_key",
+  "billium.financial_session.seal_lock_timeout_ms",
+  "billium.idempotency.lock_timeout_ms",
+  "billium.inbox.handler_compatibility",
+  "billium.inbox.retention_floor_seconds",
+  "billium.inbox.retry_backoff_seconds",
+  "billium.inbox.retry_budget",
+  "billium.installation_ref",
+  "billium.ledger.refund_reconcile_after_seconds",
+  "billium.modules.composition",
+  "billium.modules.enabled",
+  "billium.outbox.claim_seconds",
+  "billium.outbox.delivery_backoff_seconds",
+  "billium.outbox.delivery_budget",
+  "billium.outbox.maintenance_connection",
+  "billium.outbox.relay_batch",
+  "billium.outbox.retention_floor_seconds",
+  "billium.runner.max_attempts",
+  "billium.runner.root_deadline_ms",
+  "billium.runtime_role.preflight"
+]

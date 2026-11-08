@@ -1,0 +1,156 @@
+{
+  "id": "ledger/conservation/cross-seller-reference-unknown",
+  "description": "INV-14: another seller cannot discover or allocate seller-a references.",
+  "spec_refs": [
+    "BC-CNF-10",
+    "REQ-ACC-10",
+    "D60",
+    "INV-14"
+  ],
+  "profiles": [
+    "php"
+  ],
+  "given": {
+    "caller": {
+      "sellerRef": "seller-a",
+      "environment": "test",
+      "installationRef": "inst-test",
+      "sourceAuthorities": [
+        "embedded-commerz"
+      ]
+    }
+  },
+  "script": [
+    {
+      "op": "ledger.reset",
+      "args": {}
+    },
+    {
+      "op": "ledger.obligation.record",
+      "args": {
+        "commandKey": "key-o1",
+        "billingAccountRef": "account-a",
+        "obligationRef": "o1",
+        "basisRef": "basis-o1",
+        "customerRef": "customer-a",
+        "componentRef": "component-o1",
+        "amount": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "termsDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "taxSnapshotRef": "tax-o1"
+      }
+    },
+    {
+      "op": "ledger.credit.record",
+      "args": {
+        "commandKey": "key-credit-a",
+        "billingAccountRef": "account-a",
+        "creditRef": "credit-a",
+        "sourceRef": "source-credit-a",
+        "amount": {
+          "amount": "50.00",
+          "currency": "RUB"
+        }
+      }
+    },
+    {
+      "op": "ledger.caller",
+      "args": {
+        "sellerRef": "seller-b",
+        "environment": "test",
+        "installationRef": "inst-test",
+        "sourceAuthorities": [
+          "embedded-commerz"
+        ]
+      }
+    },
+    {
+      "op": "ledger.allocate",
+      "args": {
+        "commandKey": "key-a1",
+        "billingAccountRef": "account-a",
+        "allocationRef": "a1",
+        "obligationRef": "o1",
+        "amount": {
+          "amount": "20.00",
+          "currency": "RUB"
+        },
+        "customerCreditRef": "credit-a"
+      }
+    },
+    {
+      "op": "ledger.query",
+      "args": {
+        "query": "obligation",
+        "selector": {
+          "obligationRef": "o1"
+        }
+      }
+    },
+    {
+      "op": "ledger.caller",
+      "args": {
+        "sellerRef": "seller-a",
+        "environment": "test",
+        "installationRef": "inst-test",
+        "sourceAuthorities": [
+          "embedded-commerz"
+        ]
+      }
+    },
+    {
+      "op": "ledger.query",
+      "args": {
+        "query": "obligation",
+        "selector": {
+          "obligationRef": "o1"
+        }
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {}
+    },
+    {
+      "ok": {}
+    },
+    {
+      "ok": {}
+    },
+    {
+      "ok": {}
+    },
+    {
+      "error": {
+        "code": "billium.reference.unknown"
+      }
+    },
+    {
+      "error": {
+        "code": "billium.reference.unknown"
+      }
+    },
+    {
+      "ok": {}
+    },
+    {
+      "ok": {
+        "allocated": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "credited": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "open": {
+          "amount": "100.00",
+          "currency": "RUB"
+        }
+      }
+    }
+  ]
+}

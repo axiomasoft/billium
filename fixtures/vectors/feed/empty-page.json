@@ -1,0 +1,27 @@
+{
+  "id": "feed/empty-page",
+  "spec_refs": [
+    "BC-ENV-32"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"digest\":\"sha256:cc4e595eafaf7be86db6a2e8dcd86f8e211af08f06255ddc5bb8f96783dd9639\",\"events\":[],\"hasMore\":false,\"nextCursor\":\"opaque.source.token\",\"replayFloor\":{\"id\":\"0\",\"txId\":\"0\"},\"scannedThrough\":{\"id\":\"9223372036854775807\",\"txId\":\"18446744073709551615\"},\"schema\":\"billium.feed.page.v1\",\"selectionDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"subscriptionRef\":\"subscription:1\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "billium.feed.page.v1",
+        "digest": "sha256:cc4e595eafaf7be86db6a2e8dcd86f8e211af08f06255ddc5bb8f96783dd9639"
+      }
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "id": "payment/effects/unknown-kind",
+  "spec_refs": [
+    "BC-ENV-30"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"bindingRevision\":\"binding:original\",\"digest\":\"sha256:2e52fba50dc95e3d17fbb249b289ed4bc664f5d69e895cc292e9644913a16d3c\",\"effectTotal\":\"12.00\",\"environment\":\"test\",\"installationRef\":\"inst-test\",\"merchantAccountRef\":\"merchant:original\",\"money\":{\"amount\":\"10.00\",\"currency\":\"RUB\"},\"occurredAt\":\"2026-10-28T10:00:00Z\",\"operationKind\":\"refund\",\"operationRef\":\"capture:1\",\"originalOperationRef\":\"charge:1\",\"providerEvidenceRef\":\"evidence:1\",\"revision\":1,\"schema\":\"payment.effect.outcome.v1\",\"sellerRef\":\"seller-a\",\"status\":\"succeeded\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

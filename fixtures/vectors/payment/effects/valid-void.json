@@ -1,0 +1,27 @@
+{
+  "id": "payment/effects/valid-void",
+  "spec_refs": [
+    "BC-ENV-30"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"bindingRevision\":\"binding:original\",\"digest\":\"sha256:63175cb20679194e4340ecc34e8faf362c72c5f3d73361a45662caaed07e82da\",\"effectTotal\":\"10.00\",\"environment\":\"test\",\"installationRef\":\"inst-test\",\"merchantAccountRef\":\"merchant:original\",\"money\":{\"amount\":\"10.00\",\"currency\":\"RUB\"},\"occurredAt\":\"2026-10-28T10:00:00Z\",\"operationKind\":\"void_authorization\",\"operationRef\":\"capture:1\",\"originalOperationRef\":\"charge:1\",\"providerEvidenceRef\":\"evidence:1\",\"revision\":1,\"schema\":\"payment.effect.outcome.v1\",\"sellerRef\":\"seller-a\",\"status\":\"succeeded\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "payment.effect.outcome.v1",
+        "digest": "sha256:63175cb20679194e4340ecc34e8faf362c72c5f3d73361a45662caaed07e82da"
+      }
+    }
+  ]
+}

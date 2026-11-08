@@ -11,6 +11,7 @@ use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Enums\RoundingMode;
 use Billium\Contracts\Exceptions\ProblemException;
+use BilliumConformance\LedgerAdapter;
 
 /*
  * Conformance adapter of billium-contracts for PHP (protocol: conformance/README.md).
@@ -23,6 +24,11 @@ const OPS = [
     'money.parse', 'money.format', 'money.add', 'money.allocate', 'money.round',
     'canon.canonicalize', 'canon.digest', 'envelope.decode', 'envelope.roundtrip',
     'problem.decode', 'codes.registry',
+    'ledger.reset', 'ledger.caller', 'ledger.obligation.record', 'ledger.intent.declare',
+    'ledger.credit.record', 'ledger.invoice.create', 'ledger.invoice.issue', 'ledger.invoice.void',
+    'ledger.invoice.metadata', 'ledger.allocate', 'ledger.reverse', 'ledger.credit_note',
+    'ledger.reallocate', 'ledger.observe', 'ledger.drain', 'ledger.reconcile_refunds', 'ledger.query',
+    'ledger.bootstrap',
 ];
 
 /**
@@ -51,6 +57,9 @@ function text(stdClass $args, string $name): string
  */
 function run(Codec $codec, MoneyMath $math, string $op, stdClass $args): array
 {
+    if (str_starts_with($op, 'ledger.')) {
+        return ledgerAdapter()->run($op, $args);
+    }
     switch ($op) {
         case 'money.parse':
             $money = $codec->decodeMoney(text($args, 'wire_text'));
@@ -65,7 +74,7 @@ function run(Codec $codec, MoneyMath $math, string $op, stdClass $args): array
                 throw invalid('minor is outside the int64 range');
             }
 
-            return ['wire' => (new Money((int) $minor, Currency::of(text($args, 'currency'))))->toWire()];
+            return ['wire' => new Money((int) $minor, Currency::of(text($args, 'currency')))->toWire()];
         case 'money.add':
             return ['wire' => $math->add(Money::fromWire($args->a ?? null), Money::fromWire($args->b ?? null))->toWire()];
         case 'money.allocate':
@@ -110,6 +119,15 @@ function run(Codec $codec, MoneyMath $math, string $op, stdClass $args): array
     }
 }
 
+function ledgerAdapter(): LedgerAdapter
+{
+    require_once dirname(__DIR__).'/src/LedgerAdapter.php';
+
+    static $adapter = new LedgerAdapter;
+
+    return $adapter;
+}
+
 $codec = new Codec;
 $math = MoneyMathFactory::create();
 
@@ -126,10 +144,12 @@ while (($line = fgets(STDIN)) !== false) {
             send(['type' => 'ok']);
             break;
         case 'run':
+            // Storing caller input does not boot Testbench or connect to PostgreSQL for codec-only vectors.
+            ledgerAdapter()->given($message->given);
             $outputs = [];
             foreach ($message->script as $step) {
                 try {
-                    $outputs[] = ['ok' => run($codec, $math, $step->op, $step->args)];
+                    $outputs[] = ['ok' => (object) run($codec, $math, $step->op, $step->args)];
                 } catch (ProblemException $exception) {
                     $outputs[] = ['error' => ['code' => $exception->problem->value, 'detail' => $exception->detail]];
                 }

@@ -1,16 +1,19 @@
 {
     "name": "axiomasoft/billium-core",
-    "description": "Billium core skeleton: Laravel 13 service provider (modules arrive from P3).",
+    "description": "Billium core: Laravel 13 platform and ledger modules.",
     "type": "library",
     "license": "proprietary",
     "require": {
         "php": "^8.4",
+        "ext-pdo_pgsql": "*",
         "axiomasoft/billium-contracts": "^0.1",
         "laravel/framework": "^13.0"
     },
     "autoload": {
         "psr-4": {
-            "Billium\\Core\\": "src/"
+            "Billium\\Core\\": "src/",
+            "Billium\\Platform\\": "modules/platform/src/",
+            "Billium\\Ledger\\": "modules/ledger/src/"
         }
     },
     "extra": {
