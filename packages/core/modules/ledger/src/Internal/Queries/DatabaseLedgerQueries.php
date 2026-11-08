@@ -115,8 +115,8 @@ final readonly class DatabaseLedgerQueries implements LedgerQueries
             'obligation' => $this->obligation($ref('obligationRef')),
             'invoice' => $this->invoice($ref('invoiceRef')),
             'allocationByOperation' => $this->allocationByOperation($ref('operationRef'), $authority),
-            'refundAuthorization' => $this->read(static function (LedgerReader $reader) use ($ref, $selector): array {
-                $payment = $reader->payment($ref('paymentRef'));
+            'refundAuthorization' => $this->read(static function (LedgerReader $reader) use ($ref, $selector, $authority): array {
+                $payment = $reader->payment($ref('paymentRef'), $authority);
                 $exposure = is_array($payment['exposure']) ? $payment['exposure'] : throw self::invalid();
                 $amount = isset($selector['amount']) ? Money::parse($ref('amount'), View::text($exposure['currency'])) : null;
 

@@ -58,6 +58,7 @@ final readonly class CustodyProcessor
                 $live = $this->partitions->live($db, $e->channel, $e->sourceAuthority, $e->sellerRef, $e->environment, $e->partitionRef);
                 $partition = $live === null ? throw new LockPlanChanged('Concurrent partition creation') : $this->partitions->lock($context, $live);
             }
+            $this->partitions->attachParkedGaps($db, $partition);
         }
 
         $existing = $this->identity($db, $e);

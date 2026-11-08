@@ -73,6 +73,19 @@ final readonly class PartitionStore
         return $row === null ? null : PartitionRow::from($row);
     }
 
+    /** Attaches pre-partition custody to the newly inserted or locked opening partition. */
+    public function attachParkedGaps(Connection $db, PartitionRow $partition): void
+    {
+        $db->update(<<<'SQL'
+            UPDATE public.billium_inbox_message SET partition_id = ?
+            WHERE partition_id IS NULL AND status = 'parked_gap'
+              AND channel = ? AND source_authority = ? AND source_lineage = ?
+              AND seller_ref = ? AND environment = ? AND partition_ref = ?
+              AND source_sequence > ?
+            SQL, [$partition->id, $partition->channel, $partition->sourceAuthority, $partition->sourceLineage,
+            $partition->sellerRef, $partition->environment, $partition->partitionRef, $partition->accountedSequence]);
+    }
+
     public function requireRecovery(Connection $db, PartitionRow $partition, string $reason): void
     {
         $db->update(<<<'SQL'

@@ -30,6 +30,36 @@ final class AuthorityScopedPaymentsTest extends QueryTestCase
         }
     }
 
+    public function test_wire_refund_authorization_selects_each_authority_with_the_same_payment_ref(): void
+    {
+        $this->sources();
+        foreach (self::SOURCES as $index => $authority) {
+            foreach ([[], ['amount' => '16.00']] as $amount) {
+                $wire = $this->queries()->dispatch(self::request('refundAuthorization',
+                    ['paymentRef' => 'same-payment', 'sourceAuthority' => $authority, ...$amount]));
+                $advice = self::arr($wire['result']);
+                self::assertSame($index === 0 ? '16.00' : '35.00', self::arr($advice['normalCapacity'])['amount']);
+                self::assertSame($amount['amount'] ?? ($index === 0 ? '16.00' : '35.00'), self::arr($advice['requested'])['amount']);
+                self::assertSame($index === 0 ? '10.00' : ($amount === [] ? '20.00' : '1.00'), self::arr($advice['requiredReallocation'])['amount']);
+                self::assertTrue($advice['allowed']);
+            }
+        }
+        self::problem(ProblemCode::ValidationInvalid, fn () => $this->queries()->dispatch(
+            self::request('refundAuthorization', ['paymentRef' => 'same-payment'])));
+    }
+
+    public function test_wire_refund_authorization_never_falls_back_to_another_authority(): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $this->observe(ObservationFactory::charge('same-payment', 1, 1600));
+
+        self::problem(ProblemCode::ReferenceUnknown, fn () => $this->queries()->dispatch(self::request('refundAuthorization',
+            ['paymentRef' => 'same-payment', 'sourceAuthority' => 'remote-billium'])));
+        $wire = $this->queries()->dispatch(self::request('refundAuthorization', ['paymentRef' => 'same-payment']));
+        self::assertSame('16.00', self::arr(self::arr($wire['result'])['normalCapacity'])['amount']);
+    }
+
     public function test_each_authority_reads_its_applied_projection_receipts_and_bootstrap_snapshot(): void
     {
         $this->sources();
