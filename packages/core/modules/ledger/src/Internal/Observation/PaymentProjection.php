@@ -288,9 +288,9 @@ final readonly class PaymentProjection
                 && $nextState !== $previousState => ['regression_state', $applied['captured'], $captured],
             default => [null, 0, 0],
         };
-        if ($reason === null && $older) {
-            // The applied revision is an upper bound, but an unseen intermediate fact must also fit the
-            // immutable history immediately before and after it (including previously stale facts).
+        if ($reason === null) {
+            // Every candidate must fit the immutable observed neighbors, including parked facts that
+            // have never been applied, even before the first assignment or after the applied revision.
             foreach ([true, false] as $predecessor) {
                 $neighbor = $db->table('billium_observed_payment_revision')->where('observed_payment_id', $observedId)
                     ->where('revision', $predecessor ? '<' : '>', $o->operationRevision)

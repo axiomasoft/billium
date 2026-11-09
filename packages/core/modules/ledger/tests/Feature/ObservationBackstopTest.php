@@ -19,6 +19,56 @@ use PHPUnit\Framework\Attributes\TestWith;
 #[Group('D60')]
 final class ObservationBackstopTest extends ObservationTestCase
 {
+    #[TestWith([false, 1, 'succeeded', 4000, 500, 'pending', 4000, 500, false])]
+    #[TestWith([false, 1, 'failed', 4000, 500, 'succeeded', 4000, 500, false])]
+    #[TestWith([false, 1, 'cancelled', 4000, 500, 'pending', 4000, 500, false])]
+    #[TestWith([false, 1, 'pending', 4000, 500, 'pending', 3000, 500, false])]
+    #[TestWith([false, 1, 'pending', 4000, 500, 'pending', 4000, 0, false])]
+    #[TestWith([false, 3, 'succeeded', 4000, 500, 'failed', 4000, 500, false])]
+    #[TestWith([false, 3, 'pending', 4000, 500, 'pending', 5000, 500, false])]
+    #[TestWith([false, 3, 'pending', 4000, 500, 'pending', 4000, 1000, false])]
+    #[TestWith([false, 1, 'pending', 3000, 0, 'succeeded', 4000, 500, true])]
+    #[TestWith([false, 3, 'succeeded', 4000, 500, 'pending', 3000, 0, true])]
+    #[TestWith([true, 3, 'succeeded', 4000, 500, 'pending', 4000, 500, false])]
+    #[TestWith([true, 3, 'pending', 4000, 500, 'pending', 3000, 500, false])]
+    #[TestWith([true, 3, 'pending', 4000, 500, 'pending', 4000, 0, false])]
+    #[TestWith([true, 3, 'pending', 3000, 0, 'succeeded', 4000, 500, true])]
+    public function test_assign_mode_checks_unapplied_observed_neighbors(bool $existing, int $neighborRevision, string $neighborState, int $neighborCaptured, int $neighborRefunded, string $state, int $captured, int $refunded, bool $compatible): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        if ($existing) {
+            $this->observe(ObservationFactory::charge('op-1', 1, 1000, fields: ['state' => 'pending']));
+        }
+        $this->routine('record_observation', ['inst-test', 'seller-a', 'test', 'embedded-commerz', 'L1', 'op-1', 'charge', null, $neighborRevision, self::digest('c'),
+            $neighborState, 'RUB', 6000, 6000, $neighborCaptured, $neighborRefunded, 'pa-1', 'ev-neighbor', '{}']);
+        $observed = self::integer($this->observedRow()['id']);
+        $intent = self::integer($this->value('SELECT id FROM billium_settlement_intent'));
+        $revision = $existing ? 4 : 2;
+        $this->routine('record_observation', ['inst-test', 'seller-a', 'test', 'embedded-commerz', 'L1', 'op-1', 'charge', null, $revision, self::digest('b'),
+            $state, 'RUB', 6000, 6000, $captured, $refunded, 'pa-1', 'ev-incoming', '{}']);
+
+        try {
+            $this->routine('project_payment', [...$this->scopeArguments(), $observed, $revision, 'op-1', $intent, 'assign', '[]', null, 'new-assignment', self::digest('b')]);
+            self::assertTrue($compatible, 'unapplied observed history must constrain assignments');
+        } catch (PDOException $exception) {
+            self::assertFalse($compatible);
+            self::assertStringContainsString('billium.observation.conflict', $exception->getMessage());
+        }
+        self::assertSame($compatible ? 1 : 0, $this->rows('billium_allocation_receipt', "receipt_ref = 'new-assignment'"));
+        self::assertSame(($existing ? 1 : 0) + ($compatible ? 1 : 0), $this->rows('billium_payment_revision'));
+        self::assertSame($existing ? 1 : 0, $this->rows('billium_allocation'));
+        self::assertSame($existing || $compatible ? 1 : 0, $this->rows('billium_payment'));
+        if ($existing || $compatible) {
+            self::assertSame($compatible ? $revision : 1, self::integer($this->paymentRow()['applied_revision']));
+            self::assertSame($compatible ? $captured : 1000, self::integer($this->paymentRow()['captured_minor']));
+            self::assertSame($compatible ? $refunded : 0, self::integer($this->paymentRow()['refunded_minor']));
+            self::assertFalse($this->paymentRow()['financial_hold']);
+        }
+        self::assertSame($existing ? 3 : 2, $this->rows('billium_observed_payment_revision'));
+        self::assertSame(0, $this->rows('billium_ledger_discrepancy'));
+    }
+
     #[TestWith([2, 'pending', 'succeeded'])]
     #[TestWith([4, 'succeeded', 'pending'])]
     public function test_the_granted_routine_also_checks_previously_stale_neighbors(int $revision, string $neighborState, string $state): void

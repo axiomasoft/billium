@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace Billium\Ledger\Tests\Feature;
 
 use Billium\Contracts\Enums\ProblemCode;
+use Billium\Core\Contracts\TransactionContext;
 use Billium\Core\Tests\Support\ObservationFactory;
 use Billium\Ledger\Contracts\LedgerQueries;
+use Billium\Ledger\Internal\Observation\EconomicDigest;
+use Billium\Ledger\Internal\Observation\ObservationHandler;
 use Billium\Ledger\Tests\Observation\ObservationTestCase;
 use Billium\Ledger\Tests\Observation\OverRefundVector;
+use Billium\Platform\Data\Inbox\BootstrapItem;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\TestWith;
 
@@ -22,6 +26,101 @@ use PHPUnit\Framework\Attributes\TestWith;
 final class ExceptionalExposureTest extends ObservationTestCase
 {
     use OverRefundVector;
+
+    #[TestWith([1, 'succeeded', 4000, 500, 'pending', 4000, 500, 'regression_state'])]
+    #[TestWith([1, 'failed-terminal', 4000, 500, 'succeeded', 4000, 500, 'regression_state'])]
+    #[TestWith([1, 'cancelled', 4000, 500, 'pending', 4000, 500, 'regression_state'])]
+    #[TestWith([1, 'pending', 4000, 500, 'pending', 3000, 500, 'regression_captured'])]
+    #[TestWith([1, 'pending', 4000, 500, 'pending', 4000, 0, 'regression_refunded'])]
+    #[TestWith([3, 'succeeded', 4000, 500, 'failed-terminal', 4000, 500, 'regression_state'])]
+    #[TestWith([3, 'pending', 4000, 500, 'pending', 5000, 500, 'regression_captured'])]
+    #[TestWith([3, 'pending', 4000, 500, 'pending', 4000, 1000, 'regression_refunded'])]
+    #[TestWith([1, 'pending', 3000, 0, 'succeeded', 4000, 500, null])]
+    #[TestWith([3, 'succeeded', 4000, 500, 'pending', 3000, 0, null])]
+    public function test_parked_observed_history_bounds_the_first_assignment(int $neighborRevision, string $neighborState, int $neighborCaptured, int $neighborRefunded, string $state, int $captured, int $refunded, ?string $reason): void
+    {
+        $neighbor = ObservationFactory::charge('op-1', $neighborRevision, $neighborCaptured, $neighborRefunded, fields: ['state' => $neighborState]);
+        $observation = ObservationHandler::decode($neighbor) ?? self::fail('valid observation');
+        $item = new BootstrapItem('op-1', $neighborRevision, EconomicDigest::of($observation), $neighbor);
+        $handler = $this->application()->make(ObservationHandler::class);
+        $this->drainer()->root(fn (TransactionContext $context) => $handler->apply($context, $item));
+        self::assertSame(0, $this->rows('billium_payment'));
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $envelope = ObservationFactory::charge('op-1', 2, $captured, $refunded, fields: ['state' => $state]);
+
+        $receipt = $this->observe($envelope);
+
+        self::assertSame($reason === null ? 'assign' : 'hold', $receipt->mode());
+        self::assertSame($reason, $reason === null ? $receipt->body['discrepancy'] : self::arr($receipt->body['discrepancy'])['reason']);
+        self::assertSame($reason === null ? 2 : 0, self::integer($this->paymentRow()['applied_revision']));
+        self::assertSame($reason === null ? $captured : 0, self::integer($this->paymentRow()['captured_minor']));
+        self::assertSame($reason === null ? $refunded : 0, self::integer($this->paymentRow()['refunded_minor']));
+        self::assertSame($reason !== null, $this->paymentRow()['financial_hold']);
+        self::assertSame($reason === null ? 1000 : 0, $this->allocated('o1'));
+        self::assertSame($reason === null ? 1 : 0, $this->rows('billium_payment_revision'));
+        self::assertSame($reason === null ? 0 : 1, $this->rows('billium_ledger_discrepancy', 'hold'));
+        self::assertSame($reason === null ? 0 : 1, $this->rows('billium_outbox_event', "type = 'discrepancy.recorded.v1'"));
+        self::assertSame(2, $this->rows('billium_observed_payment_revision'));
+        self::assertSame(0, $this->rows('billium_outbox_command'));
+        self::assertSame($receipt->body, $this->observe($envelope)->body);
+    }
+
+    #[TestWith([false])]
+    #[TestWith([true])]
+    public function test_retrying_parked_live_and_bootstrap_history_holds_before_any_assignment(bool $bootstrap): void
+    {
+        foreach ([1 => 'succeeded', 2 => 'pending'] as $revision => $state) {
+            $envelope = ObservationFactory::charge('op-1', $revision, 4000, sequence: $revision, fields: ['state' => $state]);
+            if ($bootstrap || $revision === 2) {
+                $observation = ObservationHandler::decode($envelope) ?? self::fail('valid observation');
+                $item = new BootstrapItem('op-1', $revision, EconomicDigest::of($observation), $envelope);
+                $handler = $this->application()->make(ObservationHandler::class);
+                $this->drainer()->root(fn (TransactionContext $context) => $handler->apply($context, $item));
+            } else {
+                self::assertSame(ProblemCode::ObservationParked->value, $this->attempt($envelope));
+            }
+        }
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+
+        self::assertSame(['applied', 'applied'], $this->drainer()->retryParked());
+
+        self::assertTrue($this->paymentRow()['financial_hold']);
+        self::assertSame([0, 0, 0], [self::integer($this->paymentRow()['applied_revision']),
+            self::integer($this->paymentRow()['captured_minor']), self::integer($this->paymentRow()['refunded_minor'])]);
+        self::assertSame(0, $this->rows('billium_payment_revision'));
+        self::assertSame(0, $this->rows('billium_allocation'));
+        self::assertSame(2, $this->rows('billium_ledger_discrepancy', "reason = 'regression_state' AND hold"));
+        self::assertSame(0, $this->rows('billium_observation_park', 'released_at IS NULL'));
+        self::assertSame([], $this->drainer()->retryParked());
+    }
+
+    #[TestWith(['succeeded', 'pending', 4000, 500, 'regression_state'])]
+    #[TestWith(['pending', 'pending', 3000, 500, 'regression_captured'])]
+    #[TestWith(['pending', 'pending', 4000, 0, 'regression_refunded'])]
+    #[TestWith(['pending', 'succeeded', 5000, 1000, null])]
+    public function test_unapplied_history_also_bounds_a_newer_assignment(string $neighborState, string $state, int $captured, int $refunded, ?string $reason): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $this->observe(ObservationFactory::charge('op-1', 1, 1000, fields: ['state' => 'pending']));
+        $this->routine('record_observation', ['inst-test', 'seller-a', 'test', 'embedded-commerz', 'L1', 'op-1', 'charge', null, 3, self::digest('c'),
+            $neighborState, 'RUB', 6000, 6000, 4000, 500, 'pa-1', 'ev-neighbor', '{}']);
+
+        $receipt = $this->observe(ObservationFactory::charge('op-1', 4, $captured, $refunded, sequence: 2, fields: ['state' => $state]));
+
+        self::assertSame($reason === null ? 'assign' : 'hold', $receipt->mode());
+        self::assertSame($reason, $reason === null ? $receipt->body['discrepancy'] : self::arr($receipt->body['discrepancy'])['reason']);
+        self::assertSame($reason === null ? 4 : 1, self::integer($this->paymentRow()['applied_revision']));
+        self::assertSame($reason === null ? $captured : 1000, self::integer($this->paymentRow()['captured_minor']));
+        self::assertSame($reason === null ? $refunded : 0, self::integer($this->paymentRow()['refunded_minor']));
+        self::assertSame($reason === null ? 2 : 1, $this->rows('billium_payment_revision'));
+        self::assertSame($reason === null ? 0 : 1, $this->rows('billium_ledger_discrepancy', 'hold'));
+        self::assertSame($reason !== null, $this->paymentRow()['financial_hold']);
+        self::assertSame(1000, $this->allocated('o1'));
+        self::assertSame(3, $this->rows('billium_observed_payment_revision'));
+    }
 
     #[TestWith(['succeeded', 'pending', 4000, 500, 'regression_state'])]
     #[TestWith(['failed-terminal', 'accepted-unknown', 4000, 500, 'regression_state'])]

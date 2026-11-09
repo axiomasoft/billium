@@ -61,9 +61,25 @@ return new class extends Migration
                 -- The account is resolved now; the observed fact learns it once (the guard allows only NULL → value).
                 UPDATE public.billium_observed_payment SET billing_account_ref=p_account WHERE id=o.id AND billing_account_ref IS NULL;
 
+                IF p_mode IN ('assign','stale') THEN
+                    -- All assignments and stale facts must fit both immutable observed neighbors,
+                    -- including parked revisions that have never reached the applied projection.
+                    SELECT * INTO v_previous FROM public.billium_observed_payment_revision
+                        WHERE observed_payment_id=o.id AND revision<p_revision AND seller_ref=p_seller AND environment=p_environment
+                        ORDER BY revision DESC LIMIT 1;
+                    SELECT * INTO v_next FROM public.billium_observed_payment_revision
+                        WHERE observed_payment_id=o.id AND revision>p_revision AND seller_ref=p_seller AND environment=p_environment
+                        ORDER BY revision LIMIT 1;
+                    IF r.refunded_minor > r.captured_minor OR r.captured_minor > r.authorized_minor
+                       OR r.captured_minor < v_previous.captured_minor OR r.refunded_minor < v_previous.refunded_minor
+                       OR r.captured_minor > v_next.captured_minor OR r.refunded_minor > v_next.refunded_minor
+                       OR (v_previous.state IN ('succeeded','failed','cancelled') AND r.state IS DISTINCT FROM v_previous.state)
+                       OR (v_next.id IS NOT NULL AND r.state IN ('succeeded','failed','cancelled') AND v_next.state IS DISTINCT FROM r.state)
+                    THEN RAISE EXCEPTION 'billium.observation.conflict' USING ERRCODE='P0001'; END IF;
+                END IF;
+
                 IF p_mode = 'assign' THEN
-                    -- The mutable latest observed state already names this incoming revision.
-                    -- Only the immutable applied revision is the terminal-state comparison basis.
+                    -- The immutable applied revision remains a bound in addition to observed neighbors above.
                     SELECT state INTO v_applied_state FROM public.billium_observed_payment_revision
                         WHERE observed_payment_id=o.id AND revision=p.applied_revision
                           AND seller_ref=p_seller AND environment=p_environment;
@@ -81,22 +97,6 @@ return new class extends Migration
                     UPDATE public.billium_payment SET financial_hold=true,projection_status='held' WHERE id=p.id RETURNING * INTO p;
                 ELSIF p_revision > p.applied_revision THEN
                     RAISE EXCEPTION 'billium.validation.invalid' USING ERRCODE='P0001'; -- stale means at or below the applied revision
-                END IF;
-
-                IF p_mode = 'stale' THEN
-                    -- Historical facts must fit both immutable neighbors, not just the latest applied revision.
-                    SELECT * INTO v_previous FROM public.billium_observed_payment_revision
-                        WHERE observed_payment_id=o.id AND revision<p_revision AND seller_ref=p_seller AND environment=p_environment
-                        ORDER BY revision DESC LIMIT 1;
-                    SELECT * INTO v_next FROM public.billium_observed_payment_revision
-                        WHERE observed_payment_id=o.id AND revision>p_revision AND seller_ref=p_seller AND environment=p_environment
-                        ORDER BY revision LIMIT 1;
-                    IF r.refunded_minor > r.captured_minor OR r.captured_minor > r.authorized_minor
-                       OR r.captured_minor < v_previous.captured_minor OR r.refunded_minor < v_previous.refunded_minor
-                       OR r.captured_minor > v_next.captured_minor OR r.refunded_minor > v_next.refunded_minor
-                       OR (v_previous.state IN ('succeeded','failed','cancelled') AND r.state IS DISTINCT FROM v_previous.state)
-                       OR (v_next.id IS NOT NULL AND r.state IN ('succeeded','failed','cancelled') AND v_next.state IS DISTINCT FROM r.state)
-                    THEN RAISE EXCEPTION 'billium.observation.conflict' USING ERRCODE='P0001'; END IF;
                 END IF;
 
                 IF p_mode <> 'assign' AND coalesce(jsonb_array_length(p_parts),0) > 0 THEN RAISE EXCEPTION 'billium.validation.invalid' USING ERRCODE='P0001'; END IF;
