@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Billium\Ledger\Internal\Observation;
 
+use Billium\Contracts\Enums\ProblemCode;
+use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\CallerContext;
 use Billium\Core\Contracts\OperationRunner;
 use Billium\Core\Contracts\TransactionContext;
@@ -148,26 +150,33 @@ final readonly class ParkedDrainer
     public function retryParked(int $limit = 100, FinancialMode $mode = FinancialMode::Active): array
     {
         $caller = $this->callers->current();
+        if ($caller->sourceAuthorities === []) {
+            return [];
+        }
+        $authorities = implode(',', array_fill(0, count($caller->sourceAuthorities), '?'));
         $statuses = [];
         $attempted = [];
         while (count($statuses) < $limit) {
             // Re-select after each root so releasing an earlier bootstrap park admits its waiting revision.
-            $row = $this->connection()->selectOne(<<<'SQL'
+            $row = $this->connection()->selectOne(<<<SQL
             SELECT k.id, k.inbox_id FROM public.billium_observation_park k
+            JOIN public.billium_observed_payment o
+              ON o.id = k.observed_payment_id AND o.seller_ref = k.seller_ref AND o.environment = k.environment
             WHERE k.seller_ref = ? AND k.environment = ? AND k.released_at IS NULL
+              AND o.installation_ref = ? AND o.source_authority IN ({$authorities})
               AND NOT (k.id = ANY(?::bigint[])) AND (
                 (k.dependency_kind = 'settlement_intent' AND EXISTS (
                     SELECT 1 FROM public.billium_settlement_intent i
                     WHERE i.seller_ref = k.seller_ref AND i.environment = k.environment AND i.business_intent_ref = k.dependency_ref))
                 OR (k.dependency_kind = 'original_charge' AND EXISTS (
-                    SELECT 1 FROM public.billium_payment p JOIN public.billium_observed_payment o ON o.id = k.observed_payment_id
+                    SELECT 1 FROM public.billium_payment p
                     WHERE p.seller_ref = k.seller_ref AND p.environment = k.environment AND p.payment_ref = k.dependency_ref AND p.kind = 'charge'
-                      AND o.seller_ref = k.seller_ref AND o.environment = k.environment AND p.source_authority = o.source_authority))
+                      AND p.source_authority = o.source_authority))
                 OR (k.dependency_kind = 'operation_revision' AND NOT EXISTS (
                     SELECT 1 FROM public.billium_observation_park k2
                     WHERE k2.observed_payment_id = k.observed_payment_id AND k2.released_at IS NULL AND k2.revision < k.revision)))
             ORDER BY k.revision, k.id LIMIT 1
-            SQL, [$caller->sellerRef, $caller->environment, '{'.implode(',', $attempted).'}']);
+            SQL, [$caller->sellerRef, $caller->environment, $caller->installationRef, ...$caller->sourceAuthorities, '{'.implode(',', $attempted).'}']);
             if ($row === null) {
                 break;
             }
@@ -203,14 +212,20 @@ final readonly class ParkedDrainer
         $db = $this->databases->connection($context->connectionName());
         $caller = $context->caller();
         $row = $db->table('billium_observation_park as k')
+            ->join('billium_observed_payment as o', static function (JoinClause $join): void {
+                $join->on('o.id', '=', 'k.observed_payment_id')->on('o.seller_ref', '=', 'k.seller_ref')->on('o.environment', '=', 'k.environment');
+            })
             ->join('billium_observed_payment_revision as r', static function (JoinClause $join): void {
                 $join->on('r.seller_ref', '=', 'k.seller_ref')->on('r.environment', '=', 'k.environment')
                     ->on('r.observed_payment_id', '=', 'k.observed_payment_id')->on('r.revision', '=', 'k.revision');
             })
             ->where('k.id', $parkId)->where('k.seller_ref', $caller->sellerRef)->where('k.environment', $caller->environment)->whereNull('k.released_at')
-            ->first(['r.payload']);
+            ->first(['r.payload', 'o.installation_ref', 'o.source_authority']);
         if ($row === null) {
             return 'released';
+        }
+        if ($row->installation_ref !== $caller->installationRef || ! in_array($row->source_authority, $caller->sourceAuthorities, true)) {
+            throw new ProblemException(ProblemCode::AuthDenied, 'Caller is not authorized for observation source authority');
         }
         $payload = json_decode(is_string($row->payload) ? $row->payload : '', false, 64, JSON_THROW_ON_ERROR);
         $observation = $payload instanceof \stdClass ? ObservationHandler::decode($payload) : null;
@@ -220,6 +235,9 @@ final readonly class ParkedDrainer
             return 'quarantined';
         }
         $outcome = $this->projection->apply($context, $observation);
+        if ($outcome->kind === HandlerOutcomeKind::Conflict && $outcome->reference === ProblemCode::AuthDenied->value) {
+            throw new ProblemException(ProblemCode::AuthDenied, 'Caller is not authorized for observation source authority');
+        }
         if ($outcome->kind === HandlerOutcomeKind::ParkedDependency) {
             return 'parked_dependency';
         }

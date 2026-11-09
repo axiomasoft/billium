@@ -16,6 +16,7 @@ use Billium\Platform\Data\Inbox\CustodyResult;
 use Billium\Platform\Data\Inbox\HandlerOutcome;
 use Billium\Platform\Data\Inbox\InboxRow;
 use Billium\Platform\Tests\PlatformTestCase;
+use Closure;
 use PHPUnit\Framework\Attributes\Group;
 use RuntimeException;
 
@@ -388,5 +389,88 @@ final class CustodyProcessorTest extends InboxTestCase
         $result = $this->root(fn (TransactionContext $context) => $this->feed()->retryDependency($context, $inboxId, $handler));
 
         return $result instanceof CustodyResult ? $result : self::fail('retry returned no result');
+    }
+
+    public function test_a_drain_rejects_ungranted_sources_without_changing_custody(): void
+    {
+        $id = $this->seedPartition(10);
+        $handler = new JournalHandler;
+        $this->custody($this->envelope(11), $handler, FinancialMode::RawCustody);
+        $before = $this->inbox('evt-L1-11');
+        $partition = $this->partitionRow($id);
+
+        foreach ([['remote-billium'], []] as $authorities) {
+            $this->callers->set(new Caller('seller-a', 'test', self::INSTALLATION, 'actor-1', $authorities));
+            $this->assertAuthDenied(fn () => $this->drain($id, $handler));
+            self::assertSame($before, $this->inbox('evt-L1-11'));
+            self::assertSame($partition, $this->partitionRow($id));
+            self::assertSame(0, $handler->calls);
+        }
+
+        $this->callers->set(new Caller('seller-a', 'test', self::INSTALLATION, 'actor-1', [self::AUTHORITY]));
+        self::assertSame(CustodyDisposition::Applied, $this->drain($id, $handler)->disposition);
+    }
+
+    public function test_a_retry_rejects_ungranted_sources_before_the_retry_budget_check(): void
+    {
+        config(['billium.inbox.retry_budget' => 1]);
+        $id = $this->seedPartition(10);
+        $handler = new JournalHandler(['evt-L1-11' => HandlerOutcome::parkedDependency('payment', 'charge-1')]);
+        $parked = $this->custody($this->envelope(11), $handler);
+        $before = $this->inbox('evt-L1-11');
+        $partition = $this->partitionRow($id);
+
+        foreach ([['remote-billium'], []] as $authorities) {
+            $this->callers->set(new Caller('seller-a', 'test', self::INSTALLATION, 'actor-1', $authorities));
+            $this->assertAuthDenied(fn () => $this->retry(self::integer($parked->inboxId), $handler));
+            self::assertSame($before, $this->inbox('evt-L1-11'));
+            self::assertSame($partition, $this->partitionRow($id));
+            self::assertSame(1, $handler->calls);
+        }
+    }
+
+    public function test_a_drain_does_not_quarantine_a_handler_authorization_denial(): void
+    {
+        $id = $this->seedPartition(10);
+        $handler = new JournalHandler(['evt-L1-11' => HandlerOutcome::conflict(ProblemCode::AuthDenied->value)]);
+        $this->custody($this->envelope(11), $handler, FinancialMode::RawCustody);
+        $before = $this->inbox('evt-L1-11');
+        $partition = $this->partitionRow($id);
+
+        $this->assertAuthDenied(fn () => $this->drain($id, $handler));
+        self::assertSame($before, $this->inbox('evt-L1-11'));
+        self::assertSame($partition, $this->partitionRow($id));
+        self::assertSame([], $this->journal());
+
+        $handler->script = [];
+        self::assertSame(CustodyDisposition::Applied, $this->drain($id, $handler)->disposition);
+    }
+
+    public function test_a_retry_does_not_quarantine_or_consume_attempts_on_handler_authorization_denial(): void
+    {
+        $id = $this->seedPartition(10);
+        $handler = new JournalHandler(['evt-L1-11' => HandlerOutcome::parkedDependency('payment', 'charge-1')]);
+        $parked = $this->custody($this->envelope(11), $handler);
+        $before = $this->inbox('evt-L1-11');
+        $partition = $this->partitionRow($id);
+        $handler->script = ['evt-L1-11' => HandlerOutcome::conflict(ProblemCode::AuthDenied->value)];
+
+        $this->assertAuthDenied(fn () => $this->retry(self::integer($parked->inboxId), $handler));
+        self::assertSame($before, $this->inbox('evt-L1-11'));
+        self::assertSame($partition, $this->partitionRow($id));
+        self::assertSame(['evt-L1-11'], $this->journal());
+
+        $handler->script = [];
+        self::assertSame(CustodyDisposition::Applied, $this->retry(self::integer($parked->inboxId), $handler)->disposition);
+    }
+
+    private function assertAuthDenied(Closure $action): void
+    {
+        try {
+            $action();
+            self::fail('Expected authorization denial');
+        } catch (ProblemException $problem) {
+            self::assertSame(ProblemCode::AuthDenied, $problem->problem);
+        }
     }
 }

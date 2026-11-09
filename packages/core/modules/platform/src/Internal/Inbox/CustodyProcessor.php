@@ -123,6 +123,9 @@ final readonly class CustodyProcessor
         $db = $this->partitions->connection($context);
         $planned = $this->partitions->find($db, $partitionId, $caller->sellerRef, $caller->environment)
             ?? throw new ProblemException(ProblemCode::ReferenceUnknown, 'Unknown partition');
+        if (! in_array($planned->sourceAuthority, $caller->sourceAuthorities, true)) {
+            throw new ProblemException(ProblemCode::AuthDenied, 'The partition is outside the authenticated source scope');
+        }
         $partition = $this->partitions->lock($context, $planned);
         if (! $partition->active()) {
             return new CustodyResult(CustodyDisposition::Idle);
@@ -137,7 +140,12 @@ final readonly class CustodyProcessor
             WHERE partition_id = ? AND source_sequence = ? AND status IN ('ready', 'parked_gap')
             SQL, [$partition->id, $partition->accountedSequence + 1]);
 
-        return $record === null ? new CustodyResult(CustodyDisposition::Idle) : $this->apply($context, $db, $partition, $record, $handler);
+        if ($record === null) {
+            return new CustodyResult(CustodyDisposition::Idle);
+        }
+        InboxEnvelope::from($partition->channel, InboxRecords::payload($record))->authorize($caller);
+
+        return $this->apply($context, $db, $partition, $record, $handler);
     }
 
     /** Retries the earliest parked dependency of one operation; an earlier parked revision blocks a later one. */
@@ -151,6 +159,9 @@ final readonly class CustodyProcessor
         $db = $this->partitions->connection($context);
         $planned = $db->selectOne('SELECT * FROM public.billium_inbox_message WHERE id = ? AND seller_ref = ? AND environment = ?', [$inboxId, $caller->sellerRef, $caller->environment])
             ?? throw new ProblemException(ProblemCode::ReferenceUnknown, 'Unknown inbox message');
+        if (! in_array(Rows::string(Rows::field($planned, 'source_authority')), $caller->sourceAuthorities, true)) {
+            throw new ProblemException(ProblemCode::AuthDenied, 'The delivery is outside the authenticated source scope');
+        }
         $partitionId = Rows::field($planned, 'partition_id');
         if ($partitionId === null) {
             return new CustodyResult(CustodyDisposition::Idle, $inboxId, Rows::string(Rows::field($planned, 'status')));
@@ -163,6 +174,7 @@ final readonly class CustodyProcessor
         if ($record === null || Rows::field($record, 'status') !== 'parked_dependency') {
             return new CustodyResult(CustodyDisposition::Idle, $inboxId, $record === null ? null : Rows::string(Rows::field($record, 'status')));
         }
+        InboxEnvelope::from(Rows::string(Rows::field($record, 'channel')), InboxRecords::payload($record))->authorize($caller);
         $earlier = $this->earlierParked($db, $record);
         if ($earlier !== null) {
             return new CustodyResult(CustodyDisposition::ParkedDependency, $inboxId, 'parked_dependency', null, null, $earlier);
@@ -205,6 +217,9 @@ final readonly class CustodyProcessor
     /** Records the handler's durable disposition of one delivery. */
     private function dispose(Connection $db, mixed $record, HandlerOutcome $outcome): CustodyResult
     {
+        if ($outcome->kind === HandlerOutcomeKind::Conflict && $outcome->reference === ProblemCode::AuthDenied->value) {
+            throw new ProblemException(ProblemCode::AuthDenied, 'The delivery is outside the authenticated source scope');
+        }
         $id = Rows::int(Rows::field($record, 'id'));
 
         return match ($outcome->kind) {
