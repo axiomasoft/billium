@@ -298,6 +298,119 @@
         }
       },
       "additionalProperties": false
+    },
+    "p4AttributionPolicy": {
+      "enum": [
+        "immutable_host_snapshot"
+      ]
+    },
+    "p4EffectiveCutoff": {
+      "enum": [
+        "event_at"
+      ]
+    },
+    "p4CorrectionPolicy": {
+      "enum": [
+        "replace_same_fact_revision"
+      ]
+    },
+    "p4LatePolicy": {
+      "enum": [
+        "original_period_adjustment"
+      ]
+    },
+    "p4FinalityPolicy": {
+      "enum": [
+        "source_watermark"
+      ]
+    },
+    "p4DecimalModels": {
+      "enum": [
+        "additive_sum",
+        "gauge"
+      ]
+    },
+    "p4ReceiptResult": {
+      "enum": [
+        "accepted",
+        "duplicate",
+        "conflict",
+        "unsupported"
+      ]
+    },
+    "p4Refusal": {
+      "enum": [
+        "unknown_metric_version",
+        "unknown_unit",
+        "unknown_attribution",
+        "unsupported_model",
+        "stream_conflict"
+      ]
+    },
+    "p4ChargeTiming": {
+      "enum": [
+        "advance",
+        "arrears"
+      ]
+    },
+    "p4QuantityBasis": {
+      "enum": [
+        "fixed",
+        "aggregate",
+        "approved_snapshot"
+      ]
+    },
+    "p4AdvanceBasis": {
+      "enum": [
+        "fixed",
+        "approved_snapshot"
+      ]
+    },
+    "p4Frequency": {
+      "enum": [
+        "month",
+        "year"
+      ]
+    },
+    "p4CorrectionDirection": {
+      "enum": [
+        "positive_obligation",
+        "negative_credit_note"
+      ]
+    },
+    "p4NoChargeReason": {
+      "enum": [
+        "approved_zero_price",
+        "approved_zero_quantity"
+      ]
+    },
+    "p4Unit": {
+      "enum": [
+        "call",
+        "seat",
+        "byte",
+        "member",
+        "second",
+        "event"
+      ]
+    },
+    "p4StreamMode": {
+      "enum": [
+        "normalized_net_billable",
+        "gross_usage"
+      ]
+    },
+    "p4GaugeReducer": {
+      "enum": [
+        "latest",
+        "max"
+      ]
+    },
+    "p4Completeness": {
+      "enum": [
+        "provisional",
+        "final"
+      ]
     }
   }
 }

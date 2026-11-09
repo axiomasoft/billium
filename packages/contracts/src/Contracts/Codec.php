@@ -12,6 +12,7 @@ use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Contracts\Internal\Jcs;
 use Billium\Contracts\Internal\Json;
+use Billium\Contracts\Internal\P4Wire;
 use Billium\Contracts\Internal\SchemaValidator;
 use Billium\Contracts\Internal\Spec;
 use stdClass;
@@ -53,6 +54,14 @@ final readonly class Codec
         $problem = new SchemaValidator(Spec::schemas())->check($entry['schemaId'], $value);
         if ($problem !== null) {
             throw new ProblemException($problem, "the object does not match {$value->schema}");
+        }
+        if (in_array($value->schema, P4Wire::SCHEMAS, true)) {
+            P4Wire::validate($value);
+            foreach (get_object_vars($value) as $child) {
+                if ($child instanceof stdClass && isset($child->schema)) {
+                    $this->decode(Jcs::canonicalize($child));
+                }
+            }
         }
 
         $effect = $value->schema === 'payment.effect.outcome.v1' ? $value : ($value->schema === 'billium.event.v2' ? $value->payload : null);

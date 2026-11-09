@@ -1,0 +1,40 @@
+{
+  "id": "usage/contracts/fact-unknown-field",
+  "description": "P4 contract/unsupported boundary; algorithm cases freeze expected output and do not claim a runtime calculation.",
+  "spec_refs": [
+    "BC-ENV-33",
+    "BC-ENV-34",
+    "BC-ENV-35",
+    "BC-ENV-36",
+    "BC-ENV-37",
+    "BC-ENV-38",
+    "BC-ENV-39",
+    "BC-ENV-40",
+    "BC-ENV-41",
+    "BC-ENV-42",
+    "BC-ENV-43",
+    "BC-ENV-44",
+    "BC-CNF-16",
+    "D56"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"usage.fact.v2\",\"sellerRef\":\"seller-1\",\"source\":\"tariffler\",\"factId\":\"fact-1\",\"revision\":1,\"metricRef\":\"api_calls\",\"metricVersion\":\"api_calls/1\",\"metricDigest\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\",\"unit\":\"call\",\"attribution\":{\"customerRef\":\"original-customer\",\"billingAccountRef\":\"original-account\",\"subjectRef\":\"subject-1\",\"componentRef\":\"component-1\",\"agreementRef\":\"agreement-1\",\"agreementRevision\":1,\"attributionVersion\":\"host_snapshot/1\",\"effectiveAt\":\"2026-10-01T00:00:00Z\"},\"interval\":{\"start\":\"2026-10-01T00:00:00Z\",\"end\":\"2026-11-01T00:00:00Z\"},\"eventAt\":\"2026-10-17T10:00:00Z\",\"receivedAt\":\"2026-10-17T10:00:05Z\",\"value\":{\"kind\":\"decimal\",\"quantity\":\"12.000000001\"},\"grouping\":[{\"name\":\"region\",\"value\":\"eu\"}],\"billableStream\":{\"mode\":\"normalized_net_billable\",\"policy\":\"exclusive_commercial_basis/1\",\"commercialBasisRef\":\"commercial-units-1\",\"normalizationRef\":\"net-overage-1\"},\"provenance\":{\"collector\":\"host-adapter\",\"version\":\"1\",\"sourceRef\":\"overage-1\",\"sourceDigest\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\"},\"unexpected\":true,\"digest\":\"sha256:a873db59b0d22291a7333c91a348cfbbf9c89c2adce37dcbe8f1cbab945ac9bf\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

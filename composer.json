@@ -34,6 +34,9 @@
             "Billium\\Core\\Tests\\": "packages/core/tests/",
             "Billium\\Platform\\Tests\\": "packages/core/modules/platform/tests/",
             "Billium\\Ledger\\Tests\\": "packages/core/modules/ledger/tests/",
+            "Billium\\Usage\\Tests\\": "packages/core/modules/usage/tests/",
+            "Billium\\Rating\\Tests\\": "packages/core/modules/rating/tests/",
+            "Billium\\Schedule\\Tests\\": "packages/core/modules/schedule/tests/",
             "Billium\\Tooling\\PhpStan\\": "scripts/phpstan/src/"
         }
     },

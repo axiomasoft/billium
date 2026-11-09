@@ -591,13 +591,20 @@
       "requiresPorts": [],
       "optionalPorts": [],
       "emits": [
-        "usage.receipt.v1"
+        "usage.receipt.v1",
+        "usage.receipt.v2",
+        "usage.aggregate.v1"
       ],
       "consumes": [
-        "usage.fact.v1"
+        "usage.fact.v1",
+        "usage.fact.v2",
+        "usage.metric.v1",
+        "usage.quantity.v1"
       ],
       "ownedTables": [],
-      "configKeys": [],
+      "configKeys": [
+        "billium.usage.enabled"
+      ],
       "migrationIdentities": [],
       "disablePolicy": {
         "dependents": "block",
@@ -663,10 +670,18 @@
       ],
       "requiresPorts": [],
       "optionalPorts": [],
-      "emits": [],
-      "consumes": [],
+      "emits": [
+        "rating.basis.v1"
+      ],
+      "consumes": [
+        "rating.price.v1",
+        "usage.aggregate.v1",
+        "usage.quantity.v1"
+      ],
       "ownedTables": [],
-      "configKeys": [],
+      "configKeys": [
+        "billium.rating.enabled"
+      ],
       "migrationIdentities": [],
       "disablePolicy": {
         "dependents": "block",
@@ -740,12 +755,18 @@
       ],
       "requiresPorts": [],
       "optionalPorts": [],
-      "emits": [],
+      "emits": [
+        "occurrence.no_charge.v1"
+      ],
       "consumes": [
-        "occurrence.ensure.v1"
+        "occurrence.ensure.v1",
+        "period.commercial.v1",
+        "occurrence.ensure.v2"
       ],
       "ownedTables": [],
-      "configKeys": [],
+      "configKeys": [
+        "billium.schedule.enabled"
+      ],
       "migrationIdentities": [],
       "disablePolicy": {
         "dependents": "block",

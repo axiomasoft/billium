@@ -52,6 +52,32 @@ final class BilliumCoreServiceProvider extends ServiceProvider
         });
         $this->app->register(PlatformServiceProvider::class);
         $this->app->register(LedgerServiceProvider::class);
+        $this->registerCommercialModules();
+    }
+
+    private function registerCommercialModules(): void
+    {
+        // D55/D56: module owners add providers/installers later. Never eagerly load absent code.
+        $providers = [
+            'usage' => 'Billium\\Usage\\Internal\\UsageServiceProvider',
+            'rating' => 'Billium\\Rating\\Internal\\RatingServiceProvider',
+            'schedule' => 'Billium\\Schedule\\Internal\\ScheduleServiceProvider',
+        ];
+        $enabled = config('billium.modules.enabled', []);
+        foreach ($providers as $module => $provider) {
+            if (! is_array($enabled) || ! in_array($module, $enabled, true)
+                || config("billium.{$module}.enabled") !== true) {
+                continue;
+            }
+            $this->registerAvailableProvider($provider);
+        }
+    }
+
+    private function registerAvailableProvider(string $provider): void
+    {
+        if (class_exists($provider) && is_subclass_of($provider, ServiceProvider::class)) {
+            $this->app->register($provider);
+        }
     }
 
     public function boot(): void

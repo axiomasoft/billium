@@ -50,6 +50,7 @@ use Billium\Platform\Data\Inbox\BootstrapItem;
 use Billium\Platform\Data\Inbox\BootstrapPartition;
 use Billium\Platform\Internal\EventContracts\DatabaseEventContractRegistrar;
 use DateTimeImmutable;
+use Illuminate\Container\Container;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Foundation\Application;
 use LogicException;
@@ -66,9 +67,38 @@ final class LedgerAdapter
 
     private FixedCallerContext $callers;
 
+    /** @var list<string> */
+    private array $runtimeModules = [];
+
+    /** @var list<string> */
+    private array $bootModules = [];
+
+    public function p4(): P4RuntimeAdapter
+    {
+        $available = array_filter($this->runtimeModules, static fn (string $module): bool => class_exists('Billium\\'.ucfirst($module).'\\Internal\\'.ucfirst($module).'ServiceProvider'));
+        if ($available !== [] && ($this->app === null || $this->bootModules !== $this->runtimeModules)) {
+            $this->app = null;
+            $this->boot();
+        }
+
+        // Unavailable implementations refuse without opening a DB or installing future SQL.
+        return new P4RuntimeAdapter($this->app ?? new Container);
+    }
+
     public function given(stdClass $given): void
     {
         $this->callerInput = $given->caller ?? new stdClass;
+        $modules = $given->modules ?? [];
+        if (! is_array($modules) || ! array_is_list($modules)) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'given.modules must be a module list');
+        }
+        $this->runtimeModules = [];
+        foreach ($modules as $module) {
+            if (! is_string($module) || ! in_array($module, ['usage', 'rating', 'schedule'], true)) {
+                throw new ProblemException(ProblemCode::ValidationInvalid, 'unknown P4 runtime module');
+            }
+            $this->runtimeModules[] = $module;
+        }
     }
 
     /** @return array<string, mixed> */
@@ -187,11 +217,20 @@ final class LedgerAdapter
         try {
             $host = new class extends Testbench
             {
+                /** @var list<string> */
+                public array $runtimeModules = [];
+
+                /** @param Application $app */
                 protected function defineEnvironment($app): void
                 {
                     TestEnvironment::configure($app);
+                    $app['config']->set('billium.modules.enabled', ['platform', 'ledger', ...$this->runtimeModules]);
+                    foreach ($this->runtimeModules as $module) {
+                        $app['config']->set("billium.{$module}.enabled", true);
+                    }
                 }
             };
+            $host->runtimeModules = $this->runtimeModules;
             $app = $host->configure(['extra' => ['providers' => [BilliumCoreServiceProvider::class]]])->createApplication();
         } finally {
             // The CLI protocol (and PHPUnit host) owns diagnostics, not Laravel's global handlers.
@@ -204,6 +243,7 @@ final class LedgerAdapter
         }
         TestEnvironment::assertRuntimeSafe($app['db']->connection('pgsql')->getPdo());
         $this->app = $app;
+        $this->bootModules = $this->runtimeModules;
         $this->callers = FixedCallerContext::default();
         $app->instance(CallerContext::class, $this->callers);
     }

@@ -1,0 +1,25 @@
+{
+  "id": "usage/runtime/unavailable-usage-ingest",
+  "spec_refs": [
+    "BC-CNF-16",
+    "D55",
+    "D56"
+  ],
+  "profiles": [
+    "php"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "usage.ingest",
+      "args": {}
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.policy.unknown"
+      }
+    }
+  ]
+}

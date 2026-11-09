@@ -38,3 +38,5 @@ Vectors, golden, runner и адаптеры PHP и Dart. Формат векто
 [BC-CNF-14] `revision.lock.json.revision`, `spec_rev` пакетов PHP и Dart и `ready.spec_rev` адаптера совпадают; иначе прогон красный. (M-12)
 
 [BC-CNF-15] Отчёт conformance не заявляет exactly-once и не смешивается с паритетом PHP и Dart. (M-14)
+
+[BC-CNF-16] Owners contracts/usage/rating/schedule: P4 codecs run PHP+Dart; runtime usage/rating/schedule operations and algorithm cases have profiles=[php]. Deferred callable bindings billium.conformance.{usage,rating,schedule} accept (operation, arguments) and return protocol output; module owners bind only installed implementations. Missing implementation returns billium.policy.unknown, never zero or success. P4.1 golden algorithm inputs/expected RatedBasis are contracts plus unavailable-runtime checks, not proof of implemented calculation; domain owners add positive runtime assertions when implementing. Core PSR-4, root test PSR-4 and existing wildcard test discovery enroll all three internal modules; disabled defaults/zero checkpoints install no future SQL. (D55, D56, D59, REQ-OWN-18)

@@ -1,0 +1,25 @@
+{
+  "id": "rating/runtime/unavailable-rating-rate",
+  "spec_refs": [
+    "BC-CNF-16",
+    "D55",
+    "D56"
+  ],
+  "profiles": [
+    "php"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "rating.rate",
+      "args": {}
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.policy.unknown"
+      }
+    }
+  ]
+}

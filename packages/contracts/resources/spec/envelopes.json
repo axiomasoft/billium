@@ -234,5 +234,115 @@
         "verifyDigest": true
       }
     ]
+  },
+  "usage.metric.v1": {
+    "schemaId": "urn:billium:spec:2026-10:usage/metric.v1.json",
+    "variants": [
+      {
+        "class": "MetricVersion",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "usage.fact.v2": {
+    "schemaId": "urn:billium:spec:2026-10:usage/fact.v2.json",
+    "variants": [
+      {
+        "class": "UsageFactV2",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "usage.receipt.v2": {
+    "schemaId": "urn:billium:spec:2026-10:usage/receipt.v2.json",
+    "variants": [
+      {
+        "class": "UsageReceiptV2",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "usage.aggregate.v1": {
+    "schemaId": "urn:billium:spec:2026-10:usage/aggregate.v1.json",
+    "variants": [
+      {
+        "class": "AggregateSnapshot",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "usage.quantity.v1": {
+    "schemaId": "urn:billium:spec:2026-10:usage/quantity.v1.json",
+    "variants": [
+      {
+        "class": "QuantitySnapshot",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "rating.price.v1": {
+    "schemaId": "urn:billium:spec:2026-10:rating/price.v1.json",
+    "variants": [
+      {
+        "class": "PriceVersion",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "period.commercial.v1": {
+    "schemaId": "urn:billium:spec:2026-10:period/commercial.v1.json",
+    "variants": [
+      {
+        "class": "CommercialPeriod",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "rating.basis.v1": {
+    "schemaId": "urn:billium:spec:2026-10:rating/basis.v1.json",
+    "variants": [
+      {
+        "class": "RatedBasis",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "occurrence.ensure.v2": {
+    "schemaId": "urn:billium:spec:2026-10:occurrence/ensure.v2.json",
+    "variants": [
+      {
+        "class": "EnsureBillingOccurrenceV2",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "obligation.prepare.v2": {
+    "schemaId": "urn:billium:spec:2026-10:obligation/prepare.v2.json",
+    "variants": [
+      {
+        "class": "PrepareObligationV2",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "occurrence.no_charge.v1": {
+    "schemaId": "urn:billium:spec:2026-10:occurrence/no-charge.v1.json",
+    "variants": [
+      {
+        "class": "NoChargeReceipt",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
   }
 }

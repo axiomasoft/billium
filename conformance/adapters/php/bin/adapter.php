@@ -12,6 +12,7 @@ use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Enums\RoundingMode;
 use Billium\Contracts\Exceptions\ProblemException;
 use BilliumConformance\LedgerAdapter;
+use BilliumConformance\P4RuntimeAdapter;
 
 /*
  * Conformance adapter of billium-contracts for PHP (protocol: conformance/README.md).
@@ -29,6 +30,7 @@ const OPS = [
     'ledger.invoice.metadata', 'ledger.allocate', 'ledger.reverse', 'ledger.credit_note',
     'ledger.reallocate', 'ledger.observe', 'ledger.drain', 'ledger.reconcile_refunds', 'ledger.query',
     'ledger.bootstrap',
+    ...P4RuntimeAdapter::OPERATIONS,
 ];
 
 /**
@@ -57,6 +59,9 @@ function text(stdClass $args, string $name): string
  */
 function run(Codec $codec, MoneyMath $math, string $op, stdClass $args): array
 {
+    if (in_array($op, P4RuntimeAdapter::OPERATIONS, true)) {
+        return ledgerAdapter()->p4()->run(operation: $op, arguments: $args);
+    }
     if (str_starts_with($op, 'ledger.')) {
         return ledgerAdapter()->run($op, $args);
     }

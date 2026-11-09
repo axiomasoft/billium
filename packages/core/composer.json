@@ -13,7 +13,10 @@
         "psr-4": {
             "Billium\\Core\\": "src/",
             "Billium\\Platform\\": "modules/platform/src/",
-            "Billium\\Ledger\\": "modules/ledger/src/"
+            "Billium\\Ledger\\": "modules/ledger/src/",
+            "Billium\\Usage\\": "modules/usage/src/",
+            "Billium\\Rating\\": "modules/rating/src/",
+            "Billium\\Schedule\\": "modules/schedule/src/"
         }
     },
     "extra": {

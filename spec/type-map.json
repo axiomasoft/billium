@@ -168,6 +168,83 @@
     "category": "Data"
   },
   {
+    "schema": "usage.metric.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\MetricVersion",
+    "dart": "MetricVersion",
+    "category": "Data"
+  },
+  {
+    "schema": "usage.fact.v2",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\UsageFactV2",
+    "dart": "UsageFactV2",
+    "category": "Data"
+  },
+  {
+    "schema": "usage.receipt.v2",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\UsageReceiptV2",
+    "dart": "UsageReceiptV2",
+    "category": "Data"
+  },
+  {
+    "schema": "usage.aggregate.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\AggregateSnapshot",
+    "dart": "AggregateSnapshot",
+    "category": "Data"
+  },
+  {
+    "schema": "usage.quantity.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\QuantitySnapshot",
+    "dart": "QuantitySnapshot",
+    "category": "Data"
+  },
+  {
+    "schema": "rating.price.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\PriceVersion",
+    "dart": "PriceVersion",
+    "category": "Data"
+  },
+  {
+    "schema": "period.commercial.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\CommercialPeriod",
+    "dart": "CommercialPeriod",
+    "category": "Data"
+  },
+  {
+    "schema": "rating.basis.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\RatedBasis",
+    "dart": "RatedBasis",
+    "category": "Data"
+  },
+  {
+    "schema": "occurrence.ensure.v2",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\EnsureBillingOccurrenceV2",
+    "dart": "EnsureBillingOccurrenceV2",
+    "category": "Data"
+  },
+  {
+    "schema": "obligation.prepare.v2",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\PrepareObligationV2",
+    "dart": "PrepareObligationV2",
+    "category": "Data"
+  },
+  {
+    "schema": "occurrence.no_charge.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\NoChargeReceipt",
+    "dart": "NoChargeReceipt",
+    "category": "Data"
+  },
+  {
     "schema": null,
     "variant": null,
     "php": "Billium\\Contracts\\Data\\Money",

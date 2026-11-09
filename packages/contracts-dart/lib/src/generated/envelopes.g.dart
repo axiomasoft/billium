@@ -31,6 +31,17 @@ const Map<String, Envelope Function(Map<String, Object?>)> envelopeBuilders = {
   'FeedSelection': FeedSelection.fromRaw,
   'FeedPage': FeedPage.fromRaw,
   'FeedBootstrap': FeedBootstrap.fromRaw,
+  'MetricVersion': MetricVersion.fromRaw,
+  'UsageFactV2': UsageFactV2.fromRaw,
+  'UsageReceiptV2': UsageReceiptV2.fromRaw,
+  'AggregateSnapshot': AggregateSnapshot.fromRaw,
+  'QuantitySnapshot': QuantitySnapshot.fromRaw,
+  'PriceVersion': PriceVersion.fromRaw,
+  'CommercialPeriod': CommercialPeriod.fromRaw,
+  'RatedBasis': RatedBasis.fromRaw,
+  'EnsureBillingOccurrenceV2': EnsureBillingOccurrenceV2.fromRaw,
+  'PrepareObligationV2': PrepareObligationV2.fromRaw,
+  'NoChargeReceipt': NoChargeReceipt.fromRaw,
 };
 
 /// `payment.execute.v1`.
@@ -1065,5 +1076,650 @@ final class FeedBootstrap extends Envelope {
   final Map<String, Object?> snapshots;
   final String nextCursor;
   final String expiresAt;
+  final String digest;
+}
+
+/// `usage.metric.v1`.
+final class MetricVersion extends Envelope {
+  static const String schemaName = 'usage.metric.v1';
+
+  MetricVersion({
+    required super.raw,
+    required this.sellerRef,
+    required this.metricRef,
+    required this.metricVersion,
+    required this.unit,
+    required this.quantityPrecision,
+    required this.sourceSelection,
+    required this.model,
+    required this.extraction,
+    required this.groupingDimensions,
+    required this.attributionPolicy,
+    required this.effectiveCutoffPolicy,
+    required this.correctionPolicy,
+    required this.latePolicy,
+    required this.finalityPolicy,
+    required this.billableStream,
+    required this.digest,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory MetricVersion.fromRaw(Map<String, Object?> raw) => MetricVersion(
+        raw: raw,
+        sellerRef: requireString(raw, 'sellerRef'),
+        metricRef: requireString(raw, 'metricRef'),
+        metricVersion: requireString(raw, 'metricVersion'),
+        unit: requireString(raw, 'unit'),
+        quantityPrecision: requireString(raw, 'quantityPrecision'),
+        sourceSelection: requireObject(raw, 'sourceSelection'),
+        model: requireObject(raw, 'model'),
+        extraction: requireObject(raw, 'extraction'),
+        groupingDimensions: requireList(raw, 'groupingDimensions'),
+        attributionPolicy: requireObject(raw, 'attributionPolicy'),
+        effectiveCutoffPolicy: requireObject(raw, 'effectiveCutoffPolicy'),
+        correctionPolicy: requireObject(raw, 'correctionPolicy'),
+        latePolicy: requireObject(raw, 'latePolicy'),
+        finalityPolicy: requireObject(raw, 'finalityPolicy'),
+        billableStream: requireObject(raw, 'billableStream'),
+        digest: requireString(raw, 'digest'),
+      );
+
+  final String sellerRef;
+  final String metricRef;
+  final String metricVersion;
+  final String unit;
+  final String quantityPrecision;
+  final Map<String, Object?> sourceSelection;
+  final Map<String, Object?> model;
+  final Map<String, Object?> extraction;
+  final List<Object?> groupingDimensions;
+  final Map<String, Object?> attributionPolicy;
+  final Map<String, Object?> effectiveCutoffPolicy;
+  final Map<String, Object?> correctionPolicy;
+  final Map<String, Object?> latePolicy;
+  final Map<String, Object?> finalityPolicy;
+  final Map<String, Object?> billableStream;
+  final String digest;
+}
+
+/// `usage.fact.v2`.
+final class UsageFactV2 extends Envelope {
+  static const String schemaName = 'usage.fact.v2';
+
+  UsageFactV2({
+    required super.raw,
+    required this.sellerRef,
+    required this.source,
+    required this.factId,
+    required this.revision,
+    required this.metricRef,
+    required this.metricVersion,
+    required this.metricDigest,
+    required this.unit,
+    required this.attribution,
+    required this.interval,
+    required this.eventAt,
+    required this.receivedAt,
+    required this.value,
+    required this.grouping,
+    required this.billableStream,
+    required this.provenance,
+    required this.digest,
+    this.correction,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory UsageFactV2.fromRaw(Map<String, Object?> raw) => UsageFactV2(
+        raw: raw,
+        sellerRef: requireString(raw, 'sellerRef'),
+        source: requireString(raw, 'source'),
+        factId: requireString(raw, 'factId'),
+        revision: requireInt(raw, 'revision'),
+        metricRef: requireString(raw, 'metricRef'),
+        metricVersion: requireString(raw, 'metricVersion'),
+        metricDigest: requireString(raw, 'metricDigest'),
+        unit: requireString(raw, 'unit'),
+        attribution: requireObject(raw, 'attribution'),
+        interval: requireObject(raw, 'interval'),
+        eventAt: requireString(raw, 'eventAt'),
+        receivedAt: requireString(raw, 'receivedAt'),
+        value: requireObject(raw, 'value'),
+        grouping: requireList(raw, 'grouping'),
+        billableStream: requireObject(raw, 'billableStream'),
+        provenance: requireObject(raw, 'provenance'),
+        digest: requireString(raw, 'digest'),
+        correction: optionalObject(raw, 'correction'),
+      );
+
+  final String sellerRef;
+  final String source;
+  final String factId;
+  final int revision;
+  final String metricRef;
+  final String metricVersion;
+  final String metricDigest;
+  final String unit;
+  final Map<String, Object?> attribution;
+  final Map<String, Object?> interval;
+  final String eventAt;
+  final String receivedAt;
+  final Map<String, Object?> value;
+  final List<Object?> grouping;
+  final Map<String, Object?> billableStream;
+  final Map<String, Object?> provenance;
+  final String digest;
+  final Map<String, Object?>? correction;
+}
+
+/// `usage.receipt.v2`.
+final class UsageReceiptV2 extends Envelope {
+  static const String schemaName = 'usage.receipt.v2';
+
+  UsageReceiptV2({
+    required super.raw,
+    required this.sellerRef,
+    required this.source,
+    required this.factId,
+    required this.revision,
+    required this.result,
+    required this.factDigest,
+    required this.receiptRef,
+    required this.digest,
+    this.refusal,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory UsageReceiptV2.fromRaw(Map<String, Object?> raw) => UsageReceiptV2(
+        raw: raw,
+        sellerRef: requireString(raw, 'sellerRef'),
+        source: requireString(raw, 'source'),
+        factId: requireString(raw, 'factId'),
+        revision: requireInt(raw, 'revision'),
+        result: requireString(raw, 'result'),
+        factDigest: requireString(raw, 'factDigest'),
+        receiptRef: requireString(raw, 'receiptRef'),
+        digest: requireString(raw, 'digest'),
+        refusal: optionalString(raw, 'refusal'),
+      );
+
+  final String sellerRef;
+  final String source;
+  final String factId;
+  final int revision;
+  final String result;
+  final String factDigest;
+  final String receiptRef;
+  final String digest;
+  final String? refusal;
+}
+
+/// `usage.aggregate.v1`.
+final class AggregateSnapshot extends Envelope {
+  static const String schemaName = 'usage.aggregate.v1';
+
+  AggregateSnapshot({
+    required super.raw,
+    required this.snapshotRef,
+    required this.sellerRef,
+    required this.metricRef,
+    required this.metricVersion,
+    required this.metricDigest,
+    required this.unit,
+    required this.attribution,
+    required this.grouping,
+    required this.window,
+    required this.effectiveRevision,
+    required this.sourceFrontier,
+    required this.completeness,
+    required this.sourceDigest,
+    required this.model,
+    required this.quantity,
+    required this.billableStream,
+    required this.digest,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory AggregateSnapshot.fromRaw(Map<String, Object?> raw) => AggregateSnapshot(
+        raw: raw,
+        snapshotRef: requireString(raw, 'snapshotRef'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        metricRef: requireString(raw, 'metricRef'),
+        metricVersion: requireString(raw, 'metricVersion'),
+        metricDigest: requireString(raw, 'metricDigest'),
+        unit: requireString(raw, 'unit'),
+        attribution: requireObject(raw, 'attribution'),
+        grouping: requireList(raw, 'grouping'),
+        window: requireObject(raw, 'window'),
+        effectiveRevision: requireInt(raw, 'effectiveRevision'),
+        sourceFrontier: requireList(raw, 'sourceFrontier'),
+        completeness: requireObject(raw, 'completeness'),
+        sourceDigest: requireString(raw, 'sourceDigest'),
+        model: requireObject(raw, 'model'),
+        quantity: requireString(raw, 'quantity'),
+        billableStream: requireObject(raw, 'billableStream'),
+        digest: requireString(raw, 'digest'),
+      );
+
+  final String snapshotRef;
+  final String sellerRef;
+  final String metricRef;
+  final String metricVersion;
+  final String metricDigest;
+  final String unit;
+  final Map<String, Object?> attribution;
+  final List<Object?> grouping;
+  final Map<String, Object?> window;
+  final int effectiveRevision;
+  final List<Object?> sourceFrontier;
+  final Map<String, Object?> completeness;
+  final String sourceDigest;
+  final Map<String, Object?> model;
+  final String quantity;
+  final Map<String, Object?> billableStream;
+  final String digest;
+}
+
+/// `usage.quantity.v1`.
+final class QuantitySnapshot extends Envelope {
+  static const String schemaName = 'usage.quantity.v1';
+
+  QuantitySnapshot({
+    required super.raw,
+    required this.snapshotRef,
+    required this.sellerRef,
+    required this.attribution,
+    required this.unit,
+    required this.quantity,
+    required this.effectiveRevision,
+    required this.effectiveInterval,
+    required this.approvedBy,
+    required this.approvalDigest,
+    required this.sourceDigest,
+    required this.prorationPolicy,
+    required this.digest,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory QuantitySnapshot.fromRaw(Map<String, Object?> raw) => QuantitySnapshot(
+        raw: raw,
+        snapshotRef: requireString(raw, 'snapshotRef'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        attribution: requireObject(raw, 'attribution'),
+        unit: requireString(raw, 'unit'),
+        quantity: requireString(raw, 'quantity'),
+        effectiveRevision: requireInt(raw, 'effectiveRevision'),
+        effectiveInterval: requireObject(raw, 'effectiveInterval'),
+        approvedBy: requireString(raw, 'approvedBy'),
+        approvalDigest: requireString(raw, 'approvalDigest'),
+        sourceDigest: requireString(raw, 'sourceDigest'),
+        prorationPolicy: requireString(raw, 'prorationPolicy'),
+        digest: requireString(raw, 'digest'),
+      );
+
+  final String snapshotRef;
+  final String sellerRef;
+  final Map<String, Object?> attribution;
+  final String unit;
+  final String quantity;
+  final int effectiveRevision;
+  final Map<String, Object?> effectiveInterval;
+  final String approvedBy;
+  final String approvalDigest;
+  final String sourceDigest;
+  final String prorationPolicy;
+  final String digest;
+}
+
+/// `rating.price.v1`.
+final class PriceVersion extends Envelope {
+  static const String schemaName = 'rating.price.v1';
+
+  PriceVersion({
+    required super.raw,
+    required this.sellerRef,
+    required this.priceVersionRef,
+    required this.componentRef,
+    required this.effectiveInterval,
+    required this.unit,
+    required this.quantityPrecision,
+    required this.amountPrecision,
+    required this.currency,
+    required this.currencyExponentVersion,
+    required this.strategy,
+    required this.commitment,
+    required this.modifierOrder,
+    required this.rounding,
+    required this.taxSnapshot,
+    required this.chargeTiming,
+    required this.quantityBasis,
+    required this.billableStream,
+    required this.allowancePolicy,
+    required this.commercialPolicyRef,
+    required this.digest,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory PriceVersion.fromRaw(Map<String, Object?> raw) => PriceVersion(
+        raw: raw,
+        sellerRef: requireString(raw, 'sellerRef'),
+        priceVersionRef: requireString(raw, 'priceVersionRef'),
+        componentRef: requireString(raw, 'componentRef'),
+        effectiveInterval: requireObject(raw, 'effectiveInterval'),
+        unit: requireString(raw, 'unit'),
+        quantityPrecision: requireString(raw, 'quantityPrecision'),
+        amountPrecision: requireString(raw, 'amountPrecision'),
+        currency: requireString(raw, 'currency'),
+        currencyExponentVersion: requireString(raw, 'currencyExponentVersion'),
+        strategy: requireObject(raw, 'strategy'),
+        commitment: requireObject(raw, 'commitment'),
+        modifierOrder: requireString(raw, 'modifierOrder'),
+        rounding: requireObject(raw, 'rounding'),
+        taxSnapshot: requireObject(raw, 'taxSnapshot'),
+        chargeTiming: requireString(raw, 'chargeTiming'),
+        quantityBasis: requireString(raw, 'quantityBasis'),
+        billableStream: requireObject(raw, 'billableStream'),
+        allowancePolicy: requireString(raw, 'allowancePolicy'),
+        commercialPolicyRef: requireString(raw, 'commercialPolicyRef'),
+        digest: requireString(raw, 'digest'),
+      );
+
+  final String sellerRef;
+  final String priceVersionRef;
+  final String componentRef;
+  final Map<String, Object?> effectiveInterval;
+  final String unit;
+  final String quantityPrecision;
+  final String amountPrecision;
+  final String currency;
+  final String currencyExponentVersion;
+  final Map<String, Object?> strategy;
+  final Map<String, Object?> commitment;
+  final String modifierOrder;
+  final Map<String, Object?> rounding;
+  final Map<String, Object?> taxSnapshot;
+  final String chargeTiming;
+  final String quantityBasis;
+  final Map<String, Object?> billableStream;
+  final String allowancePolicy;
+  final String commercialPolicyRef;
+  final String digest;
+}
+
+/// `period.commercial.v1`.
+final class CommercialPeriod extends Envelope {
+  static const String schemaName = 'period.commercial.v1';
+
+  CommercialPeriod({
+    required super.raw,
+    required this.periodRef,
+    required this.sellerRef,
+    required this.componentRef,
+    required this.agreementRef,
+    required this.agreementRevision,
+    required this.interval,
+    required this.localStart,
+    required this.localEnd,
+    required this.timezone,
+    required this.tzdbVersion,
+    required this.calendarPolicy,
+    required this.frequency,
+    required this.anchor,
+    required this.shortMonthPolicy,
+    required this.dstGapPolicy,
+    required this.dstFoldPolicy,
+    required this.prorationPolicy,
+    required this.chargeTiming,
+    required this.externalCorrelationRef,
+    required this.digest,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory CommercialPeriod.fromRaw(Map<String, Object?> raw) => CommercialPeriod(
+        raw: raw,
+        periodRef: requireString(raw, 'periodRef'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        componentRef: requireString(raw, 'componentRef'),
+        agreementRef: requireString(raw, 'agreementRef'),
+        agreementRevision: requireInt(raw, 'agreementRevision'),
+        interval: requireObject(raw, 'interval'),
+        localStart: requireString(raw, 'localStart'),
+        localEnd: requireString(raw, 'localEnd'),
+        timezone: requireString(raw, 'timezone'),
+        tzdbVersion: requireString(raw, 'tzdbVersion'),
+        calendarPolicy: requireString(raw, 'calendarPolicy'),
+        frequency: requireString(raw, 'frequency'),
+        anchor: requireObject(raw, 'anchor'),
+        shortMonthPolicy: requireString(raw, 'shortMonthPolicy'),
+        dstGapPolicy: requireString(raw, 'dstGapPolicy'),
+        dstFoldPolicy: requireString(raw, 'dstFoldPolicy'),
+        prorationPolicy: requireString(raw, 'prorationPolicy'),
+        chargeTiming: requireString(raw, 'chargeTiming'),
+        externalCorrelationRef: requireString(raw, 'externalCorrelationRef'),
+        digest: requireString(raw, 'digest'),
+      );
+
+  final String periodRef;
+  final String sellerRef;
+  final String componentRef;
+  final String agreementRef;
+  final int agreementRevision;
+  final Map<String, Object?> interval;
+  final String localStart;
+  final String localEnd;
+  final String timezone;
+  final String tzdbVersion;
+  final String calendarPolicy;
+  final String frequency;
+  final Map<String, Object?> anchor;
+  final String shortMonthPolicy;
+  final String dstGapPolicy;
+  final String dstFoldPolicy;
+  final String prorationPolicy;
+  final String chargeTiming;
+  final String externalCorrelationRef;
+  final String digest;
+}
+
+/// `rating.basis.v1`.
+final class RatedBasis extends Envelope {
+  static const String schemaName = 'rating.basis.v1';
+
+  RatedBasis({
+    required super.raw,
+    required this.ratedBasisRef,
+    required this.sellerRef,
+    required this.attribution,
+    required this.billingOccurrenceRef,
+    required this.period,
+    required this.priceVersionRef,
+    required this.priceDigest,
+    required this.quantityEvidence,
+    required this.quantity,
+    required this.unit,
+    required this.billableStream,
+    required this.commitmentScopeKey,
+    required this.taxSnapshot,
+    required this.currencyExponentVersion,
+    required this.rounding,
+    required this.amount,
+    required this.digest,
+    this.correction,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory RatedBasis.fromRaw(Map<String, Object?> raw) => RatedBasis(
+        raw: raw,
+        ratedBasisRef: requireString(raw, 'ratedBasisRef'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        attribution: requireObject(raw, 'attribution'),
+        billingOccurrenceRef: requireString(raw, 'billingOccurrenceRef'),
+        period: requireObject(raw, 'period'),
+        priceVersionRef: requireString(raw, 'priceVersionRef'),
+        priceDigest: requireString(raw, 'priceDigest'),
+        quantityEvidence: requireObject(raw, 'quantityEvidence'),
+        quantity: requireString(raw, 'quantity'),
+        unit: requireString(raw, 'unit'),
+        billableStream: requireObject(raw, 'billableStream'),
+        commitmentScopeKey: requireString(raw, 'commitmentScopeKey'),
+        taxSnapshot: requireObject(raw, 'taxSnapshot'),
+        currencyExponentVersion: requireString(raw, 'currencyExponentVersion'),
+        rounding: requireObject(raw, 'rounding'),
+        amount: requireMoney(raw, 'amount'),
+        digest: requireString(raw, 'digest'),
+        correction: optionalObject(raw, 'correction'),
+      );
+
+  final String ratedBasisRef;
+  final String sellerRef;
+  final Map<String, Object?> attribution;
+  final String billingOccurrenceRef;
+  final Map<String, Object?> period;
+  final String priceVersionRef;
+  final String priceDigest;
+  final Map<String, Object?> quantityEvidence;
+  final String quantity;
+  final String unit;
+  final Map<String, Object?> billableStream;
+  final String commitmentScopeKey;
+  final Map<String, Object?> taxSnapshot;
+  final String currencyExponentVersion;
+  final Map<String, Object?> rounding;
+  final Money amount;
+  final String digest;
+  final Map<String, Object?>? correction;
+}
+
+/// `occurrence.ensure.v2`.
+final class EnsureBillingOccurrenceV2 extends Envelope {
+  static const String schemaName = 'occurrence.ensure.v2';
+
+  EnsureBillingOccurrenceV2({
+    required super.raw,
+    required this.commandKey,
+    required this.installationRef,
+    required this.environment,
+    required this.sellerRef,
+    required this.componentRef,
+    required this.purpose,
+    required this.interval,
+    required this.scheduleRevision,
+    required this.period,
+    required this.priceVersionRef,
+    required this.priceDigest,
+    required this.digest,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory EnsureBillingOccurrenceV2.fromRaw(Map<String, Object?> raw) => EnsureBillingOccurrenceV2(
+        raw: raw,
+        commandKey: requireString(raw, 'commandKey'),
+        installationRef: requireString(raw, 'installationRef'),
+        environment: requireString(raw, 'environment'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        componentRef: requireString(raw, 'componentRef'),
+        purpose: requireString(raw, 'purpose'),
+        interval: requireObject(raw, 'interval'),
+        scheduleRevision: requireInt(raw, 'scheduleRevision'),
+        period: requireObject(raw, 'period'),
+        priceVersionRef: requireString(raw, 'priceVersionRef'),
+        priceDigest: requireString(raw, 'priceDigest'),
+        digest: requireString(raw, 'digest'),
+      );
+
+  final String commandKey;
+  final String installationRef;
+  final String environment;
+  final String sellerRef;
+  final String componentRef;
+  final String purpose;
+  final Map<String, Object?> interval;
+  final int scheduleRevision;
+  final Map<String, Object?> period;
+  final String priceVersionRef;
+  final String priceDigest;
+  final String digest;
+}
+
+/// `obligation.prepare.v2`.
+final class PrepareObligationV2 extends Envelope {
+  static const String schemaName = 'obligation.prepare.v2';
+
+  PrepareObligationV2({
+    required super.raw,
+    required this.commandKey,
+    required this.installationRef,
+    required this.environment,
+    required this.sellerRef,
+    required this.ratedBasis,
+    required this.digest,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory PrepareObligationV2.fromRaw(Map<String, Object?> raw) => PrepareObligationV2(
+        raw: raw,
+        commandKey: requireString(raw, 'commandKey'),
+        installationRef: requireString(raw, 'installationRef'),
+        environment: requireString(raw, 'environment'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        ratedBasis: requireObject(raw, 'ratedBasis'),
+        digest: requireString(raw, 'digest'),
+      );
+
+  final String commandKey;
+  final String installationRef;
+  final String environment;
+  final String sellerRef;
+  final Map<String, Object?> ratedBasis;
+  final String digest;
+}
+
+/// `occurrence.no_charge.v1`.
+final class NoChargeReceipt extends Envelope {
+  static const String schemaName = 'occurrence.no_charge.v1';
+
+  NoChargeReceipt({
+    required super.raw,
+    required this.receiptRef,
+    required this.billingOccurrenceRef,
+    required this.ratedBasisRef,
+    required this.sellerRef,
+    required this.periodRef,
+    required this.priceVersionRef,
+    required this.priceDigest,
+    required this.result,
+    required this.reason,
+    required this.approvalRef,
+    required this.approvalDigest,
+    required this.digest,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory NoChargeReceipt.fromRaw(Map<String, Object?> raw) => NoChargeReceipt(
+        raw: raw,
+        receiptRef: requireString(raw, 'receiptRef'),
+        billingOccurrenceRef: requireString(raw, 'billingOccurrenceRef'),
+        ratedBasisRef: requireString(raw, 'ratedBasisRef'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        periodRef: requireString(raw, 'periodRef'),
+        priceVersionRef: requireString(raw, 'priceVersionRef'),
+        priceDigest: requireString(raw, 'priceDigest'),
+        result: requireString(raw, 'result'),
+        reason: requireString(raw, 'reason'),
+        approvalRef: requireString(raw, 'approvalRef'),
+        approvalDigest: requireString(raw, 'approvalDigest'),
+        digest: requireString(raw, 'digest'),
+      );
+
+  final String receiptRef;
+  final String billingOccurrenceRef;
+  final String ratedBasisRef;
+  final String sellerRef;
+  final String periodRef;
+  final String priceVersionRef;
+  final String priceDigest;
+  final String result;
+  final String reason;
+  final String approvalRef;
+  final String approvalDigest;
   final String digest;
 }

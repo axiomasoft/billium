@@ -20,7 +20,10 @@
   "billium.outbox.maintenance_connection",
   "billium.outbox.relay_batch",
   "billium.outbox.retention_floor_seconds",
+  "billium.rating.enabled",
   "billium.runner.max_attempts",
   "billium.runner.root_deadline_ms",
-  "billium.runtime_role.preflight"
+  "billium.runtime_role.preflight",
+  "billium.schedule.enabled",
+  "billium.usage.enabled"
 ]

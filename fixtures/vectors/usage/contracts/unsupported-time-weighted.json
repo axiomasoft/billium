@@ -1,0 +1,40 @@
+{
+  "id": "usage/contracts/unsupported-time-weighted",
+  "description": "P4 contract/unsupported boundary; algorithm cases freeze expected output and do not claim a runtime calculation.",
+  "spec_refs": [
+    "BC-ENV-33",
+    "BC-ENV-34",
+    "BC-ENV-35",
+    "BC-ENV-36",
+    "BC-ENV-37",
+    "BC-ENV-38",
+    "BC-ENV-39",
+    "BC-ENV-40",
+    "BC-ENV-41",
+    "BC-ENV-42",
+    "BC-ENV-43",
+    "BC-ENV-44",
+    "BC-CNF-16",
+    "D56"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"usage.metric.v1\",\"sellerRef\":\"seller-1\",\"metricRef\":\"api_calls\",\"metricVersion\":\"api_calls/1\",\"unit\":\"call\",\"quantityPrecision\":\"decimal_24_9/1\",\"sourceSelection\":{\"sources\":[\"tariffler\"],\"filters\":[{\"field\":\"billable\",\"operator\":\"equals\",\"value\":\"true\"}]},\"model\":{\"id\":\"additive_sum\",\"version\":1,\"sampleReducer\":\"time_weighted\"},\"extraction\":{\"kind\":\"decimal_field\",\"field\":\"quantity\"},\"groupingDimensions\":[\"region\"],\"attributionPolicy\":{\"id\":\"immutable_host_snapshot\",\"version\":1},\"effectiveCutoffPolicy\":{\"id\":\"event_at\",\"version\":1},\"correctionPolicy\":{\"id\":\"replace_same_fact_revision\",\"version\":1},\"latePolicy\":{\"id\":\"original_period_adjustment\",\"version\":1},\"finalityPolicy\":{\"id\":\"source_watermark\",\"version\":1},\"billableStream\":{\"mode\":\"normalized_net_billable\",\"policy\":\"exclusive_commercial_basis/1\",\"commercialBasisRef\":\"commercial-units-1\",\"normalizationRef\":\"net-overage-1\"},\"digest\":\"sha256:63844cde08de616d0b2504e6561aa039b083a0ec34205e4ebee470396e9dfeca\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

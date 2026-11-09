@@ -1,0 +1,40 @@
+{
+  "id": "usage/contracts/receipt-unknown-field",
+  "description": "P4 contract/unsupported boundary; algorithm cases freeze expected output and do not claim a runtime calculation.",
+  "spec_refs": [
+    "BC-ENV-33",
+    "BC-ENV-34",
+    "BC-ENV-35",
+    "BC-ENV-36",
+    "BC-ENV-37",
+    "BC-ENV-38",
+    "BC-ENV-39",
+    "BC-ENV-40",
+    "BC-ENV-41",
+    "BC-ENV-42",
+    "BC-ENV-43",
+    "BC-ENV-44",
+    "BC-CNF-16",
+    "D56"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"usage.receipt.v2\",\"sellerRef\":\"seller-1\",\"source\":\"tariffler\",\"factId\":\"fact-1\",\"revision\":1,\"result\":\"accepted\",\"factDigest\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\",\"receiptRef\":\"receipt-1\",\"unexpected\":true,\"digest\":\"sha256:b62d66da86e98b18f5999965d9a7a873b7f5957674a63b668a8007c330878299\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}
