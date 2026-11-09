@@ -10,10 +10,12 @@ use Billium\Core\Contracts\CallerContext;
 use Billium\Core\Contracts\FinancialSessionAdmission;
 use Billium\Core\Contracts\OperationRunner;
 use Billium\Core\Contracts\TransactionContext;
+use Billium\Core\Data\Caller;
 use Billium\Core\Enums\FinancialMode;
 use Billium\Core\Tests\Support\Concurrency\WorkerApplication;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Platform\Contracts\FeedPartitions;
+use Billium\Platform\Contracts\FeedRecoveryQueries;
 use Billium\Platform\Data\Inbox\BootstrapItem;
 use Billium\Platform\Data\Inbox\BootstrapPartition;
 use Billium\Platform\Data\Inbox\BootstrapStatus;
@@ -42,6 +44,62 @@ use stdClass;
 #[Group('ACC-RST-07')]
 final class BootstrapAtomicAdoptionTest extends InboxTestCase
 {
+    public function test_handler_auth_denial_does_not_dispose_a_bootstrap_item_or_advance_the_session(): void
+    {
+        $session = $this->stage($this->snapshot(cursor: 20));
+        $handler = new JournalHandler(['op-1#1' => HandlerOutcome::conflict(ProblemCode::AuthDenied->value)]);
+        try {
+            $this->applyNext($session, $handler);
+            self::fail('Handler authorization denial must propagate');
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::AuthDenied, $error->problem);
+        }
+        self::assertSame(1, $handler->calls);
+        $status = $this->bootstrapState($session);
+        self::assertSame(['verified', 3, 0, 0], [$status->status, $status->staged, $status->applied, $status->discrepancy]);
+        self::assertSame(0, $this->rows('billium_feed_bootstrap_item', 'disposed_at IS NOT NULL OR result_ref IS NOT NULL'));
+        self::assertSame([], $this->journal('snapshot'), 'handler writes must roll back with the denied root');
+        self::assertSame(0, $this->rows('billium_feed_partition'));
+
+        $handler->script = ['op-2#1' => HandlerOutcome::conflict(ProblemCode::ObservationConflict->value)];
+        while ($this->applyNext($session, $handler) > 0) {
+            // The denied item remains resumable; ordinary conflicts still get a durable discrepancy.
+        }
+        self::assertSame(['op-1#1', 'op-2#1', 'op-3#1'], $this->journal('snapshot'));
+        self::assertSame(1, $this->bootstrapState($session)->discrepancy);
+        $this->root(fn (TransactionContext $context): int => $this->feed()->adoptBootstrap($context, $session));
+        self::assertSame('adopted', $this->bootstrapState($session)->status);
+    }
+
+    public function test_recovery_metadata_is_filtered_by_authenticated_source_authorities(): void
+    {
+        $this->seedPartition(10);
+        $this->stage($this->snapshot(cursor: 20));
+        $db = $this->application()->make(DatabaseManager::class)->connection();
+        $queries = $this->application()->make(FeedRecoveryQueries::class);
+        foreach ([[self::AUTHORITY], ['remote-billium'], []] as $authorities) {
+            $this->callers->set(new Caller('seller-a', 'test', self::INSTALLATION, 'actor-1', $authorities));
+            foreach ([null, self::AUTHORITY, 'remote-billium'] as $selector) {
+                $state = $db->transaction(function () use ($db, $queries, $selector): array {
+                    $db->statement('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY');
+
+                    return $queries->state(self::text($db->getName()), 'payment.observation', $selector, 'part-1');
+                });
+                if ($authorities === [self::AUTHORITY] && $selector !== 'remote-billium') {
+                    self::assertTrue($state['recoveryRequired']);
+                    self::assertSame('verified', $state['bootstrapStatus']);
+                    self::assertCount(2, $state['snapshots']);
+                    foreach ($state['snapshots'] as $snapshot) {
+                        self::assertIsArray($snapshot['payload']);
+                        self::assertSame(self::AUTHORITY, $snapshot['payload']['source_authority']);
+                    }
+                } else {
+                    self::assertSame(['recoveryRequired' => false, 'bootstrapStatus' => 'not_started', 'snapshots' => []], $state);
+                }
+            }
+        }
+    }
+
     #[TestWith([true])]
     #[TestWith([false])]
     public function test_a_late_initial_orphan_covered_by_bootstrap_is_reconciled(bool $redeliver): void

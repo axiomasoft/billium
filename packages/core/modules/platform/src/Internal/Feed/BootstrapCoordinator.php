@@ -137,8 +137,11 @@ final readonly class BootstrapCoordinator
             if (! BootstrapPartition::contains($item, $namespace) || ($item->payload->installationRef ?? null) !== $context->caller()->installationRef) {
                 throw new ProblemException(ProblemCode::ValidationInvalid, 'The bootstrap item is outside its manifest namespace');
             }
-            $db->update("UPDATE public.billium_feed_bootstrap_session SET status = 'applying', updated_at = now() WHERE id = ? AND status = 'verified'", [$sessionId]);
             $outcome = $handler->apply($context, $item);
+            if ($outcome->kind === HandlerOutcomeKind::Conflict && $outcome->reference === ProblemCode::AuthDenied->value) {
+                throw new ProblemException(ProblemCode::AuthDenied, 'The bootstrap item is outside the authenticated source scope');
+            }
+            $db->update("UPDATE public.billium_feed_bootstrap_session SET status = 'applying', updated_at = now() WHERE id = ? AND status = 'verified'", [$sessionId]);
             [$state, $ref] = match ($outcome->kind) {
                 HandlerOutcomeKind::Applied => ['applied', $outcome->reference],
                 HandlerOutcomeKind::ParkedDependency => ['parked', $outcome->dependencyKind.':'.$outcome->reference],
@@ -243,8 +246,13 @@ final readonly class BootstrapCoordinator
 
     private function session(Connection $db, int $sessionId, Caller $caller): mixed
     {
-        return $db->selectOne('SELECT * FROM public.billium_feed_bootstrap_session WHERE id = ? AND seller_ref = ? AND environment = ?', [$sessionId, $caller->sellerRef, $caller->environment])
+        $session = $db->selectOne('SELECT * FROM public.billium_feed_bootstrap_session WHERE id = ? AND seller_ref = ? AND environment = ?', [$sessionId, $caller->sellerRef, $caller->environment])
             ?? throw new ProblemException(ProblemCode::ReferenceUnknown, 'Unknown bootstrap session');
+        if (! in_array(Rows::string(Rows::field($session, 'source_authority')), $caller->sourceAuthorities, true)) {
+            throw new ProblemException(ProblemCode::AuthDenied, 'The bootstrap session is outside the authenticated source scope');
+        }
+
+        return $session;
     }
 
     /** Plans partition (rank 30, segment 0) then session (segment 1), locks both and re-reads the session. */

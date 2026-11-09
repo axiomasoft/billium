@@ -7,7 +7,9 @@ namespace Billium\Ledger\Tests\Feature;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\TransactionContext;
+use Billium\Core\Data\Caller;
 use Billium\Core\Tests\Support\ObservationFactory;
+use Billium\Ledger\Internal\Observation\ObservationHandler;
 use Billium\Ledger\Tests\Observation\ObservationTestCase;
 use Billium\Platform\Contracts\FeedPartitions;
 use Billium\Platform\Data\Inbox\BootstrapPartition;
@@ -22,6 +24,54 @@ use PHPUnit\Framework\Attributes\Group;
 #[Group('PF-13')]
 final class FeedBootstrapTest extends ObservationTestCase
 {
+    public function test_bootstrap_session_access_requires_its_source_authority_and_denial_preserves_items(): void
+    {
+        $this->debt('o1', 10000);
+        $this->intent('intent-a', ['o1']);
+        $authorized = new Caller('seller-a', 'test', self::INSTALLATION, 'actor-1', ['remote-billium']);
+        $this->callers->set($authorized);
+        $snapshot = $this->snapshot('remote-bootstrap', 'L1', 20, [
+            ObservationFactory::charge('op-1', 1, 1000, fields: ['sourceAuthority' => 'remote-billium']),
+        ], authority: 'remote-billium');
+        $feed = $this->application()->make(FeedPartitions::class);
+        $handler = $this->application()->make(ObservationHandler::class);
+        $session = $this->drainer()->root(fn (TransactionContext $context): int => $feed->stageBootstrap($context, $snapshot));
+        $this->callers->set(new Caller('seller-a', 'test', self::INSTALLATION, 'actor-1', ['embedded-commerz']));
+
+        foreach ([
+            fn (TransactionContext $context) => $feed->applyBootstrapItem($context, $session, $handler),
+            fn (TransactionContext $context) => $feed->adoptBootstrap($context, $session),
+            fn (TransactionContext $context) => $feed->bootstrapStatus($context, $session),
+        ] as $operation) {
+            try {
+                $this->drainer()->root($operation);
+                self::fail('A bootstrap session requires its source authority');
+            } catch (ProblemException $error) {
+                self::assertSame(ProblemCode::AuthDenied, $error->problem);
+            }
+            self::assertSame('staged', $this->value('SELECT state FROM billium_feed_bootstrap_item WHERE session_id=?', [$session]));
+            self::assertNull($this->value('SELECT disposed_at FROM billium_feed_bootstrap_item WHERE session_id=?', [$session]));
+            self::assertSame('verified', $this->value('SELECT status FROM billium_feed_bootstrap_session WHERE id=?', [$session]));
+            self::assertNull($this->value('SELECT new_partition_id FROM billium_feed_bootstrap_session WHERE id=?', [$session]));
+            self::assertSame(0, $this->rows('billium_feed_partition'));
+            self::assertSame(0, $this->rows('billium_observed_payment'));
+            self::assertSame(0, $this->rows('billium_payment'));
+            self::assertSame(0, $this->rows('billium_allocation'));
+        }
+
+        $this->callers->set($authorized);
+        self::assertSame(0, $this->drainer()->root(fn (TransactionContext $context): int => $feed->applyBootstrapItem($context, $session, $handler)));
+        $partition = $this->drainer()->root(fn (TransactionContext $context): int => $feed->adoptBootstrap($context, $session));
+        $status = $this->drainer()->root(fn (TransactionContext $context) => $feed->bootstrapStatus($context, $session));
+        self::assertSame(['adopted', 1, 0, 0, $partition], [$status->status, $status->applied, $status->staged, $status->discrepancy, $status->newPartitionId]);
+        self::assertSame(['active', 'remote-billium', 20], [$this->partition()['state'], $this->partition()['source_authority'], self::integer($this->partition()['accounted_sequence'])]);
+        self::assertSame(1000, self::integer($this->observedRow()['captured_minor']));
+        self::assertSame(1000, $this->allocated('o1'));
+        self::assertSame(1, $this->rows('billium_payment'));
+        self::assertSame(1, $this->rows('billium_allocation'));
+        self::assertSame(0, $this->rows('billium_ledger_discrepancy'));
+    }
+
     public function test_manifest_namespace_and_item_namespace_are_verified_before_staging_or_resuming(): void
     {
         $this->debt('o1', 10000);
