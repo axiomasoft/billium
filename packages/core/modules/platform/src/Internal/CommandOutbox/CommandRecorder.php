@@ -10,6 +10,7 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Modules\ModuleRegistry;
 use Billium\Core\Contracts\OperationRunner;
 use Billium\Core\Contracts\TransactionContext;
+use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Platform\Contracts\CommandOutbox;
 use Billium\Platform\Data\EventContracts\PreparedInternalCommand;
 use Billium\Platform\Internal\Installation\Rows;
@@ -27,6 +28,11 @@ final readonly class CommandRecorder implements CommandOutbox
     {
         ($this->runner)()->assertCurrent($context, 'platform');
         ($this->runner)()->assertCurrent($context, $command->ownerModuleId);
+        // @phpstan-ignore identical.alwaysFalse (Keep the explicit admission invariant although sessionEpoch returns int or throws.)
+        if (! $context->spec()->mode->financial() || $context->sessionEpoch() === null
+            || in_array($context->spec()->operationClass, [ModuleOperationClass::ReceiptReplay, ModuleOperationClass::HistoricalRead, ModuleOperationClass::CallbackCustody], true)) {
+            throw new LogicException('Outbox recording requires an admitted financial write operation class and session (D54, D55, D60)');
+        }
         $descriptor = $this->modules->descriptor($command->ownerModuleId);
         if ($descriptor === null || ! array_any($descriptor->internalCommands, static fn ($declaration): bool => $declaration->commandSchema === $command->commandSchema && $declaration->commandType === $command->commandType)) {
             throw new LogicException('Internal command is not declared by its owner');

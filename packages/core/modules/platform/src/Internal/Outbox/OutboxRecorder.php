@@ -9,6 +9,7 @@ use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\OperationRunner;
 use Billium\Core\Contracts\TransactionContext;
+use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Platform\Contracts\Outbox;
 use Billium\Platform\Data\EventContracts\RegisteredPublicEvent;
 use Billium\Platform\Data\OutboxEvent;
@@ -27,6 +28,11 @@ final readonly class OutboxRecorder implements Outbox
     {
         // Same runner, connection and root Tx as the owning state (PF-10); platform is in every admitted closure.
         ($this->runner)()->assertCurrent($context, 'platform');
+        // @phpstan-ignore identical.alwaysFalse (Keep the explicit admission invariant although sessionEpoch returns int or throws.)
+        if (! $context->spec()->mode->financial() || $context->sessionEpoch() === null
+            || in_array($context->spec()->operationClass, [ModuleOperationClass::ReceiptReplay, ModuleOperationClass::HistoricalRead, ModuleOperationClass::CallbackCustody], true)) {
+            throw new LogicException('Outbox recording requires an admitted financial write operation class and session (D54, D55, D60)');
+        }
         $registered = $event instanceof RegisteredPublicEvent ? $event : null;
         $event = $registered->event ?? $event;
         if (! $event instanceof OutboxEvent) {

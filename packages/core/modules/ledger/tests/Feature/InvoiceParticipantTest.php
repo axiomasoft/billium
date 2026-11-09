@@ -15,6 +15,7 @@ use Billium\Core\Enums\FinancialMode;
 use Billium\Core\Enums\LockRank;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Core\Exceptions\LockOrderViolation;
+use Billium\Core\Tests\Support\ObservationFactory;
 use Billium\Ledger\Contracts\LedgerParticipants;
 use Billium\Ledger\Data\AdjustObligation;
 use Billium\Ledger\Data\BillingAccountScope;
@@ -26,8 +27,16 @@ use Billium\Ledger\Data\IssueCreditNote;
 use Billium\Ledger\Data\IssueInvoice;
 use Billium\Ledger\Data\NoEffectProof;
 use Billium\Ledger\Data\RecordObligation;
+use Billium\Ledger\Internal\Observation\ObservationHandler;
+use Billium\Ledger\Internal\Observation\PaymentProjection;
+use Billium\Ledger\Internal\Observation\RefundReconciler;
 use Billium\Ledger\Tests\Commands\InvoiceFixtures;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
+use Billium\Platform\Contracts\CommandOutbox;
+use Billium\Platform\Contracts\Outbox;
+use Billium\Platform\Data\EventContracts\PreparedInternalCommand;
+use Billium\Platform\Data\OutboxEvent;
+use DateTimeImmutable;
 use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
@@ -82,6 +91,144 @@ final class InvoiceParticipantTest extends LedgerTestCase
         }
 
         self::assertSame($before, array_map($this->rows(...), $tables));
+    }
+
+    /** @return iterable<string, array{string, ModuleOperationClass}> */
+    public static function nonMonetaryOperationClasses(): iterable
+    {
+        foreach (['recordObligation', 'adjustObligation', 'declareSettlementIntent', 'issueInvoice', 'issueCreditNote', 'closeSettlementIntentNoEffect'] as $participant) {
+            foreach ([ModuleOperationClass::HistoricalRead, ModuleOperationClass::ReceiptReplay, ModuleOperationClass::CallbackCustody,
+                ModuleOperationClass::ObservedFactRecording, ModuleOperationClass::UnknownResolution] as $class) {
+                yield $participant.' in '.$class->value => [$participant, $class];
+            }
+        }
+    }
+
+    #[DataProvider('nonMonetaryOperationClasses')]
+    public function test_monetary_participants_require_an_admitted_monetary_operation_class(string $participant, ModuleOperationClass $class): void
+    {
+        $this->obligation('obligation-a', 1000);
+        $this->draft();
+        if ($participant === 'issueCreditNote') {
+            $this->issue();
+        }
+        if ($participant === 'closeSettlementIntentNoEffect') {
+            $this->ledger()->declareSettlementIntent(new DeclareSettlementIntent('intent', $this->account(), 'intent-a', 'RUB', ['obligation-a']));
+        }
+        // Retired modules admit history and replay roots; neither capability permits a new write.
+        if (in_array($class, [ModuleOperationClass::HistoricalRead, ModuleOperationClass::ReceiptReplay], true)) {
+            $this->retireLedger();
+        }
+        $tables = ['billium_obligation', 'billium_allocation_receipt', 'billium_outbox_event', 'billium_money_commit_log'];
+        $before = array_map($this->rows(...), $tables);
+
+        try {
+            $this->runner()->run($this->spec(mode: FinancialMode::Active, class: $class, modules: ['ledger', 'platform'], commit: 'ledger.test_effect'),
+                function (TransactionContext $context) use ($participant): Receipt {
+                    self::assertSame(1, $context->sessionEpoch());
+
+                    return $this->monetaryParticipant($context, $participant);
+                });
+            self::fail('operation class '.$class->value.' must not invoke '.$participant);
+        } catch (LogicException $exception) {
+            self::assertSame('Monetary ledger operation is not permitted for operation class '.$class->value.' (D55, D60)', $exception->getMessage());
+        }
+
+        self::assertSame($before, array_map($this->rows(...), $tables));
+    }
+
+    /** @return iterable<string, array{bool, FinancialMode, ModuleOperationClass}> */
+    public static function nonWritingOutboxRoots(): iterable
+    {
+        foreach ([false, true] as $command) {
+            $recorder = $command ? 'command' : 'event';
+            foreach ([ModuleOperationClass::HistoricalRead, ModuleOperationClass::ReceiptReplay, ModuleOperationClass::CallbackCustody] as $class) {
+                yield $recorder.' in '.$class->value => [$command, FinancialMode::Active, $class];
+            }
+            yield $recorder.' in raw custody' => [$command, FinancialMode::RawCustody, ModuleOperationClass::CallbackCustody];
+        }
+    }
+
+    #[DataProvider('nonWritingOutboxRoots')]
+    public function test_outbox_recording_requires_a_financial_write_class_and_session(bool $command, FinancialMode $mode, ModuleOperationClass $class): void
+    {
+        if (in_array($class, [ModuleOperationClass::HistoricalRead, ModuleOperationClass::ReceiptReplay], true)) {
+            $this->retireLedger();
+        }
+        if ($mode === FinancialMode::RawCustody) {
+            $this->installation()->seal('seal-outbox', 1);
+        }
+        $tables = ['billium_outbox_event', 'billium_outbox_delivery', 'billium_outbox_command', 'billium_outbox_command_delivery', 'billium_money_commit_log'];
+        $before = array_map($this->rows(...), $tables);
+
+        try {
+            $this->runner()->run($this->spec(mode: $mode, class: $class, modules: ['ledger', 'platform'], commit: 'ledger.test_effect'),
+                function (TransactionContext $context) use ($command): Receipt {
+                    if ($command) {
+                        $this->application()->make(CommandOutbox::class)->record($context,
+                            new PreparedInternalCommand('command-a', 'business-a', 'ledger', 'ledger.test', 'billium.command.v1', [], ['default']));
+                    } else {
+                        $this->application()->make(Outbox::class)->record($context,
+                            new OutboxEvent('event-a', 'obligation.created.v1', 'billium.event.v1', 'obligation-a', 1, new DateTimeImmutable('2026-10-28T10:00:00Z'), ['ref' => 'obligation-a']));
+                    }
+
+                    return self::receipt();
+                });
+            self::fail('a nonwriting root must not record outbox work');
+        } catch (LogicException $exception) {
+            self::assertSame('Outbox recording requires an admitted financial write operation class and session (D54, D55, D60)', $exception->getMessage());
+        }
+
+        self::assertSame($before, array_map($this->rows(...), $tables));
+    }
+
+    /** @return iterable<string, array{bool, ModuleOperationClass}> */
+    public static function nonObservationRoots(): iterable
+    {
+        foreach (ModuleOperationClass::cases() as $class) {
+            if ($class !== ModuleOperationClass::ObservedFactRecording) {
+                yield 'projection in '.$class->value => [false, $class];
+            }
+            if (! in_array($class, [ModuleOperationClass::ObservedFactRecording, ModuleOperationClass::UnknownResolution], true)) {
+                yield 'reconciliation in '.$class->value => [true, $class];
+            }
+        }
+    }
+
+    #[DataProvider('nonObservationRoots')]
+    public function test_observation_writers_require_their_own_operation_class(bool $reconcile, ModuleOperationClass $class): void
+    {
+        $tables = ['billium_obligation', 'billium_allocation_receipt', 'billium_outbox_event', 'billium_money_commit_log', 'billium_observed_payment', 'billium_payment'];
+        $before = array_map($this->rows(...), $tables);
+
+        try {
+            $this->runner()->run($this->spec(class: $class), function (TransactionContext $context) use ($reconcile): Receipt {
+                if ($reconcile) {
+                    $this->application()->make(RefundReconciler::class)->compare($context, 0);
+                } else {
+                    $observation = ObservationHandler::decode(ObservationFactory::charge('op-1', 1, 1000)) ?? self::fail('valid observation');
+                    $this->application()->make(PaymentProjection::class)->apply($context, $observation);
+                }
+
+                return self::receipt();
+            });
+            self::fail('operation class '.$class->value.' must not invoke an observation writer');
+        } catch (LogicException $exception) {
+            $prefix = $reconcile ? 'Ledger operation' : 'Monetary ledger operation';
+            self::assertSame($prefix.' is not permitted for operation class '.$class->value.' (D55, D60)', $exception->getMessage());
+        }
+
+        self::assertSame($before, array_map($this->rows(...), $tables));
+    }
+
+    private function retireLedger(): void
+    {
+        foreach (['draining', 'recovery_only', 'retired'] as $state) {
+            self::assertSame(1, $this->owner()->update(
+                "UPDATE billium_module_state SET state=?, generation=generation+1, last_transition_ref=? WHERE installation_ref=? AND module_id='ledger'",
+                [$state, 'retire-fixture-'.$state, self::INSTALLATION],
+            ));
+        }
     }
 
     private function monetaryParticipant(TransactionContext $context, string $participant): Receipt

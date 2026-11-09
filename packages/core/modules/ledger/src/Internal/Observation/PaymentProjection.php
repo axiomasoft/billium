@@ -12,6 +12,7 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\OperationRunner;
 use Billium\Core\Contracts\TransactionContext;
 use Billium\Core\Data\Caller;
+use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Core\Exceptions\LockPlanChanged;
 use Billium\Ledger\Internal\Commands\AllocateLockPlan;
 use Billium\Ledger\Internal\InvoiceStatus;
@@ -60,7 +61,7 @@ final readonly class PaymentProjection
     public function apply(TransactionContext $context, PaymentObservation $observation, ?int $inboxId = null): HandlerOutcome
     {
         $this->runner->assertCurrent($context, 'ledger');
-        $this->routines->assertMonetary($context);
+        $this->routines->assertMonetary($context, [ModuleOperationClass::ObservedFactRecording]);
         $caller = $context->caller();
         $refusal = self::refusal($caller, $observation);
         if ($refusal !== null) {

@@ -10,6 +10,7 @@ use Billium\Core\Contracts\OperationRunner;
 use Billium\Core\Contracts\TransactionContext;
 use Billium\Core\Data\LockRequest;
 use Billium\Core\Enums\LockRank;
+use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Core\Exceptions\LockPlanChanged;
 use Billium\Ledger\Data\AdjustObligation;
 use Billium\Ledger\Data\AmendObligationDuePolicy;
@@ -27,21 +28,29 @@ final readonly class LedgerRepository
 {
     public function __construct(private DatabaseManager $databases, private OperationRunner $runner) {}
 
-    public function assertMonetary(TransactionContext $context): void
+    /** @param list<ModuleOperationClass> $allowedClasses */
+    public function assertMonetary(TransactionContext $context, array $allowedClasses = [ModuleOperationClass::NewIntent, ModuleOperationClass::FrozenIntentCompletion, ModuleOperationClass::OriginalOwnerRefund]): void
     {
         $this->runner->assertCurrent($context, 'ledger');
         // @phpstan-ignore identical.alwaysFalse (Keep the explicit admission invariant although sessionEpoch returns int or throws.)
         if (! $context->spec()->mode->financial() || $context->sessionEpoch() === null || ! $context->spec()->monetary()) {
             throw new LogicException('Monetary ledger operations require an admitted financial session and commit accounting (D54, D60, D62)');
         }
+        if (! in_array($context->spec()->operationClass, $allowedClasses, true)) {
+            throw new LogicException('Monetary ledger operation is not permitted for operation class '.$context->spec()->operationClass->value.' (D55, D60)');
+        }
     }
 
-    public function assertFinancialSession(TransactionContext $context): void
+    /** @param list<ModuleOperationClass> $allowedClasses */
+    public function assertFinancialSession(TransactionContext $context, array $allowedClasses = [ModuleOperationClass::ObservedFactRecording, ModuleOperationClass::UnknownResolution]): void
     {
         $this->runner->assertCurrent($context, 'ledger');
         // @phpstan-ignore identical.alwaysFalse (Keep the explicit admission invariant although sessionEpoch returns int or throws.)
         if (! $context->spec()->mode->financial() || $context->sessionEpoch() === null) {
             throw new LogicException('Ledger operations require an admitted financial session (D54, D60)');
+        }
+        if (! in_array($context->spec()->operationClass, $allowedClasses, true)) {
+            throw new LogicException('Ledger operation is not permitted for operation class '.$context->spec()->operationClass->value.' (D55, D60)');
         }
     }
 

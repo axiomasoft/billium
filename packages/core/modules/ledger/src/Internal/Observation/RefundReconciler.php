@@ -8,6 +8,7 @@ use Billium\Contracts\Contracts\Codec;
 use Billium\Core\Contracts\CallerContext;
 use Billium\Core\Contracts\OperationRunner;
 use Billium\Core\Contracts\TransactionContext;
+use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Ledger\Internal\Commands\AllocateLockPlan;
 use Billium\Ledger\Internal\Receipts\AllocationReceiptWriter;
 use Billium\Ledger\Internal\Repositories\LedgerRepository;
@@ -86,7 +87,7 @@ final readonly class RefundReconciler
     public function compare(TransactionContext $context, int $paymentId): array
     {
         $this->runner->assertCurrent($context, 'ledger');
-        $this->routines->assertFinancialSession($context);
+        $this->routines->assertFinancialSession($context, [ModuleOperationClass::ObservedFactRecording, ModuleOperationClass::UnknownResolution]);
         $caller = $context->caller();
         $db = $this->databases->connection($context->connectionName());
         new AllocateLockPlan(payments: [$paymentId])->lock($context);
