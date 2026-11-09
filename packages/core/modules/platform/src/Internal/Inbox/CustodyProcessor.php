@@ -49,10 +49,9 @@ final readonly class CustodyProcessor
         $db = $this->partitions->connection($context);
 
         $partition = $this->partitions->live($db, $e->channel, $e->sourceAuthority, $e->sellerRef, $e->environment, $e->partitionRef);
-        if ($partition === null && ($e->sourceSequence === 1 || $this->retiredNamespace($db, $e))) {
-            // A retired namespace can acquire a successor through bootstrap at any sequence. Re-read under
-            // its admission lock so custody cannot strand a held orphan after adoption scanned the tail.
-            // Gaps in a fresh namespace remain free to commit while its first delivery opens the partition.
+        if ($partition === null && ($e->sourceSequence === 1 || $this->retiredNamespace($db, $e) || $this->bootstrapOpen($db, $e))) {
+            // Bootstrap can admit a partition at any sequence, including in a fresh namespace.
+            // Re-read under its admission lock while bootstrap is open or a retired partition exists.
             $this->partitions->lockNamespace($db, $e->channel, $e->sourceAuthority, $e->sellerRef, $e->environment, $e->partitionRef);
             $partition = $this->partitions->live($db, $e->channel, $e->sourceAuthority, $e->sellerRef, $e->environment, $e->partitionRef);
         }
@@ -70,6 +69,7 @@ final readonly class CustodyProcessor
             // An orphan may have committed after this partition's opening root scanned pre-partition custody.
             // Reattach before replaying an identity so duplicates can hand the recovered tail to a new drain root.
             $this->partitions->attachParkedGaps($db, $partition);
+            $partition = $this->partitions->find($db, $partition->id, $e->sellerRef, $e->environment) ?? throw new LogicException('Locked partition vanished');
         }
 
         $existing = $this->identity($db, $e);
@@ -128,6 +128,10 @@ final readonly class CustodyProcessor
             return new CustodyResult(CustodyDisposition::Idle);
         }
         $this->partitions->attachParkedGaps($db, $partition);
+        $partition = $this->partitions->find($db, $partition->id, $caller->sellerRef, $caller->environment) ?? throw new LogicException('Locked partition vanished');
+        if (! $partition->active()) {
+            return new CustodyResult(CustodyDisposition::Idle);
+        }
         $record = $db->selectOne(<<<'SQL'
             SELECT * FROM public.billium_inbox_message
             WHERE partition_id = ? AND source_sequence = ? AND status IN ('ready', 'parked_gap')

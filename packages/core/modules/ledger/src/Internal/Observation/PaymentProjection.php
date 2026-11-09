@@ -172,6 +172,13 @@ final readonly class PaymentProjection
         $binding = $payment !== null && $payment['intent'] !== ($intent === null || $closed ? null : $intent['id']);
         // An unseen older fact can still contradict the consistent history; only compatible history is stale.
         $exceptional = self::exceptional($db, $observedId, $o, $applied, $closed, $binding);
+        if ($exceptional === null) {
+            $earlierPark = $db->table('billium_observation_park')->where('observed_payment_id', $observedId)
+                ->whereNull('released_at')->where('revision', '<', $revision)->orderBy('revision')->first(['revision']);
+            if ($earlierPark !== null) {
+                return $this->park($db, $caller, $o, $observedId, $inboxId, 'operation_revision', (string) self::int($earlierPark->revision));
+            }
+        }
         if ($exceptional !== null) {
             $mode = self::MODE_HOLD;
         } elseif ($applied !== null && $revision <= $applied['revision']) {
@@ -289,15 +296,14 @@ final readonly class PaymentProjection
             default => [null, 0, 0],
         };
         if ($reason === null) {
-            // Every candidate must fit the immutable observed neighbors, including parked facts that
-            // have never been applied, even before the first assignment or after the applied revision.
-            foreach ([true, false] as $predecessor) {
-                $neighbor = $db->table('billium_observed_payment_revision')->where('observed_payment_id', $observedId)
-                    ->where('revision', $predecessor ? '<' : '>', $o->operationRevision)
-                    ->orderBy('revision', $predecessor ? 'desc' : 'asc')->first(['state', 'captured_minor', 'refunded_minor']);
-                if ($neighbor === null) {
+            // Parked and unapplied facts constrain every candidate, even beyond its nearest neighbors.
+            $history = $db->table('billium_observed_payment_revision')->where('observed_payment_id', $observedId)
+                ->orderBy('revision')->get(['revision', 'state', 'captured_minor', 'refunded_minor']);
+            foreach ($history as $neighbor) {
+                if (self::int($neighbor->revision) === $o->operationRevision) {
                     continue;
                 }
+                $predecessor = self::int($neighbor->revision) < $o->operationRevision;
                 $neighborCaptured = self::int($neighbor->captured_minor);
                 $neighborRefunded = self::int($neighbor->refunded_minor);
                 $previousState = $predecessor ? self::text($neighbor->state) : self::state($o->state);
@@ -312,6 +318,28 @@ final readonly class PaymentProjection
                 if ($reason !== null) {
                     break;
                 }
+            }
+            // Monotonic totals and terminal-state preservation are transitive: checking each ordered
+            // pair of consecutive persisted facts detects a contradiction between any historical pair.
+            $previous = null;
+            foreach ($history as $row) {
+                if ($reason !== null) {
+                    break;
+                }
+                if ($previous !== null) {
+                    $previousCaptured = self::int($previous->captured_minor);
+                    $previousRefunded = self::int($previous->refunded_minor);
+                    $rowCaptured = self::int($row->captured_minor);
+                    $rowRefunded = self::int($row->refunded_minor);
+                    [$reason, $expected, $actual] = match (true) {
+                        $rowCaptured < $previousCaptured => ['regression_captured', $previousCaptured, $rowCaptured],
+                        $rowRefunded < $previousRefunded => ['regression_refunded', $previousRefunded, $rowRefunded],
+                        in_array(self::text($previous->state), ['succeeded', 'failed', 'cancelled'], true)
+                            && $row->state !== $previous->state => ['regression_state', $previousCaptured, $rowCaptured],
+                        default => [null, 0, 0],
+                    };
+                }
+                $previous = $row;
             }
         }
         if ($reason === null) {

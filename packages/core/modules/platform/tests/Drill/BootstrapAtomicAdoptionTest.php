@@ -44,6 +44,117 @@ final class BootstrapAtomicAdoptionTest extends InboxTestCase
 {
     #[TestWith([true])]
     #[TestWith([false])]
+    public function test_a_late_initial_orphan_covered_by_bootstrap_is_reconciled(bool $redeliver): void
+    {
+        $handler = new JournalHandler;
+        $paused = false;
+        $adopted = null;
+        $app = $this->application();
+        $spec = $this->spec();
+        $snapshot = $this->snapshot(cursor: 20);
+        $this->owner()->listen(function (QueryExecuted $query) use (&$paused, &$adopted, $app, $spec, $snapshot, $handler): void {
+            if ($paused || ! str_contains($query->sql, 'SELECT * FROM public.billium_feed_partition')
+                || ! str_contains($query->sql, "state <> 'retired'")) {
+                return;
+            }
+            $paused = true;
+            // No partition or session existed at the read. Initial bootstrap commits before custody resumes.
+            $worker = WorkerApplication::create();
+            try {
+                $worker->instance(CallerContext::class, $this->callers);
+                $worker->instance(FinancialSessionAdmission::class, $this->tokens);
+                $run = function (\Closure $body) use ($worker, $spec): void {
+                    $worker->make(OperationRunner::class)->run($spec, static function (TransactionContext $context) use ($body) {
+                        $body($context);
+
+                        return self::receipt();
+                    });
+                };
+                $feed = $worker->make(FeedPartitions::class);
+                $session = null;
+                $run(function (TransactionContext $context) use ($feed, $snapshot, &$session): void {
+                    $session = $feed->stageBootstrap($context, $snapshot);
+                });
+                self::assertIsInt($session);
+                $remaining = 1;
+                while ($remaining > 0) {
+                    $run(function (TransactionContext $context) use ($feed, $session, $handler, &$remaining): void {
+                        $remaining = $feed->applyBootstrapItem($context, $session, $handler);
+                    });
+                }
+                $run(function (TransactionContext $context) use ($feed, $session, &$adopted): void {
+                    $adopted = $feed->adoptBootstrap($context, $session);
+                });
+            } finally {
+                foreach (array_keys($worker->make(DatabaseManager::class)->getConnections()) as $name) {
+                    $worker->make(DatabaseManager::class)->purge($name);
+                }
+                Container::setInstance($app);
+                Facade::clearResolvedInstances();
+                Facade::setFacadeApplication($app);
+            }
+        });
+
+        $envelope = $this->envelope(2, lineage: 'L2');
+        $this->custody($envelope, $handler, FinancialMode::RawCustody);
+        self::assertTrue($paused);
+        self::assertIsInt($adopted);
+        self::assertSame(['parked_gap', null], [$this->inbox('evt-L2-2')['status'], $this->inbox('evt-L2-2')['partition_id']]);
+        if ($redeliver) {
+            self::assertSame('quarantined', $this->custody($envelope, $handler)->status);
+        }
+        self::assertSame(CustodyDisposition::Idle, $this->drain($adopted, $handler)->disposition);
+        $row = $this->inbox('evt-L2-2');
+        self::assertSame(['quarantined', $adopted, 'superseded_by_bootstrap', null, null],
+            [$row['status'], $row['partition_id'], $row['last_error_class'], $row['park_kind'], $row['park_ref']]);
+        self::assertSame([20, 'active'], [$this->partitionRow($adopted)['accounted_sequence'], $this->partitionRow($adopted)['state']]);
+        self::assertSame([], $this->journal());
+    }
+
+    public function test_an_open_initial_bootstrap_serializes_gap_custody_on_the_namespace(): void
+    {
+        $this->stage($this->snapshot(cursor: 20));
+        $locked = false;
+        $reread = false;
+        $this->application()->make(DatabaseManager::class)->connection()->beforeExecuting(function (string $sql) use (&$locked, &$reread): void {
+            if (str_contains($sql, 'pg_advisory_xact_lock')) {
+                $locked = true;
+            }
+            if ($locked && str_contains($sql, 'SELECT * FROM public.billium_feed_partition')) {
+                $reread = true;
+            }
+        });
+
+        self::assertSame(CustodyDisposition::ParkedGap, $this->custody($this->envelope(2, lineage: 'L2'), new JournalHandler)->disposition);
+
+        self::assertTrue($locked);
+        self::assertTrue($reread);
+        self::assertSame(0, $this->rows('billium_feed_partition'));
+    }
+
+    #[TestWith([true])]
+    #[TestWith([false])]
+    public function test_an_uncovered_orphan_below_the_accounted_cursor_requires_recovery(bool $receive): void
+    {
+        $handler = new JournalHandler;
+        $this->custody($this->envelope(2), $handler);
+        $partition = $this->seedPartition(20);
+
+        if ($receive) {
+            self::assertSame(CustodyDisposition::RecoveryRequired, $this->custody($this->envelope(21), $handler)->disposition);
+        } else {
+            self::assertSame(CustodyDisposition::Idle, $this->drain($partition, $handler)->disposition);
+        }
+
+        self::assertSame('held_recovery', $this->inbox('evt-L1-2')['status']);
+        self::assertSame(['recovery_required', 'sequence_regressed'],
+            [$this->partitionRow($partition)['state'], $this->partitionRow($partition)['recovery_reason']]);
+        self::assertSame(CustodyDisposition::Idle, $this->drain($partition, $handler)->disposition);
+        self::assertSame([], $this->journal());
+    }
+
+    #[TestWith([true])]
+    #[TestWith([false])]
     public function test_a_missing_partition_read_before_retired_namespace_adoption_keeps_the_tail_drainable(bool $redeliver): void
     {
         $handler = new JournalHandler;

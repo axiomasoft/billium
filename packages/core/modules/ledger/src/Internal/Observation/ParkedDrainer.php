@@ -148,21 +148,31 @@ final readonly class ParkedDrainer
     public function retryParked(int $limit = 100, FinancialMode $mode = FinancialMode::Active): array
     {
         $caller = $this->callers->current();
-        $rows = $this->connection()->select(<<<'SQL'
+        $statuses = [];
+        $attempted = [];
+        while (count($statuses) < $limit) {
+            // Re-select after each root so releasing an earlier bootstrap park admits its waiting revision.
+            $row = $this->connection()->selectOne(<<<'SQL'
             SELECT k.id, k.inbox_id FROM public.billium_observation_park k
-            WHERE k.seller_ref = ? AND k.environment = ? AND k.released_at IS NULL AND (
+            WHERE k.seller_ref = ? AND k.environment = ? AND k.released_at IS NULL
+              AND NOT (k.id = ANY(?::bigint[])) AND (
                 (k.dependency_kind = 'settlement_intent' AND EXISTS (
                     SELECT 1 FROM public.billium_settlement_intent i
                     WHERE i.seller_ref = k.seller_ref AND i.environment = k.environment AND i.business_intent_ref = k.dependency_ref))
                 OR (k.dependency_kind = 'original_charge' AND EXISTS (
                     SELECT 1 FROM public.billium_payment p JOIN public.billium_observed_payment o ON o.id = k.observed_payment_id
                     WHERE p.seller_ref = k.seller_ref AND p.environment = k.environment AND p.payment_ref = k.dependency_ref AND p.kind = 'charge'
-                      AND o.seller_ref = k.seller_ref AND o.environment = k.environment AND p.source_authority = o.source_authority)))
-            ORDER BY k.id LIMIT ?
-            SQL, [$caller->sellerRef, $caller->environment, $limit]);
-        $statuses = [];
-        foreach ($rows as $row) {
+                      AND o.seller_ref = k.seller_ref AND o.environment = k.environment AND p.source_authority = o.source_authority))
+                OR (k.dependency_kind = 'operation_revision' AND NOT EXISTS (
+                    SELECT 1 FROM public.billium_observation_park k2
+                    WHERE k2.observed_payment_id = k.observed_payment_id AND k2.released_at IS NULL AND k2.revision < k.revision)))
+            ORDER BY k.revision, k.id LIMIT 1
+            SQL, [$caller->sellerRef, $caller->environment, '{'.implode(',', $attempted).'}']);
+            if ($row === null) {
+                break;
+            }
             $park = is_object($row) && is_int($row->id ?? null) ? $row->id : throw new LogicException('Expected a park id');
+            $attempted[] = $park;
             $inbox = is_int($row->inbox_id ?? null) ? $row->inbox_id : null;
             if ($inbox !== null) {
                 $result = $this->root(fn (TransactionContext $context): CustodyResult => $this->retry($context, $inbox, $this->handler), mode: $mode);

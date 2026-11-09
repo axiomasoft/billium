@@ -11,13 +11,16 @@ return new class extends Migration
     public function up(): void
     {
         DB::unprepared(<<<'SQL'
+            ALTER TABLE public.billium_observation_park DROP CONSTRAINT billium_observation_park_dependency_kind_check;
+            ALTER TABLE public.billium_observation_park ADD CONSTRAINT billium_observation_park_dependency_kind_check
+                CHECK (dependency_kind IN ('settlement_intent','original_charge','operation_revision')) NOT VALID;
+
             CREATE OR REPLACE FUNCTION public.billium_project_payment(
                 p_installation text,p_seller text,p_environment text,p_account text,p_currency text,p_observed bigint,p_revision bigint,
                 p_payment_ref text,p_intent bigint,p_mode text,p_parts jsonb,p_discrepancy jsonb,p_receipt text,p_digest text)
             RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
             DECLARE
                 o public.billium_observed_payment; r public.billium_observed_payment_revision; p public.billium_payment; i public.billium_settlement_intent;
-                v_previous public.billium_observed_payment_revision; v_next public.billium_observed_payment_revision;
                 b public.billium_obligation; l record; v_replay public.billium_allocation_receipt; v_body jsonb; v_allocs jsonb := '[]'::jsonb; v_sum numeric := 0;
                 v_applied_state text; v_amount numeric; v_obligations bigint[]; v_discrepancy bigint; v_disc jsonb := NULL;
             BEGIN
@@ -62,19 +65,22 @@ return new class extends Migration
                 UPDATE public.billium_observed_payment SET billing_account_ref=p_account WHERE id=o.id AND billing_account_ref IS NULL;
 
                 IF p_mode IN ('assign','stale') THEN
-                    -- All assignments and stale facts must fit both immutable observed neighbors,
-                    -- including parked revisions that have never reached the applied projection.
-                    SELECT * INTO v_previous FROM public.billium_observed_payment_revision
-                        WHERE observed_payment_id=o.id AND revision<p_revision AND seller_ref=p_seller AND environment=p_environment
-                        ORDER BY revision DESC LIMIT 1;
-                    SELECT * INTO v_next FROM public.billium_observed_payment_revision
-                        WHERE observed_payment_id=o.id AND revision>p_revision AND seller_ref=p_seller AND environment=p_environment
-                        ORDER BY revision LIMIT 1;
+                    -- Every immutable fact, including parked history, constrains assign and stale modes.
                     IF r.refunded_minor > r.captured_minor OR r.captured_minor > r.authorized_minor
-                       OR r.captured_minor < v_previous.captured_minor OR r.refunded_minor < v_previous.refunded_minor
-                       OR r.captured_minor > v_next.captured_minor OR r.refunded_minor > v_next.refunded_minor
-                       OR (v_previous.state IN ('succeeded','failed','cancelled') AND r.state IS DISTINCT FROM v_previous.state)
-                       OR (v_next.id IS NOT NULL AND r.state IN ('succeeded','failed','cancelled') AND v_next.state IS DISTINCT FROM r.state)
+                       OR EXISTS (SELECT 1 FROM public.billium_observed_payment_revision prev
+                           WHERE prev.observed_payment_id=r.observed_payment_id AND prev.revision<r.revision
+                             AND (r.captured_minor<prev.captured_minor OR r.refunded_minor<prev.refunded_minor
+                                  OR (prev.state IN ('succeeded','failed','cancelled') AND r.state<>prev.state)))
+                       OR EXISTS (SELECT 1 FROM public.billium_observed_payment_revision succ
+                           WHERE succ.observed_payment_id=r.observed_payment_id AND succ.revision>r.revision
+                             AND (r.captured_minor>succ.captured_minor OR r.refunded_minor>succ.refunded_minor
+                                  OR (r.state IN ('succeeded','failed','cancelled') AND succ.state<>r.state)))
+                       OR EXISTS (SELECT 1 FROM public.billium_observed_payment_revision r1
+                           JOIN public.billium_observed_payment_revision r2
+                             ON r2.observed_payment_id=r1.observed_payment_id AND r2.revision>r1.revision
+                           WHERE r1.observed_payment_id=r.observed_payment_id
+                             AND (r2.captured_minor<r1.captured_minor OR r2.refunded_minor<r1.refunded_minor
+                                  OR (r1.state IN ('succeeded','failed','cancelled') AND r2.state<>r1.state)))
                     THEN RAISE EXCEPTION 'billium.observation.conflict' USING ERRCODE='P0001'; END IF;
                 END IF;
 

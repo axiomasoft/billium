@@ -19,6 +19,34 @@ use PHPUnit\Framework\Attributes\TestWith;
 #[Group('D60')]
 final class ObservationBackstopTest extends ObservationTestCase
 {
+    #[TestWith(['pending'])]
+    #[TestWith(['succeeded'])]
+    #[TestWith(['pending', 3000, 0])]
+    #[TestWith(['pending', 4000, 500])]
+    public function test_assign_mode_rejects_a_contradiction_anywhere_in_persisted_history(string $state, int $secondCaptured = 4000, int $firstRefunded = 0): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $firstState = $secondCaptured < 4000 || $firstRefunded > 0 ? 'pending' : 'succeeded';
+        foreach ([1 => $firstState, 2 => 'pending', 3 => $state] as $revision => $revisionState) {
+            $this->routine('record_observation', ['inst-test', 'seller-a', 'test', 'embedded-commerz', 'L1', 'op-1', 'charge', null,
+                $revision, self::digest((string) $revision), $revisionState, 'RUB', 4000, 4000, $revision === 2 ? $secondCaptured : 4000,
+                $revision === 2 ? 0 : $firstRefunded, 'pa-1', 'ev-'.$revision, '{}']);
+        }
+        $observed = self::integer($this->observedRow()['id']);
+        $intent = self::integer($this->value('SELECT id FROM billium_settlement_intent'));
+
+        try {
+            $this->routine('project_payment', [...$this->scopeArguments(), $observed, 3, 'op-1', $intent, 'assign', '[]', null, 'new-assignment', self::digest('3')]);
+            self::fail('all persisted revisions must constrain assignment');
+        } catch (PDOException $exception) {
+            self::assertStringContainsString('billium.observation.conflict', $exception->getMessage());
+        }
+        self::assertSame(0, $this->rows('billium_payment'));
+        self::assertSame(0, $this->rows('billium_allocation_receipt', "receipt_ref = 'new-assignment'"));
+        self::assertSame(0, $this->rows('billium_allocation'));
+    }
+
     #[TestWith([false, 1, 'succeeded', 4000, 500, 'pending', 4000, 500, false])]
     #[TestWith([false, 1, 'failed', 4000, 500, 'succeeded', 4000, 500, false])]
     #[TestWith([false, 1, 'cancelled', 4000, 500, 'pending', 4000, 500, false])]

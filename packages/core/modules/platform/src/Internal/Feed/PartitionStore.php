@@ -90,6 +90,32 @@ final readonly class PartitionStore
         if (! $partition->active()) {
             return;
         }
+        $namespace = [$partition->channel, $partition->sourceAuthority, $partition->sourceLineage,
+            $partition->sellerRef, $partition->environment, $partition->partitionRef];
+        // Custody can commit after adoption has already scanned the tail. Covered orphans have
+        // the same durable disposition as arrivals seen during adoption, even below the cursor.
+        $db->update(<<<'SQL'
+            UPDATE public.billium_inbox_message m
+            SET partition_id = ?, status = 'quarantined', last_error_class = 'superseded_by_bootstrap', park_kind = NULL, park_ref = NULL
+            WHERE m.partition_id IS NULL AND m.status = 'parked_gap'
+              AND m.channel = ? AND m.source_authority = ? AND m.source_lineage = ?
+              AND m.seller_ref = ? AND m.environment = ? AND m.partition_ref = ? AND m.source_sequence <= ?
+              AND EXISTS (SELECT 1 FROM public.billium_feed_bootstrap_session s
+                  WHERE s.new_partition_id = ? AND s.status = 'adopted' AND m.source_sequence <= s.cursor_sequence)
+            SQL, [$partition->id, ...$namespace, $partition->accountedSequence, $partition->id]);
+        $regressed = $db->update(<<<'SQL'
+            UPDATE public.billium_inbox_message SET status = 'held_recovery'
+            WHERE partition_id IS NULL AND status = 'parked_gap'
+              AND channel = ? AND source_authority = ? AND source_lineage = ?
+              AND seller_ref = ? AND environment = ? AND partition_ref = ? AND source_sequence <= ?
+              AND NOT EXISTS (SELECT 1 FROM public.billium_feed_bootstrap_session s
+                  WHERE s.new_partition_id = ? AND s.status = 'adopted' AND billium_inbox_message.source_sequence <= s.cursor_sequence)
+            SQL, [...$namespace, $partition->accountedSequence, $partition->id]);
+        if ($regressed > 0) {
+            $this->requireRecovery($db, $partition, 'sequence_regressed');
+
+            return;
+        }
         $attached = $db->update(<<<'SQL'
             UPDATE public.billium_inbox_message SET partition_id = ?
             WHERE partition_id IS NULL AND status = 'parked_gap'
