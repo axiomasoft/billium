@@ -20,4 +20,7 @@ interface FeedRecoveryQueries
      * @return array{recoveryRequired: bool, bootstrapStatus: string, snapshots: list<array<string, mixed>>}
      */
     public function state(string $connectionName, string $channel, ?string $sourceAuthority = null, ?string $partitionRef = null): array;
+
+    /** Pending park reason in the caller's REPEATABLE READ READ ONLY root snapshot, if any. */
+    public function pendingOperationPark(string $connectionName, string $channel, string $sourceAuthority, string $operationRef): ?string;
 }

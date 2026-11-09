@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Billium\Platform\Internal\Feed;
 
 use Billium\Core\Contracts\TransactionContext;
+use Billium\Core\Data\Caller;
 use Billium\Platform\Contracts\BootstrapItemHandler;
 use Billium\Platform\Contracts\CustodyHandler;
 use Billium\Platform\Contracts\FeedPartitions;
@@ -31,6 +32,12 @@ final readonly class DatabaseFeedPartitions implements FeedPartitions
     public function retryDependency(TransactionContext $context, int $inboxId, CustodyHandler $handler): CustodyResult
     {
         return $this->custody->retryDependency($context, $inboxId, $handler);
+    }
+
+    /** @param  list<int>  $excludeInboxIds */
+    public function nextUnblockedDependency(string $channel, Caller $caller, array $excludeInboxIds = []): ?int
+    {
+        return $this->custody->nextUnblockedDependency($channel, $caller, $excludeInboxIds);
     }
 
     public function stageBootstrap(TransactionContext $context, BootstrapPartition $snapshot): int

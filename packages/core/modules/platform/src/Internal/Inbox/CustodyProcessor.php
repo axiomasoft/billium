@@ -8,6 +8,7 @@ use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\OperationRunner;
 use Billium\Core\Contracts\TransactionContext;
+use Billium\Core\Data\Caller;
 use Billium\Core\Exceptions\LockPlanChanged;
 use Billium\Platform\Contracts\CustodyHandler;
 use Billium\Platform\Data\Inbox\CustodyDisposition;
@@ -191,6 +192,32 @@ final readonly class CustodyProcessor
         }
 
         return $result;
+    }
+
+    /** @param  list<int>  $excludeInboxIds */
+    public function nextUnblockedDependency(string $channel, Caller $caller, array $excludeInboxIds = []): ?int
+    {
+        if ($caller->sourceAuthorities === []) {
+            return null;
+        }
+        $authorities = implode(',', array_fill(0, count($caller->sourceAuthorities), '?'));
+        $row = $this->partitions->defaultConnection()->selectOne(<<<SQL
+            SELECT m.id FROM public.billium_inbox_message m
+            WHERE m.seller_ref = ? AND m.environment = ? AND m.channel = ?
+              AND m.status = 'parked_dependency' AND m.park_kind = 'operation_revision' AND m.park_ref LIKE 'inbox:%'
+              AND m.partition_id IS NOT NULL
+              AND m.source_authority IN ({$authorities}) AND (m.payload->>'installationRef') = ?
+              AND NOT (m.id = ANY(?::bigint[]))
+              AND NOT EXISTS (
+                SELECT 1 FROM public.billium_inbox_message m2
+                WHERE m2.channel = m.channel AND m2.source_authority = m.source_authority
+                  AND m2.seller_ref = m.seller_ref AND m2.environment = m.environment AND m2.operation_ref = m.operation_ref
+                  AND m2.status = 'parked_dependency' AND m2.operation_revision < m.operation_revision AND m2.id <> m.id)
+            ORDER BY m.operation_revision, m.id LIMIT 1
+            SQL, [$caller->sellerRef, $caller->environment, $channel, ...$caller->sourceAuthorities,
+            $caller->installationRef, '{'.implode(',', $excludeInboxIds).'}']);
+
+        return $row === null ? null : Rows::int(Rows::field($row, 'id'));
     }
 
     private function apply(TransactionContext $context, Connection $db, PartitionRow $partition, mixed $record, CustodyHandler $handler): CustodyResult

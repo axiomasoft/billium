@@ -26,6 +26,11 @@ final readonly class PartitionStore
         return $this->databases->connection($context->connectionName());
     }
 
+    public function defaultConnection(): Connection
+    {
+        return $this->databases->connection(is_string($name = config('billium.connection')) ? $name : null);
+    }
+
     /**
      * Serializes bootstrap staging/adoption with first-delivery creation and custody in retired-only namespaces.
      * Precedes partition/session row locks; fresh orphan gaps can commit without namespace admission.
