@@ -570,14 +570,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "usage",
-      "currentSchemaVersion": 0,
+      "currentSchemaVersion": 1,
       "supportedSchemaReadRange": {
-        "min": 0,
-        "max": 0
+        "min": 1,
+        "max": 1
       },
       "supportedSchemaWriteRange": {
-        "min": 0,
-        "max": 0
+        "min": 1,
+        "max": 1
       },
       "requiresModules": [
         {
@@ -601,11 +601,21 @@
         "usage.metric.v1",
         "usage.quantity.v1"
       ],
-      "ownedTables": [],
+      "ownedTables": [
+        "billium_usage_stream",
+        "billium_usage_metric",
+        "billium_usage_fact"
+      ],
       "configKeys": [
         "billium.usage.enabled"
       ],
-      "migrationIdentities": [],
+      "migrationIdentities": [
+        {
+          "id": "2026_11_10_000001_create_billium_usage",
+          "version": 1,
+          "checksum": "sha256:babb2ffad66761ffd9a5418d404c48be219cdc4aaeda0da3fd893e628343c053"
+        }
+      ],
       "disablePolicy": {
         "dependents": "block",
         "keeps": [

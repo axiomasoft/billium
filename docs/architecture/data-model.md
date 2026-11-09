@@ -190,7 +190,8 @@ unknown не освобождает резерв по таймеру. Succeeded 
 атомарно, закрывая долг; `reversal` оставляет долг открытым с запретом автоматического collection
 до разрешённой policy. До подтверждённого refund ledger не уменьшает allocation (D35/D41/D60).
 
-Будущие usage/rating/schedule сохраняют metric/price versions, immutable usage revision и occurrence
+Usage сохраняет immutable metric versions и append-only fact revisions (D13/D56; owner usage, P4.2).
+Будущие rating/schedule сохраняют price versions и occurrence
 business interval identity (EXCLUDE overlapping non-superseded intervals), basis UNIQUE obligation.
 Новые условия действуют вперёд; после issue positive late delta создаёт linked correction obligation,
 negative delta — credit note по versioned correction policy (INV-11/12/13, D12/D13/D63).
@@ -208,3 +209,52 @@ Lint запрещает enum, destructive down, смешанный column expand
 conservation и journal/receipt/commit completeness, отдельный VALIDATE и old-code replay.
 Contract DROP COLUMN отложен за rollback window. Поколения приложения и host authority — test doubles;
 это не live rolling deployment и не PSP qualification (D21/D50/D59).
+
+## Usage admission (D13/D19/D22/D23/D55/D56; owner usage, P4.2)
+
+`billium_usage_metric` хранит immutable MetricVersion; `billium_usage_stream` фиксирует единственный
+gross/net mode и normalization ref для `(seller, environment, commercialBasisRef)`. Конфликт mode
+или normalization не создаёт вторую billable basis. `billium_usage_fact` хранит ревизии, frozen
+subject/customer/billing account/component/agreement, mapping revision, validity и исходный commercial
+period. Canonical envelopes и receipt сохраняются как bounded immutable evidence; scope, keys, numeric
+quantity, correction links и индексируемые dimensions представлены отдельными колонками (D13/D19/D22/D56).
+
+`Usage::submitUsageFact` сначала проверяет contract digest, authenticated seller/source и получает
+host-owned `UsageAttribution` snapshot вне Tx. Host port подтверждает normalized provenance и source
+selection/filters и возвращает историческую mapping revision с validity/cutoff и исходным периодом;
+default port отказывает unresolved input. Интервал целиком помещается в mapping validity и один period,
+eventAt находится внутри интервала. receivedAt не выбирает payer или period. Пересекающий границу факт
+требует pre-split input; exact splitting policy пока не зарегистрирована (D13/D56; COV-214/215).
+
+Root OperationRunner берёт claim → session shared barrier в Administrative mode → platform/usage
+module admission → usage-owned advisory leaf lock `(seller,environment,source,factId)`. Usage body
+не берёт последующих platform/financial locks и не вызывает сеть. Факт, immutable business receipt и
+platform claim коммитятся атомарно; rating, obligation, money commit и outbox event здесь не создаются.
+UsageReceipt `accepted` подтверждает durable admission; transport ACK и rated/applied monetary result
+имеют отдельный смысл. Replay после disable возвращает прежний receipt без нового admission
+(INV-05/08/14, D27/D55/D56; owner platform/usage).
+
+Business uniqueness — `(seller,environment,source,factId,revision)`. Тот же canonical digest возвращает
+stored receipt; другой payload конфликтует. Revision 1 не имеет predecessor; revision N продолжает
+ровно N−1 того же seller/source/fact, с originalFactDigest. Missing predecessor отказывается без claim
+и допускает retry после его поступления. Cycles, forks, cross-metric links и изменение frozen attribution,
+period, event time, interval или grouping запрещены. Effective revision — наибольшая принятая revision.
+Policy `replace_same_fact_revision/1` допускает меньшую nonnegative replacement quantity; signed negative
+quantity не входит в wire contract. Это не refund. Attribution correction требует будущей authorized
+financial correction policy с lineage и здесь отказывается (D13/D56/D63; owner usage, corrections P4.8).
+
+UTC instants в usage хранятся fixed-width nanosecond text с C collation: PostgreSQL timestamptz теряет
+sub-microsecond precision wire contract. Numeric quantity — `numeric(33,9)`, не деньги. SQL PK/FK/CHECK
+и append-only triggers защищают историю. Runtime получает только SELECT/INSERT usage tables;
+boot provider только объявляет migration path при явном enable. Миграции и platform module registry
+устанавливает host отдельно; disabled/uninstalled module при свежей установке не создаёт таблиц,
+registry rows, workers или routes (D13/D19/D22/D55/D56; owner usage/platform).
+
+`UsageQueries::period` всегда фильтрует authenticated seller/environment, subject, metricVersion и frozen
+mappingRef, `[start,end)` event window; LIMIT 1…500 и keyset `(event_at,fact_id,revision,source)` ограничивают
+страницу. Индекс `billium_usage_subject_window` начинается с
+`(seller_ref,subject_ref,metric_version,event_at,fact_id,revision)`; отдельный chain index обслуживает
+effective revision anti-join. Query tests содержат out-of-order/nanosecond pages, seller isolation и
+EXPLAIN fixture с 2,000 rows. Между страницами новые corrections требуют fresh scan; final aggregate
+snapshot/frontier — владелец P4.3. Duration semantics пока unsupported contract-ом, поэтому GiST overlap
+index для duration не создаётся (D56; COV-334, owner usage; ACC-CON-12).

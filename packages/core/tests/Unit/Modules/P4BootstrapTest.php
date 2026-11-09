@@ -36,7 +36,7 @@ final class P4BootstrapTest extends ModuleTestCase
 
     public function test_preparation_descriptors_have_only_real_uninstalled_checkpoints(): void
     {
-        foreach (['usage', 'rating', 'schedule'] as $module) {
+        foreach (['rating', 'schedule'] as $module) {
             $descriptor = self::catalog()->descriptor($module);
             self::assertNotNull($descriptor);
             $checkpoint = new InstalledCheckpoint($module);
@@ -63,7 +63,8 @@ final class P4BootstrapTest extends ModuleTestCase
             $app['config']->set("billium.{$module}.enabled", true);
         }
         (new BilliumCoreServiceProvider($app))->register();
-        foreach (['Usage', 'Rating', 'Schedule'] as $module) {
+        self::assertArrayHasKey('Billium\\Usage\\Internal\\UsageServiceProvider', $app->getLoadedProviders());
+        foreach (['Rating', 'Schedule'] as $module) {
             self::assertArrayNotHasKey("Billium\\{$module}\\Internal\\{$module}ServiceProvider", $app->getLoadedProviders());
         }
         Container::setInstance(null);

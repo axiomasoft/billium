@@ -19,6 +19,7 @@ use Billium\Ledger\Internal\LedgerServiceProvider;
 use Billium\Platform\Contracts\IdempotencyStore;
 use Billium\Platform\Contracts\RootAdmission;
 use Billium\Platform\Internal\PlatformServiceProvider;
+use Billium\Usage\Internal\UsageServiceProvider;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\ServiceProvider;
@@ -57,9 +58,9 @@ final class BilliumCoreServiceProvider extends ServiceProvider
 
     private function registerCommercialModules(): void
     {
-        // D55/D56: module owners add providers/installers later. Never eagerly load absent code.
+        // D55/D56: enroll module-owned providers only when enabled and available.
         $providers = [
-            'usage' => 'Billium\\Usage\\Internal\\UsageServiceProvider',
+            'usage' => UsageServiceProvider::class,
             'rating' => 'Billium\\Rating\\Internal\\RatingServiceProvider',
             'schedule' => 'Billium\\Schedule\\Internal\\ScheduleServiceProvider',
         ];
