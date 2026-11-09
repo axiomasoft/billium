@@ -171,7 +171,7 @@ final readonly class PaymentProjection
         $revision = $o->operationRevision;
         $binding = $payment !== null && $payment['intent'] !== ($intent === null || $closed ? null : $intent['id']);
         // An unseen older fact can still contradict the consistent history; only compatible history is stale.
-        $exceptional = self::exceptional($o, $applied, $closed, $binding);
+        $exceptional = self::exceptional($db, $observedId, $o, $applied, $closed, $binding);
         if ($exceptional !== null) {
             $mode = self::MODE_HOLD;
         } elseif ($applied !== null && $revision <= $applied['revision']) {
@@ -267,7 +267,7 @@ final readonly class PaymentProjection
      * @param  array{revision: int, state: string|null, captured: int, refunded: int, allocated: int, hold: bool}|null  $applied
      * @return array{fingerprint: string, reason: string, expected_minor: string, actual_minor: string, exposure_minor: string}|null
      */
-    private static function exceptional(PaymentObservation $o, ?array $applied, bool $closed, bool $binding): ?array
+    private static function exceptional(Connection $db, int $observedId, PaymentObservation $o, ?array $applied, bool $closed, bool $binding): ?array
     {
         $captured = $o->capturedTotal->minor;
         $refunded = $o->refundedTotal->minor;
@@ -288,6 +288,32 @@ final readonly class PaymentProjection
                 && $nextState !== $previousState => ['regression_state', $applied['captured'], $captured],
             default => [null, 0, 0],
         };
+        if ($reason === null && $older) {
+            // The applied revision is an upper bound, but an unseen intermediate fact must also fit the
+            // immutable history immediately before and after it (including previously stale facts).
+            foreach ([true, false] as $predecessor) {
+                $neighbor = $db->table('billium_observed_payment_revision')->where('observed_payment_id', $observedId)
+                    ->where('revision', $predecessor ? '<' : '>', $o->operationRevision)
+                    ->orderBy('revision', $predecessor ? 'desc' : 'asc')->first(['state', 'captured_minor', 'refunded_minor']);
+                if ($neighbor === null) {
+                    continue;
+                }
+                $neighborCaptured = self::int($neighbor->captured_minor);
+                $neighborRefunded = self::int($neighbor->refunded_minor);
+                $previousState = $predecessor ? self::text($neighbor->state) : self::state($o->state);
+                $nextState = $predecessor ? self::state($o->state) : self::text($neighbor->state);
+                [$reason, $expected, $actual] = match (true) {
+                    $predecessor ? $captured < $neighborCaptured : $captured > $neighborCaptured => ['regression_captured', $neighborCaptured, $captured],
+                    $predecessor ? $refunded < $neighborRefunded : $refunded > $neighborRefunded => ['regression_refunded', $neighborRefunded, $refunded],
+                    in_array($previousState, ['succeeded', 'failed', 'cancelled'], true)
+                        && $nextState !== $previousState => ['regression_state', $neighborCaptured, $captured],
+                    default => [null, 0, 0],
+                };
+                if ($reason !== null) {
+                    break;
+                }
+            }
+        }
         if ($reason === null) {
             return null;
         }

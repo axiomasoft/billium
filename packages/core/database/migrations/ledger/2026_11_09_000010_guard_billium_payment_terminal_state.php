@@ -17,6 +17,7 @@ return new class extends Migration
             RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
             DECLARE
                 o public.billium_observed_payment; r public.billium_observed_payment_revision; p public.billium_payment; i public.billium_settlement_intent;
+                v_previous public.billium_observed_payment_revision; v_next public.billium_observed_payment_revision;
                 b public.billium_obligation; l record; v_replay public.billium_allocation_receipt; v_body jsonb; v_allocs jsonb := '[]'::jsonb; v_sum numeric := 0;
                 v_applied_state text; v_amount numeric; v_obligations bigint[]; v_discrepancy bigint; v_disc jsonb := NULL;
             BEGIN
@@ -80,6 +81,22 @@ return new class extends Migration
                     UPDATE public.billium_payment SET financial_hold=true,projection_status='held' WHERE id=p.id RETURNING * INTO p;
                 ELSIF p_revision > p.applied_revision THEN
                     RAISE EXCEPTION 'billium.validation.invalid' USING ERRCODE='P0001'; -- stale means at or below the applied revision
+                END IF;
+
+                IF p_mode = 'stale' THEN
+                    -- Historical facts must fit both immutable neighbors, not just the latest applied revision.
+                    SELECT * INTO v_previous FROM public.billium_observed_payment_revision
+                        WHERE observed_payment_id=o.id AND revision<p_revision AND seller_ref=p_seller AND environment=p_environment
+                        ORDER BY revision DESC LIMIT 1;
+                    SELECT * INTO v_next FROM public.billium_observed_payment_revision
+                        WHERE observed_payment_id=o.id AND revision>p_revision AND seller_ref=p_seller AND environment=p_environment
+                        ORDER BY revision LIMIT 1;
+                    IF r.refunded_minor > r.captured_minor OR r.captured_minor > r.authorized_minor
+                       OR r.captured_minor < v_previous.captured_minor OR r.refunded_minor < v_previous.refunded_minor
+                       OR r.captured_minor > v_next.captured_minor OR r.refunded_minor > v_next.refunded_minor
+                       OR (v_previous.state IN ('succeeded','failed','cancelled') AND r.state IS DISTINCT FROM v_previous.state)
+                       OR (v_next.id IS NOT NULL AND r.state IN ('succeeded','failed','cancelled') AND v_next.state IS DISTINCT FROM r.state)
+                    THEN RAISE EXCEPTION 'billium.observation.conflict' USING ERRCODE='P0001'; END IF;
                 END IF;
 
                 IF p_mode <> 'assign' AND coalesce(jsonb_array_length(p_parts),0) > 0 THEN RAISE EXCEPTION 'billium.validation.invalid' USING ERRCODE='P0001'; END IF;

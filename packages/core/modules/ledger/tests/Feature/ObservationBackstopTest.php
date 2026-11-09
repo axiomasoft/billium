@@ -19,6 +19,98 @@ use PHPUnit\Framework\Attributes\TestWith;
 #[Group('D60')]
 final class ObservationBackstopTest extends ObservationTestCase
 {
+    #[TestWith([2, 'pending', 'succeeded'])]
+    #[TestWith([4, 'succeeded', 'pending'])]
+    public function test_the_granted_routine_also_checks_previously_stale_neighbors(int $revision, string $neighborState, string $state): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $this->observe(ObservationFactory::charge('op-1', 1, 1000, fields: ['state' => 'pending']));
+        $this->observe(ObservationFactory::charge('op-1', 5, 5000, sequence: 2));
+        $this->observe(ObservationFactory::charge('op-1', 3, 3000, sequence: 3, fields: ['state' => $neighborState]));
+        $observed = self::integer($this->observedRow()['id']);
+        $intent = self::integer($this->value('SELECT id FROM billium_settlement_intent'));
+        $this->routine('record_observation', ['inst-test', 'seller-a', 'test', 'embedded-commerz', 'L1', 'op-1', 'charge', null, $revision, self::digest('b'),
+            $state, 'RUB', 5000, 5000, 4000, 0, 'pa-1', 'ev-x', '{}']);
+
+        try {
+            $this->routine('project_payment', [...$this->scopeArguments(), $observed, $revision, 'op-1', $intent, 'stale', '[]', null, 'historical', self::digest('b')]);
+            self::fail('stale neighbors must constrain the granted routine');
+        } catch (PDOException $exception) {
+            self::assertStringContainsString('billium.observation.conflict', $exception->getMessage());
+        }
+        self::assertSame(5, self::integer($this->paymentRow()['applied_revision']));
+        self::assertFalse($this->paymentRow()['financial_hold']);
+        self::assertSame(2, $this->rows('billium_payment_revision'));
+        self::assertSame(0, $this->rows('billium_allocation_receipt', "receipt_ref = 'historical'"));
+    }
+
+    #[TestWith(['pending', 3000, 0, 6000, true])]
+    #[TestWith(['succeeded', 5000, 0, 6000, true])]
+    #[TestWith(['failed', 3000, 0, 6000, false])]
+    #[TestWith(['pending', 6000, 0, 6000, false])]
+    #[TestWith(['pending', 3000, 3500, 6000, false])]
+    #[TestWith(['pending', 4000, 0, 3000, false])]
+    public function test_stale_mode_checks_a_successor_without_a_predecessor(string $state, int $captured, int $refunded, int $authorized, bool $compatible): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $this->observe(ObservationFactory::charge('op-1', 3, 5000));
+        $observed = self::integer($this->observedRow()['id']);
+        $intent = self::integer($this->value('SELECT id FROM billium_settlement_intent'));
+        $this->routine('record_observation', ['inst-test', 'seller-a', 'test', 'embedded-commerz', 'L1', 'op-1', 'charge', null, 2, self::digest('b'),
+            $state, 'RUB', 6000, $authorized, $captured, $refunded, 'pa-1', 'ev-x', '{}']);
+
+        try {
+            $this->routine('project_payment', [...$this->scopeArguments(), $observed, 2, 'op-1', $intent, 'stale', '[]', null, 'historical', self::digest('b')]);
+            self::assertTrue($compatible);
+        } catch (PDOException $exception) {
+            self::assertFalse($compatible);
+            self::assertStringContainsString('billium.observation.conflict', $exception->getMessage());
+        }
+        self::assertSame($compatible ? 1 : 0, $this->rows('billium_allocation_receipt', "receipt_ref = 'historical'"));
+        self::assertSame(3, self::integer($this->paymentRow()['applied_revision']));
+        self::assertFalse($this->paymentRow()['financial_hold']);
+    }
+
+    #[TestWith(['succeeded', 'pending', 4000, 500, false])]
+    #[TestWith(['failed-terminal', 'unknown', 4000, 500, false])]
+    #[TestWith(['cancelled', 'succeeded', 4000, 500, false])]
+    #[TestWith(['pending', 'pending', 2000, 500, false])]
+    #[TestWith(['pending', 'pending', 4000, 0, false])]
+    #[TestWith(['pending', 'pending', 6000, 500, false])]
+    #[TestWith(['pending', 'pending', 4000, 1500, false])]
+    #[TestWith(['pending', 'failed', 4000, 500, false])]
+    #[TestWith(['pending', 'pending', 4000, 500, true])]
+    #[TestWith(['succeeded', 'succeeded', 4000, 500, true])]
+    public function test_the_granted_routine_guards_both_neighbors_in_stale_mode(string $previous, string $state, int $captured, int $refunded, bool $compatible): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $this->observe(ObservationFactory::charge('op-1', 1, 3000, 500, fields: ['state' => $previous]));
+        $next = $previous === 'pending' ? 'succeeded' : $previous;
+        $this->observe(ObservationFactory::charge('op-1', 3, 5000, 1000, sequence: 2, fields: ['state' => $next]));
+        $observed = self::integer($this->observedRow()['id']);
+        $intent = self::integer($this->value('SELECT id FROM billium_settlement_intent'));
+        $this->routine('record_observation', ['inst-test', 'seller-a', 'test', 'embedded-commerz', 'L1', 'op-1', 'charge', null, 2, self::digest('b'),
+            $state, 'RUB', 6000, 6000, $captured, $refunded, 'pa-1', 'ev-x', '{}']);
+
+        try {
+            $this->routine('project_payment', [...$this->scopeArguments(), $observed, 2, 'op-1', $intent, 'stale', '[]', null, 'historical#2', self::digest('b')]);
+            self::assertTrue($compatible, 'a contradictory historical revision must not bypass hold through stale mode');
+        } catch (PDOException $exception) {
+            self::assertFalse($compatible);
+            self::assertStringContainsString('billium.observation.conflict', $exception->getMessage());
+        }
+        self::assertSame([3, 5000, 1000, 1000, false], [self::integer($this->paymentRow()['applied_revision']),
+            self::integer($this->paymentRow()['captured_minor']), self::integer($this->paymentRow()['refunded_minor']),
+            self::integer($this->paymentRow()['allocated_minor']), $this->paymentRow()['financial_hold']]);
+        self::assertSame($compatible ? 1 : 0, $this->rows('billium_allocation_receipt', "receipt_ref = 'historical#2'"));
+        self::assertSame(2, $this->rows('billium_payment_revision'));
+        self::assertSame(1, $this->rows('billium_allocation'));
+        self::assertSame(3, $this->rows('billium_observed_payment_revision'));
+    }
+
     #[TestWith(['succeeded', 'pending', false])]
     #[TestWith(['succeeded', 'unknown', false])]
     #[TestWith(['succeeded', 'failed', false])]

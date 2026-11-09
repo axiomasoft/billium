@@ -23,6 +23,63 @@ final class ExceptionalExposureTest extends ObservationTestCase
 {
     use OverRefundVector;
 
+    #[TestWith(['succeeded', 'pending', 4000, 500, 'regression_state'])]
+    #[TestWith(['failed-terminal', 'accepted-unknown', 4000, 500, 'regression_state'])]
+    #[TestWith(['cancelled', 'succeeded', 4000, 500, 'regression_state'])]
+    #[TestWith(['pending', 'pending', 2000, 500, 'regression_captured'])]
+    #[TestWith(['pending', 'pending', 4000, 0, 'regression_refunded'])]
+    #[TestWith(['pending', 'pending', 6000, 500, 'regression_captured'])]
+    #[TestWith(['pending', 'pending', 4000, 1500, 'regression_refunded'])]
+    #[TestWith(['pending', 'failed-terminal', 4000, 500, 'regression_state'])]
+    #[TestWith(['pending', 'pending', 4000, 500, null])]
+    #[TestWith(['succeeded', 'succeeded', 4000, 500, null])]
+    public function test_an_intermediate_revision_must_fit_both_persisted_neighbors(string $previous, string $state, int $captured, int $refunded, ?string $reason): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $this->observe(ObservationFactory::charge('op-1', 1, 3000, 500, fields: ['state' => $previous]));
+        $next = $previous === 'pending' ? 'succeeded' : $previous;
+        $this->observe(ObservationFactory::charge('op-1', 3, 5000, 1000, sequence: 2, fields: ['state' => $next]));
+        $envelope = ObservationFactory::charge('op-1', 2, $captured, $refunded, sequence: 3, fields: ['state' => $state]);
+
+        $receipt = $this->observe($envelope);
+
+        self::assertSame($reason === null ? 'stale' : 'hold', $receipt->mode());
+        self::assertSame($reason, $reason === null ? $receipt->body['discrepancy'] : self::arr($receipt->body['discrepancy'])['reason']);
+        self::assertSame($reason === null ? '3000' : '0', $receipt->body['spendable_minor']);
+        self::assertSame([3, 5000, 1000, 1000, $reason !== null], [self::integer($this->paymentRow()['applied_revision']),
+            self::integer($this->paymentRow()['captured_minor']), self::integer($this->paymentRow()['refunded_minor']),
+            self::integer($this->paymentRow()['allocated_minor']), $this->paymentRow()['financial_hold']]);
+        self::assertSame(3, self::integer($this->observedRow()['revision']));
+        self::assertSame(3, $this->rows('billium_observed_payment_revision'));
+        self::assertSame($reason === null ? 0 : 1, $this->rows('billium_ledger_discrepancy', 'hold'));
+        self::assertSame($reason === null ? 0 : 1, $this->rows('billium_outbox_event', "type = 'discrepancy.recorded.v1'"));
+        self::assertSame(2, $this->rows('billium_payment_revision'));
+        self::assertSame(1, $this->rows('billium_allocation'));
+        self::assertSame(0, $this->rows('billium_outbox_command'));
+        self::assertSame($receipt->body, $this->observe($envelope)->body);
+        self::assertSame($reason === null ? 0 : 1, $this->rows('billium_ledger_discrepancy'));
+    }
+
+    #[TestWith([2, 'pending', 'succeeded', 'regression_captured'])]
+    #[TestWith([4, 'succeeded', 'pending', 'regression_state'])]
+    public function test_previously_stale_history_also_bounds_an_intermediate_revision(int $revision, string $neighborState, string $state, string $reason): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $this->observe(ObservationFactory::charge('op-1', 1, 1000, fields: ['state' => 'pending']));
+        $this->observe(ObservationFactory::charge('op-1', 5, 5000, sequence: 2));
+        self::assertSame('stale', $this->observe(ObservationFactory::charge('op-1', 3, 3000, sequence: 3, fields: ['state' => $neighborState]))->mode());
+
+        $held = $this->observe(ObservationFactory::charge('op-1', $revision, 4000, sequence: 4, fields: ['state' => $state]));
+
+        self::assertSame('hold', $held->mode());
+        self::assertSame($reason, self::arr($held->body['discrepancy'])['reason']);
+        self::assertSame('3000', self::arr($held->body['discrepancy'])['expected_minor']);
+        self::assertSame(5, self::integer($this->paymentRow()['applied_revision']));
+        self::assertSame(2, $this->rows('billium_payment_revision'));
+    }
+
     /** @param array<string, mixed> $fields */
     #[TestWith([5000, 6000, [], 'over_refund'])]
     #[TestWith([6000, 0, ['authorizedTotal' => 5000], 'over_capture'])]
