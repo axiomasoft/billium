@@ -86,6 +86,7 @@ final readonly class RefundReconciler
     public function compare(TransactionContext $context, int $paymentId): array
     {
         $this->runner->assertCurrent($context, 'ledger');
+        $this->routines->assertFinancialSession($context);
         $caller = $context->caller();
         $db = $this->databases->connection($context->connectionName());
         new AllocateLockPlan(payments: [$paymentId])->lock($context);

@@ -60,6 +60,7 @@ final readonly class PaymentProjection
     public function apply(TransactionContext $context, PaymentObservation $observation, ?int $inboxId = null): HandlerOutcome
     {
         $this->runner->assertCurrent($context, 'ledger');
+        $this->routines->assertMonetary($context);
         $caller = $context->caller();
         $refusal = self::refusal($caller, $observation);
         if ($refusal !== null) {

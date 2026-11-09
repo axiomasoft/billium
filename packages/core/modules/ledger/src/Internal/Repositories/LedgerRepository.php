@@ -27,9 +27,27 @@ final readonly class LedgerRepository
 {
     public function __construct(private DatabaseManager $databases, private OperationRunner $runner) {}
 
-    public function execute(TransactionContext $context, RecordObligation|AdjustObligation|AmendObligationDuePolicy|RecordCustomerCredit|DeclareSettlementIntent $command): LedgerReceipt
+    public function assertMonetary(TransactionContext $context): void
     {
         $this->runner->assertCurrent($context, 'ledger');
+        // @phpstan-ignore identical.alwaysFalse (Keep the explicit admission invariant although sessionEpoch returns int or throws.)
+        if (! $context->spec()->mode->financial() || $context->sessionEpoch() === null || ! $context->spec()->monetary()) {
+            throw new LogicException('Monetary ledger operations require an admitted financial session and commit accounting (D54, D60, D62)');
+        }
+    }
+
+    public function assertFinancialSession(TransactionContext $context): void
+    {
+        $this->runner->assertCurrent($context, 'ledger');
+        // @phpstan-ignore identical.alwaysFalse (Keep the explicit admission invariant although sessionEpoch returns int or throws.)
+        if (! $context->spec()->mode->financial() || $context->sessionEpoch() === null) {
+            throw new LogicException('Ledger operations require an admitted financial session (D54, D60)');
+        }
+    }
+
+    public function execute(TransactionContext $context, RecordObligation|AdjustObligation|AmendObligationDuePolicy|RecordCustomerCredit|DeclareSettlementIntent $command): LedgerReceipt
+    {
+        $this->assertMonetary($context);
         CommandPayload::validate($command);
         $caller = $context->caller();
         if ($caller->sellerRef !== $command->scope->sellerRef || $caller->environment !== $command->scope->environment) {

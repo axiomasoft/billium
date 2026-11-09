@@ -48,6 +48,7 @@ final readonly class AllocateCommand
     public function execute(TransactionContext $context, Allocate $command): LedgerReceipt
     {
         $this->runner->assertCurrent($context, 'ledger');
+        $this->writer->assertMonetary($context);
         self::validate($command);
         $caller = $context->caller();
         if ($caller->sellerRef !== $command->scope->sellerRef || $caller->environment !== $command->scope->environment) {

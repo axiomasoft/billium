@@ -25,6 +25,11 @@ final readonly class AllocationReceiptWriter
 {
     public function __construct(private LedgerRepository $routines, private Outbox $outbox) {}
 
+    public function assertMonetary(TransactionContext $context): void
+    {
+        $this->routines->assertMonetary($context);
+    }
+
     /**
      * @param  list<mixed>  $bindings
      * @param  list<int>  $invoiceIds  invoices already locked by the caller's plan

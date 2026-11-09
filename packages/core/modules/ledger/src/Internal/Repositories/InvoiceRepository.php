@@ -35,6 +35,7 @@ final readonly class InvoiceRepository
     public function execute(TransactionContext $context, CreateInvoice|UpdateInvoiceMetadata|IssueInvoice|DiscardInvoice|VoidInvoice|MarkUncollectible $command, ?string $legalDocumentRef = null): LedgerReceipt
     {
         $this->runner->assertCurrent($context, 'ledger');
+        $this->routines->assertMonetary($context);
         InvoicePayload::validate($command, $legalDocumentRef);
         $caller = $context->caller();
         if ($caller->sellerRef !== $command->scope->sellerRef || $caller->environment !== $command->scope->environment) {

@@ -64,6 +64,7 @@ final readonly class IssueCreditNoteCommand
     public function execute(TransactionContext $context, IssueCreditNote $command): LedgerReceipt
     {
         $this->runner->assertCurrent($context, 'ledger');
+        $this->writer->assertMonetary($context);
         self::validate($command);
         $caller = $context->caller();
         if ($caller->sellerRef !== $command->scope->sellerRef || $caller->environment !== $command->scope->environment) {

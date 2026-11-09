@@ -4,19 +4,32 @@ declare(strict_types=1);
 
 namespace Billium\Ledger\Tests\Feature;
 
+use Billium\Contracts\Data\Currency;
+use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\TransactionContext;
 use Billium\Core\Data\LockRequest;
 use Billium\Core\Data\Receipt;
+use Billium\Core\Enums\FinancialMode;
 use Billium\Core\Enums\LockRank;
+use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Core\Exceptions\LockOrderViolation;
 use Billium\Ledger\Contracts\LedgerParticipants;
+use Billium\Ledger\Data\AdjustObligation;
 use Billium\Ledger\Data\BillingAccountScope;
+use Billium\Ledger\Data\CloseSettlementIntentNoEffect;
+use Billium\Ledger\Data\CreditNoteLine;
+use Billium\Ledger\Data\CreditNoteMode;
+use Billium\Ledger\Data\DeclareSettlementIntent;
+use Billium\Ledger\Data\IssueCreditNote;
 use Billium\Ledger\Data\IssueInvoice;
+use Billium\Ledger\Data\NoEffectProof;
+use Billium\Ledger\Data\RecordObligation;
 use Billium\Ledger\Tests\Commands\InvoiceFixtures;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
 use LogicException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 
 /** D49/D60: the composed issue (P6 supplies the legal reference) is the same guarded routine in the caller's root Tx. */
@@ -32,6 +45,60 @@ final class InvoiceParticipantTest extends LedgerTestCase
     private function port(): LedgerParticipants
     {
         return $this->application()->make(LedgerParticipants::class);
+    }
+
+    /** @return iterable<string, array{string, FinancialMode}> */
+    public static function nonMonetaryRoots(): iterable
+    {
+        foreach (['recordObligation', 'adjustObligation', 'declareSettlementIntent', 'issueInvoice', 'issueCreditNote', 'closeSettlementIntentNoEffect'] as $participant) {
+            yield $participant.' in sealed raw custody' => [$participant, FinancialMode::RawCustody];
+            yield $participant.' without commit accounting' => [$participant, FinancialMode::Active];
+        }
+    }
+
+    #[DataProvider('nonMonetaryRoots')]
+    public function test_monetary_participants_require_an_admitted_financial_session_and_commit_accounting(string $participant, FinancialMode $mode): void
+    {
+        $this->obligation('obligation-a', 1000);
+        $this->draft();
+        if ($participant === 'issueCreditNote') {
+            $this->issue();
+        }
+        if ($participant === 'closeSettlementIntentNoEffect') {
+            $this->ledger()->declareSettlementIntent(new DeclareSettlementIntent('intent', $this->account(), 'intent-a', 'RUB', ['obligation-a']));
+        }
+        if ($mode === FinancialMode::RawCustody) {
+            $this->installation()->seal('seal-1', 1);
+        }
+        $tables = ['billium_obligation', 'billium_allocation_receipt', 'billium_outbox_event', 'billium_money_commit_log'];
+        $before = array_map($this->rows(...), $tables);
+
+        try {
+            $this->runner()->run($this->spec(mode: $mode, class: ModuleOperationClass::NewIntent, modules: ['ledger', 'platform'], commit: null),
+                fn (TransactionContext $context): Receipt => $this->monetaryParticipant($context, $participant));
+            self::fail('a nonmonetary root must not invoke '.$participant);
+        } catch (LogicException $exception) {
+            self::assertSame('Monetary ledger operations require an admitted financial session and commit accounting (D54, D60, D62)', $exception->getMessage());
+        }
+
+        self::assertSame($before, array_map($this->rows(...), $tables));
+    }
+
+    private function monetaryParticipant(TransactionContext $context, string $participant): Receipt
+    {
+        $scope = $this->account();
+        $money = new Money(100, Currency::of('RUB'));
+
+        return match ($participant) {
+            'recordObligation' => $this->port()->recordObligation($context, new RecordObligation('record', $scope, 'obligation-b', 'basis-b', 'customer-a', 'component-a', $money, self::digest())),
+            'adjustObligation' => $this->port()->adjustObligation($context, new AdjustObligation('adjust', $scope, 'adjustment-a', 'obligation-a', $money, 'cause-a')),
+            'declareSettlementIntent' => $this->port()->declareSettlementIntent($context, new DeclareSettlementIntent('declare', $scope, 'intent-a', 'RUB', ['obligation-a'])),
+            'issueInvoice' => $this->port()->issueInvoice($context, $this->command(), 'LEGAL-1'),
+            'issueCreditNote' => $this->port()->issueCreditNote($context, new IssueCreditNote('credit', $scope, 'credit-note-a', 'invoice-a', CreditNoteMode::OpenOnly, [new CreditNoteLine('obligation-a', $money)], 'reason-a')),
+            'closeSettlementIntentNoEffect' => $this->port()->closeSettlementIntentNoEffect($context, new CloseSettlementIntentNoEffect($scope, 'intent-a', 1, 'step-a', 'closure-a', 'RUB', 'cause-a',
+                new NoEffectProof($context->rootRef(), 'intent-a', 1, 'step-a', 'not_admitted', 'evidence-a'))),
+            default => throw new RuntimeException('Unknown participant '.$participant),
+        };
     }
 
     public function test_composed_issue_sets_the_legal_reference_once_in_the_root_tx_and_replays(): void
