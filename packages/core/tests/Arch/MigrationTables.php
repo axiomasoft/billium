@@ -6,6 +6,9 @@ namespace Billium\Core\Tests\Arch;
 
 final class MigrationTables
 {
+    /** @var array<string, array<string, string>> */
+    private static array $ownershipCache = [];
+
     /** @return list<string> */
     public static function createdBy(string $source): array
     {
@@ -29,6 +32,9 @@ final class MigrationTables
     /** @return array<string, string> table => module */
     public static function ownership(string $directory): array
     {
+        if (isset(self::$ownershipCache[$directory])) {
+            return self::$ownershipCache[$directory];
+        }
         $owners = [];
         foreach (glob($directory.'/*/*.php') ?: [] as $migration) {
             $module = basename(dirname($migration));
@@ -40,6 +46,6 @@ final class MigrationTables
             }
         }
 
-        return $owners;
+        return self::$ownershipCache[$directory] = $owners;
     }
 }

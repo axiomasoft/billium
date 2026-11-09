@@ -220,15 +220,41 @@ final class LedgerAdapter
         $this->setCaller($this->callerInput);
         $owner = $app['db']->connection('billium_owner');
         // D50: committed fixtures, no RefreshDatabase transaction. Never truncate host tables.
-        $tables = $owner->select("SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND starts_with(tablename, 'billium_') ORDER BY tablename");
-        if ($tables !== []) {
-            $names = array_map(static fn (stdClass $row): string => '"public"."'.str_replace('"', '""', $row->tablename).'"', $tables);
-            $owner->unprepared('TRUNCATE '.implode(', ', $names).' RESTART IDENTITY CASCADE');
+        $owner->unprepared(<<<'SQL'
+            DO $$
+            DECLARE
+                r record;
+                has_rows boolean;
+                non_empty_tables text[] := ARRAY[]::text[];
+            BEGIN
+                FOR r IN SELECT tablename FROM pg_tables
+                    WHERE schemaname = 'public' AND starts_with(tablename, 'billium_')
+                      AND tablename <> 'billium_event_contract'
+                    ORDER BY tablename
+                LOOP
+                    EXECUTE format('SELECT EXISTS (SELECT 1 FROM public.%I LIMIT 1)', r.tablename) INTO has_rows;
+                    IF has_rows THEN
+                        non_empty_tables := array_append(non_empty_tables, format('public.%I', r.tablename));
+                    END IF;
+                END LOOP;
+                IF cardinality(non_empty_tables) > 0 THEN
+                    EXECUTE 'TRUNCATE ' || array_to_string(non_empty_tables, ', ') || ' RESTART IDENTITY CASCADE';
+                END IF;
+            END $$
+            SQL);
+        $contractsIntact = $owner->scalar(<<<'SQL'
+            SELECT (SELECT count(*) FROM public.billium_event_contract) = 7 AND NOT EXISTS (
+                SELECT 1 FROM public.billium_event_contract
+                WHERE contract_revision <> 'events-2026-10-v1' OR status <> 'registered'
+            )
+            SQL);
+        if (! $contractsIntact) {
+            $owner->unprepared('TRUNCATE public.billium_event_contract RESTART IDENTITY CASCADE');
+            $modules = $app->make(ModuleRegistry::class);
+            $descriptor = $modules->descriptor('ledger') ?? throw new LogicException('Ledger module is missing');
+            $registrar = new DatabaseEventContractRegistrar($owner, $modules);
+            $registrar->register($registrar->plan($descriptor, true));
         }
-        $modules = $app->make(ModuleRegistry::class);
-        $descriptor = $modules->descriptor('ledger') ?? throw new LogicException('Ledger module is missing');
-        $registrar = new DatabaseEventContractRegistrar($owner, $modules);
-        $registrar->register($registrar->plan($descriptor, true));
         $ref = $this->callers->current()->installationRef;
         $installation = $app->make(Installation::class);
         $installation->init($ref);
