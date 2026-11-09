@@ -75,12 +75,13 @@ final readonly class PaymentProjection
                 $observation->capturedTotal->minor, $observation->refundedTotal->minor, $observation->providerAccountRef, $observation->evidenceRef,
                 json_encode($observation->raw, JSON_THROW_ON_ERROR),
             ], 'ledger.observed_payment')->body();
-            // Same revision with another economic digest, or another immutable binding: quarantine, the original stays.
-            $outcome = in_array($recorded['disposition'] ?? null, ['conflict', 'contradiction'], true)
+            // Conflicting identities are quarantined; an authenticated charge binding contradiction holds its funds.
+            $outcome = ($recorded['disposition'] ?? null) === 'conflict'
                 ? HandlerOutcome::conflict(ProblemCode::ObservationConflict->value)
                 : ($observation->operationKind === 'refund'
                     ? $this->refund($db, $caller, $observation, self::int($recorded['observed_id'] ?? null), $material, $inboxId)
-                    : $this->charge($context, $db, $caller, $observation, self::int($recorded['observed_id'] ?? null), $material, $inboxId));
+                    : $this->charge($context, $db, $caller, $observation, self::int($recorded['observed_id'] ?? null), $material, $inboxId,
+                        ($recorded['disposition'] ?? null) === 'contradiction'));
         } catch (ProblemException $problem) {
             $outcome = HandlerOutcome::conflict($problem->problem->value);
         }
@@ -111,9 +112,11 @@ final readonly class PaymentProjection
         return strlen($ref) <= 200 ? $ref : $prefix.':sha256:'.hash('sha256', $identity).'#'.$revision;
     }
 
-    private function charge(TransactionContext $context, Connection $db, Caller $caller, PaymentObservation $o, int $observedId, string $material, ?int $inboxId): HandlerOutcome
+    private function charge(TransactionContext $context, Connection $db, Caller $caller, PaymentObservation $o, int $observedId, string $material, ?int $inboxId, bool $contradiction): HandlerOutcome
     {
-        $read = static function () use ($db, $caller, $o): array {
+        $read = static function () use ($db, $caller, $o, $observedId): array {
+            $observed = $db->table('billium_observed_payment')->where('id', $observedId)->first(['currency', 'provider_account_ref'])
+                ?? throw new LockPlanChanged('observed payment vanished');
             $intent = $db->table('billium_settlement_intent')->where('seller_ref', $caller->sellerRef)->where('environment', $caller->environment)
                 ->where('business_intent_ref', $o->businessIntentRef)->first(['id', 'billing_account_ref', 'currency', 'status']);
             $payment = $db->table('billium_payment')->where('seller_ref', $caller->sellerRef)->where('environment', $caller->environment)
@@ -128,6 +131,7 @@ final readonly class PaymentProjection
             }
 
             return [
+                'observed' => ['currency' => self::text($observed->currency), 'provider_account_ref' => self::text($observed->provider_account_ref)],
                 'intent' => $intent === null ? null : ['id' => self::int($intent->id), 'account' => self::text($intent->billing_account_ref),
                     'currency' => self::text($intent->currency), 'status' => self::text($intent->status)],
                 'payment' => $payment === null ? null : ['id' => self::int($payment->id), 'account' => self::text($payment->billing_account_ref),
@@ -139,14 +143,23 @@ final readonly class PaymentProjection
         $before = $read();
         $intent = $before['intent'];
         $payment = $before['payment'];
+        $observed = $before['observed'];
+        $currency = $o->currency;
+        $binding = $contradiction;
         $closed = $intent !== null && $intent['status'] === 'closed_no_effect';
         if ($payment !== null) {
-            if ($payment['kind'] !== 'charge' || $payment['currency'] !== $o->currency) {
+            if ($payment['kind'] !== 'charge') {
                 return HandlerOutcome::conflict(ProblemCode::ObservationConflict->value);
             }
+            $currency = $payment['currency'];
             [$account, $intentId] = [$payment['account'], $payment['intent']];
+            $binding = $binding || $currency !== $o->currency || $observed['provider_account_ref'] !== $o->providerAccountRef
+                || $payment['intent'] !== ($intent === null || $closed ? null : $intent['id']);
         } elseif ($intent !== null) {
-            if ($intent['currency'] !== $o->currency) {
+            if ($contradiction && $intent['currency'] === $observed['currency']) {
+                $currency = $observed['currency'];
+            }
+            if ($intent['currency'] !== $currency) {
                 return HandlerOutcome::conflict(ProblemCode::MoneyCurrencyMismatch->value);
             }
             // An effect on a closed intent never silently reopens it: the payment keeps no intent and is held below.
@@ -157,7 +170,7 @@ final readonly class PaymentProjection
         }
         $targets = $intent !== null && $intentId === $intent['id'] ? $before['targets'] : [];
         $plan = new AllocateLockPlan(
-            [$intent['id'] ?? null],
+            [$intent['id'] ?? null, $payment['intent'] ?? null],
             array_column($targets, 'id'),
             array_column($targets, 'invoice'),
             [$payment['id'] ?? null],
@@ -169,9 +182,8 @@ final readonly class PaymentProjection
 
         $applied = $payment === null ? null : $this->payment($db, $payment['id'], $observedId);
         $revision = $o->operationRevision;
-        $binding = $payment !== null && $payment['intent'] !== ($intent === null || $closed ? null : $intent['id']);
         // An unseen older fact can still contradict the consistent history; only compatible history is stale.
-        $exceptional = self::exceptional($db, $observedId, $o, $applied, $closed, $binding);
+        $exceptional = self::exceptional($db, $observedId, $o, $applied, $closed, $binding, $currency);
         if ($exceptional === null) {
             $earlierPark = $db->table('billium_observation_park')->where('observed_payment_id', $observedId)
                 ->whereNull('released_at')->where('revision', '<', $revision)->orderBy('revision')->first(['revision']);
@@ -189,7 +201,7 @@ final readonly class PaymentProjection
         $parts = $mode === self::MODE_ASSIGN ? $this->parts($db, $o, $applied, $targets) : [];
         $receiptRef = self::receiptRef('observation', $o->sourceAuthority, $o->operationRef, $revision);
         [$receipt, $invoices] = $this->writer->apply($context, $db, 'project_payment', [
-            $caller->installationRef, $caller->sellerRef, $caller->environment, $account, $o->currency, $observedId, $revision, $o->operationRef,
+            $caller->installationRef, $caller->sellerRef, $caller->environment, $account, $currency, $observedId, $revision, $o->operationRef,
             $intentId, $mode, json_encode($parts, JSON_THROW_ON_ERROR),
             $exceptional === null ? null : json_encode($exceptional, JSON_THROW_ON_ERROR), $receiptRef, $material,
         ], 'ledger.payment_observation', $plan->invoices);
@@ -274,8 +286,10 @@ final readonly class PaymentProjection
      * @param  array{revision: int, state: string|null, captured: int, refunded: int, allocated: int, hold: bool}|null  $applied
      * @return array{fingerprint: string, reason: string, expected_minor: string, actual_minor: string, exposure_minor: string}|null
      */
-    private static function exceptional(Connection $db, int $observedId, PaymentObservation $o, ?array $applied, bool $closed, bool $binding): ?array
+    private static function exceptional(Connection $db, int $observedId, PaymentObservation $o, ?array $applied, bool $closed, bool $binding, string $currency): ?array
     {
+        $binding = $binding || $db->table('billium_observed_payment_revision')->where('observed_payment_id', $observedId)
+            ->where('currency', '<>', $currency)->exists();
         $captured = $o->capturedTotal->minor;
         $refunded = $o->refundedTotal->minor;
         $older = $applied !== null && $o->operationRevision < $applied['revision'];

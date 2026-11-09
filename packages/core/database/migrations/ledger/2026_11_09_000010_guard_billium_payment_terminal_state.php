@@ -15,6 +15,57 @@ return new class extends Migration
             ALTER TABLE public.billium_observation_park ADD CONSTRAINT billium_observation_park_dependency_kind_check
                 CHECK (dependency_kind IN ('settlement_intent','original_charge','operation_revision')) NOT VALID;
 
+            -- Keep contradictory charge bindings as immutable evidence without replacing the original source identity.
+            CREATE OR REPLACE FUNCTION public.billium_record_observation(
+                p_installation text,p_seller text,p_environment text,p_authority text,p_lineage text,p_operation text,p_kind text,p_original text,
+                p_revision bigint,p_material text,p_state text,p_currency text,p_requested bigint,p_authorized bigint,p_captured bigint,p_refunded bigint,
+                p_provider_account text,p_evidence text,p_payload jsonb)
+            RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
+            DECLARE o public.billium_observed_payment; r public.billium_observed_payment_revision; v_disposition text;
+            BEGIN
+                IF p_kind IS NULL OR p_kind NOT IN ('charge','refund') OR p_revision IS NULL OR p_revision < 1
+                   OR least(p_requested,p_authorized,p_captured,p_refunded) < 0 OR (p_kind = 'refund') IS DISTINCT FROM (p_original IS NOT NULL)
+                   OR p_material IS NULL OR p_material !~ '^sha256:[0-9a-f]{64}$'
+                THEN RAISE EXCEPTION 'billium.validation.invalid' USING ERRCODE='P0001'; END IF;
+                SELECT * INTO o FROM public.billium_observed_payment
+                    WHERE seller_ref=p_seller AND environment=p_environment AND source_authority=p_authority AND operation_ref=p_operation ORDER BY id LIMIT 1 FOR UPDATE;
+                IF NOT FOUND THEN
+                    INSERT INTO public.billium_observed_payment(installation_ref,seller_ref,environment,source_authority,source_lineage,operation_ref,kind,original_ref,revision,
+                        material_digest,state,currency,requested_minor,authorized_minor,captured_minor,refunded_minor,voided_minor,provider_account_ref,evidence_ref)
+                    VALUES(p_installation,p_seller,p_environment,p_authority,p_lineage,p_operation,p_kind,p_original,p_revision,
+                        p_material,p_state,p_currency,p_requested,p_authorized,p_captured,p_refunded,0,p_provider_account,p_evidence)
+                    ON CONFLICT DO NOTHING RETURNING * INTO o;
+                    IF NOT FOUND THEN RAISE EXCEPTION 'billium: concurrent observation identity' USING ERRCODE='40001'; END IF;
+                    v_disposition := 'new';
+                ELSE
+                    SELECT * INTO r FROM public.billium_observed_payment_revision WHERE seller_ref=p_seller AND environment=p_environment AND observed_payment_id=o.id AND revision=p_revision;
+                    IF FOUND THEN
+                        RETURN jsonb_build_object('body',jsonb_build_object('observed_id',o.id,'revision',o.revision,
+                            'disposition',CASE WHEN r.material_digest<>p_material THEN 'conflict'
+                                WHEN (o.installation_ref,o.kind,o.currency,o.provider_account_ref,o.original_ref)
+                                    IS DISTINCT FROM (p_installation,p_kind,p_currency,p_provider_account,p_original) THEN 'contradiction'
+                                ELSE 'duplicate' END),'replayed',true);
+                    END IF;
+                    IF o.installation_ref IS DISTINCT FROM p_installation OR o.kind IS DISTINCT FROM p_kind OR o.original_ref IS DISTINCT FROM p_original OR o.kind <> 'charge'
+                    THEN RETURN jsonb_build_object('body',jsonb_build_object('observed_id',o.id,'disposition','conflict','revision',o.revision),'replayed',false); END IF;
+                    IF (o.currency,o.provider_account_ref) IS DISTINCT FROM (p_currency,p_provider_account) THEN
+                        v_disposition := 'contradiction';
+                    ELSIF p_revision > o.revision THEN
+                        UPDATE public.billium_observed_payment SET revision=p_revision,material_digest=p_material,state=p_state,requested_minor=p_requested,
+                            authorized_minor=p_authorized,captured_minor=p_captured,refunded_minor=p_refunded,evidence_ref=p_evidence WHERE id=o.id;
+                        v_disposition := 'advanced';
+                    ELSE
+                        v_disposition := 'stale';
+                    END IF;
+                END IF;
+                INSERT INTO public.billium_observed_payment_revision(installation_ref,seller_ref,environment,observed_payment_id,revision,material_digest,state,
+                    requested_minor,authorized_minor,captured_minor,refunded_minor,voided_minor,currency,evidence_ref,payload)
+                VALUES(p_installation,p_seller,p_environment,o.id,p_revision,p_material,p_state,p_requested,p_authorized,p_captured,p_refunded,0,p_currency,p_evidence,coalesce(p_payload,'{}'::jsonb));
+                RETURN jsonb_build_object('body',jsonb_build_object('observed_id',o.id,'disposition',v_disposition,
+                    'revision',CASE WHEN v_disposition='contradiction' THEN o.revision ELSE greatest(o.revision,p_revision) END),'replayed',false);
+            END $$;
+            REVOKE ALL ON FUNCTION public.billium_record_observation(text,text,text,text,text,text,text,text,bigint,text,text,text,bigint,bigint,bigint,bigint,text,text,jsonb) FROM PUBLIC;
+
             CREATE OR REPLACE FUNCTION public.billium_project_payment(
                 p_installation text,p_seller text,p_environment text,p_account text,p_currency text,p_observed bigint,p_revision bigint,
                 p_payment_ref text,p_intent bigint,p_mode text,p_parts jsonb,p_discrepancy jsonb,p_receipt text,p_digest text)
@@ -66,7 +117,10 @@ return new class extends Migration
 
                 IF p_mode IN ('assign','stale') THEN
                     -- Every immutable fact, including parked history, constrains assign and stale modes.
-                    IF r.refunded_minor > r.captured_minor OR r.captured_minor > r.authorized_minor
+                    IF r.currency IS DISTINCT FROM o.currency
+                       OR EXISTS (SELECT 1 FROM public.billium_observed_payment_revision rc
+                           WHERE rc.observed_payment_id=o.id AND rc.currency IS DISTINCT FROM o.currency)
+                       OR r.refunded_minor > r.captured_minor OR r.captured_minor > r.authorized_minor
                        OR EXISTS (SELECT 1 FROM public.billium_observed_payment_revision prev
                            WHERE prev.observed_payment_id=r.observed_payment_id AND prev.revision<r.revision
                              AND (r.captured_minor<prev.captured_minor OR r.refunded_minor<prev.refunded_minor

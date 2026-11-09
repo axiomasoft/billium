@@ -13,6 +13,9 @@ use Billium\Ledger\Internal\Observation\ObservationHandler;
 use Billium\Ledger\Tests\Observation\ObservationTestCase;
 use Billium\Ledger\Tests\Observation\OverRefundVector;
 use Billium\Platform\Data\Inbox\BootstrapItem;
+use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\TestWith;
 
@@ -26,6 +29,101 @@ use PHPUnit\Framework\Attributes\TestWith;
 final class ExceptionalExposureTest extends ObservationTestCase
 {
     use OverRefundVector;
+
+    /** @param array<string, mixed> $fields */
+    #[TestWith([['currency' => 'USD']])]
+    #[TestWith([['providerAccountRef' => 'pa-2']])]
+    public function test_a_changed_currency_or_provider_account_holds_the_original_projection(array $fields): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $this->observe(ObservationFactory::charge('op-1', 1, 2000));
+        $envelope = ObservationFactory::charge('op-1', 2, 2000, sequence: 2, fields: $fields);
+
+        $held = $this->observe($envelope);
+
+        self::assertSame('hold', $held->mode());
+        self::assertSame('binding_changed', self::arr($held->body['discrepancy'])['reason']);
+        self::assertTrue($held->body['financial_hold']);
+        self::assertSame('0', $held->body['spendable_minor']);
+        self::assertSame('RUB', $held->body['currency']);
+        self::assertSame(['RUB', 'pa-1', 1], [$this->observedRow()['currency'], $this->observedRow()['provider_account_ref'],
+            self::integer($this->observedRow()['revision'])]);
+        self::assertSame(2, $this->rows('billium_observed_payment_revision'));
+        self::assertSame(1, $this->rows('billium_payment_revision'));
+
+        $status = $this->application()->make(LedgerQueries::class)->paymentStatus('op-1');
+        self::assertSame('held_discrepancy', $status['projectionStatus']);
+        self::assertTrue(self::arr($status['financialHold'])['active']);
+        self::assertSame('0.00', self::arr($status['spendable'])['amount']);
+        $applied = self::arr($status['applied']);
+        self::assertSame(['amount' => '20.00', 'currency' => 'RUB'], $applied['capturedTotal']);
+        self::assertSame(['amount' => '10.00', 'currency' => 'RUB'], $applied['allocated']);
+        self::assertSame($held->body, $this->observe(ObservationFactory::with($envelope, [
+            'eventId' => (string) Str::ulid(), 'sourceSequence' => 3,
+        ]))->body);
+        self::assertSame(1, $this->rows('billium_ledger_discrepancy'));
+    }
+
+    #[TestWith([false])]
+    #[TestWith([true])]
+    public function test_a_parked_currency_contradiction_holds_before_any_assignment(bool $compatibleDelivery): void
+    {
+        $handler = $this->application()->make(ObservationHandler::class);
+        foreach ([1 => 'RUB', 2 => 'USD'] as $revision => $currency) {
+            $envelope = ObservationFactory::charge('op-1', $revision, 2000, fields: ['currency' => $currency]);
+            $o = ObservationHandler::decode($envelope) ?? self::fail('valid observation');
+            $item = new BootstrapItem('op-1', $revision, EconomicDigest::of($o), $envelope);
+            $this->drainer()->root(fn (TransactionContext $context) => $handler->apply($context, $item));
+        }
+        self::assertSame(2, $this->rows('billium_observed_payment_revision'));
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+
+        if ($compatibleDelivery) {
+            $held = $this->observe(ObservationFactory::charge('op-1', 3, 2000));
+        } else {
+            self::assertSame(['applied', 'applied'], $this->drainer()->retryParked());
+            $held = $this->observe(ObservationFactory::charge('op-1', 2, 2000, fields: ['currency' => 'USD']));
+        }
+
+        self::assertSame('hold', $held->mode());
+        self::assertSame('binding_changed', self::arr($held->body['discrepancy'])['reason']);
+        self::assertSame('RUB', $held->body['currency']);
+        self::assertTrue($this->paymentRow()['financial_hold']);
+        self::assertSame(0, self::integer($this->paymentRow()['applied_revision']));
+        self::assertSame(0, $this->rows('billium_allocation'));
+    }
+
+    #[TestWith([false])]
+    #[TestWith([true])]
+    public function test_changed_intents_are_both_locked_in_order_before_the_payment(bool $boundIntentFirst): void
+    {
+        $this->debt('o1', 1000);
+        foreach ($boundIntentFirst ? ['intent-a', 'intent-b'] : ['intent-b', 'intent-a'] as $ref) {
+            $this->intent($ref, ['o1']);
+        }
+        $this->observe(ObservationFactory::charge('op-1', 1, 2000));
+        $intents = array_map(static fn (mixed $id): string => (string) self::integer($id),
+            array_column($this->table('SELECT id FROM billium_settlement_intent ORDER BY id'), 'id'));
+        $locks = [];
+        $this->application()->make(DatabaseManager::class)->listen(static function (QueryExecuted $query) use (&$locks): void {
+            if (str_contains($query->sql, 'billium_lock_settlement_intent')) {
+                $locks[] = ['intent', $query->bindings[0]];
+            } elseif (str_contains($query->sql, 'billium_lock_payment')) {
+                $locks[] = ['payment', $query->bindings[0]];
+            }
+        });
+
+        $held = $this->observe(ObservationFactory::charge('op-1', 2, 2000, sequence: 2, fields: ['businessIntentRef' => 'intent-b']));
+
+        self::assertSame('hold', $held->mode());
+        self::assertSame('binding_changed', self::arr($held->body['discrepancy'])['reason']);
+        self::assertSame([['intent', '{'.implode(',', $intents).'}'], ['payment', '{'.self::integer($this->paymentRow()['id']).'}']], $locks);
+        self::assertSame($this->value("SELECT id FROM billium_settlement_intent WHERE business_intent_ref = 'intent-a'"),
+            $this->paymentRow()['settlement_intent_id']);
+        self::assertSame(1000, $this->allocated('o1'));
+    }
 
     #[TestWith(['pending'])]
     #[TestWith(['succeeded'])]

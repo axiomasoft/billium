@@ -19,6 +19,85 @@ use PHPUnit\Framework\Attributes\TestWith;
 #[Group('D60')]
 final class ObservationBackstopTest extends ObservationTestCase
 {
+    /** @param array<int, mixed> $overrides */
+    #[TestWith(['charge', null, [0 => 'other-installation']])]
+    #[TestWith(['charge', null, [6 => 'refund', 7 => 'original']])]
+    #[TestWith(['refund', 'original', [7 => 'other-original']])]
+    #[TestWith(['refund', 'original', []])]
+    public function test_only_charge_revisions_with_the_original_identity_can_record_new_binding_evidence(string $kind, ?string $original, array $overrides): void
+    {
+        $arguments = ['inst-test', 'seller-a', 'test', 'embedded-commerz', 'L1', 'op-1', $kind, $original, 1, self::digest('a'),
+            'succeeded', 'RUB', 2000, 2000, 2000, 0, 'pa-1', 'ev-1', '{}'];
+        $this->routine('record_observation', $arguments);
+        $arguments[8] = 2;
+        $arguments[9] = self::digest('b');
+        $refused = $this->routine('record_observation', array_values(array_replace($arguments, $overrides)));
+
+        self::assertSame('conflict', self::arr($refused['body'])['disposition']);
+        self::assertFalse($refused['replayed']);
+        self::assertSame(1, $this->rows('billium_observed_payment_revision'));
+        self::assertSame(1, self::integer($this->observedRow()['revision']));
+    }
+
+    #[TestWith(['USD', 'pa-1'])]
+    #[TestWith(['RUB', 'pa-2'])]
+    public function test_binding_contradictions_are_retained_and_replayed_without_changing_the_observed_identity(string $currency, string $provider): void
+    {
+        $arguments = ['inst-test', 'seller-a', 'test', 'embedded-commerz', 'L1', 'op-1', 'charge', null, 1, self::digest('a'),
+            'succeeded', 'RUB', 2000, 2000, 2000, 0, 'pa-1', 'ev-1', '{}'];
+        $this->routine('record_observation', $arguments);
+        $original = $this->observedRow();
+        $arguments[8] = 2;
+        $arguments[9] = self::digest('b');
+        $arguments[11] = $currency;
+        $arguments[16] = $provider;
+        $arguments[17] = 'ev-2';
+        $arguments[18] = '{"evidence":"contradiction"}';
+
+        $recorded = $this->routine('record_observation', $arguments);
+        self::assertSame('contradiction', self::arr($recorded['body'])['disposition']);
+        self::assertFalse($recorded['replayed']);
+        $replayed = $this->routine('record_observation', $arguments);
+        self::assertSame('contradiction', self::arr($replayed['body'])['disposition']);
+        self::assertTrue($replayed['replayed']);
+        $arguments[9] = self::digest('c');
+        $conflict = $this->routine('record_observation', $arguments);
+        self::assertSame('conflict', self::arr($conflict['body'])['disposition']);
+        self::assertTrue($conflict['replayed']);
+        self::assertSame($original, $this->observedRow());
+        $revision = $this->row('SELECT * FROM billium_observed_payment_revision WHERE revision = 2');
+        self::assertSame([$currency, self::digest('b'), 'ev-2', '{"evidence": "contradiction"}'],
+            [$revision['currency'], $revision['material_digest'], $revision['evidence_ref'], $revision['payload']]);
+        self::assertSame(2, $this->rows('billium_observed_payment_revision'));
+    }
+
+    #[TestWith(['assign', 2])]
+    #[TestWith(['assign', 3])]
+    #[TestWith(['stale', 2])]
+    #[TestWith(['stale', 1])]
+    public function test_currency_contradictions_block_assign_and_stale_even_for_a_compatible_revision(string $mode, int $revision): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $appliedRevision = $mode === 'stale' ? 3 : 1;
+        $this->observe(ObservationFactory::charge('op-1', $appliedRevision, 2000));
+        $compatibleRevision = $mode === 'stale' ? 1 : 3;
+        foreach ([2 => 'USD', $compatibleRevision => 'RUB'] as $number => $currency) {
+            $this->routine('record_observation', ['inst-test', 'seller-a', 'test', 'embedded-commerz', 'L1', 'op-1', 'charge', null,
+                $number, self::digest((string) $number), 'succeeded', $currency, 2000, 2000, 2000, 0, 'pa-1', 'ev-'.$number, '{}']);
+        }
+        $digest = self::digest((string) $revision);
+        try {
+            $this->routine('project_payment', [...$this->scopeArguments(), self::integer($this->observedRow()['id']), $revision, 'op-1',
+                self::integer($this->value('SELECT id FROM billium_settlement_intent')), $mode, '[]', null, 'unsafe-projection', $digest]);
+            self::fail('currency contradictions require hold mode');
+        } catch (PDOException $exception) {
+            self::assertStringContainsString('billium.observation.conflict', $exception->getMessage());
+        }
+        self::assertSame($appliedRevision, self::integer($this->paymentRow()['applied_revision']));
+        self::assertSame(0, $this->rows('billium_allocation_receipt', "receipt_ref = 'unsafe-projection'"));
+    }
+
     #[TestWith(['pending'])]
     #[TestWith(['succeeded'])]
     #[TestWith(['pending', 3000, 0])]
