@@ -44,6 +44,7 @@ final readonly class BootstrapCoordinator
             throw new ProblemException(ProblemCode::AuthDenied, 'The snapshot is outside the authenticated source scope');
         }
         $db = $this->partitions->connection($context);
+        $this->partitions->lockNamespace($db, $snapshot->channel, $snapshot->sourceAuthority, $snapshot->sellerRef, $snapshot->environment, $snapshot->partitionRef);
         $existing = $db->selectOne('SELECT * FROM public.billium_feed_bootstrap_session WHERE bootstrap_ref = ?', [$snapshot->bootstrapRef]);
         if ($existing !== null) {
             if (Rows::field($existing, 'snapshot_digest') !== $snapshot->snapshotDigest || Rows::field($existing, 'seller_ref') !== $caller->sellerRef
@@ -157,6 +158,9 @@ final readonly class BootstrapCoordinator
     {
         ($this->runner)()->assertCurrent($context, 'platform');
         $db = $this->partitions->connection($context);
+        $planned = $this->session($db, $sessionId, $context->caller());
+        $this->partitions->lockNamespace($db, Rows::string(Rows::field($planned, 'channel')), Rows::string(Rows::field($planned, 'source_authority')),
+            Rows::string(Rows::field($planned, 'seller_ref')), Rows::string(Rows::field($planned, 'environment')), Rows::string(Rows::field($planned, 'partition_ref')));
         $session = $this->lockSession($context, $db, $sessionId);
         $status = Rows::string(Rows::field($session, 'status'));
         if ($status === 'adopted') {

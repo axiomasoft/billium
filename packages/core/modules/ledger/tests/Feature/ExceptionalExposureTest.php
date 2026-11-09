@@ -23,6 +23,59 @@ final class ExceptionalExposureTest extends ObservationTestCase
 {
     use OverRefundVector;
 
+    /** @param array<string, mixed> $fields */
+    #[TestWith([5000, 6000, [], 'over_refund'])]
+    #[TestWith([6000, 0, ['authorizedTotal' => 5000], 'over_capture'])]
+    #[TestWith([6000, 0, [], 'regression_captured'])]
+    #[TestWith([5000, 1000, [], 'regression_refunded'])]
+    #[TestWith([5000, 0, ['state' => 'failed-terminal'], 'regression_state'])]
+    #[TestWith([5000, 0, ['discrepancy' => ['discrepancyRef' => 'disc-old', 'kind' => 'amount_mismatch', 'revision' => 1]], 'source_reported'])]
+    public function test_an_unseen_older_contradiction_is_held_without_changing_applied_money(int $captured, int $refunded, array $fields, string $reason): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $this->observe(ObservationFactory::charge('op-1', 3, 5000));
+        $older = ObservationFactory::charge('op-1', 2, $captured, $refunded, sequence: 2, fields: $fields);
+
+        $held = $this->observe($older);
+
+        self::assertSame('hold', $held->mode());
+        self::assertSame($reason, self::arr($held->body['discrepancy'])['reason']);
+        self::assertSame('0', $held->body['spendable_minor']);
+        self::assertSame([3, 5000, 0, 1000, true], [self::integer($this->paymentRow()['applied_revision']),
+            self::integer($this->paymentRow()['captured_minor']), self::integer($this->paymentRow()['refunded_minor']),
+            self::integer($this->paymentRow()['allocated_minor']), $this->paymentRow()['financial_hold']]);
+        self::assertSame(3, self::integer($this->observedRow()['revision']), 'the latest observed snapshot stays current');
+        self::assertSame($refunded, self::integer($this->value('SELECT refunded_minor FROM billium_observed_payment_revision WHERE revision = 2')));
+        self::assertSame(1, $this->rows('billium_ledger_discrepancy', 'hold'));
+        self::assertSame(1, $this->rows('billium_outbox_event', "type = 'discrepancy.recorded.v1'"));
+        self::assertSame(1, $this->rows('billium_allocation'));
+        self::assertSame(1, $this->rows('billium_payment_revision'));
+        self::assertSame(0, $this->rows('billium_outbox_command'));
+
+        self::assertSame($held->body, $this->observe($older)->body, 'an exact delivery replay keeps its receipt');
+        self::assertSame(1, $this->rows('billium_ledger_discrepancy'));
+    }
+
+    #[TestWith(['pending', 3000, 0])]
+    #[TestWith(['accepted-unknown', 0, 0])]
+    #[TestWith(['succeeded', 5000, 1000])]
+    public function test_a_compatible_unseen_older_snapshot_stays_stale(string $state, int $captured, int $refunded): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $this->observe(ObservationFactory::charge('op-1', 3, 5000, 1000));
+
+        $stale = $this->observe(ObservationFactory::charge('op-1', 2, $captured, $refunded, sequence: 2, fields: ['state' => $state]));
+
+        self::assertSame('stale', $stale->mode());
+        self::assertSame('3000', $stale->body['spendable_minor']);
+        self::assertSame(3, self::integer($this->paymentRow()['applied_revision']));
+        self::assertFalse($this->paymentRow()['financial_hold']);
+        self::assertSame(0, $this->rows('billium_ledger_discrepancy'));
+        self::assertSame(1, $this->rows('billium_allocation'));
+    }
+
     #[TestWith(['succeeded', 'pending'])]
     #[TestWith(['succeeded', 'accepted-unknown'])]
     #[TestWith(['succeeded', 'failed-terminal'])]

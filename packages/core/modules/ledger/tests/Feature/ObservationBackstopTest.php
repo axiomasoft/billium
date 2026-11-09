@@ -9,6 +9,7 @@ use Billium\Core\Tests\TestEnvironment;
 use Billium\Ledger\Tests\Observation\ObservationTestCase;
 use PDOException;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\TestWith;
 
 /**
  * Database backstops of the observation path (D60, INV-01, INV-06): the runtime role reads observation tables and only
@@ -18,6 +19,45 @@ use PHPUnit\Framework\Attributes\Group;
 #[Group('D60')]
 final class ObservationBackstopTest extends ObservationTestCase
 {
+    #[TestWith(['succeeded', 'pending', false])]
+    #[TestWith(['succeeded', 'unknown', false])]
+    #[TestWith(['succeeded', 'failed', false])]
+    #[TestWith(['failed-terminal', 'succeeded', false])]
+    #[TestWith(['failed-terminal', 'pending', false])]
+    #[TestWith(['failed-terminal', 'cancelled', false])]
+    #[TestWith(['cancelled', 'pending', false])]
+    #[TestWith(['cancelled', 'succeeded', false])]
+    #[TestWith(['cancelled', 'failed', false])]
+    #[TestWith(['succeeded', 'succeeded', true])]
+    #[TestWith(['failed-terminal', 'failed', true])]
+    #[TestWith(['cancelled', 'cancelled', true])]
+    #[TestWith(['pending', 'succeeded', true])]
+    public function test_the_granted_routine_guards_terminal_state_using_the_applied_revision(string $previous, string $next, bool $compatible): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $this->observe(ObservationFactory::charge('op-1', 1, 5000, fields: ['state' => $previous]));
+        $observed = self::integer($this->observedRow()['id']);
+        $intent = self::integer($this->value('SELECT id FROM billium_settlement_intent'));
+        $this->routine('record_observation', ['inst-test', 'seller-a', 'test', 'embedded-commerz', 'L1', 'op-1', 'charge', null, 2, self::digest('b'),
+            $next, 'RUB', 5000, 5000, 5000, 0, 'pa-1', 'ev-x', '{}']);
+
+        try {
+            $this->routine('project_payment', [...$this->scopeArguments(), $observed, 2, 'op-1', $intent, 'assign', '[]', null, 'observation:op-1#2', self::digest('b')]);
+            self::assertTrue($compatible, 'a terminal-state change cannot bypass the application through the runtime routine');
+        } catch (PDOException $exception) {
+            self::assertFalse($compatible);
+            self::assertStringContainsString('billium.observation.conflict', $exception->getMessage());
+        }
+        self::assertSame($compatible ? 2 : 1, self::integer($this->paymentRow()['applied_revision']));
+        self::assertSame($compatible ? 2 : 1, $this->rows('billium_payment_revision'));
+        self::assertSame($compatible ? 1 : 0, $this->rows('billium_allocation_receipt', "receipt_ref = 'observation:op-1#2'"));
+        self::assertSame([5000, 0, 1000], [self::integer($this->paymentRow()['captured_minor']),
+            self::integer($this->paymentRow()['refunded_minor']), self::integer($this->paymentRow()['allocated_minor'])]);
+        self::assertSame($next, $this->observedRow()['state'], 'the mutable latest observed state is not the applied-state basis');
+        self::assertFalse($this->paymentRow()['financial_hold'], 'a refused direct call rolls back without mutating the payment');
+    }
+
     public function test_runtime_cannot_write_observation_state_directly(): void
     {
         $runtime = TestEnvironment::pdo();

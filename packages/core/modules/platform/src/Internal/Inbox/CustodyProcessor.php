@@ -48,6 +48,8 @@ final readonly class CustodyProcessor
         $e->authorize($context->caller());
         $db = $this->partitions->connection($context);
 
+        $this->partitions->lockNamespace($db, $e->channel, $e->sourceAuthority, $e->sellerRef, $e->environment, $e->partitionRef);
+
         $partition = $this->partitions->live($db, $e->channel, $e->sourceAuthority, $e->sellerRef, $e->environment, $e->partitionRef);
         if ($partition !== null) {
             $partition = $this->partitions->lock($context, $partition);

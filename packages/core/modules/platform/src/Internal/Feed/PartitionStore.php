@@ -26,6 +26,14 @@ final readonly class PartitionStore
         return $this->databases->connection($context->connectionName());
     }
 
+    /** Serializes namespace admission even before a partition row exists; always precedes partition/session row locks. */
+    public function lockNamespace(Connection $db, string $channel, string $authority, string $seller, string $environment, string $partitionRef): void
+    {
+        // Lineage is deliberately absent: its replacement recovers the same namespace.
+        $key = json_encode(['billium.feed.namespace', $channel, $authority, $seller, $environment, $partitionRef], JSON_THROW_ON_ERROR);
+        $db->selectOne('SELECT pg_advisory_xact_lock(hashtextextended(?::text, 0))', [$key]);
+    }
+
     public function live(Connection $db, string $channel, string $authority, string $seller, string $environment, string $partitionRef): ?PartitionRow
     {
         $row = $db->selectOne(<<<'SQL'

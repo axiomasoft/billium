@@ -347,14 +347,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "ledger",
-      "currentSchemaVersion": 9,
+      "currentSchemaVersion": 10,
       "supportedSchemaReadRange": {
         "min": 2,
-        "max": 9
+        "max": 10
       },
       "supportedSchemaWriteRange": {
         "min": 2,
-        "max": 9
+        "max": 10
       },
       "requiresModules": [
         {
@@ -449,6 +449,11 @@
           "id": "2026_10_29_000009_sync_billium_draft_invoice_adjustments",
           "version": 9,
           "checksum": "sha256:5724001aec8a7b8f57562df3c5c167331f27b849b90bb0e57bf34bc1818a1f2c"
+        },
+        {
+          "id": "2026_11_09_000010_guard_billium_payment_terminal_state",
+          "version": 10,
+          "checksum": "sha256:04a4eca1d33639ae2d7716e6297a4b4215fe138a8f36122f2d8a5db91e478550"
         }
       ],
       "disablePolicy": {

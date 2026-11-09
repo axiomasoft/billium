@@ -169,13 +169,15 @@ final readonly class PaymentProjection
 
         $applied = $payment === null ? null : $this->payment($db, $payment['id'], $observedId);
         $revision = $o->operationRevision;
-        $exceptional = null;
-        if ($applied !== null && $revision <= $applied['revision']) {
+        $binding = $payment !== null && $payment['intent'] !== ($intent === null || $closed ? null : $intent['id']);
+        // An unseen older fact can still contradict the consistent history; only compatible history is stale.
+        $exceptional = self::exceptional($o, $applied, $closed, $binding);
+        if ($exceptional !== null) {
+            $mode = self::MODE_HOLD;
+        } elseif ($applied !== null && $revision <= $applied['revision']) {
             $mode = self::MODE_STALE;
         } else {
-            $binding = $payment !== null && $payment['intent'] !== ($intent === null || $closed ? null : $intent['id']);
-            $exceptional = self::exceptional($o, $applied, $closed, $binding);
-            $mode = $exceptional !== null || ($applied['hold'] ?? false) ? self::MODE_HOLD : self::MODE_ASSIGN;
+            $mode = ($applied['hold'] ?? false) ? self::MODE_HOLD : self::MODE_ASSIGN;
         }
         $parts = $mode === self::MODE_ASSIGN ? $this->parts($db, $o, $applied, $targets) : [];
         $receiptRef = self::receiptRef('observation', $o->sourceAuthority, $o->operationRef, $revision);
@@ -269,6 +271,10 @@ final readonly class PaymentProjection
     {
         $captured = $o->capturedTotal->minor;
         $refunded = $o->refundedTotal->minor;
+        $older = $applied !== null && $o->operationRevision < $applied['revision'];
+        // Compare in revision order: lower cumulative totals and a pre-terminal state are valid older history.
+        $previousState = $older ? self::state($o->state) : ($applied['state'] ?? null);
+        $nextState = $older ? $applied['state'] : self::state($o->state);
         $at = self::receiptRef('source', $o->sourceAuthority, $o->operationRef, $o->operationRevision);
         [$reason, $expected, $actual] = match (true) {
             $closed && ($captured > 0 || $refunded > 0) => ['closed_intent_effect', 0, $captured],
@@ -276,10 +282,10 @@ final readonly class PaymentProjection
             $o->discrepancy !== null => ['source_reported', $applied['captured'] ?? 0, $captured],
             $refunded > $captured => ['over_refund', $captured, $refunded],
             $captured > $o->authorizedTotal->minor => ['over_capture', $o->authorizedTotal->minor, $captured],
-            $applied !== null && $captured < $applied['captured'] => ['regression_captured', $applied['captured'], $captured],
-            $applied !== null && $refunded < $applied['refunded'] => ['regression_refunded', $applied['refunded'], $refunded],
-            $applied !== null && in_array($applied['state'], ['succeeded', 'failed', 'cancelled'], true)
-                && self::state($o->state) !== $applied['state'] => ['regression_state', $applied['captured'], $captured],
+            $applied !== null && ($older ? $captured > $applied['captured'] : $captured < $applied['captured']) => ['regression_captured', $applied['captured'], $captured],
+            $applied !== null && ($older ? $refunded > $applied['refunded'] : $refunded < $applied['refunded']) => ['regression_refunded', $applied['refunded'], $refunded],
+            $applied !== null && in_array($previousState, ['succeeded', 'failed', 'cancelled'], true)
+                && $nextState !== $previousState => ['regression_state', $applied['captured'], $captured],
             default => [null, 0, 0],
         };
         if ($reason === null) {

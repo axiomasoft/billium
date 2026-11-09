@@ -13,9 +13,14 @@ use Billium\Platform\Data\Inbox\BootstrapPartition;
 use Billium\Platform\Data\Inbox\BootstrapStatus;
 use Billium\Platform\Data\Inbox\CustodyDisposition;
 use Billium\Platform\Data\Inbox\HandlerOutcome;
+use Billium\Platform\Internal\Feed\PartitionStore;
 use Billium\Platform\Tests\Inbox\InboxTestCase;
 use Billium\Platform\Tests\Inbox\JournalHandler;
+use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\PostgresConnection;
+use Illuminate\Database\QueryException;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\TestWith;
 use RuntimeException;
 use stdClass;
 
@@ -28,6 +33,56 @@ use stdClass;
 #[Group('ACC-RST-07')]
 final class BootstrapAtomicAdoptionTest extends InboxTestCase
 {
+    #[TestWith([true])]
+    #[TestWith([false])]
+    public function test_staging_and_first_delivery_lock_the_same_namespace_before_looking_for_a_partition(bool $stageFirst): void
+    {
+        $store = $this->application()->make(PartitionStore::class);
+        $competitor = new PostgresConnection(TestEnvironment::pdo());
+        $competitor->statement("SET lock_timeout = '100ms'");
+        $checked = false;
+        $this->application()->make(DatabaseManager::class)->connection()->beforeExecuting(function (string $sql) use ($store, $competitor, &$checked): void {
+            if ($checked || ! str_contains($sql, 'FROM public.billium_feed_partition')) {
+                return;
+            }
+            $checked = true;
+            $competitor->beginTransaction();
+            try {
+                $store->lockNamespace($competitor, 'payment.observation', self::AUTHORITY, 'seller-a', 'test', 'part-1');
+                self::fail('another connection must not admit a partition or bootstrap while the namespace is being inspected');
+            } catch (QueryException $exception) {
+                self::assertSame('55P03', $exception->getCode());
+            } finally {
+                $competitor->rollBack();
+            }
+            $competitor->transaction(function () use ($store, $competitor): void {
+                $store->lockNamespace($competitor, 'payment.observation', self::AUTHORITY, 'seller-a', 'test', 'part-2');
+            });
+        });
+
+        $handler = new JournalHandler;
+        if ($stageFirst) {
+            $session = $this->stage($this->snapshot(cursor: 20));
+            $this->custody($this->envelope(1), $handler);
+            self::assertSame(0, $this->rows('billium_feed_partition'), 'staging fences initial live creation');
+            self::assertSame(0, $handler->calls);
+        } else {
+            $this->custody($this->envelope(1), $handler);
+            $session = $this->stage($this->snapshot(cursor: 20));
+            self::assertSame(self::integer($this->value('SELECT id FROM billium_feed_partition')), $this->bootstrapState($session)->oldPartitionId);
+            self::assertSame(1, $handler->calls);
+            self::assertSame(1, $this->rows('billium_feed_partition', "state = 'recovery_required'"));
+        }
+        self::assertTrue($checked);
+        while ($this->applyNext($session, $handler) > 0) {
+            // One item per recovery root.
+        }
+        $adopted = $this->root(fn (TransactionContext $context): int => $this->feed()->adoptBootstrap($context, $session));
+        self::assertSame('adopted', $this->bootstrapState($session)->status);
+        self::assertSame($adopted, $this->bootstrapState($session)->newPartitionId);
+        self::assertSame(1, $this->rows('billium_feed_partition', "state = 'active'"));
+    }
+
     public function test_a_recovering_partition_adopts_a_verified_bootstrap_only_after_every_item_is_disposed(): void
     {
         $old = $this->seedPartition(10);
