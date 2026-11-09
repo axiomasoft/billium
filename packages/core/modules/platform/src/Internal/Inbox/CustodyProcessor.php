@@ -58,6 +58,10 @@ final readonly class CustodyProcessor
                 $live = $this->partitions->live($db, $e->channel, $e->sourceAuthority, $e->sellerRef, $e->environment, $e->partitionRef);
                 $partition = $live === null ? throw new LockPlanChanged('Concurrent partition creation') : $this->partitions->lock($context, $live);
             }
+        }
+        if ($partition !== null) {
+            // An orphan may have committed after this partition's opening root scanned pre-partition custody.
+            // Reattach before replaying an identity so duplicates can hand the recovered tail to a new drain root.
             $this->partitions->attachParkedGaps($db, $partition);
         }
 
@@ -116,6 +120,7 @@ final readonly class CustodyProcessor
         if (! $partition->active()) {
             return new CustodyResult(CustodyDisposition::Idle);
         }
+        $this->partitions->attachParkedGaps($db, $partition);
         $record = $db->selectOne(<<<'SQL'
             SELECT * FROM public.billium_inbox_message
             WHERE partition_id = ? AND source_sequence = ? AND status IN ('ready', 'parked_gap')

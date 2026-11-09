@@ -73,10 +73,13 @@ final readonly class PartitionStore
         return $row === null ? null : PartitionRow::from($row);
     }
 
-    /** Attaches pre-partition custody to the newly inserted or locked opening partition. */
+    /** Under the inserted/locked active partition, reattaches orphan custody and restores its contiguous frontier. */
     public function attachParkedGaps(Connection $db, PartitionRow $partition): void
     {
-        $db->update(<<<'SQL'
+        if (! $partition->active()) {
+            return;
+        }
+        $attached = $db->update(<<<'SQL'
             UPDATE public.billium_inbox_message SET partition_id = ?
             WHERE partition_id IS NULL AND status = 'parked_gap'
               AND channel = ? AND source_authority = ? AND source_lineage = ?
@@ -84,6 +87,9 @@ final readonly class PartitionStore
               AND source_sequence > ?
             SQL, [$partition->id, $partition->channel, $partition->sourceAuthority, $partition->sourceLineage,
             $partition->sellerRef, $partition->environment, $partition->partitionRef, $partition->accountedSequence]);
+        if ($attached > 0) {
+            $this->extendCustody($db, $partition);
+        }
     }
 
     public function requireRecovery(Connection $db, PartitionRow $partition, string $reason): void

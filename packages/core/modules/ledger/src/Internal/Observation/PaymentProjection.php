@@ -167,7 +167,7 @@ final readonly class PaymentProjection
             throw new LockPlanChanged('observation plan changed');
         }
 
-        $applied = $payment === null ? null : $this->payment($db, $payment['id']);
+        $applied = $payment === null ? null : $this->payment($db, $payment['id'], $observedId);
         $revision = $o->operationRevision;
         $exceptional = null;
         if ($applied !== null && $revision <= $applied['revision']) {
@@ -219,7 +219,7 @@ final readonly class PaymentProjection
     }
 
     /**
-     * @param  array{revision: int, captured: int, refunded: int, allocated: int, hold: bool}|null  $applied
+     * @param  array{revision: int, state: string|null, captured: int, refunded: int, allocated: int, hold: bool}|null  $applied
      * @param  list<array{id: int, invoice: int|null}>  $targets
      * @return list<array{obligation_id: int, amount_minor: string}>
      */
@@ -245,20 +245,24 @@ final readonly class PaymentProjection
         return $parts; // the overpayment beyond the open amounts stays unallocated on the payment (REQ-OWN-12)
     }
 
-    /** @return array{revision: int, captured: int, refunded: int, allocated: int, hold: bool} */
-    private function payment(Connection $db, int $id): array
+    /** @return array{revision: int, state: string|null, captured: int, refunded: int, allocated: int, hold: bool} */
+    private function payment(Connection $db, int $id, int $observedId): array
     {
         $row = $db->table('billium_payment')->where('id', $id)->first(['applied_revision', 'captured_minor', 'refunded_minor', 'allocated_minor', 'financial_hold'])
             ?? throw new LockPlanChanged('payment vanished');
+        $revision = self::int($row->applied_revision);
+        // The latest observed state may already contradict the projection: use its immutable applied revision.
+        $state = $revision === 0 ? null : self::text($db->table('billium_observed_payment_revision')
+            ->where('observed_payment_id', $observedId)->where('revision', $revision)->value('state'));
 
-        return ['revision' => self::int($row->applied_revision), 'captured' => self::int($row->captured_minor), 'refunded' => self::int($row->refunded_minor),
+        return ['revision' => $revision, 'state' => $state, 'captured' => self::int($row->captured_minor), 'refunded' => self::int($row->refunded_minor),
             'allocated' => self::int($row->allocated_minor), 'hold' => $row->financial_hold === true];
     }
 
     /**
      * Actual provider facts outside the normal bounds of the applied projection (D57): retained, held, never clamped.
      *
-     * @param  array{revision: int, captured: int, refunded: int, allocated: int, hold: bool}|null  $applied
+     * @param  array{revision: int, state: string|null, captured: int, refunded: int, allocated: int, hold: bool}|null  $applied
      * @return array{fingerprint: string, reason: string, expected_minor: string, actual_minor: string, exposure_minor: string}|null
      */
     private static function exceptional(PaymentObservation $o, ?array $applied, bool $closed, bool $binding): ?array
@@ -274,6 +278,8 @@ final readonly class PaymentProjection
             $captured > $o->authorizedTotal->minor => ['over_capture', $o->authorizedTotal->minor, $captured],
             $applied !== null && $captured < $applied['captured'] => ['regression_captured', $applied['captured'], $captured],
             $applied !== null && $refunded < $applied['refunded'] => ['regression_refunded', $applied['refunded'], $refunded],
+            $applied !== null && in_array($applied['state'], ['succeeded', 'failed', 'cancelled'], true)
+                && self::state($o->state) !== $applied['state'] => ['regression_state', $applied['captured'], $captured],
             default => [null, 0, 0],
         };
         if ($reason === null) {

@@ -6,9 +6,11 @@ namespace Billium\Ledger\Tests\Feature;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Core\Tests\Support\ObservationFactory;
+use Billium\Ledger\Contracts\LedgerQueries;
 use Billium\Ledger\Tests\Observation\ObservationTestCase;
 use Billium\Ledger\Tests\Observation\OverRefundVector;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\TestWith;
 
 /**
  * D57 actual vs applied (invariant-model, observation-apply 7): an actual provider refund above the capture is retained
@@ -20,6 +22,67 @@ use PHPUnit\Framework\Attributes\Group;
 final class ExceptionalExposureTest extends ObservationTestCase
 {
     use OverRefundVector;
+
+    #[TestWith(['succeeded', 'pending'])]
+    #[TestWith(['succeeded', 'accepted-unknown'])]
+    #[TestWith(['succeeded', 'failed-terminal'])]
+    #[TestWith(['succeeded', 'cancelled'])]
+    #[TestWith(['failed-terminal', 'pending'])]
+    #[TestWith(['failed-terminal', 'succeeded'])]
+    #[TestWith(['cancelled', 'pending'])]
+    #[TestWith(['cancelled', 'succeeded'])]
+    public function test_a_terminal_state_contradiction_is_observed_but_keeps_the_last_applied_revision(string $previous, string $next): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $consistent = $this->observe(ObservationFactory::charge('op-1', 1, 5000, sequence: 1, fields: ['state' => $previous]));
+        self::assertSame('4000', $consistent->body['spendable_minor']);
+
+        $envelope = ObservationFactory::charge('op-1', 2, 5000, sequence: 2, fields: ['state' => $next]);
+        $held = $this->observe($envelope);
+
+        self::assertSame('hold', $held->mode());
+        self::assertSame('regression_state', self::arr($held->body['discrepancy'])['reason']);
+        self::assertSame('0', self::arr($held->body['discrepancy'])['exposure_minor']);
+        self::assertTrue($held->body['financial_hold']);
+        self::assertSame('0', $held->body['spendable_minor']);
+        self::assertSame(1, self::arr($held->body['applied'])['revision']);
+        self::assertSame([1, 5000, 1000, true], [self::integer($this->paymentRow()['applied_revision']), self::integer($this->paymentRow()['captured_minor']),
+            self::integer($this->paymentRow()['allocated_minor']), $this->paymentRow()['financial_hold']]);
+        self::assertSame(2, self::integer($this->observedRow()['revision']));
+
+        $status = $this->application()->make(LedgerQueries::class)->paymentStatus('op-1');
+        self::assertSame('held_discrepancy', $status['projectionStatus']);
+        self::assertSame([1, $previous], [self::arr($status['applied'])['revision'], self::arr($status['applied'])['state']]);
+        self::assertSame($next, self::arr($status['observed'])['state']);
+        self::assertTrue(self::arr($status['financialHold'])['active']);
+        self::assertSame('0.00', self::arr($status['spendable'])['amount']);
+        self::assertContains($envelope->evidenceRef, self::arr(self::arr($status['observed'])['evidenceRefs']));
+        self::assertSame(1, $this->rows('billium_ledger_discrepancy', "reason = 'regression_state' AND hold"));
+        self::assertSame(1, $this->rows('billium_outbox_event', "type = 'discrepancy.recorded.v1'"));
+        self::assertSame(1, $this->rows('billium_allocation'));
+        self::assertSame(0, $this->rows('billium_outbox_command'));
+    }
+
+    #[TestWith(['succeeded', 'succeeded'])]
+    #[TestWith(['failed-terminal', 'failed-terminal'])]
+    #[TestWith(['cancelled', 'cancelled'])]
+    #[TestWith(['pending', 'succeeded'])]
+    #[TestWith(['accepted-unknown', 'pending'])]
+    public function test_compatible_states_can_advance_the_applied_revision(string $previous, string $next): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $this->observe(ObservationFactory::charge('op-1', 1, 5000, sequence: 1, fields: ['state' => $previous]));
+
+        $applied = $this->observe(ObservationFactory::charge('op-1', 2, 5000, sequence: 2, fields: ['state' => $next]));
+
+        self::assertSame('assign', $applied->mode());
+        self::assertSame(2, self::arr($applied->body['applied'])['revision']);
+        self::assertFalse($applied->body['financial_hold']);
+        self::assertSame('4000', $applied->body['spendable_minor']);
+        self::assertSame(0, $this->rows('billium_ledger_discrepancy'));
+    }
 
     public function test_an_actual_over_refund_is_kept_held_and_never_clamped(): void
     {

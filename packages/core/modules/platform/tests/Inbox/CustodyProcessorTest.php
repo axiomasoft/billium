@@ -169,6 +169,38 @@ final class CustodyProcessorTest extends InboxTestCase
         self::assertSame(['held_recovery', null], [$this->inbox('forked')['status'], $this->inbox('forked')['partition_id']]);
     }
 
+    public function test_an_existing_partition_reattaches_orphans_before_processing_a_new_delivery(): void
+    {
+        $handler = new JournalHandler;
+        $this->custody($this->envelope(2), $handler);
+        $this->custody($this->envelope(2, lineage: 'L2'), $handler);
+        $this->custody($this->envelope(2, event: 'forked'), $handler);
+        $id = $this->seedPartition(1);
+
+        $this->custody($this->envelope(3), $handler);
+
+        self::assertSame($id, $this->inbox('evt-L1-2')['partition_id']);
+        self::assertSame([3, 1], [$this->partitionRow($id)['custody_sequence'], $this->partitionRow($id)['accounted_sequence']]);
+        self::assertSame(['parked_gap', null], [$this->inbox('evt-L2-2')['status'], $this->inbox('evt-L2-2')['partition_id']]);
+        self::assertSame(['held_recovery', null], [$this->inbox('forked')['status'], $this->inbox('forked')['partition_id']]);
+        self::assertCount(2, $this->drainAll($id, $handler));
+        self::assertSame(['evt-L1-2', 'evt-L1-3'], $this->journal());
+    }
+
+    public function test_a_recovering_partition_leaves_orphan_gaps_unattached(): void
+    {
+        $handler = new JournalHandler;
+        $this->custody($this->envelope(2), $handler);
+        $id = $this->seedPartition(1, state: 'recovery_required');
+
+        self::assertSame(CustodyDisposition::RecoveryRequired, $this->custody($this->envelope(3), $handler)->disposition);
+        self::assertSame(CustodyDisposition::Idle, $this->drain($id, $handler)->disposition);
+
+        self::assertSame(['parked_gap', null], [$this->inbox('evt-L1-2')['status'], $this->inbox('evt-L1-2')['partition_id']]);
+        self::assertSame([1, 1], [$this->partitionRow($id)['custody_sequence'], $this->partitionRow($id)['accounted_sequence']]);
+        self::assertSame(0, $handler->calls);
+    }
+
     public function test_a_regressed_sequence_requires_recovery_and_has_no_effect(): void
     {
         $id = $this->seedPartition(10);
