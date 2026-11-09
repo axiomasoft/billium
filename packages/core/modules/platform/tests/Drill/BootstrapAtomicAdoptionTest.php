@@ -71,7 +71,7 @@ final class BootstrapAtomicAdoptionTest extends InboxTestCase
         self::assertSame('adopted', $this->bootstrapState($session)->status);
     }
 
-    public function test_recovery_metadata_is_filtered_by_authenticated_source_authorities(): void
+    public function test_recovery_metadata_stays_visible_regardless_of_caller_source_authorities(): void
     {
         $this->seedPartition(10);
         $this->stage($this->snapshot(cursor: 20));
@@ -85,7 +85,7 @@ final class BootstrapAtomicAdoptionTest extends InboxTestCase
 
                     return $queries->state(self::text($db->getName()), 'payment.observation', $selector, 'part-1');
                 });
-                if ($authorities === [self::AUTHORITY] && $selector !== 'remote-billium') {
+                if ($selector !== 'remote-billium') {
                     self::assertTrue($state['recoveryRequired']);
                     self::assertSame('verified', $state['bootstrapStatus']);
                     self::assertCount(2, $state['snapshots']);
