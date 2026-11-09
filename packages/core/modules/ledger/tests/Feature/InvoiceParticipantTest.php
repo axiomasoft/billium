@@ -15,6 +15,7 @@ use Billium\Core\Enums\FinancialMode;
 use Billium\Core\Enums\LockRank;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Core\Exceptions\LockOrderViolation;
+use Billium\Core\Tests\Support\FixedSessionAdmission;
 use Billium\Core\Tests\Support\ObservationFactory;
 use Billium\Ledger\Contracts\LedgerParticipants;
 use Billium\Ledger\Data\AdjustObligation;
@@ -54,6 +55,30 @@ final class InvoiceParticipantTest extends LedgerTestCase
     private function port(): LedgerParticipants
     {
         return $this->application()->make(LedgerParticipants::class);
+    }
+
+    public function test_ledger_participants_reject_new_intent_roots_when_financial_session_is_in_recovery(): void
+    {
+        $this->obligation('obligation-a', 1000);
+        $this->draft();
+        $this->ledger()->declareSettlementIntent(new DeclareSettlementIntent('intent', $this->account(), 'intent-a', 'RUB', ['obligation-a']));
+        $this->installation()->seal('seal-recovery', 1);
+        $this->installation()->openSession('sess-recovery-only', 'owner-1', 1, 1, 1, 'evidence:recovery');
+        $this->tokens->set(FixedSessionAdmission::token(self::INSTALLATION, modes: [FinancialMode::Recovery]));
+        $tables = ['billium_obligation', 'billium_invoice', 'billium_allocation_receipt', 'billium_outbox_event', 'billium_money_commit_log'];
+        $before = array_map($this->rows(...), $tables);
+
+        foreach (['recordObligation', 'closeSettlementIntentNoEffect', 'issueInvoice'] as $participant) {
+            try {
+                $this->runner()->run($this->spec(mode: FinancialMode::Recovery, class: ModuleOperationClass::NewIntent,
+                    modules: ['ledger', 'platform'], commit: 'ledger.test_effect'),
+                    fn (TransactionContext $context): Receipt => $this->monetaryParticipant($context, $participant));
+                self::fail('a recovery root must not invoke '.$participant);
+            } catch (LogicException $exception) {
+                self::assertSame('Monetary ledger operations require an admitted financial session and commit accounting (D54, D60, D62)', $exception->getMessage());
+            }
+            self::assertSame($before, array_map($this->rows(...), $tables));
+        }
     }
 
     /** @return iterable<string, array{string, FinancialMode}> */

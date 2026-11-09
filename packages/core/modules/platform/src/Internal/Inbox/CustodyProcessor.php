@@ -270,7 +270,8 @@ final readonly class CustodyProcessor
     private function parked(Connection $db, int $id, HandlerOutcome $outcome): CustodyResult
     {
         $db->update(<<<'SQL'
-            UPDATE public.billium_inbox_message SET status = 'parked_dependency', park_kind = ?, park_ref = ?, attempts = attempts + 1,
+            UPDATE public.billium_inbox_message SET status = 'parked_dependency', park_kind = ?, park_ref = ?,
+                attempts = CASE WHEN status = 'parked_dependency' THEN attempts ELSE attempts + 1 END,
                 next_attempt_at = now() + make_interval(secs => ?)
             WHERE id = ?
             SQL, [$outcome->dependencyKind, $outcome->reference, $this->retryBackoffSeconds, $id]);

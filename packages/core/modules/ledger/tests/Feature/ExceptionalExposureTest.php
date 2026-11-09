@@ -16,6 +16,7 @@ use Billium\Platform\Data\Inbox\BootstrapItem;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Str;
+use PDOException;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\TestWith;
 
@@ -29,6 +30,53 @@ use PHPUnit\Framework\Attributes\TestWith;
 final class ExceptionalExposureTest extends ObservationTestCase
 {
     use OverRefundVector;
+
+    public function test_a_parked_provider_account_contradiction_holds_before_any_assignment(): void
+    {
+        $this->bootstrapper()->execute($this->snapshot('boot', 'L1', 2, [
+            ObservationFactory::charge('op-1', 1, 4000, sequence: 1, fields: ['providerAccountRef' => 'pa-1']),
+            ObservationFactory::charge('op-1', 2, 4000, sequence: 2, fields: ['providerAccountRef' => 'pa-2']),
+        ]));
+        self::assertSame(2, $this->rows('billium_observed_payment_revision'));
+        self::assertSame(2, $this->rows('billium_observation_park', 'released_at IS NULL'));
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+
+        self::assertSame(['applied', 'applied'], $this->drainer()->retryParked());
+
+        self::assertSame(0, $this->allocated('o1'));
+        self::assertTrue($this->paymentRow()['financial_hold']);
+        self::assertSame(0, self::integer($this->paymentRow()['applied_revision']));
+        self::assertSame(0, $this->rows('billium_payment_revision'));
+        self::assertSame(0, $this->rows('billium_allocation'));
+        self::assertSame(2, $this->rows('billium_ledger_discrepancy', "reason = 'binding_changed' AND hold"));
+    }
+
+    #[TestWith([1])]
+    #[TestWith([2])]
+    public function test_the_projection_routine_rejects_persisted_provider_account_contradictions(int $revision): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        foreach ([1 => 'pa-1', 2 => 'pa-2'] as $at => $account) {
+            $this->routine('record_observation', [self::INSTALLATION, 'seller-a', 'test', 'embedded-commerz', 'L1', 'op-1', 'charge', null,
+                $at, self::digest($at === 1 ? 'a' : 'b'), 'succeeded', 'RUB', 4000, 4000, 4000, 0, $account, 'evidence-'.$at, '{}']);
+        }
+        $tables = ['billium_payment', 'billium_payment_revision', 'billium_allocation', 'billium_allocation_receipt', 'billium_outbox_event'];
+        $before = array_map($this->rows(...), $tables);
+        try {
+            $this->routine('project_payment', [...$this->scopeArguments(), self::integer($this->observedRow()['id']), $revision,
+                'op-1', self::integer($this->value("SELECT id FROM billium_settlement_intent WHERE business_intent_ref = 'intent-a'")),
+                'assign', '[]', null, 'direct-projection', self::digest($revision === 1 ? 'a' : 'b')]);
+            self::fail('persisted provider account contradictions must refuse direct assignment');
+        } catch (PDOException $exception) {
+            self::assertSame('P0001', $exception->getCode());
+            self::assertStringContainsString(ProblemCode::ObservationConflict->value, $exception->getMessage());
+        }
+        self::assertSame($before, array_map($this->rows(...), $tables));
+        self::assertSame(0, $this->allocated('o1'));
+        self::assertSame(['pa-1', 'pa-2'], array_column($this->table("SELECT payload->>'providerAccountRef' AS account FROM billium_observed_payment_revision ORDER BY revision"), 'account'));
+    }
 
     /** @param array<string, mixed> $fields */
     #[TestWith([['currency' => 'USD']])]

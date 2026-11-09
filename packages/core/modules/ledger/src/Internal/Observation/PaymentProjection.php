@@ -12,6 +12,7 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\OperationRunner;
 use Billium\Core\Contracts\TransactionContext;
 use Billium\Core\Data\Caller;
+use Billium\Core\Enums\FinancialMode;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Core\Exceptions\LockPlanChanged;
 use Billium\Ledger\Internal\Commands\AllocateLockPlan;
@@ -61,7 +62,7 @@ final readonly class PaymentProjection
     public function apply(TransactionContext $context, PaymentObservation $observation, ?int $inboxId = null): HandlerOutcome
     {
         $this->runner->assertCurrent($context, 'ledger');
-        $this->routines->assertMonetary($context, [ModuleOperationClass::ObservedFactRecording]);
+        $this->routines->assertMonetary($context, [ModuleOperationClass::ObservedFactRecording], [FinancialMode::Active, FinancialMode::Recovery]);
         $caller = $context->caller();
         $refusal = self::refusal($caller, $observation);
         if ($refusal !== null) {
@@ -297,7 +298,10 @@ final readonly class PaymentProjection
     private static function exceptional(Connection $db, int $observedId, PaymentObservation $o, ?array $applied, bool $closed, bool $binding, string $currency): ?array
     {
         $binding = $binding || $db->table('billium_observed_payment_revision')->where('observed_payment_id', $observedId)
-            ->where('currency', '<>', $currency)->exists();
+            ->where(static function (Builder $query) use ($currency, $o): void {
+                $query->where('currency', '<>', $currency)
+                    ->orWhereRaw("coalesce(payload->>'providerAccountRef', ?) <> ?", [$o->providerAccountRef, $o->providerAccountRef]);
+            })->exists();
         $captured = $o->capturedTotal->minor;
         $refunded = $o->refundedTotal->minor;
         $older = $applied !== null && $o->operationRevision < $applied['revision'];

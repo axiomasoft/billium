@@ -62,7 +62,9 @@ return new class extends Migration
                 END IF;
                 INSERT INTO public.billium_observed_payment_revision(installation_ref,seller_ref,environment,observed_payment_id,revision,material_digest,state,
                     requested_minor,authorized_minor,captured_minor,refunded_minor,voided_minor,currency,evidence_ref,payload)
-                VALUES(p_installation,p_seller,p_environment,o.id,p_revision,p_material,p_state,p_requested,p_authorized,p_captured,p_refunded,0,p_currency,p_evidence,coalesce(p_payload,'{}'::jsonb));
+                VALUES(p_installation,p_seller,p_environment,o.id,p_revision,p_material,p_state,p_requested,p_authorized,p_captured,p_refunded,0,p_currency,p_evidence,
+                    CASE WHEN p_provider_account IS NULL THEN coalesce(p_payload,'{}'::jsonb)
+                        ELSE jsonb_set(coalesce(p_payload,'{}'::jsonb), '{providerAccountRef}', to_jsonb(p_provider_account), true) END);
                 RETURN jsonb_build_object('body',jsonb_build_object('observed_id',o.id,'disposition',v_disposition,
                     'revision',CASE WHEN v_disposition='contradiction' THEN o.revision ELSE greatest(o.revision,p_revision) END),'replayed',false);
             END $$;
@@ -120,8 +122,10 @@ return new class extends Migration
                 IF p_mode IN ('assign','stale') THEN
                     -- Every immutable fact, including parked history, constrains assign and stale modes.
                     IF r.currency IS DISTINCT FROM o.currency
+                       OR coalesce(r.payload->>'providerAccountRef', o.provider_account_ref) IS DISTINCT FROM o.provider_account_ref
                        OR EXISTS (SELECT 1 FROM public.billium_observed_payment_revision rc
-                           WHERE rc.observed_payment_id=o.id AND rc.currency IS DISTINCT FROM o.currency)
+                           WHERE rc.observed_payment_id=o.id AND (rc.currency IS DISTINCT FROM o.currency
+                               OR coalesce(rc.payload->>'providerAccountRef', o.provider_account_ref) IS DISTINCT FROM o.provider_account_ref))
                        OR r.refunded_minor > r.captured_minor OR r.captured_minor > r.authorized_minor
                        OR EXISTS (SELECT 1 FROM public.billium_observed_payment_revision prev
                            WHERE prev.observed_payment_id=r.observed_payment_id AND prev.revision<r.revision
