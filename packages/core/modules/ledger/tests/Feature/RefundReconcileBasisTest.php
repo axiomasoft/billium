@@ -24,6 +24,37 @@ use PHPUnit\Framework\Attributes\TestWith;
 #[Group('D60')]
 final class RefundReconcileBasisTest extends ObservationTestCase
 {
+    #[TestWith([0])]
+    #[TestWith([PHP_INT_MAX])]
+    public function test_overflowing_refund_details_record_a_durable_mismatch_without_starving_the_next_charge(int $refunded): void
+    {
+        $this->debt('o1', 1000);
+        $this->debt('o2', 1000);
+        $this->intent('intent-a', ['o1']);
+        $this->intent('intent-b', ['o2']);
+        $this->observe(ObservationFactory::charge('op-1', 1, PHP_INT_MAX, $refunded, sequence: 1));
+        foreach (['refund-1', 'refund-2'] as $index => $operation) {
+            $receipt = $this->observe(ObservationFactory::refund($operation, 'op-1', 1, 5_000_000_000_000_000_000, sequence: $index + 2));
+            self::assertSame('refund_detail', $receipt->mode());
+        }
+        $this->observe(ObservationFactory::charge('op-2', 1, 1000, 300, sequence: 4, fields: ['businessIntentRef' => 'intent-b']));
+
+        self::assertSame(['compared' => 1, 'recorded' => 1, 'resolved' => 0], $this->reconciler()->reconcile(0, 1));
+        $first = $this->row("SELECT * FROM billium_ledger_discrepancy WHERE reason = 'refund_basis_mismatch'");
+        self::assertSame(self::integer($this->observedRow()['id']), self::integer($first['observed_payment_id']));
+        self::assertSame($refunded, self::integer($first['expected_minor']));
+        self::assertSame($refunded === PHP_INT_MAX ? PHP_INT_MAX - 1 : PHP_INT_MAX, self::integer($first['actual_minor']));
+        self::assertFalse($first['hold']);
+
+        self::assertSame(['compared' => 1, 'recorded' => 1, 'resolved' => 0], $this->reconciler()->reconcile(0, 1));
+        $secondId = self::integer($this->observedRow('op-2')['id']);
+        self::assertSame(1, $this->rows('billium_ledger_discrepancy', "reason = 'refund_basis_mismatch' AND observed_payment_id = ".$secondId));
+        self::assertSame(['compared' => 2, 'recorded' => 0, 'resolved' => 0], $this->reconciler()->reconcile(0));
+        self::assertSame(2, $this->rows('billium_ledger_discrepancy', "reason = 'refund_basis_mismatch'"));
+        self::assertSame(2, $this->rows('billium_outbox_event', "type = 'discrepancy.recorded.v1'"));
+        self::assertSame(0, $this->rows('billium_discrepancy_event', "kind = 'resolved'"));
+    }
+
     public function test_a_pre_upgrade_mismatch_is_reused_and_resolved_without_duplicate_history(): void
     {
         $this->debt('o1', 1000);

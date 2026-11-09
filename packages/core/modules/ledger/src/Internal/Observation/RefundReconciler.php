@@ -96,6 +96,7 @@ final readonly class RefundReconciler
         $paymentRef = self::text($payment->payment_ref);
         $contributing = [];
         $detail = 0;
+        $overflow = false;
         $latest = null;
         // Only a validated detail receipt admits a revision to the basis. Latest observed facts can be quarantined
         // or held; neither may replace the last consistent refund detail or resolve an existing mismatch.
@@ -113,13 +114,23 @@ final readonly class RefundReconciler
             ->where('o.currency', $payment->currency)->where('o.billing_account_ref', $payment->billing_account_ref)->where('r.state', 'succeeded')
             ->orderBy('o.operation_ref')->orderBy('o.id')->get(['o.operation_ref', 'r.revision', 'r.captured_minor']) as $refund) {
             $contributing[] = ['operationRef' => self::text($refund->operation_ref), 'revision' => self::int($refund->revision), 'captured' => (string) self::int($refund->captured_minor)];
-            $detail += self::int($refund->captured_minor);
+            $captured = self::int($refund->captured_minor);
+            if ($detail > PHP_INT_MAX - $captured) {
+                $overflow = true;
+                $detail = PHP_INT_MAX;
+            } else {
+                $detail += $captured;
+            }
             $latest = max($latest ?? 0, self::int($refund->revision));
         }
         $chargeRevision = self::int($payment->applied_revision);
         $chargeRefunded = self::int($payment->refunded_minor);
         $basis = (new Codec)->digest((object) ['normalization' => self::BASIS, 'paymentRef' => $paymentRef, 'chargeRevision' => $chargeRevision,
             'chargeRefunded' => (string) $chargeRefunded, 'refunds' => $contributing], 'basisDigest');
+        if ($overflow && $detail === $chargeRefunded) {
+            // A saturated sum must still mismatch a charge whose refund total is itself PHP_INT_MAX.
+            $detail = PHP_INT_MAX - 1;
+        }
         $body = $this->routines->call($db, 'reconcile_refund_basis', [
             $caller->installationRef, $caller->sellerRef, $caller->environment, $paymentId, $chargeRevision, $basis, $latest, $chargeRefunded, $detail, 'reconcile:'.$basis,
         ], 'ledger.refund_reconcile')->body();

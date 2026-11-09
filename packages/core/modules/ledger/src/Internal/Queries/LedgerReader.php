@@ -99,10 +99,22 @@ final readonly class LedgerReader
             }
         }
         $park = $this->scoped('billium_observation_park')->where('observed_payment_id', $observed->id)->whereNull('released_at')->orderByDesc('id')->first();
+        $caller = $this->caller;
+        $inboxPark = $park !== null ? null : $this->db->table('billium_inbox_message')
+            ->where('seller_ref', $caller->sellerRef)
+            ->where('environment', $caller->environment)
+            ->where('channel', ParkedDrainer::CHANNEL)
+            ->where('source_authority', $observed->source_authority)
+            ->where('operation_ref', $observed->operation_ref)
+            ->whereIn('status', ['ready', 'parked_gap', 'parked_dependency'])
+            ->whereRaw("(payload->>'installationRef') = ?", [$caller->installationRef])
+            ->orderByDesc('operation_revision')->orderByDesc('id')
+            ->first(['status', 'park_kind']);
+        $pendingPark = $park !== null || $inboxPark !== null;
         $partitionRef = is_string($payload['partitionRef'] ?? null) ? $payload['partitionRef'] : null;
         $recovery = $this->feedRecovery->state($this->db->getName() ?? throw new \LogicException('Query connection must be named'),
             ParkedDrainer::CHANNEL, View::text($observed->source_authority), $partitionRef);
-        $status = $recovery['recoveryRequired'] ? 'recovery_required' : ($held ? 'held_discrepancy' : ($park !== null || $payment === null ? 'allocation_pending' : 'current'));
+        $status = $recovery['recoveryRequired'] ? 'recovery_required' : ($held ? 'held_discrepancy' : ($pendingPark || $payment === null ? 'allocation_pending' : 'current'));
         $result = ['paymentRef' => $ref, 'sourceAuthority' => $observed->source_authority, 'sourceLineage' => $observed->source_lineage,
             'providerAccountRef' => $observed->provider_account_ref,
             'observed' => ['revision' => $observed->revision, 'state' => self::state(View::text($observed->state)),
@@ -118,6 +130,8 @@ final readonly class LedgerReader
             'reconciliation' => ['status' => $discrepancies->isEmpty() ? ($observed->refunded_minor > 0 ? 'pending' : 'not_started') : 'discrepancy']];
         if ($park !== null) {
             $result['pendingAllocationReason'] = $park->dependency_kind;
+        } elseif ($inboxPark !== null) {
+            $result['pendingAllocationReason'] = is_string($inboxPark->park_kind ?? null) && $inboxPark->park_kind !== '' ? $inboxPark->park_kind : 'operation_revision';
         } elseif ($payment === null) {
             $result['pendingAllocationReason'] = 'unapplied_observation';
         }

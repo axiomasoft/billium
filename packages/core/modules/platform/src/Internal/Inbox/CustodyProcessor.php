@@ -304,7 +304,8 @@ final readonly class CustodyProcessor
         $partition = Rows::field($existing, 'partition_id');
 
         return new CustodyResult(CustodyDisposition::Duplicate, $id, $status, $result === null ? null : Rows::string($result),
-            in_array($status, ['ready', 'parked_gap'], true) && $partition !== null ? Rows::int($partition) : null);
+            in_array($status, ['ready', 'parked_gap'], true) && $partition !== null ? Rows::int($partition) : null,
+            retryInboxId: $status === 'parked_dependency' && $partition !== null ? ($this->earlierParked($db, $existing) ?? $id) : null);
     }
 
     private function identity(Connection $db, InboxEnvelope $e): mixed

@@ -283,6 +283,11 @@ final class CustodyProcessorTest extends InboxTestCase
 
         $firstId = self::integer($this->inbox('evt-L1-11')['id']);
         $laterId = self::integer($row['id']);
+        $duplicate = $this->custody($this->envelope(12, revision: 2), $handler);
+        self::assertSame(CustodyDisposition::Duplicate, $duplicate->disposition);
+        self::assertSame($firstId, $duplicate->retryInboxId, 'redelivery retries the earlier parked revision first');
+        self::assertSame($firstId, $this->custody($this->envelope(11, revision: 1), $handler)->retryInboxId);
+        self::assertSame(1, $handler->calls, 'duplicate custody never invokes the handler');
         // The later one cannot be retried first.
         $blocked = $this->retry($laterId, $handler);
         self::assertSame($firstId, $blocked->retryInboxId);
@@ -293,6 +298,8 @@ final class CustodyProcessorTest extends InboxTestCase
         $resolved = $this->retry($firstId, $handler);
         self::assertSame(CustodyDisposition::Applied, $resolved->disposition);
         self::assertSame($laterId, $resolved->retryInboxId);
+        self::assertSame($laterId, $this->custody($this->envelope(12, revision: 2), $handler)->retryInboxId,
+            'after the earlier revision resolves, duplicate custody schedules its own retry');
         self::assertSame(CustodyDisposition::Applied, $this->retry($laterId, $handler)->disposition);
         self::assertSame(['evt-L1-11', 'evt-L1-11', 'evt-L1-12'], $this->journal());
         self::assertSame(['applied', 'applied'], [$this->inbox('evt-L1-11')['status'], $this->inbox('evt-L1-12')['status']]);

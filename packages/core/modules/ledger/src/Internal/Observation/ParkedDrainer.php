@@ -121,7 +121,7 @@ final readonly class ParkedDrainer
                 $partition = $current->drainPartitionId;
                 $next[] = $this->root(fn (TransactionContext $context): CustodyResult => $this->feed->drain($context, $partition, $handler), mode: $mode);
             }
-            if ($current->retryInboxId !== null && $current->retryInboxId !== $current->inboxId) {
+            if ($current->retryInboxId !== null && ($current->disposition === CustodyDisposition::Duplicate || $current->retryInboxId !== $current->inboxId)) {
                 $inbox = $current->retryInboxId;
                 $next[] = $this->root(fn (TransactionContext $context): CustodyResult => $this->retry($context, $inbox, $handler), mode: $mode);
             }
@@ -155,7 +155,8 @@ final readonly class ParkedDrainer
         }
         $authorities = implode(',', array_fill(0, count($caller->sourceAuthorities), '?'));
         $statuses = [];
-        $attempted = [];
+        $attemptedParks = [];
+        $attemptedInboxes = [];
         while (count($statuses) < $limit) {
             // Re-select after each root so releasing an earlier bootstrap park admits its waiting revision.
             $row = $this->connection()->selectOne(<<<SQL
@@ -176,12 +177,44 @@ final readonly class ParkedDrainer
                     SELECT 1 FROM public.billium_observation_park k2
                     WHERE k2.observed_payment_id = k.observed_payment_id AND k2.released_at IS NULL AND k2.revision < k.revision)))
             ORDER BY k.revision, k.id LIMIT 1
-            SQL, [$caller->sellerRef, $caller->environment, $caller->installationRef, ...$caller->sourceAuthorities, '{'.implode(',', $attempted).'}']);
+            SQL, [$caller->sellerRef, $caller->environment, $caller->installationRef, ...$caller->sourceAuthorities, '{'.implode(',', $attemptedParks).'}']);
             if ($row === null) {
-                break;
+                // Custody can park a later revision before the ledger handler sees it. Recover it even if the
+                // worker that released its predecessor died after commit and before following the retry pointer.
+                $inboxRow = $this->connection()->selectOne(<<<SQL
+                SELECT m.id FROM public.billium_inbox_message m
+                WHERE m.seller_ref = ? AND m.environment = ? AND m.channel = ?
+                  AND m.status = 'parked_dependency' AND m.partition_id IS NOT NULL
+                  AND m.source_authority IN ({$authorities}) AND (m.payload->>'installationRef') = ?
+                  AND NOT (m.id = ANY(?::bigint[]))
+                  AND NOT EXISTS (SELECT 1 FROM public.billium_observation_park k WHERE k.inbox_id = m.id AND k.released_at IS NULL)
+                  AND NOT EXISTS (
+                    SELECT 1 FROM public.billium_inbox_message m2
+                    WHERE m2.channel = m.channel AND m2.source_authority = m.source_authority
+                      AND m2.seller_ref = m.seller_ref AND m2.environment = m.environment AND m2.operation_ref = m.operation_ref
+                      AND m2.status = 'parked_dependency' AND m2.operation_revision < m.operation_revision AND m2.id <> m.id)
+                  AND NOT EXISTS (
+                    SELECT 1 FROM public.billium_observed_payment o
+                    JOIN public.billium_observation_park k2 ON k2.observed_payment_id = o.id
+                    WHERE o.seller_ref = m.seller_ref AND o.environment = m.environment
+                      AND o.source_authority = m.source_authority AND o.operation_ref = m.operation_ref
+                      AND k2.released_at IS NULL AND k2.revision < m.operation_revision)
+                ORDER BY m.operation_revision, m.id LIMIT 1
+                SQL, [$caller->sellerRef, $caller->environment, self::CHANNEL, ...$caller->sourceAuthorities,
+                    $caller->installationRef, '{'.implode(',', $attemptedInboxes).'}']);
+                if ($inboxRow === null) {
+                    break;
+                }
+                $inbox = is_object($inboxRow) && is_int($inboxRow->id ?? null) ? $inboxRow->id : throw new LogicException('Expected an inbox id');
+                $attemptedInboxes[] = $inbox;
+                $result = $this->root(fn (TransactionContext $context): CustodyResult => $this->retry($context, $inbox, $this->handler), mode: $mode);
+                $statuses[] = $result->status ?? $result->disposition->value;
+                $this->follow($result, mode: $mode);
+
+                continue;
             }
             $park = is_object($row) && is_int($row->id ?? null) ? $row->id : throw new LogicException('Expected a park id');
-            $attempted[] = $park;
+            $attemptedParks[] = $park;
             $inbox = is_int($row->inbox_id ?? null) ? $row->inbox_id : null;
             if ($inbox !== null) {
                 $result = $this->root(fn (TransactionContext $context): CustodyResult => $this->retry($context, $inbox, $this->handler), mode: $mode);

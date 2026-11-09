@@ -44,10 +44,10 @@ final readonly class ObservationIntake implements ObservationApplier
         // 2. Economic application in separate financial roots, one event each. A refused financial admission (sealed or
         //    recovery session) or a failed apply surfaces here; the committed custody stays for a later admitted drain.
         $this->roots->follow($result, $this->handler);
-        // A replay is a delivery whose identity was already in custody, whatever the probe below returns.
-        $replayed = $result->disposition === CustodyDisposition::Duplicate;
-        if (in_array($result->status, ['ready', 'parked_gap'], true)) {
-            // The drain may have applied it; a duplicate custody call never invokes the handler.
+        // Only a delivery already applied before this follow-up is an economic replay.
+        $replayed = $result->disposition === CustodyDisposition::Duplicate && $result->status === 'applied';
+        if (in_array($result->status, ['ready', 'parked_gap', 'parked_dependency'], true)) {
+            // The follow-up may have applied it; a duplicate custody call never invokes the handler.
             $result = $this->roots->custody($raw, $this->handler);
         }
 
