@@ -26,7 +26,10 @@ final readonly class PartitionStore
         return $this->databases->connection($context->connectionName());
     }
 
-    /** Serializes namespace admission even before a partition row exists; always precedes partition/session row locks. */
+    /**
+     * Serializes bootstrap staging/adoption with first-delivery creation before a partition row exists.
+     * Precedes partition/session row locks; ordinary custody uses the partition row lock or parks an orphan gap.
+     */
     public function lockNamespace(Connection $db, string $channel, string $authority, string $seller, string $environment, string $partitionRef): void
     {
         // Lineage is deliberately absent: its replacement recovers the same namespace.

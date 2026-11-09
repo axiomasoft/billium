@@ -48,9 +48,13 @@ final readonly class CustodyProcessor
         $e->authorize($context->caller());
         $db = $this->partitions->connection($context);
 
-        $this->partitions->lockNamespace($db, $e->channel, $e->sourceAuthority, $e->sellerRef, $e->environment, $e->partitionRef);
-
         $partition = $this->partitions->live($db, $e->channel, $e->sourceAuthority, $e->sellerRef, $e->environment, $e->partitionRef);
+        if ($partition === null && $e->sourceSequence === 1) {
+            // Only namespace admission competes with bootstrap staging. Gaps must be free to commit while a
+            // first delivery opens the partition; existing partitions serialize through their rank-30 row lock.
+            $this->partitions->lockNamespace($db, $e->channel, $e->sourceAuthority, $e->sellerRef, $e->environment, $e->partitionRef);
+            $partition = $this->partitions->live($db, $e->channel, $e->sourceAuthority, $e->sellerRef, $e->environment, $e->partitionRef);
+        }
         if ($partition !== null) {
             $partition = $this->partitions->lock($context, $partition);
         } elseif ($e->sourceSequence === 1 && ! $this->bootstrapOpen($db, $e) && ! $this->retiredNamespace($db, $e)) {

@@ -41,8 +41,13 @@ final class BootstrapAtomicAdoptionTest extends InboxTestCase
         $competitor = new PostgresConnection(TestEnvironment::pdo());
         $competitor->statement("SET lock_timeout = '100ms'");
         $checked = false;
-        $this->application()->make(DatabaseManager::class)->connection()->beforeExecuting(function (string $sql) use ($store, $competitor, &$checked): void {
-            if ($checked || ! str_contains($sql, 'FROM public.billium_feed_partition')) {
+        $namespaceLockRequested = false;
+        $this->application()->make(DatabaseManager::class)->connection()->beforeExecuting(function (string $sql) use ($store, $competitor, &$checked, &$namespaceLockRequested): void {
+            if (str_contains($sql, 'pg_advisory_xact_lock')) {
+                $namespaceLockRequested = true;
+            }
+            // First delivery may inspect optimistically, but admission must re-read under the namespace lock.
+            if ($checked || ! $namespaceLockRequested || ! str_contains($sql, 'FROM public.billium_feed_partition')) {
                 return;
             }
             $checked = true;

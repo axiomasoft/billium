@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace Billium\Platform\Tests\Concurrency;
 
 use Billium\Core\Tests\Support\Concurrency\ConcurrencyStand;
+use Billium\Core\Tests\TestEnvironment;
 use Billium\Platform\Data\Inbox\CustodyDisposition;
+use Billium\Platform\Internal\Feed\PartitionStore;
 use Billium\Platform\Tests\Inbox\CustodyScenario;
 use Billium\Platform\Tests\Inbox\InboxTestCase;
 use Billium\Platform\Tests\Inbox\JournalHandler;
 use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Database\PostgresConnection;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\TestWith;
 
@@ -21,6 +24,28 @@ use PHPUnit\Framework\Attributes\TestWith;
 #[Group('REQ-FAIL-13')]
 final class FeedPartitionApplyTest extends InboxTestCase
 {
+    #[TestWith([false, 2])]
+    #[TestWith([true, 1])]
+    #[TestWith([true, 11])]
+    public function test_gaps_and_existing_partitions_do_not_wait_for_namespace_admission(bool $exists, int $sequence): void
+    {
+        if ($exists) {
+            $this->seedPartition($sequence - 1);
+        }
+        $competitor = new PostgresConnection(TestEnvironment::pdo());
+        $competitor->beginTransaction();
+        $this->application()->make(PartitionStore::class)->lockNamespace($competitor, 'payment.observation', self::AUTHORITY, 'seller-a', 'test', 'part-1');
+        self::connection('pgsql')->statement("SET lock_timeout = '100ms'");
+        $handler = new JournalHandler;
+        try {
+            $result = $this->custody($this->envelope($sequence), $handler);
+            self::assertSame($exists ? CustodyDisposition::Applied : CustodyDisposition::ParkedGap, $result->disposition);
+            self::assertSame($exists ? 1 : 0, $handler->calls);
+        } finally {
+            $competitor->rollBack();
+        }
+    }
+
     #[TestWith([true])]
     #[TestWith([false])]
     public function test_a_gap_inserted_after_partition_creation_is_reattached_and_drained(bool $redeliver): void
