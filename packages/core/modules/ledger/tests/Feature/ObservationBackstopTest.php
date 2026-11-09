@@ -19,6 +19,55 @@ use PHPUnit\Framework\Attributes\TestWith;
 #[Group('D60')]
 final class ObservationBackstopTest extends ObservationTestCase
 {
+    #[TestWith([300, 0, 'succeeded'])]
+    #[TestWith([500, 0, 'pending'])]
+    #[TestWith([500, 600, 'succeeded'])]
+    #[TestWith([600, 0, 'succeeded'])]
+    public function test_refund_detail_without_a_discrepancy_rejects_regressed_or_inconsistent_history(int $captured, int $refunded, string $state): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $this->observe(ObservationFactory::charge('op-1', 1, 1000));
+        $this->observe(ObservationFactory::refund('op-r1', 'op-1', 1, 500, sequence: 2));
+        $this->routine('record_observation', ['inst-test', 'seller-a', 'test', 'embedded-commerz', 'L1', 'op-r1', 'refund', 'op-1',
+            2, self::digest('b'), $state, 'RUB', 500, 500, $captured, $refunded, 'pa-1', 'ev-2', '{}']);
+        try {
+            $this->routine('record_refund_detail', ['inst-test', 'seller-a', 'test', self::integer($this->observedRow('op-r1')['id']),
+                2, self::integer($this->paymentRow()['id']), 'unsafe-refund', self::digest('b'), null]);
+            self::fail('an inconsistent refund requires a held discrepancy');
+        } catch (PDOException $exception) {
+            self::assertStringContainsString('billium.observation.conflict', $exception->getMessage());
+        }
+        self::assertSame(0, $this->rows('billium_allocation_receipt', "receipt_ref='unsafe-refund'"));
+        self::assertFalse($this->paymentRow()['financial_hold']);
+    }
+
+    #[TestWith(['{}'])]
+    #[TestWith(['[]'])]
+    #[TestWith(['null'])]
+    #[TestWith(['{"fingerprint":"held:x","reason":"x","expected_minor":null,"actual_minor":"0"}'])]
+    #[TestWith(['{"fingerprint":"held:x","reason":"x","expected_minor":"0","actual_minor":null}'])]
+    #[TestWith(['{"fingerprint":"held:x","reason":"x","expected_minor":"-1","actual_minor":"0"}'])]
+    public function test_refund_hold_requires_a_complete_discrepancy(string $discrepancy): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $this->observe(ObservationFactory::charge('op-1', 1, 1000));
+        $this->routine('record_observation', ['inst-test', 'seller-a', 'test', 'embedded-commerz', 'L1', 'op-r1', 'refund', 'op-1',
+            1, self::digest('b'), 'succeeded', 'RUB', 500, 500, 500, 0, 'pa-1', 'ev-2', '{}']);
+        try {
+            $this->routine('record_refund_detail', ['inst-test', 'seller-a', 'test', self::integer($this->observedRow('op-r1')['id']),
+                1, self::integer($this->paymentRow()['id']), 'invalid-hold', self::digest('b'), $discrepancy]);
+            self::fail('a hold needs a valid discrepancy');
+        } catch (PDOException $exception) {
+            self::assertStringContainsString('billium.observation.conflict', $exception->getMessage());
+        }
+        self::assertFalse($this->paymentRow()['financial_hold']);
+        self::assertNull($this->observedRow('op-r1')['billing_account_ref'], 'failed linkage is rolled back');
+        self::assertSame(0, $this->rows('billium_ledger_discrepancy'));
+        self::assertSame(0, $this->rows('billium_allocation_receipt', "receipt_ref='invalid-hold'"));
+    }
+
     /** @param array<int, mixed> $overrides */
     #[TestWith(['charge', null, [0 => 'other-installation']])]
     #[TestWith(['charge', null, [6 => 'refund', 7 => 'original']])]
@@ -358,6 +407,7 @@ final class ObservationBackstopTest extends ObservationTestCase
         }
         self::assertFalse(self::pdoValue($runtime, "SELECT has_function_privilege(current_user, 'public.billium_observation_park_guard()', 'EXECUTE')"));
         self::assertSame(1, self::integer($this->value("SELECT count(*) FROM pg_proc WHERE proname = 'billium_project_payment'")), 'no stale overload');
+        self::assertSame(1, self::integer($this->value("SELECT count(*) FROM pg_proc WHERE proname = 'billium_record_refund_detail' AND pronargs = 9 AND pronargdefaults = 1")), 'one guarded refund signature, compatible with eight-argument callers');
     }
 
     public function test_the_projection_routine_refuses_an_inconsistent_snapshot_outside_hold(): void

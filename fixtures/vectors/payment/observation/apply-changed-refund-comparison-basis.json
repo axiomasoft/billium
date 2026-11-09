@@ -1,6 +1,6 @@
 {
   "id": "payment/observation/apply-changed-refund-comparison-basis",
-  "description": "D48: unchanged charge revision with detail40 then50 produces two mismatch bases; later30 resolves without changing ledger.",
+  "description": "D48: unchanged charge revision with detail10 then20 produces two mismatch bases; a second detail10 reaches30 and resolves without changing ledger.",
   "spec_refs": [
     "BC-CNF-10",
     "REQ-ACC-10",
@@ -78,7 +78,7 @@
     {
       "op": "ledger.observe",
       "args": {
-        "json_text": "{\"schema\":\"payment.observation.v1\",\"eventId\":\"01JBX5Q0Z8M3N4P7R9S2000002\",\"sourceAuthority\":\"embedded-commerz\",\"sourceLineage\":\"L1\",\"partitionRef\":\"part-1\",\"sourceSequence\":2,\"installationRef\":\"inst-test\",\"environment\":\"test\",\"sellerRef\":\"seller-a\",\"operationRef\":\"op-r1\",\"operationKind\":\"refund\",\"businessIntentRef\":\"intent-a\",\"operationRevision\":1,\"state\":\"succeeded\",\"currency\":\"RUB\",\"requested\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"authorizedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"capturedTotal\":{\"amount\":\"40.00\",\"currency\":\"RUB\"},\"refundedTotal\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"providerAccountRef\":\"pa-1\",\"evidenceRef\":\"ev-2\",\"observedAt\":\"2026-10-29T10:00:00Z\",\"recordedAt\":\"2026-10-29T10:00:01Z\",\"originalPaymentRef\":\"op-1\",\"contentDigest\":\"sha256:1610d3abe9da8e9e8bd639325996e5488f6c2edb943a9c7f5d935ed8cdcab398\"}"
+        "json_text": "{\"schema\":\"payment.observation.v1\",\"eventId\":\"01JBX5Q0Z8M3N4P7R9S2000002\",\"sourceAuthority\":\"embedded-commerz\",\"sourceLineage\":\"L1\",\"partitionRef\":\"part-1\",\"sourceSequence\":2,\"installationRef\":\"inst-test\",\"environment\":\"test\",\"sellerRef\":\"seller-a\",\"operationRef\":\"op-r1\",\"operationKind\":\"refund\",\"businessIntentRef\":\"intent-a\",\"operationRevision\":1,\"state\":\"succeeded\",\"currency\":\"RUB\",\"requested\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"authorizedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"capturedTotal\":{\"amount\":\"10.00\",\"currency\":\"RUB\"},\"refundedTotal\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"providerAccountRef\":\"pa-1\",\"evidenceRef\":\"ev-2\",\"observedAt\":\"2026-10-29T10:00:00Z\",\"recordedAt\":\"2026-10-29T10:00:01Z\",\"originalPaymentRef\":\"op-1\",\"contentDigest\":\"sha256:126905d934ab602113ead0a8eae31307cef3591fb51e2b833298f0871d68f325\"}"
       }
     },
     {
@@ -96,7 +96,7 @@
     {
       "op": "ledger.observe",
       "args": {
-        "json_text": "{\"schema\":\"payment.observation.v1\",\"eventId\":\"01JBX5Q0Z8M3N4P7R9S2000003\",\"sourceAuthority\":\"embedded-commerz\",\"sourceLineage\":\"L1\",\"partitionRef\":\"part-1\",\"sourceSequence\":3,\"installationRef\":\"inst-test\",\"environment\":\"test\",\"sellerRef\":\"seller-a\",\"operationRef\":\"op-r1\",\"operationKind\":\"refund\",\"businessIntentRef\":\"intent-a\",\"operationRevision\":2,\"state\":\"succeeded\",\"currency\":\"RUB\",\"requested\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"authorizedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"capturedTotal\":{\"amount\":\"50.00\",\"currency\":\"RUB\"},\"refundedTotal\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"providerAccountRef\":\"pa-1\",\"evidenceRef\":\"ev-3\",\"observedAt\":\"2026-10-29T10:00:00Z\",\"recordedAt\":\"2026-10-29T10:00:01Z\",\"originalPaymentRef\":\"op-1\",\"contentDigest\":\"sha256:e2f8d8bbdad7b781be428fe2894474399d361f2005ed5b822b064d33e0362e28\"}"
+        "json_text": "{\"schema\":\"payment.observation.v1\",\"eventId\":\"01JBX5Q0Z8M3N4P7R9S2000003\",\"sourceAuthority\":\"embedded-commerz\",\"sourceLineage\":\"L1\",\"partitionRef\":\"part-1\",\"sourceSequence\":3,\"installationRef\":\"inst-test\",\"environment\":\"test\",\"sellerRef\":\"seller-a\",\"operationRef\":\"op-r1\",\"operationKind\":\"refund\",\"businessIntentRef\":\"intent-a\",\"operationRevision\":2,\"state\":\"succeeded\",\"currency\":\"RUB\",\"requested\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"authorizedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"capturedTotal\":{\"amount\":\"20.00\",\"currency\":\"RUB\"},\"refundedTotal\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"providerAccountRef\":\"pa-1\",\"evidenceRef\":\"ev-3\",\"observedAt\":\"2026-10-29T10:00:00Z\",\"recordedAt\":\"2026-10-29T10:00:01Z\",\"originalPaymentRef\":\"op-1\",\"contentDigest\":\"sha256:7aff128351849b6e5fa036b48d35b360d81794f92e4bd20c500c78b1d34f37f2\"}"
       }
     },
     {
@@ -108,7 +108,7 @@
     {
       "op": "ledger.observe",
       "args": {
-        "json_text": "{\"schema\":\"payment.observation.v1\",\"eventId\":\"01JBX5Q0Z8M3N4P7R9S2000004\",\"sourceAuthority\":\"embedded-commerz\",\"sourceLineage\":\"L1\",\"partitionRef\":\"part-1\",\"sourceSequence\":4,\"installationRef\":\"inst-test\",\"environment\":\"test\",\"sellerRef\":\"seller-a\",\"operationRef\":\"op-r1\",\"operationKind\":\"refund\",\"businessIntentRef\":\"intent-a\",\"operationRevision\":3,\"state\":\"succeeded\",\"currency\":\"RUB\",\"requested\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"authorizedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"capturedTotal\":{\"amount\":\"30.00\",\"currency\":\"RUB\"},\"refundedTotal\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"providerAccountRef\":\"pa-1\",\"evidenceRef\":\"ev-4\",\"observedAt\":\"2026-10-29T10:00:00Z\",\"recordedAt\":\"2026-10-29T10:00:01Z\",\"originalPaymentRef\":\"op-1\",\"contentDigest\":\"sha256:3896c94ea3ea96468976ef2cb936e0b49dc2e173d54a033e0c017d988a8d719d\"}"
+        "json_text": "{\"schema\":\"payment.observation.v1\",\"eventId\":\"01JBX5Q0Z8M3N4P7R9S2000004\",\"sourceAuthority\":\"embedded-commerz\",\"sourceLineage\":\"L1\",\"partitionRef\":\"part-1\",\"sourceSequence\":4,\"installationRef\":\"inst-test\",\"environment\":\"test\",\"sellerRef\":\"seller-a\",\"operationRef\":\"op-r2\",\"operationKind\":\"refund\",\"businessIntentRef\":\"intent-a\",\"operationRevision\":1,\"state\":\"succeeded\",\"currency\":\"RUB\",\"requested\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"authorizedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"capturedTotal\":{\"amount\":\"10.00\",\"currency\":\"RUB\"},\"refundedTotal\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"providerAccountRef\":\"pa-1\",\"evidenceRef\":\"ev-4\",\"observedAt\":\"2026-10-29T10:00:00Z\",\"recordedAt\":\"2026-10-29T10:00:01Z\",\"originalPaymentRef\":\"op-1\",\"contentDigest\":\"sha256:1ab568cfaa39bee5dd2273cd0689205fe3f595e02590614c4489732bcf577dd9\"}"
       }
     },
     {

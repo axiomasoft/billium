@@ -49,7 +49,8 @@ final readonly class RefundReconciler
             LEFT JOIN public.billium_refund_reconcile_progress progress ON progress.payment_id = p.id
             WHERE p.seller_ref = ? AND p.environment = ? AND p.kind = 'charge' AND (
                 p.refunded_minor > 0
-                OR EXISTS (SELECT 1 FROM public.billium_observed_payment r WHERE r.seller_ref = p.seller_ref AND r.environment = p.environment
+                OR EXISTS (SELECT 1 FROM public.billium_observed_payment r WHERE r.installation_ref = p.installation_ref AND r.seller_ref = p.seller_ref AND r.environment = p.environment
+                    AND r.currency = p.currency AND r.billing_account_ref = p.billing_account_ref
                     AND r.kind = 'refund' AND r.original_ref = p.payment_ref AND r.source_authority = p.source_authority)
                 OR EXISTS (SELECT 1 FROM public.billium_ledger_discrepancy d JOIN public.billium_observed_payment c ON c.id = d.observed_payment_id
                     WHERE d.seller_ref = p.seller_ref AND d.environment = p.environment AND d.reason = 'refund_basis_mismatch'
@@ -59,7 +60,8 @@ final readonly class RefundReconciler
                   (SELECT max(v.created_at) FROM public.billium_payment_revision v WHERE v.seller_ref = p.seller_ref AND v.environment = p.environment AND v.payment_id = p.id),
                   (SELECT max(v.received_at) FROM public.billium_observed_payment r JOIN public.billium_observed_payment_revision v
                        ON v.seller_ref = r.seller_ref AND v.environment = r.environment AND v.observed_payment_id = r.id
-                   WHERE r.seller_ref = p.seller_ref AND r.environment = p.environment AND r.kind = 'refund' AND r.original_ref = p.payment_ref
+                   WHERE r.installation_ref = p.installation_ref AND r.seller_ref = p.seller_ref AND r.environment = p.environment
+                     AND r.currency = p.currency AND r.billing_account_ref = p.billing_account_ref AND r.kind = 'refund' AND r.original_ref = p.payment_ref
                      AND r.source_authority = p.source_authority),
                   p.created_at) <= now() - make_interval(secs => ?)
             ORDER BY progress.compared_at NULLS FIRST, p.id LIMIT ?
@@ -88,15 +90,28 @@ final readonly class RefundReconciler
         $db = $this->databases->connection($context->connectionName());
         new AllocateLockPlan(payments: [$paymentId])->lock($context);
         $payment = $db->table('billium_payment')->where('id', $paymentId)->where('seller_ref', $caller->sellerRef)->where('environment', $caller->environment)
-            ->first(['payment_ref', 'source_authority', 'applied_revision', 'refunded_minor', 'billing_account_ref', 'currency'])
+            ->where('installation_ref', $caller->installationRef)
+            ->first(['id', 'payment_ref', 'source_authority', 'applied_revision', 'refunded_minor', 'billing_account_ref', 'currency'])
             ?? throw new LogicException('Unknown charge for refund reconcile');
         $paymentRef = self::text($payment->payment_ref);
         $contributing = [];
         $detail = 0;
         $latest = null;
-        foreach ($db->table('billium_observed_payment')->where('seller_ref', $caller->sellerRef)->where('environment', $caller->environment)
-            ->where('kind', 'refund')->where('original_ref', $paymentRef)->where('source_authority', $payment->source_authority)->where('state', 'succeeded')
-            ->orderBy('operation_ref')->orderBy('id')->get(['operation_ref', 'revision', 'captured_minor']) as $refund) {
+        // Only a validated detail receipt admits a revision to the basis. Latest observed facts can be quarantined
+        // or held; neither may replace the last consistent refund detail or resolve an existing mismatch.
+        $validated = $db->table('billium_observed_payment_revision as rev')
+            ->join('billium_allocation_receipt as rc', 'rc.semantic_digest', '=', 'rev.material_digest')
+            ->where('rc.installation_ref', $caller->installationRef)->where('rc.seller_ref', $caller->sellerRef)->where('rc.environment', $caller->environment)
+            ->where('rc.kind', 'refund_detail')->whereRaw("rc.body::jsonb ->> 'mode' = ?", ['refund_detail'])
+            ->whereRaw("rc.body::jsonb ->> 'original_payment_ref' = ?", [$paymentRef])
+            ->where('rc.billing_account_ref', $payment->billing_account_ref)->where('rc.currency', $payment->currency)
+            ->selectRaw('DISTINCT ON (rev.observed_payment_id) rev.observed_payment_id, rev.revision, rev.captured_minor, rev.state')
+            ->orderBy('rev.observed_payment_id')->orderByDesc('rev.revision');
+        foreach ($db->table('billium_observed_payment as o')->joinSub($validated, 'r', 'r.observed_payment_id', '=', 'o.id')
+            ->where('o.installation_ref', $caller->installationRef)->where('o.seller_ref', $caller->sellerRef)->where('o.environment', $caller->environment)
+            ->where('o.kind', 'refund')->where('o.original_ref', $paymentRef)->where('o.source_authority', $payment->source_authority)
+            ->where('o.currency', $payment->currency)->where('o.billing_account_ref', $payment->billing_account_ref)->where('r.state', 'succeeded')
+            ->orderBy('o.operation_ref')->orderBy('o.id')->get(['o.operation_ref', 'r.revision', 'r.captured_minor']) as $refund) {
             $contributing[] = ['operationRef' => self::text($refund->operation_ref), 'revision' => self::int($refund->revision), 'captured' => (string) self::int($refund->captured_minor)];
             $detail += self::int($refund->captured_minor);
             $latest = max($latest ?? 0, self::int($refund->revision));

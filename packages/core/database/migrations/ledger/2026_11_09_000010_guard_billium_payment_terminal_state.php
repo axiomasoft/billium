@@ -209,6 +209,91 @@ return new class extends Migration
                 RETURN jsonb_build_object('body',v_body,'replayed',false);
             END $$;
             REVOKE ALL ON FUNCTION public.billium_project_payment(text,text,text,text,text,bigint,bigint,text,bigint,text,jsonb,jsonb,text,text) FROM PUBLIC;
+
+            DROP FUNCTION IF EXISTS public.billium_record_refund_detail(text,text,text,bigint,bigint,bigint,text,text);
+            DROP FUNCTION IF EXISTS public.billium_record_refund_detail(text,text,text,bigint,bigint,bigint,text,text,jsonb);
+            CREATE OR REPLACE FUNCTION public.billium_record_refund_detail(
+                p_installation text,p_seller text,p_environment text,p_observed bigint,p_revision bigint,p_payment bigint,p_receipt text,p_digest text,
+                p_discrepancy jsonb DEFAULT NULL)
+            RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
+            DECLARE
+                o public.billium_observed_payment; r public.billium_observed_payment_revision; p public.billium_payment;
+                v_replay public.billium_allocation_receipt; v_body jsonb; v_discrepancy bigint; v_disc jsonb := NULL;
+                v_existing public.billium_ledger_discrepancy;
+            BEGIN
+                SELECT * INTO p FROM public.billium_payment WHERE id=p_payment AND seller_ref=p_seller AND environment=p_environment FOR UPDATE;
+                SELECT * INTO o FROM public.billium_observed_payment WHERE id=p_observed AND seller_ref=p_seller AND environment=p_environment FOR UPDATE;
+                IF o.id IS NULL OR p.id IS NULL OR o.kind <> 'refund' OR p.kind <> 'charge'
+                   OR o.installation_ref IS DISTINCT FROM p_installation OR p.installation_ref IS DISTINCT FROM p_installation
+                   OR o.original_ref IS DISTINCT FROM p.operation_ref OR o.source_authority IS DISTINCT FROM p.source_authority
+                THEN RAISE EXCEPTION 'billium.reference.unknown' USING ERRCODE='P0001'; END IF;
+                SELECT * INTO r FROM public.billium_observed_payment_revision
+                    WHERE seller_ref=p_seller AND environment=p_environment AND observed_payment_id=o.id AND revision=p_revision;
+                IF NOT FOUND THEN RAISE EXCEPTION 'billium.reference.unknown' USING ERRCODE='P0001'; END IF;
+                IF p.currency IS DISTINCT FROM o.currency OR p.currency IS DISTINCT FROM r.currency
+                THEN RAISE EXCEPTION 'billium.money.currency_mismatch' USING ERRCODE='P0001'; END IF;
+                IF r.material_digest IS DISTINCT FROM p_digest THEN RAISE EXCEPTION 'billium.observation.conflict' USING ERRCODE='P0001'; END IF;
+                SELECT * INTO v_replay FROM public.billium_allocation_receipt WHERE seller_ref=p_seller AND environment=p_environment
+                    AND (receipt_ref=p_receipt OR (kind='refund_detail' AND semantic_digest=p_digest)) ORDER BY id LIMIT 1;
+                IF FOUND THEN
+                    IF (v_replay.installation_ref,v_replay.kind,v_replay.semantic_digest) IS DISTINCT FROM (p_installation,'refund_detail'::text,p_digest)
+                    THEN RAISE EXCEPTION 'billium.observation.conflict' USING ERRCODE='P0001'; END IF;
+                    RETURN jsonb_build_object('body',v_replay.body,'replayed',true);
+                END IF;
+                -- Observed totals remain provider facts. A validated receipt, rather than the mutable observation,
+                -- is the applied refund-detail basis; a held revision must never enter that basis.
+                IF o.billing_account_ref IS NULL THEN
+                    UPDATE public.billium_observed_payment SET billing_account_ref=p.billing_account_ref WHERE id=o.id RETURNING * INTO o;
+                END IF;
+                IF o.billing_account_ref IS DISTINCT FROM p.billing_account_ref
+                THEN RAISE EXCEPTION 'billium.observation.conflict' USING ERRCODE='P0001'; END IF;
+                IF p_discrepancy IS NULL THEN
+                    IF r.refunded_minor > r.captured_minor OR r.captured_minor > r.authorized_minor
+                       OR EXISTS (SELECT 1 FROM public.billium_observed_payment_revision r1
+                           JOIN public.billium_observed_payment_revision r2
+                             ON r2.observed_payment_id=r1.observed_payment_id AND r2.revision>r1.revision
+                           WHERE r1.observed_payment_id=o.id
+                             AND (r2.captured_minor<r1.captured_minor OR r2.refunded_minor<r1.refunded_minor
+                                  OR (r1.state IN ('succeeded','failed','cancelled') AND r2.state<>r1.state)))
+                       OR EXISTS (SELECT 1 FROM public.billium_ledger_discrepancy d WHERE d.observed_payment_id=o.id AND d.hold)
+                    THEN RAISE EXCEPTION 'billium.observation.conflict' USING ERRCODE='P0001'; END IF;
+                ELSE
+                    IF jsonb_typeof(p_discrepancy) IS DISTINCT FROM 'object'
+                       OR coalesce(p_discrepancy->>'fingerprint','') = '' OR coalesce(p_discrepancy->>'reason','') = ''
+                       OR coalesce(p_discrepancy->>'expected_minor','') !~ '^[0-9]+$'
+                       OR coalesce(p_discrepancy->>'actual_minor','') !~ '^[0-9]+$'
+                    THEN RAISE EXCEPTION 'billium.observation.conflict' USING ERRCODE='P0001'; END IF;
+                    UPDATE public.billium_payment SET financial_hold=true,projection_status='held' WHERE id=p.id RETURNING * INTO p;
+                    INSERT INTO public.billium_ledger_discrepancy(installation_ref,seller_ref,environment,fingerprint,comparison_basis_digest,
+                        observed_payment_id,observed_revision,charge_revision,refund_revision,expected_minor,actual_minor,hold,reason)
+                    VALUES(p_installation,p_seller,p_environment,p_discrepancy->>'fingerprint',r.material_digest,o.id,p_revision,
+                        CASE WHEN p.applied_revision>0 THEN p.applied_revision ELSE NULL END,p_revision,
+                        (p_discrepancy->>'expected_minor')::bigint,(p_discrepancy->>'actual_minor')::bigint,true,p_discrepancy->>'reason')
+                    ON CONFLICT (seller_ref,environment,fingerprint) DO NOTHING RETURNING id INTO v_discrepancy;
+                    IF v_discrepancy IS NOT NULL THEN
+                        INSERT INTO public.billium_discrepancy_event(installation_ref,seller_ref,environment,discrepancy_id,event_ref,kind,evidence_ref)
+                        VALUES(p_installation,p_seller,p_environment,v_discrepancy,'held:' || (p_discrepancy->>'fingerprint'),'held',r.evidence_ref);
+                    ELSE
+                        SELECT * INTO v_existing FROM public.billium_ledger_discrepancy
+                            WHERE seller_ref=p_seller AND environment=p_environment AND fingerprint=p_discrepancy->>'fingerprint';
+                        IF (v_existing.installation_ref,v_existing.observed_payment_id,v_existing.observed_revision,v_existing.comparison_basis_digest,
+                            v_existing.reason,v_existing.expected_minor,v_existing.actual_minor,v_existing.hold)
+                           IS DISTINCT FROM (p_installation,o.id,p_revision,r.material_digest,p_discrepancy->>'reason',
+                            (p_discrepancy->>'expected_minor')::bigint,(p_discrepancy->>'actual_minor')::bigint,true)
+                        THEN RAISE EXCEPTION 'billium.observation.conflict' USING ERRCODE='P0001'; END IF;
+                    END IF;
+                    v_disc := jsonb_build_object('fingerprint',p_discrepancy->>'fingerprint','reason',p_discrepancy->>'reason',
+                        'recorded',v_discrepancy IS NOT NULL,'expected_minor',p_discrepancy->>'expected_minor',
+                        'actual_minor',p_discrepancy->>'actual_minor','exposure_minor',p_discrepancy->>'exposure_minor');
+                END IF;
+                v_body := jsonb_build_object('receipt_ref',p_receipt,'operation_ref',o.operation_ref,'original_payment_ref',p.payment_ref,
+                    'revision',p_revision,'mode',CASE WHEN p_discrepancy IS NULL THEN 'refund_detail' ELSE 'hold' END,
+                    'billing_account_ref',p.billing_account_ref,'currency',p.currency,'state',r.state,'refund_captured_minor',r.captured_minor::text,
+                    'charge_refunded_minor',p.refunded_minor::text,'financial_hold',p.financial_hold,'discrepancy',v_disc);
+                PERFORM public.billium_ledger_receipt(p_installation,p_seller,p_environment,p.billing_account_ref,p.currency,p_receipt,'refund_detail',p_digest,v_body);
+                RETURN jsonb_build_object('body',v_body,'replayed',false);
+            END $$;
+            REVOKE ALL ON FUNCTION public.billium_record_refund_detail(text,text,text,bigint,bigint,bigint,text,text,jsonb) FROM PUBLIC;
             SQL);
         app(LedgerPrivileges::class)->grant();
     }

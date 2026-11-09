@@ -79,7 +79,7 @@ final readonly class PaymentProjection
             $outcome = ($recorded['disposition'] ?? null) === 'conflict'
                 ? HandlerOutcome::conflict(ProblemCode::ObservationConflict->value)
                 : ($observation->operationKind === 'refund'
-                    ? $this->refund($db, $caller, $observation, self::int($recorded['observed_id'] ?? null), $material, $inboxId)
+                    ? $this->refund($context, $db, $caller, $observation, self::int($recorded['observed_id'] ?? null), $material, $inboxId)
                     : $this->charge($context, $db, $caller, $observation, self::int($recorded['observed_id'] ?? null), $material, $inboxId,
                         ($recorded['disposition'] ?? null) === 'contradiction'));
         } catch (ProblemException $problem) {
@@ -212,20 +212,26 @@ final readonly class PaymentProjection
         return HandlerOutcome::applied(self::text($receipt->body()['receipt_ref'] ?? null));
     }
 
-    private function refund(Connection $db, Caller $caller, PaymentObservation $o, int $observedId, string $material, ?int $inboxId): HandlerOutcome
+    private function refund(TransactionContext $context, Connection $db, Caller $caller, PaymentObservation $o, int $observedId, string $material, ?int $inboxId): HandlerOutcome
     {
         $original = $o->originalPaymentRef ?? throw new LogicException('A refund names its original charge');
         $payment = $db->table('billium_payment')->where('seller_ref', $caller->sellerRef)->where('environment', $caller->environment)
-            ->where('source_authority', $o->sourceAuthority)->where('payment_ref', $original)->where('kind', 'charge')->value('id');
+            ->where('source_authority', $o->sourceAuthority)->where('payment_ref', $original)->where('kind', 'charge')->first(['id', 'billing_account_ref', 'currency']);
         if ($payment === null) {
             // Refund detail before its charge: observed and parked on the linkage, no ledger effect (REQ-FAIL-12).
             return $this->park($db, $caller, $o, $observedId, $inboxId, 'original_charge', $original);
         }
+        new AllocateLockPlan(payments: [self::int($payment->id)])->lock($context);
+        $exceptional = self::exceptional($db, $observedId, $o, null, false, false, self::text($payment->currency));
         $receiptRef = self::receiptRef('refund-detail', $o->sourceAuthority, $o->operationRef, $o->operationRevision);
         // D41: the child never touches payment.refunded_minor; RefundReconciler compares it after the window (D48).
         $receipt = $this->routines->call($db, 'record_refund_detail', [
-            $caller->installationRef, $caller->sellerRef, $caller->environment, $observedId, $o->operationRevision, self::int($payment), $receiptRef, $material,
+            $caller->installationRef, $caller->sellerRef, $caller->environment, $observedId, $o->operationRevision, self::int($payment->id), $receiptRef, $material,
+            $exceptional === null ? null : json_encode($exceptional, JSON_THROW_ON_ERROR),
         ], 'ledger.refund_detail');
+        if (! $receipt->replayed) {
+            $this->discrepancyEvent($context, $o, $receipt->body(), self::text($payment->billing_account_ref));
+        }
 
         return HandlerOutcome::applied(self::text($receipt->body()['receipt_ref'] ?? null));
     }
@@ -313,7 +319,10 @@ final readonly class PaymentProjection
             // Parked and unapplied facts constrain every candidate, even beyond its nearest neighbors.
             $history = $db->table('billium_observed_payment_revision')->where('observed_payment_id', $observedId)
                 ->orderBy('revision')->get(['revision', 'state', 'captured_minor', 'refunded_minor']);
-            foreach ($history as $neighbor) {
+            // Nearest predecessors first, then nearest successors; retain ascending history for the pair check.
+            $neighbors = $history->filter(static fn (object $row): bool => self::int($row->revision) < $o->operationRevision)->reverse()
+                ->concat($history->filter(static fn (object $row): bool => self::int($row->revision) > $o->operationRevision));
+            foreach ($neighbors as $neighbor) {
                 if (self::int($neighbor->revision) === $o->operationRevision) {
                     continue;
                 }
@@ -396,6 +405,12 @@ final readonly class PaymentProjection
                 'invoice_status' => $invoice === null ? null : $invoice['status']->value,
             ]);
         }
+        $this->discrepancyEvent($context, $o, $body, $account);
+    }
+
+    /** @param array<string, mixed> $body */
+    private function discrepancyEvent(TransactionContext $context, PaymentObservation $o, array $body, string $account): void
+    {
         $discrepancy = $body['discrepancy'] ?? null;
         if (is_array($discrepancy) && ($discrepancy['recorded'] ?? false) === true) {
             $this->writer->event($context, 'discrepancy.recorded.v1', $o->operationRef, $o->operationRevision, [

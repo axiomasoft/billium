@@ -80,7 +80,11 @@ final readonly class LedgerReader
             }
         }
         $payload = View::json($current->payload ?? '{}');
-        $discrepancies = $this->scoped('billium_ledger_discrepancy')->where('observed_payment_id', $observed->id)
+        $discrepancies = $this->scoped('billium_ledger_discrepancy')->where(function (Builder $q) use ($observed, $ref): void {
+            $q->where('observed_payment_id', $observed->id)->orWhereIn('observed_payment_id',
+                $this->scoped('billium_observed_payment')->select('id')->where('source_authority', $observed->source_authority)
+                    ->where('kind', 'refund')->where('original_ref', $ref));
+        })
             ->whereNotExists(function (Builder $q): void {
                 $q->selectRaw('1')->from('billium_discrepancy_event as e')->whereColumn('e.discrepancy_id', 'billium_ledger_discrepancy.id')->where('e.kind', 'resolved');
             })->orderBy('id')->get();
