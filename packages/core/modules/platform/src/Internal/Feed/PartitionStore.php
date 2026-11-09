@@ -27,8 +27,8 @@ final readonly class PartitionStore
     }
 
     /**
-     * Serializes bootstrap staging/adoption with first-delivery creation before a partition row exists.
-     * Precedes partition/session row locks; ordinary custody uses the partition row lock or parks an orphan gap.
+     * Serializes bootstrap staging/adoption with first-delivery creation and custody in retired-only namespaces.
+     * Precedes partition/session row locks; fresh orphan gaps can commit without namespace admission.
      */
     public function lockNamespace(Connection $db, string $channel, string $authority, string $seller, string $environment, string $partitionRef): void
     {

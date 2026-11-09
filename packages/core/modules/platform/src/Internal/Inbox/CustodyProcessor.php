@@ -49,9 +49,10 @@ final readonly class CustodyProcessor
         $db = $this->partitions->connection($context);
 
         $partition = $this->partitions->live($db, $e->channel, $e->sourceAuthority, $e->sellerRef, $e->environment, $e->partitionRef);
-        if ($partition === null && $e->sourceSequence === 1) {
-            // Only namespace admission competes with bootstrap staging. Gaps must be free to commit while a
-            // first delivery opens the partition; existing partitions serialize through their rank-30 row lock.
+        if ($partition === null && ($e->sourceSequence === 1 || $this->retiredNamespace($db, $e))) {
+            // A retired namespace can acquire a successor through bootstrap at any sequence. Re-read under
+            // its admission lock so custody cannot strand a held orphan after adoption scanned the tail.
+            // Gaps in a fresh namespace remain free to commit while its first delivery opens the partition.
             $this->partitions->lockNamespace($db, $e->channel, $e->sourceAuthority, $e->sellerRef, $e->environment, $e->partitionRef);
             $partition = $this->partitions->live($db, $e->channel, $e->sourceAuthority, $e->sellerRef, $e->environment, $e->partitionRef);
         }

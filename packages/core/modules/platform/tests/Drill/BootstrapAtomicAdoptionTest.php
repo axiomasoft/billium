@@ -6,8 +6,14 @@ namespace Billium\Platform\Tests\Drill;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Core\Contracts\CallerContext;
+use Billium\Core\Contracts\FinancialSessionAdmission;
+use Billium\Core\Contracts\OperationRunner;
 use Billium\Core\Contracts\TransactionContext;
+use Billium\Core\Enums\FinancialMode;
+use Billium\Core\Tests\Support\Concurrency\WorkerApplication;
 use Billium\Core\Tests\TestEnvironment;
+use Billium\Platform\Contracts\FeedPartitions;
 use Billium\Platform\Data\Inbox\BootstrapItem;
 use Billium\Platform\Data\Inbox\BootstrapPartition;
 use Billium\Platform\Data\Inbox\BootstrapStatus;
@@ -16,9 +22,12 @@ use Billium\Platform\Data\Inbox\HandlerOutcome;
 use Billium\Platform\Internal\Feed\PartitionStore;
 use Billium\Platform\Tests\Inbox\InboxTestCase;
 use Billium\Platform\Tests\Inbox\JournalHandler;
+use Illuminate\Container\Container;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Database\PostgresConnection;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Facade;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\TestWith;
 use RuntimeException;
@@ -33,6 +42,80 @@ use stdClass;
 #[Group('ACC-RST-07')]
 final class BootstrapAtomicAdoptionTest extends InboxTestCase
 {
+    #[TestWith([true])]
+    #[TestWith([false])]
+    public function test_a_missing_partition_read_before_retired_namespace_adoption_keeps_the_tail_drainable(bool $redeliver): void
+    {
+        $handler = new JournalHandler;
+        // Ordinary orphan custody owns slot 22; its fork must never be promoted by an ordinary drain.
+        $this->custody($this->envelope(22, lineage: 'L2'), $handler);
+        $this->custody($this->envelope(22, event: 'forked-22', lineage: 'L2'), $handler);
+        $old = $this->seedPartition(10);
+        $this->owner()->unprepared(<<<'SQL'
+            INSERT INTO billium_feed_bootstrap_session(bootstrap_ref,channel,source_authority,source_lineage,seller_ref,environment,
+                partition_ref,cursor_sequence,snapshot_digest,item_count,source_retention_lease_ref,status,old_partition_id)
+            SELECT 'abandoned',channel,source_authority,'L2',seller_ref,environment,partition_ref,20,
+                'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',0,'lease-abandoned','ready',id
+            FROM billium_feed_partition;
+            UPDATE billium_feed_partition SET state='retired';
+            UPDATE billium_feed_bootstrap_session SET status='failed';
+            SQL);
+        $session = $this->stage($this->snapshot(cursor: 20));
+        while ($this->applyNext($session, $handler) > 0) {
+            // Finish the manifest before the competing adoption root starts.
+        }
+
+        $paused = false;
+        $adopted = null;
+        $app = $this->application();
+        $spec = $this->spec();
+        $this->owner()->listen(function (QueryExecuted $query) use (&$paused, &$adopted, $app, $spec, $session): void {
+            if ($paused || ! str_contains($query->sql, 'SELECT * FROM public.billium_feed_partition')
+                || ! str_contains($query->sql, "state <> 'retired'")) {
+                return;
+            }
+            $paused = true;
+            // Custody fetched NULL. A separate application's root adopts and commits before custody resumes.
+            $worker = WorkerApplication::create();
+            try {
+                $worker->instance(CallerContext::class, $this->callers);
+                $worker->instance(FinancialSessionAdmission::class, $this->tokens);
+                $worker->make(OperationRunner::class)->run($spec, function (TransactionContext $context) use ($worker, $session, &$adopted) {
+                    $adopted = $worker->make(FeedPartitions::class)->adoptBootstrap($context, $session);
+
+                    return self::receipt();
+                });
+            } finally {
+                foreach (array_keys($worker->make(DatabaseManager::class)->getConnections()) as $name) {
+                    $worker->make(DatabaseManager::class)->purge($name);
+                }
+                Container::setInstance($app);
+                Facade::clearResolvedInstances();
+                Facade::setFacadeApplication($app);
+            }
+        });
+
+        $tail = $this->envelope(21, lineage: 'L2');
+        $received = $this->custody($tail, $handler, FinancialMode::RawCustody);
+        self::assertTrue($paused, 'adoption must commit immediately after the null live-partition read');
+        self::assertIsInt($adopted);
+        self::assertSame(CustodyDisposition::Received, $received->disposition);
+        self::assertSame(['ready', $adopted], [$this->inbox('evt-L2-21')['status'], $this->inbox('evt-L2-21')['partition_id']]);
+        self::assertSame([22, 20], [$this->partitionRow($adopted)['custody_sequence'], $this->partitionRow($adopted)['accounted_sequence']]);
+        self::assertSame('retired', $this->partitionRow($old)['state']);
+        if ($redeliver) {
+            $duplicate = $this->custody($tail, $handler);
+            self::assertSame(CustodyDisposition::Duplicate, $duplicate->disposition);
+            self::assertSame($received->inboxId, $duplicate->inboxId);
+            self::assertSame($adopted, $duplicate->drainPartitionId);
+        }
+        self::assertCount(2, $this->drainAll($adopted, $handler));
+        self::assertSame(CustodyDisposition::Idle, $this->drain($adopted, $handler)->disposition);
+        self::assertSame(['evt-L2-21', 'evt-L2-22'], $this->journal());
+        self::assertSame(['held_recovery', null], [$this->inbox('forked-22')['status'], $this->inbox('forked-22')['partition_id']]);
+        self::assertSame([22, 22, 'active'], [$this->partitionRow($adopted)['custody_sequence'], $this->partitionRow($adopted)['accounted_sequence'], $this->partitionRow($adopted)['state']]);
+    }
+
     #[TestWith([true])]
     #[TestWith([false])]
     public function test_staging_and_first_delivery_lock_the_same_namespace_before_looking_for_a_partition(bool $stageFirst): void

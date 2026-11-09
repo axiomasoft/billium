@@ -10,6 +10,7 @@ use Billium\Core\Tests\TestEnvironment;
 use Billium\Ledger\Tests\Observation\ObservationTestCase;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\TestWith;
 
 /**
  * PF-14, ACC-RST-07 (REQ-FAIL-23, D60): a restored source with another lineage, or a new event at an already accounted
@@ -20,7 +21,9 @@ use PHPUnit\Framework\Attributes\Group;
 #[Group('ACC-RST-07')]
 final class FeedRecoveryTest extends ObservationTestCase
 {
-    public function test_a_retired_namespace_holds_sequence_one_until_another_bootstrap_is_adopted(): void
+    #[TestWith([1])]
+    #[TestWith([2])]
+    public function test_a_retired_namespace_holds_custody_until_another_bootstrap_is_adopted(int $sequence): void
     {
         $this->debt('o1', 1000);
         $this->intent('intent-a', ['o1']);
@@ -43,7 +46,7 @@ final class FeedRecoveryTest extends ObservationTestCase
             INSERT INTO billium_feed_partition(channel,source_authority,source_lineage,seller_ref,environment,partition_ref,generation,state)
             VALUES('payment.observation','embedded-commerz','L2','seller-a','test','part-1',2,'active')
             SQL));
-        $restored = ObservationFactory::charge('op-1', 2, 600, fields: ['sourceLineage' => 'L2']);
+        $restored = ObservationFactory::charge('op-1', 2, 600, sequence: $sequence, fields: ['sourceLineage' => 'L2']);
         self::assertSame(ProblemCode::RecoveryRequired->value, $this->attempt($restored));
         self::assertSame(1, $this->rows('billium_feed_partition'));
         self::assertSame('held_recovery', $this->inboxStatus(self::eventId($restored)));
