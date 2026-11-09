@@ -23,7 +23,8 @@ final class ObservationBackstopTest extends ObservationTestCase
     #[TestWith(['charge', null, [0 => 'other-installation']])]
     #[TestWith(['charge', null, [6 => 'refund', 7 => 'original']])]
     #[TestWith(['refund', 'original', [7 => 'other-original']])]
-    #[TestWith(['refund', 'original', []])]
+    #[TestWith(['refund', 'original', [11 => 'USD']])]
+    #[TestWith(['refund', 'original', [16 => 'pa-2']])]
     public function test_only_charge_revisions_with_the_original_identity_can_record_new_binding_evidence(string $kind, ?string $original, array $overrides): void
     {
         $arguments = ['inst-test', 'seller-a', 'test', 'embedded-commerz', 'L1', 'op-1', $kind, $original, 1, self::digest('a'),
@@ -37,6 +38,38 @@ final class ObservationBackstopTest extends ObservationTestCase
         self::assertFalse($refused['replayed']);
         self::assertSame(1, $this->rows('billium_observed_payment_revision'));
         self::assertSame(1, self::integer($this->observedRow()['revision']));
+    }
+
+    #[TestWith([3, 'advanced'])]
+    #[TestWith([1, 'stale'])]
+    public function test_refund_revisions_with_unchanged_bindings_advance_or_stale_normally(int $revision, string $disposition): void
+    {
+        $arguments = ['inst-test', 'seller-a', 'test', 'embedded-commerz', 'L1', 'op-1', 'refund', 'original', 2, self::digest('a'),
+            'succeeded', 'RUB', 2000, 2000, 2000, 0, 'pa-1', 'ev-2', '{}'];
+        $this->routine('record_observation', $arguments);
+        $original = $this->observedRow();
+        $arguments[8] = $revision;
+        $arguments[9] = self::digest('b');
+        $arguments[17] = 'ev-'.$revision;
+
+        $recorded = $this->routine('record_observation', $arguments);
+        self::assertSame($disposition, self::arr($recorded['body'])['disposition']);
+        self::assertSame(max(2, $revision), self::arr($recorded['body'])['revision']);
+        self::assertFalse($recorded['replayed']);
+        self::assertSame(2, $this->rows('billium_observed_payment_revision'));
+        $observed = $this->observedRow();
+        self::assertSame(['refund', 'original', 'RUB', 'pa-1'],
+            [$observed['kind'], $observed['original_ref'], $observed['currency'], $observed['provider_account_ref']]);
+        if ($disposition === 'advanced') {
+            self::assertSame([$revision, self::digest('b'), 'ev-'.$revision],
+                [self::integer($observed['revision']), $observed['material_digest'], $observed['evidence_ref']]);
+        } else {
+            self::assertSame($original, $observed);
+        }
+        $replayed = $this->routine('record_observation', $arguments);
+        self::assertSame('duplicate', self::arr($replayed['body'])['disposition']);
+        self::assertTrue($replayed['replayed']);
+        self::assertSame(2, $this->rows('billium_observed_payment_revision'));
     }
 
     #[TestWith(['USD', 'pa-1'])]

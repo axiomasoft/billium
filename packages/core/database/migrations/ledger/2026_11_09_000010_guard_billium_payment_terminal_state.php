@@ -46,9 +46,11 @@ return new class extends Migration
                                     IS DISTINCT FROM (p_installation,p_kind,p_currency,p_provider_account,p_original) THEN 'contradiction'
                                 ELSE 'duplicate' END),'replayed',true);
                     END IF;
-                    IF o.installation_ref IS DISTINCT FROM p_installation OR o.kind IS DISTINCT FROM p_kind OR o.original_ref IS DISTINCT FROM p_original OR o.kind <> 'charge'
+                    IF o.installation_ref IS DISTINCT FROM p_installation OR o.kind IS DISTINCT FROM p_kind OR o.original_ref IS DISTINCT FROM p_original
                     THEN RETURN jsonb_build_object('body',jsonb_build_object('observed_id',o.id,'disposition','conflict','revision',o.revision),'replayed',false); END IF;
                     IF (o.currency,o.provider_account_ref) IS DISTINCT FROM (p_currency,p_provider_account) THEN
+                        IF o.kind <> 'charge'
+                        THEN RETURN jsonb_build_object('body',jsonb_build_object('observed_id',o.id,'disposition','conflict','revision',o.revision),'replayed',false); END IF;
                         v_disposition := 'contradiction';
                     ELSIF p_revision > o.revision THEN
                         UPDATE public.billium_observed_payment SET revision=p_revision,material_digest=p_material,state=p_state,requested_minor=p_requested,
