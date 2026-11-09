@@ -31,8 +31,7 @@ final readonly class DatabaseFeedRecoveryQueries implements FeedRecoveryQueries
         $bootstrap = 'not_started';
         $snapshots = [];
         foreach (['billium_feed_partition', 'billium_feed_bootstrap_session'] as $table) {
-            $query = $db->table($table)->where('seller_ref', $caller->sellerRef)->where('environment', $caller->environment)->where('channel', $channel)
-                ->whereIn('source_authority', $caller->sourceAuthorities);
+            $query = $db->table($table)->where('seller_ref', $caller->sellerRef)->where('environment', $caller->environment)->where('channel', $channel);
             if ($sourceAuthority !== null) {
                 $query->where('source_authority', $sourceAuthority);
             }

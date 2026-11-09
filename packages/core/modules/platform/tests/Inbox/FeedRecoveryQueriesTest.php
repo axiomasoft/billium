@@ -47,19 +47,24 @@ final class FeedRecoveryQueriesTest extends PlatformTestCase
         self::assertSame(['recoveryRequired' => false, 'bootstrapStatus' => 'not_started', 'snapshots' => []], $this->read());
     }
 
-    public function test_authority_selectors_only_narrow_the_authenticated_source_scope(): void
+    public function test_recovery_metadata_stays_visible_regardless_of_caller_source_authorities(): void
     {
         $this->owner()->insert(<<<'SQL'
             INSERT INTO billium_feed_partition(channel,source_authority,source_lineage,seller_ref,environment,partition_ref,state)
             VALUES ('observations','authority-a','L1','seller-a','test','part-1','recovery_required'),
-                   ('observations','authority-b','L1','seller-a','test','part-1','recovery_required')
+                   ('observations','authority-b','L1','seller-a','test','part-1','recovery_required'),
+                   ('observations','authority-a','L1','seller-b','test','part-1','recovery_required'),
+                   ('observations','authority-a','L1','seller-a','live','part-1','recovery_required'),
+                   ('events','authority-a','L1','seller-a','test','part-1','recovery_required')
             SQL);
         $this->bootstrap('seller-a', 'test');
+        $this->bootstrap('seller-b', 'test');
+        $this->bootstrap('seller-a', 'live');
 
         foreach ([['authority-a'], ['authority-b'], ['authority-a', 'authority-b'], []] as $authorities) {
             $this->callers->set(new Caller('seller-a', 'test', self::INSTALLATION, 'actor', $authorities));
-            foreach ([null, 'authority-a', 'authority-b'] as $selector) {
-                $visible = $selector === null ? $authorities : array_values(array_intersect($authorities, [$selector]));
+            foreach ([null, 'authority-a', 'authority-b', 'authority-unknown'] as $selector) {
+                $visible = $selector === null ? ['authority-a', 'authority-b'] : ($selector === 'authority-unknown' ? [] : [$selector]);
                 $hasBootstrap = in_array('authority-a', $visible, true);
                 $result = $this->read($selector, 'part-1');
 
@@ -67,7 +72,11 @@ final class FeedRecoveryQueriesTest extends PlatformTestCase
                 self::assertSame($hasBootstrap ? 'loading' : 'not_started', $result['bootstrapStatus']);
                 self::assertCount(count($visible) + ($hasBootstrap ? 1 : 0), $result['snapshots']);
                 foreach ($result['snapshots'] as $snapshot) {
-                    self::assertContains(self::arr($snapshot['payload'])['source_authority'], $visible);
+                    $payload = self::arr($snapshot['payload']);
+                    self::assertContains($payload['source_authority'], $visible);
+                    self::assertSame('seller-a', $payload['seller_ref']);
+                    self::assertSame('test', $payload['environment']);
+                    self::assertSame('observations', $payload['channel']);
                 }
             }
         }
