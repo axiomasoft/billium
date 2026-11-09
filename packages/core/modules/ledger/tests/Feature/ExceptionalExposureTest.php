@@ -75,7 +75,7 @@ final class ExceptionalExposureTest extends ObservationTestCase
         }
         self::assertSame($before, array_map($this->rows(...), $tables));
         self::assertSame(0, $this->allocated('o1'));
-        self::assertSame(['pa-1', 'pa-2'], array_column($this->table("SELECT payload->>'providerAccountRef' AS account FROM billium_observed_payment_revision ORDER BY revision"), 'account'));
+        self::assertSame(['pa-1', 'pa-2'], array_column($this->table('SELECT provider_account_ref AS account FROM billium_observed_payment_revision ORDER BY revision'), 'account'));
     }
 
     /** @param array<string, mixed> $fields */

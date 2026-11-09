@@ -300,7 +300,7 @@ final readonly class PaymentProjection
         $binding = $binding || $db->table('billium_observed_payment_revision')->where('observed_payment_id', $observedId)
             ->where(static function (Builder $query) use ($currency, $o): void {
                 $query->where('currency', '<>', $currency)
-                    ->orWhereRaw("coalesce(payload->>'providerAccountRef', ?) <> ?", [$o->providerAccountRef, $o->providerAccountRef]);
+                    ->orWhereRaw("coalesce(provider_account_ref, payload->>'providerAccountRef', ?) <> ?", [$o->providerAccountRef, $o->providerAccountRef]);
             })->exists();
         $captured = $o->capturedTotal->minor;
         $refunded = $o->refundedTotal->minor;
