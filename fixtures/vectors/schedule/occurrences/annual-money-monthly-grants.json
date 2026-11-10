@@ -1,0 +1,96 @@
+{
+  "schema": "billium.schedule.occurrences/1",
+  "owners": [
+    "D12",
+    "D56",
+    "COV-500",
+    "COV-544"
+  ],
+  "selectionGate": "Host grant owner supplies the twelve external windows; schedule owns only annual monetary coverage.",
+  "annual": {
+    "purpose": "recurring_charge",
+    "correlationRef": "commercial:annual-a",
+    "start": "2024-01-01T00:00:00Z",
+    "end": "2025-01-01T00:00:00Z"
+  },
+  "externalGrants": [
+    {
+      "grantRef": "external:grant:1",
+      "correlationRef": "commercial:annual-a",
+      "start": "2024-01-01T00:00:00Z",
+      "end": "2024-02-01T00:00:00Z"
+    },
+    {
+      "grantRef": "external:grant:2",
+      "correlationRef": "commercial:annual-a",
+      "start": "2024-02-01T00:00:00Z",
+      "end": "2024-03-01T00:00:00Z"
+    },
+    {
+      "grantRef": "external:grant:3",
+      "correlationRef": "commercial:annual-a",
+      "start": "2024-03-01T00:00:00Z",
+      "end": "2024-04-01T00:00:00Z"
+    },
+    {
+      "grantRef": "external:grant:4",
+      "correlationRef": "commercial:annual-a",
+      "start": "2024-04-01T00:00:00Z",
+      "end": "2024-05-01T00:00:00Z"
+    },
+    {
+      "grantRef": "external:grant:5",
+      "correlationRef": "commercial:annual-a",
+      "start": "2024-05-01T00:00:00Z",
+      "end": "2024-06-01T00:00:00Z"
+    },
+    {
+      "grantRef": "external:grant:6",
+      "correlationRef": "commercial:annual-a",
+      "start": "2024-06-01T00:00:00Z",
+      "end": "2024-07-01T00:00:00Z"
+    },
+    {
+      "grantRef": "external:grant:7",
+      "correlationRef": "commercial:annual-a",
+      "start": "2024-07-01T00:00:00Z",
+      "end": "2024-08-01T00:00:00Z"
+    },
+    {
+      "grantRef": "external:grant:8",
+      "correlationRef": "commercial:annual-a",
+      "start": "2024-08-01T00:00:00Z",
+      "end": "2024-09-01T00:00:00Z"
+    },
+    {
+      "grantRef": "external:grant:9",
+      "correlationRef": "commercial:annual-a",
+      "start": "2024-09-01T00:00:00Z",
+      "end": "2024-10-01T00:00:00Z"
+    },
+    {
+      "grantRef": "external:grant:10",
+      "correlationRef": "commercial:annual-a",
+      "start": "2024-10-01T00:00:00Z",
+      "end": "2024-11-01T00:00:00Z"
+    },
+    {
+      "grantRef": "external:grant:11",
+      "correlationRef": "commercial:annual-a",
+      "start": "2024-11-01T00:00:00Z",
+      "end": "2024-12-01T00:00:00Z"
+    },
+    {
+      "grantRef": "external:grant:12",
+      "correlationRef": "commercial:annual-a",
+      "start": "2024-12-01T00:00:00Z",
+      "end": "2025-01-01T00:00:00Z"
+    }
+  ],
+  "expect": {
+    "normalMonetaryOccurrences": 1,
+    "externalGrantWindows": 12,
+    "grantPurposeAccepted": false
+  }
+}
+

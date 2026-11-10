@@ -1,0 +1,123 @@
+{
+  "schema": "billium.schedule.occurrences/1",
+  "owners": [
+    "D12",
+    "D56",
+    "D63",
+    "INV-11"
+  ],
+  "businessIdentity": [
+    "seller",
+    "environment",
+    "component",
+    "purpose",
+    "startMicros",
+    "endMicros"
+  ],
+  "excludedFromIdentity": [
+    "scheduleRef",
+    "scheduleRevision",
+    "commandKey",
+    "inputsDigest"
+  ],
+  "cases": [
+    {
+      "id": "replay_across_revision",
+      "first": {
+        "revision": 1,
+        "key": "a"
+      },
+      "second": {
+        "revision": 2,
+        "key": "b"
+      },
+      "expect": {
+        "normalOccurrences": 1,
+        "secondCreated": false
+      }
+    },
+    {
+      "id": "changed_inputs",
+      "expect": {
+        "detail": "billium.occurrence.inputs_changed",
+        "normalOccurrences": 1
+      }
+    },
+    {
+      "id": "overlap",
+      "expect": {
+        "detail": "billium.occurrence.overlap"
+      }
+    },
+    {
+      "id": "planned_replacement",
+      "expect": {
+        "old": "superseded",
+        "new": "planned"
+      }
+    },
+    {
+      "id": "posted_revision",
+      "expect": {
+        "originalByteIdentical": true,
+        "amendment": "amendment_required"
+      }
+    },
+    {
+      "id": "revived_interval",
+      "expect": {
+        "incarnation": 2
+      }
+    },
+    {
+      "id": "correction_frontier_replay",
+      "expect": {
+        "children": 1,
+        "secondCreated": false,
+        "parentByteIdentical": true
+      }
+    },
+    {
+      "id": "correction_cas_stale",
+      "expect": {
+        "detail": "billium.correction.frontier_stale"
+      }
+    },
+    {
+      "id": "scheduler_period_boundary_crash",
+      "expect": {
+        "beforeRestart": {
+          "occurrences": 0,
+          "cursor": 0
+        },
+        "afterRestart": {
+          "occurrences": 1,
+          "cursor": 1
+        }
+      }
+    },
+    {
+      "id": "parallel_jobs",
+      "workers": 5,
+      "expect": {
+        "occurrences": 1,
+        "createdCount": 1,
+        "replayedBusinessCount": 4
+      }
+    },
+    {
+      "id": "forbidden_purposes",
+      "purposes": [
+        "entitlement_grant",
+        "collection_step",
+        "collection_retry",
+        "correction",
+        "anything_else"
+      ],
+      "expect": {
+        "detail": "billium.occurrence.purpose_rejected"
+      }
+    }
+  ]
+}
+

@@ -3894,6 +3894,20 @@
       "source": "packages/core/database/migrations/schedule/2026_11_10_000500_create_billium_schedule_periods.php"
     },
     {
+      "kind": "migration",
+      "id": "2026_11_10_000600_create_billium_schedule_occurrences",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/schedule/2026_11_10_000600_create_billium_schedule_occurrences.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_10_000610_create_billium_schedule_billing_correction",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/schedule/2026_11_10_000610_create_billium_schedule_billing_correction.php"
+    },
+    {
       "kind": "doctor-finding",
       "id": "module.composition_forbidden",
       "status": "new",

@@ -758,14 +758,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "schedule",
-      "currentSchemaVersion": 1,
+      "currentSchemaVersion": 3,
       "supportedSchemaReadRange": {
-        "min": 1,
-        "max": 1
+        "min": 3,
+        "max": 3
       },
       "supportedSchemaWriteRange": {
-        "min": 1,
-        "max": 1
+        "min": 3,
+        "max": 3
       },
       "requiresModules": [
         {
@@ -804,7 +804,14 @@
         "billium_schedule_component",
         "billium_schedule_quote",
         "billium_schedule_revision",
-        "billium_schedule_period"
+        "billium_schedule_period",
+        "billium_schedule_billing_schedule",
+        "billium_schedule_billing_schedule_revision",
+        "billium_schedule_billing_occurrence",
+        "billium_schedule_occurrence_amendment",
+        "billium_schedule_occurrence_outbox",
+        "billium_schedule_correction_head",
+        "billium_schedule_billing_correction"
       ],
       "configKeys": [
         "billium.schedule.enabled"
@@ -814,6 +821,16 @@
           "id": "2026_11_10_000500_create_billium_schedule_periods",
           "version": 1,
           "checksum": "sha256:6e542f7bad81723bf5c338cc1ad1a53134eea4f18a0dc3a6fc806aa48d570bce"
+        },
+        {
+          "id": "2026_11_10_000600_create_billium_schedule_occurrences",
+          "version": 2,
+          "checksum": "sha256:037cb3dc69af04b9eda22f7127b3d0aa161d31af02a39662a9acb2b95dd9b469"
+        },
+        {
+          "id": "2026_11_10_000610_create_billium_schedule_billing_correction",
+          "version": 3,
+          "checksum": "sha256:8e9ee47d1b6dc0b5eadea7b74a1cc7847956ac746889a591137909dec0b6d97c"
         }
       ],
       "disablePolicy": {

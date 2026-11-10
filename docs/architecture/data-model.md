@@ -1,7 +1,7 @@
 # Billium — модель данных
 
-Синхронизация PLAN1.P3.12, 2026-10-29, дополнения P4.2/P4.3/P4.5. Реализованы platform, ledger,
-usage admission/aggregation и schedule commercial periods. Rating, occurrence booking,
+Синхронизация PLAN1.P3.12, 2026-10-29, дополнения P4.2/P4.3/P4.5/P4.6. Реализованы platform, ledger,
+usage admission/aggregation, schedule commercial periods и monetary occurrences. Rating booking,
 execution, documents и collection ниже сохраняют явно обозначенные будущие потоки.
 Основания: INV-01–INV-14, D21, D45–D52, D54/D55/D57/D60/D62/D63.
 DDL: `packages/core/database/migrations/{platform,ledger,usage,schedule}/`. Реестр модулей:
@@ -234,6 +234,74 @@ Integration query `coverage` возвращает immutable `billium.schedule.co
 в notice — frozen host provenance, не подтверждение оплаты и не команда grant owner. Annual monetary
 coverage и monthly grants не размножают друг друга; P4.5 не вызывает ledger booking и не пишет grant state
 (REQ-OWN-02/03, REQ-OUT-01/02/10, D56; owner schedule/host).
+
+## Schedule occurrences (P4.6)
+
+`schedule` owns the following tables. Every business scope includes seller/environment
+(D12/D22/D23/D56; owner schedule).
+
+| Table | Responsibility and backstop |
+|:--|:--|
+| `billium_schedule_billing_schedule` | Revision/generation CAS, strict state/runnable/next_occurrence_at, next calendar ordinal, claim lease, attempts/retry_at and row_version |
+| `billium_schedule_billing_schedule_revision` | Append-only calendar terms, inputs digest and effective boundary; immutable provenance |
+| `billium_schedule_billing_occurrence` | Immutable resolved interval/evidence and inputs; stable occurrence_ref plus historical incarnation; normal monetary purposes only |
+| `billium_schedule_occurrence_amendment` | Append-only revision confirmation, planned replacement, cancellation or amendment request pointing to the original occurrence |
+| `billium_schedule_occurrence_outbox` | Atomic module-owned notifications; preserves the frozen public event catalogue (D63; owner schedule/platform) |
+| `billium_schedule_correction_head` | Approved correction revision/source frontier CAS, serialized by the original occurrence lock |
+| `billium_schedule_billing_correction` | Append-only correction children with original period, predecessor, reason, optional tax policy provenance, registered digest and canonical obligation basis |
+
+Normal business identity is `seller/environment/component/purpose/[start,end)`, resolved to UTC
+microseconds. `occurrence_ref = occ_ + first48(sha256(canonical identity))`; schedule reference,
+schedule revision, transport key and inputs digest do not enter identity. The active-reference
+partial UNIQUE and GiST exclusion arbitrate inserts. The exclusion remains
+`(seller_ref =, environment =, component_ref =, coverage_class =, service_period &&)` for
+planned/rated/obligated rows. `usage_settlement` uses coverage class usage; recurring_charge and
+proration share time coverage. Proration requires a same-component original parent and lies
+inside its interval; its parent link never exempts it from overlap protection. Historical
+superseded rows remain immutable; returning to an old interval creates the next incarnation
+(INV-11/12, D12/D56; owner schedule).
+
+`occurrence.ensure.v1` inserts using a PostgreSQL arbiter and recovers exclusion errors at a
+savepoint. Another key with the same identity and inputs returns the existing occurrence with
+created=false. Changed inputs require explicit correction. A revision can replace only planned
+work; rated/obligated originals receive amendment_required records and retain their bytes.
+Cancellation increments the schedule generation and cancels planned work only. FSM permits
+planned→rated/obligated/superseded/cancelled and rated→obligated; triggers reject deletion,
+revival and immutable-column changes (INV-05/11/12, D12/D27/D56; owner schedule).
+
+Roots lock schedule rank 40 before the complete occurrence rank 50 set. They recheck their
+planned row set under locks and retry LockPlanChanged. Outer rating/correction roots use the
+public `OccurrenceLocks` port before ranks 65/70: it delegates to the root LockSet and remembers
+the rows locked in that live context. Participants assert that remembered parent lock and
+runner/module/scope authority; they acquire no additional lock, create no root/claim/outbox and
+write only schedule tables. This adapter supplies lock inspection without changing the shared
+TransactionContext contract (D27/D60/D63, FA03; owner schedule).
+
+Correction is a literal purpose exclusively in billing_correction. Its obligated normal parent
+and original [start,end) are rechecked; original_period_ref is the stable period correlation
+derived from the parent occurrence. UNIQUE parent/revision and parent/source-frontier plus
+head CAS reject duplicates/reordering. Exact frontier replay is checked before head CAS.
+`CorrectionBasis::derive(parentOccurrenceRef, correctionRevision)` canonically binds the
+obligation basis. A correction can overlap only through its registered parent lineage and
+never enters the normal scheduler/exclusion table. The outer P4.8 root owns rating/ledger work;
+registering lineage alone books no obligation (INV-11/12, D56/D63/FA03; owner schedule/rating).
+
+Due reads are authenticated, seller/environment scoped, bounded to 500 schedules and use
+keyset `(next_occurrence_at,id)` with a scope/asOf-bound cursor. The partial index
+`billium_schedule_due_idx(seller_ref,state,next_occurrence_at,id) WHERE runnable` covers the scan;
+claim expiry and retry_at filter unavailable work. Each schedule materializes in its own root:
+occurrence, cursor, persisted calendar evidence and outbox commit together. The resolver's
+zero-based next ordinal is advanced only after successful materialization; unfinished batch
+tails remain due. CAS refuses parallel stale jobs. Separate recordFailure roots clear leases,
+increment attempts and schedule `asOf + min(2^attempts*60,3600)` seconds. dueStats exposes due
+count/oldest age. The resolver's ordinal bound completes a schedule after its final supported
+interval (D12/D22/D27/D56, COV-329; owner schedule).
+
+`fixtures/vectors/schedule/occurrences/annual-money-monthly-grants.json` records the selection
+gate for one annual monetary occurrence correlated with twelve external grant windows. The
+host grant owner supplies those windows; entitlement_grant and collection_* cannot create
+monetary occurrences. Collection references existing debt. This fixture establishes no live
+grant delivery or provider qualification (REQ-OWN-02/03, D56/D59, COV-500/544; owner schedule/host).
 
 ## Expand/contract и доказательства
 

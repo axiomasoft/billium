@@ -9,7 +9,12 @@ use Billium\Core\Internal\Modules\ModuleCatalog;
 use Billium\Schedule\Contracts\AgreementRevisionCommit;
 use Billium\Schedule\Contracts\AgreementRevisionGuard;
 use Billium\Schedule\Contracts\CommercialPeriods;
+use Billium\Schedule\Contracts\CorrectionParticipants;
 use Billium\Schedule\Contracts\IntervalResolver;
+use Billium\Schedule\Contracts\OccurrenceLocks;
+use Billium\Schedule\Contracts\OccurrenceParticipants;
+use Billium\Schedule\Contracts\OccurrenceService;
+use Billium\Schedule\Contracts\ScheduleQueries;
 use Billium\Schedule\Internal\ScheduleServiceProvider;
 use Billium\Schedule\Internal\UnboundAgreementRevisionGuard;
 use Illuminate\Config\Repository;
@@ -38,17 +43,20 @@ final class ScheduleProviderTest extends TestCase
             'modules' => ['enabled' => ['platform', 'ledger', 'rating', 'schedule']], 'schedule' => ['enabled' => true],
         ]]));
         $app->register(BilliumCoreServiceProvider::class);
-        foreach ([IntervalResolver::class, AgreementRevisionCommit::class, CommercialPeriods::class] as $contract) {
+        foreach ([IntervalResolver::class, AgreementRevisionCommit::class, CommercialPeriods::class,
+            OccurrenceService::class, OccurrenceParticipants::class,
+            CorrectionParticipants::class, OccurrenceLocks::class,
+            ScheduleQueries::class] as $contract) {
             self::assertTrue($app->bound($contract));
         }
         self::assertInstanceOf(UnboundAgreementRevisionGuard::class, $app->make(AgreementRevisionGuard::class));
         self::assertArrayHasKey(ScheduleServiceProvider::class, $app->getLoadedProviders());
         self::assertFalse($app->isBooted());
         $descriptor = ModuleCatalog::packaged()->descriptor('schedule');
-        self::assertSame(1, $descriptor->currentSchemaVersion);
-        self::assertCount(4, $descriptor->ownedTables);
-        self::assertCount(1, $descriptor->migrationIdentities);
-        self::assertSame(0, ModuleCatalog::packaged()->descriptor('rating')->currentSchemaVersion);
+        self::assertSame(3, $descriptor->currentSchemaVersion);
+        self::assertCount(11, $descriptor->ownedTables);
+        self::assertCount(3, $descriptor->migrationIdentities);
+        self::assertSame(1, ModuleCatalog::packaged()->descriptor('rating')->currentSchemaVersion);
         Container::setInstance(null);
     }
 }

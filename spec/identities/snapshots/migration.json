@@ -28,5 +28,7 @@
   "2026_11_10_000001_create_billium_usage",
   "2026_11_10_000100_create_rating_pricing_tables",
   "2026_11_10_000300_create_usage_aggregation_tables",
-  "2026_11_10_000500_create_billium_schedule_periods"
+  "2026_11_10_000500_create_billium_schedule_periods",
+  "2026_11_10_000600_create_billium_schedule_occurrences",
+  "2026_11_10_000610_create_billium_schedule_billing_correction"
 ]
