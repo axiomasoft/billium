@@ -48,6 +48,7 @@ use Billium\Rating\Data\Tax\TaxSnapshot;
 use Billium\Rating\Enums\CorrectionKind;
 use Billium\Rating\Enums\ProrationPolicyId;
 use Billium\Rating\Enums\ReleasePolicy;
+use Billium\Rating\Enums\RoundingMode;
 use Billium\Rating\Enums\StrategyId;
 use Billium\Rating\Enums\TaxMode;
 use Billium\Rating\Enums\TaxSnapshotKind;
@@ -70,6 +71,52 @@ use RuntimeException;
 
 class CorrectionIntegrationSmokeTest extends RatingTestCase
 {
+    /** @return array<string, array{string, string, string, string, string, string}> */
+    public static function exactProrations(): array
+    {
+        return [
+            'half' => ['2026-10-16T12:00:00Z', '2', '1', '3', '-3', '-3'],
+            'non-terminating day fraction' => ['2026-10-16T00:00:00Z', '2', '1', '3', '-3', '-3'],
+        ];
+    }
+
+    #[DataProvider('exactProrations')]
+    public function test_partial_cancel_preserves_exact_prorated_fraction_through_after_tax_rounding(
+        string $effectiveAt, string $net, string $tax, string $gross, string $deltaNet, string $deltaGross,
+    ): void {
+        $this->tax->rate = '0.25';
+        $fields = [...get_object_vars($this->price(version: 2, fixed: '0.05')), 'roundingMode' => RoundingMode::HalfEven, 'termsDigest' => 'draft'];
+        $fields['termsDigest'] = CanonicalJson::termsDigest(FixtureArguments::construct(class: PriceVersion::class, arguments: $fields));
+        $this->application()->make(PriceVersionStore::class)->publish(
+            price: FixtureArguments::construct(class: PriceVersion::class, arguments: $fields), commandKey: 'five-cent-price');
+        $request = $this->request(priceVersion: 2);
+        $components = $request->components;
+        $components[0]['snapshotRef'] = 'fixed';
+        $original = $this->application()->make(RatingPreparer::class)->prepare(FixtureArguments::construct(
+            class: PrepareRating::class, arguments: [...get_object_vars($request), 'components' => $components]));
+        self::assertInstanceOf(PreparedRating::class, $original);
+        self::assertSame(['5', '1', '6'], [$original->draft->netMinor, $original->draft->taxMinor, $original->draft->grossMinor]);
+        $booked = $this->book($original);
+        $this->issueInvoice($booked->obligationRef);
+        $port = $this->correctionTax(rate: '0.25', version: '1', treatment: 'original_rate');
+        $date = new DateTimeImmutable($effectiveAt);
+        $this->publishPolicy(port: $port, date: $date);
+        $this->application()->instance(TaxSnapshotPort::class, $port);
+        $correction = $this->application()->make(RatingCorrection::class);
+        $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef,
+            kind: CorrectionKind::PartialCancel, amendment: new HostAmendment(amendmentRef: 'half-cancel', revision: 1, effectiveAt: $date,
+                prorationPolicy: ProrationPolicyId::ElapsedSeconds, kind: 'partial_cancel', timezone: null),
+            reasonCode: 'cancel', releasePolicy: ReleasePolicy::OpenOnly));
+        self::assertInstanceOf(PreparedCorrection::class, $prepared, json_encode($prepared, JSON_THROW_ON_ERROR));
+        $computed = $prepared->computation;
+        self::assertSame([$net, $tax, $gross], [$computed->correctedBasis->netMinor, $computed->correctedBasis->taxMinor, $computed->correctedBasis->grossMinor]);
+        self::assertSame([$deltaNet, '0', $deltaGross], [$computed->deltaNetMinor, $computed->deltaTaxMinor, $computed->deltaGrossMinor]);
+        self::assertSame('0.02', $computed->correctedBasis->lines[0]->pricedAmount);
+        self::assertSame('credit_note', $correction->apply(new ApplyCorrection(prepared: $prepared, operationKey: 'half-cancel'))->outcome);
+        self::assertSame(3, $this->value('SELECT amount_minor FROM billium_credit_note'));
+        self::assertSame('0.020000000000000000000000', $this->value('SELECT priced_amount::text FROM billium_rating_rated_line WHERE predecessor_basis_ref IS NOT NULL'));
+    }
+
     public function test_tax_only_correction_creates_child_and_replays(): void
     {
         $this->tax->rate = '0.20';

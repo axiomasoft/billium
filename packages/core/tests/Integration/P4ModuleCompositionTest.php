@@ -5,17 +5,28 @@ declare(strict_types=1);
 namespace Billium\Core\Tests\Integration;
 
 use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Core\Tests\Integration\Support\P4TaxPolicy;
 use Billium\Core\Tests\Support\Extensions\FixedRuleV2;
 use Billium\Ledger\Contracts\Ledger;
+use Billium\Ledger\Data\BillingAccountScope;
+use Billium\Ledger\Data\CreateInvoice;
+use Billium\Ledger\Data\InvoiceLineInput;
+use Billium\Ledger\Data\IssueInvoice;
 use Billium\Ledger\Internal\LedgerServiceProvider;
 use Billium\Platform\Contracts\Installation;
 use Billium\Platform\Internal\Installation\DatabaseInstallation;
 use Billium\Rating\Contracts\PriceVersionStore;
 use Billium\Rating\Contracts\PricingStrategyRegistry;
 use Billium\Rating\Contracts\RatingBooking;
+use Billium\Rating\Contracts\RatingCorrection;
 use Billium\Rating\Contracts\RatingPreparer;
 use Billium\Rating\Contracts\RatingQuoter;
+use Billium\Rating\Contracts\TaxCorrectionPolicyFrontier;
 use Billium\Rating\Contracts\TaxSnapshotPort;
+use Billium\Rating\Data\Correction\ApplyCorrection;
+use Billium\Rating\Data\Correction\HostAmendment;
+use Billium\Rating\Data\Correction\PrepareCorrection;
+use Billium\Rating\Data\Correction\PreparedCorrection;
 use Billium\Rating\Data\Pricing\FixedTerms;
 use Billium\Rating\Data\Pricing\PriceVersion;
 use Billium\Rating\Data\Pricing\QuantityRules;
@@ -29,7 +40,10 @@ use Billium\Rating\Data\Tax\TaxCorrectionRequest;
 use Billium\Rating\Data\Tax\TaxResolutionRequest;
 use Billium\Rating\Data\Tax\TaxSnapshot;
 use Billium\Rating\Enums\BookingOutcome;
+use Billium\Rating\Enums\CorrectionKind;
 use Billium\Rating\Enums\IncrementMode;
+use Billium\Rating\Enums\ProrationPolicyId;
+use Billium\Rating\Enums\ReleasePolicy;
 use Billium\Rating\Enums\RoundingMode;
 use Billium\Rating\Enums\RoundingStage;
 use Billium\Rating\Enums\StrategyId;
@@ -44,10 +58,66 @@ use Billium\Schedule\Data\Commands\EnsureOccurrence;
 use Billium\Schedule\Enums\OccurrencePurpose;
 use Billium\Schedule\Tests\Support\Terms;
 use Billium\Usage\Contracts\Usage;
+use Billium\Usage\Internal\UsageServiceProvider;
 use DateTimeImmutable;
 
 final class P4ModuleCompositionTest extends CompositionTestCase
 {
+    public function test_fixed_partial_cancellation_works_without_and_with_usage_installed(): void
+    {
+        $tax = new TestTaxPort;
+        $tax->rate = '0.20';
+        $prepared = $this->prepared(tax: $tax);
+        config(['billium.modules.enabled' => ['platform', 'ledger', 'rating', 'schedule']]);
+        $this->application()->register(LedgerServiceProvider::class);
+        $this->migrateModules();
+        $this->application()->forgetInstance(DatabaseInstallation::class);
+        $this->application()->make(Installation::class)->init('inst-test');
+        $booked = $this->application()->make(RatingBooking::class)->book(new BookRatedBasis(prepared: $prepared, operationKey: 'fixed-book'));
+        self::assertNotNull($booked->obligationRef);
+        $scope = new BillingAccountScope(sellerRef: 'seller-a', environment: 'test', billingAccountRef: 'account-a');
+        $ledger = $this->application()->make(Ledger::class);
+        self::assertTrue($ledger->createInvoice(new CreateInvoice(commandKey: 'draft', scope: $scope, invoiceRef: 'fixed-invoice',
+            customerRef: 'customer-a', lines: [new InvoiceLineInput(obligationRef: $booked->obligationRef)]))->accepted);
+        self::assertTrue($ledger->issueInvoice(new IssueInvoice(commandKey: 'issue', scope: $scope, invoiceRef: 'fixed-invoice'))->accepted);
+        $port = new P4TaxPolicy;
+        $this->application()->instance(TaxSnapshotPort::class, $port);
+        $date = new DateTimeImmutable('2026-10-16T12:00:00Z');
+        $request = new TaxCorrectionRequest(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $prepared->inputs->occurrenceRef,
+            originalTaxSnapshotRef: 'original', originalTaxSnapshotDigest: 'digest', originalTaxPoint: $date, correctionEffectiveDate: $date,
+            reasonCode: 'cancel', jurisdiction: 'TEST', originalTaxableBaseMinor: '4900', correctedTaxableBaseMinor: '2450', inputDigest: 'publication');
+        $this->application()->make(TaxCorrectionPolicyFrontier::class)->publish(policy: $port->resolveCorrection($request), commandKey: 'correction-policy');
+        foreach ([false, true] as $withUsage) {
+            if ($withUsage) {
+                config(['billium.modules.enabled' => ['platform', 'ledger', 'rating', 'schedule', 'usage'], 'billium.usage.enabled' => true]);
+                $this->application()->register(UsageServiceProvider::class);
+                $this->migrateModules();
+                $this->application()->forgetInstance(DatabaseInstallation::class);
+                $this->application()->make(Installation::class)->init('inst-test');
+            } else {
+                self::assertFalse($this->application()->bound(Usage::class));
+                self::assertNull($this->owner()->scalar("SELECT to_regclass('public.billium_usage_fact')::text"));
+            }
+            $revision = $withUsage ? 2 : 1;
+            $correction = $this->application()->make(RatingCorrection::class);
+            $cancel = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test',
+                parentOccurrenceRef: $prepared->inputs->occurrenceRef, kind: CorrectionKind::PartialCancel,
+                amendment: new HostAmendment(amendmentRef: 'fixed-cancel', revision: $revision,
+                    effectiveAt: $withUsage ? new DateTimeImmutable('2026-10-08T18:00:00Z') : $date,
+                    prorationPolicy: ProrationPolicyId::ElapsedSeconds, kind: 'partial_cancel', timezone: null),
+                reasonCode: 'cancel', releasePolicy: ReleasePolicy::OpenOnly));
+            self::assertInstanceOf(PreparedCorrection::class, $cancel, json_encode($cancel, JSON_THROW_ON_ERROR));
+            self::assertSame($withUsage ? '-1470' : '-2940', $cancel->computation->deltaGrossMinor);
+            $receipt = $correction->apply(new ApplyCorrection(prepared: $cancel, operationKey: 'cancel-'.$revision));
+            self::assertSame('credit_note', $receipt->outcome);
+            self::assertSame($cancel->computation->deltaGrossMinor, $receipt->deltaGrossMinor);
+            self::assertSame($revision, $this->owner()->table('billium_credit_note')->count());
+            $replay = $correction->apply(new ApplyCorrection(prepared: $cancel, operationKey: 'cancel-replay-'.$revision));
+            self::assertSame('existing', $replay->outcome);
+            self::assertSame($receipt->creditNoteRef, $replay->creditNoteRef);
+        }
+    }
+
     private function prepared(int $strategyVersion = 1, ?TaxSnapshotPort $tax = null): PreparedRating
     {
         $this->application()->instance(TaxSnapshotPort::class, $tax ?? new TestTaxPort);

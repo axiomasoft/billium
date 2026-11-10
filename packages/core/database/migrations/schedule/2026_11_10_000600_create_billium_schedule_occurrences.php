@@ -80,7 +80,7 @@ return new class extends Migration
              END IF;
              IF TG_OP='INSERT' THEN
               SELECT * INTO h FROM public.billium_schedule_billing_schedule WHERE id=NEW.schedule_id;
-              IF NOT FOUND OR h.state<>'active' OR h.cancel_generation<>NEW.cancel_generation OR h.current_revision<>NEW.created_revision
+              IF NOT FOUND OR h.state<>'active' OR h.cancel_generation<>NEW.cancel_generation OR NEW.created_revision<1 OR NEW.created_revision>h.current_revision
                 OR (NEW.purpose<>'proration' AND NEW.purpose<>h.purpose) THEN
                RAISE EXCEPTION 'billium.schedule.not_runnable' USING ERRCODE='23514';
               END IF;

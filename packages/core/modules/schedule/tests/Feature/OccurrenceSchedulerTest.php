@@ -15,6 +15,44 @@ use Illuminate\Database\QueryException;
 
 final class OccurrenceSchedulerTest extends OccurrenceTestCase
 {
+    public function test_future_dated_revision_does_not_override_earlier_unmaterialized_or_pre_ensured_interval(): void
+    {
+        $this->createSchedule();
+        $digest1 = 'sha256:'.str_repeat('a', 64);
+        $digest2 = 'sha256:'.str_repeat('b', 64);
+        $this->occurrences()->ensureOccurrence($this->ensure([
+            'periodStart' => new DateTimeImmutable('2024-02-29Z'), 'periodEnd' => new DateTimeImmutable('2024-03-31Z'),
+            'ordinal' => 1, 'commandKey' => 'pre-ensure-february']));
+        $this->occurrences()->applyScheduleRevision($this->revision([
+            'expectedRevision' => 1, 'expectedRowVersion' => 1, 'newRevision' => 2, 'commandKey' => 'future-revision',
+            'effectiveFrom' => new DateTimeImmutable('2024-03-31Z'), 'inputsDigest' => $digest2,
+            'terms' => Terms::make(['purpose' => 'recurring_charge', 'priceVersionRef' => 'price:2', 'monetaryTermsDigest' => $digest2])]));
+        self::assertSame('2024-01-31', substr(self::text($this->value('SELECT next_occurrence_at FROM billium_schedule_billing_schedule')), 0, 10));
+        // A current or historical revision with the wrong effective inputs must not create January.
+        $this->refusal(fn () => $this->occurrences()->ensureOccurrence($this->ensure([
+            'scheduleRevision' => 2, 'inputsDigest' => $digest2, 'commandKey' => 'premature-revision'])), 'schedule.revision_stale');
+        $this->refusal(fn () => $this->occurrences()->ensureOccurrence($this->ensure([
+            'inputsDigest' => $digest2, 'commandKey' => 'historical-wrong-inputs'])), 'schedule.revision_stale');
+        $january = $this->occurrences()->materializeNext($this->materialize(key: 'january', version: 2))->body();
+        self::assertTrue($january['created']);
+        self::assertSame($digest1, $january['inputsDigest']);
+        self::assertSame('2024-01-31T00:00:00.000000Z', $january['periodStart']);
+        self::assertSame('2024-02-29T00:00:00.000000Z', $january['periodEnd']);
+        self::assertSame(1, $this->value('SELECT created_revision FROM billium_schedule_billing_occurrence WHERE occurrence_ref=?', [$january['occurrenceRef']]));
+        $february = $this->occurrences()->materializeNext($this->materialize(key: 'february', version: 3))->body();
+        self::assertFalse($february['created']);
+        self::assertSame($digest1, $february['inputsDigest']);
+        self::assertSame('2024-03-31T00:00:00.000000Z', $february['nextOccurrenceAt']);
+        $march = $this->occurrences()->materializeNext(new MaterializeNext(sellerRef: 'seller-a', environment: 'test',
+            scheduleRef: 'schedule-a', expectedRowVersion: 4, expectedCancelGeneration: 0,
+            asOf: new DateTimeImmutable('2024-03-31Z'), commandKey: 'march'))->body();
+        self::assertTrue($march['created']);
+        self::assertSame($digest2, $march['inputsDigest']);
+        self::assertSame('2024-03-31T00:00:00.000000Z', $march['periodStart']);
+        self::assertSame('2024-04-30T00:00:00.000000Z', $march['periodEnd']);
+        self::assertSame(2, $this->value('SELECT created_revision FROM billium_schedule_billing_occurrence WHERE occurrence_ref=?', [$march['occurrenceRef']]));
+    }
+
     public function test_paused_schedule_can_be_cancelled_without_reviving_future_work(): void
     {
         $this->createSchedule();
@@ -24,6 +62,21 @@ final class OccurrenceSchedulerTest extends OccurrenceTestCase
             expectedRevision: 2, expectedRowVersion: 2, expectedCancelGeneration: 0, commandKey: 'cancel-paused'));
         self::assertSame('cancelled', $this->value('SELECT state FROM billium_schedule_billing_schedule'));
         self::assertSame(1, $this->value('SELECT cancel_generation FROM billium_schedule_billing_schedule'));
+    }
+
+    public function test_ensure_accepts_applicable_historical_revision_before_first_materialization(): void
+    {
+        // The earliest revision also covers intervals before its effective date.
+        $this->occurrences()->applyScheduleRevision($this->revision(['effectiveFrom' => new DateTimeImmutable('2024-02-01Z')]));
+        $this->occurrences()->applyScheduleRevision($this->revision([
+            'expectedRevision' => 1, 'expectedRowVersion' => 1, 'newRevision' => 2, 'commandKey' => 'future-revision',
+            'effectiveFrom' => new DateTimeImmutable('2024-03-31Z'), 'inputsDigest' => 'sha256:'.str_repeat('b', 64),
+            'terms' => Terms::make(['purpose' => 'recurring_charge', 'priceVersionRef' => 'price:2'])]));
+        $receipt = $this->occurrences()->ensureOccurrence($this->ensure())->body();
+        self::assertTrue($receipt['created']);
+        self::assertSame('sha256:'.str_repeat('a', 64), $receipt['inputsDigest']);
+        self::assertSame(1, $this->value('SELECT created_revision FROM billium_schedule_billing_occurrence'));
+        self::assertFalse($this->occurrences()->ensureOccurrence($this->ensure(['commandKey' => 'ensure-replay']))->body()['created']);
     }
 
     private function materialize(string $key = 'materialize', int $version = 1): MaterializeNext

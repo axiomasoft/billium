@@ -39,6 +39,7 @@ use Billium\Rating\Internal\Corrections\CorrectionDigest;
 use Billium\Rating\Internal\Corrections\CorrectionInputs;
 use Billium\Rating\Internal\Corrections\TaxCorrectionGroup;
 use Billium\Rating\Internal\Money\MoneyFactory;
+use Billium\Rating\Internal\Pipeline\FixedOccurrenceInput;
 use Billium\Rating\Internal\Pipeline\RatingComputation;
 use Billium\Rating\Internal\Proration\AmendmentSupport;
 use Billium\Rating\Internal\Proration\ProrationCalculator;
@@ -77,9 +78,13 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
             throw new ProblemException(ProblemCode::AuthDenied, 'billium.rating.scope_denied');
         }
         $semantic = CanonicalJson::digest($p);
+        $modules = ['platform', 'rating', 'schedule', 'ledger'];
+        if (array_any($in->aggregates, static fn ($aggregate): bool => ! FixedOccurrenceInput::matches($aggregate))) {
+            $modules[] = 'usage';
+        }
         $outcome = $this->runner->run(spec: new OperationSpec(commandKind: 'rating.correct.v1', sellerRef: $in->sellerRef,
             environment: $in->environment, mode: FinancialMode::Active, operationClass: ModuleOperationClass::NewIntent,
-            modules: ['platform', 'rating', 'usage', 'schedule', 'ledger'], commandKey: $command->operationKey, digest: $semantic,
+            modules: $modules, commandKey: $command->operationKey, digest: $semantic,
             commitKind: 'rating.correct.v1'), body: function (TransactionContext $context) use ($p, $in, $c): RatingCorrectionReceipt {
                 $this->runner->assertCurrent(context: $context, moduleId: 'rating');
                 $this->usage->lock(context: $context, inputs: $in);
@@ -237,7 +242,8 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
                 !== [$aggregate->componentRef, $aggregate->metricRef, $aggregate->metricVersion,
                     $aggregate->windowStartMicros, $aggregate->windowEndMicros]
                 || CanonicalJson::encode($oldWindow) !== CanonicalJson::encode($window)
-                || CanonicalJson::encode($oldAggregate->quantitySnapshot) !== CanonicalJson::encode($aggregate->quantitySnapshot)) {
+                || CanonicalJson::encode($oldAggregate->quantitySnapshot) !== CanonicalJson::encode($aggregate->quantitySnapshot)
+                || (FixedOccurrenceInput::matches($oldAggregate) && CanonicalJson::encode($oldAggregate) !== CanonicalJson::encode($aggregate))) {
                 RatingComputation::refuse('correction_digest_mismatch');
             }
         }

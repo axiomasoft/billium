@@ -94,6 +94,7 @@ final readonly class DatabaseRatingBooking implements RatingBooking
                 } else {
                     // Unposted basis uses its retained inputs; a changed commitment cannot silently change its amount.
                     $this->store->assertCommitments(context: $context, inputs: $in);
+                    $this->usage->assertCurrent(context: $context, inputs: $in);
                 }
                 $this->schedule->lock(context: $context, ref: $in->occurrenceRef);
                 $this->schedule->assertBookable($in);

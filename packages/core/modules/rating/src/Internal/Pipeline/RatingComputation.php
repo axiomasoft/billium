@@ -23,11 +23,13 @@ use Billium\Rating\Data\Rating\QuoteRequest;
 use Billium\Rating\Data\Rating\RatedBasisDraft;
 use Billium\Rating\Data\Rating\RatedLineDraft;
 use Billium\Rating\Enums\ChargeKind;
+use Billium\Rating\Enums\RoundingStage;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
 use Billium\Rating\Internal\Math\Dec;
 use Billium\Rating\Internal\Money\MoneyFactory;
 use Billium\Rating\Internal\Proration\ProrationCalculator;
 use Billium\Rating\Internal\Proration\QuantitySnapshotScope;
+use Billium\Rating\Internal\Storage\FrozenInputsCodec;
 use Billium\Rating\Internal\Storage\RatingRows;
 use Billium\Rating\Internal\Tax\TaxCalculator;
 
@@ -71,7 +73,10 @@ final readonly class RatingComputation implements RatingQuoter
             $price = $inputs->prices[$i];
             $tax = $inputs->taxes[$i];
             $snapshot = $price->snapshot;
-            FixedOccurrenceInput::assertValid(inputs: $inputs, aggregate: $aggregate, price: $snapshot);
+            $fixedInputs = $predecessorBasisRef !== null && FixedOccurrenceInput::matches($aggregate)
+                ? FrozenInputsCodec::decode(CanonicalJson::encode([...get_object_vars($inputs), 'sourceDigest' => RatingRows::text($aggregate->snapshot['sourceDigest'] ?? null)]))
+                : $inputs;
+            FixedOccurrenceInput::assertValid(inputs: $fixedInputs, aggregate: $aggregate, price: $snapshot);
             QuantitySnapshotScope::assertValid(inputs: $inputs, aggregate: $aggregate, price: $snapshot);
             if (strcmp($aggregate->componentRef, $last) <= 0 || $aggregate->componentRef !== $price->componentRef
                 || $aggregate->windowStartMicros !== $inputs->periodStartMicros || $aggregate->windowEndMicros !== $inputs->periodEndMicros
@@ -99,6 +104,7 @@ final readonly class RatingComputation implements RatingQuoter
             $result = $this->strategies->resolve(id: $snapshot->strategyId, version: $snapshot->strategyVersion)->price(
                 new PricingInput(price: $snapshot, quantity: $aggregate->quantity,
                     commitmentBasis: $commitment === null ? null : new CommitmentBasis(alreadyBilledNetMinor: $price->alreadyBilledNetMinor ?? '', basisDigest: $price->commitmentBasisDigest ?? '')));
+            $rawPricedAmount = $result->pricedAmount;
             if ($proration !== null) {
                 $minor = (new ProrationCalculator)->prorateMinor(fullMajor: Dec::parse($result->pricedAmount), exponent: $inputs->currencyExponent,
                     elapsed: $proration['elapsed'], total: $proration['total'], roundingMode: $snapshot->roundingMode->value);
@@ -108,9 +114,11 @@ final readonly class RatingComputation implements RatingQuoter
             }
             $priced[$i] = $result;
             $group = CanonicalJson::digest([$tax->jurisdiction, $tax->taxCode, $tax->mode, $tax->rate, $tax->snapshot->noTaxReason,
-                $snapshot->roundingMode, $snapshot->roundingPolicyVersion]);
+                $snapshot->roundingMode, $snapshot->roundingPolicyVersion, $snapshot->roundingStage]);
             $key = 'line:'.str_pad((string) ($i + 1), 3, '0', STR_PAD_LEFT);
-            $groups[$group][$key] = $result->pricedAmount;
+            $groups[$group][$key] = match ($snapshot->roundingStage) {
+                RoundingStage::AfterTax => $proration !== null ? $rawPricedAmount : $result->pricedAmount,
+            };
             $groupFor[$i] = [$group, $key];
         }
         $allocated = [];
@@ -118,7 +126,10 @@ final readonly class RatingComputation implements RatingQuoter
             if (! isset($allocated[$group])) {
                 $price = $inputs->prices[$i]->snapshot;
                 $allocated[$group] = $this->taxes->calculateSnapshot(amounts: $groups[$group], snapshot: $inputs->taxes[$i]->snapshot,
-                    exp: $inputs->currencyExponent, rounding: $price->roundingMode->value, commitment: $price->commitment);
+                    exp: $inputs->currencyExponent, rounding: $price->roundingMode->value, commitment: $price->commitment,
+                    proration: match ($price->roundingStage) {
+                        RoundingStage::AfterTax => $proration
+                    });
             }
         }
         $lines = [];

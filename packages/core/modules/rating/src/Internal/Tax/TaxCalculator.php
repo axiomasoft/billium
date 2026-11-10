@@ -11,15 +11,18 @@ use Billium\Rating\Data\Tax\TaxSnapshot;
 use Billium\Rating\Internal\Math\Dec;
 use Billium\Rating\Internal\Math\IntegerRounding;
 use Billium\Rating\Internal\Math\LargestRemainder;
+use Billium\Rating\Internal\Proration\ProrationCalculator;
+use Billium\Rating\Internal\Storage\RatingRows;
 use InvalidArgumentException;
 
 final class TaxCalculator
 {
     /**
      * @param  array<string, string>  $amounts
+     * @param  array{elapsed: string, total: string}|null  $proration
      * @return array<string, array{net:string, tax:string, gross:string, residual:string}>
      */
-    public function calculate(array $amounts, string $mode, string $rate, int $exp, string $rounding, ?string $noTaxReason = null, ?CommitmentTerms $commitment = null): array
+    public function calculate(array $amounts, string $mode, string $rate, int $exp, string $rounding, ?string $noTaxReason = null, ?CommitmentTerms $commitment = null, ?array $proration = null): array
     {
         try {
             $r = Dec::parse($rate);
@@ -47,50 +50,56 @@ final class TaxCalculator
             $sign = $current === 0 ? $sign : $current;
         }
         if ($mode === 'inclusive') {
-            return $this->inclusive($amounts, $r, $exp, $rounding, $sign < 0);
+            return $this->inclusive($amounts, $r, $exp, $rounding, $sign < 0, $proration);
         }
 
-        return $this->exclusive($amounts, $r, $exp, $rounding, $sign < 0);
+        return $this->exclusive($amounts, $r, $exp, $rounding, $sign < 0, $proration);
     }
 
     /** @param array<string, string> $amounts
+     * @param  array{elapsed: string, total: string}|null  $proration
      * @return array<string, array{net:string, tax:string, gross:string, residual:string}>
      */
-    public function calculateSnapshot(array $amounts, TaxSnapshot $snapshot, int $exp, string $rounding, ?CommitmentTerms $commitment = null): array
+    public function calculateSnapshot(array $amounts, TaxSnapshot $snapshot, int $exp, string $rounding, ?CommitmentTerms $commitment = null, ?array $proration = null): array
     {
         if ($snapshot->snapshotRef === '' || $snapshot->jurisdiction === '' || $snapshot->taxCode === '' || $snapshot->resolver === '' || $snapshot->resolverVersion === '' || $snapshot->inputDigest === '' || $snapshot->evidenceDigest === '') {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.rating.terms_invalid: incomplete tax evidence');
         }
 
-        return $this->calculate(amounts: $amounts, mode: $snapshot->mode->value, rate: $snapshot->rate, exp: $exp, rounding: $rounding, noTaxReason: $snapshot->noTaxReason, commitment: $commitment);
+        return $this->calculate(amounts: $amounts, mode: $snapshot->mode->value, rate: $snapshot->rate, exp: $exp, rounding: $rounding, noTaxReason: $snapshot->noTaxReason, commitment: $commitment, proration: $proration);
     }
 
     /**
      * @param  array<string, string>  $amounts
+     * @param  array{elapsed: string, total: string}|null  $proration
      * @return array<string, array{net:string, tax:string, gross:string, residual:string}>
      */
-    private function exclusive(array $amounts, Dec $rate, int $exp, string $mode, bool $negative): array
+    private function exclusive(array $amounts, Dec $rate, int $exp, string $mode, bool $negative, ?array $proration): array
     {
         $net = $taxes = [];
-        $sum = Dec::parse('0');
         $scale = 0;
         foreach ($amounts as $key => $amount) {
             $value = Dec::parse($amount);
-            $net[$key] = $value->toMinor(exponent: $exp, mode: $mode);
+            $net[$key] = $this->minor(value: $value, exp: $exp, mode: $mode, proration: $proration);
             $taxes[$key] = $value->mul($rate);
-            $sum = $sum->add($taxes[$key]);
             $scale = max($scale, $taxes[$key]->scale);
         }
-        $den = bcpow('10', (string) $scale, 0);
+        $elapsed = RatingRows::decimal($proration['elapsed'] ?? '1');
+        $den = bcmul(bcpow('10', (string) $scale, 0), RatingRows::decimal($proration['total'] ?? '1'), 0);
         $nums = [];
+        $sumNum = '0';
         foreach ($taxes as $key => $tax) {
-            $nums[$key] = bcmul(ltrim($tax->rescale($scale)->unscaled, '-'), bcpow('10', (string) $exp, 0), 0);
+            // Keep the fraction rational through group rounding and largest-remainder allocation.
+            $num = bcmul(bcmul($tax->rescale($scale)->unscaled, $elapsed, 0), bcpow('10', (string) $exp, 0), 0);
+            $nums[$key] = ltrim($num, '-');
+            $sumNum = bcadd($sumNum, $num, 0);
         }
-        $allocation = LargestRemainder::allocate(nums: $nums, den: $den, target: ltrim($sum->toMinor(exponent: $exp, mode: $mode), '-'));
+        $target = IntegerRounding::divide(num: $sumNum, den: $den, mode: $mode);
+        $allocation = LargestRemainder::allocate(nums: $nums, den: $den, target: ltrim($target, '-'));
         $result = [];
         foreach ($net as $key => $value) {
             $tax = $negative ? bcsub('0', $allocation[$key], 0) : $allocation[$key];
-            $result[$key] = ['net' => $value, 'tax' => $tax, 'gross' => bcadd($value, $tax, 0), 'residual' => bcsub($allocation[$key], bcdiv($nums[$key], $den, 0), 0)];
+            $result[$key] = ['net' => $value, 'tax' => $tax, 'gross' => bcadd(RatingRows::decimal($value), $tax, 0), 'residual' => bcsub($allocation[$key], bcdiv($nums[$key], $den, 0), 0)];
         }
 
         return $result;
@@ -98,30 +107,39 @@ final class TaxCalculator
 
     /**
      * @param  array<string, string>  $amounts
+     * @param  array{elapsed: string, total: string}|null  $proration
      * @return array<string, array{net:string, tax:string, gross:string, residual:string}>
      */
-    private function inclusive(array $amounts, Dec $rate, int $exp, string $mode, bool $negative): array
+    private function inclusive(array $amounts, Dec $rate, int $exp, string $mode, bool $negative, ?array $proration): array
     {
         $gross = [];
         $total = '0';
         foreach ($amounts as $key => $amount) {
-            $gross[$key] = Dec::parse($amount)->toMinor(exponent: $exp, mode: $mode);
-            $total = bcadd($total, $gross[$key], 0);
+            $gross[$key] = $this->minor(value: Dec::parse($amount), exp: $exp, mode: $mode, proration: $proration);
+            $total = bcadd($total, RatingRows::decimal($gross[$key]), 0);
         }
         $power = bcpow('10', (string) $rate->scale, 0);
         $den = bcadd($power, $rate->unscaled, 0);
         $target = IntegerRounding::divide(num: bcmul($total, $power, 0), den: $den, mode: $mode);
         $nums = [];
         foreach ($gross as $key => $value) {
-            $nums[$key] = bcmul(ltrim($value, '-'), $power, 0);
+            $nums[$key] = bcmul(RatingRows::decimal(ltrim($value, '-')), $power, 0);
         }
         $allocation = LargestRemainder::allocate(nums: $nums, den: $den, target: ltrim($target, '-'));
         $result = [];
         foreach ($gross as $key => $value) {
             $net = $negative ? bcsub('0', $allocation[$key], 0) : $allocation[$key];
-            $result[$key] = ['net' => $net, 'tax' => bcsub($value, $net, 0), 'gross' => $value, 'residual' => bcsub($allocation[$key], bcdiv($nums[$key], $den, 0), 0)];
+            $result[$key] = ['net' => $net, 'tax' => bcsub(RatingRows::decimal($value), $net, 0), 'gross' => $value, 'residual' => bcsub($allocation[$key], bcdiv($nums[$key], $den, 0), 0)];
         }
 
         return $result;
+    }
+
+    /** @param array{elapsed: string, total: string}|null $proration */
+    private function minor(Dec $value, int $exp, string $mode, ?array $proration): string
+    {
+        return $proration === null ? $value->toMinor(exponent: $exp, mode: $mode)
+            : (new ProrationCalculator)->prorateMinor(fullMajor: $value, exponent: $exp,
+                elapsed: $proration['elapsed'], total: $proration['total'], roundingMode: $mode);
     }
 }

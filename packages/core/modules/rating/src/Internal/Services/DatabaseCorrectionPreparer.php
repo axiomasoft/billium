@@ -25,10 +25,12 @@ use Billium\Rating\Internal\Corrections\CorrectionCalculator;
 use Billium\Rating\Internal\Corrections\CorrectionDigest;
 use Billium\Rating\Internal\Corrections\CorrectionInputs;
 use Billium\Rating\Internal\Corrections\TaxCorrectionGroup;
+use Billium\Rating\Internal\Pipeline\FixedOccurrenceInput;
 use Billium\Rating\Internal\Pipeline\RatingComputation;
 use Billium\Rating\Internal\Proration\AmendmentSupport;
 use Billium\Rating\Internal\Proration\ProrationCalculator;
 use Billium\Rating\Internal\Storage\CorrectionStore;
+use Billium\Rating\Internal\Storage\FrozenInputsCodec;
 use Billium\Rating\Internal\Storage\RatingRows;
 use Billium\Rating\Internal\Storage\RatingStore;
 use Billium\Rating\Internal\Storage\TaxPolicyFrontier;
@@ -42,9 +44,9 @@ use Throwable;
 final readonly class DatabaseCorrectionPreparer
 {
     public function __construct(private CallerContext $callers, private RatingStore $store, private CorrectionStore $corrections, private ScheduleQueries $schedule,
-        private AggregationQueries $usage, private LedgerQueries $ledger, private TaxSnapshotPort $tax,
+        private LedgerQueries $ledger, private TaxSnapshotPort $tax,
         private TaxPolicyFrontier $policyFrontier, private RatingComputation $rating, private CorrectionCalculator $calculator,
-        private AmendmentSupport $amendmentSupport, private ProrationCalculator $proration) {}
+        private AmendmentSupport $amendmentSupport, private ProrationCalculator $proration, private ?AggregationQueries $usage = null) {}
 
     public function prepare(PrepareCorrection $command): PreparedCorrection|RatingHold
     {
@@ -100,7 +102,19 @@ final readonly class DatabaseCorrectionPreparer
             RatingComputation::refuse('terms_invalid');
         }
         $aggregates = [];
-        foreach ($retained->aggregates as $aggregate) {
+        foreach ($retained->aggregates as $i => $aggregate) {
+            if (FixedOccurrenceInput::matches($aggregate)) {
+                // A correction frontier changes independently of the retained fixed source evidence.
+                $fixedInputs = $retained->correctionEvidence === null ? $retained : FrozenInputsCodec::decode(CanonicalJson::encode([
+                    ...get_object_vars($retained), 'sourceDigest' => RatingRows::text($aggregate->snapshot['sourceDigest'] ?? null)]));
+                FixedOccurrenceInput::assertValid(inputs: $fixedInputs, aggregate: $aggregate, price: $retained->prices[$i]->snapshot);
+                $aggregates[] = $aggregate;
+
+                continue;
+            }
+            if ($this->usage === null) {
+                return new RatingHold(reason: HoldReason::IncompleteSource, repairOrReplayRefs: [$aggregate->snapshotRef], detail: 'usage capability absent');
+            }
             $window = RatingRows::map($aggregate->snapshot['window'] ?? null);
             $selector = new WindowSelector(sellerRef: $retained->sellerRef, environment: $retained->environment,
                 metricRef: $aggregate->metricRef, metricVersion: $aggregate->metricVersion, groupKey: RatingRows::map($window['group'] ?? null),
@@ -225,7 +239,7 @@ final readonly class DatabaseCorrectionPreparer
 
     private function latePolicyHold(WindowSelector $selector): ?RatingHold
     {
-        $policy = $this->usage->latePolicy($selector);
+        $policy = ($this->usage ?? RatingComputation::refuse('usage_capability_absent'))->latePolicy($selector);
         if ($policy['policy'] === LatePolicy::Reject) {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.usage.late_rejected');
         }
