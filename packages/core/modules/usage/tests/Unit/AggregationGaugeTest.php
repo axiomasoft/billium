@@ -19,12 +19,18 @@ final class AggregationGaugeTest extends TestCase
             try {
                 $quantity = $this->reduce($case);
                 self::assertArrayNotHasKey('error', $case['expected']);
+                if (! isset($case['expected']['quantity'])) {
+                    self::fail('Successful gauge fixture has no expected quantity');
+                }
                 self::assertSame($case['expected']['quantity'], $quantity);
                 if (isset($case['variant_end_150'])) {
                     $case['window'] = $case['variant_end_150']['window'];
                     self::assertSame('7', $this->reduce($case));
                 }
             } catch (ProblemException $exception) {
+                if (! isset($case['expected']['error'])) {
+                    throw $exception;
+                }
                 self::assertSame($case['expected']['error'], $exception->detail);
             }
         }
@@ -71,6 +77,7 @@ final class AggregationGaugeTest extends TestCase
         self::assertSame('7', $this->reduce($case));
     }
 
+    /** @param array{policy: array{algorithm: string, scale: int, missingInitial?: string, carryForward?: bool, maxCarrySeconds?: int, unitSeconds?: int, rounding?: string, allowNegative?: bool}, window: array{int, int}, samples: list<array{fact: string, t: int, q?: string, rev?: int, retracted?: bool, src?: string, seq?: int|null, memberSeeds?: list<string>}>} $case */
     private function reduce(array $case): string
     {
         $effective = EffectiveRevisionSelector::select(

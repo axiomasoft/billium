@@ -179,7 +179,7 @@ final readonly class DatabaseEffectiveFactSource implements EffectiveFactSource
         $seconds = (int) IntegerRoundingAdapter::seconds($micros);
         $remainder = $micros - $seconds * 1_000_000;
 
-        return (new DateTimeImmutable('@'.$seconds))->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\\TH:i:s')
+        return new DateTimeImmutable('@'.$seconds)->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\\TH:i:s')
             .'.'.str_pad((string) $remainder, 6, '0', STR_PAD_LEFT).'000';
     }
 }

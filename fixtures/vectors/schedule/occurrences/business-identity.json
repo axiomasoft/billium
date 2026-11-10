@@ -1,123 +1,154 @@
 {
-  "schema": "billium.schedule.occurrences/1",
-  "owners": [
+  "id": "schedule/occurrences/business-identity",
+  "description": "P4 PHP occurrence algorithm fixture; canonical digest conformance checks fixture integrity only.",
+  "spec_refs": [
     "D12",
     "D56",
     "D63",
     "INV-11"
   ],
-  "businessIdentity": [
-    "seller",
-    "environment",
-    "component",
-    "purpose",
-    "startMicros",
-    "endMicros"
+  "profiles": [
+    "php"
   ],
-  "excludedFromIdentity": [
-    "scheduleRef",
-    "scheduleRevision",
-    "commandKey",
-    "inputsDigest"
-  ],
-  "cases": [
-    {
-      "id": "replay_across_revision",
-      "first": {
-        "revision": 1,
-        "key": "a"
-      },
-      "second": {
-        "revision": 2,
-        "key": "b"
-      },
-      "expect": {
-        "normalOccurrences": 1,
-        "secondCreated": false
-      }
-    },
-    {
-      "id": "changed_inputs",
-      "expect": {
-        "detail": "billium.occurrence.inputs_changed",
-        "normalOccurrences": 1
-      }
-    },
-    {
-      "id": "overlap",
-      "expect": {
-        "detail": "billium.occurrence.overlap"
-      }
-    },
-    {
-      "id": "planned_replacement",
-      "expect": {
-        "old": "superseded",
-        "new": "planned"
-      }
-    },
-    {
-      "id": "posted_revision",
-      "expect": {
-        "originalByteIdentical": true,
-        "amendment": "amendment_required"
-      }
-    },
-    {
-      "id": "revived_interval",
-      "expect": {
-        "incarnation": 2
-      }
-    },
-    {
-      "id": "correction_frontier_replay",
-      "expect": {
-        "children": 1,
-        "secondCreated": false,
-        "parentByteIdentical": true
-      }
-    },
-    {
-      "id": "correction_cas_stale",
-      "expect": {
-        "detail": "billium.correction.frontier_stale"
-      }
-    },
-    {
-      "id": "scheduler_period_boundary_crash",
-      "expect": {
-        "beforeRestart": {
-          "occurrences": 0,
-          "cursor": 0
-        },
-        "afterRestart": {
-          "occurrences": 1,
-          "cursor": 1
-        }
-      }
-    },
-    {
-      "id": "parallel_jobs",
-      "workers": 5,
-      "expect": {
-        "occurrences": 1,
-        "createdCount": 1,
-        "replayedBusinessCount": 4
-      }
-    },
-    {
-      "id": "forbidden_purposes",
-      "purposes": [
-        "entitlement_grant",
-        "collection_step",
-        "collection_retry",
-        "correction",
-        "anything_else"
+  "given": {
+    "occurrence": {
+      "schema": "billium.schedule.occurrences/1",
+      "owners": [
+        "D12",
+        "D56",
+        "D63",
+        "INV-11"
       ],
-      "expect": {
-        "detail": "billium.occurrence.purpose_rejected"
+      "businessIdentity": [
+        "seller",
+        "environment",
+        "component",
+        "purpose",
+        "startMicros",
+        "endMicros"
+      ],
+      "excludedFromIdentity": [
+        "scheduleRef",
+        "scheduleRevision",
+        "commandKey",
+        "inputsDigest"
+      ],
+      "cases": [
+        {
+          "id": "replay_across_revision",
+          "first": {
+            "revision": 1,
+            "key": "a"
+          },
+          "second": {
+            "revision": 2,
+            "key": "b"
+          },
+          "expect": {
+            "normalOccurrences": 1,
+            "secondCreated": false
+          }
+        },
+        {
+          "id": "changed_inputs",
+          "expect": {
+            "detail": "billium.occurrence.inputs_changed",
+            "normalOccurrences": 1
+          }
+        },
+        {
+          "id": "overlap",
+          "expect": {
+            "detail": "billium.occurrence.overlap"
+          }
+        },
+        {
+          "id": "planned_replacement",
+          "expect": {
+            "old": "superseded",
+            "new": "planned"
+          }
+        },
+        {
+          "id": "posted_revision",
+          "expect": {
+            "originalByteIdentical": true,
+            "amendment": "amendment_required"
+          }
+        },
+        {
+          "id": "revived_interval",
+          "expect": {
+            "incarnation": 2
+          }
+        },
+        {
+          "id": "correction_frontier_replay",
+          "expect": {
+            "children": 1,
+            "secondCreated": false,
+            "parentByteIdentical": true
+          }
+        },
+        {
+          "id": "correction_cas_stale",
+          "expect": {
+            "detail": "billium.correction.frontier_stale"
+          }
+        },
+        {
+          "id": "scheduler_period_boundary_crash",
+          "expect": {
+            "beforeRestart": {
+              "occurrences": 0,
+              "cursor": 0
+            },
+            "afterRestart": {
+              "occurrences": 1,
+              "cursor": 1
+            }
+          }
+        },
+        {
+          "id": "parallel_jobs",
+          "workers": 5,
+          "expect": {
+            "occurrences": 1,
+            "createdCount": 1,
+            "replayedBusinessCount": 4
+          }
+        },
+        {
+          "id": "forbidden_purposes",
+          "purposes": [
+            "entitlement_grant",
+            "collection_step",
+            "collection_retry",
+            "correction",
+            "anything_else"
+          ],
+          "expect": {
+            "detail": "billium.occurrence.purpose_rejected"
+          }
+        }
+      ]
+    }
+  },
+  "script": [
+    {
+      "op": "canon.digest",
+      "args": {
+        "json_text": "{\"businessIdentity\":[\"seller\",\"environment\",\"component\",\"purpose\",\"startMicros\",\"endMicros\"],\"cases\":[{\"expect\":{\"normalOccurrences\":1,\"secondCreated\":false},\"first\":{\"key\":\"a\",\"revision\":1},\"id\":\"replay_across_revision\",\"second\":{\"key\":\"b\",\"revision\":2}},{\"expect\":{\"detail\":\"billium.occurrence.inputs_changed\",\"normalOccurrences\":1},\"id\":\"changed_inputs\"},{\"expect\":{\"detail\":\"billium.occurrence.overlap\"},\"id\":\"overlap\"},{\"expect\":{\"new\":\"planned\",\"old\":\"superseded\"},\"id\":\"planned_replacement\"},{\"expect\":{\"amendment\":\"amendment_required\",\"originalByteIdentical\":true},\"id\":\"posted_revision\"},{\"expect\":{\"incarnation\":2},\"id\":\"revived_interval\"},{\"expect\":{\"children\":1,\"parentByteIdentical\":true,\"secondCreated\":false},\"id\":\"correction_frontier_replay\"},{\"expect\":{\"detail\":\"billium.correction.frontier_stale\"},\"id\":\"correction_cas_stale\"},{\"expect\":{\"afterRestart\":{\"cursor\":1,\"occurrences\":1},\"beforeRestart\":{\"cursor\":0,\"occurrences\":0}},\"id\":\"scheduler_period_boundary_crash\"},{\"expect\":{\"createdCount\":1,\"occurrences\":1,\"replayedBusinessCount\":4},\"id\":\"parallel_jobs\",\"workers\":5},{\"expect\":{\"detail\":\"billium.occurrence.purpose_rejected\"},\"id\":\"forbidden_purposes\",\"purposes\":[\"entitlement_grant\",\"collection_step\",\"collection_retry\",\"correction\",\"anything_else\"]}],\"excludedFromIdentity\":[\"scheduleRef\",\"scheduleRevision\",\"commandKey\",\"inputsDigest\"],\"owners\":[\"D12\",\"D56\",\"D63\",\"INV-11\"],\"schema\":\"billium.schedule.occurrences/1\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "digest": {
+          "golden": "canon/digest/schedule-business-identity-digest.txt"
+        }
       }
     }
   ]
 }
-

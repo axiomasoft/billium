@@ -111,4 +111,9 @@ return new class extends Migration
         DB::unprepared('GRANT UPDATE (agreement_revision,cancellation_generation,funding_revision,action,effective_at,covered_until,terms)
             ON TABLE public.billium_schedule_component TO '.$role);
     }
+
+    public function down(): never
+    {
+        throw new LogicException('forward-only (REQ-FAIL-29)');
+    }
 };

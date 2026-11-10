@@ -42,7 +42,7 @@ final readonly class DatabaseCorrectionCreditParticipants implements CorrectionC
             array_push($payments, ...$state['payments']);
             array_push($credits, ...$state['credits']);
         }
-        (new AllocateLockPlan(intents: $intents, obligations: $obligations, invoices: $invoices, payments: $payments, credits: $credits))->lock($context);
+        new AllocateLockPlan(intents: $intents, obligations: $obligations, invoices: $invoices, payments: $payments, credits: $credits)->lock($context);
         foreach ($commands as $index => $command) {
             if ($this->creditNotes->correctionPlan($context, $command) !== $states[$index]) {
                 throw new LockPlanChanged('correction credit plan changed');

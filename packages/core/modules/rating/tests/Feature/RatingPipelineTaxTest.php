@@ -22,6 +22,8 @@ final class RatingPipelineTaxTest extends RatingTestCase
         $replay = $this->application()->make(RatingQueries::class)->replay($receipt->basisRef);
         self::assertSame($prepared->draft->ratedDigest, $replay->ratedDigest);
         $line = $replay->lines[0];
+        self::assertTrue(is_numeric($line->netMinor));
+        self::assertTrue(is_numeric($line->taxMinor));
         self::assertSame($line->grossMinor, bcadd($line->netMinor, $line->taxMinor, 0));
         self::assertStringContainsString('0.03', $line->intermediatesJson);
         self::assertSame(1, $this->value('SELECT residual_minor FROM billium_rating_rated_line'));

@@ -26,25 +26,20 @@ final class UsageAdmissionProviderTest extends TestCase
         $app->register(BilliumCoreServiceProvider::class);
         self::assertFalse($app->bound(Usage::class));
         self::assertArrayNotHasKey(UsageServiceProvider::class, $app->getLoadedProviders());
-        self::assertSame(['platform', 'ledger'], $app['config']->get('billium.modules.enabled'));
-        self::assertSame(2, ModuleCatalog::packaged()->descriptor('usage')->currentSchemaVersion);
+        self::assertSame(['platform', 'ledger'], $app->make(\Illuminate\Contracts\Config\Repository::class)->get('billium.modules.enabled'));
+        $descriptor = ModuleCatalog::packaged()->descriptor('usage');
+        self::assertNotNull($descriptor);
+        self::assertSame(2, $descriptor->currentSchemaVersion);
         Container::setInstance(null);
     }
 
     public function test_explicit_host_enable_discovers_owned_provider_without_booting_or_installing(): void
     {
         $app = new Application(dirname(__DIR__, 6));
-        $app->instance('config', new Repository(['billium' => [
-            'modules' => ['enabled' => ['platform', 'ledger', 'usage']], 'usage' => ['enabled' => true],
-        ]]));
+        $app->instance('config', new Repository(['billium' => ['modules' => ['enabled' => ['platform', 'ledger', 'usage']], 'usage' => ['enabled' => true]]]));
         $app->register(BilliumCoreServiceProvider::class);
         self::assertTrue($app->bound(Usage::class));
-        foreach ([
-            AggregationService::class,
-            AggregationQueries::class,
-            AggregationParticipants::class,
-            SourceCompletenessIntake::class,
-        ] as $contract) {
+        foreach ([AggregationService::class, AggregationQueries::class, AggregationParticipants::class, SourceCompletenessIntake::class] as $contract) {
             self::assertTrue($app->bound($contract));
         }
         self::assertArrayHasKey(UsageServiceProvider::class, $app->getLoadedProviders());

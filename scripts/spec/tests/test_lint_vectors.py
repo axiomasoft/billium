@@ -131,7 +131,10 @@ class LintVectorsTest(CorpusCopy):
         self.assert_red("control golden canon/digest/control-wrong-golden.txt equals the oracle output")
 
     def test_no_control_vector(self) -> None:
-        self.edit_vector("canon/digest/control-wrong-golden", lambda d: d.pop("control"))
+        for path in self.vectors.rglob("*.json"):
+            document = json.loads(path.read_text(encoding="utf-8"))
+            if "control" in document:
+                self.edit_vector(document["id"], lambda d: d.pop("control"))
         self.assert_red("no control vector")
 
     def test_missing_golden(self) -> None:

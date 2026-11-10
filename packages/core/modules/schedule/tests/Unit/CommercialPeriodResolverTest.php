@@ -6,6 +6,7 @@ namespace Billium\Schedule\Tests\Unit;
 
 use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Core\Tests\Support\FixtureArguments;
 use Billium\Schedule\Data\PeriodPolicy;
 use Billium\Schedule\Data\PeriodQuote;
 use Billium\Schedule\Data\ScheduleRevisionTerms;
@@ -18,19 +19,22 @@ use PHPUnit\Framework\TestCase;
 
 final class CommercialPeriodResolverTest extends TestCase
 {
+    /** @return \Generator<string, array{array{id: string, anchor: string, ordinal: int, policy: array<string, string|int>, refusal?: string, start?: string, end?: string, resolvedStart?: string}}> */
     public static function boundaries(): iterable
     {
         $path = dirname(__DIR__, 6).'/fixtures/vectors/schedule/periods/calendar-cases.json';
-        foreach (json_decode(file_get_contents($path), true, 64, JSON_THROW_ON_ERROR)['given']['cases'] as $case) {
+        /** @var array{given: array{cases: list<array{id: string, anchor: string, ordinal: int, policy: array<string, string|int>, refusal?: string, start?: string, end?: string, resolvedStart?: string}>}} $fixture */
+        $fixture = json_decode((string) file_get_contents($path), true, 64, JSON_THROW_ON_ERROR);
+        foreach ($fixture['given']['cases'] as $case) {
             yield $case['id'] => [$case];
         }
     }
 
-    /** @param array<string, mixed> $case */
+    /** @param array{id: string, anchor: string, ordinal: int, policy: array<string, string|int>, refusal?: string, start?: string, end?: string, resolvedStart?: string} $case */
     #[DataProvider('boundaries')]
     public function test_explicit_calendar_boundaries(array $case): void
     {
-        $policy = new PeriodPolicy(...$case['policy']);
+        $policy = FixtureArguments::construct(class: PeriodPolicy::class, arguments: $case['policy']);
         $terms = Terms::make(['anchorLocal' => $case['anchor'], 'policy' => $policy]);
         $resolver = new CalendarIntervalResolver;
         if (isset($case['refusal'])) {
@@ -38,10 +42,13 @@ final class CommercialPeriodResolverTest extends TestCase
             $this->expectExceptionMessage($case['refusal']);
         }
         $period = $resolver->resolve(terms: $terms, ordinal: $case['ordinal']);
+        if (! isset($case['start'], $case['end'])) {
+            self::fail('Successful calendar fixture has no expected boundaries');
+        }
         self::assertSame($case['start'], $period->start);
         self::assertSame($case['end'], $period->end);
         if (isset($case['resolvedStart'])) {
-            self::assertSame($case['resolvedStart'], $period->evidence['start']['resolvedLocal']);
+            self::assertSame($case['resolvedStart'], self::arrayValue($period->evidence['start'])['resolvedLocal']);
         }
         self::assertTrue($period->contains(new DateTimeImmutable($period->start)));
         self::assertFalse($period->contains(new DateTimeImmutable($period->end)));
@@ -62,7 +69,7 @@ final class CommercialPeriodResolverTest extends TestCase
             self::assertSame($february->end, $march->start);
             self::assertSame('2024-03-31T00:00:00Z', $march->start);
             self::assertSame($february->digest(), $resolver->resolve(terms: $terms, ordinal: 1)->digest());
-            self::assertNotSame(30 * 86400, (new DateTimeImmutable($january->end))->getTimestamp() - (new DateTimeImmutable($january->start))->getTimestamp());
+            self::assertNotSame(30 * 86400, new DateTimeImmutable($january->end)->getTimestamp() - new DateTimeImmutable($january->start)->getTimestamp());
         } finally {
             date_default_timezone_set($original);
         }
@@ -74,7 +81,7 @@ final class CommercialPeriodResolverTest extends TestCase
         $period = (new CalendarIntervalResolver)->resolve(terms: $terms, ordinal: 0);
         self::assertSame('2024-01-30T23:00:00Z', $period->cutoffAt);
         $quote = new PeriodQuote(terms: $terms, ordinal: 0, period: $period, issuedAt: '2024-01-01T00:00:00Z', validUntil: '2024-01-20T00:00:00Z');
-        $wire = (new CommercialPeriodExport(new Codec))->fromQuote($quote);
+        $wire = new CommercialPeriodExport(new Codec)->fromQuote($quote);
         self::assertSame($period->start, $wire->interval->start);
         self::assertSame(31, $wire->anchor->day);
         self::assertSame($quote->digest, PeriodQuote::fromArray($quote->body())->digest);
@@ -87,19 +94,27 @@ final class CommercialPeriodResolverTest extends TestCase
         $quote = new PeriodQuote(terms: $terms, ordinal: 0, period: $period, issuedAt: '2024-01-01T00:00:00Z', validUntil: '2024-01-20T00:00:00Z');
         $this->expectException(ProblemException::class);
         $this->expectExceptionMessage('period_wire_policy_unsupported');
-        (new CommercialPeriodExport(new Codec))->fromQuote($quote);
+        new CommercialPeriodExport(new Codec)->fromQuote($quote);
     }
 
     public function test_unknown_fixed_duration_and_proration_policies_are_not_approximated(): void
     {
         foreach ([['frequency' => 'fixed_30_days'], ['calendarPolicy' => 'process_timezone/1'], ['prorationPolicy' => 'midperiod/unknown']] as $override) {
             try {
-                new PeriodPolicy(...['timezone' => 'Etc/UTC', 'frequency' => 'month', ...$override]);
+                FixtureArguments::construct(class: PeriodPolicy::class, arguments: ['timezone' => 'Etc/UTC', 'frequency' => 'month', ...$override]);
                 self::fail('unregistered policy accepted');
             } catch (ProblemException $exception) {
                 self::assertStringContainsString('unsupported_period_policy', $exception->detail);
             }
         }
+    }
+
+    /** @return array<mixed> */
+    private static function arrayValue(mixed $value): array
+    {
+        self::assertIsArray($value);
+
+        return $value;
     }
 
     public function test_unknown_commercial_fields_are_refused_during_hydration(): void

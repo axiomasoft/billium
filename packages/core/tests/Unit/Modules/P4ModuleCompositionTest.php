@@ -7,6 +7,7 @@ namespace Billium\Core\Tests\Unit\Modules;
 use Billium\Core\BilliumCoreServiceProvider;
 use Billium\Core\Enums\Modules\CompatibilityFindingCode as Code;
 use Billium\Rating\Contracts\RatingQuoter;
+use Billium\Schedule\Internal\ScheduleServiceProvider;
 use Billium\Usage\Contracts\Usage;
 use Illuminate\Config\Repository;
 use Illuminate\Container\Container;
@@ -40,7 +41,7 @@ final class P4ModuleCompositionTest extends ModuleTestCase
                 'rating' => ['enabled' => true], 'usage' => ['enabled' => false], 'schedule' => ['enabled' => true]]]));
             $app->register(BilliumCoreServiceProvider::class);
             self::assertFalse($app->bound(Usage::class));
-            self::assertArrayNotHasKey('Billium\\Schedule\\Internal\\ScheduleServiceProvider', $app->getLoadedProviders());
+            self::assertArrayNotHasKey(ScheduleServiceProvider::class, $app->getLoadedProviders());
             self::assertInstanceOf(RatingQuoter::class, $app->make(RatingQuoter::class));
         } finally {
             Container::setInstance(null);

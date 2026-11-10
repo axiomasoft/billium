@@ -8,6 +8,7 @@ use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\CallerContext;
 use Billium\Core\Data\Caller;
+use Billium\Core\Tests\Support\FixtureArguments;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Platform\Tests\PlatformTestCase;
 use Billium\Rating\Contracts\PriceVersionStore;
@@ -29,20 +30,24 @@ use Billium\Rating\Enums\TaxSnapshotKind;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
 use Billium\Rating\Internal\RatingServiceProvider;
 use DateTimeImmutable;
+use Illuminate\Contracts\Config\Repository;
+use Illuminate\Foundation\Application;
 use Throwable;
 
 final class PricingStrategyRegistryTest extends PlatformTestCase
 {
+    /** @param Application $app */
     protected function getPackageProviders($app): array
     {
         return [...parent::getPackageProviders($app), RatingServiceProvider::class];
     }
 
+    /** @param Application $app */
     protected function defineEnvironment($app): void
     {
         parent::defineEnvironment($app);
-        $app['config']->set('billium.modules.enabled', ['platform', 'ledger', 'rating']);
-        $app['config']->set('billium.rating.enabled', true);
+        $app->make(Repository::class)->set('billium.modules.enabled', ['platform', 'ledger', 'rating']);
+        $app->make(Repository::class)->set('billium.rating.enabled', true);
     }
 
     protected function setUp(): void
@@ -55,14 +60,10 @@ final class PricingStrategyRegistryTest extends PlatformTestCase
 
     private function price(string $amount): PriceVersion
     {
-        $args = ['sellerRef' => 'seller-a', 'priceRef' => 'monthly', 'version' => 1, 'strategyId' => StrategyId::Fixed, 'strategyVersion' => 1,
-            'currency' => 'USD', 'currencyExponent' => 2, 'exponentVersion' => 'ISO4217-2026-10', 'unit' => 'component',
-            'quantityRules' => new QuantityRules(quantityScale: 0, conversionNumerator: '1', conversionDenominator: '1', billingIncrement: '1', incrementMode: IncrementMode::None),
-            'terms' => new FixedTerms(amount: $amount, scope: 'per_component_occurrence'), 'roundingMode' => RoundingMode::HalfUp,
-            'roundingStage' => RoundingStage::AfterTax, 'roundingPolicyVersion' => 'test', 'commitment' => null];
-        $draft = new PriceVersion(...$args, termsDigest: 'draft');
+        $args = ['sellerRef' => 'seller-a', 'priceRef' => 'monthly', 'version' => 1, 'strategyId' => StrategyId::Fixed, 'strategyVersion' => 1, 'currency' => 'USD', 'currencyExponent' => 2, 'exponentVersion' => 'ISO4217-2026-10', 'unit' => 'component', 'quantityRules' => new QuantityRules(quantityScale: 0, conversionNumerator: '1', conversionDenominator: '1', billingIncrement: '1', incrementMode: IncrementMode::None), 'terms' => new FixedTerms(amount: $amount, scope: 'per_component_occurrence'), 'roundingMode' => RoundingMode::HalfUp, 'roundingStage' => RoundingStage::AfterTax, 'roundingPolicyVersion' => 'test', 'commitment' => null];
+        $draft = FixtureArguments::construct(class: PriceVersion::class, arguments: [...$args, 'termsDigest' => 'draft']);
 
-        return new PriceVersion(...$args, termsDigest: CanonicalJson::termsDigest($draft));
+        return FixtureArguments::construct(class: PriceVersion::class, arguments: [...$args, 'termsDigest' => CanonicalJson::termsDigest($draft)]);
     }
 
     public function test_pricing_strategy_publication_is_atomic_immutable_and_replay_safe(): void
@@ -120,9 +121,7 @@ final class PricingStrategyRegistryTest extends PlatformTestCase
                     throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.rating.tax_rate_missing');
                 }
 
-                return new TaxSnapshot(snapshotRef: 'test-tax', kind: TaxSnapshotKind::Standard, mode: TaxMode::Exclusive,
-                    jurisdiction: 'TEST', taxCode: 'TEST', rate: '0.2000', effectiveDate: new DateTimeImmutable('2026-01-01'), taxPoint: $request->taxPoint,
-                    noTaxReason: null, resolver: 'test-host', resolverVersion: '1', inputDigest: $request->inputDigest, evidenceDigest: 'test-evidence');
+                return new TaxSnapshot(snapshotRef: 'test-tax', kind: TaxSnapshotKind::Standard, mode: TaxMode::Exclusive, jurisdiction: 'TEST', taxCode: 'TEST', rate: '0.2000', effectiveDate: new DateTimeImmutable('2026-01-01'), taxPoint: $request->taxPoint, noTaxReason: null, resolver: 'test-host', resolverVersion: '1', inputDigest: $request->inputDigest, evidenceDigest: 'test-evidence');
             }
 
             public function resolveCorrection(TaxCorrectionRequest $request): TaxCorrectionPolicySnapshot

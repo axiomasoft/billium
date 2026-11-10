@@ -1,0 +1,11 @@
+{
+  "id": "p4-advance-codecs/1",
+  "owner": "PLAN1.P4.10",
+  "decision": "D56",
+  "layer": "wire-codec-only",
+  "cases": [
+    {"base": "fixtures/vectors/rating/contracts/price-fixed.json", "chargeTiming": "advance", "quantityBasis": "fixed"},
+    {"base": "fixtures/vectors/rating/contracts/price.json", "chargeTiming": "advance", "quantityBasis": "approved_snapshot"}
+  ],
+  "expectation": "rating.price.v1 accepts explicit advance fixed/approved snapshot; this does not prove advance usage settlement"
+}

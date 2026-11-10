@@ -121,7 +121,7 @@ return new class extends Migration
             CREATE TRIGGER billium_rating_commitment_immutable BEFORE UPDATE OR DELETE ON public.billium_rating_commitment_term FOR EACH ROW EXECUTE FUNCTION public.billium_append_only();
             CREATE TRIGGER billium_rating_tax_immutable BEFORE UPDATE OR DELETE ON public.billium_rating_tax_snapshot FOR EACH ROW EXECUTE FUNCTION public.billium_append_only();
 
-            CREATE FUNCTION public.billium_rating_check_price_shape() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,pg_temp AS $$
+            CREATE OR REPLACE FUNCTION public.billium_rating_check_price_shape() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,pg_temp AS $$
             DECLARE v_id bigint; v record; r record; previous_upper numeric; n integer := 0; unbounded integer := 0;
             BEGIN
                 IF TG_TABLE_NAME = 'billium_rating_price_version' THEN v_id := NEW.id;
@@ -163,5 +163,10 @@ return new class extends Migration
         }
         // PostgreSQL requires UPDATE privilege for FOR UPDATE; the immutable trigger still forbids mutation.
         DB::unprepared('GRANT UPDATE (publication_key) ON TABLE public.billium_rating_price_publication TO '.$role);
+    }
+
+    public function down(): never
+    {
+        throw new LogicException('forward-only (REQ-FAIL-29)');
     }
 };

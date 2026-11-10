@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Usage\Tests\Feature;
 
+use Billium\Core\Tests\Support\FixtureValues;
 use Billium\Usage\Internal\Storage\EffectiveFactSource;
 use Billium\Usage\Tests\AggregationTestCase;
 use Billium\Usage\Tests\Support\AggregationVectors as V;
@@ -26,6 +27,7 @@ final class UsageReplayPermutationTest extends AggregationTestCase
         self::assertSame(720, $count);
     }
 
+    /** @param iterable<list<array{fact: string, t: int, q?: string, rev?: int, retracted?: bool, src?: string, seq?: int|null, memberSeeds?: list<string>}>> $permutations */
     private function replay(iterable $permutations): int
     {
         $this->policy(scale: 0);
@@ -45,7 +47,7 @@ final class UsageReplayPermutationTest extends AggregationTestCase
                 $source->revisions[] = $revision;
             }
             $snapshot = $this->freeze();
-            $digest ??= $snapshot['snapshotDigest'];
+            $digest ??= FixtureValues::text($snapshot['snapshotDigest']);
             self::assertSame('17', $snapshot['quantity']);
             self::assertSame($digest, $snapshot['snapshotDigest']);
             self::assertSame($vector['expected']['digest'], V::snapshot(raw: $vector, events: $permutation)->snapshotDigest);

@@ -149,7 +149,7 @@ final readonly class FrozenInputsBuilder
                 if ($tax->inputDigest !== $taxInputDigest) {
                     RatingComputation::refuse('tax_input_mismatch');
                 }
-            } catch (Throwable $error) {
+            } catch (Throwable) {
                 return new RatingHold(reason: HoldReason::MissingTax, repairOrReplayRefs: [], detail: 'tax resolution failed');
             }
             $scope = $price->commitment === null ? null : RatingComputation::commitmentScope(environment: $caller->environment, terms: $price->commitment);

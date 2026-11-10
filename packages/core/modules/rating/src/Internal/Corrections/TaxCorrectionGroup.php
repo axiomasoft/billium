@@ -16,12 +16,7 @@ final class TaxCorrectionGroup
             return false;
         }
         $first = CanonicalJson::encode($snapshots[0]);
-        foreach ($snapshots as $snapshot) {
-            if (CanonicalJson::encode($snapshot) !== $first) {
-                return false;
-            }
-        }
 
-        return true;
+        return array_all($snapshots, fn ($snapshot) => ! (CanonicalJson::encode($snapshot) !== $first));
     }
 }

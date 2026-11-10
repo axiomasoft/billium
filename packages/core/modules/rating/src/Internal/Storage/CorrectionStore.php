@@ -36,7 +36,7 @@ final readonly class CorrectionStore
             $query->whereIn('c.id', $this->store->query('correction')->select('id'));
         }
 
-        return array_values(array_map(static fn (mixed $ref): string => RatingRows::text($ref), $query->pluck('b.obligation_ref')->all()));
+        return array_values(array_map(RatingRows::text(...), $query->pluck('b.obligation_ref')->all()));
     }
 
     public function receipt(TransactionContext $context, stdClass $correction, string $currency): RatingCorrectionReceipt

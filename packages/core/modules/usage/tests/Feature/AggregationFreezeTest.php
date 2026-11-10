@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Billium\Usage\Tests\Feature;
 
 use Billium\Contracts\Contracts\Codec;
+use Billium\Contracts\Data\Envelopes\UsageFactV2;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\TransactionContext;
@@ -12,6 +13,7 @@ use Billium\Core\Data\Caller;
 use Billium\Core\Data\OperationSpec;
 use Billium\Core\Enums\FinancialMode;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
+use Billium\Core\Tests\Support\FixtureValues;
 use Billium\Usage\Contracts\AggregationParticipants;
 use Billium\Usage\Data\AggregateSnapshotRef;
 use Billium\Usage\Data\FreezeAggregate;
@@ -45,8 +47,7 @@ final class AggregationFreezeTest extends AggregationTestCase
         self::assertSame(1, $this->rows('billium_usage_aggregate_event'));
         self::assertSame(0, $this->rows('billium_outbox_event'));
         self::assertSame(0, $this->rows('billium_obligation'));
-        foreach (['billium_usage_aggregate_snapshot', 'billium_usage_aggregate_member', 'billium_usage_aggregate_event',
-            'billium_usage_source_completeness', 'billium_usage_aggregation_policy', 'billium_usage_source_finality_contract'] as $table) {
+        foreach (['billium_usage_aggregate_snapshot', 'billium_usage_aggregate_member', 'billium_usage_aggregate_event', 'billium_usage_source_completeness', 'billium_usage_aggregation_policy', 'billium_usage_source_finality_contract'] as $table) {
             try {
                 $this->owner()->statement("DELETE FROM {$table}");
                 self::fail('Append-only table was mutable: '.$table);
@@ -76,22 +77,17 @@ final class AggregationFreezeTest extends AggregationTestCase
         self::assertSame('pending', $status['progress']);
         self::assertArrayNotHasKey('quantity', $status);
         $this->domainRefusal(fn () => $this->assertCurrent($first), 'snapshot_superseded');
-        $late = $this->queries()->classifyLateFact(
-            window: $this->window(), observedAtMicros: self::micros($fact->eventAt),
-            factId: DatabaseEffectiveFactSource::identity(source: $fact->source, factId: $fact->factId), factRevision: 2,
-        );
+        $late = $this->queries()->classifyLateFact(window: $this->window(), observedAtMicros: self::micros($fact->eventAt), factId: DatabaseEffectiveFactSource::identity(source: $fact->source, factId: $fact->factId), factRevision: 2);
         self::assertSame(LateClass::PostFinal, $late->classification);
         self::assertSame($this->window()->startMicros, $late->window->startMicros);
-        $second = $this->freeze($first['snapshotDigest']);
+        $second = $this->freeze(FixtureValues::text($first['snapshotDigest']));
         self::assertSame(2, $second['snapshotRevision']);
         self::assertSame('10.000000000', $second['quantity']);
-        self::assertSame($first['snapshotDigest'], $this->queries()->snapshot($second['snapshotRef'])['predecessorDigest']);
+        self::assertSame($first['snapshotDigest'], $this->queries()->snapshot(FixtureValues::text($second['snapshotRef']))['predecessorDigest']);
         self::assertSame($before, $this->value('SELECT row_to_json(s)::text FROM billium_usage_aggregate_snapshot s WHERE snapshot_revision=1'));
         $this->domainRefusal(fn () => $this->assertCurrent($first), 'snapshot_superseded');
         $this->assertCurrent($second);
-        $this->domainRefusal(fn () => $this->queries()->classifyLateFact(
-            window: $this->window(), observedAtMicros: $this->window()->endMicros, factId: 'late', factRevision: 1,
-        ), 'original_window_mismatch');
+        $this->domainRefusal(fn () => $this->queries()->classifyLateFact(window: $this->window(), observedAtMicros: $this->window()->endMicros, factId: 'late', factRevision: 1), 'original_window_mismatch');
     }
 
     public function test_aggregation_reject_and_manual_review_leave_final_snapshot_unchanged(): void
@@ -201,7 +197,7 @@ final class AggregationFreezeTest extends AggregationTestCase
             $raw->factId = $id;
             $raw->metricVersion = $metric->metricVersion;
             $raw->metricDigest = $metric->digest;
-            $raw->value = (object) ['kind' => 'members', 'members' => array_map(static fn (string $s): string => hash('sha256', $s), $seeds)];
+            $raw->value = (object) ['kind' => 'members', 'members' => array_map(static fn (mixed $s): string => hash('sha256', self::text($s)), $seeds)];
         });
         $a = $make('A', ['m1', 'm2']);
         $this->usage()->submitUsageFact($a);
@@ -215,13 +211,13 @@ final class AggregationFreezeTest extends AggregationTestCase
         $raw->correction = (object) ['correctionRef' => 'distinct-correction', 'supersedesRevision' => 1, 'originalFactDigest' => $a->digest];
         $codec = new Codec;
         $raw->digest = $codec->digest($raw);
-        $this->usage()->submitUsageFact($codec->decode($codec->canonicalize($raw)));
+        $this->usage()->submitUsageFact(FixtureValues::instance($codec->decode($codec->canonicalize($raw)), UsageFactV2::class));
         $second = $this->aggregation()->freeze(new FreezeAggregate($window))->body();
         self::assertSame('3', $second['quantity']);
         self::assertNotSame($first['snapshotDigest'], $second['snapshotDigest']);
         self::assertSame(3, $this->rows('billium_usage_aggregate_distinct_member', 'snapshot_id=(SELECT id FROM billium_usage_aggregate_snapshot WHERE snapshot_revision=2)'));
         self::assertSame(1, $this->rows('billium_usage_aggregate_distinct_member', 'snapshot_id=(SELECT id FROM billium_usage_aggregate_snapshot WHERE snapshot_revision=2) AND member_id=?', [hash('sha256', 'm2')]));
-        $id = $this->value('SELECT id FROM billium_usage_aggregate_snapshot WHERE snapshot_revision=2');
+        $id = self::integer($this->value('SELECT id FROM billium_usage_aggregate_snapshot WHERE snapshot_revision=2'));
         try {
             self::connection('pgsql')->statement("SELECT public.billium_usage_erase_distinct_members('seller-a','test',ARRAY[{$id}]::bigint[])");
             self::fail('runtime may not erase retained membership');
@@ -229,7 +225,7 @@ final class AggregationFreezeTest extends AggregationTestCase
             self::assertSame('42501', $exception->getCode());
         }
         $this->owner()->statement("SELECT public.billium_usage_erase_distinct_members('seller-a','test',ARRAY[{$id}]::bigint[])");
-        self::assertSame('erased', $this->queries()->snapshot($second['snapshotRef'])['reproducibility']);
+        self::assertSame('erased', $this->queries()->snapshot(FixtureValues::text($second['snapshotRef']))['reproducibility']);
         self::assertSame(0, $this->rows('billium_usage_aggregate_distinct_member', 'snapshot_id=? AND member_id IS NOT NULL', [$id]));
         $this->domainRefusal(fn () => $this->aggregation()->freeze(new FreezeAggregate($window)), 'not_reproducible');
         $this->domainRefusal(fn () => $this->assertCurrent($second), 'not_reproducible');
@@ -241,11 +237,11 @@ final class AggregationFreezeTest extends AggregationTestCase
         $this->completeness();
         $this->usage()->submitUsageFact(UsageFixtures::fact());
         $this->owner()->unprepared(<<<'SQL'
-            CREATE FUNCTION public.billium_usage_test_event_failure() RETURNS trigger LANGUAGE plpgsql AS $$
-                BEGIN RAISE EXCEPTION 'event failure'; END $$;
-            CREATE TRIGGER billium_usage_test_event_failure BEFORE INSERT ON public.billium_usage_aggregate_event
-                FOR EACH ROW EXECUTE FUNCTION public.billium_usage_test_event_failure();
-            SQL);
+        CREATE FUNCTION public.billium_usage_test_event_failure() RETURNS trigger LANGUAGE plpgsql AS $$
+            BEGIN RAISE EXCEPTION 'event failure'; END $$;
+        CREATE TRIGGER billium_usage_test_event_failure BEFORE INSERT ON public.billium_usage_aggregate_event
+            FOR EACH ROW EXECUTE FUNCTION public.billium_usage_test_event_failure();
+        SQL);
         try {
             try {
                 $this->aggregation()->freeze(new FreezeAggregate(window: $this->window(), commandKey: 'rolled-back'));
@@ -269,35 +265,25 @@ final class AggregationFreezeTest extends AggregationTestCase
         $this->completeness();
         $first = $this->freeze();
         $this->callers->set(new Caller('seller-b', 'test', self::INSTALLATION, 'other', ['tariffler']));
-        $this->domainRefusal(fn () => $this->queries()->snapshot($first['snapshotRef']), 'snapshot_unknown');
+        $this->domainRefusal(fn () => $this->queries()->snapshot(FixtureValues::text($first['snapshotRef'])), 'snapshot_unknown');
         $this->domainRefusal(fn () => $this->queries()->windowStatus($this->window()), 'scope_denied');
     }
 
+    /** @param array<string, mixed> $receipt */
     private function assertCurrent(array $receipt): void
     {
-        $this->runner()->run(
-            spec: new OperationSpec(
-                commandKind: 'usage.test_current', sellerRef: 'seller-a', environment: 'test',
-                mode: FinancialMode::Administrative, operationClass: ModuleOperationClass::NewIntent, modules: ['platform', 'usage'],
-            ),
-            body: function (TransactionContext $context) use ($receipt): FreezeReceipt {
-                $this->application()->make(AggregationParticipants::class)->assertSnapshotCurrent(
-                    context: $context, ref: new AggregateSnapshotRef(snapshotRef: $receipt['snapshotRef'], snapshotDigest: $receipt['snapshotDigest']),
-                );
+        $this->runner()->run(spec: new OperationSpec(commandKind: 'usage.test_current', sellerRef: 'seller-a', environment: 'test', mode: FinancialMode::Administrative, operationClass: ModuleOperationClass::NewIntent, modules: ['platform', 'usage']), body: function (TransactionContext $context) use ($receipt): FreezeReceipt {
+            $this->application()->make(AggregationParticipants::class)->assertSnapshotCurrent(context: $context, ref: new AggregateSnapshotRef(snapshotRef: FixtureValues::text($receipt['snapshotRef']), snapshotDigest: FixtureValues::text($receipt['snapshotDigest'])));
 
-                return new FreezeReceipt([]);
-            },
-        )->orThrow();
+            return new FreezeReceipt([]);
+        })->orThrow();
     }
 
     public function test_aggregation_gauge_database_ties_and_carry_follow_the_registered_metric(): void
     {
         $metric = UsageFixtures::metric(static function (stdClass $raw): void {
             $raw->metricVersion = 'gauge/1';
-            $raw->model = (object) [
-                'id' => 'gauge', 'version' => 1, 'revisionPolicy' => 'highest_fact_revision',
-                'sampleReducer' => 'latest', 'tieBreak' => 'eventAt_source_factId',
-            ];
+            $raw->model = (object) ['id' => 'gauge', 'version' => 1, 'revisionPolicy' => 'highest_fact_revision', 'sampleReducer' => 'latest', 'tieBreak' => 'eventAt_source_factId'];
         });
         $this->usage()->registerMetric($metric);
         $this->policy(metric: $metric, algorithm: 'gauge_latest_as_of', carry: true);
@@ -312,31 +298,24 @@ final class AggregationFreezeTest extends AggregationTestCase
         }
         $window = $this->window($metric);
         self::assertSame('7.000000000', $this->aggregation()->freeze(new FreezeAggregate($window))->body()['quantity']);
-        $carried = new WindowSelector(
-            sellerRef: $window->sellerRef, environment: $window->environment, metricRef: $window->metricRef,
-            metricVersion: $window->metricVersion, groupKey: $window->groupKey,
-            startMicros: self::micros('2026-10-18T00:00:00Z'), endMicros: self::micros('2026-10-19T00:00:00Z'),
-        );
+        $carried = new WindowSelector(sellerRef: $window->sellerRef, environment: $window->environment, metricRef: $window->metricRef, metricVersion: $window->metricVersion, groupKey: $window->groupKey, startMicros: self::micros('2026-10-18T00:00:00Z'), endMicros: self::micros('2026-10-19T00:00:00Z'));
         $receipt = $this->aggregation()->freeze(new FreezeAggregate($carried))->body();
         self::assertSame('7.000000000', $receipt['quantity']);
-        self::assertSame(['carried' => true, 'declaredZero' => false], $this->queries()->snapshot($receipt['snapshotRef'])['reductionEvidence']);
+        self::assertSame(['carried' => true, 'declaredZero' => false], $this->queries()->snapshot(FixtureValues::text($receipt['snapshotRef']))['reductionEvidence']);
     }
 
     public function test_aggregation_gauge_declared_zero_is_persisted_as_evidence(): void
     {
         $metric = UsageFixtures::metric(static function (stdClass $raw): void {
             $raw->metricVersion = 'gauge-zero/1';
-            $raw->model = (object) [
-                'id' => 'gauge', 'version' => 1, 'revisionPolicy' => 'highest_fact_revision',
-                'sampleReducer' => 'latest', 'tieBreak' => 'eventAt_source_factId',
-            ];
+            $raw->model = (object) ['id' => 'gauge', 'version' => 1, 'revisionPolicy' => 'highest_fact_revision', 'sampleReducer' => 'latest', 'tieBreak' => 'eventAt_source_factId'];
         });
         $this->usage()->registerMetric($metric);
         $this->policy(metric: $metric, algorithm: 'gauge_latest_as_of', missingInitial: 'declared_zero');
         $this->completeness();
         $receipt = $this->aggregation()->freeze(new FreezeAggregate($this->window($metric)))->body();
         self::assertSame('0.000000000', $receipt['quantity']);
-        self::assertSame(['carried' => false, 'declaredZero' => true], $this->queries()->snapshot($receipt['snapshotRef'])['reductionEvidence']);
+        self::assertSame(['carried' => false, 'declaredZero' => true], $this->queries()->snapshot(FixtureValues::text($receipt['snapshotRef']))['reductionEvidence']);
     }
 
     public function test_aggregation_definition_digest_mismatch_never_writes_a_snapshot(): void
@@ -353,10 +332,8 @@ final class AggregationFreezeTest extends AggregationTestCase
         $this->completeness();
         $this->usage()->submitUsageFact(UsageFixtures::fact());
         $receipt = $this->freeze();
-        $this->owner()->table('billium_usage_aggregate_reproducibility_event')->insert([
-            'snapshot_id' => $this->value('SELECT id FROM billium_usage_aggregate_snapshot'), 'reproducibility' => 'retention_expired',
-        ]);
-        self::assertSame('retention_expired', $this->queries()->snapshot($receipt['snapshotRef'])['reproducibility']);
+        $this->owner()->table('billium_usage_aggregate_reproducibility_event')->insert(['snapshot_id' => $this->value('SELECT id FROM billium_usage_aggregate_snapshot'), 'reproducibility' => 'retention_expired']);
+        self::assertSame('retention_expired', $this->queries()->snapshot(FixtureValues::text($receipt['snapshotRef']))['reproducibility']);
         $this->domainRefusal(fn () => $this->freeze(), 'not_reproducible');
         $this->domainRefusal(fn () => $this->assertCurrent($receipt), 'not_reproducible');
         $status = $this->queries()->windowStatus($this->window());
@@ -370,10 +347,7 @@ final class AggregationFreezeTest extends AggregationTestCase
         $this->completeness();
         $this->usage()->submitUsageFact(UsageFixtures::fact());
         $this->freeze();
-        $this->application()->instance(
-            EffectiveFactSource::class,
-            new ReplayFactSource(UsageFixtures::metric()->digest),
-        );
+        $this->application()->instance(EffectiveFactSource::class, new ReplayFactSource(UsageFixtures::metric()->digest));
         $this->domainRefusal(fn () => $this->freeze(), 'not_reproducible');
         $status = $this->queries()->windowStatus($this->window());
         self::assertSame('held', $status['state']);

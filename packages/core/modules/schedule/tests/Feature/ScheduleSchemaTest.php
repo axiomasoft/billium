@@ -54,6 +54,7 @@ final class ScheduleSchemaTest extends ScheduleTestCase
     public function test_explicit_module_install_has_real_schema_and_exact_migration_checksum(): void
     {
         $descriptor = $this->application()->make(ModuleRegistry::class)->descriptor('schedule');
+        self::assertNotNull($descriptor);
         $migration = $descriptor->migrationIdentities[0];
         $path = dirname(__DIR__, 4).'/database/migrations/schedule/'.$migration->id.'.php';
         self::assertSame('sha256:'.hash_file('sha256', $path), $migration->checksum);

@@ -32,7 +32,7 @@ final class RoleRegistrationTest extends TestCase
     {
         $this->expectException(ProblemException::class);
         $this->expectExceptionMessage('strategy_unknown');
-        (new StrategyCatalog(strategies: []))->resolve(id: StrategyId::Fixed, version: 1);
+        new StrategyCatalog(strategies: [])->resolve(id: StrategyId::Fixed, version: 1);
     }
 
     public function test_duplicate_metric_role_is_refused(): void

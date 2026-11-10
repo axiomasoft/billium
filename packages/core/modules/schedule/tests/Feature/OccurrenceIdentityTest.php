@@ -6,6 +6,7 @@ namespace Billium\Schedule\Tests\Feature;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Schedule\Internal\OccurrenceConformance;
 use Billium\Schedule\Tests\OccurrenceTestCase;
 use Billium\Schedule\Tests\Support\Terms;
 
@@ -15,6 +16,7 @@ final class OccurrenceIdentityTest extends OccurrenceTestCase
     {
         $this->createSchedule();
         $handler = $this->application()->make('billium.conformance.schedule');
+        self::assertInstanceOf(OccurrenceConformance::class, $handler);
         $input = (object) ['sellerRef' => 'seller-a', 'environment' => 'test', 'scheduleRef' => 'schedule-a',
             'commandKey' => 'adapter-1', 'componentRef' => 'component-a', 'purpose' => 'recurring_charge',
             'periodStart' => '2024-01-31T00:00:00Z', 'periodEnd' => '2024-02-29T00:00:00Z',

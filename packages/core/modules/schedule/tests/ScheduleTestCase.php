@@ -14,6 +14,8 @@ use Billium\Schedule\Data\ScheduleRevisionTerms;
 use Billium\Schedule\Internal\ScheduleServiceProvider;
 use Billium\Schedule\Tests\Support\FrozenClock;
 use Billium\Schedule\Tests\Support\HostGuard;
+use Illuminate\Contracts\Config\Repository;
+use Illuminate\Foundation\Application;
 
 abstract class ScheduleTestCase extends PlatformTestCase
 {
@@ -21,16 +23,18 @@ abstract class ScheduleTestCase extends PlatformTestCase
 
     protected FrozenClock $clock;
 
+    /** @param Application $app */
     protected function getPackageProviders($app): array
     {
         return [...parent::getPackageProviders($app), ScheduleServiceProvider::class];
     }
 
+    /** @param Application $app */
     protected function defineEnvironment($app): void
     {
         parent::defineEnvironment($app);
-        $app['config']->set('billium.modules.enabled', ['platform', 'ledger', 'rating', 'schedule']);
-        $app['config']->set('billium.schedule.enabled', true);
+        $app->make(Repository::class)->set('billium.modules.enabled', ['platform', 'ledger', 'rating', 'schedule']);
+        $app->make(Repository::class)->set('billium.schedule.enabled', true);
     }
 
     protected function setUp(): void
@@ -57,8 +61,6 @@ abstract class ScheduleTestCase extends PlatformTestCase
 
     protected function commitQuote(PeriodQuote $quote, string $key = 'commit-1'): ScheduleReceipt
     {
-        return $this->schedule()->commit(quoteRef: $quote->quoteRef, quoteDigest: $quote->digest,
-            expectedRevision: $quote->terms->agreementRevision, cancellationGeneration: $quote->terms->cancellationGeneration,
-            commandKey: $key);
+        return $this->schedule()->commit(quoteRef: $quote->quoteRef, quoteDigest: $quote->digest, expectedRevision: $quote->terms->agreementRevision, cancellationGeneration: $quote->terms->cancellationGeneration, commandKey: $key);
     }
 }

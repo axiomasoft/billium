@@ -13,7 +13,7 @@ final class ReplayFactSource implements EffectiveFactSource
     /** @var list<FactRevision> */
     public array $revisions = [];
 
-    public function __construct(private string $metricDigest) {}
+    public function __construct(private readonly string $metricDigest) {}
 
     /** @return list<FactRevision> */
     public function revisionsForWindow(WindowSelector $window, string $connectionName): array
@@ -21,7 +21,7 @@ final class ReplayFactSource implements EffectiveFactSource
         return $this->revisions;
     }
 
-    public function metricDefinitionDigest(string $sellerRef, string $metricRef, int|string $metricVersion, string $connectionName): ?string
+    public function metricDefinitionDigest(string $sellerRef, string $metricRef, int|string $metricVersion, string $connectionName): string
     {
         return $this->metricDigest;
     }

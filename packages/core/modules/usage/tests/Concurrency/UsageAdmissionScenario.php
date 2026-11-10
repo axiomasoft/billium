@@ -12,18 +12,15 @@ use Billium\Usage\Contracts\Usage;
 use Billium\Usage\Contracts\UsageAttribution;
 use Billium\Usage\Internal\UsageServiceProvider;
 use Billium\Usage\Tests\Support\UsageFixtures;
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Application;
 use stdClass;
 
-final class UsageAdmissionScenario implements Scenario
+final readonly class UsageAdmissionScenario implements Scenario
 {
-    /** @param array<string,mixed> $args */
-    public function __construct(Application $app, int $index, array $args)
+    public function __construct(Application $app, int $index)
     {
-        $app->instance(CallerContext::class, new FixedCallerContext(new Caller(
-            sellerRef: 'seller-a', environment: 'test', installationRef: 'inst-test',
-            actorRef: 'courier-'.$index, sourceAuthorities: ['tariffler'],
-        )));
+        $app->instance(CallerContext::class, new FixedCallerContext(new Caller(sellerRef: 'seller-a', environment: 'test', installationRef: 'inst-test', actorRef: 'courier-'.$index, sourceAuthorities: ['tariffler'])));
         $app->register(UsageServiceProvider::class);
         $app->instance(UsageAttribution::class, new UsageFixtures);
     }
@@ -40,7 +37,6 @@ final class UsageAdmissionScenario implements Scenario
         });
         $receipt = $app->make(Usage::class)->submitUsageFact($fact);
 
-        return ['receipt' => $receipt->receiptRef, 'digest' => $receipt->digest,
-            'pid' => $app['db']->connection('pgsql')->scalar('SELECT pg_backend_pid()')];
+        return ['receipt' => $receipt->receiptRef, 'digest' => $receipt->digest, 'pid' => $app->make(DatabaseManager::class)->connection('pgsql')->scalar('SELECT pg_backend_pid()')];
     }
 }

@@ -39,9 +39,10 @@ final class UsageFixtures implements UsageAttribution
         );
     }
 
-    /** @param (callable(stdClass):void)|null $change */
+    /** @param (callable(stdClass&object{model: stdClass}):void)|null $change */
     public static function metric(?callable $change = null): MetricVersion
     {
+        /** @var stdClass&object{model: stdClass} $raw */
         $raw = self::raw('metric');
         $raw->sellerRef = 'seller-a';
         if ($change !== null) {
@@ -55,9 +56,10 @@ final class UsageFixtures implements UsageAttribution
         return $metric;
     }
 
-    /** @param (callable(stdClass):void)|null $change */
+    /** @param (callable(stdClass&object{value: stdClass, attribution: stdClass, interval: stdClass, provenance: stdClass, billableStream: stdClass}):void)|null $change */
     public static function fact(?callable $change = null): UsageFactV2
     {
+        /** @var stdClass&object{value: stdClass, attribution: stdClass, interval: stdClass, provenance: stdClass, billableStream: stdClass} $raw */
         $raw = self::raw('fact');
         $raw->sellerRef = 'seller-a';
         $raw->metricDigest = self::metric()->digest;
@@ -74,6 +76,7 @@ final class UsageFixtures implements UsageAttribution
 
     public static function correction(UsageFactV2 $previous, string $quantity = '10'): UsageFactV2
     {
+        /** @var stdClass&object{revision: int, value: stdClass} $raw */
         $raw = json_decode(json_encode($previous->raw, JSON_THROW_ON_ERROR), false, 64, JSON_THROW_ON_ERROR);
         $raw->revision++;
         $raw->value->quantity = $quantity;
@@ -91,8 +94,12 @@ final class UsageFixtures implements UsageAttribution
 
     private static function raw(string $name): stdClass
     {
-        $vector = json_decode(file_get_contents(dirname(__DIR__, 6).'/fixtures/vectors/usage/contracts/'.$name.'.json'), false, 64, JSON_THROW_ON_ERROR);
+        /** @var stdClass&object{script: list<object{args: object{json_text: string}}>} $vector */
+        $vector = json_decode((string) file_get_contents(dirname(__DIR__, 6).'/fixtures/vectors/usage/contracts/'.$name.'.json'), false, 64, JSON_THROW_ON_ERROR);
 
-        return json_decode($vector->script[0]->args->json_text, false, 64, JSON_THROW_ON_ERROR);
+        $raw = json_decode($vector->script[0]->args->json_text, false, 64, JSON_THROW_ON_ERROR);
+        assert($raw instanceof stdClass);
+
+        return $raw;
     }
 }

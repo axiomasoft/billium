@@ -72,7 +72,7 @@ return new class extends Migration
              ON public.billium_schedule_billing_occurrence(seller_ref,environment,occurrence_ref)
              WHERE state IN ('planned','rated','obligated');
             CREATE INDEX billium_schedule_occurrence_schedule_idx ON public.billium_schedule_billing_occurrence(schedule_id,period_start);
-            CREATE FUNCTION public.billium_schedule_occurrence_guard() RETURNS trigger LANGUAGE plpgsql AS $$
+            CREATE OR REPLACE FUNCTION public.billium_schedule_occurrence_guard() RETURNS trigger LANGUAGE plpgsql AS $$
             DECLARE p public.billium_schedule_billing_occurrence%ROWTYPE; h public.billium_schedule_billing_schedule%ROWTYPE;
             BEGIN
              IF TG_OP='DELETE' THEN
@@ -148,5 +148,10 @@ return new class extends Migration
         }
         DB::unprepared('GRANT UPDATE (current_revision,state,cancel_generation,cursor_ordinal,next_occurrence_at,runnable,claim_token,claim_expires_at,attempts,retry_at,row_version) ON TABLE public.billium_schedule_billing_schedule TO '.$role);
         DB::unprepared('GRANT UPDATE (state,superseded_by_occurrence_ref,rated_basis_ref,row_version) ON TABLE public.billium_schedule_billing_occurrence TO '.$role);
+    }
+
+    public function down(): never
+    {
+        throw new LogicException('forward-only (REQ-FAIL-29)');
     }
 };

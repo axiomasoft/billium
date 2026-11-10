@@ -10,6 +10,9 @@ use Billium\Core\BilliumCoreServiceProvider;
 use Billium\Core\Data\Modules\InstalledCheckpoint;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Rating\Contracts\PricingStrategyRegistry;
+use Billium\Rating\Internal\RatingServiceProvider;
+use Billium\Schedule\Internal\ScheduleServiceProvider;
+use Billium\Usage\Internal\UsageServiceProvider;
 use BilliumConformance\LedgerAdapter;
 use BilliumConformance\P4RuntimeAdapter;
 use Composer\Autoload\ClassLoader;
@@ -65,10 +68,10 @@ final class P4BootstrapTest extends ModuleTestCase
         foreach (['usage', 'rating', 'schedule'] as $module) {
             $app['config']->set("billium.{$module}.enabled", true);
         }
-        (new BilliumCoreServiceProvider($app))->register();
-        self::assertArrayHasKey('Billium\\Usage\\Internal\\UsageServiceProvider', $app->getLoadedProviders());
-        self::assertArrayHasKey('Billium\\Schedule\\Internal\\ScheduleServiceProvider', $app->getLoadedProviders());
-        self::assertArrayHasKey('Billium\\Rating\\Internal\\RatingServiceProvider', $app->getLoadedProviders());
+        new BilliumCoreServiceProvider($app)->register();
+        self::assertArrayHasKey(UsageServiceProvider::class, $app->getLoadedProviders());
+        self::assertArrayHasKey(ScheduleServiceProvider::class, $app->getLoadedProviders());
+        self::assertArrayHasKey(RatingServiceProvider::class, $app->getLoadedProviders());
         self::assertInstanceOf(PricingStrategyRegistry::class, $app->make(PricingStrategyRegistry::class));
         Container::setInstance(null);
     }
@@ -103,7 +106,7 @@ final class P4BootstrapTest extends ModuleTestCase
 
             return ['enrolled' => true];
         });
-        self::assertSame(['enrolled' => true], (new P4RuntimeAdapter($container))->run(operation: 'rating.rate', arguments: $arguments));
+        self::assertSame(['enrolled' => true], new P4RuntimeAdapter($container)->run(operation: 'rating.rate', arguments: $arguments));
     }
 
     public function test_php_protocol_enrolls_runtime_operations_and_refuses_without_database_setup(): void

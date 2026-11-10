@@ -32,10 +32,10 @@ final class UsageAdmissionConcurrencyTest extends UsageTestCase
     private function race(int $workers): void
     {
         $results = ConcurrencyStand::run(scenario: UsageAdmissionScenario::class, workers: $workers, timeoutSeconds: 60);
-        $ok = array_map(static fn (array $r): array => $r['ok'] ?? self::fail(json_encode($r)), $results);
-        self::assertCount($workers, array_unique(array_column($ok, 'pid')));
-        self::assertCount(1, array_unique(array_column($ok, 'receipt')));
-        self::assertCount(1, array_unique(array_column($ok, 'digest')));
+        $ok = array_map(static fn (array $r): array => $r['ok'] ?? self::fail(json_encode($r, JSON_THROW_ON_ERROR)), $results);
+        self::assertCount($workers, array_unique(array_map(self::integer(...), array_column($ok, 'pid'))));
+        self::assertCount(1, array_unique(array_map(self::text(...), array_column($ok, 'receipt'))));
+        self::assertCount(1, array_unique(array_map(self::text(...), array_column($ok, 'digest'))));
         self::assertSame(1, $this->rows('billium_usage_fact'));
         self::assertSame(1, $this->rows('billium_idempotency_receipt', "command_kind='usage.fact_submit'"));
         self::assertSame(0, $this->rows('billium_obligation'));

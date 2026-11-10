@@ -1,0 +1,21 @@
+{
+  "id": "p4-acceptance-replay/1",
+  "owner": "PLAN1.P4.10",
+  "decisions": ["D13", "D19", "D56", "D59", "D63"],
+  "runtime": "php-postgresql-only",
+  "tax_rate": "0.20",
+  "original_quantity": "100",
+  "original_gross_minor": "12000",
+  "late_facts": [{"id": "late-a", "quantity": "30"}, {"id": "late-b", "quantity": "20"}],
+  "late_revision": {"id": "late-a", "previous_quantity": "30", "quantity": "40"},
+  "fixed": {"amount": "49.00", "tax_rate": "0.20", "gross_minor": "5880"},
+  "counts": {
+    "original": {"source": 1, "rated": 1, "obligation": 1},
+    "first_correction": {"source": 3, "rated": 2, "obligation": 2},
+    "late_revision": {"source": 4, "rated": 3, "obligation": 3}
+  },
+  "strategies": {
+    "graduated": {"first_delta_gross_minor": "4800", "revision_delta_gross_minor": "960", "effective_gross_minor": "17760"},
+    "volume": {"first_delta_gross_minor": "2400", "revision_delta_gross_minor": "960", "effective_gross_minor": "15360"}
+  }
+}

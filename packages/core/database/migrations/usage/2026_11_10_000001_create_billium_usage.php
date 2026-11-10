@@ -101,4 +101,9 @@ return new class extends Migration
             DB::unprepared('GRANT SELECT, INSERT ON TABLE public.billium_usage_'.$table.' TO '.$role);
         }
     }
+
+    public function down(): never
+    {
+        throw new LogicException('forward-only (REQ-FAIL-29)');
+    }
 };

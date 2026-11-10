@@ -6,6 +6,7 @@ namespace Billium\Rating\Tests\Feature;
 
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Tests\Support\Concurrency\ConcurrencyStand;
+use Billium\Core\Tests\Support\FixtureValues;
 use Billium\Rating\Contracts\PriceVersionStore;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
 use Billium\Rating\Tests\RatingTestCase;
@@ -24,9 +25,9 @@ final class RatingBookingConcurrencyTest extends RatingTestCase
     {
         $prepared = $this->prepared();
         $results = ConcurrencyStand::run(scenario: RatingScenario::class, workers: 5, args: ['inputs' => CanonicalJson::encode($prepared->inputs)]);
-        $bodies = array_map(static fn (array $r): array => self::ok($r), $results);
-        self::assertCount(5, array_unique(array_column($bodies, 'pid')));
-        $outcomes = array_count_values(array_column(array_column($bodies, 'body'), 'outcome'));
+        $bodies = array_map(self::ok(...), $results);
+        self::assertCount(5, array_unique(array_map(self::integer(...), array_column($bodies, 'pid'))));
+        $outcomes = array_count_values(array_map(self::text(...), array_column(array_column($bodies, 'body'), 'outcome')));
         self::assertSame(1, $outcomes['booked'] ?? 0);
         self::assertSame(4, $outcomes['existing'] ?? 0);
         self::assertSame(1, $this->rows('billium_rating_rated_basis'));
@@ -35,19 +36,17 @@ final class RatingBookingConcurrencyTest extends RatingTestCase
 
     public function test_competing_quotes_share_a_frontier_and_only_one_semantic_basis_wins(): void
     {
-        $results = ConcurrencyStand::run(scenario: RatingScenario::class, workers: 2,
-            args: ['inputs' => CanonicalJson::encode($this->prepared()->inputs), 'stale' => true]);
-        $bodies = array_map(static fn (array $r): array => self::ok($r), $results);
-        self::assertSame(1, count(array_filter($bodies, static fn (array $r): bool => $r['accepted'])));
-        self::assertSame(['billium.rating.frozen_input_stale'], array_values(array_column(array_filter($bodies, static fn (array $r): bool => ! $r['accepted']), 'detail')));
+        $results = ConcurrencyStand::run(scenario: RatingScenario::class, workers: 2, args: ['inputs' => CanonicalJson::encode($this->prepared()->inputs), 'stale' => true]);
+        $bodies = array_map(self::ok(...), $results);
+        self::assertSame(1, count(array_filter($bodies, static fn (array $r): bool => $r['accepted'] === true)));
+        self::assertSame(['billium.rating.frozen_input_stale'], array_column(array_filter($bodies, static fn (array $r): bool => ! $r['accepted']), 'detail'));
         self::assertSame(1, $this->rows('billium_obligation'));
     }
 
     public function test_duplicate_rating_jobs_racing_schedule_revision_never_supersede_booked_work(): void
     {
         $prepared = $this->prepared();
-        $results = ConcurrencyStand::run(scenario: RatingScenario::class, workers: 5,
-            args: ['inputs' => CanonicalJson::encode($prepared->inputs), 'revise' => true]);
+        $results = ConcurrencyStand::run(scenario: RatingScenario::class, workers: 5, args: ['inputs' => CanonicalJson::encode($prepared->inputs), 'revise' => true]);
         foreach ($results as $result) {
             self::ok($result);
         }
@@ -77,13 +76,8 @@ final class RatingBookingConcurrencyTest extends RatingTestCase
     public function test_commitment_floor_cannot_be_booked_twice_across_different_occurrences(): void
     {
         $service = $this->application()->make(OccurrenceService::class);
-        $service->applyScheduleRevision(new ApplyScheduleRevision(sellerRef: 'seller-a', environment: 'test', scheduleRef: 'time-schedule',
-            expectedRevision: 0, expectedRowVersion: 0, newRevision: 1,
-            terms: Terms::make(['componentRef' => 'component-1', 'anchorLocal' => '2026-10-01T00:00:00', 'purpose' => 'recurring_charge']),
-            effectiveFrom: new DateTimeImmutable('2026-01-01Z'), inputsDigest: self::inputDigest(), commandKey: 'time-schedule-revision'));
-        $second = $service->ensureOccurrence(new EnsureOccurrence(sellerRef: 'seller-a', environment: 'test', componentRef: 'component-1',
-            purpose: OccurrencePurpose::RecurringCharge, periodStart: new DateTimeImmutable('2026-10-01Z'), periodEnd: new DateTimeImmutable('2026-11-01Z'),
-            scheduleRef: 'time-schedule', scheduleRevision: 1, inputsDigest: self::inputDigest(), commandKey: 'time-ensure'))->body()['occurrenceRef'];
+        $service->applyScheduleRevision(new ApplyScheduleRevision(sellerRef: 'seller-a', environment: 'test', scheduleRef: 'time-schedule', expectedRevision: 0, expectedRowVersion: 0, newRevision: 1, terms: Terms::make(['componentRef' => 'component-1', 'anchorLocal' => '2026-10-01T00:00:00', 'purpose' => 'recurring_charge']), effectiveFrom: new DateTimeImmutable('2026-01-01Z'), inputsDigest: self::inputDigest(), commandKey: 'time-schedule-revision'));
+        $second = FixtureValues::text($service->ensureOccurrence(new EnsureOccurrence(sellerRef: 'seller-a', environment: 'test', componentRef: 'component-1', purpose: OccurrencePurpose::RecurringCharge, periodStart: new DateTimeImmutable('2026-10-01Z'), periodEnd: new DateTimeImmutable('2026-11-01Z'), scheduleRef: 'time-schedule', scheduleRevision: 1, inputsDigest: self::inputDigest(), commandKey: 'time-ensure'))->body()['occurrenceRef']);
         $this->application()->make(PriceVersionStore::class)->publish(price: $this->price(version: 2, fixed: '140', commitment: true), commandKey: 'commitment-price');
         $a = $this->prepared(priceVersion: 2);
         $b = $this->prepared(priceVersion: 2, ref: $second);
@@ -119,9 +113,7 @@ final class RatingBookingConcurrencyTest extends RatingTestCase
                 $definition = $point === 'before_commit' ? 'CREATE CONSTRAINT TRIGGER billium_test_rating_sleep AFTER INSERT ON '.$table.' DEFERRABLE INITIALLY DEFERRED' : 'CREATE TRIGGER billium_test_rating_sleep AFTER INSERT ON '.$table;
                 $this->owner()->unprepared($definition.' FOR EACH ROW EXECUTE FUNCTION public.billium_test_rating_sleep()');
             }
-            $process = proc_open([PHP_BINARY, $root.'/packages/core/modules/rating/tests/Support/rating-crash-worker.php',
-                base64_encode(CanonicalJson::encode($prepared->inputs)), $point],
-                [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, $root);
+            $process = proc_open([PHP_BINARY, $root.'/packages/core/modules/rating/tests/Support/rating-crash-worker.php', base64_encode(CanonicalJson::encode($prepared->inputs)), $point], [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, $root);
             self::assertIsResource($process);
             fclose($pipes[0]);
             stream_set_blocking($pipes[1], false);
@@ -137,8 +129,7 @@ final class RatingBookingConcurrencyTest extends RatingTestCase
                         $pid = (int) $m[1];
                     }
                     if ($pid !== null) {
-                        $reached = $afterCommit ? str_contains($output, 'committed')
-                            : $this->value("SELECT count(*) FROM pg_stat_activity WHERE pid=? AND wait_event='PgSleep'", [$pid]) === 1;
+                        $reached = $afterCommit ? str_contains($output, 'committed') : $this->value("SELECT count(*) FROM pg_stat_activity WHERE pid=? AND wait_event='PgSleep'", [$pid]) === 1;
                     }
                     if ($reached || ! proc_get_status($process)['running']) {
                         break;
@@ -147,7 +138,7 @@ final class RatingBookingConcurrencyTest extends RatingTestCase
                 } while (microtime(true) < $deadline);
                 self::assertTrue($reached, $point.': '.$output.stream_get_contents($pipes[2]));
                 proc_terminate($process, 9);
-                if ($pid !== null && ! $afterCommit) {
+                if (! $afterCommit) {
                     $this->owner()->select('SELECT pg_terminate_backend(?)', [$pid]);
                 }
             } finally {

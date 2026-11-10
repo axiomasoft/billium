@@ -195,7 +195,7 @@ return new class extends Migration
             CREATE TRIGGER billium_usage_event_immutable BEFORE UPDATE OR DELETE ON public.billium_usage_aggregate_event
                 FOR EACH ROW EXECUTE FUNCTION public.billium_append_only();
 
-            CREATE FUNCTION public.billium_usage_guard_member_erasure() RETURNS trigger LANGUAGE plpgsql
+            CREATE OR REPLACE FUNCTION public.billium_usage_guard_member_erasure() RETURNS trigger LANGUAGE plpgsql
             SET search_path=pg_catalog,pg_temp AS $$
             BEGIN
                 IF TG_OP='UPDATE' AND current_user=pg_get_userbyid((SELECT relowner FROM pg_class WHERE oid=TG_RELID))
@@ -208,7 +208,7 @@ return new class extends Migration
             CREATE TRIGGER billium_usage_distinct_immutable BEFORE UPDATE OR DELETE ON public.billium_usage_aggregate_distinct_member
                 FOR EACH ROW EXECUTE FUNCTION public.billium_usage_guard_member_erasure();
 
-            CREATE FUNCTION public.billium_usage_erase_distinct_members(p_seller text,p_environment text,p_snapshot_ids bigint[])
+            CREATE OR REPLACE FUNCTION public.billium_usage_erase_distinct_members(p_seller text,p_environment text,p_snapshot_ids bigint[])
                 RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
             DECLARE n integer;
             BEGIN
@@ -252,5 +252,10 @@ return new class extends Migration
         DB::unprepared('GRANT UPDATE (row_version) ON TABLE public.billium_usage_source_head TO '.$role);
         DB::unprepared('REVOKE INSERT ON TABLE public.billium_usage_aggregate_reproducibility_event FROM '.$role);
         DB::unprepared('REVOKE ALL ON FUNCTION public.billium_usage_erase_distinct_members(text,text,bigint[]) FROM '.$role);
+    }
+
+    public function down(): never
+    {
+        throw new LogicException('forward-only (REQ-FAIL-29)');
     }
 };

@@ -52,7 +52,7 @@ final class CalendarIntervalResolver implements IntervalResolver
         $candidates = [];
         foreach (array_unique(array_column($transitions, 'offset')) as $offset) {
             $utc = $naive->getTimestamp() - $offset;
-            if ((new DateTimeImmutable('@'.$utc))->setTimezone($zone)->format('Y-m-d\TH:i:s') === $local) {
+            if (new DateTimeImmutable('@'.$utc)->setTimezone($zone)->format('Y-m-d\TH:i:s') === $local) {
                 $candidates[$utc] = $offset;
             }
         }
@@ -76,7 +76,7 @@ final class CalendarIntervalResolver implements IntervalResolver
                 $utc = $naive->getTimestamp() - $previousOffset;
 
                 return ['utc' => Instants::format(new DateTimeImmutable('@'.$utc)), 'requestedLocal' => $local,
-                    'resolvedLocal' => (new DateTimeImmutable('@'.$utc))->setTimezone($zone)->format('Y-m-d\TH:i:s'),
+                    'resolvedLocal' => new DateTimeImmutable('@'.$utc)->setTimezone($zone)->format('Y-m-d\TH:i:s'),
                     'offsetSeconds' => $offset, 'disposition' => 'shift_forward'];
             }
             $previousOffset = $offset;

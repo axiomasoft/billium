@@ -65,7 +65,7 @@ final class P4DependencyBoundaryTest extends TestCase
     private static function violations(string $source, string $module, array $owners): array
     {
         $tree = (new ParserFactory)->createForNewestSupportedVersion()->parse($source) ?? [];
-        $tree = (new NodeTraverser(new NameResolver))->traverse($tree);
+        $tree = new NodeTraverser(new NameResolver)->traverse($tree);
         $finder = new NodeFinder;
         $violations = [];
         foreach ($finder->findInstanceOf($tree, Name::class) as $name) {

@@ -156,6 +156,15 @@ P4.8: `fixtures/vectors/rating/corrections/original-period.json` содержи�
 повтор, гонки и rollback участников. V1–V3 и V903–V905 остаются отдельными проверками conductor;
 их покрытие COV-199–205, COV-502 и COV-538 фиксируется только после фактического прохождения.
 
+P4.10: [машинный manifest](architecture/p4-acceptance.json) связывает ACC-CON-11/12, MG-08,
+SB-02/SB-09, EC-11, COV-AC-520 и calendar/tier/commitment/tax/gauge/distinct/finality/composition
+с конкретными fixtures и PHP test paths. [Evidence guide](architecture/p4-acceptance.md) описывает
+точные суммы, logical PostgreSQL restore, N-процессные gates и обязательные owner inputs
+(D53/D56/D59; owner PLAN1.P4.10). `P4AcceptanceManifestTest` делает отсутствие обязательного
+предмета/feature disposition красным; наличие ссылки само по себе не считается пройденной проверкой.
+Manifest сохраняет красные результаты `checks.1` V1/V3/V4/V5/V6; исправления ожидают повторной
+приёмки conductor. Независимый фазовый gate остаётся pending (D59/D64/D66; owner PLAN1.P4.10).
+
 ## Restore, clone, lost response
 
 Drills до effect-capable remote-профиля и при смене runtime, retention или custody (REQ-ACC-12). Каждый

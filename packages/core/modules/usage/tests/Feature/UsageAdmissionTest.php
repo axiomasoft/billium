@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Billium\Usage\Tests\Feature;
 
 use Billium\Contracts\Contracts\Codec;
+use Billium\Contracts\Data\Envelopes\UsageFactV2;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Data\Caller;
+use Billium\Core\Tests\Support\FixtureValues;
 use Billium\Usage\Internal\UsageQueries;
 use Billium\Usage\Tests\Support\UsageFixtures;
 use Billium\Usage\Tests\UsageTestCase;
@@ -56,37 +58,29 @@ final class UsageAdmissionTest extends UsageTestCase
         $this->usage()->submitUsageFact($three);
         self::assertSame(3, $this->rows('billium_usage_fact'));
         self::assertSame(0, $this->rows('billium_obligation'));
-        $rows = $this->application()->make(UsageQueries::class)->period(
-            subject: 'subject-1', metricVersion: 'api_calls/1', mappingRef: 'mapping-1',
-            start: '2026-10-01T00:00:00Z', end: '2026-11-01T00:00:00Z',
-        );
+        $rows = $this->application()->make(UsageQueries::class)->period(subject: 'subject-1', metricVersion: 'api_calls/1', mappingRef: 'mapping-1', start: '2026-10-01T00:00:00Z', end: '2026-11-01T00:00:00Z');
         self::assertCount(1, $rows);
+        self::assertInstanceOf(stdClass::class, $rows[0]);
         self::assertSame(3, $rows[0]->revision);
         self::assertSame('8.000000000', $rows[0]->quantity);
     }
 
     public function test_unknown_metric_and_semantic_mismatches_leave_no_facts_or_financial_rows(): void
     {
-        $changes = [
-            static function (stdClass $r): void {
-                $r->metricVersion = 'unknown/1';
-            },
-            static function (stdClass $r): void {
-                $r->metricDigest = 'sha256:'.str_repeat('0', 64);
-            },
-            static function (stdClass $r): void {
-                $r->unit = 'event';
-            },
-            static function (stdClass $r): void {
-                $r->grouping = [];
-            },
-            static function (stdClass $r): void {
-                $r->value = (object) ['kind' => 'count', 'quantity' => '1'];
-            },
-            static function (stdClass $r): void {
-                $r->billableStream->mode = 'gross_usage';
-            },
-        ];
+        $changes = [static function (stdClass $r): void {
+            $r->metricVersion = 'unknown/1';
+        }, static function (stdClass $r): void {
+            $r->metricDigest = 'sha256:'.str_repeat('0', 64);
+        }, static function (stdClass $r): void {
+            $r->unit = 'event';
+        }, static function (stdClass $r): void {
+            $r->grouping = [];
+        }, static function (stdClass $r): void {
+            $r->value = (object) ['kind' => 'count', 'quantity' => '1'];
+        }, static function (stdClass $r): void {
+            self::assertInstanceOf(stdClass::class, $r->billableStream);
+            $r->billableStream->mode = 'gross_usage';
+        }];
         foreach ($changes as $change) {
             $this->refused(fn () => $this->usage()->submitUsageFact(UsageFixtures::fact($change)));
         }
@@ -108,10 +102,11 @@ final class UsageAdmissionTest extends UsageTestCase
         self::assertSame('mapping-1', $row['mapping_ref']);
         self::assertSame('october-2026', $row['period_ref']);
         $rebound = UsageFixtures::correction($old)->raw;
+        self::assertInstanceOf(stdClass::class, $rebound->attribution);
         $rebound->attribution->billingAccountRef = 'new-payer';
         $codec = new Codec;
         $rebound->digest = $codec->digest($rebound);
-        $this->refused(fn () => $this->usage()->submitUsageFact($codec->decode($codec->canonicalize($rebound))));
+        $this->refused(fn () => $this->usage()->submitUsageFact(FixtureValues::instance($codec->decode($codec->canonicalize($rebound)), UsageFactV2::class)));
         self::assertSame(1, $this->rows('billium_usage_fact'));
         $this->usage()->submitUsageFact(UsageFixtures::fact(function (stdClass $r): void {
             $r->factId = 'after-transfer';
@@ -147,6 +142,7 @@ final class UsageAdmissionTest extends UsageTestCase
         })), ProblemCode::IdempotencyConflict);
         $this->refused(fn () => $this->usage()->registerMetric(UsageFixtures::metric(function (stdClass $r): void {
             $r->metricVersion = 'api_calls/2';
+            self::assertInstanceOf(stdClass::class, $r->billableStream);
             $r->billableStream->mode = 'gross_usage';
         })), ProblemCode::UsageConflict);
         self::assertSame(1, $this->rows('billium_usage_metric'));
@@ -167,11 +163,9 @@ final class UsageAdmissionTest extends UsageTestCase
             })->digest;
         }));
         self::assertSame(2, $this->rows('billium_usage_fact'));
-        $rows = $this->application()->make(UsageQueries::class)->period(
-            subject: 'subject-1', metricVersion: 'api_calls/1', mappingRef: 'mapping-1',
-            start: '2026-10-01T00:00:00Z', end: '2026-11-01T00:00:00Z',
-        );
+        $rows = $this->application()->make(UsageQueries::class)->period(subject: 'subject-1', metricVersion: 'api_calls/1', mappingRef: 'mapping-1', start: '2026-10-01T00:00:00Z', end: '2026-11-01T00:00:00Z');
         self::assertCount(1, $rows);
+        self::assertInstanceOf(stdClass::class, $rows[0]);
         self::assertSame('seller-b', $rows[0]->seller_ref);
     }
 
@@ -194,6 +188,7 @@ final class UsageAdmissionTest extends UsageTestCase
         $codec = new Codec;
         foreach (['metric', 'digest', 'cycle', 'seller'] as $case) {
             $raw = UsageFixtures::correction($one)->raw;
+            self::assertInstanceOf(stdClass::class, $raw->correction);
             if ($case === 'metric') {
                 $raw->metricRef = $metric->metricRef;
                 $raw->metricVersion = $metric->metricVersion;
@@ -210,10 +205,11 @@ final class UsageAdmissionTest extends UsageTestCase
             }
             $raw->digest = $codec->digest($raw);
             $expected = match ($case) {
-                'cycle' => ProblemCode::ValidationInvalid, 'seller' => ProblemCode::AuthDenied,
+                'cycle' => ProblemCode::ValidationInvalid,
+                'seller' => ProblemCode::AuthDenied,
                 default => ProblemCode::UsageConflict,
             };
-            $this->refused(fn () => $this->usage()->submitUsageFact($codec->decode($codec->canonicalize($raw))), $expected);
+            $this->refused(fn () => $this->usage()->submitUsageFact(FixtureValues::instance($codec->decode($codec->canonicalize($raw)), UsageFactV2::class)), $expected);
         }
         self::assertSame(1, $this->rows('billium_usage_fact'));
     }

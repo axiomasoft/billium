@@ -6,6 +6,7 @@ namespace Billium\Rating\Tests\Feature;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Core\Tests\Support\FixtureArguments;
 use Billium\Rating\Contracts\PriceVersionStore;
 use Billium\Rating\Contracts\RatingQueries;
 use Billium\Rating\Data\Rating\FrozenRatingInputs;
@@ -32,7 +33,9 @@ final class RatingPipelineSnapshotTest extends RatingTestCase
         $queries = $this->application()->make(RatingQueries::class);
         self::assertSame(CanonicalJson::encode($prepared->draft), CanonicalJson::encode($queries->replay($receipt->basisRef)));
         self::assertSame(1, $this->tax->calls);
-        $line = $queries->basis($receipt->basisRef)->lines[0];
+        $basis = $queries->basis($receipt->basisRef);
+        self::assertNotNull($basis);
+        $line = $basis->lines[0];
         self::assertSame('api_calls/1', $line->metricVersion);
         self::assertSame(1, $line->priceVersion);
         self::assertSame('0.2', $line->taxRate);
@@ -56,7 +59,7 @@ final class RatingPipelineSnapshotTest extends RatingTestCase
         self::assertSame(1, $this->rows('billium_rating_run'));
         self::assertSame(1, $this->rows('billium_obligation'));
         self::assertSame(1, $this->rows('billium_rating_booking'));
-        $in = new FrozenRatingInputs(...[...get_object_vars($prepared->inputs), 'sourceDigest' => 'different']);
+        $in = FixtureArguments::construct(class: FrozenRatingInputs::class, arguments: [...get_object_vars($prepared->inputs), 'sourceDigest' => 'different']);
         $draft = $this->application()->make(RatingComputation::class)->compute($in);
         try {
             $this->book(new PreparedRating(inputs: $in, draft: $draft));

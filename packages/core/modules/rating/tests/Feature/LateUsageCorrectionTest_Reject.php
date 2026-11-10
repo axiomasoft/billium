@@ -17,10 +17,10 @@ use DateTimeImmutable;
 final class LateUsageCorrectionTest_Reject extends RatingTestCase
 {
     protected function policy(LatePolicy $late = LatePolicy::AcceptAdjust, ?MetricVersion $metric = null, string $algorithm = 'additive_sum',
-        int $scale = 9, bool $carry = false, string $missingInitial = 'refuse', ?string $definitionDigest = null): void
+        int $scale = 9, bool $carry = false, string $missingInitial = 'refuse', ?string $definitionDigest = null, int $algorithmVersion = 1): void
     {
         parent::policy(late: LatePolicy::Reject, metric: $metric, algorithm: $algorithm, scale: $scale,
-            carry: $carry, missingInitial: $missingInitial, definitionDigest: $definitionDigest);
+            carry: $carry, missingInitial: $missingInitial, definitionDigest: $definitionDigest, algorithmVersion: $algorithmVersion);
     }
 
     public function test_post_final_reject_policy_refuses_late_fact_without_financial_writes(): void

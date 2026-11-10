@@ -68,7 +68,7 @@ final readonly class DatabaseScheduleQueries implements ScheduleQueries
         $oldest = $row?->oldest;
 
         return ['dueCount' => $row === null ? 0 : Payload::integer($row->due_count),
-            'oldestDueAgeSeconds' => $oldest === null ? 0 : max(0, $asOf->getTimestamp() - (new DateTimeImmutable(Payload::text($oldest)))->getTimestamp())];
+            'oldestDueAgeSeconds' => $oldest === null ? 0 : max(0, $asOf->getTimestamp() - new DateTimeImmutable(Payload::text($oldest))->getTimestamp())];
     }
 
     public function correctionHead(string $sellerRef, string $parentOccurrenceRef): array

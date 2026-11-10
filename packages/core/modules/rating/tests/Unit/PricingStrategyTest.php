@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Billium\Rating\Tests\Unit;
 
 use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Core\Tests\Support\FixtureArguments;
 use Billium\Rating\Data\Pricing\CommitmentBasis;
 use Billium\Rating\Data\Pricing\CommitmentTerms;
 use Billium\Rating\Data\Pricing\FixedTerms;
@@ -28,13 +29,10 @@ final class PricingStrategyTest extends TestCase
 {
     private function price(StrategyId $strategy, PriceTerms $terms, ?CommitmentTerms $commitment = null, ?QuantityRules $rules = null): PriceVersion
     {
-        $args = ['sellerRef' => 'seller-a', 'priceRef' => 'price', 'version' => 1, 'strategyId' => $strategy, 'strategyVersion' => 1,
-            'currency' => 'USD', 'currencyExponent' => 2, 'exponentVersion' => 'ISO4217-2026-10', 'unit' => 'call',
-            'quantityRules' => $rules ?? new QuantityRules(quantityScale: 3, conversionNumerator: '1', conversionDenominator: '1', billingIncrement: '1', incrementMode: IncrementMode::None),
-            'terms' => $terms, 'roundingMode' => RoundingMode::HalfUp, 'roundingStage' => RoundingStage::AfterTax, 'roundingPolicyVersion' => 'v1', 'commitment' => $commitment];
-        $draft = new PriceVersion(...$args, termsDigest: 'draft');
+        $args = ['sellerRef' => 'seller-a', 'priceRef' => 'price', 'version' => 1, 'strategyId' => $strategy, 'strategyVersion' => 1, 'currency' => 'USD', 'currencyExponent' => 2, 'exponentVersion' => 'ISO4217-2026-10', 'unit' => 'call', 'quantityRules' => $rules ?? new QuantityRules(quantityScale: 3, conversionNumerator: '1', conversionDenominator: '1', billingIncrement: '1', incrementMode: IncrementMode::None), 'terms' => $terms, 'roundingMode' => RoundingMode::HalfUp, 'roundingStage' => RoundingStage::AfterTax, 'roundingPolicyVersion' => 'v1', 'commitment' => $commitment];
+        $draft = FixtureArguments::construct(class: PriceVersion::class, arguments: [...$args, 'termsDigest' => 'draft']);
 
-        return new PriceVersion(...$args, termsDigest: CanonicalJson::termsDigest($draft));
+        return FixtureArguments::construct(class: PriceVersion::class, arguments: [...$args, 'termsDigest' => CanonicalJson::termsDigest($draft)]);
     }
 
     private function priced(PriceVersion $price, string $quantity, ?CommitmentBasis $basis = null): string
@@ -46,6 +44,8 @@ final class PricingStrategyTest extends TestCase
 
     private function assertAmount(string $expected, string $actual): void
     {
+        self::assertTrue(is_numeric($expected));
+        self::assertTrue(is_numeric($actual));
         self::assertSame(0, bccomp($expected, $actual, 12), "Expected {$expected}, got {$actual}");
     }
 
@@ -109,7 +109,9 @@ final class PricingStrategyTest extends TestCase
     public function test_pricing_strategy_fixture_examples_execute(): void
     {
         $path = dirname(__DIR__, 6).'/fixtures/vectors/rating/strategies/tier-boundaries.json';
-        $example = json_decode((string) file_get_contents($path), true, 32, JSON_THROW_ON_ERROR)['given']['example'];
+        /** @var array{given: array{example: array{tiers: list<array{lower: string, upper: string|null, price: string, flat: string}>, graduated: list<array{quantity: string, raw: string}>, volume: list<array{quantity: string, raw: string}>}}} $vector */
+        $vector = json_decode((string) file_get_contents($path), true, 32, JSON_THROW_ON_ERROR);
+        $example = $vector['given']['example'];
         $tiers = [];
         foreach ($example['tiers'] as $index => $tier) {
             $tiers[] = new Tier(index: $index, lower: $tier['lower'], upper: $tier['upper'], unitPrice: $tier['price'], flatFee: $tier['flat']);

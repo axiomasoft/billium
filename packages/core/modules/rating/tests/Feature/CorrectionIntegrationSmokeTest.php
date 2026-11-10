@@ -12,6 +12,8 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\TransactionContext;
 use Billium\Core\Data\Caller;
 use Billium\Core\Tests\Support\Concurrency\ConcurrencyStand;
+use Billium\Core\Tests\Support\FixtureArguments;
+use Billium\Core\Tests\Support\FixtureValues;
 use Billium\Ledger\Contracts\CorrectionCreditParticipants;
 use Billium\Ledger\Contracts\Ledger;
 use Billium\Ledger\Contracts\LedgerParticipants;
@@ -77,8 +79,7 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $this->publishPolicy(port: $port, date: $date);
         $this->application()->instance(TaxSnapshotPort::class, $port);
         $correction = $this->application()->make(RatingCorrection::class);
-        $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef,
-            kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'tax', releasePolicy: null, correctionEffectiveDate: $date));
+        $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'tax', releasePolicy: null, correctionEffectiveDate: $date));
         self::assertInstanceOf(PreparedCorrection::class, $prepared, json_encode($prepared, JSON_THROW_ON_ERROR));
         self::assertSame('500', $prepared->computation->deltaGrossMinor);
         $first = $correction->apply(new ApplyCorrection(prepared: $prepared, operationKey: 'correction-1'));
@@ -89,9 +90,8 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         self::assertSame($first->obligationRef, $replay->obligationRef);
         self::assertSame(1, $this->rows('billium_rating_correction'));
         self::assertSame(2, $this->rows('billium_obligation'));
-        $changed = new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef,
-            kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'different', releasePolicy: null, correctionEffectiveDate: $date);
-        $tampered = new PreparedCorrection(...[...get_object_vars($prepared), 'command' => $changed]);
+        $changed = new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'different', releasePolicy: null, correctionEffectiveDate: $date);
+        $tampered = FixtureArguments::construct(class: PreparedCorrection::class, arguments: [...get_object_vars($prepared), 'command' => $changed]);
         try {
             $correction->apply(new ApplyCorrection(prepared: $tampered, operationKey: 'correction-1'));
             self::fail('Same operation key with changed payload was accepted');
@@ -103,10 +103,11 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
     public function test_late_usage_reprices_full_original_period(): void
     {
         $booked = $this->book($this->prepared());
+        self::assertNotNull($booked->obligationRef);
         $this->issueInvoice($booked->obligationRef);
         $invoice = $this->value("SELECT row_to_json(i)::text FROM billium_invoice i WHERE invoice_ref='invoice-1'");
         $occurrence = $this->value('SELECT row_to_json(o)::text FROM billium_schedule_billing_occurrence o WHERE occurrence_ref=?', [$this->occurrenceRef]);
-        $originalDigest = $this->queries()->snapshot($this->snapshotRef)['snapshotDigest'];
+        $originalDigest = FixtureValues::text($this->queries()->snapshot($this->snapshotRef)['snapshotDigest']);
         $this->usage()->submitUsageFact(UsageFixtures::fact(static function ($fact): void {
             $fact->factId = 'fact-2';
             $fact->value->quantity = '50';
@@ -117,8 +118,7 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $this->publishPolicy(port: $port, date: $date);
         $this->application()->instance(TaxSnapshotPort::class, $port);
         $correction = $this->application()->make(RatingCorrection::class);
-        $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef,
-            kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'late', releasePolicy: null, correctionEffectiveDate: $date));
+        $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'late', releasePolicy: null, correctionEffectiveDate: $date));
         self::assertInstanceOf(PreparedCorrection::class, $prepared, json_encode($prepared, JSON_THROW_ON_ERROR));
         self::assertSame('4000', $prepared->computation->deltaGrossMinor);
         self::assertSame('obligation', $correction->apply(new ApplyCorrection(prepared: $prepared, operationKey: 'late-1'))->outcome);
@@ -140,17 +140,17 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $base = $this->price();
         $fields = get_object_vars($base);
         $fields['strategyId'] = StrategyId::TieredVolume;
-        $fields['terms'] = new VolumeTerms(tiers: [new Tier(index: 0, lower: '0', upper: '150', unitPrice: '1', flatFee: '0'),
-            new Tier(index: 1, lower: '150', upper: null, unitPrice: '0.8', flatFee: '0')]);
+        $fields['terms'] = new VolumeTerms(tiers: [new Tier(index: 0, lower: '0', upper: '150', unitPrice: '1', flatFee: '0'), new Tier(index: 1, lower: '150', upper: null, unitPrice: '0.8', flatFee: '0')]);
         $fields['version'] = 2;
         $fields['termsDigest'] = 'draft';
-        $draft = new PriceVersion(...$fields);
+        $draft = FixtureArguments::construct(class: PriceVersion::class, arguments: $fields);
         $fields['termsDigest'] = CanonicalJson::termsDigest($draft);
-        $this->application()->make(PriceVersionStore::class)->publish(price: new PriceVersion(...$fields), commandKey: 'volume-price');
+        $this->application()->make(PriceVersionStore::class)->publish(price: FixtureArguments::construct(class: PriceVersion::class, arguments: $fields), commandKey: 'volume-price');
         $booked = $this->book($this->prepared(priceVersion: 2));
+        self::assertNotNull($booked->obligationRef);
         $this->issueInvoice($booked->obligationRef);
         $invoice = $this->value("SELECT row_to_json(i)::text FROM billium_invoice i WHERE invoice_ref='invoice-1'");
-        $originalDigest = $this->queries()->snapshot($this->snapshotRef)['snapshotDigest'];
+        $originalDigest = FixtureValues::text($this->queries()->snapshot($this->snapshotRef)['snapshotDigest']);
         $this->usage()->submitUsageFact(UsageFixtures::fact(static function ($fact): void {
             $fact->factId = 'fact-2';
             $fact->value->quantity = '50';
@@ -161,8 +161,7 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $this->publishPolicy(port: $port, date: $date);
         $this->application()->instance(TaxSnapshotPort::class, $port);
         $correction = $this->application()->make(RatingCorrection::class);
-        $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef,
-            kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'late', releasePolicy: null, correctionEffectiveDate: $date));
+        $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'late', releasePolicy: null, correctionEffectiveDate: $date));
         self::assertInstanceOf(PreparedCorrection::class, $prepared, json_encode($prepared, JSON_THROW_ON_ERROR));
         self::assertSame($expected, $prepared->computation->deltaGrossMinor);
         self::assertSame('obligation', $correction->apply(new ApplyCorrection(prepared: $prepared, operationKey: 'volume-late'))->outcome);
@@ -178,8 +177,7 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $first = $this->correctionTax(rate: '0.25', version: '2');
         $this->publishPolicy(port: $first, date: $date);
         $this->application()->instance(TaxSnapshotPort::class, $first);
-        $command = new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef,
-            kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'tax', releasePolicy: null, correctionEffectiveDate: $date);
+        $command = new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'tax', releasePolicy: null, correctionEffectiveDate: $date);
         $correction = $this->application()->make(RatingCorrection::class);
         $one = $correction->prepare($command);
         self::assertInstanceOf(PreparedCorrection::class, $one);
@@ -203,7 +201,7 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $original = $this->prepared(priceVersion: 2);
         self::assertSame('20000', $original->draft->netMinor);
         $this->book($original);
-        $originalDigest = $this->queries()->snapshot($this->snapshotRef)['snapshotDigest'];
+        $originalDigest = FixtureValues::text($this->queries()->snapshot($this->snapshotRef)['snapshotDigest']);
         $this->usage()->submitUsageFact(UsageFixtures::fact(static function ($fact): void {
             $fact->factId = 'fact-2';
             $fact->value->quantity = '200';
@@ -214,8 +212,7 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $this->publishPolicy(port: $port, date: $date);
         $this->application()->instance(TaxSnapshotPort::class, $port);
         $correction = $this->application()->make(RatingCorrection::class);
-        $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef,
-            kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'late', releasePolicy: null, correctionEffectiveDate: $date));
+        $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'late', releasePolicy: null, correctionEffectiveDate: $date));
         self::assertInstanceOf(PreparedCorrection::class, $prepared, json_encode($prepared, JSON_THROW_ON_ERROR));
         self::assertSame('6000', $prepared->computation->deltaGrossMinor);
         $correction->apply(new ApplyCorrection(prepared: $prepared, operationKey: 'commitment-correction'));
@@ -228,17 +225,10 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
     {
         $metric = UsageFixtures::metric(static function ($raw): void {
             $raw->metricVersion = 'gauge/1';
-            $raw->model = (object) ['id' => 'gauge', 'version' => 1, 'revisionPolicy' => 'highest_fact_revision',
-                'sampleReducer' => 'latest', 'tieBreak' => 'eventAt_source_factId'];
+            $raw->model = (object) ['id' => 'gauge', 'version' => 1, 'revisionPolicy' => 'highest_fact_revision', 'sampleReducer' => 'latest', 'tieBreak' => 'eventAt_source_factId'];
         });
         $this->usage()->registerMetric($metric);
-        $this->owner()->table('billium_usage_aggregation_policy')->insert([
-            'seller_ref' => 'seller-a', 'environment' => 'test', 'metric_ref' => $metric->metricRef,
-            'metric_version' => $metric->metricVersion, 'metric_definition_digest' => $metric->digest,
-            'semantics' => 'gauge', 'algorithm_id' => 'gauge_latest_as_of', 'algorithm_version' => 1, 'gauge_policy' => 'latest_as_of',
-            'missing_initial' => 'refuse', 'carry_forward' => false, 'quantity_scale' => 9, 'rounding_mode' => 'half_up',
-            'allow_negative' => false, 'finality_contract_ref' => 'source-finality', 'finality_contract_version' => 1,
-            'identity_key_version' => null, 'identity_namespace' => null, 'cross_source_identity_policy' => 'shared']);
+        $this->owner()->table('billium_usage_aggregation_policy')->insert(['seller_ref' => 'seller-a', 'environment' => 'test', 'metric_ref' => $metric->metricRef, 'metric_version' => $metric->metricVersion, 'metric_definition_digest' => $metric->digest, 'semantics' => 'gauge', 'algorithm_id' => 'gauge_latest_as_of', 'algorithm_version' => 1, 'gauge_policy' => 'latest_as_of', 'missing_initial' => 'refuse', 'carry_forward' => false, 'quantity_scale' => 9, 'rounding_mode' => 'half_up', 'allow_negative' => false, 'finality_contract_ref' => 'source-finality', 'finality_contract_version' => 1, 'identity_key_version' => null, 'identity_namespace' => null, 'cross_source_identity_policy' => 'shared']);
         $fact = UsageFixtures::fact(static function ($raw) use ($metric): void {
             $raw->metricVersion = $metric->metricVersion;
             $raw->metricDigest = $metric->digest;
@@ -249,21 +239,19 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $window = $this->window($metric);
         $snapshot = $this->aggregation()->freeze(new FreezeAggregate(window: $window))->body();
         $request = $this->request();
-        $request = new PrepareRating(...[...get_object_vars($request), 'components' => [['componentRef' => 'component-1',
-            'snapshotRef' => $snapshot['snapshotRef'], 'priceRef' => 'api', 'priceVersion' => 1]]]);
+        $request = FixtureArguments::construct(class: PrepareRating::class, arguments: [...get_object_vars($request), 'components' => [['componentRef' => 'component-1', 'snapshotRef' => FixtureValues::text($snapshot['snapshotRef']), 'priceRef' => 'api', 'priceVersion' => 1]]]);
         $original = $this->application()->make(RatingPreparer::class)->prepare($request);
         self::assertInstanceOf(PreparedRating::class, $original);
         self::assertSame('1000', $original->draft->netMinor);
         $this->book($original);
         $this->usage()->submitUsageFact(UsageFixtures::correction(previous: $fact, quantity: '15'));
-        $this->aggregation()->freeze(new FreezeAggregate(window: $window, expectedHeadDigest: $snapshot['snapshotDigest']));
+        $this->aggregation()->freeze(new FreezeAggregate(window: $window, expectedHeadDigest: FixtureValues::text($snapshot['snapshotDigest'])));
         $port = $this->correctionTax(rate: '0', version: '1');
         $date = new DateTimeImmutable('2026-11-15Z');
         $this->publishPolicy(port: $port, date: $date);
         $this->application()->instance(TaxSnapshotPort::class, $port);
         $correction = $this->application()->make(RatingCorrection::class);
-        $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef,
-            kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'gauge-revision', releasePolicy: null, correctionEffectiveDate: $date));
+        $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'gauge-revision', releasePolicy: null, correctionEffectiveDate: $date));
         self::assertInstanceOf(PreparedCorrection::class, $prepared, json_encode($prepared, JSON_THROW_ON_ERROR));
         self::assertSame('500', $prepared->computation->deltaGrossMinor);
         self::assertSame('1500', $prepared->computation->correctedBasis->netMinor);
@@ -282,28 +270,22 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
     {
         $this->application()->make(PriceVersionStore::class)->publish(price: $this->price(version: 2, fixed: '31.00'), commandKey: 'fixed-price');
         $booked = $this->book($this->prepared(priceVersion: 2));
+        self::assertNotNull($booked->obligationRef);
         $scope = new BillingAccountScope(sellerRef: 'seller-a', environment: 'test', billingAccountRef: 'original-account');
         $ledger = $this->application()->make(Ledger::class);
-        self::assertTrue($ledger->createInvoice(new CreateInvoice(commandKey: 'draft', scope: $scope, invoiceRef: 'invoice-1', customerRef: 'original-customer',
-            lines: [new InvoiceLineInput(obligationRef: $booked->obligationRef)]))->accepted);
+        self::assertTrue($ledger->createInvoice(new CreateInvoice(commandKey: 'draft', scope: $scope, invoiceRef: 'invoice-1', customerRef: 'original-customer', lines: [new InvoiceLineInput(obligationRef: $booked->obligationRef)]))->accepted);
         self::assertTrue($ledger->issueInvoice(new IssueInvoice(commandKey: 'issue', scope: $scope, invoiceRef: 'invoice-1'))->accepted);
         $invoiceBefore = $this->value("SELECT row_to_json(i)::text FROM billium_invoice i WHERE invoice_ref='invoice-1'");
         if ($release === ReleasePolicy::ReverseAllocations) {
-            $this->owner()->table('billium_payment')->insert(['installation_ref' => 'inst-test', 'seller_ref' => 'seller-a', 'environment' => 'test',
-                'billing_account_ref' => 'original-account', 'currency' => 'USD', 'payment_ref' => 'payment-1', 'source_authority' => 'authority',
-                'source_lineage' => 'lineage', 'operation_ref' => 'operation-1', 'kind' => 'charge', 'captured_minor' => 3100]);
-            self::assertTrue($ledger->allocate(new Allocate(commandKey: 'allocate', scope: $scope, allocationRef: 'allocation-1',
-                obligationRef: $booked->obligationRef, money: Money::parse('31.00', 'USD'), paymentRef: 'payment-1'))->accepted);
+            $this->owner()->table('billium_payment')->insert(['installation_ref' => 'inst-test', 'seller_ref' => 'seller-a', 'environment' => 'test', 'billing_account_ref' => 'original-account', 'currency' => 'USD', 'payment_ref' => 'payment-1', 'source_authority' => 'authority', 'source_lineage' => 'lineage', 'operation_ref' => 'operation-1', 'kind' => 'charge', 'captured_minor' => 3100]);
+            self::assertTrue($ledger->allocate(new Allocate(commandKey: 'allocate', scope: $scope, allocationRef: 'allocation-1', obligationRef: $booked->obligationRef, money: Money::parse('31.00', 'USD'), paymentRef: 'payment-1'))->accepted);
         }
         $port = $this->correctionTax(rate: '0', version: '1');
         $date = new DateTimeImmutable('2026-10-16Z');
         $this->publishPolicy(port: $port, date: $date);
         $this->application()->instance(TaxSnapshotPort::class, $port);
         $correction = $this->application()->make(RatingCorrection::class);
-        $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef,
-            kind: CorrectionKind::PartialCancel, amendment: new HostAmendment(amendmentRef: 'cancel', revision: 1, effectiveAt: $date,
-                prorationPolicy: ProrationPolicyId::ElapsedSeconds, kind: 'partial_cancel', timezone: null), reasonCode: 'cancel',
-            releasePolicy: $release));
+        $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::PartialCancel, amendment: new HostAmendment(amendmentRef: 'cancel', revision: 1, effectiveAt: $date, prorationPolicy: ProrationPolicyId::ElapsedSeconds, kind: 'partial_cancel', timezone: null), reasonCode: 'cancel', releasePolicy: $release));
         self::assertInstanceOf(PreparedCorrection::class, $prepared, json_encode($prepared, JSON_THROW_ON_ERROR));
         self::assertSame('-1600', $prepared->computation->deltaGrossMinor);
         self::assertSame('credit_note', $correction->apply(new ApplyCorrection(prepared: $prepared, operationKey: 'cancel-1'))->outcome);
@@ -326,8 +308,7 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $this->publishPolicy(port: $firstPort, date: $date);
         $this->application()->instance(TaxSnapshotPort::class, $firstPort);
         $correction = $this->application()->make(RatingCorrection::class);
-        $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef,
-            kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'tax', releasePolicy: null, correctionEffectiveDate: $date));
+        $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'tax', releasePolicy: null, correctionEffectiveDate: $date));
         self::assertInstanceOf(PreparedCorrection::class, $prepared);
         $other = $this->correctionTax(rate: '0.30', version: '3');
         $dummy = $prepared->taxRequest;
@@ -347,17 +328,14 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
     {
         $this->application()->make(PriceVersionStore::class)->publish(price: $this->price(version: 2, fixed: '31.00'), commandKey: 'fixed-price');
         $booked = $this->book($this->prepared(priceVersion: 2));
+        self::assertNotNull($booked->obligationRef);
         $this->issueInvoice($booked->obligationRef);
         $port = $this->correctionTax(rate: '0', version: '1');
         $this->publishPolicy(port: $port, date: new DateTimeImmutable('2026-10-11Z'));
         $this->application()->instance(TaxSnapshotPort::class, $port);
         $service = $this->application()->make(RatingCorrection::class);
         $occurrence = $this->occurrenceRef;
-        $command = static fn (int $revision, string $date): PrepareCorrection => new PrepareCorrection(
-            sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $occurrence,
-            kind: CorrectionKind::PartialCancel, amendment: new HostAmendment(amendmentRef: 'cancel', revision: $revision,
-                effectiveAt: new DateTimeImmutable($date), prorationPolicy: ProrationPolicyId::ElapsedSeconds, kind: 'partial_cancel', timezone: null),
-            reasonCode: 'cancel', releasePolicy: ReleasePolicy::OpenOnly);
+        $command = static fn (int $revision, string $date): PrepareCorrection => new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $occurrence, kind: CorrectionKind::PartialCancel, amendment: new HostAmendment(amendmentRef: 'cancel', revision: $revision, effectiveAt: new DateTimeImmutable($date), prorationPolicy: ProrationPolicyId::ElapsedSeconds, kind: 'partial_cancel', timezone: null), reasonCode: 'cancel', releasePolicy: ReleasePolicy::OpenOnly);
         $second = $service->prepare($command(2, '2026-10-11Z'));
         $competing = $service->prepare($command(3, '2026-10-16Z'));
         self::assertInstanceOf(PreparedCorrection::class, $second);
@@ -389,18 +367,15 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
     {
         $base = $this->price(version: 2);
         $data = [...get_object_vars($base), 'strategyId' => StrategyId::PerUnit, 'terms' => new PerUnitTerms(unitPrice: '1'), 'termsDigest' => 'draft'];
-        $draft = new PriceVersion(...$data);
+        $draft = FixtureArguments::construct(class: PriceVersion::class, arguments: $data);
         $data['termsDigest'] = CanonicalJson::termsDigest($draft);
-        $this->application()->make(PriceVersionStore::class)->publish(price: new PriceVersion(...$data), commandKey: 'per-unit-price');
+        $this->application()->make(PriceVersionStore::class)->publish(price: FixtureArguments::construct(class: PriceVersion::class, arguments: $data), commandKey: 'per-unit-price');
         $booked = $this->book($this->prepared(priceVersion: 2));
+        self::assertNotNull($booked->obligationRef);
         $this->issueInvoice($booked->obligationRef);
         $head = $this->value("SELECT head_digest FROM billium_rating_source_frontier WHERE frontier_key LIKE 'occurrence:%'");
         try {
-            $this->application()->make(RatingCorrection::class)->prepare(new PrepareCorrection(
-                sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef,
-                kind: CorrectionKind::PartialCancel, amendment: new HostAmendment(amendmentRef: 'cancel', revision: 1,
-                    effectiveAt: new DateTimeImmutable('2026-10-16Z'), prorationPolicy: ProrationPolicyId::ElapsedSeconds,
-                    kind: 'partial_cancel', timezone: null), reasonCode: 'cancel', releasePolicy: ReleasePolicy::OpenOnly));
+            $this->application()->make(RatingCorrection::class)->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::PartialCancel, amendment: new HostAmendment(amendmentRef: 'cancel', revision: 1, effectiveAt: new DateTimeImmutable('2026-10-16Z'), prorationPolicy: ProrationPolicyId::ElapsedSeconds, kind: 'partial_cancel', timezone: null), reasonCode: 'cancel', releasePolicy: ReleasePolicy::OpenOnly));
             self::fail('Metered per-unit usage was prorated');
         } catch (ProblemException $error) {
             self::assertStringContainsString('amendment_unsupported', $error->detail);
@@ -415,10 +390,12 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
     {
         $base = $this->price(version: 2);
         $data = [...get_object_vars($base), 'strategyId' => StrategyId::PerUnit, 'unit' => 'seat', 'terms' => new PerUnitTerms(unitPrice: '1'), 'termsDigest' => 'draft'];
-        $data['termsDigest'] = CanonicalJson::termsDigest(new PriceVersion(...$data));
-        $this->application()->make(PriceVersionStore::class)->publish(price: new PriceVersion(...$data), commandKey: 'approved-price');
+        $data['termsDigest'] = CanonicalJson::termsDigest(FixtureArguments::construct(class: PriceVersion::class, arguments: $data));
+        $this->application()->make(PriceVersionStore::class)->publish(price: FixtureArguments::construct(class: PriceVersion::class, arguments: $data), commandKey: 'approved-price');
+        /** @var \stdClass&object{script: list<object{args: object{json_text: string}}>} $vector */
         $vector = json_decode((string) file_get_contents(dirname(__DIR__, 6).'/fixtures/vectors/usage/contracts/quantity.json'), false, 64, JSON_THROW_ON_ERROR);
         $raw = json_decode($vector->script[0]->args->json_text, false, 64, JSON_THROW_ON_ERROR);
+        self::assertInstanceOf(\stdClass::class, $raw);
         $raw->sellerRef = 'seller-a';
         $raw->attribution = UsageFixtures::fact()->attribution;
         $raw->quantity = '100';
@@ -434,30 +411,31 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $invalid->digest = $codec->digest($invalid);
         $invalidComponents = $components;
         $invalidComponents[0]['quantitySnapshot'] = $codec->decode($codec->canonicalize($invalid));
-        $invalidResult = $this->application()->make(RatingPreparer::class)->prepare(new PrepareRating(...[...get_object_vars($request), 'components' => $invalidComponents]));
+        $invalidResult = $this->application()->make(RatingPreparer::class)->prepare(FixtureArguments::construct(class: PrepareRating::class, arguments: [...get_object_vars($request), 'components' => $invalidComponents]));
         self::assertInstanceOf(RatingHold::class, $invalidResult);
         self::assertStringContainsString('quantity_snapshot_invalid', $invalidResult->detail);
-        $request = new PrepareRating(...[...get_object_vars($request), 'components' => $components]);
+        $request = FixtureArguments::construct(class: PrepareRating::class, arguments: [...get_object_vars($request), 'components' => $components]);
         $prepared = $this->application()->make(RatingPreparer::class)->prepare($request);
         self::assertInstanceOf(PreparedRating::class, $prepared);
         $booked = $this->book($prepared);
+        self::assertNotNull($booked->obligationRef);
         $this->issueInvoice($booked->obligationRef);
         $port = $this->correctionTax(rate: '0', version: '1');
         $date = new DateTimeImmutable('2026-10-16Z');
         $this->publishPolicy(port: $port, date: $date);
         $this->application()->instance(TaxSnapshotPort::class, $port);
         $service = $this->application()->make(RatingCorrection::class);
-        $correction = $service->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef,
-            kind: CorrectionKind::PartialCancel, amendment: new HostAmendment(amendmentRef: 'cancel', revision: 1, effectiveAt: $date,
-                prorationPolicy: ProrationPolicyId::ElapsedSeconds, kind: 'partial_cancel', timezone: null), reasonCode: 'cancel', releasePolicy: ReleasePolicy::OpenOnly));
+        $correction = $service->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::PartialCancel, amendment: new HostAmendment(amendmentRef: 'cancel', revision: 1, effectiveAt: $date, prorationPolicy: ProrationPolicyId::ElapsedSeconds, kind: 'partial_cancel', timezone: null), reasonCode: 'cancel', releasePolicy: ReleasePolicy::OpenOnly));
         self::assertInstanceOf(PreparedCorrection::class, $correction);
         self::assertSame('-5161', $correction->computation->deltaGrossMinor);
-        self::assertSame($raw->digest, $correction->inputs->aggregates[0]->quantitySnapshot['digest']);
+        $retained = $correction->inputs->aggregates[0]->quantitySnapshot;
+        self::assertNotNull($retained);
+        self::assertSame($raw->digest, $retained['digest'] ?? null);
         $modified = $correction->inputs->aggregates[0]->quantitySnapshot;
         $modified['quantity'] = '99';
-        $forgedAggregate = new FrozenAggregate(...[...get_object_vars($correction->inputs->aggregates[0]), 'quantitySnapshot' => $modified]);
-        $forgedInputs = new FrozenRatingInputs(...[...get_object_vars($correction->inputs), 'aggregates' => [$forgedAggregate]]);
-        $forged = new PreparedCorrection(...[...get_object_vars($correction), 'inputs' => $forgedInputs]);
+        $forgedAggregate = FixtureArguments::construct(class: FrozenAggregate::class, arguments: [...get_object_vars($correction->inputs->aggregates[0]), 'quantitySnapshot' => $modified]);
+        $forgedInputs = FixtureArguments::construct(class: FrozenRatingInputs::class, arguments: [...get_object_vars($correction->inputs), 'aggregates' => [$forgedAggregate]]);
+        $forged = FixtureArguments::construct(class: PreparedCorrection::class, arguments: [...get_object_vars($correction), 'inputs' => $forgedInputs]);
         try {
             $service->apply(new ApplyCorrection(prepared: $forged, operationKey: 'forged-snapshot'));
             self::fail('Changed retained quantity evidence was accepted');
@@ -478,10 +456,9 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $this->publishPolicy(port: $port, date: $date);
         $this->application()->instance(TaxSnapshotPort::class, $port);
         $correction = $this->application()->make(RatingCorrection::class);
-        $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef,
-            kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'tax', releasePolicy: null, correctionEffectiveDate: $date));
+        $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'tax', releasePolicy: null, correctionEffectiveDate: $date));
         self::assertInstanceOf(PreparedCorrection::class, $prepared);
-        $forged = new PreparedCorrection(...[...get_object_vars($prepared), 'originalObligationRef' => 'unrelated']);
+        $forged = FixtureArguments::construct(class: PreparedCorrection::class, arguments: [...get_object_vars($prepared), 'originalObligationRef' => 'unrelated']);
         try {
             $correction->apply(new ApplyCorrection(prepared: $forged, operationKey: 'forged'));
             self::fail('Unrelated parent obligation was accepted');
@@ -496,8 +473,7 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
     {
         $this->book($this->prepared());
         $date = new DateTimeImmutable('2026-11-15Z');
-        $command = new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef,
-            kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'tax', releasePolicy: null, correctionEffectiveDate: $date);
+        $command = new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'tax', releasePolicy: null, correctionEffectiveDate: $date);
         $result = $this->application()->make(RatingCorrection::class)->prepare($command);
         self::assertInstanceOf(RatingHold::class, $result);
         self::assertSame('billium.rating.tax_policy_missing', $result->detail);
@@ -515,11 +491,9 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
     {
         $this->application()->instance(UsageAttribution::class, new class implements UsageAttribution
         {
-            public function resolve(Caller $caller, UsageFactV2 $fact): ?AttributionSnapshot
+            public function resolve(Caller $caller, UsageFactV2 $fact): AttributionSnapshot
             {
-                return new AttributionSnapshot(sellerRef: $caller->sellerRef, attribution: $fact->attribution, mappingRef: 'mapping-1',
-                    validFrom: '2026-10-01T00:00:00Z', validUntil: '2026-11-01T00:00:00Z', periodRef: 'october-2026',
-                    periodStart: '2026-10-01T00:00:00Z', periodEnd: '2026-11-01T00:00:00Z');
+                return new AttributionSnapshot(sellerRef: $caller->sellerRef, attribution: $fact->attribution, mappingRef: 'mapping-1', validFrom: '2026-10-01T00:00:00Z', validUntil: '2026-11-01T00:00:00Z', periodRef: 'october-2026', periodStart: '2026-10-01T00:00:00Z', periodEnd: '2026-11-01T00:00:00Z');
             }
         });
         $this->usage()->submitUsageFact(UsageFixtures::fact(static function ($fact): void {
@@ -530,10 +504,8 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $firstWindow = $this->window();
         $group = $firstWindow->groupKey;
         $group['componentRef'] = 'component-2';
-        $window = new WindowSelector(sellerRef: $firstWindow->sellerRef, environment: $firstWindow->environment,
-            metricRef: $firstWindow->metricRef, metricVersion: $firstWindow->metricVersion, groupKey: $group,
-            startMicros: $firstWindow->startMicros, endMicros: $firstWindow->endMicros);
-        $secondRef = $this->aggregation()->freeze(new FreezeAggregate(window: $window))->body()['snapshotRef'];
+        $window = new WindowSelector(sellerRef: $firstWindow->sellerRef, environment: $firstWindow->environment, metricRef: $firstWindow->metricRef, metricVersion: $firstWindow->metricVersion, groupKey: $group, startMicros: $firstWindow->startMicros, endMicros: $firstWindow->endMicros);
+        $secondRef = FixtureValues::text($this->aggregation()->freeze(new FreezeAggregate(window: $window))->body()['snapshotRef']);
         $port = new class implements TaxSnapshotPort
         {
             public int $correctionCalls = 0;
@@ -554,16 +526,16 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         };
         $this->application()->instance(TaxSnapshotPort::class, $port);
         $priceData = [...get_object_vars($this->price(version: 2)), 'strategyId' => StrategyId::PerUnit, 'terms' => new PerUnitTerms(unitPrice: '1'), 'termsDigest' => 'draft'];
-        $priceData['termsDigest'] = CanonicalJson::termsDigest(new PriceVersion(...$priceData));
-        $this->application()->make(PriceVersionStore::class)->publish(price: new PriceVersion(...$priceData), commandKey: 'two-tax-price');
+        $priceData['termsDigest'] = CanonicalJson::termsDigest(FixtureArguments::construct(class: PriceVersion::class, arguments: $priceData));
+        $this->application()->make(PriceVersionStore::class)->publish(price: FixtureArguments::construct(class: PriceVersion::class, arguments: $priceData), commandKey: 'two-tax-price');
         $request = $this->request(priceVersion: 2);
         $components = [...$request->components, ['componentRef' => 'component-2', 'snapshotRef' => $secondRef, 'priceRef' => 'api', 'priceVersion' => 2]];
-        $prepared = $this->application()->make(RatingPreparer::class)->prepare(new PrepareRating(...[...get_object_vars($request), 'components' => $components]));
+        $prepared = $this->application()->make(RatingPreparer::class)->prepare(FixtureArguments::construct(class: PrepareRating::class, arguments: [...get_object_vars($request), 'components' => $components]));
         self::assertInstanceOf(PreparedRating::class, $prepared);
         self::assertSame('3000', $prepared->draft->taxMinor);
         $this->book($prepared);
-        $firstDigest = $this->queries()->snapshot($this->snapshotRef)['snapshotDigest'];
-        $secondDigest = $this->queries()->snapshot($secondRef)['snapshotDigest'];
+        $firstDigest = FixtureValues::text($this->queries()->snapshot($this->snapshotRef)['snapshotDigest']);
+        $secondDigest = FixtureValues::text($this->queries()->snapshot($secondRef)['snapshotDigest']);
         foreach ([1, 2] as $component) {
             $this->usage()->submitUsageFact(UsageFixtures::fact(static function ($fact) use ($component): void {
                 $fact->factId = 'late-tax-'.$component;
@@ -573,12 +545,10 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         }
         $firstLate = $this->aggregation()->freeze(new FreezeAggregate(window: $firstWindow, expectedHeadDigest: $firstDigest))->body();
         $secondLate = $this->aggregation()->freeze(new FreezeAggregate(window: $window, expectedHeadDigest: $secondDigest))->body();
-        self::assertSame('150.000000000', $this->queries()->snapshot($firstLate['snapshotRef'])['quantity']);
-        self::assertSame('150.000000000', $this->queries()->snapshot($secondLate['snapshotRef'])['quantity']);
+        self::assertSame('150.000000000', $this->queries()->snapshot(FixtureValues::text($firstLate['snapshotRef']))['quantity']);
+        self::assertSame('150.000000000', $this->queries()->snapshot(FixtureValues::text($secondLate['snapshotRef']))['quantity']);
         $head = $this->value("SELECT head_digest FROM billium_rating_source_frontier WHERE frontier_key LIKE 'occurrence:%'");
-        $held = $this->application()->make(RatingCorrection::class)->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test',
-            parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'late',
-            releasePolicy: null, correctionEffectiveDate: new DateTimeImmutable('2026-11-15Z')));
+        $held = $this->application()->make(RatingCorrection::class)->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'late', releasePolicy: null, correctionEffectiveDate: new DateTimeImmutable('2026-11-15Z')));
         self::assertInstanceOf(RatingHold::class, $held);
         self::assertSame('billium.rating.tax_policy_unsupported', $held->detail);
         self::assertSame(0, $port->correctionCalls);
@@ -598,8 +568,7 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $fault = new LedgerFault($this->application()->make(LedgerParticipants::class));
         $this->application()->instance(LedgerParticipants::class, $fault);
         $correction = $this->application()->make(RatingCorrection::class);
-        $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef,
-            kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'tax', releasePolicy: null, correctionEffectiveDate: $date));
+        $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'tax', releasePolicy: null, correctionEffectiveDate: $date));
         self::assertInstanceOf(PreparedCorrection::class, $prepared);
         self::assertSame('0', $prepared->computation->deltaGrossMinor);
         self::assertSame('none', $correction->apply(new ApplyCorrection(prepared: $prepared, operationKey: 'zero'))->outcome);
@@ -613,7 +582,7 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
     {
         $this->tax->rate = '0.20';
         $this->book($this->prepared());
-        $originalDigest = $this->queries()->snapshot($this->snapshotRef)['snapshotDigest'];
+        $originalDigest = FixtureValues::text($this->queries()->snapshot($this->snapshotRef)['snapshotDigest']);
         $this->usage()->submitUsageFact(UsageFixtures::fact(static function ($fact): void {
             $fact->factId = 'fact-2';
             $fact->value->quantity = '50';
@@ -623,9 +592,7 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $date = new DateTimeImmutable('2026-11-15Z');
         $this->publishPolicy(port: $port, date: $date);
         $this->application()->instance(TaxSnapshotPort::class, $port);
-        $result = $this->application()->make(RatingCorrection::class)->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test',
-            parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'tax', releasePolicy: null,
-            correctionEffectiveDate: $date));
+        $result = $this->application()->make(RatingCorrection::class)->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'tax', releasePolicy: null, correctionEffectiveDate: $date));
         self::assertInstanceOf(RatingHold::class, $result);
         self::assertSame('billium.rating.correction_mixed_sign', $result->detail);
         self::assertSame(0, $this->rows('billium_rating_correction'));
@@ -640,9 +607,7 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $date = new DateTimeImmutable('2026-11-15Z');
         $this->publishPolicy(port: $port, date: $date);
         $this->application()->instance(TaxSnapshotPort::class, $port);
-        $result = $this->application()->make(RatingCorrection::class)->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test',
-            parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'tax',
-            releasePolicy: ReleasePolicy::OpenOnly, correctionEffectiveDate: $date));
+        $result = $this->application()->make(RatingCorrection::class)->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'tax', releasePolicy: ReleasePolicy::OpenOnly, correctionEffectiveDate: $date));
         self::assertInstanceOf(RatingHold::class, $result);
         self::assertSame('billium.rating.tax_policy_unsupported', $result->detail);
         self::assertSame(0, $this->rows('billium_rating_correction'));
@@ -653,6 +618,7 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
     {
         $this->application()->make(PriceVersionStore::class)->publish(price: $this->price(version: 2, fixed: '31.00'), commandKey: 'fixed-price');
         $booked = $this->book($this->prepared(priceVersion: 2));
+        self::assertNotNull($booked->obligationRef);
         $this->issueInvoice($booked->obligationRef);
         $port = $this->correctionTax(rate: '0', version: '1');
         $date = new DateTimeImmutable('2026-10-16Z');
@@ -661,10 +627,7 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $fault = new LedgerFault(inner: $this->application()->make(LedgerParticipants::class), failure: 'credit_rollback');
         $this->application()->instance(LedgerParticipants::class, $fault);
         $correction = $this->application()->make(RatingCorrection::class);
-        $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef,
-            kind: CorrectionKind::PartialCancel, amendment: new HostAmendment(amendmentRef: 'cancel', revision: 1, effectiveAt: $date,
-                prorationPolicy: ProrationPolicyId::ElapsedSeconds, kind: 'partial_cancel', timezone: null), reasonCode: 'cancel',
-            releasePolicy: ReleasePolicy::OpenOnly));
+        $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::PartialCancel, amendment: new HostAmendment(amendmentRef: 'cancel', revision: 1, effectiveAt: $date, prorationPolicy: ProrationPolicyId::ElapsedSeconds, kind: 'partial_cancel', timezone: null), reasonCode: 'cancel', releasePolicy: ReleasePolicy::OpenOnly));
         self::assertInstanceOf(PreparedCorrection::class, $prepared);
         try {
             $correction->apply(new ApplyCorrection(prepared: $prepared, operationKey: 'negative-fault'));
@@ -682,6 +645,7 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
     public function test_full_reversal_after_positive_correction_credits_the_entire_effective_basis(): void
     {
         $booked = $this->book($this->prepared());
+        self::assertNotNull($booked->obligationRef);
         $this->issueInvoice($booked->obligationRef);
         $originalFact = UsageFixtures::fact(static function ($fact): void {
             $fact->value->quantity = '100';
@@ -690,7 +654,7 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
             $fact->factId = 'fact-2';
             $fact->value->quantity = '200';
         });
-        $digest = $this->queries()->snapshot($this->snapshotRef)['snapshotDigest'];
+        $digest = FixtureValues::text($this->queries()->snapshot($this->snapshotRef)['snapshotDigest']);
         $this->usage()->submitUsageFact($addedFact);
         $newSnapshot = $this->freeze($digest);
         $port = $this->correctionTax(rate: '0', version: '1');
@@ -698,8 +662,7 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $this->publishPolicy(port: $port, date: $date);
         $this->application()->instance(TaxSnapshotPort::class, $port);
         $correction = $this->application()->make(RatingCorrection::class);
-        $command = new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef,
-            kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'late', releasePolicy: ReleasePolicy::OpenOnly, correctionEffectiveDate: $date);
+        $command = new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'late', releasePolicy: ReleasePolicy::OpenOnly, correctionEffectiveDate: $date);
         $positive = $correction->prepare($command);
         self::assertInstanceOf(PreparedCorrection::class, $positive);
         self::assertSame('16000', $positive->computation->deltaGrossMinor);
@@ -707,11 +670,13 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $this->usage()->submitUsageFact(UsageFixtures::correction(previous: $originalFact, quantity: '0'));
         $secondCorrection = UsageFixtures::correction(previous: $addedFact, quantity: '0');
         $raw = json_decode(json_encode($secondCorrection->raw, JSON_THROW_ON_ERROR), false, 64, JSON_THROW_ON_ERROR);
+        self::assertInstanceOf(\stdClass::class, $raw);
+        self::assertInstanceOf(\stdClass::class, $raw->correction);
         $raw->correction->correctionRef = 'correction-added-2';
         $codec = new Codec;
         $raw->digest = $codec->digest($raw);
-        $this->usage()->submitUsageFact($codec->decode($codec->canonicalize($raw)));
-        $this->freeze($newSnapshot['snapshotDigest']);
+        $this->usage()->submitUsageFact(FixtureValues::instance($codec->decode($codec->canonicalize($raw)), UsageFactV2::class));
+        $this->freeze(FixtureValues::text($newSnapshot['snapshotDigest']));
         $hold = $correction->prepare($command);
         self::assertInstanceOf(RatingHold::class, $hold);
         self::assertSame('billium.rating.invoice_not_issued', $hold->detail);
@@ -719,8 +684,7 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         self::assertNotNull($positiveReceipt->obligationRef);
         $scope = new BillingAccountScope(sellerRef: 'seller-a', environment: 'test', billingAccountRef: 'original-account');
         $ledger = $this->application()->make(Ledger::class);
-        self::assertTrue($ledger->createInvoice(new CreateInvoice(commandKey: 'draft-child', scope: $scope, invoiceRef: 'invoice-child',
-            customerRef: 'original-customer', lines: [new InvoiceLineInput(obligationRef: $positiveReceipt->obligationRef)]))->accepted);
+        self::assertTrue($ledger->createInvoice(new CreateInvoice(commandKey: 'draft-child', scope: $scope, invoiceRef: 'invoice-child', customerRef: 'original-customer', lines: [new InvoiceLineInput(obligationRef: $positiveReceipt->obligationRef)]))->accepted);
         self::assertTrue($ledger->issueInvoice(new IssueInvoice(commandKey: 'issue-child', scope: $scope, invoiceRef: 'invoice-child'))->accepted);
         $invoiceContentSql = "SELECT jsonb_build_object('invoice', to_jsonb(i) - ARRAY['status','revision','allocated_minor','credited_minor','open_minor']::text[], 'lines', (SELECT jsonb_agg(to_jsonb(l) ORDER BY l.id) FROM billium_invoice_line l WHERE l.invoice_id=i.id))::text FROM billium_invoice i WHERE i.invoice_ref=?";
         $originalContent = $this->value($invoiceContentSql, ['invoice-1']);
@@ -729,9 +693,9 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         self::assertInstanceOf(PreparedCorrection::class, $negative);
         self::assertSame('-26000', $negative->computation->deltaGrossMinor);
         $participant = $this->application()->make(CorrectionCreditParticipants::class);
-        $fault = new class($participant) implements CorrectionCreditParticipants
+        $fault = new readonly class($participant) implements CorrectionCreditParticipants
         {
-            public function __construct(private readonly CorrectionCreditParticipants $inner) {}
+            public function __construct(private CorrectionCreditParticipants $inner) {}
 
             public function issue(TransactionContext $context, array $commands): void
             {
@@ -756,12 +720,16 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $queries = $this->application()->make(LedgerQueries::class);
         $group = $queries->receipt('credit-note:'.$receipt->creditNoteRef);
         self::assertSame($receipt->creditNoteRef, $this->value("SELECT payload->>'creditNoteRef' FROM billium_outbox_command WHERE business_ref=?", [$receipt->correctionRef]));
+        self::assertIsArray($group['parts']);
         self::assertCount(2, $group['parts']);
         $amounts = [];
         foreach ($group['parts'] as $part) {
-            $resolved = $queries->receipt($part['receiptRef']);
+            self::assertIsArray($part);
+            $resolved = $queries->receipt(self::text($part['receiptRef']));
             self::assertSame($part['receipt'], $resolved);
-            $amounts[] = $resolved['lines'][0]['amount_minor'];
+            $lines = self::arr($resolved['lines']);
+            $line = self::arr($lines[0]);
+            $amounts[] = $line['amount_minor'];
         }
         sort($amounts);
         self::assertSame(['10000', '16000'], $amounts);
@@ -792,8 +760,7 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $fault = new LedgerFault($this->application()->make(LedgerParticipants::class));
         $this->application()->instance(LedgerParticipants::class, $fault);
         $correction = $this->application()->make(RatingCorrection::class);
-        $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef,
-            kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'tax', releasePolicy: null, correctionEffectiveDate: $date));
+        $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'tax', releasePolicy: null, correctionEffectiveDate: $date));
         self::assertInstanceOf(PreparedCorrection::class, $prepared);
         $before = $this->value("SELECT head_digest FROM billium_rating_source_frontier WHERE frontier_key LIKE 'occurrence:%'");
         try {
@@ -819,14 +786,12 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $date = new DateTimeImmutable('2026-11-15Z');
         $this->publishPolicy(port: $port, date: $date);
         $this->application()->instance(TaxSnapshotPort::class, $port);
-        $prepared = $this->application()->make(RatingCorrection::class)->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test',
-            parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'tax', releasePolicy: null,
-            correctionEffectiveDate: $date));
+        $prepared = $this->application()->make(RatingCorrection::class)->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'tax', releasePolicy: null, correctionEffectiveDate: $date));
         self::assertInstanceOf(PreparedCorrection::class, $prepared);
         $results = ConcurrencyStand::run(scenario: CorrectionScenario::class, workers: 5, args: ['prepared' => base64_encode(serialize($prepared))]);
-        $bodies = array_map(static fn (array $result): array => self::ok($result), $results);
-        self::assertCount(5, array_unique(array_column($bodies, 'pid')));
-        $outcomes = array_count_values(array_column(array_column($bodies, 'body'), 'outcome'));
+        $bodies = array_map(self::ok(...), $results);
+        self::assertCount(5, array_unique(array_map(self::integer(...), array_column($bodies, 'pid'))));
+        $outcomes = array_count_values(array_map(self::text(...), array_column(array_column($bodies, 'body'), 'outcome')));
         self::assertSame(1, $outcomes['obligation'] ?? 0);
         self::assertSame(4, $outcomes['existing'] ?? 0);
         self::assertSame(1, $this->rows('billium_schedule_billing_correction'));
@@ -842,20 +807,17 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $firstPort = $this->correctionTax(rate: '0.25', version: '2', treatment: 'original_rate');
         $secondPort = $this->correctionTax(rate: '0.30', version: '2', treatment: 'current_legal_rate');
         $this->publishPolicy(port: $firstPort, date: $date);
-        $command = new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef,
-            kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'tax', releasePolicy: null, correctionEffectiveDate: $date);
+        $command = new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'tax', releasePolicy: null, correctionEffectiveDate: $date);
         $this->application()->instance(TaxSnapshotPort::class, $firstPort);
         $first = $this->application()->make(RatingCorrection::class)->prepare($command);
         $this->application()->instance(TaxSnapshotPort::class, $secondPort);
         $second = $this->application()->make(RatingCorrection::class)->prepare($command);
         self::assertInstanceOf(PreparedCorrection::class, $first);
         self::assertInstanceOf(PreparedCorrection::class, $second);
-        $results = ConcurrencyStand::run(scenario: CorrectionScenario::class, workers: 2,
-            args: ['alternatives' => [base64_encode(serialize($first)), base64_encode(serialize($second))]]);
-        $bodies = array_map(static fn (array $result): array => self::ok($result), $results);
-        self::assertSame(1, count(array_filter($bodies, static fn (array $body): bool => $body['accepted'])));
-        self::assertSame(['billium.rating.correction_frontier_stale'], array_values(array_column(array_filter($bodies,
-            static fn (array $body): bool => ! $body['accepted']), 'detail')));
+        $results = ConcurrencyStand::run(scenario: CorrectionScenario::class, workers: 2, args: ['alternatives' => [base64_encode(serialize($first)), base64_encode(serialize($second))]]);
+        $bodies = array_map(self::ok(...), $results);
+        self::assertSame(1, count(array_filter($bodies, static fn (array $body): bool => $body['accepted'] === true)));
+        self::assertSame(['billium.rating.correction_frontier_stale'], array_column(array_filter($bodies, static fn (array $body): bool => ! $body['accepted']), 'detail'));
         $correction = $this->application()->make(RatingCorrection::class);
         $fresh = $correction->prepare($command);
         self::assertInstanceOf(PreparedCorrection::class, $fresh);
@@ -874,23 +836,20 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
     {
         $this->tax->rate = '0.20';
         $booked = $this->book($this->prepared());
+        self::assertNotNull($booked->obligationRef);
         if ($action === 'issue') {
             $scope = new BillingAccountScope(sellerRef: 'seller-a', environment: 'test', billingAccountRef: 'original-account');
-            self::assertTrue($this->application()->make(Ledger::class)->createInvoice(new CreateInvoice(commandKey: 'draft', scope: $scope,
-                invoiceRef: 'invoice-1', customerRef: 'original-customer', lines: [new InvoiceLineInput(obligationRef: $booked->obligationRef)]))->accepted);
+            self::assertTrue($this->application()->make(Ledger::class)->createInvoice(new CreateInvoice(commandKey: 'draft', scope: $scope, invoiceRef: 'invoice-1', customerRef: 'original-customer', lines: [new InvoiceLineInput(obligationRef: $booked->obligationRef)]))->accepted);
         }
         $port = $this->correctionTax(rate: '0.25', version: '2');
         $date = new DateTimeImmutable('2026-11-15Z');
         $this->publishPolicy(port: $port, date: $date);
         $this->application()->instance(TaxSnapshotPort::class, $port);
-        $prepared = $this->application()->make(RatingCorrection::class)->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test',
-            parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'tax', releasePolicy: null,
-            correctionEffectiveDate: $date));
+        $prepared = $this->application()->make(RatingCorrection::class)->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'tax', releasePolicy: null, correctionEffectiveDate: $date));
         self::assertInstanceOf(PreparedCorrection::class, $prepared);
-        $results = ConcurrencyStand::run(scenario: CorrectionScenario::class, workers: 5,
-            args: ['prepared' => base64_encode(serialize($prepared)), $action => true]);
-        $bodies = array_map(static fn (array $result): array => self::ok($result), $results);
-        self::assertCount(5, array_filter($bodies, static fn (array $body): bool => $body['accepted']));
+        $results = ConcurrencyStand::run(scenario: CorrectionScenario::class, workers: 5, args: ['prepared' => base64_encode(serialize($prepared)), $action => true]);
+        $bodies = array_map(self::ok(...), $results);
+        self::assertCount(5, array_filter($bodies, static fn (array $body): bool => $body['accepted'] === true));
         self::assertSame(1, $this->rows('billium_schedule_billing_correction'));
         self::assertSame(1, $this->rows('billium_rating_correction'));
         self::assertSame(2, $this->rows('billium_obligation'));
@@ -909,13 +868,10 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $this->publishPolicy(port: $port, date: $date);
         $this->application()->instance(TaxSnapshotPort::class, $port);
         $correction = $this->application()->make(RatingCorrection::class);
-        $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef,
-            kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'tax', releasePolicy: null, correctionEffectiveDate: $date));
+        $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null, reasonCode: 'tax', releasePolicy: null, correctionEffectiveDate: $date));
         self::assertInstanceOf(PreparedCorrection::class, $prepared);
-        foreach ([['billium_schedule_billing_correction', 'AFTER INSERT'], ['billium_rating_rated_basis', 'AFTER INSERT'],
-            ['billium_rating_correction_booking', 'AFTER INSERT'], ['billium_rating_source_frontier', 'AFTER UPDATE'],
-            ['billium_outbox_command', 'AFTER INSERT']] as [$table, $timing]) {
-            $this->owner()->unprepared("CREATE FUNCTION public.billium_test_correction_fault() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'correction fault'; END $$");
+        foreach ([['billium_schedule_billing_correction', 'AFTER INSERT'], ['billium_rating_rated_basis', 'AFTER INSERT'], ['billium_rating_correction_booking', 'AFTER INSERT'], ['billium_rating_source_frontier', 'AFTER UPDATE'], ['billium_outbox_command', 'AFTER INSERT']] as [$table, $timing]) {
+            $this->owner()->unprepared("CREATE FUNCTION public.billium_test_correction_fault() RETURNS trigger LANGUAGE plpgsql AS \$\$ BEGIN RAISE EXCEPTION 'correction fault'; END \$\$");
             $this->owner()->unprepared("CREATE TRIGGER billium_test_correction_fault {$timing} ON {$table} FOR EACH ROW EXECUTE FUNCTION public.billium_test_correction_fault()");
             try {
                 $correction->apply(new ApplyCorrection(prepared: $prepared, operationKey: 'fault-'.$table));
@@ -935,7 +891,7 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
 
     private function correctionTax(string $rate, string $version, string $treatment = 'current_legal_rate', ?TaxMode $mode = null): TaxSnapshotPort
     {
-        return new class($rate, $version, $treatment, $mode) implements TaxSnapshotPort
+        return new readonly class($rate, $version, $treatment, $mode) implements TaxSnapshotPort
         {
             public function __construct(private string $rate, private string $version, private string $treatment, private ?TaxMode $mode) {}
 
@@ -947,25 +903,16 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
             public function resolveCorrection(TaxCorrectionRequest $request): TaxCorrectionPolicySnapshot
             {
                 $from = new DateTimeImmutable('2026-01-01Z');
-                $rate = new TaxSnapshot(snapshotRef: 'correction-tax:'.$this->version, kind: TaxSnapshotKind::Correction,
-                    mode: $this->mode ?? ($this->rate === '0' ? TaxMode::NoneDeclared : TaxMode::Exclusive),
-                    jurisdiction: 'TEST', taxCode: 'test-tax', rate: $this->rate, effectiveDate: $from,
-                    taxPoint: $request->originalTaxPoint, noTaxReason: $this->rate === '0' ? 'test-exempt' : null, resolver: 'host', resolverVersion: '1',
-                    inputDigest: $request->inputDigest, evidenceDigest: 'rate-evidence');
+                $rate = new TaxSnapshot(snapshotRef: 'correction-tax:'.$this->version, kind: TaxSnapshotKind::Correction, mode: $this->mode ?? ($this->rate === '0' ? TaxMode::NoneDeclared : TaxMode::Exclusive), jurisdiction: 'TEST', taxCode: 'test-tax', rate: $this->rate, effectiveDate: $from, taxPoint: $request->originalTaxPoint, noTaxReason: $this->rate === '0' ? 'test-exempt' : null, resolver: 'host', resolverVersion: '1', inputDigest: $request->inputDigest, evidenceDigest: 'rate-evidence');
 
-                return new TaxCorrectionPolicySnapshot(policyRef: 'policy', policyVersion: $this->version, treatment: $this->treatment,
-                    selectedRate: $rate, effectiveFrom: $from, effectiveTo: null, inputDigest: $request->inputDigest,
-                    outputDigest: 'output', resolverVersion: '1');
+                return new TaxCorrectionPolicySnapshot(policyRef: 'policy', policyVersion: $this->version, treatment: $this->treatment, selectedRate: $rate, effectiveFrom: $from, effectiveTo: null, inputDigest: $request->inputDigest, outputDigest: 'output', resolverVersion: '1');
             }
         };
     }
 
     private function publishPolicy(TaxSnapshotPort $port, DateTimeImmutable $date): void
     {
-        $dummy = new TaxCorrectionRequest(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef,
-            originalTaxSnapshotRef: 'original', originalTaxSnapshotDigest: 'digest', originalTaxPoint: $date,
-            correctionEffectiveDate: $date, reasonCode: 'tax', jurisdiction: 'TEST', originalTaxableBaseMinor: '10000',
-            correctedTaxableBaseMinor: '10000', inputDigest: 'input');
+        $dummy = new TaxCorrectionRequest(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, originalTaxSnapshotRef: 'original', originalTaxSnapshotDigest: 'digest', originalTaxPoint: $date, correctionEffectiveDate: $date, reasonCode: 'tax', jurisdiction: 'TEST', originalTaxableBaseMinor: '10000', correctedTaxableBaseMinor: '10000', inputDigest: 'input');
         $this->application()->make(TaxCorrectionPolicyFrontier::class)->publish(policy: $port->resolveCorrection($dummy), commandKey: 'policy-v2');
     }
 
@@ -974,8 +921,7 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         self::assertNotNull($obligation);
         $scope = new BillingAccountScope(sellerRef: 'seller-a', environment: 'test', billingAccountRef: 'original-account');
         $ledger = $this->application()->make(Ledger::class);
-        self::assertTrue($ledger->createInvoice(new CreateInvoice(commandKey: 'draft', scope: $scope, invoiceRef: 'invoice-1',
-            customerRef: 'original-customer', lines: [new InvoiceLineInput(obligationRef: $obligation)]))->accepted);
+        self::assertTrue($ledger->createInvoice(new CreateInvoice(commandKey: 'draft', scope: $scope, invoiceRef: 'invoice-1', customerRef: 'original-customer', lines: [new InvoiceLineInput(obligationRef: $obligation)]))->accepted);
         self::assertTrue($ledger->issueInvoice(new IssueInvoice(commandKey: 'issue', scope: $scope, invoiceRef: 'invoice-1'))->accepted);
     }
 }

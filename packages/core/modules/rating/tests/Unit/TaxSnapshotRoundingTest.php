@@ -20,6 +20,8 @@ final class TaxSnapshotRoundingTest extends TestCase
             self::assertSame($expectedTax, $lines['b']['tax']);
             self::assertSame('0', $lines['c']['tax']);
             foreach ($lines as $line) {
+                self::assertTrue(is_numeric($line['net']));
+                self::assertTrue(is_numeric($line['tax']));
                 self::assertSame($line['gross'], bcadd($line['net'], $line['tax'], 0));
             }
         }
@@ -58,7 +60,9 @@ final class TaxSnapshotRoundingTest extends TestCase
     public function test_tax_fixture_preserves_positive_and_negative_allocations(): void
     {
         $path = dirname(__DIR__, 6).'/fixtures/vectors/rating/tax/residual-corrections.json';
-        $example = json_decode((string) file_get_contents($path), true, 32, JSON_THROW_ON_ERROR)['given']['example'];
+        /** @var array{given: array{example: array{jurisdiction: string, taxCode: string, resolver: string, resolverVersion: string, inputDigest: string, rate: string, mode: string, exponent: int, rounding: string, cases: list<array{lines: array{a: string, b: string, c: string}, tax: list<string>}>}}} $vector */
+        $vector = json_decode((string) file_get_contents($path), true, 32, JSON_THROW_ON_ERROR);
+        $example = $vector['given']['example'];
         foreach ($example['cases'] as $case) {
             $result = (new TaxCalculator)->calculate(amounts: $case['lines'], mode: $example['mode'], rate: $example['rate'], exp: $example['exponent'], rounding: $example['rounding']);
             self::assertSame($case['tax'], array_column($result, 'tax'));

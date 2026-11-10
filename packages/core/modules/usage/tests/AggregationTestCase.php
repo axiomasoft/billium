@@ -116,6 +116,6 @@ abstract class AggregationTestCase extends UsageTestCase
 
     protected static function micros(string $value): int
     {
-        return ((int) (new DateTimeImmutable($value))->format('U')) * 1_000_000;
+        return ((int) new DateTimeImmutable($value)->format('U')) * 1_000_000;
     }
 }

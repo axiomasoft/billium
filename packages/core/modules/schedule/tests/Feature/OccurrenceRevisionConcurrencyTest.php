@@ -16,10 +16,10 @@ final class OccurrenceRevisionConcurrencyTest extends OccurrenceTestCase
     {
         $this->createSchedule();
         $results = ConcurrencyStand::run(scenario: OccurrenceScenario::class, workers: 5, args: ['kind' => 'ensure']);
-        $bodies = array_map(static fn (array $r): array => self::ok($r), $results);
-        self::assertCount(5, array_unique(array_column($bodies, 'pid')));
-        self::assertSame(1, count(array_filter($bodies, static fn (array $b): bool => ($b['body']['created'] ?? false) === true)));
-        self::assertSame(4, count(array_filter($bodies, static fn (array $b): bool => ($b['body']['created'] ?? null) === false)));
+        $bodies = array_map(self::ok(...), $results);
+        self::assertCount(5, array_unique(array_map(self::integer(...), array_column($bodies, 'pid'))));
+        self::assertSame(1, count(array_filter($bodies, static fn (array $b): bool => (self::arr($b['body'])['created'] ?? false) === true)));
+        self::assertSame(4, count(array_filter($bodies, static fn (array $b): bool => (self::arr($b['body'])['created'] ?? null) === false)));
         self::assertSame(1, $this->rows('billium_schedule_billing_occurrence'));
     }
 
@@ -28,7 +28,7 @@ final class OccurrenceRevisionConcurrencyTest extends OccurrenceTestCase
         $this->createSchedule();
         $this->occurrences()->ensureOccurrence($this->ensure());
         $results = ConcurrencyStand::run(scenario: OccurrenceScenario::class, workers: 5, args: ['kind' => 'revision']);
-        $bodies = array_map(static fn (array $r): array => self::ok($r), $results);
+        $bodies = array_map(self::ok(...), $results);
         self::assertSame(1, count(array_filter($bodies, static fn (array $b): bool => $b['accepted'] === true)));
         self::assertSame(4, count(array_filter($bodies, static fn (array $b): bool => ($b['detail'] ?? null) === 'billium.schedule.revision_stale')));
         self::assertSame(1, $this->rows('billium_schedule_billing_occurrence', "state='planned'"));
@@ -39,7 +39,7 @@ final class OccurrenceRevisionConcurrencyTest extends OccurrenceTestCase
     {
         $this->createSchedule();
         $results = ConcurrencyStand::run(scenario: OccurrenceScenario::class, workers: 5, args: ['kind' => 'race']);
-        $bodies = array_map(static fn (array $r): array => self::ok($r), $results);
+        $bodies = array_map(self::ok(...), $results);
         self::assertSame(1, count(array_filter($bodies, static fn (array $b): bool => $b['accepted'] === true)));
         foreach ($bodies as $body) {
             if ($body['accepted'] === false) {
@@ -59,7 +59,7 @@ final class OccurrenceRevisionConcurrencyTest extends OccurrenceTestCase
     {
         $this->createSchedule();
         $results = ConcurrencyStand::run(scenario: OccurrenceScenario::class, workers: 5, args: ['kind' => 'materialize']);
-        $bodies = array_map(static fn (array $r): array => self::ok($r), $results);
+        $bodies = array_map(self::ok(...), $results);
         self::assertSame(1, count(array_filter($bodies, static fn (array $b): bool => $b['accepted'] === true)));
         self::assertSame(1, $this->value('SELECT cursor_ordinal FROM billium_schedule_billing_schedule'));
         self::assertSame(1, $this->rows('billium_schedule_billing_occurrence'));

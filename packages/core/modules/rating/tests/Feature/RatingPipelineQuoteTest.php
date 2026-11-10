@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Billium\Rating\Tests\Feature;
 
 use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Core\Tests\Support\FixtureArguments;
 use Billium\Rating\Contracts\RatingQuoter;
 use Billium\Rating\Data\Rating\FrozenRatingInputs;
 use Billium\Rating\Data\Rating\PreparedRating;
@@ -22,14 +23,14 @@ final class RatingPipelineQuoteTest extends RatingTestCase
         self::assertFalse($quote->financial);
         self::assertSame($before, $this->ratingCounts());
         self::assertSame($prepared->draft->inputsDigest, $quote->inputsDigest);
-        $changed = new FrozenRatingInputs(...[...get_object_vars($prepared->inputs), 'frontierExpectedRowVersion' => 999, 'frontierExpectedDigest' => 'other']);
+        $changed = FixtureArguments::construct(class: FrozenRatingInputs::class, arguments: [...get_object_vars($prepared->inputs), 'frontierExpectedRowVersion' => 999, 'frontierExpectedDigest' => 'other']);
         self::assertSame($prepared->inputs->digest(), $changed->digest());
     }
 
     public function test_changed_frontier_refuses_a_stale_preparation_without_a_new_basis(): void
     {
         $prepared = $this->prepared();
-        $changed = new FrozenRatingInputs(...[...get_object_vars($prepared->inputs), 'sourceDigest' => 'next-source']);
+        $changed = FixtureArguments::construct(class: FrozenRatingInputs::class, arguments: [...get_object_vars($prepared->inputs), 'sourceDigest' => 'next-source']);
         $draft = $this->application()->make(RatingComputation::class)->compute($changed);
         $this->book($prepared);
         try {

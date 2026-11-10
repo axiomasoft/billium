@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Rating\Tests\Feature;
 
+use Billium\Core\Tests\Support\FixtureArguments;
 use Billium\Rating\Contracts\PriceVersionStore;
 use Billium\Rating\Contracts\RatingPreparer;
 use Billium\Rating\Data\Pricing\PriceVersion;
@@ -34,8 +35,7 @@ final class RatingPipelineUnknownPolicyTest extends RatingTestCase
         self::assertInstanceOf(RatingHold::class, $held);
         self::assertSame(HoldReason::IncompleteSource, $held->reason);
         $id = $this->value('SELECT id FROM billium_usage_aggregate_snapshot');
-        $this->owner()->table('billium_usage_aggregate_reproducibility_event')->insert([
-            'snapshot_id' => $id, 'reproducibility' => 'erased']);
+        $this->owner()->table('billium_usage_aggregate_reproducibility_event')->insert(['snapshot_id' => $id, 'reproducibility' => 'erased']);
         $held = $this->application()->make(RatingPreparer::class)->prepare($this->request());
         self::assertInstanceOf(RatingHold::class, $held);
         self::assertSame(HoldReason::AggregateNotReproducible, $held->reason);
@@ -54,7 +54,7 @@ final class RatingPipelineUnknownPolicyTest extends RatingTestCase
 
     public function test_unknown_versioned_strategy_holds_without_financial_rows(): void
     {
-        $this->application()->instance(PriceVersionStore::class, new class($this->price()) implements PriceVersionStore
+        $this->application()->instance(PriceVersionStore::class, new readonly class($this->price()) implements PriceVersionStore
         {
             public function __construct(private PriceVersion $price) {}
 
@@ -63,9 +63,9 @@ final class RatingPipelineUnknownPolicyTest extends RatingTestCase
                 throw new \LogicException('not used');
             }
 
-            public function find(string $priceRef, int $version): ?PriceVersion
+            public function find(string $priceRef, int $version): PriceVersion
             {
-                return new PriceVersion(...[...get_object_vars($this->price), 'strategyVersion' => 99]);
+                return FixtureArguments::construct(class: PriceVersion::class, arguments: [...get_object_vars($this->price), 'strategyVersion' => 99]);
             }
         });
         $held = $this->application()->make(RatingPreparer::class)->prepare($this->request());

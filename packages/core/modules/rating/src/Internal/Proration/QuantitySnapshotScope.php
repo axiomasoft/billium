@@ -30,8 +30,8 @@ final class QuantitySnapshotScope
             }
             $attribution = json_decode($inputs->attribution, true, 32, JSON_THROW_ON_ERROR);
             $identity = get_object_vars($snapshot->attribution);
-            $start = ScheduleOccurrenceAdapter::micros((new DateTimeImmutable(RatingRows::text($snapshot->effectiveInterval->start)))->format('Y-m-d\TH:i:s.uP'));
-            $end = ScheduleOccurrenceAdapter::micros((new DateTimeImmutable(RatingRows::text($snapshot->effectiveInterval->end)))->format('Y-m-d\TH:i:s.uP'));
+            $start = ScheduleOccurrenceAdapter::micros(new DateTimeImmutable(RatingRows::text($snapshot->effectiveInterval->start))->format('Y-m-d\TH:i:s.uP'));
+            $end = ScheduleOccurrenceAdapter::micros(new DateTimeImmutable(RatingRows::text($snapshot->effectiveInterval->end))->format('Y-m-d\TH:i:s.uP'));
             if ($snapshot->sellerRef !== $inputs->sellerRef || $snapshot->unit !== $price->unit
                 || $snapshot->effectiveRevision < 1 || $snapshot->prorationPolicy !== 'whole_interval/1'
                 || $start !== $inputs->periodStartMicros || $end !== $inputs->periodEndMicros

@@ -35,7 +35,7 @@
       "ok": {
         "schema": "rating.price.v1",
         "digest": {
-          "golden": "canon/digest/control-wrong-golden.txt"
+          "golden": "canon/digest/rating-control-wrong-golden.txt"
         }
       }
     }

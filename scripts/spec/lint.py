@@ -46,7 +46,8 @@ OPEN = {
     ("billium.event.v1", ""),
 }
 NON_ENVELOPE_DIRS = {"common", "problem", "conformance"}
-NON_ENVELOPE_FILES = {"feed/defs.json"}
+# D63: rating correction.applied is an internal event payload, not a public wire envelope.
+NON_ENVELOPE_FILES = {"feed/defs.json", "rating/correction-applied.v1.json"}
 
 NORMATIVE = re.compile(r"\b(MUST|SHALL|SHOULD)\b|\b(долж(ен|на|но|ны)|обязан(а|о|ы)?)\b", re.IGNORECASE)
 AMOUNT_KEY = re.compile(r"^(amount|quantity|money|requested)$|Total$")

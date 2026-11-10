@@ -47,6 +47,7 @@
     "schema/query/payment-status.v1.json": "sha256:1aec7ef5d32bb31bd5b9be0968cc25ae16d61fc1072e244f654c41a667108bc2",
     "schema/query/query.v1.json": "sha256:3a034ae0d466894e78f4f144decae90554bb6e5b713cf81ff440d3631e10a677",
     "schema/rating/basis.v1.json": "sha256:da7afaec7ecd8994904bc0c15a5aa48e5e7220523d98839d9eb6e4d4f5f66832",
+    "schema/rating/correction-applied.v1.json": "sha256:a49f788b6982e245c5f2e2fae87bb53c09258147dafca103baef055da6afc9ea",
     "schema/rating/price.v1.json": "sha256:1b3b2750c14344a4c8b6bf526212d298259136e73f1cb0c34a20fb2027330451",
     "schema/usage/aggregate.v1.json": "sha256:aecbce76544cbb0f9d8fe18ef36e0b539696b354ae35b7433c08437f21665a97",
     "schema/usage/fact.v1.json": "sha256:8bdae12e7925cb67f949a2857d8773aca1596851230cea97dc5b84d4622e0ef1",

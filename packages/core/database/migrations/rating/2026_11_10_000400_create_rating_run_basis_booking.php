@@ -101,7 +101,7 @@ return new class extends Migration
                 UNIQUE(seller_ref,environment,occurrence_ref),
                 CHECK ((row_version=0)=(head_basis_ref IS NULL))
             );
-            CREATE FUNCTION public.billium_rating_frontier_guard() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,pg_temp AS $$
+            CREATE OR REPLACE FUNCTION public.billium_rating_frontier_guard() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,pg_temp AS $$
             BEGIN
                 IF TG_OP='DELETE' THEN RAISE EXCEPTION 'billium.rating.frontier_immutable' USING ERRCODE='55000'; END IF;
                 IF (NEW.seller_ref,NEW.environment,NEW.frontier_key,NEW.occurrence_ref) IS DISTINCT FROM (OLD.seller_ref,OLD.environment,OLD.frontier_key,OLD.occurrence_ref)
@@ -171,5 +171,10 @@ return new class extends Migration
         }
         DB::unprepared('GRANT UPDATE (head_basis_ref,head_digest,correction_head_revision,row_version) ON TABLE public.billium_rating_source_frontier TO '.$role);
         DB::unprepared('REVOKE ALL ON FUNCTION public.billium_rating_frontier_guard() FROM PUBLIC, '.$role);
+    }
+
+    public function down(): never
+    {
+        throw new LogicException('forward-only (REQ-FAIL-29)');
     }
 };

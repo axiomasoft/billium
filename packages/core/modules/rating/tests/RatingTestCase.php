@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Billium\Rating\Tests;
 
+use Billium\Core\Tests\Support\FixtureArguments;
+use Billium\Core\Tests\Support\FixtureValues;
 use Billium\Rating\Contracts\PriceVersionStore;
 use Billium\Rating\Contracts\RatingBooking;
 use Billium\Rating\Contracts\RatingPreparer;
@@ -34,6 +36,8 @@ use Billium\Schedule\Tests\Support\Terms;
 use Billium\Usage\Tests\AggregationTestCase;
 use Billium\Usage\Tests\Support\UsageFixtures;
 use DateTimeImmutable;
+use Illuminate\Contracts\Config\Repository;
+use Illuminate\Foundation\Application;
 
 abstract class RatingTestCase extends AggregationTestCase
 {
@@ -43,17 +47,19 @@ abstract class RatingTestCase extends AggregationTestCase
 
     protected string $snapshotRef;
 
+    /** @param Application $app */
     protected function getPackageProviders($app): array
     {
         return [...parent::getPackageProviders($app), RatingServiceProvider::class, ScheduleServiceProvider::class];
     }
 
+    /** @param Application $app */
     protected function defineEnvironment($app): void
     {
         parent::defineEnvironment($app);
-        $app['config']->set('billium.modules.enabled', ['platform', 'ledger', 'usage', 'rating', 'schedule']);
-        $app['config']->set('billium.rating.enabled', true);
-        $app['config']->set('billium.schedule.enabled', true);
+        $app->make(Repository::class)->set('billium.modules.enabled', ['platform', 'ledger', 'usage', 'rating', 'schedule']);
+        $app->make(Repository::class)->set('billium.rating.enabled', true);
+        $app->make(Repository::class)->set('billium.schedule.enabled', true);
     }
 
     protected function setUp(): void
@@ -67,12 +73,9 @@ abstract class RatingTestCase extends AggregationTestCase
         $this->usage()->submitUsageFact(UsageFixtures::fact(static function ($fact): void {
             $fact->value->quantity = '100';
         }));
-        $this->snapshotRef = $this->freeze()['snapshotRef'];
+        $this->snapshotRef = FixtureValues::text($this->freeze()['snapshotRef']);
         $service = $this->application()->make(OccurrenceService::class);
-        $service->applyScheduleRevision(new ApplyScheduleRevision(sellerRef: 'seller-a', environment: 'test', scheduleRef: 'schedule-a',
-            expectedRevision: 0, expectedRowVersion: 0, newRevision: 1,
-            terms: Terms::make(['componentRef' => 'component-1', 'anchorLocal' => '2026-10-01T00:00:00', 'purpose' => 'usage_settlement']),
-            effectiveFrom: new DateTimeImmutable('2026-01-01Z'), inputsDigest: self::inputDigest(), commandKey: 'schedule-revision'));
+        $service->applyScheduleRevision(new ApplyScheduleRevision(sellerRef: 'seller-a', environment: 'test', scheduleRef: 'schedule-a', expectedRevision: 0, expectedRowVersion: 0, newRevision: 1, terms: Terms::make(['componentRef' => 'component-1', 'anchorLocal' => '2026-10-01T00:00:00', 'purpose' => 'usage_settlement']), effectiveFrom: new DateTimeImmutable('2026-01-01Z'), inputsDigest: self::inputDigest(), commandKey: 'schedule-revision'));
         $this->occurrenceRef = $this->occurrence(OccurrencePurpose::UsageSettlement);
         $this->application()->make(PriceVersionStore::class)->publish(price: $this->price(), commandKey: 'price-v1');
     }
@@ -84,37 +87,22 @@ abstract class RatingTestCase extends AggregationTestCase
 
     protected function occurrence(OccurrencePurpose $purpose): string
     {
-        $receipt = $this->application()->make(OccurrenceService::class)->ensureOccurrence(new EnsureOccurrence(
-            sellerRef: 'seller-a', environment: 'test', componentRef: 'component-1', purpose: $purpose,
-            periodStart: new DateTimeImmutable('2026-10-01Z'), periodEnd: new DateTimeImmutable('2026-11-01Z'),
-            scheduleRef: 'schedule-a', scheduleRevision: 1, inputsDigest: self::inputDigest(), commandKey: 'ensure-'.$purpose->value));
+        $receipt = $this->application()->make(OccurrenceService::class)->ensureOccurrence(new EnsureOccurrence(sellerRef: 'seller-a', environment: 'test', componentRef: 'component-1', purpose: $purpose, periodStart: new DateTimeImmutable('2026-10-01Z'), periodEnd: new DateTimeImmutable('2026-11-01Z'), scheduleRef: 'schedule-a', scheduleRevision: 1, inputsDigest: self::inputDigest(), commandKey: 'ensure-'.$purpose->value));
 
-        return $receipt->body()['occurrenceRef'];
+        return FixtureValues::text($receipt->body()['occurrenceRef']);
     }
 
     protected function price(int $version = 1, ?string $fixed = null, bool $commitment = false): PriceVersion
     {
-        $args = ['sellerRef' => 'seller-a', 'priceRef' => 'api', 'version' => $version,
-            'strategyId' => $fixed === null ? StrategyId::TieredGraduated : StrategyId::Fixed, 'strategyVersion' => 1,
-            'currency' => 'USD', 'currencyExponent' => 2, 'exponentVersion' => 'ISO4217-2026-10', 'unit' => 'api-call',
-            'quantityRules' => new QuantityRules(quantityScale: 9, conversionNumerator: '1', conversionDenominator: '1',
-                billingIncrement: '1', incrementMode: IncrementMode::None),
-            'terms' => $fixed === null ? new GraduatedTerms(tiers: [new Tier(index: 0, lower: '0', upper: '100', unitPrice: '1', flatFee: '0'),
-                new Tier(index: 1, lower: '100', upper: null, unitPrice: '0.8', flatFee: '0')]) : new FixedTerms(amount: $fixed, scope: 'per_component_occurrence'),
-            'roundingMode' => RoundingMode::HalfUp, 'roundingStage' => RoundingStage::AfterTax, 'roundingPolicyVersion' => 'test-rounding/1',
-            'commitment' => $commitment ? new CommitmentTerms(sellerRef: 'seller-a', billingAccountRef: 'original-account', componentRef: 'component-1',
-                currency: 'USD', periodRef: 'october-2026', minimumMinor: 20000, maximumMinor: 50000, consumedByAlreadyBilled: true, appliesAt: 'period_final') : null];
-        $draft = new PriceVersion(...$args, termsDigest: 'draft');
+        $args = ['sellerRef' => 'seller-a', 'priceRef' => 'api', 'version' => $version, 'strategyId' => $fixed === null ? StrategyId::TieredGraduated : StrategyId::Fixed, 'strategyVersion' => 1, 'currency' => 'USD', 'currencyExponent' => 2, 'exponentVersion' => 'ISO4217-2026-10', 'unit' => 'api-call', 'quantityRules' => new QuantityRules(quantityScale: 9, conversionNumerator: '1', conversionDenominator: '1', billingIncrement: '1', incrementMode: IncrementMode::None), 'terms' => $fixed === null ? new GraduatedTerms(tiers: [new Tier(index: 0, lower: '0', upper: '100', unitPrice: '1', flatFee: '0'), new Tier(index: 1, lower: '100', upper: null, unitPrice: '0.8', flatFee: '0')]) : new FixedTerms(amount: $fixed, scope: 'per_component_occurrence'), 'roundingMode' => RoundingMode::HalfUp, 'roundingStage' => RoundingStage::AfterTax, 'roundingPolicyVersion' => 'test-rounding/1', 'commitment' => $commitment ? new CommitmentTerms(sellerRef: 'seller-a', billingAccountRef: 'original-account', componentRef: 'component-1', currency: 'USD', periodRef: 'october-2026', minimumMinor: 20000, maximumMinor: 50000, consumedByAlreadyBilled: true, appliesAt: 'period_final') : null];
+        $draft = FixtureArguments::construct(class: PriceVersion::class, arguments: [...$args, 'termsDigest' => 'draft']);
 
-        return new PriceVersion(...$args, termsDigest: CanonicalJson::termsDigest($draft));
+        return FixtureArguments::construct(class: PriceVersion::class, arguments: [...$args, 'termsDigest' => CanonicalJson::termsDigest($draft)]);
     }
 
     protected function request(int $priceVersion = 1, ?string $ref = null, ?string $noCharge = null): PrepareRating
     {
-        return new PrepareRating(occurrenceRef: $ref ?? $this->occurrenceRef, billingAccountRef: 'original-account',
-            attribution: CanonicalJson::encode(get_object_vars(UsageFixtures::fact()->attribution)), agreementRevision: '1',
-            occurrenceInputsDigest: self::inputDigest(), sourceDigest: 'source:test:1',
-            components: [['componentRef' => 'component-1', 'snapshotRef' => $this->snapshotRef, 'priceRef' => 'api', 'priceVersion' => $priceVersion]], noChargeReason: $noCharge);
+        return new PrepareRating(occurrenceRef: $ref ?? $this->occurrenceRef, billingAccountRef: 'original-account', attribution: CanonicalJson::encode(get_object_vars(UsageFixtures::fact()->attribution)), agreementRevision: '1', occurrenceInputsDigest: self::inputDigest(), sourceDigest: 'source:test:1', components: [['componentRef' => 'component-1', 'snapshotRef' => $this->snapshotRef, 'priceRef' => 'api', 'priceVersion' => $priceVersion]], noChargeReason: $noCharge);
     }
 
     protected function prepared(int $priceVersion = 1, ?string $ref = null, ?string $noCharge = null): PreparedRating

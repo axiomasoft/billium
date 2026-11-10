@@ -40,7 +40,7 @@ return new class extends Migration
             );
             CREATE TRIGGER billium_schedule_correction_immutable BEFORE UPDATE OR DELETE ON public.billium_schedule_billing_correction
              FOR EACH ROW EXECUTE FUNCTION public.billium_append_only();
-            CREATE FUNCTION public.billium_schedule_correction_guard() RETURNS trigger LANGUAGE plpgsql AS $$
+            CREATE OR REPLACE FUNCTION public.billium_schedule_correction_guard() RETURNS trigger LANGUAGE plpgsql AS $$
             DECLARE p public.billium_schedule_billing_occurrence%ROWTYPE; h public.billium_schedule_correction_head%ROWTYPE;
             BEGIN
              SELECT * INTO p FROM public.billium_schedule_billing_occurrence WHERE id=NEW.parent_occurrence_id;
@@ -77,5 +77,10 @@ return new class extends Migration
             DB::unprepared('GRANT SELECT, INSERT ON TABLE public.'.$table.' TO '.$role);
         }
         DB::unprepared('GRANT UPDATE (head_revision,head_frontier_digest,row_version) ON TABLE public.billium_schedule_correction_head TO '.$role);
+    }
+
+    public function down(): never
+    {
+        throw new LogicException('forward-only (REQ-FAIL-29)');
     }
 };

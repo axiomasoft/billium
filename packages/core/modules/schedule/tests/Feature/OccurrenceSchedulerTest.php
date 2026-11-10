@@ -90,7 +90,7 @@ final class OccurrenceSchedulerTest extends OccurrenceTestCase
         $second = $queries->dueSchedules(sellerRef: 'seller-a', asOf: $asOf, limit: 2, cursor: $first->cursor);
         self::assertCount(2, $second->schedules);
         self::assertNull($second->cursor);
-        self::assertSame([], array_intersect(array_column($first->schedules, 'id'), array_column($second->schedules, 'id')));
+        self::assertSame([], array_intersect(array_map(self::integer(...), array_column($first->schedules, 'id')), array_map(self::integer(...), array_column($second->schedules, 'id'))));
         self::assertSame(4, $queries->dueStats(sellerRef: 'seller-a', asOf: $asOf)['dueCount']);
         $this->callers->as('seller-b');
         self::assertSame([], $queries->dueSchedules(sellerRef: 'seller-b', asOf: $asOf)->schedules);

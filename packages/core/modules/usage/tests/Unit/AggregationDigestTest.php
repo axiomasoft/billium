@@ -25,7 +25,7 @@ final class AggregationDigestTest extends TestCase
     {
         $vector = V::load('additive');
         $one = V::snapshot($vector);
-        $two = (new SnapshotBuilder(new ReducerRegistry))->build(
+        $two = new SnapshotBuilder(new ReducerRegistry)->build(
             policy: V::policy($vector['policy']), contract: V::contract(), window: V::window(),
             revisions: V::revisions(array_reverse($vector['revisions'])),
             evidence: [V::evidence(['src' => 's1', 'seq' => 1, 'status' => 'complete', 'range' => [0, 3600], 'watermark' => 3900])],

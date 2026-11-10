@@ -17,6 +17,10 @@ Usage, rating and schedule are optional internal core modules. Fixed-price sched
 usage; pure quotes can omit ledger; obligation booking needs no legal renderer or payment executor.
 See the [module, provider and capability matrix](docs/architecture/optional-commercial-modules.md)
 for host enablement, migration ownership, trusted versioned extensions and A–D composition proofs (D55/D56).
+The [P4 evidence guide](docs/architecture/p4-acceptance.md) and
+[acceptance manifest](docs/architecture/p4-acceptance.json) map exact amounts, restore/permutation,
+concurrency and unsupported combinations to executable tests. Implementation evidence and pending
+independent phase acceptance are recorded separately (D59/D64; owner PLAN1.P4.10).
 
 - [Requirements and traceability](docs/requirements.md)
 - [Target architecture](docs/architecture/target-architecture.md) and
