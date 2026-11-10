@@ -134,7 +134,7 @@ final readonly class DatabaseOccurrenceService implements OccurrenceService
                     'schedule_id' => $head->id, 'revision' => $command->newRevision, 'terms_digest' => $terms->digest(),
                     'inputs_digest' => $command->inputsDigest, 'terms' => Canonical::encode($terms->toArray()),
                     'effective_from' => OccurrenceTime::format($command->effectiveFrom)]);
-                [, , $next] = $this->applicableInterval(context: $context, head: $head, ordinal: Payload::integer($head->cursor_ordinal),
+                [, $applicableTerms, $next] = $this->applicableInterval(context: $context, head: $head, ordinal: Payload::integer($head->cursor_ordinal),
                     start: new DateTimeImmutable(Payload::text($head->next_occurrence_at ?? $next->start)));
                 $this->store->query(table: 'billing_schedule', context: $context)->where('id', $head->id)
                     ->update(['current_revision' => $command->newRevision, 'state' => 'active', 'runnable' => true,
@@ -164,7 +164,7 @@ final readonly class DatabaseOccurrenceService implements OccurrenceService
                     $this->store->amendment(context: $context, row: $row, revision: $command->newRevision, kind: 'superseded_by',
                         detail: ['supersededByOccurrenceRef' => $replacementRef]);
                 }
-                $paused = $terms->action === 'pause';
+                $paused = $applicableTerms->action === 'pause';
                 $version = $created ? 1 : Payload::integer($head->row_version) + 1;
                 $this->store->query(table: 'billing_schedule', context: $context)->where('id', $head->id)->update([
                     'next_occurrence_at' => $paused ? null : $next->start, 'state' => $paused ? 'paused' : 'active',
@@ -242,22 +242,27 @@ final readonly class DatabaseOccurrenceService implements OccurrenceService
                 $ordinal = Payload::integer($head->cursor_ordinal);
                 [$revision, $terms, $period] = $this->applicableInterval(context: $context, head: $head, ordinal: $ordinal,
                     start: new DateTimeImmutable(Payload::text($head->next_occurrence_at)));
+                if ($terms->action === 'pause') {
+                    OccurrenceProblems::refuse('schedule.not_runnable');
+                }
                 $ensure = $this->ensureCommand(head: $head, terms: $terms, period: $period, revision: Payload::integer($revision->revision),
                     digest: Payload::text($revision->inputs_digest), ordinal: $ordinal);
                 $ref = $this->ref($ensure);
                 $this->locks->acquire(context: $context, occurrenceRefs: [$ref]);
                 $receipt = $this->store->ensure(context: $context, command: $ensure, ref: $ref, head: $head, evidence: $period->toArray());
                 $complete = $ordinal === 100000;
+                $paused = false;
                 $next = null;
                 if (! $complete) {
                     $candidate = $this->resolver->resolve(terms: $terms, ordinal: $ordinal + 1);
-                    [, , $nextPeriod] = $this->applicableInterval(context: $context, head: $head, ordinal: $ordinal + 1,
+                    [, $nextTerms, $nextPeriod] = $this->applicableInterval(context: $context, head: $head, ordinal: $ordinal + 1,
                         start: new DateTimeImmutable($candidate->start));
-                    $next = $nextPeriod->start;
+                    $paused = $nextTerms->action === 'pause';
+                    $next = $paused ? null : $nextPeriod->start;
                 }
                 $this->store->query(table: 'billing_schedule', context: $context)->where('id', $head->id)->update([
                     'cursor_ordinal' => $complete ? $ordinal : $ordinal + 1, 'next_occurrence_at' => $next,
-                    'state' => $complete ? 'completed' : 'active', 'runnable' => ! $complete, 'attempts' => 0, 'retry_at' => null,
+                    'state' => $complete ? 'completed' : ($paused ? 'paused' : 'active'), 'runnable' => ! $complete && ! $paused, 'attempts' => 0, 'retry_at' => null,
                     'claim_token' => null, 'claim_expires_at' => null, 'row_version' => $command->expectedRowVersion + 1]);
                 $result = new OccurrenceReceipt([...$receipt->body(), 'cursorOrdinal' => $complete ? $ordinal : $ordinal + 1,
                     'nextOccurrenceAt' => $next === null ? null : OccurrenceTime::format(new DateTimeImmutable($next)), 'rowVersion' => $command->expectedRowVersion + 1]);

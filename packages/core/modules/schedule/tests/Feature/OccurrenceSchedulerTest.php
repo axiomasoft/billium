@@ -15,6 +15,30 @@ use Illuminate\Database\QueryException;
 
 final class OccurrenceSchedulerTest extends OccurrenceTestCase
 {
+    public function test_future_pause_allows_earlier_intervals_and_stops_at_its_boundary(): void
+    {
+        $this->createSchedule();
+        $this->occurrences()->applyScheduleRevision($this->revision([
+            'expectedRevision' => 1, 'expectedRowVersion' => 1, 'newRevision' => 2, 'commandKey' => 'future-pause',
+            'effectiveFrom' => new DateTimeImmutable('2024-03-31T00:00:00Z'),
+            'terms' => Terms::make(['purpose' => 'recurring_charge', 'action' => 'pause'])]));
+        self::assertSame('active', $this->value('SELECT state FROM billium_schedule_billing_schedule'));
+        self::assertTrue($this->value('SELECT runnable FROM billium_schedule_billing_schedule'));
+        $january = $this->occurrences()->materializeNext($this->materialize(key: 'january', version: 2))->body();
+        self::assertSame('2024-01-31T00:00:00.000000Z', $january['periodStart']);
+        self::assertSame(1, $january['cursorOrdinal']);
+        $february = $this->occurrences()->materializeNext($this->materialize(key: 'february', version: 3))->body();
+        self::assertSame('2024-02-29T00:00:00.000000Z', $february['periodStart']);
+        self::assertSame(2, $february['cursorOrdinal']);
+        self::assertNull($february['nextOccurrenceAt']);
+        self::assertSame('paused', $this->value('SELECT state FROM billium_schedule_billing_schedule'));
+        self::assertFalse($this->value('SELECT runnable FROM billium_schedule_billing_schedule'));
+        self::assertNull($this->value('SELECT next_occurrence_at FROM billium_schedule_billing_schedule'));
+        self::assertSame(2, $this->value('SELECT cursor_ordinal FROM billium_schedule_billing_schedule'));
+        $this->refusal(fn () => $this->occurrences()->materializeNext($this->materialize(key: 'march', version: 4)), 'schedule.not_runnable');
+        self::assertSame(2, $this->rows('billium_schedule_billing_occurrence'));
+    }
+
     public function test_future_dated_revision_does_not_override_earlier_unmaterialized_or_pre_ensured_interval(): void
     {
         $this->createSchedule();

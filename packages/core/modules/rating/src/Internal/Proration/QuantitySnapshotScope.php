@@ -18,9 +18,34 @@ use Throwable;
 
 final class QuantitySnapshotScope
 {
+    /** @param array<string, mixed> $group
+     * @param  array<string, mixed>  $quantitySnapshot
+     */
+    public static function freeze(string $seller, string $environment, string $occurrence, string $occurrenceDigest,
+        int $start, int $end, array $group, PriceVersion $price, array $quantitySnapshot): FrozenAggregate
+    {
+        $quantity = RatingRows::text($quantitySnapshot['quantity'] ?? null);
+        $scale = strlen(explode('.', $quantity, 2)[1] ?? '');
+        $sourceDigest = RatingRows::text($quantitySnapshot['sourceDigest'] ?? null);
+        $snapshot = ['kind' => 'approved_quantity/1', 'occurrenceRef' => $occurrence,
+            'occurrenceInputsDigest' => $occurrenceDigest, 'termsDigest' => $price->termsDigest, 'sourceDigest' => $sourceDigest,
+            'window' => ['sellerRef' => $seller, 'environment' => $environment, 'startMicros' => $start, 'endMicros' => $end, 'group' => $group],
+            'quantity' => $quantity, 'quantityScale' => $scale, 'quantitySnapshotDigest' => $quantitySnapshot['digest'] ?? null];
+
+        return new FrozenAggregate(componentRef: RatingRows::text($group['componentRef'] ?? null), metricRef: 'billium.approved_quantity', metricVersion: '1',
+            snapshotRef: RatingRows::text($quantitySnapshot['snapshotRef'] ?? null), snapshotDigest: CanonicalJson::digest($snapshot),
+            windowStartMicros: $start, windowEndMicros: $end, completenessFrontierDigest: $sourceDigest,
+            quantity: $quantity, quantityScale: $scale, snapshot: $snapshot, quantitySnapshot: $quantitySnapshot);
+    }
+
     public static function assertValid(FrozenRatingInputs $inputs, FrozenAggregate $aggregate, PriceVersion $price): void
     {
+        $approved = ($aggregate->snapshot['kind'] ?? null) === 'approved_quantity/1';
         if ($aggregate->quantitySnapshot === null) {
+            if ($approved) {
+                RatingComputation::refuse('quantity_snapshot_invalid');
+            }
+
             return;
         }
         try {
@@ -29,6 +54,18 @@ final class QuantitySnapshotScope
                 RatingComputation::refuse('quantity_snapshot_invalid');
             }
             $attribution = json_decode($inputs->attribution, true, 32, JSON_THROW_ON_ERROR);
+            if ($approved) {
+                $group = RatingRows::map($attribution);
+                $group['billingAccountRef'] = $inputs->billingAccountRef;
+                $group['agreementRevision'] = $inputs->agreementRevision;
+                $group['componentRef'] = $aggregate->componentRef;
+                $expected = self::freeze(seller: $inputs->sellerRef, environment: $inputs->environment, occurrence: $inputs->occurrenceRef,
+                    occurrenceDigest: $inputs->occurrenceInputsDigest, start: $inputs->periodStartMicros, end: $inputs->periodEndMicros,
+                    group: $group, price: $price, quantitySnapshot: $aggregate->quantitySnapshot);
+                if (CanonicalJson::encode($expected) !== CanonicalJson::encode($aggregate)) {
+                    RatingComputation::refuse('quantity_snapshot_invalid');
+                }
+            }
             $identity = get_object_vars($snapshot->attribution);
             $start = ScheduleOccurrenceAdapter::micros(new DateTimeImmutable(RatingRows::text($snapshot->effectiveInterval->start))->format('Y-m-d\TH:i:s.uP'));
             $end = ScheduleOccurrenceAdapter::micros(new DateTimeImmutable(RatingRows::text($snapshot->effectiveInterval->end))->format('Y-m-d\TH:i:s.uP'));

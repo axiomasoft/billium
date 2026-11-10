@@ -20,6 +20,7 @@ use Billium\Rating\Data\Tax\TaxResolutionRequest;
 use Billium\Rating\Enums\HoldReason;
 use Billium\Rating\Internal\Adapters\ScheduleOccurrenceAdapter;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
+use Billium\Rating\Internal\Proration\QuantitySnapshotScope;
 use Billium\Rating\Internal\Storage\RatingRows;
 use Billium\Rating\Internal\Storage\RatingStore;
 use Billium\Usage\Contracts\AggregationQueries;
@@ -60,8 +61,15 @@ final readonly class FrozenInputsBuilder
             }
             $requested = $command->components;
             foreach ($requested as &$component) {
-                if (array_key_exists('quantitySnapshot', $component)) {
+                if (isset($component['quantitySnapshot'])) {
                     $component['quantitySnapshot'] = self::quantitySnapshot($component['quantitySnapshot']);
+                }
+                foreach ($retained->aggregates as $aggregate) {
+                    if (($aggregate->snapshot['kind'] ?? null) === 'approved_quantity/1'
+                        && $component['componentRef'] === $aggregate->componentRef
+                        && in_array($component['snapshotRef'], ['fixed', $aggregate->snapshotRef], true)) {
+                        $component['snapshotRef'] = 'fixed';
+                    }
                 }
             }
             unset($component);
@@ -87,18 +95,24 @@ final readonly class FrozenInputsBuilder
             if ($price === null) {
                 return new RatingHold(reason: HoldReason::MissingPrice, repairOrReplayRefs: [$component['priceRef']], detail: 'pinned price version absent');
             }
+            $quantitySnapshot = isset($component['quantitySnapshot'])
+                ? self::quantitySnapshot($component['quantitySnapshot']) : null;
             $fixed = $component['snapshotRef'] === 'fixed';
-            if ($fixed) {
-                if (isset($component['quantitySnapshot']) || $component['componentRef'] !== $occurrence['component_ref']) {
+            $approved = $quantitySnapshot !== null && ($fixed || $component['snapshotRef'] === ($quantitySnapshot['snapshotRef'] ?? null) || $this->usage === null);
+            if ($fixed || $approved) {
+                if ($component['componentRef'] !== $occurrence['component_ref']) {
                     RatingComputation::refuse('fixed_input_scope_mismatch');
                 }
                 $group = RatingRows::map(json_decode($command->attribution, true, 32, JSON_THROW_ON_ERROR));
                 $group['billingAccountRef'] = $command->billingAccountRef;
                 $group['agreementRevision'] = $command->agreementRevision;
                 $group['componentRef'] = $component['componentRef'];
-                $frozen = FixedOccurrenceInput::freeze(seller: $caller->sellerRef, environment: $caller->environment, occurrence: $command->occurrenceRef,
-                    sourceDigest: $command->sourceDigest, occurrenceDigest: $command->occurrenceInputsDigest,
-                    start: $start, end: $end, group: $group, price: $price);
+                $frozen = $approved
+                    ? QuantitySnapshotScope::freeze(seller: $caller->sellerRef, environment: $caller->environment, occurrence: $command->occurrenceRef,
+                        occurrenceDigest: $command->occurrenceInputsDigest, start: $start, end: $end, group: $group, price: $price, quantitySnapshot: $quantitySnapshot)
+                    : FixedOccurrenceInput::freeze(seller: $caller->sellerRef, environment: $caller->environment, occurrence: $command->occurrenceRef,
+                        sourceDigest: $command->sourceDigest, occurrenceDigest: $command->occurrenceInputsDigest,
+                        start: $start, end: $end, group: $group, price: $price);
             } else {
                 if ($this->usage === null) {
                     return new RatingHold(reason: HoldReason::IncompleteSource, repairOrReplayRefs: [$component['snapshotRef']], detail: 'usage capability absent');
@@ -133,7 +147,7 @@ final readonly class FrozenInputsBuilder
                     snapshotRef: RatingRows::text($aggregate['snapshotRef'] ?? null), snapshotDigest: RatingRows::text($aggregate['snapshotDigest'] ?? null),
                     windowStartMicros: $start, windowEndMicros: $end, completenessFrontierDigest: RatingRows::text($aggregate['completenessFrontierDigest'] ?? null),
                     quantity: RatingRows::text($aggregate['quantity'] ?? null), quantityScale: RatingRows::integer($aggregate['quantityScale'] ?? null), snapshot: $aggregate,
-                    quantitySnapshot: isset($component['quantitySnapshot']) ? self::quantitySnapshot($component['quantitySnapshot']) : null);
+                    quantitySnapshot: $quantitySnapshot);
             }
             if ($currency !== null && ($price->currency !== $currency || $price->currencyExponent !== $exponent)) {
                 return new RatingHold(reason: HoldReason::UnknownPolicy, repairOrReplayRefs: [], detail: 'mixed currency is unsupported');
@@ -164,12 +178,17 @@ final readonly class FrozenInputsBuilder
         }
         $head = $this->store->frontier($command->occurrenceRef);
 
-        return new FrozenRatingInputs(sellerRef: $caller->sellerRef, environment: $caller->environment, billingAccountRef: $command->billingAccountRef,
+        $inputs = new FrozenRatingInputs(sellerRef: $caller->sellerRef, environment: $caller->environment, billingAccountRef: $command->billingAccountRef,
             occurrenceRef: $command->occurrenceRef, periodStartMicros: $start, periodEndMicros: $end,
             attribution: CanonicalJson::encode(json_decode($command->attribution, true, 32, JSON_THROW_ON_ERROR)),
             agreementRevision: $command->agreementRevision, currency: $currency, currencyExponent: $exponent,
             aggregates: $aggregates, prices: $prices, taxes: $taxes, occurrenceInputsDigest: $command->occurrenceInputsDigest,
             sourceDigest: $command->sourceDigest, frontierExpectedDigest: $head['headDigest'], frontierExpectedRowVersion: $head['rowVersion'], noChargeReason: $command->noChargeReason);
+        foreach ($aggregates as $i => $aggregate) {
+            QuantitySnapshotScope::assertValid(inputs: $inputs, aggregate: $aggregate, price: $prices[$i]->snapshot);
+        }
+
+        return $inputs;
     }
 
     /** @return array<string, mixed> */

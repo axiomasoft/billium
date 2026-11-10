@@ -6,9 +6,12 @@ namespace Billium\Rating\Tests\Feature;
 
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Tests\Support\FixtureArguments;
+use Billium\Rating\Contracts\PriceVersionStore;
+use Billium\Rating\Contracts\RatingPreparer;
 use Billium\Rating\Data\Rating\FrozenAggregate;
 use Billium\Rating\Data\Rating\FrozenRatingInputs;
 use Billium\Rating\Data\Rating\PreparedRating;
+use Billium\Rating\Data\Rating\PrepareRating;
 use Billium\Rating\Data\Rating\RatedBasisDraft;
 use Billium\Rating\Internal\Pipeline\RatingComputation;
 use Billium\Rating\Tests\RatingTestCase;
@@ -16,6 +19,25 @@ use Illuminate\Database\QueryException;
 
 final class RatingPipelineValidationTest extends RatingTestCase
 {
+    public function test_large_valid_fixed_price_can_be_prepared_and_booked(): void
+    {
+        $this->application()->make(PriceVersionStore::class)->publish(
+            price: $this->price(version: 2, fixed: '100000000000000.00'), commandKey: 'large-price');
+        $request = $this->request(priceVersion: 2);
+        $components = $request->components;
+        $components[0]['snapshotRef'] = 'fixed';
+        $prepared = $this->application()->make(RatingPreparer::class)->prepare(FixtureArguments::construct(
+            class: PrepareRating::class, arguments: [...get_object_vars($request), 'components' => $components]));
+        self::assertInstanceOf(PreparedRating::class, $prepared);
+        self::assertSame('10000000000000000', $prepared->draft->grossMinor);
+        self::assertNotNull($this->book($prepared)->obligationRef);
+        self::assertSame(10000000000000000, $this->value('SELECT gross_minor FROM billium_rating_rated_basis'));
+        foreach (['raw_amount', 'commitment_adjustment', 'priced_amount'] as $column) {
+            self::assertSame(64, $this->value('SELECT numeric_precision FROM information_schema.columns WHERE table_name=? AND column_name=?', ['billium_rating_rated_line', $column]));
+            self::assertSame(24, $this->value('SELECT numeric_scale FROM information_schema.columns WHERE table_name=? AND column_name=?', ['billium_rating_rated_line', $column]));
+        }
+    }
+
     public function test_changed_total_is_rejected_even_when_the_client_keeps_the_original_digest(): void
     {
         $prepared = $this->prepared();

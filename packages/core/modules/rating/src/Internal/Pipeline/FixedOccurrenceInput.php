@@ -9,14 +9,15 @@ use Billium\Rating\Data\Rating\FrozenAggregate;
 use Billium\Rating\Data\Rating\FrozenRatingInputs;
 use Billium\Rating\Enums\StrategyId;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
+use Billium\Rating\Internal\Proration\QuantitySnapshotScope;
 use Billium\Rating\Internal\Storage\RatingRows;
 
-/** One component occurrence is the basis of a fixed price, never fabricated metered usage (D55/D56). */
+/** Synthetic occurrence and host-approved quantity inputs do not depend on metered usage (D55/D56). */
 final class FixedOccurrenceInput
 {
     public static function matches(FrozenAggregate $aggregate): bool
     {
-        return ($aggregate->snapshot['kind'] ?? null) === 'fixed_occurrence/1';
+        return in_array($aggregate->snapshot['kind'] ?? null, ['fixed_occurrence/1', 'approved_quantity/1'], true);
     }
 
     /** @param array<string, mixed> $group */
@@ -39,6 +40,11 @@ final class FixedOccurrenceInput
 
     public static function assertValid(FrozenRatingInputs $inputs, FrozenAggregate $aggregate, PriceVersion $price): void
     {
+        if (($aggregate->snapshot['kind'] ?? null) === 'approved_quantity/1') {
+            QuantitySnapshotScope::assertValid(inputs: $inputs, aggregate: $aggregate, price: $price);
+
+            return;
+        }
         if (! self::matches($aggregate)) {
             return;
         }

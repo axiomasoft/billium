@@ -29,6 +29,7 @@ use Billium\Rating\Internal\Pipeline\FixedOccurrenceInput;
 use Billium\Rating\Internal\Pipeline\RatingComputation;
 use Billium\Rating\Internal\Proration\AmendmentSupport;
 use Billium\Rating\Internal\Proration\ProrationCalculator;
+use Billium\Rating\Internal\Proration\QuantitySnapshotScope;
 use Billium\Rating\Internal\Storage\CorrectionStore;
 use Billium\Rating\Internal\Storage\FrozenInputsCodec;
 use Billium\Rating\Internal\Storage\RatingRows;
@@ -103,6 +104,12 @@ final readonly class DatabaseCorrectionPreparer
         }
         $aggregates = [];
         foreach ($retained->aggregates as $i => $aggregate) {
+            if (($aggregate->snapshot['kind'] ?? null) === 'approved_quantity/1') {
+                QuantitySnapshotScope::assertValid(inputs: $retained, aggregate: $aggregate, price: $retained->prices[$i]->snapshot);
+                $aggregates[] = $aggregate;
+
+                continue;
+            }
             if (FixedOccurrenceInput::matches($aggregate)) {
                 // A correction frontier changes independently of the retained fixed source evidence.
                 $fixedInputs = $retained->correctionEvidence === null ? $retained : FrozenInputsCodec::decode(CanonicalJson::encode([

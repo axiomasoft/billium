@@ -67,7 +67,7 @@ return new class extends Migration
                 window_start_micros bigint NOT NULL, window_end_micros bigint NOT NULL CHECK (window_end_micros>window_start_micros),
                 quantity numeric(38,12) NOT NULL CHECK (quantity>=0),
                 quantity_scale smallint NOT NULL CHECK (quantity_scale BETWEEN 0 AND 12),
-                raw_amount numeric(38,24) NOT NULL, commitment_adjustment numeric(38,24) NOT NULL, priced_amount numeric(38,24) NOT NULL,
+                raw_amount numeric(64,24) NOT NULL, commitment_adjustment numeric(64,24) NOT NULL, priced_amount numeric(64,24) NOT NULL,
                 commitment_scope_digest text NULL,
                 rounding_stage text NOT NULL, rounding_mode text NOT NULL, rounding_policy_version text NOT NULL, exponent_version text NOT NULL,
                 tax_snapshot_ref text NOT NULL, jurisdiction text NOT NULL, tax_code text NOT NULL, tax_mode text NOT NULL, tax_rate numeric(18,8) NOT NULL,
