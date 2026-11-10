@@ -53,6 +53,7 @@ final class LedgerServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->loadMigrationsFrom(__DIR__.'/../../../../database/migrations/ledger');
         // Capture runtime before migrate --database selects the migration owner.
         $this->app->make(LedgerPrivileges::class);
         if ($this->app->runningInConsole()) {

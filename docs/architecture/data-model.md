@@ -1,10 +1,10 @@
 # Billium — модель данных
 
-Синхронизация PLAN1.P3.12, 2026-10-29, дополнения P4.2/P4.3/P4.5/P4.6. Реализованы platform, ledger,
-usage admission/aggregation, schedule commercial periods и monetary occurrences. Rating booking,
-execution, documents и collection ниже сохраняют явно обозначенные будущие потоки.
+Синхронизация PLAN1.P3.12, 2026-10-29, дополнения P4.2–P4.9. Реализованы platform, ledger,
+usage admission/aggregation, rating booking/corrections, schedule commercial periods и monetary occurrences.
+Execution, documents и collection ниже сохраняют явно обозначенные будущие потоки (D55/D56/D63; owners core modules).
 Основания: INV-01–INV-14, D21, D45–D52, D54/D55/D57/D60/D62/D63.
-DDL: `packages/core/database/migrations/{platform,ledger,usage,schedule}/`. Реестр модулей:
+DDL: `packages/core/database/migrations/{platform,ledger,usage,rating,schedule}/`. Реестр модулей:
 [`spec/modules.json`](../../spec/modules.json); контракты композиции:
 [module-compatibility.md](module-compatibility.md) (D55).
 [Полнота дизайна](design-coverage.md) задаёт поддерживаемые границы и оставшийся объём реализации.
@@ -193,7 +193,7 @@ unknown не освобождает резерв по таймеру. Succeeded 
 
 Usage сохраняет immutable metric versions и append-only fact revisions (D13/D56; owner usage, P4.2).
 Schedule сохраняет commercial periods по immutable business interval identity (P4.5).
-Будущие rating/occurrence booking сохраняют price versions, non-overlapping non-superseded
+Rating/occurrence booking сохраняют price versions, non-overlapping non-superseded
 occurrences и basis UNIQUE obligation (D12/D56; owner rating/schedule).
 Новые условия действуют вперёд; после issue positive late delta создаёт linked correction obligation,
 negative delta — credit note по versioned correction policy (INV-11/12/13, D12/D13/D63).
@@ -337,7 +337,7 @@ An explicit zero price and frozen reason produce a no_charge disposition and no 
 (D55/D56/D60; owner rating).
 
 One `rating.book.v1` OperationRunner root asserts its live rating capability first, then
-acquires the complete UsageSeries (35) set through AggregationLocks, the sorted
+acquires the complete UsageSeries (35) set through AggregationLocks for metered inputs, the sorted
 RatingFrontier (45) set, and BillingOccurrence (50) through OccurrenceLocks. Usage participants
 revalidate both snapshot identity and supplied quantity/window/frontier. Commitment heads
 share rank 45 with occurrence heads, using separate canonical keys; under that lock the
@@ -368,6 +368,14 @@ current prices/tax or re-inserting its lines. A changed commitment requires expl
 rather than silently repricing that immutable basis. Booked and no-charge mappings are
 terminal. Legal issue/render and execution are independent optional capabilities
 (D55/D56/D60; REQ-OWN-03; owner platform/rating/schedule/ledger).
+
+P4.9 additionally supports an explicit `snapshotRef="fixed"` component input for a pinned fixed
+price. Its `fixed_occurrence/1` evidence freezes one original component occurrence, attribution,
+interval and price terms; recomputation validates the entire evidence before writes. This path
+does not admit usage or access usage tables. Schedule-owned roots admit platform/rating/schedule
+without ledger; adding ledger to rating booking enables debt through its participant. Pure quote
+requires neither provider nor schema for ledger. See the [capability matrix](optional-commercial-modules.md)
+for provider, migration and trusted role/version ownership (D55/D56; owners rating/schedule/core).
 
 ## Expand/contract и доказательства
 

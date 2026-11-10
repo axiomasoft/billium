@@ -22,6 +22,7 @@ use Billium\Rating\Internal\Adapters\LedgerAdapter;
 use Billium\Rating\Internal\Adapters\ScheduleOccurrenceAdapter;
 use Billium\Rating\Internal\Adapters\UsageAggregateAdapter;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
+use Billium\Rating\Internal\Pipeline\FixedOccurrenceInput;
 use Billium\Rating\Internal\Pipeline\RatingComputation;
 use Billium\Rating\Internal\Storage\RatingRows;
 use Billium\Rating\Internal\Storage\RatingStore;
@@ -39,7 +40,10 @@ final readonly class DatabaseRatingBooking implements RatingBooking
         if ($caller->sellerRef !== $in->sellerRef || $caller->environment !== $in->environment) {
             throw new ProblemException(ProblemCode::AuthDenied, 'billium.rating.scope_denied');
         }
-        $modules = ['platform', 'rating', 'usage', 'schedule'];
+        $modules = ['platform', 'rating', 'schedule'];
+        if (array_any($in->aggregates, static fn ($aggregate): bool => ! FixedOccurrenceInput::matches($aggregate))) {
+            $modules[] = 'usage';
+        }
         $enabled = config('billium.modules.enabled', []);
         if (is_array($enabled) && in_array('ledger', $enabled, true)) {
             $modules[] = 'ledger';

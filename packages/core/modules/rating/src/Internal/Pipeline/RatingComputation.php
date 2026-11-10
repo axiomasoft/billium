@@ -71,6 +71,7 @@ final readonly class RatingComputation implements RatingQuoter
             $price = $inputs->prices[$i];
             $tax = $inputs->taxes[$i];
             $snapshot = $price->snapshot;
+            FixedOccurrenceInput::assertValid(inputs: $inputs, aggregate: $aggregate, price: $snapshot);
             QuantitySnapshotScope::assertValid(inputs: $inputs, aggregate: $aggregate, price: $snapshot);
             if (strcmp($aggregate->componentRef, $last) <= 0 || $aggregate->componentRef !== $price->componentRef
                 || $aggregate->windowStartMicros !== $inputs->periodStartMicros || $aggregate->windowEndMicros !== $inputs->periodEndMicros

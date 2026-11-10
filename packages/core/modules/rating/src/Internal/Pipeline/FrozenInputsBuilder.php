@@ -30,8 +30,8 @@ use Throwable;
 final readonly class FrozenInputsBuilder
 {
     public function __construct(private CallerContext $callers, private ScheduleOccurrenceAdapter $schedule,
-        private AggregationQueries $usage, private PriceVersionStore $prices, private TaxSnapshotPort $tax,
-        private RatingStore $store) {}
+        private PriceVersionStore $prices, private TaxSnapshotPort $tax,
+        private RatingStore $store, private ?AggregationQueries $usage = null) {}
 
     public function build(PrepareRating $command): FrozenRatingInputs|RatingHold
     {
@@ -52,7 +52,7 @@ final readonly class FrozenInputsBuilder
             $retained = $this->store->inputs($existing);
             $pinned = [];
             foreach ($retained->aggregates as $i => $aggregate) {
-                $pinned[] = ['componentRef' => $aggregate->componentRef, 'snapshotRef' => $aggregate->snapshotRef,
+                $pinned[] = ['componentRef' => $aggregate->componentRef, 'snapshotRef' => FixedOccurrenceInput::matches($aggregate) ? 'fixed' : $aggregate->snapshotRef,
                     'priceRef' => $retained->prices[$i]->priceRef, 'priceVersion' => $retained->prices[$i]->priceVersion];
                 if ($aggregate->quantitySnapshot !== null) {
                     $pinned[array_key_last($pinned)]['quantitySnapshot'] = $aggregate->quantitySnapshot;
@@ -83,35 +83,57 @@ final readonly class FrozenInputsBuilder
         $currency = null;
         $exponent = null;
         foreach ($components as $component) {
-            try {
-                $aggregate = RatingRows::map(json_decode(CanonicalJson::encode($this->usage->snapshot($component['snapshotRef'])), true, 128, JSON_THROW_ON_ERROR));
-                $w = RatingRows::map($aggregate['window'] ?? null);
-                $window = new WindowSelector(sellerRef: RatingRows::text($w['sellerRef'] ?? null), environment: RatingRows::text($w['environment'] ?? null),
-                    metricRef: RatingRows::text($w['metricRef'] ?? null), metricVersion: RatingRows::text($w['metricVersion'] ?? null), groupKey: RatingRows::map($w['group'] ?? null),
-                    startMicros: RatingRows::integer($w['startMicros'] ?? null), endMicros: RatingRows::integer($w['endMicros'] ?? null));
-                $status = $this->usage->windowStatus($window);
-            } catch (ProblemException $error) {
-                return new RatingHold(reason: str_contains($error->detail, 'reproduc') ? HoldReason::AggregateNotReproducible : HoldReason::IncompleteSource,
-                    repairOrReplayRefs: [$component['snapshotRef']], detail: $error->detail);
-            }
-            if (($aggregate['reproducibility'] ?? null) !== 'reproducible') {
-                return new RatingHold(reason: HoldReason::AggregateNotReproducible, repairOrReplayRefs: [$component['snapshotRef']], detail: 'retained aggregate unavailable');
-            }
-            if (($status['state'] ?? null) !== 'final' || ($status['progress'] ?? null) !== 'aggregated'
-                || ($status['finalSnapshotRef'] ?? null) !== $component['snapshotRef']) {
-                return new RatingHold(reason: HoldReason::IncompleteSource, repairOrReplayRefs: RatingRows::texts($status['repairOrReplayRefs'] ?? []), detail: 'source window is not final');
-            }
-            $group = $window->groupKey;
-            if ($window->sellerRef !== $caller->sellerRef || $window->environment !== $caller->environment
-                || $window->startMicros !== $start || $window->endMicros !== $end
-                || ($group['billingAccountRef'] ?? null) !== $command->billingAccountRef
-                || ($group['componentRef'] ?? null) !== $component['componentRef']
-                || ($group['agreementRevision'] ?? null) !== $command->agreementRevision) {
-                RatingComputation::refuse('aggregate_scope_mismatch');
-            }
             $price = $this->prices->find(priceRef: $component['priceRef'], version: $component['priceVersion']);
             if ($price === null) {
                 return new RatingHold(reason: HoldReason::MissingPrice, repairOrReplayRefs: [$component['priceRef']], detail: 'pinned price version absent');
+            }
+            $fixed = $component['snapshotRef'] === 'fixed';
+            if ($fixed) {
+                if (isset($component['quantitySnapshot']) || $component['componentRef'] !== $occurrence['component_ref']) {
+                    RatingComputation::refuse('fixed_input_scope_mismatch');
+                }
+                $group = RatingRows::map(json_decode($command->attribution, true, 32, JSON_THROW_ON_ERROR));
+                $group['billingAccountRef'] = $command->billingAccountRef;
+                $group['agreementRevision'] = $command->agreementRevision;
+                $group['componentRef'] = $component['componentRef'];
+                $frozen = FixedOccurrenceInput::freeze(seller: $caller->sellerRef, environment: $caller->environment, occurrence: $command->occurrenceRef,
+                    sourceDigest: $command->sourceDigest, occurrenceDigest: $command->occurrenceInputsDigest,
+                    start: $start, end: $end, group: $group, price: $price);
+            } else {
+                if ($this->usage === null) {
+                    return new RatingHold(reason: HoldReason::IncompleteSource, repairOrReplayRefs: [$component['snapshotRef']], detail: 'usage capability absent');
+                }
+                try {
+                    $aggregate = RatingRows::map(json_decode(CanonicalJson::encode($this->usage->snapshot($component['snapshotRef'])), true, 128, JSON_THROW_ON_ERROR));
+                    $w = RatingRows::map($aggregate['window'] ?? null);
+                    $window = new WindowSelector(sellerRef: RatingRows::text($w['sellerRef'] ?? null), environment: RatingRows::text($w['environment'] ?? null),
+                        metricRef: RatingRows::text($w['metricRef'] ?? null), metricVersion: RatingRows::text($w['metricVersion'] ?? null), groupKey: RatingRows::map($w['group'] ?? null),
+                        startMicros: RatingRows::integer($w['startMicros'] ?? null), endMicros: RatingRows::integer($w['endMicros'] ?? null));
+                    $status = $this->usage->windowStatus($window);
+                } catch (ProblemException $error) {
+                    return new RatingHold(reason: str_contains($error->detail, 'reproduc') ? HoldReason::AggregateNotReproducible : HoldReason::IncompleteSource,
+                        repairOrReplayRefs: [$component['snapshotRef']], detail: $error->detail);
+                }
+                if (($aggregate['reproducibility'] ?? null) !== 'reproducible') {
+                    return new RatingHold(reason: HoldReason::AggregateNotReproducible, repairOrReplayRefs: [$component['snapshotRef']], detail: 'retained aggregate unavailable');
+                }
+                if (($status['state'] ?? null) !== 'final' || ($status['progress'] ?? null) !== 'aggregated'
+                    || ($status['finalSnapshotRef'] ?? null) !== $component['snapshotRef']) {
+                    return new RatingHold(reason: HoldReason::IncompleteSource, repairOrReplayRefs: RatingRows::texts($status['repairOrReplayRefs'] ?? []), detail: 'source window is not final');
+                }
+                $group = $window->groupKey;
+                if ($window->sellerRef !== $caller->sellerRef || $window->environment !== $caller->environment
+                    || $window->startMicros !== $start || $window->endMicros !== $end
+                    || ($group['billingAccountRef'] ?? null) !== $command->billingAccountRef
+                    || ($group['componentRef'] ?? null) !== $component['componentRef']
+                    || ($group['agreementRevision'] ?? null) !== $command->agreementRevision) {
+                    RatingComputation::refuse('aggregate_scope_mismatch');
+                }
+                $frozen = new FrozenAggregate(componentRef: $component['componentRef'], metricRef: $window->metricRef, metricVersion: $window->metricVersion,
+                    snapshotRef: RatingRows::text($aggregate['snapshotRef'] ?? null), snapshotDigest: RatingRows::text($aggregate['snapshotDigest'] ?? null),
+                    windowStartMicros: $start, windowEndMicros: $end, completenessFrontierDigest: RatingRows::text($aggregate['completenessFrontierDigest'] ?? null),
+                    quantity: RatingRows::text($aggregate['quantity'] ?? null), quantityScale: RatingRows::integer($aggregate['quantityScale'] ?? null), snapshot: $aggregate,
+                    quantitySnapshot: isset($component['quantitySnapshot']) ? self::quantitySnapshot($component['quantitySnapshot']) : null);
             }
             if ($currency !== null && ($price->currency !== $currency || $price->currencyExponent !== $exponent)) {
                 return new RatingHold(reason: HoldReason::UnknownPolicy, repairOrReplayRefs: [], detail: 'mixed currency is unsupported');
@@ -138,11 +160,7 @@ final readonly class FrozenInputsBuilder
                 roundingPolicyVersion: $price->roundingPolicyVersion, exponentVersion: $price->exponentVersion, snapshot: $price);
             $taxes[] = new FrozenTax(snapshotRef: $tax->snapshotRef, snapshotDigest: CanonicalJson::digest($tax), inputDigest: $tax->inputDigest,
                 jurisdiction: $tax->jurisdiction, taxCode: $tax->taxCode, mode: $tax->mode->value, rate: $tax->rate, snapshot: $tax);
-            $aggregates[] = new FrozenAggregate(componentRef: $component['componentRef'], metricRef: $window->metricRef, metricVersion: $window->metricVersion,
-                snapshotRef: RatingRows::text($aggregate['snapshotRef'] ?? null), snapshotDigest: RatingRows::text($aggregate['snapshotDigest'] ?? null),
-                windowStartMicros: $start, windowEndMicros: $end, completenessFrontierDigest: RatingRows::text($aggregate['completenessFrontierDigest'] ?? null),
-                quantity: RatingRows::text($aggregate['quantity'] ?? null), quantityScale: RatingRows::integer($aggregate['quantityScale'] ?? null), snapshot: $aggregate,
-                quantitySnapshot: isset($component['quantitySnapshot']) ? self::quantitySnapshot($component['quantitySnapshot']) : null);
+            $aggregates[] = $frozen;
         }
         $head = $this->store->frontier($command->occurrenceRef);
 

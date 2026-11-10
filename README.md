@@ -13,6 +13,11 @@ and the `billium-contracts` packages for PHP and Dart. Core implements the P3 pl
 guarded PostgreSQL routines, financial-session admission, receipts, observations, outbox and feed (D60).
 Live PSP execution and legal numbering belong to later modules (D55/D59).
 
+Usage, rating and schedule are optional internal core modules. Fixed-price schedule booking can omit
+usage; pure quotes can omit ledger; obligation booking needs no legal renderer or payment executor.
+See the [module, provider and capability matrix](docs/architecture/optional-commercial-modules.md)
+for host enablement, migration ownership, trusted versioned extensions and A–D composition proofs (D55/D56).
+
 - [Requirements and traceability](docs/requirements.md)
 - [Target architecture](docs/architecture/target-architecture.md) and
   [data model](docs/architecture/data-model.md)

@@ -70,6 +70,12 @@ flowchart LR
 
 ## Commercial periods: реализация P4.5
 
+P4.9: [module/provider/capability matrix and A–D proofs](optional-commercial-modules.md) separates the
+installation DAG from operation capabilities. Quote is pure without ledger; fixed schedule rating can
+omit usage; ledger booking does not require legal issue/render. Providers discover only enabled module
+migrations; strategy and metric roles resolve exact trusted versions with no implicit fallback
+(D13/D55/D56; owners core/usage/rating/schedule/ledger).
+
 `schedule` разрешает коммерческий календарь через
 `Billium\Schedule\Contracts\IntervalResolver::resolve(ScheduleRevisionTerms $terms, int $ordinal): ResolvedInterval`.
 Ordinal начинается с нуля и всегда считается от исходного `anchorLocal`, а не от предыдущей

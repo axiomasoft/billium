@@ -12,6 +12,7 @@ final readonly class PrepareRating
 {
     /**
      * Versions are pinned host agreement inputs, never current-price selectors (D56).
+     * snapshotRef="fixed" selects one fixed-price component occurrence without a usage backend (D55).
      *
      * @param  list<array{componentRef: string, snapshotRef: string, priceRef: string, priceVersion: int, quantitySnapshot?: QuantitySnapshot}>  $components
      */

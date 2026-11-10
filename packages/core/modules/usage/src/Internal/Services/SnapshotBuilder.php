@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Usage\Internal\Services;
 
+use Billium\Usage\Contracts\MetricReducerRegistry;
 use Billium\Usage\Data\AggregateSnapshot;
 use Billium\Usage\Data\AggregationPolicy;
 use Billium\Usage\Data\CompletenessFrontier;
@@ -16,15 +17,12 @@ use Billium\Usage\Enums\Reproducibility;
 use Billium\Usage\Internal\Canonical\CanonicalJson;
 use Billium\Usage\Internal\Errors\UsageProblems;
 use Billium\Usage\Internal\Math\Decimal;
-use Billium\Usage\Internal\Reducers\AdditiveReducer;
 use Billium\Usage\Internal\Reducers\DistinctReducer;
 use Billium\Usage\Internal\Reducers\EffectiveRevisionSelector;
-use Billium\Usage\Internal\Reducers\GaugeReducer;
-use Billium\Usage\Internal\Reducers\ReducerRegistry;
 
 final readonly class SnapshotBuilder
 {
-    public function __construct(private ReducerRegistry $registry) {}
+    public function __construct(private MetricReducerRegistry $registry) {}
 
     /**
      * @param  list<FactRevision>  $revisions
@@ -59,13 +57,20 @@ final readonly class SnapshotBuilder
                 }
             }
         }
-        $reducer = $this->registry->get($policy->algorithmId.'@'.$policy->algorithmVersion);
-        $distinct = $reducer instanceof DistinctReducer ? $reducer->reduce($effective) : null;
-        $unscaled = match (true) {
-            $reducer instanceof AdditiveReducer => $reducer->reduce(effective: $effective, allowNegative: $policy->allowNegative),
-            $reducer instanceof GaugeReducer => $reducer->reduce(policy: $policy, start: $window->startMicros, end: $window->endMicros, allEffective: $effective),
-            default => $distinct['count'] ?? throw UsageProblems::error('metric_semantics_unsupported'),
-        };
+        $reducer = $this->registry->resolve(algorithmId: $policy->algorithmId, version: $policy->algorithmVersion);
+        $result = $reducer->reduce(policy: $policy, window: $window, effective: $effective);
+        $unscaled = $result->unscaled;
+        if (preg_match('/^-?[0-9]+$/D', $unscaled) !== 1 || (! $policy->allowNegative && bccomp($unscaled, '0', 0) < 0)
+            || (($policy->semantics === AggregationSemantics::DistinctExact) !== ($result->memberSetDigest !== null))) {
+            throw UsageProblems::error('metric_semantics_unsupported');
+        }
+        $distinct = $result->memberSetDigest === null ? null : ['count' => $unscaled, 'digest' => $result->memberSetDigest];
+        if ($distinct !== null) {
+            $union = (new DistinctReducer)->reduce($effective);
+            if ($union['count'] !== $unscaled || $union['digest'] !== $result->memberSetDigest) {
+                throw UsageProblems::error('metric_semantics_unsupported');
+            }
+        }
         $absolute = bccomp($unscaled, '0', 0) < 0 ? bcsub('0', $unscaled, 0) : $unscaled;
         $limit = str_repeat('9', 26 + $policy->quantityScale);
         assert(is_numeric($limit));

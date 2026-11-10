@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Billium\Usage\Contracts;
 
 use Billium\Contracts\Attributes\Api;
+use Billium\Contracts\Attributes\Spi;
+use Billium\Contracts\Attributes\SpiKind;
 use Billium\Contracts\Data\Envelopes\UsageFactV2;
 use Billium\Core\Data\Caller;
 use Billium\Usage\Data\AttributionSnapshot;
@@ -14,6 +16,7 @@ use Billium\Usage\Data\AttributionSnapshot;
  * original commercial period. It must return historical mapping versions after a payer transfer.
  */
 #[Api]
+#[Spi(SpiKind::Implement)]
 interface UsageAttribution
 {
     public function resolve(Caller $caller, UsageFactV2 $fact): ?AttributionSnapshot;

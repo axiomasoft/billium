@@ -224,7 +224,7 @@ final readonly class DatabaseAgreementRevisionCommit implements AgreementRevisio
 
         return new OperationSpec(commandKind: $kind, sellerRef: $caller->sellerRef, environment: $caller->environment,
             mode: $financial ? FinancialMode::Active : FinancialMode::Administrative,
-            operationClass: ModuleOperationClass::NewIntent, modules: ['platform', 'ledger', 'rating', 'schedule'],
+            operationClass: ModuleOperationClass::NewIntent, modules: ['platform', 'rating', 'schedule'],
             commandKey: $key, digest: $digest, commitKind: $financial ? 'schedule.revision_committed' : null);
     }
 

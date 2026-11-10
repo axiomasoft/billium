@@ -11,11 +11,14 @@ use Billium\Usage\Contracts\AggregationLocks;
 use Billium\Usage\Contracts\AggregationParticipants;
 use Billium\Usage\Contracts\AggregationQueries;
 use Billium\Usage\Contracts\AggregationService;
+use Billium\Usage\Contracts\MetricReducer;
+use Billium\Usage\Contracts\MetricReducerRegistry;
 use Billium\Usage\Contracts\SourceCompletenessIntake;
 use Billium\Usage\Contracts\Usage;
 use Billium\Usage\Contracts\UsageAttribution;
 use Billium\Usage\Internal\Participants\DatabaseAggregationLocks;
 use Billium\Usage\Internal\Participants\DatabaseAggregationParticipants;
+use Billium\Usage\Internal\Reducers\ReducerRegistry;
 use Billium\Usage\Internal\Services\DatabaseAggregationQueries;
 use Billium\Usage\Internal\Services\DatabaseAggregationService;
 use Billium\Usage\Internal\Services\DatabaseSourceCompletenessIntake;
@@ -29,6 +32,9 @@ final class UsageServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->bindIf(MetricReducerRegistry::class, static fn (Application $app): ReducerRegistry => new ReducerRegistry(
+            reducers: self::reducers($app),
+        ), shared: true);
         $this->app->bind(EffectiveFactSource::class, DatabaseEffectiveFactSource::class);
         $this->app->bind(AggregationService::class, DatabaseAggregationService::class);
         $this->app->bind(AggregationQueries::class, DatabaseAggregationQueries::class);
@@ -49,5 +55,17 @@ final class UsageServiceProvider extends ServiceProvider
     {
         // D55: discovery only; install/upgrade and module registration are explicit host operations.
         $this->loadMigrationsFrom(__DIR__.'/../../../../database/migrations/usage');
+    }
+
+    /** @return iterable<MetricReducer> */
+    private static function reducers(Application $app): iterable
+    {
+        yield from ReducerRegistry::builtins();
+        foreach ($app->tagged('billium.metric_reducers') as $reducer) {
+            if (! $reducer instanceof MetricReducer) {
+                throw new \LogicException('Metric reducer tag requires a trusted MetricReducer implementation');
+            }
+            yield $reducer;
+        }
     }
 }

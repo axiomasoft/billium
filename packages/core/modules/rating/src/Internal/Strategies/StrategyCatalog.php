@@ -24,18 +24,31 @@ use InvalidArgumentException;
 
 final class StrategyCatalog implements PricingStrategyRegistry
 {
+    /** @var array<string, PricingStrategy> */
+    private array $strategies = [];
+
+    /** @param iterable<PricingStrategy>|null $strategies Trusted host code only (D55/D56). */
+    public function __construct(?iterable $strategies = null)
+    {
+        foreach ($strategies ?? self::builtins() as $strategy) {
+            $key = $strategy->id()->value.'@'.$strategy->version();
+            if ($strategy->version() < 1 || isset($this->strategies[$key])) {
+                throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.rating.strategy_duplicate_or_invalid');
+            }
+            $this->strategies[$key] = $strategy;
+        }
+    }
+
+    /** @return list<PricingStrategy> */
+    public static function builtins(): array
+    {
+        return [new FixedStrategy, new PerUnitStrategy, new GraduatedStrategy, new VolumeStrategy];
+    }
+
     public function resolve(StrategyId $id, int $version): PricingStrategy
     {
-        if ($version !== 1) {
-            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.rating.strategy_unknown');
-        }
-
-        return match ($id) {
-            StrategyId::Fixed => new FixedStrategy,
-            StrategyId::PerUnit => new PerUnitStrategy,
-            StrategyId::TieredGraduated => new GraduatedStrategy,
-            StrategyId::TieredVolume => new VolumeStrategy,
-        };
+        return $this->strategies[$id->value.'@'.$version]
+            ?? throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.rating.strategy_unknown');
     }
 
     public function validate(PriceVersion $version): void

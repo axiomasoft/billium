@@ -29,7 +29,7 @@ final readonly class ScheduleOperations
 
         return new OperationSpec(commandKind: $kind, sellerRef: $seller, environment: $environment,
             mode: FinancialMode::Active, operationClass: ModuleOperationClass::NewIntent,
-            modules: ['platform', 'ledger', 'rating', 'schedule'], commandKey: $key,
+            modules: ['platform', 'rating', 'schedule'], commandKey: $key,
             digest: $key === null ? null : Canonical::digest(self::payload($payload)), commitKind: $kind);
     }
 

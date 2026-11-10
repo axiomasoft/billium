@@ -54,7 +54,10 @@ final class BilliumCoreServiceProvider extends ServiceProvider
             );
         });
         $this->app->register(PlatformServiceProvider::class);
-        $this->app->register(LedgerServiceProvider::class);
+        $enabled = config('billium.modules.enabled', []);
+        if (is_array($enabled) && in_array('ledger', $enabled, true)) {
+            $this->app->register(LedgerServiceProvider::class);
+        }
         $this->registerCommercialModules();
     }
 
@@ -85,9 +88,6 @@ final class BilliumCoreServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->loadMigrationsFrom([
-            __DIR__.'/../database/migrations/platform',
-            __DIR__.'/../database/migrations/ledger',
-        ]);
+        $this->loadMigrationsFrom(__DIR__.'/../database/migrations/platform');
     }
 }

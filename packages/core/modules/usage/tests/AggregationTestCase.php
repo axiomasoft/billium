@@ -38,6 +38,7 @@ abstract class AggregationTestCase extends UsageTestCase
         $group = ['region' => 'eu', 'mappingRef' => 'mapping-1', 'periodRef' => 'october-2026'];
         foreach (get_object_vars(UsageFixtures::fact()->attribution) as $name => $value) {
             if (array_key_exists($name, DatabaseEffectiveFactSource::ATTRIBUTION)) {
+                assert(is_string($value) || is_int($value));
                 $group[$name] = (string) $value;
             }
         }
@@ -57,6 +58,7 @@ abstract class AggregationTestCase extends UsageTestCase
         bool $carry = false,
         string $missingInitial = 'refuse',
         ?string $definitionDigest = null,
+        int $algorithmVersion = 1,
     ): void {
         $metric ??= UsageFixtures::metric();
         $contract = new SourceFinalityContract(
@@ -75,7 +77,7 @@ abstract class AggregationTestCase extends UsageTestCase
             'seller_ref' => 'seller-a', 'environment' => 'test', 'metric_ref' => $metric->metricRef,
             'metric_version' => $metric->metricVersion, 'metric_definition_digest' => $definitionDigest ?? $metric->digest,
             'semantics' => $distinct ? 'distinct_exact' : ($gauge ? 'gauge' : 'additive'),
-            'algorithm_id' => $algorithm, 'algorithm_version' => 1, 'gauge_policy' => $gauge ? substr($algorithm, 6) : null,
+            'algorithm_id' => $algorithm, 'algorithm_version' => $algorithmVersion, 'gauge_policy' => $gauge ? substr($algorithm, 6) : null,
             'missing_initial' => $missingInitial, 'carry_forward' => $carry, 'quantity_scale' => $scale, 'rounding_mode' => 'half_up',
             'allow_negative' => false, 'finality_contract_ref' => 'source-finality', 'finality_contract_version' => 1,
             'identity_key_version' => $distinct ? '1' : null, 'identity_namespace' => $distinct ? 'host-members/1' : null,
@@ -96,6 +98,7 @@ abstract class AggregationTestCase extends UsageTestCase
         ));
     }
 
+    /** @return array<string, mixed> */
     protected function freeze(?string $expected = null): array
     {
         return $this->aggregation()->freeze(new FreezeAggregate(window: $this->window(), expectedHeadDigest: $expected))->body();
