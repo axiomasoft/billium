@@ -60,6 +60,10 @@ final readonly class DatabaseOccurrenceService implements OccurrenceService
                 if ($command->scheduleRevision !== Payload::integer($applicable->revision) || $command->inputsDigest !== $applicable->inputs_digest) {
                     OccurrenceProblems::refuse('schedule.revision_stale');
                 }
+                $terms = ScheduleRevisionTerms::fromArray(Payload::decode($applicable->terms));
+                if ($terms->action === 'pause') {
+                    OccurrenceProblems::refuse('schedule.not_runnable');
+                }
 
                 return $this->store->ensure(context: $context, command: $command, ref: $ref, head: $head);
             },
