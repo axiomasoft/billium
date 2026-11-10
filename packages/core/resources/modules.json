@@ -746,14 +746,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "schedule",
-      "currentSchemaVersion": 0,
+      "currentSchemaVersion": 1,
       "supportedSchemaReadRange": {
-        "min": 0,
-        "max": 0
+        "min": 1,
+        "max": 1
       },
       "supportedSchemaWriteRange": {
-        "min": 0,
-        "max": 0
+        "min": 1,
+        "max": 1
       },
       "requiresModules": [
         {
@@ -788,11 +788,22 @@
         "period.commercial.v1",
         "occurrence.ensure.v2"
       ],
-      "ownedTables": [],
+      "ownedTables": [
+        "billium_schedule_component",
+        "billium_schedule_quote",
+        "billium_schedule_revision",
+        "billium_schedule_period"
+      ],
       "configKeys": [
         "billium.schedule.enabled"
       ],
-      "migrationIdentities": [],
+      "migrationIdentities": [
+        {
+          "id": "2026_11_10_000500_create_billium_schedule_periods",
+          "version": 1,
+          "checksum": "sha256:6e542f7bad81723bf5c338cc1ad1a53134eea4f18a0dc3a6fc806aa48d570bce"
+        }
+      ],
       "disablePolicy": {
         "dependents": "block",
         "keeps": [

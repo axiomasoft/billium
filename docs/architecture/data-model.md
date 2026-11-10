@@ -1,9 +1,10 @@
 # Billium — модель данных
 
-Синхронизация PLAN1.P3.12, 2026-10-29. Реализованный слой — platform и ledger;
-execution, usage/rating/schedule, documents и collection ниже обозначены как будущие владельцы.
+Синхронизация PLAN1.P3.12, 2026-10-29, дополнения P4.2/P4.3/P4.5. Реализованы platform, ledger,
+usage admission/aggregation и schedule commercial periods. Rating, occurrence booking,
+execution, documents и collection ниже сохраняют явно обозначенные будущие потоки.
 Основания: INV-01–INV-14, D21, D45–D52, D54/D55/D57/D60/D62/D63.
-DDL: `packages/core/database/migrations/{platform,ledger}/`. Реестр модулей:
+DDL: `packages/core/database/migrations/{platform,ledger,usage,schedule}/`. Реестр модулей:
 [`spec/modules.json`](../../spec/modules.json); контракты композиции:
 [module-compatibility.md](module-compatibility.md) (D55).
 [Полнота дизайна](design-coverage.md) задаёт поддерживаемые границы и оставшийся объём реализации.
@@ -191,14 +192,48 @@ unknown не освобождает резерв по таймеру. Succeeded 
 до разрешённой policy. До подтверждённого refund ledger не уменьшает allocation (D35/D41/D60).
 
 Usage сохраняет immutable metric versions и append-only fact revisions (D13/D56; owner usage, P4.2).
-Будущие rating/schedule сохраняют price versions и occurrence
-business interval identity (EXCLUDE overlapping non-superseded intervals), basis UNIQUE obligation.
+Schedule сохраняет commercial periods по immutable business interval identity (P4.5).
+Будущие rating/occurrence booking сохраняют price versions, non-overlapping non-superseded
+occurrences и basis UNIQUE obligation (D12/D56; owner rating/schedule).
 Новые условия действуют вперёд; после issue positive late delta создаёт linked correction obligation,
 negative delta — credit note по versioned correction policy (INV-11/12/13, D12/D13/D63).
 Будущий collection guard проверяет authorization/generation до admission и dispatch через port+context;
 автосбор не начинается после refund reversal без policy. Documents хранит series/number/economic identity,
 render provenance; cash/fiscal export опирается на actual unique effects, receivable export — ledger
 (D35/D55/D63). Эти будущие таблицы/PSP integrations не заявлены реализованными в P3.
+
+## Commercial period evidence и accepted terms (P4.5)
+
+Все четыре таблицы принадлежат schedule; ключи включают seller/environment. Grant, quota,
+consume и host subscription state здесь отсутствуют (D22/D23/D45/D56; owner schedule).
+
+| Таблица | Состояние и backstop |
+|:--|:--|
+| `billium_schedule_quote` | append-only quoteRef, exact terms/period/quote digests, host revision/cancellation generation, validity и bounded frozen body |
+| `billium_schedule_component` | mutable serialization head: scoped component key, immutable host agreement correlation, последняя accepted revision/generation/funding revision, effective boundary/covered-until и exact terms |
+| `billium_schedule_revision` | append-only accepted host monetary terms + immutable integration receipt; UNIQUE component/revision и quoteRef; composite FK связывает exact revision/generation/terms digest с quote |
+| `billium_schedule_period` | append-only resolved UTC [start,end), local policy/evidence, source revision/funding revision; UNIQUE component/purpose/start/end, coverageRef и occurrenceRef; revision не входит в business uniqueness |
+
+Резолвер сохраняет source anchor, explicit policy, requested и resolved local boundaries, UTC offsets,
+ordinal и tzdb marker. Исторический replay не вызывает resolver; source policy и stored boundary evidence
+сохраняются вместе. Commercial identity определяется интервалом, price/host/funding revisions — provenance.
+Runtime получает SELECT/INSERT, immutable triggers запрещают UPDATE/DELETE history; только head получает
+ограниченные UPDATE columns. FK периода на accepted revision deferred до commit, поэтому обе записи
+создаются в одной root Tx. Boot SQL не выполняет (INV-11/12, D22/D55/D56; owner schedule).
+
+Lock path: claim → session/install/module admission → transaction-local host approval guard →
+`BillingSchedule (40)` на `component_key`. Guard хоста обязан сериализовать exact approved revision и
+cancellation generation до commit; default отказывает. После lock повторно проверяется business replay,
+затем validity, monotonic revision/generations, future boundary и anchor policy. Accepted revision,
+period, head, receipt и diagnostic money commit log коммитятся одной root; business refusal сохраняет
+только свой idempotency receipt. Пересчёт posted money и supersession planned occurrences принадлежат
+отдельному occurrence/correction протоколу, не прямому UPDATE periods (D27/D56/D63; owner schedule/platform).
+
+Integration query `coverage` возвращает immutable `billium.schedule.coverage/1` в authenticated scope,
+не новый strict public event. Coverage/occurrence refs стабильны при transport replay. Funding revision
+в notice — frozen host provenance, не подтверждение оплаты и не команда grant owner. Annual monetary
+coverage и monthly grants не размножают друг друга; P4.5 не вызывает ledger booking и не пишет grant state
+(REQ-OWN-02/03, REQ-OUT-01/02/10, D56; owner schedule/host).
 
 ## Expand/contract и доказательства
 

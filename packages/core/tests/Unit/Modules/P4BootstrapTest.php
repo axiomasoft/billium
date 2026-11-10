@@ -8,6 +8,7 @@ use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\BilliumCoreServiceProvider;
 use Billium\Core\Data\Modules\InstalledCheckpoint;
+use Billium\Core\Tests\TestEnvironment;
 use BilliumConformance\LedgerAdapter;
 use BilliumConformance\P4RuntimeAdapter;
 use Composer\Autoload\ClassLoader;
@@ -36,7 +37,7 @@ final class P4BootstrapTest extends ModuleTestCase
 
     public function test_preparation_descriptors_have_only_real_uninstalled_checkpoints(): void
     {
-        foreach (['rating', 'schedule'] as $module) {
+        foreach (['rating'] as $module) {
             $descriptor = self::catalog()->descriptor($module);
             self::assertNotNull($descriptor);
             $checkpoint = new InstalledCheckpoint($module);
@@ -64,7 +65,8 @@ final class P4BootstrapTest extends ModuleTestCase
         }
         (new BilliumCoreServiceProvider($app))->register();
         self::assertArrayHasKey('Billium\\Usage\\Internal\\UsageServiceProvider', $app->getLoadedProviders());
-        foreach (['Rating', 'Schedule'] as $module) {
+        self::assertArrayHasKey('Billium\\Schedule\\Internal\\ScheduleServiceProvider', $app->getLoadedProviders());
+        foreach (['Rating'] as $module) {
             self::assertArrayNotHasKey("Billium\\{$module}\\Internal\\{$module}ServiceProvider", $app->getLoadedProviders());
         }
         Container::setInstance(null);
@@ -99,7 +101,9 @@ final class P4BootstrapTest extends ModuleTestCase
     public function test_php_protocol_enrolls_runtime_operations_and_refuses_without_database_setup(): void
     {
         $root = dirname(__DIR__, 5);
-        $process = new Process([PHP_BINARY, 'conformance/adapters/php/bin/adapter.php'], $root);
+        // The adapter joins the parent's verified DB lease, including when earlier tests used committed data (D50).
+        $process = new Process(command: [PHP_BINARY, 'conformance/adapters/php/bin/adapter.php'], cwd: $root,
+            env: TestEnvironment::suiteLeaseEnvironment());
         $messages = [
             ['type' => 'start', 'protocol' => 1],
             ['type' => 'config', 'profile' => 'php'],

@@ -19,6 +19,7 @@ use Billium\Ledger\Internal\LedgerServiceProvider;
 use Billium\Platform\Contracts\IdempotencyStore;
 use Billium\Platform\Contracts\RootAdmission;
 use Billium\Platform\Internal\PlatformServiceProvider;
+use Billium\Schedule\Internal\ScheduleServiceProvider;
 use Billium\Usage\Internal\UsageServiceProvider;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\DatabaseManager;
@@ -62,7 +63,7 @@ final class BilliumCoreServiceProvider extends ServiceProvider
         $providers = [
             'usage' => UsageServiceProvider::class,
             'rating' => 'Billium\\Rating\\Internal\\RatingServiceProvider',
-            'schedule' => 'Billium\\Schedule\\Internal\\ScheduleServiceProvider',
+            'schedule' => ScheduleServiceProvider::class,
         ];
         $enabled = config('billium.modules.enabled', []);
         foreach ($providers as $module => $provider) {

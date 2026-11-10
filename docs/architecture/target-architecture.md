@@ -1,6 +1,6 @@
 # Billium — целевая архитектура
 
-Статус: исходное решение PLAN1.P1.6 (2026-10-17), уточнено D53–D63 (2026-10-24). Дизайн P3–P10 ещё не реализован. Полнота и границы поставки — [design-coverage.md](design-coverage.md). Нормативная основа — `docs/requirements.md` (REQ/INV),
+Статус: исходное решение PLAN1.P1.6 (2026-10-17), уточнено D53–D63 (2026-10-24). Реализация отдельных частей P3/P4 описана в модели данных и разделах ниже; будущие потоки не считаются реализованными по одному наличию дизайна. Полнота и границы поставки — [design-coverage.md](design-coverage.md). Нормативная основа — `docs/requirements.md` (REQ/INV),
 первичные факты — `knowledge/research/DR-0*.md` плана `2026.10.14-№1-BILLIUM-V1`
 в [workspace](../planning.md) (DR0N-NN), практики —
 `artifacts/P1-methods/methods.json` (M-NN), решения — `decisions/D9.json`…`D28.json`. Модель данных и инварианты —
@@ -67,6 +67,57 @@ flowchart LR
 - Внешние вызовы (драйвер, renderer, доставка) — вне транзакции, после commit намерения (INV-03).
 - Все денежные мутации проходят один pipeline: admission → claim идемпотентности → locks в
   глобальном порядке → запись → outbox → commit (M-55, D27).
+
+## Commercial periods: реализация P4.5
+
+`schedule` разрешает коммерческий календарь через
+`Billium\Schedule\Contracts\IntervalResolver::resolve(ScheduleRevisionTerms $terms, int $ordinal): ResolvedInterval`.
+Ordinal начинается с нуля и всегда считается от исходного `anchorLocal`, а не от предыдущей
+сокращённой границы: Jan31 → Feb28/29 → Mar31; yearly Feb29 → Feb28 → … → Feb29.
+`PeriodPolicy` задаёт IANA zone, month/year, intervalCount, endOfMonth, clamp_preserve_anchor,
+gap shift_forward/reject, fold earlier_offset/later_offset, charge timing и cutoffSeconds.
+Shift-forward сохраняет положение внутри gap (02:30 → 03:30 при часовом gap), fold выбирает
+ранний/поздний UTC instant. Cutoff — start минус явно заданные elapsed seconds; это граница
+приёма новых условий, не срок оплаты. Фиксированные 30 суток и неизвестная proration policy
+отказываются, не подменяют календарный месяц (D56; owner schedule).
+
+`AgreementRevisionCommit::preview` сохраняет quote с точными terms/period digests, [start,end) UTC,
+requested/resolved local boundaries, offsets, policy и tzdb marker. Даже при system tzdb marker
+сохранённые границы/offsets дают воспроизводимое evidence. Quote validity — [issuedAt,validUntil),
+validUntil не позже cutoff. Retry и commit читают эти границы, не считают их по текущей зоне или tzdb.
+`CommercialPeriods::fromQuote` экспортирует frozen `period.commercial.v1`: его согласованный wire
+профиль допускает intervalCount=1, shift_forward и earlier_offset. Другие явные resolver policies
+остаются типизированными внутренними terms и отказываются при таком экспорте; wire enum не расширяется
+молча (D56/D63; owner schedule/contracts).
+
+Commit принимает quoteRef/digest, expected host revision, cancellation generation и commandKey.
+Текущая host authority проверяется через `AgreementRevisionGuard` в root OperationRunner Tx до
+schedule lock; default guard отказывает. Host adapter обязан удерживать сериализацию с amendment/
+cancellation до commit без сети в Tx. Он проверяет exact approved terms, revision, generation и
+tombstone; Billium не читает host tables. Изменённый payload под тем же key — conflict.
+Компонентный head сериализует новые financial terms, не представляет вторую subscription FSM.
+Новая revision действует на будущей границе; timezone/anchor change требует reanchor_explicit.
+Pause не создаёт coverage; resume с preserve продолжает исходную anchor sequence, с reanchor_explicit
+принимает новую явную sequence. Midperiod/backdated change и замена уже committed interval отказываются
+с correction-required; P4.6 отдельно владеет supersession planned occurrences, а posted money меняется
+только linked correction (REQ-CON-33, REQ-NBR-06, INV-11/12, D12/D56; owner schedule).
+
+`AgreementRevisionCommit::coverage` возвращает seller/environment-scoped immutable
+`billium.schedule.coverage/1` с coverageRef, occurrenceRef, periodRef, period/evidence, fundingRevision,
+agreementRevision, priceVersionRef, monetaryTermsDigest и externalCorrelationRef. Identity зависит от
+seller/component/purpose/UTC interval в environment namespace, не от revision. Это versioned query,
+не новый публичный v1 outbox event и не payment/funding confirmation. Grant owner сам выбирает
+grant windows и свои dedupe keys. Годовое покрытие остаётся одним monetary occurrence при двенадцати
+внешних monthly grants; replay, reorder, поздний/неудачный grant или funding reversal не создают и
+не отзывают grants внутри Billium. Host amendment/cancellation — явный запрос финансовой коррекции,
+не неявная переоценка старой coverage. Obligation booking подключает следующий occurrence flow,
+не period resolver (REQ-OWN-02/03, REQ-OUT-01/02/10/11, REQ-ACC-20, D56; owner schedule/host).
+
+`ScheduleServiceProvider` подключается только при schedule в `billium.modules.enabled` и
+`billium.schedule.enabled=true`. Boot регистрирует migration path, без SQL/install/registry writes;
+host явно применяет migration stream и platform install/upgrade. Disabled/uninstalled fresh module
+не создаёт tables, workers, routes или registry rows. Historical receipt/query остаётся immutable;
+политика retention/purge задаётся отдельно (D55; owner schedule/platform).
 
 ## Профили embedded и server
 
