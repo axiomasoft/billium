@@ -22,6 +22,12 @@ MONEY_WIRE_PATH = "common/money-wire.json"
 
 # class name, schema name, schema file, variant of a oneOf schema (def name) or None
 ENVELOPES = (
+    ("AuthorizePayment", "payment.authorize.v1", "payment/authorize.v1.json", None),
+    ("CapturePayment", "payment.capture.v1", "payment/capture.v1.json", None),
+    ("VoidAuthorization", "payment.void_authorization.v1", "payment/void-authorization.v1.json", None),
+    ("CapabilitySnapshot", "payment.capabilities.v1", "payment/capabilities.v1.json", None),
+    ("QualificationManifest", "payment.qualification.v1", "payment/qualification.v1.json", None),
+    ("DriverLookupResult", "payment.driver_lookup.v1", "payment/driver-lookup.v1.json", None),
     ("ExecutePayment", "payment.execute.v1", "payment/execute.v1.json", None),
     ("RequestRefund", "payment.refund.v1", "payment/refund.v1.json", None),
     ("CancelOperation", "payment.cancel.v1", "payment/cancel.v1.json", None),

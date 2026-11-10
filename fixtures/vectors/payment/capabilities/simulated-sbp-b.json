@@ -1,0 +1,30 @@
+{
+  "id": "payment/capabilities/simulated-sbp-b",
+  "spec_refs": [
+    "BC-CAP-01",
+    "BC-CAP-02",
+    "BC-CAP-03",
+    "BC-CAP-04"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"asynchronousStates\":\"supported\",\"authorize\":\"unsupported\",\"callback\":{\"authenticity\":\"none\",\"identity\":\"none\"},\"capture\":\"none\",\"digest\":\"sha256:10e36b0b7d1347c6dc797be096ac03da0f8add8267a554bc27883280c6510bb3\",\"disputes\":\"unsupported\",\"driver\":\"simulated-sbp-b\",\"driverVersion\":\"fixture-1\",\"fiscalPassthrough\":\"unsupported\",\"idempotency\":{\"guaranteedTtlSeconds\":0,\"keyScope\":\"none\",\"mode\":\"none\"},\"initiate\":\"supported\",\"inventory\":\"unsupported\",\"lookup\":{\"business_ref\":{\"mode\":\"none\",\"retentionSeconds\":0,\"visibilityDelaySeconds\":0},\"event_id\":{\"mode\":\"none\",\"retentionSeconds\":0,\"visibilityDelaySeconds\":0},\"provider_id\":{\"mode\":\"none\",\"retentionSeconds\":0,\"visibilityDelaySeconds\":0},\"refund_ref\":{\"mode\":\"none\",\"retentionSeconds\":0,\"visibilityDelaySeconds\":0}},\"multipleRefund\":\"unsupported\",\"partialRefund\":\"unsupported\",\"paymentMethodFamily\":\"sbp\",\"provider\":\"simulated-bank-b\",\"providerApiVersion\":\"fixture-api-1\",\"recurringConsent\":\"unsupported\",\"refund\":\"unsupported\",\"savedMethod\":\"unsupported\",\"schema\":\"payment.capabilities.v1\",\"settlement\":\"unsupported\",\"voidMode\":\"none\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "payment.capabilities.v1",
+        "digest": "sha256:10e36b0b7d1347c6dc797be096ac03da0f8add8267a554bc27883280c6510bb3"
+      }
+    }
+  ]
+}

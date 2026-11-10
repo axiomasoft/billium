@@ -1,0 +1,29 @@
+{
+  "id": "payment/effects/void-authorization-zero",
+  "spec_refs": [
+    "BC-CAP-01",
+    "BC-CAP-02",
+    "BC-CAP-03",
+    "BC-CAP-04"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"commandKey\":\"00000000-0000-4000-8000-000000000051\",\"digest\":\"sha256:122d6a2d19950445798840c3e95cc0c41388a03e8340d898723729379c3d7868\",\"environment\":\"test\",\"installationRef\":\"inst-test\",\"money\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"operationKind\":\"void_authorization\",\"operationRef\":\"void_authorization:1\",\"originalOperationRef\":\"auth:1\",\"requestedAt\":\"2026-11-10T00:00:00Z\",\"schema\":\"payment.void_authorization.v1\",\"sellerRef\":\"seller-a\",\"source\":{\"context\":\"fixture\",\"intentRef\":\"authorize:1\"}}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

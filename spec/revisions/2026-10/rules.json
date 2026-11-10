@@ -1,5 +1,72 @@
 [
   {
+    "id": "BC-CAP-01",
+    "doc": "07-provider-capabilities.md",
+    "line_digest": "sha256:f890aecdae961f1c20d5f157ee721fc8dab72bdcb17b15fd686c66972f47b1cb",
+    "refs": [
+      "D57",
+      "D31",
+      "REQ-OWN-21"
+    ]
+  },
+  {
+    "id": "BC-CAP-02",
+    "doc": "07-provider-capabilities.md",
+    "line_digest": "sha256:d978296bf3e4fb7fceb66a821947d8f50f492b92ec083c9aaf436d3d7031e48d",
+    "refs": [
+      "D57",
+      "D26",
+      "D37",
+      "D41",
+      "D63"
+    ]
+  },
+  {
+    "id": "BC-CAP-03",
+    "doc": "07-provider-capabilities.md",
+    "line_digest": "sha256:02c9727778e46cad34b3b7f849ae11fd5ec41fcccbf26bc2cd3faa79b6d64f34",
+    "refs": [
+      "D54",
+      "D57",
+      "D62",
+      "REQ-FAIL-08"
+    ]
+  },
+  {
+    "id": "BC-CAP-04",
+    "doc": "07-provider-capabilities.md",
+    "line_digest": "sha256:294257e7f25b8d2e0ab69bb0651b3dc6f3c3e50703d07b568459b2344bbdade7",
+    "refs": [
+      "D26",
+      "D57",
+      "D59",
+      "D62"
+    ]
+  },
+  {
+    "id": "BC-CAP-05",
+    "doc": "07-provider-capabilities.md",
+    "line_digest": "sha256:f6ea96f90fe2c86f0f8403c74b9ad640b218a4993d71a43045c08013bc6a3f5b",
+    "refs": [
+      "D55",
+      "D57",
+      "D60",
+      "D63",
+      "REQ-OWN-18"
+    ]
+  },
+  {
+    "id": "BC-CAP-06",
+    "doc": "07-provider-capabilities.md",
+    "line_digest": "sha256:0665ad97f647176495a20ee9fdb80cb13b04bed895d93b8c13b47f0e1c1979f6",
+    "refs": [
+      "D57",
+      "D59",
+      "REQ-CON-03",
+      "REQ-OWN-18"
+    ]
+  },
+  {
     "id": "BC-CNF-01",
     "doc": "06-conformance.md",
     "line_digest": "sha256:466ddccbf4ee1fb8ed6b6f126d2d589d89ad4948b4cfdcce19ab3fed428286be",

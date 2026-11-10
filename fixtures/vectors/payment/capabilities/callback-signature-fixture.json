@@ -1,0 +1,39 @@
+{
+  "id": "payment/capabilities/callback-signature-fixture",
+  "spec_refs": [
+    "BC-CAP-01",
+    "BC-CAP-02",
+    "BC-CAP-03",
+    "BC-CAP-04"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {
+    "authenticity": {
+      "scheme": "fixture-hmac-sha256",
+      "key": "simulated-nonproduction-test-key",
+      "body": "{\"eventId\":\"evt-simulated-1\",\"merchantAccountRef\":\"merchant:original\",\"environment\":\"test\"}",
+      "signature": "17e0ad23eba952304e333169ba2c3d2145198abc9306697368c3cfc6ab991203",
+      "wrongSignature": "0000000000000000000000000000000000000000000000000000000000000000",
+      "alteredBody": "{\"eventId\":\"evt-simulated-1\",\"merchantAccountRef\":\"merchant:other\",\"environment\":\"test\"}"
+    }
+  },
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"asynchronousStates\":\"supported\",\"authorize\":\"supported\",\"callback\":{\"authenticity\":\"signed\",\"identity\":\"stable_event_id\"},\"capture\":\"partial_multiple\",\"digest\":\"sha256:fd417cfbfc22c8ad7a4b3f6a3bcf8d99a96b560291cb23e68718602349ea20af\",\"disputes\":\"supported\",\"driver\":\"simulated-sbp-a\",\"driverVersion\":\"fixture-1\",\"fiscalPassthrough\":\"supported\",\"idempotency\":{\"guaranteedTtlSeconds\":3600,\"keyScope\":\"account_action\",\"mode\":\"keyed\"},\"initiate\":\"supported\",\"inventory\":\"supported\",\"lookup\":{\"business_ref\":{\"mode\":\"complete\",\"retentionSeconds\":86400,\"visibilityDelaySeconds\":60},\"event_id\":{\"mode\":\"complete\",\"retentionSeconds\":86400,\"visibilityDelaySeconds\":60},\"provider_id\":{\"mode\":\"complete\",\"retentionSeconds\":86400,\"visibilityDelaySeconds\":60},\"refund_ref\":{\"mode\":\"complete\",\"retentionSeconds\":86400,\"visibilityDelaySeconds\":60}},\"multipleRefund\":\"supported\",\"partialRefund\":\"supported\",\"paymentMethodFamily\":\"sbp\",\"provider\":\"simulated-bank-a\",\"providerApiVersion\":\"fixture-api-1\",\"recurringConsent\":\"supported\",\"refund\":\"supported\",\"savedMethod\":\"supported\",\"schema\":\"payment.capabilities.v1\",\"settlement\":\"supported\",\"voidMode\":\"full\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "payment.capabilities.v1",
+        "digest": "sha256:fd417cfbfc22c8ad7a4b3f6a3bcf8d99a96b560291cb23e68718602349ea20af"
+      }
+    }
+  ]
+}

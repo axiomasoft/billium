@@ -1,5 +1,6 @@
 [
   "billium.connection",
+  "billium.execution.enabled",
   "billium.feed.bootstrap_batch",
   "billium.feed.bootstrap_lease_seconds",
   "billium.feed.drain_batch",

@@ -166,5 +166,33 @@
     "retryable": true,
     "sameKey": true,
     "receipt": "none"
+  },
+  {
+    "code": "billium.capability.unsupported",
+    "category": "capability",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none"
+  },
+  {
+    "code": "billium.lookup.ambiguous",
+    "category": "lookup",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none"
+  },
+  {
+    "code": "billium.capture.capacity_exceeded",
+    "category": "capture",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored"
+  },
+  {
+    "code": "billium.authorization.not_voidable",
+    "category": "authorization",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored"
   }
 ]

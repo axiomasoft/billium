@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-10:payment/driver-lookup.v1.json",
+  "title": "payment.driver_lookup.v1",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "payment.driver_lookup.v1"
+    },
+    "status": {
+      "enum": [
+        "found",
+        "unavailable",
+        "ambiguous",
+        "certified_absent"
+      ]
+    },
+    "merchantAccountRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "selectorKind": {
+      "enum": [
+        "provider_id",
+        "business_ref",
+        "refund_ref",
+        "event_id"
+      ]
+    },
+    "selectorValue": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "evidenceRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "absenceCertificate": {
+      "type": "object",
+      "properties": {
+        "merchantAccountRef": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+        },
+        "environment": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+        },
+        "selectorKind": {
+          "enum": [
+            "provider_id",
+            "business_ref",
+            "refund_ref",
+            "event_id"
+          ]
+        },
+        "selectorValue": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+        },
+        "selectorCoverage": {
+          "enum": [
+            "complete"
+          ]
+        },
+        "dispatchFrom": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/timestamp"
+        },
+        "dispatchThrough": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/timestamp"
+        },
+        "providerCompleteThrough": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/timestamp"
+        },
+        "retainedFrom": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/timestamp"
+        },
+        "oldDispatchFenced": {
+          "const": true
+        },
+        "fenceProofRef": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+        }
+      },
+      "required": [
+        "merchantAccountRef",
+        "environment",
+        "selectorKind",
+        "selectorValue",
+        "selectorCoverage",
+        "dispatchFrom",
+        "dispatchThrough",
+        "providerCompleteThrough",
+        "retainedFrom",
+        "oldDispatchFenced",
+        "fenceProofRef"
+      ],
+      "additionalProperties": false
+    },
+    "reason": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    }
+  },
+  "required": [
+    "schema",
+    "status",
+    "merchantAccountRef",
+    "environment",
+    "selectorKind",
+    "selectorValue"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "certified_absent"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "absenceCertificate"
+        ]
+      },
+      "else": {
+        "not": {
+          "required": [
+            "absenceCertificate"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "found"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "evidenceRef"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "unavailable",
+              "ambiguous"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "reason"
+        ]
+      }
+    }
+  ]
+}

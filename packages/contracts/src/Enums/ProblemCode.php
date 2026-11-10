@@ -36,6 +36,10 @@ enum ProblemCode: string
     case AllocationExceedsAvailable = 'billium.allocation.exceeds_available';
     case InvoiceTransitionInvalid = 'billium.invoice.transition_invalid';
     case ReferenceUnknown = 'billium.reference.unknown';
+    case CapabilityUnsupported = 'billium.capability.unsupported';
+    case LookupAmbiguous = 'billium.lookup.ambiguous';
+    case CaptureCapacityExceeded = 'billium.capture.capacity_exceeded';
+    case AuthorizationNotVoidable = 'billium.authorization.not_voidable';
 
     public function category(): string
     {
@@ -64,6 +68,10 @@ enum ProblemCode: string
             self::AllocationExceedsAvailable => 'allocation',
             self::InvoiceTransitionInvalid => 'invoice',
             self::ReferenceUnknown => 'reference',
+            self::CapabilityUnsupported => 'capability',
+            self::LookupAmbiguous => 'lookup',
+            self::CaptureCapacityExceeded => 'capture',
+            self::AuthorizationNotVoidable => 'authorization',
         };
     }
 
@@ -94,6 +102,10 @@ enum ProblemCode: string
             self::AllocationExceedsAvailable => false,
             self::InvoiceTransitionInvalid => false,
             self::ReferenceUnknown => true,
+            self::CapabilityUnsupported => false,
+            self::LookupAmbiguous => false,
+            self::CaptureCapacityExceeded => false,
+            self::AuthorizationNotVoidable => false,
         };
     }
 
@@ -124,6 +136,10 @@ enum ProblemCode: string
             self::AllocationExceedsAvailable => false,
             self::InvoiceTransitionInvalid => false,
             self::ReferenceUnknown => true,
+            self::CapabilityUnsupported => true,
+            self::LookupAmbiguous => true,
+            self::CaptureCapacityExceeded => false,
+            self::AuthorizationNotVoidable => false,
         };
     }
 
@@ -154,6 +170,10 @@ enum ProblemCode: string
             self::AllocationExceedsAvailable => 'stored',
             self::InvoiceTransitionInvalid => 'stored',
             self::ReferenceUnknown => 'none',
+            self::CapabilityUnsupported => 'none',
+            self::LookupAmbiguous => 'none',
+            self::CaptureCapacityExceeded => 'stored',
+            self::AuthorizationNotVoidable => 'stored',
         };
     }
 }

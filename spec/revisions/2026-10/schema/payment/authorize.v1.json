@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-10:payment/authorize.v1.json",
+  "title": "AuthorizePayment",
+  "type": "object",
+  "required": [
+    "schema",
+    "commandKey",
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "operationRef",
+    "operationKind",
+    "source",
+    "executionProfile",
+    "routingEpoch",
+    "merchantAccountRef",
+    "money",
+    "bindingRevision",
+    "requestedAt",
+    "executionMode",
+    "digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "payment.authorize.v1"
+    },
+    "commandKey": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/commandKey"
+    },
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    },
+    "operationRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "operationKind": {
+      "const": "charge"
+    },
+    "source": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/commandSource"
+    },
+    "executionProfile": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/executionProfile"
+    },
+    "routingEpoch": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/counter"
+    },
+    "merchantAccountRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "money": {
+      "$ref": "urn:billium:spec:2026-10:common/money-wire.json#/$defs/positive"
+    },
+    "bindingRevision": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "returnContextRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "requestedAt": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/timestamp"
+    },
+    "executionMode": {
+      "const": "authorize"
+    }
+  },
+  "additionalProperties": false
+}

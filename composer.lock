@@ -47,7 +47,7 @@
             "dist": {
                 "type": "path",
                 "url": "packages/core",
-                "reference": "e1d59bf396bff68d844f3680b72ea94c19f194a6"
+                "reference": "b4034a4f5e3c63f9c3489ee949b0a575247b6389"
             },
             "require": {
                 "axiomasoft/billium-contracts": "^0.1",
@@ -71,7 +71,8 @@
                     "Billium\\Ledger\\": "modules/ledger/src/",
                     "Billium\\Usage\\": "modules/usage/src/",
                     "Billium\\Rating\\": "modules/rating/src/",
-                    "Billium\\Schedule\\": "modules/schedule/src/"
+                    "Billium\\Schedule\\": "modules/schedule/src/",
+                    "Billium\\Execution\\": "modules/execution/src/"
                 }
             },
             "license": [

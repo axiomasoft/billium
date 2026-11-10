@@ -1,0 +1,29 @@
+{
+  "id": "payment/capabilities/absence-no-certificate",
+  "spec_refs": [
+    "BC-CAP-01",
+    "BC-CAP-02",
+    "BC-CAP-03",
+    "BC-CAP-04"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"environment\":\"test\",\"merchantAccountRef\":\"merchant:original\",\"schema\":\"payment.driver_lookup.v1\",\"selectorKind\":\"business_ref\",\"selectorValue\":\"business:1\",\"status\":\"certified_absent\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

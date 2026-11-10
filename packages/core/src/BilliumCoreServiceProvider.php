@@ -15,6 +15,7 @@ use Billium\Core\Internal\Modules\ModuleLifecycle;
 use Billium\Core\Internal\Runner\DatabaseOperationRunner;
 use Billium\Core\Internal\Runner\UnboundCallerContext;
 use Billium\Core\Internal\Runner\UnboundSessionAdmission;
+use Billium\Execution\Internal\ExecutionServiceProvider;
 use Billium\Ledger\Internal\LedgerServiceProvider;
 use Billium\Platform\Contracts\IdempotencyStore;
 use Billium\Platform\Contracts\RootAdmission;
@@ -65,6 +66,7 @@ final class BilliumCoreServiceProvider extends ServiceProvider
     {
         // D55/D56: enroll module-owned providers only when enabled and available.
         $providers = [
+            'execution' => ExecutionServiceProvider::class,
             'usage' => UsageServiceProvider::class,
             'rating' => RatingServiceProvider::class,
             'schedule' => ScheduleServiceProvider::class,

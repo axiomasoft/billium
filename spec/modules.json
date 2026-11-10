@@ -994,10 +994,15 @@
         "payment.cancel.v1",
         "payment.execute.v1",
         "payment.find.v1",
-        "payment.refund.v1"
+        "payment.refund.v1",
+        "payment.authorize.v1",
+        "payment.capture.v1",
+        "payment.void_authorization.v1"
       ],
       "ownedTables": [],
-      "configKeys": [],
+      "configKeys": [
+        "billium.execution.enabled"
+      ],
       "migrationIdentities": [],
       "disablePolicy": {
         "dependents": "cascade",

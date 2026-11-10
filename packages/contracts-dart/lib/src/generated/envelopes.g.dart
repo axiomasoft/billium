@@ -7,6 +7,12 @@ import '../money.dart';
 
 /// Builders of the envelope classes by class name, for the registry.
 const Map<String, Envelope Function(Map<String, Object?>)> envelopeBuilders = {
+  'AuthorizePayment': AuthorizePayment.fromRaw,
+  'CapturePayment': CapturePayment.fromRaw,
+  'VoidAuthorization': VoidAuthorization.fromRaw,
+  'CapabilitySnapshot': CapabilitySnapshot.fromRaw,
+  'QualificationManifest': QualificationManifest.fromRaw,
+  'DriverLookupResult': DriverLookupResult.fromRaw,
   'ExecutePayment': ExecutePayment.fromRaw,
   'RequestRefund': RequestRefund.fromRaw,
   'CancelOperation': CancelOperation.fromRaw,
@@ -43,6 +49,342 @@ const Map<String, Envelope Function(Map<String, Object?>)> envelopeBuilders = {
   'PrepareObligationV2': PrepareObligationV2.fromRaw,
   'NoChargeReceipt': NoChargeReceipt.fromRaw,
 };
+
+/// `payment.authorize.v1`.
+final class AuthorizePayment extends Envelope {
+  static const String schemaName = 'payment.authorize.v1';
+
+  AuthorizePayment({
+    required super.raw,
+    required this.commandKey,
+    required this.installationRef,
+    required this.environment,
+    required this.sellerRef,
+    required this.digest,
+    required this.operationRef,
+    required this.operationKind,
+    required this.source,
+    required this.executionProfile,
+    required this.routingEpoch,
+    required this.merchantAccountRef,
+    required this.money,
+    required this.bindingRevision,
+    required this.requestedAt,
+    required this.executionMode,
+    this.returnContextRef,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory AuthorizePayment.fromRaw(Map<String, Object?> raw) => AuthorizePayment(
+        raw: raw,
+        commandKey: requireString(raw, 'commandKey'),
+        installationRef: requireString(raw, 'installationRef'),
+        environment: requireString(raw, 'environment'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        digest: requireString(raw, 'digest'),
+        operationRef: requireString(raw, 'operationRef'),
+        operationKind: requireString(raw, 'operationKind'),
+        source: requireObject(raw, 'source'),
+        executionProfile: requireString(raw, 'executionProfile'),
+        routingEpoch: requireInt(raw, 'routingEpoch'),
+        merchantAccountRef: requireString(raw, 'merchantAccountRef'),
+        money: requireMoney(raw, 'money'),
+        bindingRevision: requireString(raw, 'bindingRevision'),
+        requestedAt: requireString(raw, 'requestedAt'),
+        executionMode: requireString(raw, 'executionMode'),
+        returnContextRef: optionalString(raw, 'returnContextRef'),
+      );
+
+  final String commandKey;
+  final String installationRef;
+  final String environment;
+  final String sellerRef;
+  final String digest;
+  final String operationRef;
+  final String operationKind;
+  final Map<String, Object?> source;
+  final String executionProfile;
+  final int routingEpoch;
+  final String merchantAccountRef;
+  final Money money;
+  final String bindingRevision;
+  final String requestedAt;
+  final String executionMode;
+  final String? returnContextRef;
+}
+
+/// `payment.capture.v1`.
+final class CapturePayment extends Envelope {
+  static const String schemaName = 'payment.capture.v1';
+
+  CapturePayment({
+    required super.raw,
+    required this.commandKey,
+    required this.installationRef,
+    required this.environment,
+    required this.sellerRef,
+    required this.digest,
+    required this.operationRef,
+    required this.originalOperationRef,
+    required this.source,
+    required this.money,
+    required this.requestedAt,
+    required this.operationKind,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory CapturePayment.fromRaw(Map<String, Object?> raw) => CapturePayment(
+        raw: raw,
+        commandKey: requireString(raw, 'commandKey'),
+        installationRef: requireString(raw, 'installationRef'),
+        environment: requireString(raw, 'environment'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        digest: requireString(raw, 'digest'),
+        operationRef: requireString(raw, 'operationRef'),
+        originalOperationRef: requireString(raw, 'originalOperationRef'),
+        source: requireObject(raw, 'source'),
+        money: requireMoney(raw, 'money'),
+        requestedAt: requireString(raw, 'requestedAt'),
+        operationKind: requireString(raw, 'operationKind'),
+      );
+
+  final String commandKey;
+  final String installationRef;
+  final String environment;
+  final String sellerRef;
+  final String digest;
+  final String operationRef;
+  final String originalOperationRef;
+  final Map<String, Object?> source;
+  final Money money;
+  final String requestedAt;
+  final String operationKind;
+}
+
+/// `payment.void_authorization.v1`.
+final class VoidAuthorization extends Envelope {
+  static const String schemaName = 'payment.void_authorization.v1';
+
+  VoidAuthorization({
+    required super.raw,
+    required this.commandKey,
+    required this.installationRef,
+    required this.environment,
+    required this.sellerRef,
+    required this.digest,
+    required this.operationRef,
+    required this.originalOperationRef,
+    required this.source,
+    required this.money,
+    required this.requestedAt,
+    required this.operationKind,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory VoidAuthorization.fromRaw(Map<String, Object?> raw) => VoidAuthorization(
+        raw: raw,
+        commandKey: requireString(raw, 'commandKey'),
+        installationRef: requireString(raw, 'installationRef'),
+        environment: requireString(raw, 'environment'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        digest: requireString(raw, 'digest'),
+        operationRef: requireString(raw, 'operationRef'),
+        originalOperationRef: requireString(raw, 'originalOperationRef'),
+        source: requireObject(raw, 'source'),
+        money: requireMoney(raw, 'money'),
+        requestedAt: requireString(raw, 'requestedAt'),
+        operationKind: requireString(raw, 'operationKind'),
+      );
+
+  final String commandKey;
+  final String installationRef;
+  final String environment;
+  final String sellerRef;
+  final String digest;
+  final String operationRef;
+  final String originalOperationRef;
+  final Map<String, Object?> source;
+  final Money money;
+  final String requestedAt;
+  final String operationKind;
+}
+
+/// `payment.capabilities.v1`.
+final class CapabilitySnapshot extends Envelope {
+  static const String schemaName = 'payment.capabilities.v1';
+
+  CapabilitySnapshot({
+    required super.raw,
+    required this.driver,
+    required this.driverVersion,
+    required this.provider,
+    required this.providerApiVersion,
+    required this.paymentMethodFamily,
+    required this.initiate,
+    required this.authorize,
+    required this.idempotency,
+    required this.lookup,
+    required this.capture,
+    required this.refund,
+    required this.partialRefund,
+    required this.multipleRefund,
+    required this.callback,
+    required this.asynchronousStates,
+    required this.inventory,
+    required this.settlement,
+    required this.disputes,
+    required this.savedMethod,
+    required this.recurringConsent,
+    required this.fiscalPassthrough,
+    required this.digest,
+    required this.voidMode,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory CapabilitySnapshot.fromRaw(Map<String, Object?> raw) => CapabilitySnapshot(
+        raw: raw,
+        driver: requireString(raw, 'driver'),
+        driverVersion: requireString(raw, 'driverVersion'),
+        provider: requireString(raw, 'provider'),
+        providerApiVersion: requireString(raw, 'providerApiVersion'),
+        paymentMethodFamily: requireString(raw, 'paymentMethodFamily'),
+        initiate: requireString(raw, 'initiate'),
+        authorize: requireString(raw, 'authorize'),
+        idempotency: requireObject(raw, 'idempotency'),
+        lookup: requireObject(raw, 'lookup'),
+        capture: requireString(raw, 'capture'),
+        refund: requireString(raw, 'refund'),
+        partialRefund: requireString(raw, 'partialRefund'),
+        multipleRefund: requireString(raw, 'multipleRefund'),
+        callback: requireObject(raw, 'callback'),
+        asynchronousStates: requireString(raw, 'asynchronousStates'),
+        inventory: requireString(raw, 'inventory'),
+        settlement: requireString(raw, 'settlement'),
+        disputes: requireString(raw, 'disputes'),
+        savedMethod: requireString(raw, 'savedMethod'),
+        recurringConsent: requireString(raw, 'recurringConsent'),
+        fiscalPassthrough: requireString(raw, 'fiscalPassthrough'),
+        digest: requireString(raw, 'digest'),
+        voidMode: requireString(raw, 'voidMode'),
+      );
+
+  final String driver;
+  final String driverVersion;
+  final String provider;
+  final String providerApiVersion;
+  final String paymentMethodFamily;
+  final String initiate;
+  final String authorize;
+  final Map<String, Object?> idempotency;
+  final Map<String, Object?> lookup;
+  final String capture;
+  final String refund;
+  final String partialRefund;
+  final String multipleRefund;
+  final Map<String, Object?> callback;
+  final String asynchronousStates;
+  final String inventory;
+  final String settlement;
+  final String disputes;
+  final String savedMethod;
+  final String recurringConsent;
+  final String fiscalPassthrough;
+  final String digest;
+  final String voidMode;
+}
+
+/// `payment.qualification.v1`.
+final class QualificationManifest extends Envelope {
+  static const String schemaName = 'payment.qualification.v1';
+
+  QualificationManifest({
+    required super.raw,
+    required this.driver,
+    required this.driverVersion,
+    required this.provider,
+    required this.providerApiVersion,
+    required this.capabilityDigest,
+    required this.checkedAt,
+    required this.qualification,
+    required this.status,
+    required this.sources,
+    required this.evidenceRefs,
+    required this.rotation,
+    required this.unresolvedGaps,
+    required this.digest,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory QualificationManifest.fromRaw(Map<String, Object?> raw) => QualificationManifest(
+        raw: raw,
+        driver: requireString(raw, 'driver'),
+        driverVersion: requireString(raw, 'driverVersion'),
+        provider: requireString(raw, 'provider'),
+        providerApiVersion: requireString(raw, 'providerApiVersion'),
+        capabilityDigest: requireString(raw, 'capabilityDigest'),
+        checkedAt: requireString(raw, 'checkedAt'),
+        qualification: requireString(raw, 'qualification'),
+        status: requireString(raw, 'status'),
+        sources: requireList(raw, 'sources'),
+        evidenceRefs: requireList(raw, 'evidenceRefs'),
+        rotation: requireObject(raw, 'rotation'),
+        unresolvedGaps: requireList(raw, 'unresolvedGaps'),
+        digest: requireString(raw, 'digest'),
+      );
+
+  final String driver;
+  final String driverVersion;
+  final String provider;
+  final String providerApiVersion;
+  final String capabilityDigest;
+  final String checkedAt;
+  final String qualification;
+  final String status;
+  final List<Object?> sources;
+  final List<Object?> evidenceRefs;
+  final Map<String, Object?> rotation;
+  final List<Object?> unresolvedGaps;
+  final String digest;
+}
+
+/// `payment.driver_lookup.v1`.
+final class DriverLookupResult extends Envelope {
+  static const String schemaName = 'payment.driver_lookup.v1';
+
+  DriverLookupResult({
+    required super.raw,
+    required this.status,
+    required this.merchantAccountRef,
+    required this.environment,
+    required this.selectorKind,
+    required this.selectorValue,
+    this.evidenceRef,
+    this.absenceCertificate,
+    this.reason,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory DriverLookupResult.fromRaw(Map<String, Object?> raw) => DriverLookupResult(
+        raw: raw,
+        status: requireString(raw, 'status'),
+        merchantAccountRef: requireString(raw, 'merchantAccountRef'),
+        environment: requireString(raw, 'environment'),
+        selectorKind: requireString(raw, 'selectorKind'),
+        selectorValue: requireString(raw, 'selectorValue'),
+        evidenceRef: optionalString(raw, 'evidenceRef'),
+        absenceCertificate: optionalObject(raw, 'absenceCertificate'),
+        reason: optionalString(raw, 'reason'),
+      );
+
+  final String status;
+  final String merchantAccountRef;
+  final String environment;
+  final String selectorKind;
+  final String selectorValue;
+  final String? evidenceRef;
+  final Map<String, Object?>? absenceCertificate;
+  final String? reason;
+}
 
 /// `payment.execute.v1`.
 final class ExecutePayment extends Envelope {

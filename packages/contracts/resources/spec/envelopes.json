@@ -1,4 +1,64 @@
 {
+  "payment.authorize.v1": {
+    "schemaId": "urn:billium:spec:2026-10:payment/authorize.v1.json",
+    "variants": [
+      {
+        "class": "AuthorizePayment",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "payment.capture.v1": {
+    "schemaId": "urn:billium:spec:2026-10:payment/capture.v1.json",
+    "variants": [
+      {
+        "class": "CapturePayment",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "payment.void_authorization.v1": {
+    "schemaId": "urn:billium:spec:2026-10:payment/void-authorization.v1.json",
+    "variants": [
+      {
+        "class": "VoidAuthorization",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "payment.capabilities.v1": {
+    "schemaId": "urn:billium:spec:2026-10:payment/capabilities.v1.json",
+    "variants": [
+      {
+        "class": "CapabilitySnapshot",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "payment.qualification.v1": {
+    "schemaId": "urn:billium:spec:2026-10:payment/qualification.v1.json",
+    "variants": [
+      {
+        "class": "QualificationManifest",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "payment.driver_lookup.v1": {
+    "schemaId": "urn:billium:spec:2026-10:payment/driver-lookup.v1.json",
+    "variants": [
+      {
+        "class": "DriverLookupResult",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
   "payment.execute.v1": {
     "schemaId": "urn:billium:spec:2026-10:payment/execute.v1.json",
     "variants": [

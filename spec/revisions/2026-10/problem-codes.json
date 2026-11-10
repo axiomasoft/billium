@@ -302,7 +302,11 @@
     "producer": "ledger",
     "when": "сумма allocation или credit note больше открытой суммы obligation; уменьшение obligation ниже распределённого",
     "clientAction": "уменьшить сумму или пересмотреть распределения; новый ключ",
-    "basis": ["REQ-CON-20", "D31", "D47"]
+    "basis": [
+      "REQ-CON-20",
+      "D31",
+      "D47"
+    ]
   },
   {
     "code": "billium.allocation.exceeds_available",
@@ -313,7 +317,11 @@
     "producer": "ledger",
     "when": "сумма allocation больше доступного остатка платежа или customer credit",
     "clientAction": "уменьшить сумму или дождаться доступного остатка; новый ключ",
-    "basis": ["REQ-CON-20", "D31", "D47"]
+    "basis": [
+      "REQ-CON-20",
+      "D31",
+      "D47"
+    ]
   },
   {
     "code": "billium.invoice.transition_invalid",
@@ -324,7 +332,11 @@
     "producer": "ledger",
     "when": "команда недопустима в текущем статусе invoice или allocation",
     "clientAction": "выбрать допустимую для текущего статуса команду; новый ключ",
-    "basis": ["REQ-CON-20", "D31", "D47"]
+    "basis": [
+      "REQ-CON-20",
+      "D31",
+      "D47"
+    ]
   },
   {
     "code": "billium.reference.unknown",
@@ -335,6 +347,67 @@
     "producer": "ledger",
     "when": "ссылка на obligation, invoice, payment, credit или allocation не найдена в scope seller (чужой seller не раскрывается)",
     "clientAction": "проверить ссылку в scope seller или дождаться зависимости; повторить тем же ключом",
-    "basis": ["REQ-CON-20", "INV-14", "D31", "D47"]
+    "basis": [
+      "REQ-CON-20",
+      "INV-14",
+      "D31",
+      "D47"
+    ]
+  },
+  {
+    "code": "billium.capability.unsupported",
+    "category": "capability",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none",
+    "producer": "execution",
+    "when": "Capability is unsupported or unverified; refuse before operation, attempt, reservation or provider call.",
+    "clientAction": "Resolve capability/recovery with original identity; no automatic new key.",
+    "basis": [
+      "D57",
+      "D31"
+    ]
+  },
+  {
+    "code": "billium.lookup.ambiguous",
+    "category": "lookup",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none",
+    "producer": "execution",
+    "when": "Lookup is not conclusive; keep recoveryRequired and the original key.",
+    "clientAction": "Resolve capability/recovery with original identity; no automatic new key.",
+    "basis": [
+      "D57",
+      "D31"
+    ]
+  },
+  {
+    "code": "billium.capture.capacity_exceeded",
+    "category": "capture",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored",
+    "producer": "execution",
+    "when": "Capture admission exceeds available authorization capacity.",
+    "clientAction": "Read current state before issuing a new business command.",
+    "basis": [
+      "D57",
+      "D31"
+    ]
+  },
+  {
+    "code": "billium.authorization.not_voidable",
+    "category": "authorization",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored",
+    "producer": "execution",
+    "when": "Authorization state refuses a provider void command.",
+    "clientAction": "Read current state before issuing a new business command.",
+    "basis": [
+      "D57",
+      "D31"
+    ]
   }
 ]

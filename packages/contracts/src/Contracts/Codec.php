@@ -13,6 +13,7 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Contracts\Internal\Jcs;
 use Billium\Contracts\Internal\Json;
 use Billium\Contracts\Internal\P4Wire;
+use Billium\Contracts\Internal\PaymentWire;
 use Billium\Contracts\Internal\SchemaValidator;
 use Billium\Contracts\Internal\Spec;
 use stdClass;
@@ -63,6 +64,8 @@ final readonly class Codec
                 }
             }
         }
+
+        PaymentWire::validate($value);
 
         $effect = $value->schema === 'payment.effect.outcome.v1' ? $value : ($value->schema === 'billium.event.v2' ? $value->payload : null);
         if ($effect instanceof stdClass && $effect->operationRef === $effect->originalOperationRef) {

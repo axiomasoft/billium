@@ -202,7 +202,11 @@
         "billium.allocation.exceeds_open",
         "billium.allocation.exceeds_available",
         "billium.invoice.transition_invalid",
-        "billium.reference.unknown"
+        "billium.reference.unknown",
+        "billium.capability.unsupported",
+        "billium.lookup.ambiguous",
+        "billium.capture.capacity_exceeded",
+        "billium.authorization.not_voidable"
       ]
     },
     "problemCategory": {
@@ -210,6 +214,9 @@
       "enum": [
         "allocation",
         "auth",
+        "authorization",
+        "capability",
+        "capture",
         "idempotency",
         "installation",
         "invoice",

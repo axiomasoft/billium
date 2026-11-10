@@ -1,5 +1,47 @@
 [
   {
+    "schema": "payment.authorize.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\AuthorizePayment",
+    "dart": "AuthorizePayment",
+    "category": "Data"
+  },
+  {
+    "schema": "payment.capture.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\CapturePayment",
+    "dart": "CapturePayment",
+    "category": "Data"
+  },
+  {
+    "schema": "payment.void_authorization.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\VoidAuthorization",
+    "dart": "VoidAuthorization",
+    "category": "Data"
+  },
+  {
+    "schema": "payment.capabilities.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\CapabilitySnapshot",
+    "dart": "CapabilitySnapshot",
+    "category": "Data"
+  },
+  {
+    "schema": "payment.qualification.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\QualificationManifest",
+    "dart": "QualificationManifest",
+    "category": "Data"
+  },
+  {
+    "schema": "payment.driver_lookup.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\DriverLookupResult",
+    "dart": "DriverLookupResult",
+    "category": "Data"
+  },
+  {
     "schema": "payment.execute.v1",
     "variant": null,
     "php": "Billium\\Contracts\\Data\\Envelopes\\ExecutePayment",

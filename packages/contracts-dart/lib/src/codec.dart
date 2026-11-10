@@ -8,6 +8,7 @@ import 'generated/problem_codes.g.dart';
 import 'jcs.dart';
 import 'money.dart';
 import 'p4_wire.dart';
+import 'payment_wire.dart';
 import 'problem.dart';
 import 'problem_exception.dart';
 import 'schema_validator.dart';
@@ -69,6 +70,8 @@ final class Codec {
         }
       }
     }
+
+    validatePaymentWire(raw);
 
     final effect = schema == 'payment.effect.outcome.v1'
         ? raw
