@@ -771,14 +771,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "schedule",
-      "currentSchemaVersion": 3,
+      "currentSchemaVersion": 4,
       "supportedSchemaReadRange": {
         "min": 3,
-        "max": 3
+        "max": 4
       },
       "supportedSchemaWriteRange": {
-        "min": 3,
-        "max": 3
+        "min": 4,
+        "max": 4
       },
       "requiresModules": [
         {
@@ -837,6 +837,11 @@
           "id": "2026_11_10_000610_create_billium_schedule_billing_correction",
           "version": 3,
           "checksum": "sha256:99af4eaf85b06ebaffff48238b62fbd74e61c8c1ce020f535c3390c8921e7ddb"
+        },
+        {
+          "id": "2026_11_10_000620_allow_rated_correction_parents",
+          "version": 4,
+          "checksum": "sha256:fbc2d931e40b3fba0a43330e38c465f4f9025e8a46e17c9ed43e3458e4c46cdc"
         }
       ],
       "disablePolicy": {

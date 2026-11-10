@@ -59,12 +59,15 @@ final readonly class DatabaseCorrectionPreparer
             throw new ProblemException(ProblemCode::AuthDenied, 'billium.rating.scope_denied');
         }
         $occurrence = $this->schedule->occurrence($command->parentOccurrenceRef);
-        if ($occurrence === null || ($occurrence['state'] ?? null) !== 'obligated' || $command->reasonCode === '') {
+        if ($occurrence === null || ! in_array($occurrence['state'] ?? null, ['obligated', 'rated'], true) || $command->reasonCode === '') {
             RatingComputation::refuse('correction_not_applicable');
         }
         $original = $this->store->basis(RatingRows::text($occurrence['rated_basis_ref'] ?? null));
         $booking = $original === null ? null : $this->store->booking(RatingRows::integer($original->id));
-        if ($original === null || $booking === null || ! is_string($booking->obligation_ref)) {
+        if ($original === null || $booking === null
+            || ! (($occurrence['state'] === 'obligated' && $booking->outcome === 'booked' && is_string($booking->obligation_ref))
+                || ($occurrence['state'] === 'rated' && $booking->outcome === 'no_charge' && $booking->obligation_ref === null
+                    && $original->charge_kind === 'no_charge' && RatingRows::decimal($original->gross_minor) === '0'))) {
             RatingComputation::refuse('correction_not_applicable');
         }
         $head = $this->store->frontier($command->parentOccurrenceRef);
@@ -206,12 +209,13 @@ final readonly class DatabaseCorrectionPreparer
         if (bccomp(RatingRows::decimal($computation->deltaGrossMinor), '0', 0) < 0 && $command->releasePolicy === null) {
             RatingComputation::refuse('release_policy_required');
         }
-        $obligation = $this->ledger->obligation($booking->obligation_ref);
+        $obligation = $booking->obligation_ref === null ? null : $this->ledger->obligation($booking->obligation_ref);
         $invoiceRef = is_string($obligation['billedInvoiceRef'] ?? null) ? $obligation['billedInvoiceRef'] : null;
         $creditParts = [];
         if (bccomp(RatingRows::decimal($computation->deltaGrossMinor), '0', 0) < 0) {
             $remaining = bcsub('0', RatingRows::decimal($computation->deltaGrossMinor), 0);
-            foreach ([$booking->obligation_ref, ...$this->corrections->childObligations($command->parentOccurrenceRef)] as $ref) {
+            $obligationRefs = $booking->obligation_ref === null ? [] : [$booking->obligation_ref];
+            foreach ([...$obligationRefs, ...$this->corrections->childObligations($command->parentOccurrenceRef)] as $ref) {
                 $view = $ref === $booking->obligation_ref ? $obligation : $this->ledger->obligation($ref);
                 $amount = $command->releasePolicy === ReleasePolicy::OpenOnly
                     ? (string) Money::fromWire($view['open'] ?? null)->minor

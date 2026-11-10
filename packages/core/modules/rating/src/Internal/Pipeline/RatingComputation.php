@@ -104,6 +104,8 @@ final readonly class RatingComputation implements RatingQuoter
                 new PricingInput(price: $snapshot, quantity: $aggregate->quantity,
                     commitmentBasis: $commitment === null ? null : new CommitmentBasis(alreadyBilledNetMinor: $price->alreadyBilledNetMinor ?? '', basisDigest: $price->commitmentBasisDigest ?? '')));
             $declaredZeroTotal = $declaredZeroTotal && (self::declaresZero($snapshot)
+                || ($commitment?->maximumMinor !== null && Dec::parse($result->rawAmount)->sign() > 0
+                    && Dec::parse($result->commitmentAdjustment)->sign() < 0 && Dec::parse($result->pricedAmount)->isZero())
                 || (! $snapshot->terms instanceof FixedTerms && Dec::parse($aggregate->quantity)->isZero()
                     && Dec::parse($result->billableQuantity)->isZero() && Dec::parse($result->rawAmount)->isZero()
                     && Dec::parse($result->pricedAmount)->isZero()));

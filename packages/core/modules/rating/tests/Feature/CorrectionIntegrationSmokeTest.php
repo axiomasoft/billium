@@ -174,6 +174,76 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         self::assertSame($occurrence, $this->value('SELECT row_to_json(o)::text FROM billium_schedule_billing_occurrence o WHERE occurrence_ref=?', [$this->occurrenceRef]));
     }
 
+    public function test_positive_late_usage_after_a_final_no_charge_booking_creates_a_linked_obligation(): void
+    {
+        $originalFact = UsageFixtures::fact(static function ($fact): void {
+            $fact->value->quantity = '100';
+        });
+        $digest = FixtureValues::text($this->queries()->snapshot($this->snapshotRef)['snapshotDigest']);
+        $this->usage()->submitUsageFact(UsageFixtures::correction(previous: $originalFact, quantity: '0'));
+        $zero = $this->freeze($digest);
+        $this->snapshotRef = FixtureValues::text($zero['snapshotRef']);
+        $original = $this->prepared(noCharge: 'approved_zero_quantity');
+        self::assertSame('0', $original->draft->grossMinor);
+        $booked = $this->book($original);
+        self::assertSame('no_charge', $booked->outcome->value);
+        self::assertNull($booked->obligationRef);
+        self::assertSame(0, $this->rows('billium_obligation'));
+        $historySql = "SELECT jsonb_build_object('basis', to_jsonb(b), 'run', to_jsonb(r), 'booking', to_jsonb(k))::text
+            FROM billium_rating_rated_basis b JOIN billium_rating_run r ON r.id=b.run_id
+            JOIN billium_rating_booking k ON k.basis_id=b.id WHERE b.basis_ref=?";
+        $history = $this->value($historySql, [$booked->basisRef]);
+        $this->usage()->submitUsageFact(UsageFixtures::fact(static function ($fact): void {
+            $fact->factId = 'late-positive';
+            $fact->value->quantity = '50';
+        }));
+        $this->freeze(FixtureValues::text($zero['snapshotDigest']));
+        $port = $this->correctionTax(rate: '0', version: '1');
+        $date = new DateTimeImmutable('2026-11-15Z');
+        $this->publishPolicy(port: $port, date: $date);
+        $this->application()->instance(TaxSnapshotPort::class, $port);
+        $correction = $this->application()->make(RatingCorrection::class);
+        $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test',
+            parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null,
+            reasonCode: 'late', releasePolicy: null, correctionEffectiveDate: $date));
+        self::assertInstanceOf(PreparedCorrection::class, $prepared, json_encode($prepared, JSON_THROW_ON_ERROR));
+        self::assertNull($prepared->originalObligationRef);
+        self::assertSame($booked->basisRef, $prepared->originalBasisRef);
+        self::assertSame($booked->basisRef, $prepared->computation->predecessorBasisRef);
+        self::assertSame('5000', $prepared->computation->correctedBasis->grossMinor);
+        self::assertSame('5000', $prepared->computation->deltaGrossMinor);
+        $receipt = $correction->apply(new ApplyCorrection(prepared: $prepared, operationKey: 'no-charge-late'));
+        self::assertSame('obligation', $receipt->outcome);
+        self::assertNotNull($receipt->obligationRef);
+        self::assertSame(5000, $this->value('SELECT amount_due_minor FROM billium_obligation WHERE obligation_ref=?', [$receipt->obligationRef]));
+        self::assertSame(1, $this->rows('billium_obligation'));
+        self::assertSame(1, $this->rows(table: 'billium_schedule_billing_correction',
+            where: 'parent_occurrence_ref=? AND predecessor_rated_basis_ref=?', bindings: [$this->occurrenceRef, $booked->basisRef]));
+        self::assertSame($history, $this->value($historySql, [$booked->basisRef]));
+        self::assertSame('rated', $this->value('SELECT state FROM billium_schedule_billing_occurrence WHERE occurrence_ref=?', [$this->occurrenceRef]));
+        $replay = $correction->apply(new ApplyCorrection(prepared: $prepared, operationKey: 'no-charge-late-replay'));
+        self::assertSame('existing', $replay->outcome);
+        self::assertSame($receipt->obligationRef, $replay->obligationRef);
+        self::assertSame(1, $this->rows('billium_obligation'));
+    }
+
+    public function test_an_unposted_positive_basis_cannot_be_corrected_as_a_no_charge_booking(): void
+    {
+        config(['billium.modules.enabled' => ['platform', 'rating', 'usage', 'schedule']]);
+        $receipt = $this->book($this->prepared());
+        self::assertSame('unposted', $receipt->outcome->value);
+        try {
+            $this->application()->make(RatingCorrection::class)->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test',
+                parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null,
+                reasonCode: 'late', releasePolicy: null, correctionEffectiveDate: new DateTimeImmutable('2026-11-15Z')));
+            self::fail('An unposted positive basis was treated as a final no-charge booking');
+        } catch (ProblemException $error) {
+            self::assertSame('billium.rating.correction_not_applicable', $error->detail);
+        }
+        self::assertSame(0, $this->rows('billium_rating_correction'));
+        self::assertSame(0, $this->rows('billium_obligation'));
+    }
+
     /** @return list<array{string, string, string}> */
     public static function volumeTaxRates(): array
     {

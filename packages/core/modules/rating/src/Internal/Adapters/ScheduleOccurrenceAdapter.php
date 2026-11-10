@@ -34,7 +34,8 @@ final readonly class ScheduleOccurrenceAdapter
     {
         $row = $this->occurrence($inputs->occurrenceRef);
         if (! in_array($row['state'], ['planned', 'rated'], true)
-            || $row['applicable_revision'] !== $row['created_revision'] || $row['applicable_action'] === 'pause'
+            || ($row['applicable_revision'] !== $row['created_revision'] && ! $row['applicable_revision_confirmed'])
+            || $row['applicable_action'] === 'pause'
             || $row['applicable_inputs_digest'] !== $inputs->occurrenceInputsDigest
             || $row['seller_ref'] !== $inputs->sellerRef || $row['environment'] !== $inputs->environment
             || $row['inputs_digest'] !== $inputs->occurrenceInputsDigest

@@ -3915,6 +3915,13 @@
       "source": "packages/core/database/migrations/schedule/2026_11_10_000610_create_billium_schedule_billing_correction.php"
     },
     {
+      "kind": "migration",
+      "id": "2026_11_10_000620_allow_rated_correction_parents",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/schedule/2026_11_10_000620_allow_rated_correction_parents.php"
+    },
+    {
       "kind": "doctor-finding",
       "id": "module.composition_forbidden",
       "status": "new",

@@ -31,8 +31,15 @@ final readonly class DatabaseScheduleQueries implements ScheduleQueries
             ->where('schedule_id', $row->schedule_id);
         $applicable = (clone $revisions)->where('effective_from', '<=', $row->period_start)->orderByDesc('revision')->first()
             ?? $revisions->orderBy('revision')->first();
+        $created = (clone $revisions)->where('revision', $row->created_revision)->first();
+        // revision_confirmed records an identical occurrence identity (including its interval) and inputs digest.
+        // Also pin the original terms: a caller must not reuse an inputs digest for changed commercial terms.
+        $confirmed = $applicable !== null && $created !== null && $applicable->terms_digest === $created->terms_digest
+            && $this->store->query('occurrence_amendment')->where('occurrence_ref', $row->occurrence_ref)
+                ->where('schedule_revision', $applicable->revision)->where('kind', 'revision_confirmed')->exists();
 
         return [...Payload::map(get_object_vars($row)), 'applicable_revision' => $applicable === null ? null : Payload::integer($applicable->revision),
+            'applicable_revision_confirmed' => $confirmed,
             'applicable_inputs_digest' => $applicable?->inputs_digest,
             'applicable_action' => $applicable === null ? null : (Payload::decode($applicable->terms)['action'] ?? null)];
     }

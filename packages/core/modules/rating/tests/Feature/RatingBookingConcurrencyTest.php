@@ -6,8 +6,15 @@ namespace Billium\Rating\Tests\Feature;
 
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Tests\Support\Concurrency\ConcurrencyStand;
+use Billium\Core\Tests\Support\FixtureArguments;
 use Billium\Core\Tests\Support\FixtureValues;
 use Billium\Rating\Contracts\PriceVersionStore;
+use Billium\Rating\Contracts\RatingPreparer;
+use Billium\Rating\Data\Pricing\CommitmentTerms;
+use Billium\Rating\Data\Pricing\GraduatedTerms;
+use Billium\Rating\Data\Pricing\PriceVersion;
+use Billium\Rating\Data\Pricing\Tier;
+use Billium\Rating\Data\Rating\RatingHold;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
 use Billium\Rating\Tests\RatingTestCase;
 use Billium\Rating\Tests\Support\RatingScenario;
@@ -22,6 +29,58 @@ use PHPUnit\Framework\Attributes\DataProvider;
 
 final class RatingBookingConcurrencyTest extends RatingTestCase
 {
+    /** @return iterable<string, array{bool}> */
+    public static function unchangedRevisionCases(): iterable
+    {
+        yield 'prepared before confirmation' => [true];
+        yield 'prepared after confirmation' => [false];
+    }
+
+    #[DataProvider('unchangedRevisionCases')]
+    public function test_unchanged_revision_keeps_retained_planned_occurrence_bookable(bool $prepareBefore): void
+    {
+        $prepared = $prepareBefore ? $this->prepared() : null;
+        $this->application()->make(OccurrenceService::class)->applyScheduleRevision(new ApplyScheduleRevision(
+            sellerRef: 'seller-a', environment: 'test', scheduleRef: 'schedule-a', expectedRevision: 1,
+            expectedRowVersion: 1, newRevision: 2, terms: Terms::make(['componentRef' => 'component-1',
+                'anchorLocal' => '2026-10-01T00:00:00', 'purpose' => 'usage_settlement']),
+            effectiveFrom: new DateTimeImmutable('2026-10-01Z'), inputsDigest: self::inputDigest(), commandKey: 'confirm-revision'));
+        self::assertSame(1, $this->rows(table: 'billium_schedule_occurrence_amendment',
+            where: 'occurrence_ref=? AND schedule_revision=2 AND kind=?', bindings: [$this->occurrenceRef, 'revision_confirmed']));
+        self::assertSame(1, $this->value('SELECT created_revision FROM billium_schedule_billing_occurrence WHERE occurrence_ref=?', [$this->occurrenceRef]));
+        self::assertSame('planned', $this->value('SELECT state FROM billium_schedule_billing_occurrence WHERE occurrence_ref=?', [$this->occurrenceRef]));
+        $receipt = $this->book($prepared ?? $this->prepared());
+        self::assertSame('booked', $receipt->outcome->value);
+        self::assertNotNull($receipt->obligationRef);
+        self::assertSame(10000, $this->value('SELECT amount_due_minor FROM billium_obligation WHERE obligation_ref=?', [$receipt->obligationRef]));
+        self::assertSame(1, $this->rows('billium_schedule_billing_occurrence'));
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function changedRevisionCases(): iterable
+    {
+        yield 'changed inputs digest' => ['sha256:'.str_repeat('b', 64), '2026-10-01T00:00:00'];
+        yield 'changed interval' => [self::inputDigest(), '2026-10-02T00:00:00'];
+    }
+
+    #[DataProvider('changedRevisionCases')]
+    public function test_changed_commercial_provenance_refuses_a_prepared_rating(string $digest, string $anchor): void
+    {
+        $prepared = $this->prepared();
+        $this->application()->make(OccurrenceService::class)->applyScheduleRevision(new ApplyScheduleRevision(
+            sellerRef: 'seller-a', environment: 'test', scheduleRef: 'schedule-a', expectedRevision: 1,
+            expectedRowVersion: 1, newRevision: 2, terms: Terms::make(['componentRef' => 'component-1',
+                'anchorLocal' => $anchor, 'purpose' => 'usage_settlement']),
+            effectiveFrom: new DateTimeImmutable('2026-10-01Z'), inputsDigest: $digest, commandKey: 'changed-provenance'));
+        try {
+            $this->book($prepared);
+            self::fail('Changed commercial provenance accepted');
+        } catch (ProblemException $error) {
+            self::assertSame('billium.rating.occurrence_not_bookable', $error->detail);
+        }
+        self::assertSame(0, array_sum($this->ratingCounts()));
+    }
+
     /** @return iterable<string, array{string}> */
     public static function pauseCases(): iterable
     {
@@ -144,6 +203,56 @@ final class RatingBookingConcurrencyTest extends RatingTestCase
         self::assertSame('14000', $fresh->draft->netMinor);
         $this->book(prepared: $fresh, key: 'second-fresh');
         self::assertSame(34000, $this->value('SELECT sum(amount_due_minor)::bigint FROM billium_obligation'));
+    }
+
+    public function test_exhausted_maximum_commitment_books_a_second_occurrence_as_no_charge(): void
+    {
+        $service = $this->application()->make(OccurrenceService::class);
+        $service->applyScheduleRevision(new ApplyScheduleRevision(sellerRef: 'seller-a', environment: 'test',
+            scheduleRef: 'cap-schedule', expectedRevision: 0, expectedRowVersion: 0, newRevision: 1,
+            terms: Terms::make(['componentRef' => 'component-1', 'anchorLocal' => '2026-10-01T00:00:00', 'purpose' => 'recurring_charge']),
+            effectiveFrom: new DateTimeImmutable('2026-01-01Z'), inputsDigest: self::inputDigest(), commandKey: 'cap-revision'));
+        $second = FixtureValues::text($service->ensureOccurrence(new EnsureOccurrence(sellerRef: 'seller-a', environment: 'test',
+            componentRef: 'component-1', purpose: OccurrencePurpose::RecurringCharge,
+            periodStart: new DateTimeImmutable('2026-10-01Z'), periodEnd: new DateTimeImmutable('2026-11-01Z'),
+            scheduleRef: 'cap-schedule', scheduleRevision: 1, inputsDigest: self::inputDigest(), commandKey: 'cap-ensure'))->body()['occurrenceRef']);
+        $prices = $this->application()->make(PriceVersionStore::class);
+        $prices->publish(price: $this->price(version: 2, fixed: '600', commitment: true), commandKey: 'maximum-price');
+        $first = $this->prepared(priceVersion: 2);
+        self::assertSame('50000', $first->draft->grossMinor);
+        $this->book($first);
+
+        $missingReason = $this->application()->make(RatingPreparer::class)->prepare($this->request(priceVersion: 2, ref: $second));
+        self::assertInstanceOf(RatingHold::class, $missingReason);
+        self::assertSame('billium.rating.no_charge_reason_required', $missingReason->detail);
+        $prepared = $this->prepared(priceVersion: 2, ref: $second, noCharge: 'maximum_commitment_exhausted');
+        self::assertSame('50000', $prepared->inputs->prices[0]->alreadyBilledNetMinor);
+        self::assertSame('600', $prepared->draft->lines[0]->rawAmount);
+        self::assertSame('-600.00', $prepared->draft->lines[0]->commitmentAdjustment);
+        self::assertSame('0', $prepared->draft->grossMinor);
+        $receipt = $this->book(prepared: $prepared, key: 'cap-second');
+        self::assertSame('no_charge', $receipt->outcome->value);
+        self::assertNull($receipt->obligationRef);
+        self::assertSame(1, $this->rows('billium_obligation'));
+        self::assertSame(50000, $this->value('SELECT sum(amount_due_minor)::bigint FROM billium_obligation'));
+        self::assertSame(1, $this->rows(table: 'billium_rating_booking', where: 'outcome=? AND obligation_ref IS NULL', bindings: ['no_charge']));
+    }
+
+    public function test_a_maximum_commitment_does_not_declare_a_zero_tariff_for_nonzero_quantity(): void
+    {
+        $fields = [...get_object_vars($this->price(version: 2)), 'termsDigest' => 'draft',
+            'terms' => new GraduatedTerms(tiers: [new Tier(index: 0, lower: '0', upper: '100', unitPrice: '0', flatFee: '0'),
+                new Tier(index: 1, lower: '100', upper: null, unitPrice: '1', flatFee: '0')]),
+            'commitment' => new CommitmentTerms(sellerRef: 'seller-a', billingAccountRef: 'original-account',
+                componentRef: 'component-1', currency: 'USD', periodRef: 'october-2026', minimumMinor: null,
+                maximumMinor: 50000, consumedByAlreadyBilled: true, appliesAt: 'period_final')];
+        $fields['termsDigest'] = CanonicalJson::termsDigest(FixtureArguments::construct(class: PriceVersion::class, arguments: $fields));
+        $this->application()->make(PriceVersionStore::class)->publish(
+            price: FixtureArguments::construct(class: PriceVersion::class, arguments: $fields), commandKey: 'undeclared-zero-price');
+        $result = $this->application()->make(RatingPreparer::class)->prepare($this->request(priceVersion: 2, noCharge: 'maximum_commitment_exhausted'));
+        self::assertInstanceOf(RatingHold::class, $result);
+        self::assertSame('billium.rating.zero_price_not_declared', $result->detail);
+        self::assertSame(0, array_sum($this->ratingCounts()));
     }
 
     public function test_sigkill_at_each_financial_boundary_then_retry_leaves_one_obligation(): void

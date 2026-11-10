@@ -25,7 +25,7 @@ final readonly class PreparedCorrection
         public string $expectedFrontierDigest,
         public ?ReleasePolicy $releasePolicy,
         public PrepareCorrection $command,
-        public string $originalObligationRef,
+        public ?string $originalObligationRef,
         public ?string $invoiceRef,
         public string $originalBasisRef,
         public int $expectedPolicyRowVersion,

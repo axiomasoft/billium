@@ -31,5 +31,6 @@
   "2026_11_10_000400_create_rating_run_basis_booking",
   "2026_11_10_000500_create_billium_schedule_periods",
   "2026_11_10_000600_create_billium_schedule_occurrences",
-  "2026_11_10_000610_create_billium_schedule_billing_correction"
+  "2026_11_10_000610_create_billium_schedule_billing_correction",
+  "2026_11_10_000620_allow_rated_correction_parents"
 ]

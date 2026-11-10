@@ -137,7 +137,9 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
                 $obligationRef = $creditNoteRef = null;
                 $scope = new BillingAccountScope(sellerRef: $in->sellerRef, environment: $in->environment, billingAccountRef: $in->billingAccountRef);
                 if ($sign > 0) {
-                    $this->ledgerLocks->acquireParent(context: $context, obligationRef: $p->originalObligationRef, accountRef: $in->billingAccountRef);
+                    if ($p->originalObligationRef !== null) {
+                        $this->ledgerLocks->acquireParent(context: $context, obligationRef: $p->originalObligationRef, accountRef: $in->billingAccountRef);
+                    }
                     $attribution = RatingRows::map(json_decode($in->attribution, true, 32, JSON_THROW_ON_ERROR));
                     $obligationRef = 'rating:'.$child->correctionRef;
                     $price = $in->prices[0];
@@ -220,7 +222,12 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
         $old = $this->store->inputs($previous);
         $originalInputs = $this->store->inputs($original);
         $originalDraft = $this->store->draft($original);
-        if ($booking?->obligation_ref !== $p->originalObligationRef || $p->command->sellerRef !== $in->sellerRef
+        $occurrence = $this->occurrences->occurrence($in->occurrenceRef);
+        if ($booking === null
+            || ! (($occurrence['state'] === 'obligated' && $booking->outcome === 'booked' && is_string($booking->obligation_ref))
+                || ($occurrence['state'] === 'rated' && $booking->outcome === 'no_charge' && $booking->obligation_ref === null
+                    && $originalDraft->chargeKind->value === 'no_charge' && $originalDraft->grossMinor === '0'))
+            || $booking->obligation_ref !== $p->originalObligationRef || $p->command->sellerRef !== $in->sellerRef
             || $p->command->environment !== $in->environment || $p->command->parentOccurrenceRef !== $in->occurrenceRef
             || $p->releasePolicy !== $p->command->releasePolicy
             || CanonicalJson::encode($old->prices) !== CanonicalJson::encode($in->prices)

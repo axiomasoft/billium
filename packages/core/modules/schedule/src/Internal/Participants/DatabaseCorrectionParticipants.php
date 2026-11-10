@@ -44,7 +44,7 @@ final readonly class DatabaseCorrectionParticipants implements CorrectionPartici
             }
         }
         $parent = $this->store->occurrence(ref: $c->parentOccurrenceRef, context: $context);
-        if ($parent === null || $parent->state !== 'obligated'
+        if ($parent === null || ! in_array($parent->state, ['obligated', 'rated'], true) || $parent->rated_basis_ref === null
             || new DateTimeImmutable(Payload::text($parent->period_start)) != $c->originalPeriodStart
             || new DateTimeImmutable(Payload::text($parent->period_end)) != $c->originalPeriodEnd) {
             OccurrenceProblems::refuse('correction.parent_invalid');
