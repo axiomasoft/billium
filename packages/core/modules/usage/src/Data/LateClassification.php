@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Billium\Usage\Data;
 
+use Billium\Contracts\Attributes\Api;
 use Billium\Usage\Enums\LateClass;
 use Billium\Usage\Enums\LatePolicy;
 
+#[Api]
 final readonly class LateClassification
 {
     public function __construct(

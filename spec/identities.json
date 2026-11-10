@@ -3874,6 +3874,13 @@
     },
     {
       "kind": "migration",
+      "id": "2026_11_10_000100_create_rating_pricing_tables",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/rating/2026_11_10_000100_create_rating_pricing_tables.php"
+    },
+    {
+      "kind": "migration",
       "id": "2026_11_10_000300_create_usage_aggregation_tables",
       "status": "new",
       "since": "2026-10",

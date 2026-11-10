@@ -183,18 +183,43 @@ approved quantity and arrears final aggregate are distinct; prepaid money uses l
 credit, never product credits or quota (BC-ENV-36, 39, 42; owners rating/schedule).
 
 TaxSnapshotPort remains host policy authority; agreement inputs are host/ProductCoordinator
-approval snapshots, not local business choices. The registry permits exclusive tax after rounded
-subtotal and same component/period bounds only. Host policy/version refs must resolve before
-financial writes; decoding a DTO grants no activation or write authority (BC-ENV-38…39, 44;
-owners rating/host).
+approval snapshots, not local business choices. The supported commitment composition is scoped to
+one seller, customer, component, currency and period, and excludes inclusive tax. Exclusive tax
+uses the exact post-bound amount; net and group tax are rounded after tax, with deterministic
+largest-remainder allocation. Inclusive tax is supported without commitment. Host policy/version
+refs must resolve outside a transaction before financial writes; decoding a DTO grants no activation
+or write authority (D19/D56/D63, BC-ENV-38…39, 44; owners rating/host).
 
 Runtime preparation: Composer exposes Billium Usage/Rating/Schedule and their test namespaces,
-with existing `packages/core/modules/*/tests` discovery. All three descriptors remain at actual
-schema version 0 with no migrations/tables; defaults disable them. Future providers use
+with existing `packages/core/modules/*/tests` discovery. The rating descriptor has schema version 1;
+defaults disable the optional modules. Providers use
 Billium\\{Usage,Rating,Schedule}\\Internal\\{Usage,Rating,Schedule}ServiceProvider, are loaded only
 when both the module is listed in billium.modules.enabled and billium.<module>.enabled=true,
-and when the provider exists. P4.2/P4.4/P4.5 own explicit install/upgrade registration and module
-bindings; no SQL or algorithm is installed by P4.1 (D55, BC-CNF-16; owner core/module).
+and when the provider exists. Module owners provide explicit install/upgrade registration and module
+bindings; boot discovers migration paths but does not execute SQL (D55, BC-CNF-16; owner core/module).
+
+### Rating: pricing and tax snapshots
+
+The closed rating registry retains `fixed@1`, `per_unit@1`, `tiered_graduated@1`, and
+`tiered_volume@1`. Typed price terms carry a canonical digest, explicit quantity conversion and
+increment, currency exponent version and rounding policy. Fixed is per component occurrence;
+graduated tiers sum reached slices, while volume tiers use the selected rate for all quantity.
+Tiers are contiguous half-open ranges, with equality choosing the upper volume tier; the final
+tier is unbounded. Negative quantities and unknown versions refuse (D19/D56; owner rating).
+
+For the supported single-component period commitment, frozen already-billed net amounts consume
+both bounds. The floor then cap changes the same priced line; unused minimum is not a separate
+charge. Discount, allowance, package/block, prorated minimum, cross-component and inclusive-tax
+commitment compositions refuse. The caller must supply a frozen basis and verify its digest when
+booking (D56/D63; owner rating).
+
+The host resolves standard or correction tax evidence outside the root transaction and supplies
+the immutable snapshot to `TaxSnapshotStore`. It carries jurisdiction, code, exact rate string,
+effective date, tax point, resolver/version and input/evidence digests; correction policy includes
+its version, treatment, effective interval and input/output digests. A no-tax declaration requires a
+zero rate and explicit reason. Missing evidence is never replaced with zero. Tax allocation uses
+absolute largest remainders with bytewise line-key ties and restores the group sign; mixed-sign
+groups refuse. Each line conserves net plus tax equals gross (D19/D56/D63; owners rating/host).
 
 PHP conformance registers usage.ingest/aggregate/quantity, rating.rate/correct and
 schedule.ensure/generate/revise. A module supplies callable billium.conformance.<module>

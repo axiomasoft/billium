@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Billium\Usage\Data\Commands;
 
+use Billium\Contracts\Attributes\Api;
 use Billium\Usage\Data\SourceCompleteness;
 
+#[Api]
 final readonly class RecordSourceCompleteness
 {
     public function __construct(

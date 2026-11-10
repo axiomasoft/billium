@@ -9,6 +9,7 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\BilliumCoreServiceProvider;
 use Billium\Core\Data\Modules\InstalledCheckpoint;
 use Billium\Core\Tests\TestEnvironment;
+use Billium\Rating\Contracts\PricingStrategyRegistry;
 use BilliumConformance\LedgerAdapter;
 use BilliumConformance\P4RuntimeAdapter;
 use Composer\Autoload\ClassLoader;
@@ -35,16 +36,16 @@ final class P4BootstrapTest extends ModuleTestCase
         self::assertStringContainsString('packages/core/modules/*/tests', $discovery);
     }
 
-    public function test_preparation_descriptors_have_only_real_uninstalled_checkpoints(): void
+    public function test_rating_descriptor_has_a_real_installable_checkpoint(): void
     {
         foreach (['rating'] as $module) {
             $descriptor = self::catalog()->descriptor($module);
             self::assertNotNull($descriptor);
             $checkpoint = new InstalledCheckpoint($module);
             self::assertSame(0, $checkpoint->schemaVersion);
-            self::assertSame(0, $descriptor->currentSchemaVersion);
-            self::assertSame([], $descriptor->migrationIdentities);
-            self::assertSame([], $descriptor->ownedTables);
+            self::assertSame(1, $descriptor->currentSchemaVersion);
+            self::assertCount(1, $descriptor->migrationIdentities);
+            self::assertCount(5, $descriptor->ownedTables);
             self::assertSame([], $checkpoint->appliedMigrations);
         }
     }
@@ -58,7 +59,8 @@ final class P4BootstrapTest extends ModuleTestCase
         foreach (['usage', 'rating', 'schedule'] as $module) {
             self::assertFalse($app['config']->get("billium.{$module}.enabled"));
         }
-        // A requested but unavailable binary cannot be eagerly loaded or install SQL.
+        self::assertFalse($app->bound(PricingStrategyRegistry::class));
+        // Explicitly enabled available binaries register their bindings without installing SQL.
         $app['config']->set('billium.modules.enabled', ['platform', 'ledger', 'usage', 'rating', 'schedule']);
         foreach (['usage', 'rating', 'schedule'] as $module) {
             $app['config']->set("billium.{$module}.enabled", true);
@@ -66,9 +68,8 @@ final class P4BootstrapTest extends ModuleTestCase
         (new BilliumCoreServiceProvider($app))->register();
         self::assertArrayHasKey('Billium\\Usage\\Internal\\UsageServiceProvider', $app->getLoadedProviders());
         self::assertArrayHasKey('Billium\\Schedule\\Internal\\ScheduleServiceProvider', $app->getLoadedProviders());
-        foreach (['Rating'] as $module) {
-            self::assertArrayNotHasKey("Billium\\{$module}\\Internal\\{$module}ServiceProvider", $app->getLoadedProviders());
-        }
+        self::assertArrayHasKey('Billium\\Rating\\Internal\\RatingServiceProvider', $app->getLoadedProviders());
+        self::assertInstanceOf(PricingStrategyRegistry::class, $app->make(PricingStrategyRegistry::class));
         Container::setInstance(null);
     }
 

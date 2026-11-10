@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Usage\Contracts;
 
+use Billium\Contracts\Attributes\Api;
 use Billium\Contracts\Data\Envelopes\UsageFactV2;
 use Billium\Core\Data\Caller;
 use Billium\Usage\Data\AttributionSnapshot;
@@ -12,6 +13,7 @@ use Billium\Usage\Data\AttributionSnapshot;
  * The host verifies normalized provenance/source selection, and resolves the immutable event-time mapping and
  * original commercial period. It must return historical mapping versions after a payer transfer.
  */
+#[Api]
 interface UsageAttribution
 {
     public function resolve(Caller $caller, UsageFactV2 $fact): ?AttributionSnapshot;

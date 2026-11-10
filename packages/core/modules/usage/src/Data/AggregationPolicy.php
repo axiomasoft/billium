@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Billium\Usage\Data;
 
+use Billium\Contracts\Attributes\Api;
 use Billium\Usage\Enums\AggregationSemantics;
 use Billium\Usage\Enums\GaugePolicy;
 use Billium\Usage\Enums\MissingInitialPolicy;
 use Billium\Usage\Enums\RoundingMode;
 use Billium\Usage\Internal\Errors\UsageProblems;
 
+#[Api]
 final readonly class AggregationPolicy
 {
     public string $metricVersion;

@@ -371,3 +371,13 @@ Owner-only `billium_usage_erase_distinct_members(seller,environment,snapshot_ids
 recomputable membership. Erased/expired либо потерянные retained source inputs запрещают финансовый
 replay; participant также отказывается. Численные retention horizons и законность сохранения денежных
 снапшотов задаёт host owner policy, а не эвристика агрегатора (D13/D56/D59; owner usage).
+
+Rating владеет append-only `billium_rating_price_version`, tiers, commitment terms и tax snapshots.
+`billium_rating_price_publication` одновременно является scoped lock head и внутренним событием
+публикации; один root transaction фиксирует его вместе с версией и всеми terms. Ранг 44 следует
+за billing schedule и предшествует occurrence; unique seller/environment/price/version остаётся
+конечным арбитром. Deferred checks отказывают разрывы tiers и несовместимый commitment; runtime
+получает только SELECT/INSERT и UPDATE колонки head для row lock, но immutable trigger запрещает
+изменение. Tax evidence host разрешает до транзакции, rating фиксирует точную строку ставки,
+resolver и digests; ошибку или отсутствие ставки нулём не заменяет (D19/D22/D23/D27/D56/D63;
+owner rating).

@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Billium\Usage\Data;
 
+use Billium\Contracts\Attributes\Api;
 use Billium\Usage\Internal\Canonical\CanonicalJson;
 
+#[Api]
 final readonly class CompletenessFrontier
 {
     public string $digest;

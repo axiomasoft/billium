@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Billium\Usage\Contracts;
 
+use Billium\Contracts\Attributes\Api;
 use Billium\Contracts\Data\Envelopes\MetricVersion;
 use Billium\Contracts\Data\Envelopes\UsageFactV2;
 use Billium\Contracts\Data\Envelopes\UsageReceiptV2;
 
+#[Api]
 interface Usage
 {
     public function registerMetric(MetricVersion $metric): void;

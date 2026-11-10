@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Billium\Usage\Data;
 
+use Billium\Contracts\Attributes\Api;
 use Billium\Usage\Enums\CompletenessStatus;
 use Billium\Usage\Internal\Canonical\CanonicalJson;
 use Billium\Usage\Internal\Errors\UsageProblems;
 
+#[Api]
 final readonly class SourceCompleteness
 {
     public function __construct(

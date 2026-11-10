@@ -1,0 +1,65 @@
+{
+  "id": "rating/tax/residual-corrections",
+  "description": "P4.4 test-only exact algorithm example; amounts and rate are explicit test inputs.",
+  "spec_refs": [
+    "D19",
+    "D56"
+  ],
+  "profiles": [
+    "php"
+  ],
+  "given": {
+    "example": {
+      "jurisdiction": "TEST",
+      "taxCode": "TEST",
+      "resolver": "test-resolver",
+      "resolverVersion": "1",
+      "inputDigest": "test-input",
+      "rate": "0.0725",
+      "mode": "exclusive",
+      "exponent": 2,
+      "rounding": "half_up",
+      "cases": [
+        {
+          "lines": {
+            "a": "0.10",
+            "b": "0.10",
+            "c": "0.10"
+          },
+          "tax": [
+            "1",
+            "1",
+            "0"
+          ]
+        },
+        {
+          "lines": {
+            "a": "-0.10",
+            "b": "-0.10",
+            "c": "-0.10"
+          },
+          "tax": [
+            "-1",
+            "-1",
+            "0"
+          ]
+        }
+      ]
+    }
+  },
+  "script": [
+    {
+      "op": "canon.digest",
+      "args": {
+        "json_text": "{\"cases\":[{\"lines\":{\"a\":\"0.10\",\"b\":\"0.10\",\"c\":\"0.10\"},\"tax\":[\"1\",\"1\",\"0\"]},{\"lines\":{\"a\":\"-0.10\",\"b\":\"-0.10\",\"c\":\"-0.10\"},\"tax\":[\"-1\",\"-1\",\"0\"]}],\"exponent\":2,\"inputDigest\":\"test-input\",\"jurisdiction\":\"TEST\",\"mode\":\"exclusive\",\"rate\":\"0.0725\",\"resolver\":\"test-resolver\",\"resolverVersion\":\"1\",\"rounding\":\"half_up\",\"taxCode\":\"TEST\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "digest": "sha256:33f8448b43dd8f8a7f6bc5a45bec9e37b027f05a762ffad7d2b1ecc413bc50a2"
+      }
+    }
+  ]
+}

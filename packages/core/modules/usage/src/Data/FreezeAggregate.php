@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Billium\Usage\Data;
 
+use Billium\Contracts\Attributes\Api;
+
+#[Api]
 final readonly class FreezeAggregate
 {
     public function __construct(

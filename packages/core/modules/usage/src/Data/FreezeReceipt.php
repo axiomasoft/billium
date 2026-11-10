@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Billium\Usage\Data;
 
+use Billium\Contracts\Attributes\Api;
 use Billium\Core\Data\Receipt;
 
+#[Api]
 final readonly class FreezeReceipt implements Receipt
 {
     /** @param array<string, mixed> $payload */

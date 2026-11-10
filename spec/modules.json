@@ -668,14 +668,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "rating",
-      "currentSchemaVersion": 0,
+      "currentSchemaVersion": 1,
       "supportedSchemaReadRange": {
-        "min": 0,
-        "max": 0
+        "min": 1,
+        "max": 1
       },
       "supportedSchemaWriteRange": {
-        "min": 0,
-        "max": 0
+        "min": 1,
+        "max": 1
       },
       "requiresModules": [
         {
@@ -703,11 +703,23 @@
         "usage.aggregate.v1",
         "usage.quantity.v1"
       ],
-      "ownedTables": [],
+      "ownedTables": [
+        "billium_rating_price_publication",
+        "billium_rating_price_version",
+        "billium_rating_price_tier",
+        "billium_rating_commitment_term",
+        "billium_rating_tax_snapshot"
+      ],
       "configKeys": [
         "billium.rating.enabled"
       ],
-      "migrationIdentities": [],
+      "migrationIdentities": [
+        {
+          "id": "2026_11_10_000100_create_rating_pricing_tables",
+          "version": 1,
+          "checksum": "sha256:3629e846aefbcb7d58194257e33f967d9d41a8f7fb667af0fa96377261452f0c"
+        }
+      ],
       "disablePolicy": {
         "dependents": "block",
         "keeps": [
