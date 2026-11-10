@@ -88,7 +88,21 @@ final class FrozenInputsCodec
             frontierExpectedDigest: RatingRows::text($d['frontierExpectedDigest'] ?? null),
             frontierExpectedRowVersion: RatingRows::integer($d['frontierExpectedRowVersion'] ?? null),
             noChargeReason: self::nullableText($d['noChargeReason'] ?? null),
+            proration: isset($d['proration']) ? self::proration(RatingRows::map($d['proration'])) : null,
+            correctionEvidence: isset($d['correctionEvidence']) ? RatingRows::map($d['correctionEvidence']) : null,
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{elapsed: string, total: string, amendmentRef: string, revision: int, effectiveAt: string, policy: string, timezone: ?string}
+     */
+    private static function proration(array $data): array
+    {
+        return ['elapsed' => RatingRows::text($data['elapsed'] ?? null), 'total' => RatingRows::text($data['total'] ?? null),
+            'amendmentRef' => RatingRows::text($data['amendmentRef'] ?? null), 'revision' => RatingRows::integer($data['revision'] ?? null),
+            'effectiveAt' => RatingRows::text($data['effectiveAt'] ?? null), 'policy' => RatingRows::text($data['policy'] ?? null),
+            'timezone' => self::nullableText($data['timezone'] ?? null)];
     }
 
     /** @param array<string, mixed> $d */
@@ -106,6 +120,7 @@ final class FrozenInputsCodec
             quantity: RatingRows::text($d['quantity'] ?? null),
             quantityScale: RatingRows::integer($d['quantityScale'] ?? null),
             snapshot: RatingRows::map($d['snapshot'] ?? null),
+            quantitySnapshot: isset($d['quantitySnapshot']) ? RatingRows::map($d['quantitySnapshot']) : null,
         );
     }
 

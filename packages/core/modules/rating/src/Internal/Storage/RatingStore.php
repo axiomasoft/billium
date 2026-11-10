@@ -20,6 +20,7 @@ use Billium\Rating\Internal\Pipeline\RatingComputation;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Database\Query\JoinClause;
 use stdClass;
 
 final readonly class RatingStore
@@ -71,14 +72,15 @@ final readonly class RatingStore
             netMinor: RatingRows::decimal($basis->net_minor), taxMinor: RatingRows::decimal($basis->tax_minor), grossMinor: RatingRows::decimal($basis->gross_minor));
     }
 
-    /** @return array{rowVersion: int, headDigest: string, headBasisRef: ?string} */
+    /** @return array{rowVersion: int, headDigest: string, headBasisRef: ?string, correctionRevision: int} */
     public function frontier(string $occurrenceRef, ?TransactionContext $context = null): array
     {
         $row = $this->query(table: 'source_frontier', context: $context)->where('frontier_key', 'occurrence:'.$occurrenceRef)->first();
 
         return ['rowVersion' => $row === null ? 0 : RatingRows::integer($row->row_version),
             'headDigest' => $row === null ? '' : RatingRows::text($row->head_digest),
-            'headBasisRef' => $row === null || $row->head_basis_ref === null ? null : RatingRows::text($row->head_basis_ref)];
+            'headBasisRef' => $row === null || $row->head_basis_ref === null ? null : RatingRows::text($row->head_basis_ref),
+            'correctionRevision' => $row === null ? 0 : RatingRows::integer($row->correction_head_revision)];
     }
 
     /** @return array{alreadyBilledNetMinor: string, basisDigest: string} */
@@ -87,7 +89,15 @@ final readonly class RatingStore
         $caller = $context?->caller() ?? $this->callers->current();
         $rows = $this->database($context)->table('billium_rating_rated_line AS l')
             ->join('billium_rating_rated_basis AS b', 'b.id', '=', 'l.basis_id')
-            ->join('billium_rating_booking AS k', 'k.basis_id', '=', 'b.id')
+            ->join('billium_rating_source_frontier AS h', static function (JoinClause $join): void {
+                $join->on('h.seller_ref', '=', 'b.seller_ref')->on('h.environment', '=', 'b.environment')
+                    ->on('h.occurrence_ref', '=', 'b.occurrence_ref')->on('h.head_basis_ref', '=', 'b.basis_ref');
+            })
+            ->join('billium_rating_rated_basis AS original', static function (JoinClause $join): void {
+                $join->on('original.seller_ref', '=', 'b.seller_ref')->on('original.environment', '=', 'b.environment')
+                    ->on('original.occurrence_ref', '=', 'b.occurrence_ref')->where('original.kind', '=', 'original');
+            })
+            ->join('billium_rating_booking AS k', 'k.basis_id', '=', 'original.id')
             ->where('b.seller_ref', $caller->sellerRef)->where('b.environment', $caller->environment)
             ->where('l.commitment_scope_digest', $scope)->where('k.outcome', 'booked')
             ->orderBy('b.basis_ref')->orderBy('l.line_no')->get(['b.basis_ref', 'l.line_no', 'l.net_minor']);
@@ -101,9 +111,13 @@ final readonly class RatingStore
         return ['alreadyBilledNetMinor' => $sum, 'basisDigest' => CanonicalJson::digest($evidence)];
     }
 
-    public function lockFrontiers(TransactionContext $context, FrozenRatingInputs $inputs): void
+    /** @param list<string> $additionalKeys */
+    public function lockFrontiers(TransactionContext $context, FrozenRatingInputs $inputs, array $additionalKeys = []): void
     {
         $keys = ['occurrence:'.$inputs->occurrenceRef => $inputs->occurrenceRef];
+        foreach ($additionalKeys as $key) {
+            $keys[$key] = null;
+        }
         foreach ($inputs->prices as $price) {
             if ($price->commitmentScopeDigest !== null) {
                 $keys['commitment:'.$price->commitmentScopeDigest] = null;
@@ -141,7 +155,7 @@ final readonly class RatingStore
         }
     }
 
-    public function insertBasis(TransactionContext $context, PreparedRating $prepared): int
+    public function insertBasis(TransactionContext $context, PreparedRating $prepared, int $correctionRevision = 0, ?string $predecessorBasisRef = null): int
     {
         $in = $prepared->inputs;
         $draft = $prepared->draft;
@@ -151,7 +165,9 @@ final readonly class RatingStore
             'billing_account_ref' => $in->billingAccountRef, 'inputs_digest' => $draft->inputsDigest, 'agreement_revision' => $in->agreementRevision,
             'period_start_micros' => $in->periodStartMicros, 'period_end_micros' => $in->periodEndMicros, 'frozen_inputs' => CanonicalJson::encode($in)]);
         $id = (int) $db->table('billium_rating_rated_basis')->insertGetId([...$scope, 'basis_ref' => $draft->basisRef,
-            'run_id' => $run, 'occurrence_ref' => $in->occurrenceRef, 'kind' => 'original', 'currency' => $in->currency, 'currency_exponent' => $in->currencyExponent,
+            'run_id' => $run, 'occurrence_ref' => $in->occurrenceRef, 'kind' => $correctionRevision === 0 ? 'original' : 'correction',
+            'correction_revision' => $correctionRevision === 0 ? null : $correctionRevision, 'predecessor_basis_ref' => $predecessorBasisRef,
+            'currency' => $in->currency, 'currency_exponent' => $in->currencyExponent,
             'net_minor' => $draft->netMinor, 'tax_minor' => $draft->taxMinor, 'gross_minor' => $draft->grossMinor,
             'charge_kind' => $draft->chargeKind->value, 'no_charge_reason' => $draft->noChargeReason,
             'inputs_digest' => $draft->inputsDigest, 'rated_digest' => $draft->ratedDigest]);

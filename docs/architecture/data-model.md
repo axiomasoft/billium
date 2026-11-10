@@ -515,3 +515,30 @@ Rating владеет append-only `billium_rating_price_version`, tiers, commitm
 изменение. Tax evidence host разрешает до транзакции, rating фиксирует точную строку ставки,
 resolver и digests; ошибку или отсутствие ставки нулём не заменяет (D19/D22/D23/D27/D56/D63;
 owner rating).
+
+### Original-period corrections (D19/D27/D56/D63; owner rating/schedule/ledger, P4.8)
+
+Rating сохраняет frozen commercial terms и полный corrected basis с predecessor; денежный результат —
+разность с последним effective basis, а не сумма самостоятельного позднего потребления. При частичной
+отмене сохраняются host amendment и зарегистрированная дробь периода: `elapsed_seconds`,
+`local_calendar_days` или `none`. Вне зарегистрированной комбинации correction отказывается.
+Tax resolver вызывается до Tx, а versioned host policy и исходные налоговые evidence сохраняются во
+frozen inputs. Host публикует policy frontier в rating; correction проверяет его под lock перед записью.
+Digest correction frontier включает отсортированные usage snapshot digests и tax-policy evidence, поэтому
+изменение одного налога допускает новую correction при неизменном usage (D56/D63, Q4=b).
+
+Один root блокирует usage series → rating frontiers → original occurrence → ledger obligation/invoice/funds.
+Schedule participant регистрирует child и CAS собственной головы; rating пишет только свои basis, correction,
+booking и frontier. Положительная дельта создаёт отдельную obligation через ledger participant;
+отрицательная использует credit note с явной allocation-release policy и ожидает issued invoice;
+нулевая записывает lineage без ledger effect. Internal command outbox записывается в той же Tx.
+Оригинальная цена, occurrence и выпущенный invoice snapshot не переписываются; allocation и credit-note
+counters ledger обновляет согласно своим инвариантам. Это не PSP refund и не изменение продуктовой квоты
+(D12/D27/D56/D63, INV-09/INV-12; owners schedule/rating/ledger).
+
+Если отрицательная cumulative delta превышает кредитуемый остаток исходного obligation, rating
+распределяет её по исходному и затем child obligations в порядке revision. Для всех затронутых
+obligations требуется issued invoice; до этого correction удерживается. Ledger предварительно
+блокирует весь набор obligations, invoices и источников allocations и записывает credit notes в том
+же root, что и correction frontier. Выпущенные invoice content, lines и total неизменны; ledger-owned
+status и accounting counters могут изменяться (D60/D63, Q5=a, Q6=a; owners rating/ledger).

@@ -109,6 +109,20 @@ final readonly class IssueCreditNoteCommand
         return $receipt;
     }
 
+    /** @return array{invoice: int, currency: string, obligations: array<string, int>, invoices: list<int>, intents: list<int>, payments: list<int>, credits: list<int>} */
+    public function correctionPlan(TransactionContext $context, IssueCreditNote $command): array
+    {
+        $this->runner->assertCurrent($context, 'ledger');
+        $this->writer->assertMonetary($context);
+        self::validate($command);
+        $caller = $context->caller();
+        if ($caller->sellerRef !== $command->scope->sellerRef || $caller->environment !== $command->scope->environment) {
+            throw new ProblemException(ProblemCode::AuthDenied, 'participant scope differs from caller');
+        }
+
+        return $this->read($this->databases->connection($context->connectionName()), $caller->sellerRef, $caller->environment, $command);
+    }
+
     /**
      * @return array{invoice: int, currency: string, obligations: array<string, int>, invoices: list<int>, intents: list<int>, payments: list<int>, credits: list<int>}
      */

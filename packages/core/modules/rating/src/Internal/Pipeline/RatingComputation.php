@@ -15,6 +15,7 @@ use Billium\Rating\Data\Pricing\GraduatedTerms;
 use Billium\Rating\Data\Pricing\PerUnitTerms;
 use Billium\Rating\Data\Pricing\PriceVersion;
 use Billium\Rating\Data\Pricing\PricingInput;
+use Billium\Rating\Data\Pricing\PricingResult;
 use Billium\Rating\Data\Pricing\VolumeTerms;
 use Billium\Rating\Data\Rating\FrozenRatingInputs;
 use Billium\Rating\Data\Rating\Quote;
@@ -25,6 +26,8 @@ use Billium\Rating\Enums\ChargeKind;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
 use Billium\Rating\Internal\Math\Dec;
 use Billium\Rating\Internal\Money\MoneyFactory;
+use Billium\Rating\Internal\Proration\ProrationCalculator;
+use Billium\Rating\Internal\Proration\QuantitySnapshotScope;
 use Billium\Rating\Internal\Storage\RatingRows;
 use Billium\Rating\Internal\Tax\TaxCalculator;
 
@@ -41,7 +44,8 @@ final readonly class RatingComputation implements RatingQuoter
             taxMinor: $draft->taxMinor, grossMinor: $draft->grossMinor, quoteDigest: $draft->ratedDigest);
     }
 
-    public function compute(FrozenRatingInputs $inputs): RatedBasisDraft
+    /** @param array{elapsed: string, total: string}|null $proration */
+    public function compute(FrozenRatingInputs $inputs, ?array $proration = null, ?string $predecessorBasisRef = null, int $correctionRevision = 0): RatedBasisDraft
     {
         if ($inputs->periodStartMicros >= $inputs->periodEndMicros || $inputs->sellerRef === '' || $inputs->billingAccountRef === ''
             || $inputs->agreementRevision === '' || $inputs->sourceDigest === '' || $inputs->occurrenceInputsDigest === ''
@@ -67,6 +71,7 @@ final readonly class RatingComputation implements RatingQuoter
             $price = $inputs->prices[$i];
             $tax = $inputs->taxes[$i];
             $snapshot = $price->snapshot;
+            QuantitySnapshotScope::assertValid(inputs: $inputs, aggregate: $aggregate, price: $snapshot);
             if (strcmp($aggregate->componentRef, $last) <= 0 || $aggregate->componentRef !== $price->componentRef
                 || $aggregate->windowStartMicros !== $inputs->periodStartMicros || $aggregate->windowEndMicros !== $inputs->periodEndMicros
                 || $snapshot->sellerRef !== $inputs->sellerRef || $snapshot->currency !== $inputs->currency
@@ -93,6 +98,13 @@ final readonly class RatingComputation implements RatingQuoter
             $result = $this->strategies->resolve(id: $snapshot->strategyId, version: $snapshot->strategyVersion)->price(
                 new PricingInput(price: $snapshot, quantity: $aggregate->quantity,
                     commitmentBasis: $commitment === null ? null : new CommitmentBasis(alreadyBilledNetMinor: $price->alreadyBilledNetMinor ?? '', basisDigest: $price->commitmentBasisDigest ?? '')));
+            if ($proration !== null) {
+                $minor = (new ProrationCalculator)->prorateMinor(fullMajor: Dec::parse($result->pricedAmount), exponent: $inputs->currencyExponent,
+                    elapsed: $proration['elapsed'], total: $proration['total'], roundingMode: $snapshot->roundingMode->value);
+                $result = new PricingResult(billableQuantity: $result->billableQuantity, rawAmount: $result->rawAmount,
+                    commitmentAdjustment: $result->commitmentAdjustment, pricedAmount: Dec::ofUnscaled($minor, $inputs->currencyExponent)->toString(),
+                    steps: $result->steps, resultDigest: CanonicalJson::digest([$result, $proration, $minor]));
+            }
             $priced[$i] = $result;
             $group = CanonicalJson::digest([$tax->jurisdiction, $tax->taxCode, $tax->mode, $tax->rate, $tax->snapshot->noTaxReason,
                 $snapshot->roundingMode, $snapshot->roundingPolicyVersion]);
@@ -127,25 +139,27 @@ final readonly class RatingComputation implements RatingQuoter
                 taxSnapshotRef: $tax->snapshotRef, jurisdiction: $tax->jurisdiction, taxCode: $tax->taxCode, taxMode: $tax->mode, taxRate: $tax->rate,
                 netMinor: $amounts['net'], taxMinor: $amounts['tax'], grossMinor: $amounts['gross'], residualMinor: $amounts['residual'],
                 intermediatesJson: CanonicalJson::encode(['pricing' => $result, 'tax' => $tax, 'amounts' => $amounts]),
-                predecessorBasisRef: null, commitmentScopeDigest: $price->commitmentScopeDigest);
+                predecessorBasisRef: $predecessorBasisRef, commitmentScopeDigest: $price->commitmentScopeDigest);
             $net = bcadd($net, RatingRows::decimal($amounts['net']), 0);
             $taxTotal = bcadd($taxTotal, RatingRows::decimal($amounts['tax']), 0);
             $gross = bcadd($gross, RatingRows::decimal($amounts['gross']), 0);
         }
         MoneyFactory::fromMinor(minor: $gross, currency: $inputs->currency, exponent: $inputs->currencyExponent);
-        if ($gross === '0' && ! $zeroPrices) {
+        if ($gross === '0' && ! $zeroPrices && $predecessorBasisRef === null) {
             self::refuse('zero_price_not_declared');
         }
-        if (bccomp($gross, '0', 0) < 0 || ($gross === '0' && ($inputs->noChargeReason === null || $inputs->noChargeReason === ''))
+        if (bccomp($gross, '0', 0) < 0 || ($gross === '0' && $predecessorBasisRef === null && ($inputs->noChargeReason === null || $inputs->noChargeReason === ''))
             || ($gross !== '0' && $inputs->noChargeReason !== null)) {
             self::refuse('no_charge_reason_required');
         }
         $digest = $inputs->digest();
-        $basis = 'rb_'.substr(hash('sha256', implode('|', [$inputs->sellerRef, $inputs->environment, $inputs->occurrenceRef, 'original', $digest])), 0, 48);
+        $basis = 'rb_'.substr(hash('sha256', implode('|', [$inputs->sellerRef, $inputs->environment, $inputs->occurrenceRef,
+            $predecessorBasisRef === null ? 'original' : 'correction:'.$correctionRevision, $digest])), 0, 48);
 
         return new RatedBasisDraft(basisRef: $basis, inputsDigest: $digest,
             ratedDigest: CanonicalJson::digest(['inputsDigest' => $digest, 'lines' => $lines, 'totals' => ['net' => $net, 'tax' => $taxTotal, 'gross' => $gross]]),
-            chargeKind: $gross === '0' ? ChargeKind::NoCharge : ChargeKind::Charge, noChargeReason: $inputs->noChargeReason,
+            chargeKind: $gross === '0' ? ChargeKind::NoCharge : ChargeKind::Charge,
+            noChargeReason: $gross === '0' && $predecessorBasisRef !== null ? 'correction_zero' : $inputs->noChargeReason,
             lines: $lines, netMinor: $net, taxMinor: $taxTotal, grossMinor: $gross);
     }
 

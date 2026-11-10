@@ -34,6 +34,10 @@ final readonly class FrozenRatingInputs
         public string $frontierExpectedDigest,
         public int $frontierExpectedRowVersion,
         public ?string $noChargeReason = null,
+        /** @var array{elapsed: string, total: string, amendmentRef: string, revision: int, effectiveAt: string, policy: string, timezone: ?string}|null */
+        public ?array $proration = null,
+        /** @var array<string, mixed>|null */
+        public ?array $correctionEvidence = null,
     ) {}
 
     public function digest(): string

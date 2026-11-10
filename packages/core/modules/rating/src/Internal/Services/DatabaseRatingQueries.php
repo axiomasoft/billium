@@ -44,7 +44,10 @@ final readonly class DatabaseRatingQueries implements RatingQueries
     public function replay(string $basisRef): RatedBasisDraft
     {
         $row = $this->store->basis($basisRef) ?? RatingComputation::refuse('basis_unknown');
-        $draft = $this->computation->compute($this->store->inputs($row));
+        $inputs = $this->store->inputs($row);
+        $draft = $this->computation->compute(inputs: $inputs, proration: $inputs->proration,
+            predecessorBasisRef: RatingRows::nullableText($row->predecessor_basis_ref),
+            correctionRevision: $row->correction_revision === null ? 0 : RatingRows::integer($row->correction_revision));
         if (CanonicalJson::encode($draft) !== CanonicalJson::encode($this->store->draft($row))) {
             RatingComputation::refuse('replay_mismatch');
         }

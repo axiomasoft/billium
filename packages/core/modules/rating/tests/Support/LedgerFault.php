@@ -57,7 +57,12 @@ final class LedgerFault implements LedgerParticipants
 
     public function issueCreditNote(TransactionContext $context, IssueCreditNote $command): Receipt
     {
-        return $this->inner->issueCreditNote($context, $command);
+        $receipt = $this->inner->issueCreditNote($context, $command);
+        if ($this->failure === 'credit_rollback') {
+            throw new RuntimeException('test after successful credit-note participant');
+        }
+
+        return $receipt;
     }
 
     public function adjustObligation(TransactionContext $context, AdjustObligation $command): Receipt

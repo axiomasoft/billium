@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Billium\Rating\Internal\Pipeline;
 
+use Billium\Contracts\Contracts\Codec;
+use Billium\Contracts\Data\Envelopes\QuantitySnapshot;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\CallerContext;
 use Billium\Rating\Contracts\PriceVersionStore;
@@ -52,8 +54,17 @@ final readonly class FrozenInputsBuilder
             foreach ($retained->aggregates as $i => $aggregate) {
                 $pinned[] = ['componentRef' => $aggregate->componentRef, 'snapshotRef' => $aggregate->snapshotRef,
                     'priceRef' => $retained->prices[$i]->priceRef, 'priceVersion' => $retained->prices[$i]->priceVersion];
+                if ($aggregate->quantitySnapshot !== null) {
+                    $pinned[array_key_last($pinned)]['quantitySnapshot'] = $aggregate->quantitySnapshot;
+                }
             }
             $requested = $command->components;
+            foreach ($requested as &$component) {
+                if (array_key_exists('quantitySnapshot', $component)) {
+                    $component['quantitySnapshot'] = self::quantitySnapshot($component['quantitySnapshot']);
+                }
+            }
+            unset($component);
             usort($requested, static fn (array $a, array $b): int => strcmp($a['componentRef'], $b['componentRef']));
             if ($retained->billingAccountRef !== $command->billingAccountRef || $retained->sourceDigest !== $command->sourceDigest
                 || $retained->agreementRevision !== $command->agreementRevision || $retained->noChargeReason !== $command->noChargeReason
@@ -130,7 +141,8 @@ final readonly class FrozenInputsBuilder
             $aggregates[] = new FrozenAggregate(componentRef: $component['componentRef'], metricRef: $window->metricRef, metricVersion: $window->metricVersion,
                 snapshotRef: RatingRows::text($aggregate['snapshotRef'] ?? null), snapshotDigest: RatingRows::text($aggregate['snapshotDigest'] ?? null),
                 windowStartMicros: $start, windowEndMicros: $end, completenessFrontierDigest: RatingRows::text($aggregate['completenessFrontierDigest'] ?? null),
-                quantity: RatingRows::text($aggregate['quantity'] ?? null), quantityScale: RatingRows::integer($aggregate['quantityScale'] ?? null), snapshot: $aggregate);
+                quantity: RatingRows::text($aggregate['quantity'] ?? null), quantityScale: RatingRows::integer($aggregate['quantityScale'] ?? null), snapshot: $aggregate,
+                quantitySnapshot: isset($component['quantitySnapshot']) ? self::quantitySnapshot($component['quantitySnapshot']) : null);
         }
         $head = $this->store->frontier($command->occurrenceRef);
 
@@ -140,5 +152,20 @@ final readonly class FrozenInputsBuilder
             agreementRevision: $command->agreementRevision, currency: $currency, currencyExponent: $exponent,
             aggregates: $aggregates, prices: $prices, taxes: $taxes, occurrenceInputsDigest: $command->occurrenceInputsDigest,
             sourceDigest: $command->sourceDigest, frontierExpectedDigest: $head['headDigest'], frontierExpectedRowVersion: $head['rowVersion'], noChargeReason: $command->noChargeReason);
+    }
+
+    /** @return array<string, mixed> */
+    private static function quantitySnapshot(mixed $value): array
+    {
+        if (! $value instanceof QuantitySnapshot) {
+            RatingComputation::refuse('quantity_snapshot_invalid');
+        }
+        $codec = new Codec;
+        $json = $codec->encode($value);
+        if (! $codec->decode($json) instanceof QuantitySnapshot) {
+            RatingComputation::refuse('quantity_snapshot_invalid');
+        }
+
+        return RatingRows::map(json_decode($json, true, 64, JSON_THROW_ON_ERROR));
     }
 }

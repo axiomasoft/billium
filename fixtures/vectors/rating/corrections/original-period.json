@@ -1,0 +1,69 @@
+{
+  "id": "rating/corrections/original-period",
+  "description": "P4.8 exact original-period corrections and host-selected tax examples.",
+  "spec_refs": [
+    "D19",
+    "D56",
+    "D63"
+  ],
+  "profiles": [
+    "php"
+  ],
+  "given": {
+    "example": {
+      "late_usage": {
+        "volume": {
+          "original_quantity": "100",
+          "original_net_minor": "10000",
+          "corrected_quantity": "150",
+          "corrected_net_minor": "12000",
+          "delta_minor": "2000"
+        },
+        "graduated": {
+          "original_quantity": "100",
+          "original_net_minor": "10000",
+          "corrected_quantity": "150",
+          "corrected_net_minor": "14000",
+          "delta_minor": "4000"
+        },
+        "negative_graduated": {
+          "original_quantity": "150",
+          "original_net_minor": "14000",
+          "corrected_quantity": "120",
+          "corrected_net_minor": "11600",
+          "delta_minor": "-2400"
+        }
+      },
+      "partial_cancel": {
+        "period_start": "2027-01-01T00:00:00Z",
+        "period_end": "2027-02-01T00:00:00Z",
+        "effective_at": "2027-01-16T00:00:00Z",
+        "full_minor": "3100",
+        "corrected_minor": "1500",
+        "delta_minor": "-1600"
+      },
+      "tax": {
+        "original_net_minor": "10000",
+        "original_tax_minor": "2000",
+        "corrected_net_minor": "12000",
+        "original_rate_tax_minor": "2400",
+        "current_rate_tax_minor": "3000"
+      }
+    }
+  },
+  "script": [
+    {
+      "op": "canon.digest",
+      "args": {
+        "json_text": "{\"late_usage\":{\"graduated\":{\"corrected_net_minor\":\"14000\",\"corrected_quantity\":\"150\",\"delta_minor\":\"4000\",\"original_net_minor\":\"10000\",\"original_quantity\":\"100\"},\"negative_graduated\":{\"corrected_net_minor\":\"11600\",\"corrected_quantity\":\"120\",\"delta_minor\":\"-2400\",\"original_net_minor\":\"14000\",\"original_quantity\":\"150\"},\"volume\":{\"corrected_net_minor\":\"12000\",\"corrected_quantity\":\"150\",\"delta_minor\":\"2000\",\"original_net_minor\":\"10000\",\"original_quantity\":\"100\"}},\"partial_cancel\":{\"corrected_minor\":\"1500\",\"delta_minor\":\"-1600\",\"effective_at\":\"2027-01-16T00:00:00Z\",\"full_minor\":\"3100\",\"period_end\":\"2027-02-01T00:00:00Z\",\"period_start\":\"2027-01-01T00:00:00Z\"},\"tax\":{\"corrected_net_minor\":\"12000\",\"current_rate_tax_minor\":\"3000\",\"original_net_minor\":\"10000\",\"original_rate_tax_minor\":\"2400\",\"original_tax_minor\":\"2000\"}}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "digest": "sha256:600966a4fa8ba4166b70e5831c0a5d60d2173899d2d3e63ee17dd2ebfe658da3"
+      }
+    }
+  ]
+}

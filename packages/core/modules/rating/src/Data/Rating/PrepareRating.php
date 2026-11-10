@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Billium\Rating\Data\Rating;
 
 use Billium\Contracts\Attributes\Api;
+use Billium\Contracts\Data\Envelopes\QuantitySnapshot;
 
 #[Api]
 final readonly class PrepareRating
@@ -12,7 +13,7 @@ final readonly class PrepareRating
     /**
      * Versions are pinned host agreement inputs, never current-price selectors (D56).
      *
-     * @param  list<array{componentRef: string, snapshotRef: string, priceRef: string, priceVersion: int}>  $components
+     * @param  list<array{componentRef: string, snapshotRef: string, priceRef: string, priceVersion: int, quantitySnapshot?: QuantitySnapshot}>  $components
      */
     public function __construct(
         public string $occurrenceRef,

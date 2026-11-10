@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Billium\Ledger\Internal;
 
 use Billium\Core\Contracts\CallerContext;
+use Billium\Ledger\Contracts\CorrectionCreditParticipants;
+use Billium\Ledger\Contracts\CorrectionLocks;
 use Billium\Ledger\Contracts\Ledger;
 use Billium\Ledger\Contracts\LedgerParticipants;
 use Billium\Ledger\Contracts\LedgerQueries;
@@ -13,6 +15,8 @@ use Billium\Ledger\Internal\Console\DrainParkedCommand;
 use Billium\Ledger\Internal\Console\ReconcileRefundsCommand;
 use Billium\Ledger\Internal\Observation\ObservationHandler;
 use Billium\Ledger\Internal\Observation\ObservationIntake;
+use Billium\Ledger\Internal\Participants\DatabaseCorrectionCreditParticipants;
+use Billium\Ledger\Internal\Participants\DatabaseCorrectionLocks;
 use Billium\Ledger\Internal\Participants\DatabaseLedgerParticipants;
 use Billium\Ledger\Internal\Queries\DatabaseLedgerQueries;
 use Billium\Ledger\Internal\Repositories\LedgerPrivileges;
@@ -27,6 +31,8 @@ final class LedgerServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(Ledger::class, LedgerFacade::class);
+        $this->app->bind(CorrectionLocks::class, DatabaseCorrectionLocks::class);
+        $this->app->bind(CorrectionCreditParticipants::class, DatabaseCorrectionCreditParticipants::class);
         $this->app->bind(LedgerParticipants::class, DatabaseLedgerParticipants::class);
         $this->app->bind(ObservationApplier::class, ObservationIntake::class);
         $this->app->bind(LedgerQueries::class, DatabaseLedgerQueries::class);

@@ -753,7 +753,14 @@
       },
       "retentionClass": "financial-permanent",
       "publicEvents": [],
-      "internalCommands": []
+      "internalCommands": [
+        {
+          "commandType": "rating.correction.applied.v1",
+          "commandSchema": "billium.command.v1",
+          "payloadSchemaRef": "spec/revisions/2026-10/schema/rating/correction-applied.v1.json",
+          "payloadSchemaDigest": "sha256:b36cd4245c03372730dba91f8908bc08a976e8c4dbc8685f5048530729d1d712"
+        }
+      ]
     },
     {
       "moduleId": "schedule",

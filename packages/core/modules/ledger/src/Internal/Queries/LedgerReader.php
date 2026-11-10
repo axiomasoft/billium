@@ -31,6 +31,18 @@ final readonly class LedgerReader
     }
 
     /** @return array<string, mixed> */
+    public function obligation(string $ref): array
+    {
+        $row = $this->one('billium_obligation', 'obligation_ref', $ref);
+        $invoice = $row->billed_invoice_id === null ? null : $this->scoped('billium_invoice')->where('id', $row->billed_invoice_id)->first();
+        if ($row->billed_invoice_id !== null && $invoice === null) {
+            throw self::unknown();
+        }
+
+        return [...View::obligation($row), 'billedInvoiceRef' => $invoice?->invoice_ref, 'billedInvoiceStatus' => $invoice?->status];
+    }
+
+    /** @return array<string, mixed> */
     public function invoice(string $ref): array
     {
         $row = $this->one('billium_invoice', 'invoice_ref', $ref);

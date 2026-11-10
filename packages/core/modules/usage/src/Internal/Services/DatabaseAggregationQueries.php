@@ -137,4 +137,14 @@ final readonly class DatabaseAggregationQueries implements AggregationQueries
             finalSnapshotRef: $snapshot === null ? null : AggregationRows::text($snapshot->snapshot_ref),
         );
     }
+
+    public function latePolicy(WindowSelector $window): array
+    {
+        $this->store->authorize($window);
+        $db = $this->store->database();
+        $policy = $this->store->policy(db: $db, window: $window);
+        $contract = $this->store->contract(db: $db, window: $window, policy: $policy);
+
+        return ['policy' => $contract->postFinalPolicy, 'reopenAllowed' => $contract->reopenAllowed];
+    }
 }

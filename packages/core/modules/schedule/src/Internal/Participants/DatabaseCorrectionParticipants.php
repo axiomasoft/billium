@@ -31,7 +31,11 @@ final readonly class DatabaseCorrectionParticipants implements CorrectionPartici
         if ($c->sellerRef !== $caller->sellerRef || $c->environment !== $caller->environment
             || $c->correctionRevision < 1 || $c->predecessorRevision !== ($c->correctionRevision === 1 ? null : $c->correctionRevision - 1)
             || (($c->taxCorrectionPolicyRef === null) !== ($c->taxCorrectionPolicyVersion === null))
-            || $c->obligationBasisRef !== CorrectionBasis::derive(parentOccurrenceRef: $c->parentOccurrenceRef, correctionRevision: $c->correctionRevision)) {
+            || ! in_array($c->obligationBasisRef, [
+                CorrectionBasis::derive(parentOccurrenceRef: $c->parentOccurrenceRef, correctionRevision: $c->correctionRevision),
+                CorrectionBasis::deriveLedger(originalBasisRef: $c->predecessorRatedBasisRef, parentOccurrenceRef: $c->parentOccurrenceRef, correctionRevision: $c->correctionRevision),
+                CorrectionBasis::deriveLedger(originalBasisRef: 'rating:'.$c->predecessorRatedBasisRef, parentOccurrenceRef: $c->parentOccurrenceRef, correctionRevision: $c->correctionRevision),
+            ], true)) {
             OccurrenceProblems::refuse('correction.conflict');
         }
         foreach ([$c->predecessorRatedBasisRef, $c->sourceFrontierDigest, $c->reasonCode, $c->obligationBasisRef] as $ref) {
