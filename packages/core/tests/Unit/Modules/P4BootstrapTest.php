@@ -43,9 +43,9 @@ final class P4BootstrapTest extends ModuleTestCase
             self::assertNotNull($descriptor);
             $checkpoint = new InstalledCheckpoint($module);
             self::assertSame(0, $checkpoint->schemaVersion);
-            self::assertSame(1, $descriptor->currentSchemaVersion);
-            self::assertCount(1, $descriptor->migrationIdentities);
-            self::assertCount(5, $descriptor->ownedTables);
+            self::assertSame(2, $descriptor->currentSchemaVersion);
+            self::assertCount(2, $descriptor->migrationIdentities);
+            self::assertCount(13, $descriptor->ownedTables);
             self::assertSame([], $checkpoint->appliedMigrations);
         }
     }
@@ -71,6 +71,13 @@ final class P4BootstrapTest extends ModuleTestCase
         self::assertArrayHasKey('Billium\\Rating\\Internal\\RatingServiceProvider', $app->getLoadedProviders());
         self::assertInstanceOf(PricingStrategyRegistry::class, $app->make(PricingStrategyRegistry::class));
         Container::setInstance(null);
+    }
+
+    public function test_rating_and_schedule_admit_unposted_basis_without_ledger(): void
+    {
+        foreach (['rating', 'schedule'] as $module) {
+            self::assertNotContains('ledger', self::catalog()->descriptor($module)->requiredModuleIds());
+        }
     }
 
     public function test_every_unavailable_runtime_operation_refuses_instead_of_inventing_zero(): void
@@ -136,5 +143,23 @@ final class P4BootstrapTest extends ModuleTestCase
                 self::assertSame(ProblemCode::ValidationInvalid, $exception->problem);
             }
         }
+    }
+
+    public function test_php_protocol_reaches_rating_quote_after_runtime_module_selection(): void
+    {
+        $root = dirname(__DIR__, 5);
+        $fixture = json_decode(file_get_contents($root.'/fixtures/vectors/rating/pipeline/graduated-original.json'), true, 128, JSON_THROW_ON_ERROR);
+        $process = new Process(command: [PHP_BINARY, 'conformance/adapters/php/bin/adapter.php'], cwd: $root,
+            env: TestEnvironment::suiteLeaseEnvironment());
+        $messages = [
+            ['type' => 'start', 'protocol' => 1],
+            ['type' => 'config', 'profile' => 'php'],
+            ['type' => 'run', 'id' => $fixture['id'], 'given' => $fixture['given'], 'script' => $fixture['script']],
+            ['type' => 'stop'],
+        ];
+        $process->setInput(implode("\n", array_map(static fn (array $message): string => json_encode($message, JSON_THROW_ON_ERROR), $messages))."\n");
+        self::assertSame(0, $process->run(), $process->getErrorOutput());
+        $outputs = array_map(static fn (string $line): array => json_decode($line, true, 128, JSON_THROW_ON_ERROR), explode("\n", trim($process->getOutput())));
+        self::assertSame($fixture['expect'], $outputs[2]['outputs']);
     }
 }

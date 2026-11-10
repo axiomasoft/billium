@@ -22,6 +22,7 @@ enum LockRank: int
     case UsageSeries = 35;
     case BillingSchedule = 40;
     case RatingPriceVersion = 44;
+    case RatingFrontier = 45;
     case BillingOccurrence = 50;
     case DunningCase = 60;
     case SettlementIntent = 65;

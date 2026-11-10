@@ -303,6 +303,72 @@ host grant owner supplies those windows; entitlement_grant and collection_* cann
 monetary occurrences. Collection references existing debt. This fixture establishes no live
 grant delivery or provider qualification (REQ-OWN-02/03, D56/D59, COV-500/544; owner schedule/host).
 
+## Rating runs & booking
+
+P4.7 freezes the account/customer attribution, agreement revision, original service interval,
+metric version, aggregate reference/digest and source completeness frontier, source digest,
+price/strategy/terms versions, commitment scope and already-booked basis digest, rounding and
+currency exponent versions, and the tax resolver/input/evidence snapshot. Explicit typed
+price and tax snapshots in retained inputs permit deterministic replay without current
+configuration or vendor access (D19/D22/D23/D56; COV-206…213/498; owner rating).
+
+| Table | Ownership and persistence |
+|:--|:--|
+| `billium_rating_run` | append-only retained FrozenRatingInputs and original period/account |
+| `billium_rating_rated_basis` | append-only original/correction basis, totals and input/rated digests |
+| `billium_rating_rated_line` | append-only relational price/metric/window/tax/rounding fields and exact intermediates |
+| `billium_rating_booking` | insert-once basis → obligation mapping, or explicit no-charge disposition |
+| `billium_rating_source_frontier` | scoped canonical lock heads; row-version and digest CAS |
+| `billium_rating_event` | append-only internal transactional outbox; never extends public v1 events |
+| `billium_rating_correction`, `billium_rating_correction_booking` | rating-owned schema provisioned by P4.7; financial writes belong to P4.8 |
+
+The original basis is unique per seller/environment/occurrence, independently of transport
+keys; its ledger basis is `rating:<basisRef>`. Inputs identity excludes volatile frontier
+coordinates and operation keys. Booking is unique per basis and per obligation basis. Each
+line and basis enforces gross = net + tax. Immutable triggers and SELECT/INSERT runtime
+privileges protect history; frontier updates require the next row version and preserve
+scope/key identity (INV-05/11/12/14, D19/D22/D23/D56/D60; owner rating/ledger).
+
+Quote computes from frozen inputs, returns financial=false and writes no state. Price and
+tax snapshot publication admit platform/rating only, so inputs can be provisioned while
+ledger is disabled. Prepare resolves pinned versions and tax outside the root; incomplete sources, unavailable retained
+aggregates, missing prices/tax and unknown policies hold work without inventing zero.
+An explicit zero price and frozen reason produce a no_charge disposition and no obligation
+(D55/D56/D60; owner rating).
+
+One `rating.book.v1` OperationRunner root asserts its live rating capability first, then
+acquires the complete UsageSeries (35) set through AggregationLocks, the sorted
+RatingFrontier (45) set, and BillingOccurrence (50) through OccurrenceLocks. Usage participants
+revalidate both snapshot identity and supplied quantity/window/frontier. Commitment heads
+share rank 45 with occurrence heads, using separate canonical keys; under that lock the
+root rechecks the digest and sum of booked contributions for the original commitment scope.
+This prevents parallel occurrences consuming the same minimum twice. Schedule revision
+and period/state are revalidated through the public schedule port (D27/D56/D60; owner
+usage/rating/schedule).
+
+The root calls the actual LedgerParticipants::recordObligation with the same context and
+gross Money. Detailed net/tax lines, occurrence/source and rated/input digests remain in
+immutable rating records linked by the stable ledger basis (P4.7 Q1=a, D56/D60; owner
+rating/ledger). A newly inserted obligation has no existing row for a rank-70 row lock;
+the locked occurrence/frontier serializes creation and ledger's scoped basis UNIQUE is
+the final creation arbiter. Existing debt is never changed by rating booking. Basis, lines,
+frontier, booking mapping, ledger obligation, root receipt, internal notification and ledger
+outbox commit or roll back together. Participants create no separate root/claim/outer receipt;
+there is no LedgerRecording placeholder or split commit (D27/D60/D63; owner rating/ledger).
+
+When ledger is disabled the closure admits usage/rating/schedule and stores an unposted
+basis while advancing the occurrence to rated. The rating and schedule descriptors therefore
+depend on platform (and schedule on rating); financial booking adds ledger explicitly.
+If lifecycle admission rejects disabled/absent ledger while desired configuration still
+lists it, that root rolls back before its body. A fresh root admits the unposted closure;
+schema incompatibility and refusals from other modules propagate without this fallback
+(D55/D60; owner platform/rating).
+After ledger admission resumes, the same frozen basis can be posted once without querying
+current prices/tax or re-inserting its lines. A changed commitment requires explicit repair
+rather than silently repricing that immutable basis. Booked and no-charge mappings are
+terminal. Legal issue/render and execution are independent optional capabilities
+(D55/D56/D60; REQ-OWN-03; owner platform/rating/schedule/ledger).
+
 ## Expand/contract и доказательства
 
 Migration identity и config key фиксируются с первого появления в `spec/identities.json` (M-28).

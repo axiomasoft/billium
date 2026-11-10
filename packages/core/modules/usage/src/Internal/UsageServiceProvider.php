@@ -7,12 +7,14 @@ namespace Billium\Usage\Internal;
 use Billium\Contracts\Contracts\Codec;
 use Billium\Core\Contracts\CallerContext;
 use Billium\Core\Contracts\OperationRunner;
+use Billium\Usage\Contracts\AggregationLocks;
 use Billium\Usage\Contracts\AggregationParticipants;
 use Billium\Usage\Contracts\AggregationQueries;
 use Billium\Usage\Contracts\AggregationService;
 use Billium\Usage\Contracts\SourceCompletenessIntake;
 use Billium\Usage\Contracts\Usage;
 use Billium\Usage\Contracts\UsageAttribution;
+use Billium\Usage\Internal\Participants\DatabaseAggregationLocks;
 use Billium\Usage\Internal\Participants\DatabaseAggregationParticipants;
 use Billium\Usage\Internal\Services\DatabaseAggregationQueries;
 use Billium\Usage\Internal\Services\DatabaseAggregationService;
@@ -31,6 +33,7 @@ final class UsageServiceProvider extends ServiceProvider
         $this->app->bind(AggregationService::class, DatabaseAggregationService::class);
         $this->app->bind(AggregationQueries::class, DatabaseAggregationQueries::class);
         $this->app->bind(AggregationParticipants::class, DatabaseAggregationParticipants::class);
+        $this->app->bind(AggregationLocks::class, DatabaseAggregationLocks::class);
         $this->app->bind(SourceCompletenessIntake::class, DatabaseSourceCompletenessIntake::class);
         $this->app->bindIf(UsageAttribution::class, UnresolvedAttribution::class);
         $this->app->bind(Usage::class, static fn (Application $app): DatabaseUsage => new DatabaseUsage(

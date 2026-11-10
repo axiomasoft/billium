@@ -64,7 +64,7 @@ final readonly class DatabasePriceVersionStore implements PriceVersionStore, Tax
         $digest = CanonicalJson::digest(['snapshot' => $snapshot, 'policy' => $policy]);
         $outcome = $this->runner->run(
             spec: new OperationSpec(commandKind: 'rating.tax_snapshot.freeze.v1', sellerRef: $caller->sellerRef, environment: $caller->environment,
-                mode: FinancialMode::Administrative, operationClass: ModuleOperationClass::NewIntent, modules: ['platform', 'ledger', 'rating'], commandKey: $commandKey, digest: $digest),
+                mode: FinancialMode::Administrative, operationClass: ModuleOperationClass::NewIntent, modules: ['platform', 'rating'], commandKey: $commandKey, digest: $digest),
             body: function (TransactionContext $context) use ($snapshot, $policy, $caller, $digest): PricePublishedReceipt {
                 $this->runner->assertCurrent(context: $context, moduleId: 'rating');
                 $db = $this->databases->connection($context->connectionName());
@@ -99,7 +99,7 @@ final readonly class DatabasePriceVersionStore implements PriceVersionStore, Tax
         $priceDigest = CanonicalJson::digest($price);
         $outcome = $this->runner->run(
             spec: new OperationSpec(commandKind: 'rating.price_version.publish.v1', sellerRef: $caller->sellerRef, environment: $caller->environment,
-                mode: FinancialMode::Administrative, operationClass: ModuleOperationClass::NewIntent, modules: ['platform', 'ledger', 'rating'],
+                mode: FinancialMode::Administrative, operationClass: ModuleOperationClass::NewIntent, modules: ['platform', 'rating'],
                 commandKey: $commandKey, digest: $priceDigest),
             body: function (TransactionContext $context) use ($price, $caller, $publicationKey, $priceDigest): PricePublishedReceipt {
                 $this->runner->assertCurrent(context: $context, moduleId: 'rating');

@@ -220,6 +220,22 @@ final class LedgerAdapter
                 /** @var list<string> */
                 public array $runtimeModules = [];
 
+                /** @return list<class-string> */
+                protected function getPackageProviders($app): array
+                {
+                    $providers = [BilliumCoreServiceProvider::class];
+                    // Testbench configures the environment after provider registration.
+                    // Enroll the selected binaries explicitly, before their boot/migration discovery.
+                    foreach ($this->runtimeModules as $module) {
+                        $provider = 'Billium\\'.ucfirst($module).'\\Internal\\'.ucfirst($module).'ServiceProvider';
+                        if (class_exists($provider)) {
+                            $providers[] = $provider;
+                        }
+                    }
+
+                    return $providers;
+                }
+
                 /** @param Application $app */
                 protected function defineEnvironment($app): void
                 {

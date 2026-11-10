@@ -668,25 +668,18 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "rating",
-      "currentSchemaVersion": 1,
+      "currentSchemaVersion": 2,
       "supportedSchemaReadRange": {
         "min": 1,
-        "max": 1
+        "max": 2
       },
       "supportedSchemaWriteRange": {
-        "min": 1,
-        "max": 1
+        "min": 2,
+        "max": 2
       },
       "requiresModules": [
         {
           "moduleId": "platform",
-          "apiRange": {
-            "min": "1.0.0",
-            "maxExclusive": "2.0.0"
-          }
-        },
-        {
-          "moduleId": "ledger",
           "apiRange": {
             "min": "1.0.0",
             "maxExclusive": "2.0.0"
@@ -708,7 +701,15 @@
         "billium_rating_price_version",
         "billium_rating_price_tier",
         "billium_rating_commitment_term",
-        "billium_rating_tax_snapshot"
+        "billium_rating_tax_snapshot",
+        "billium_rating_run",
+        "billium_rating_rated_basis",
+        "billium_rating_rated_line",
+        "billium_rating_booking",
+        "billium_rating_source_frontier",
+        "billium_rating_event",
+        "billium_rating_correction",
+        "billium_rating_correction_booking"
       ],
       "configKeys": [
         "billium.rating.enabled"
@@ -718,6 +719,11 @@
           "id": "2026_11_10_000100_create_rating_pricing_tables",
           "version": 1,
           "checksum": "sha256:3629e846aefbcb7d58194257e33f967d9d41a8f7fb667af0fa96377261452f0c"
+        },
+        {
+          "id": "2026_11_10_000400_create_rating_run_basis_booking",
+          "version": 2,
+          "checksum": "sha256:c33130b63a0c9cc04689f943130fd9ec4843cedee5a6ea5ef2af6daa38b2464a"
         }
       ],
       "disablePolicy": {
@@ -777,13 +783,6 @@
         },
         {
           "moduleId": "rating",
-          "apiRange": {
-            "min": "1.0.0",
-            "maxExclusive": "2.0.0"
-          }
-        },
-        {
-          "moduleId": "ledger",
           "apiRange": {
             "min": "1.0.0",
             "maxExclusive": "2.0.0"

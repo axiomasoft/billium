@@ -31,6 +31,14 @@ final readonly class DatabaseAggregationParticipants implements AggregationParti
         $db = $this->store->database($context->connectionName());
         $snapshot = $this->store->snapshot(db: $db, ref: $ref->snapshotRef) ?? throw UsageProblems::error('snapshot_superseded');
         $window = $this->store->window($snapshot);
+        if ($ref->quantity !== null || $ref->window !== null || $ref->frontierDigest !== null || $ref->quantityScale !== null) {
+            $retained = $this->store->hydrate(db: $db, snapshot: $snapshot);
+            if ($ref->quantity !== $retained->quantity || $ref->quantityScale !== $retained->quantityScale
+                || $ref->window === null || $ref->window->seriesKey() !== $retained->window->seriesKey()
+                || $ref->frontierDigest !== $retained->completeness->digest) {
+                throw UsageProblems::error('snapshot_superseded');
+            }
+        }
         // The current context API reasserts a planned lock. After rank 35 this is reentrant only;
         // omission from an outer rating plan fails the global lock order instead of racing a freeze.
         $context->lock(AggregateStore::lockRequest($window));

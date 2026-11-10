@@ -9,5 +9,9 @@ use Billium\Contracts\Attributes\Api;
 #[Api]
 final readonly class AggregateSnapshotRef
 {
-    public function __construct(public string $snapshotRef, public string $snapshotDigest) {}
+    public function __construct(
+        public string $snapshotRef, public string $snapshotDigest,
+        public ?string $quantity = null, public ?int $quantityScale = null,
+        public ?WindowSelector $window = null, public ?string $frontierDigest = null,
+    ) {}
 }

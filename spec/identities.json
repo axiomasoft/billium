@@ -3888,6 +3888,13 @@
     },
     {
       "kind": "migration",
+      "id": "2026_11_10_000400_create_rating_run_basis_booking",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/rating/2026_11_10_000400_create_rating_run_basis_booking.php"
+    },
+    {
+      "kind": "migration",
       "id": "2026_11_10_000500_create_billium_schedule_periods",
       "status": "new",
       "since": "2026-10",

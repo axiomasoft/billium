@@ -8,6 +8,30 @@ use LogicException;
 
 final class RatingRows
 {
+    public static function nullableText(mixed $value): ?string
+    {
+        return $value === null ? null : self::text($value);
+    }
+
+    /** @return numeric-string */
+    public static function decimal(mixed $value): string
+    {
+        if (is_int($value)) {
+            $value = (string) $value;
+        }
+        if (! is_string($value) || ! is_numeric($value) || preg_match('/^-?(0|[1-9][0-9]*)(?:\.[0-9]+)?$/D', $value) !== 1) {
+            throw new LogicException('Invalid stored exact rating number');
+        }
+
+        return $value;
+    }
+
+    /** @return list<string> */
+    public static function texts(mixed $value): array
+    {
+        return array_map(self::text(...), self::items($value));
+    }
+
     public static function text(mixed $value): string
     {
         if (! is_string($value)) {
