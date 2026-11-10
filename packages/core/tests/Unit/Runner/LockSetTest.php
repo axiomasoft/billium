@@ -23,7 +23,7 @@ final class LockSetTest extends TestCase
     public function test_rank_values_follow_the_single_global_order(): void
     {
         $values = array_map(static fn (LockRank $rank): int => $rank->value, LockRank::cases());
-        self::assertSame([10, 15, 20, 25, 30, 40, 50, 60, 65, 70, 80, 90, 100, 110, 115, 120, 130], $values);
+        self::assertSame([10, 15, 20, 25, 30, 35, 40, 50, 60, 65, 70, 80, 90, 100, 110, 115, 120, 130], $values);
         $sorted = $values;
         sort($sorted);
         self::assertSame($sorted, $values, 'cases are declared in lock order');
@@ -143,6 +143,22 @@ final class LockSetTest extends TestCase
                 $this->addToAssertionCount(1);
             }
         }
+    }
+
+    public function test_usage_series_is_reentrant_but_cannot_be_added_after_schedule(): void
+    {
+        $locks = $this->locks();
+        $locks->acquire(new LockRequest(
+            rank: LockRank::UsageSeries, table: 'billium_usage_aggregate_series_head', keys: ['series-a'], keyColumn: 'series_key',
+        ));
+        $locks->acquire(new LockRequest(rank: LockRank::BillingSchedule, table: 'billium_billing_schedule', keys: [1]));
+        self::assertSame(['series-a'], $locks->acquire(new LockRequest(
+            rank: LockRank::UsageSeries, table: 'billium_usage_aggregate_series_head', keys: ['series-a'], keyColumn: 'series_key',
+        )));
+        $this->expectException(LockOrderViolation::class);
+        $locks->acquire(new LockRequest(
+            rank: LockRank::UsageSeries, table: 'billium_usage_aggregate_series_head', keys: ['series-b'], keyColumn: 'series_key',
+        ));
     }
 
     /** @param list<int|string>|null $found */

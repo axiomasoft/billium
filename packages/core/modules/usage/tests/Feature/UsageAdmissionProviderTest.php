@@ -6,6 +6,10 @@ namespace Billium\Usage\Tests\Feature;
 
 use Billium\Core\BilliumCoreServiceProvider;
 use Billium\Core\Internal\Modules\ModuleCatalog;
+use Billium\Usage\Contracts\AggregationParticipants;
+use Billium\Usage\Contracts\AggregationQueries;
+use Billium\Usage\Contracts\AggregationService;
+use Billium\Usage\Contracts\SourceCompletenessIntake;
 use Billium\Usage\Contracts\Usage;
 use Billium\Usage\Internal\UsageServiceProvider;
 use Illuminate\Config\Repository;
@@ -23,7 +27,7 @@ final class UsageAdmissionProviderTest extends TestCase
         self::assertFalse($app->bound(Usage::class));
         self::assertArrayNotHasKey(UsageServiceProvider::class, $app->getLoadedProviders());
         self::assertSame(['platform', 'ledger'], $app['config']->get('billium.modules.enabled'));
-        self::assertSame(1, ModuleCatalog::packaged()->descriptor('usage')->currentSchemaVersion);
+        self::assertSame(2, ModuleCatalog::packaged()->descriptor('usage')->currentSchemaVersion);
         Container::setInstance(null);
     }
 
@@ -35,6 +39,14 @@ final class UsageAdmissionProviderTest extends TestCase
         ]]));
         $app->register(BilliumCoreServiceProvider::class);
         self::assertTrue($app->bound(Usage::class));
+        foreach ([
+            AggregationService::class,
+            AggregationQueries::class,
+            AggregationParticipants::class,
+            SourceCompletenessIntake::class,
+        ] as $contract) {
+            self::assertTrue($app->bound($contract));
+        }
         self::assertArrayHasKey(UsageServiceProvider::class, $app->getLoadedProviders());
         self::assertFalse($app->isBooted());
         Container::setInstance(null);

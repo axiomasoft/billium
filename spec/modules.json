@@ -570,14 +570,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "usage",
-      "currentSchemaVersion": 1,
+      "currentSchemaVersion": 2,
       "supportedSchemaReadRange": {
-        "min": 1,
-        "max": 1
+        "min": 2,
+        "max": 2
       },
       "supportedSchemaWriteRange": {
-        "min": 1,
-        "max": 1
+        "min": 2,
+        "max": 2
       },
       "requiresModules": [
         {
@@ -604,7 +604,17 @@
       "ownedTables": [
         "billium_usage_stream",
         "billium_usage_metric",
-        "billium_usage_fact"
+        "billium_usage_fact",
+        "billium_usage_source_finality_contract",
+        "billium_usage_aggregation_policy",
+        "billium_usage_source_head",
+        "billium_usage_source_completeness",
+        "billium_usage_aggregate_series_head",
+        "billium_usage_aggregate_snapshot",
+        "billium_usage_aggregate_member",
+        "billium_usage_aggregate_distinct_member",
+        "billium_usage_aggregate_reproducibility_event",
+        "billium_usage_aggregate_event"
       ],
       "configKeys": [
         "billium.usage.enabled"
@@ -614,6 +624,11 @@
           "id": "2026_11_10_000001_create_billium_usage",
           "version": 1,
           "checksum": "sha256:babb2ffad66761ffd9a5418d404c48be219cdc4aaeda0da3fd893e628343c053"
+        },
+        {
+          "id": "2026_11_10_000300_create_usage_aggregation_tables",
+          "version": 2,
+          "checksum": "sha256:fddc5d6362db244fd1218459bf6d3e7685c9b21b500f278ace2f08a97b9c8ffb"
         }
       ],
       "disablePolicy": {

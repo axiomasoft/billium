@@ -258,3 +258,81 @@ effective revision anti-join. Query tests содержат out-of-order/nanoseco
 EXPLAIN fixture с 2,000 rows. Между страницами новые corrections требуют fresh scan; final aggregate
 snapshot/frontier — владелец P4.3. Duration semantics пока unsupported contract-ом, поэтому GiST overlap
 index для duration не создаётся (D56; COV-334, owner usage; ACC-CON-12).
+
+## Usage aggregation (D13/D19/D22/D23/D27/D56/D63; owner usage, P4.3)
+
+Usage хранит immutable aggregation policies и source-finality contracts отдельно от immutable wire
+MetricVersion. Версия метрики остаётся непрозрачной строкой P4.2; алгоритмы замкнуты:
+`additive_sum@1`, `gauge_latest_as_of@1`, `gauge_max@1`, `gauge_time_weighted@1`,
+`distinct_exact_union@1`. Реестр отказывает неизвестным/approximate алгоритмам. DB adapter проверяет
+соответствие immutable model, grouping и полного набора источников. Текущий wire gauge допускает
+latest/max; time-weighted реализован в reducer registry и не подменяет wire latest/max
+(D13/D56; owner usage).
+
+| Таблица | Состояние и защита |
+|:--|:--|
+| `billium_usage_source_finality_contract` | append-only required sources, grace, post-final policy, reopening и digest |
+| `billium_usage_aggregation_policy` | append-only metric digest, algorithm/version, quantity scale, gauge и identity policies |
+| `billium_usage_source_head` | seller/environment/source row для сериализации внешнего evidence |
+| `billium_usage_source_completeness` | append-only source-assigned evidence sequence, range, watermark, status и repair reference |
+| `billium_usage_aggregate_series_head` | mutable head revision/digest и row-version CAS; canonical `series_key` |
+| `billium_usage_aggregate_snapshot` | immutable quantity, predecessor, completeness frontier и gauge reduction evidence |
+| `billium_usage_aggregate_member` | immutable effective fact revisions, digests, source, event time и exact unscaled input |
+| `billium_usage_aggregate_distinct_member` | controlled opaque member identities с identity key/namespace и contributing fact; только privileged erasure |
+| `billium_usage_aggregate_reproducibility_event` | append-only `retention_expired`/`erased` dispositions |
+| `billium_usage_aggregate_event` | immutable internal `usage.aggregate.frozen.v1` notification в Tx снапшота |
+
+Глобальный порядок дополняется `FeedPartition (30) < UsageSeries (35) < BillingSchedule (40)`.
+Freeze создаёт head через INSERT ON CONFLICT, берёт ranked row lock по canonical `series_key`,
+после чего читает все входные ревизии одним SQL statement. Intake evidence блокирует source head
+того же ранга. Snapshot, retained contributions, CAS head и internal notification коммитятся одной Tx.
+Нет сети, obligation или публичного v1/v2 outbox event. Внешний rating root заранее планирует
+`AggregateStore::lockRequest(window)`; participant reassert-ит этот lock через текущий LockSet,
+проверяет head, effective inputs, completeness и reproducibility. Пропущенный ранний lock
+после более высокого ранга отказывается по глобальному порядку (D27/D56/D63; owner usage).
+
+Effective revision выбирается до event-window filter; superseded/retracted вклады не складываются.
+Additive суммирует только effective quantities. Gauge заменяет ревизию факта отдельно от sample
+reducer; ties идут по event time/source/source sequence/fact identity, без arrival order.
+Carry и declared-zero заданы policy и сохраняются как reduction evidence; интерполяции нет.
+Time-weighted использует integer value-microseconds с одним явно выбранным округлением в конце.
+Distinct — union retained opaque hex64 IDs, а не сумма partial counts; contribution rows сохраняют
+shared member при замене другого contributing fact (D19/D56; owner usage).
+
+Canonical snapshot digest содержит ровно algorithm, metric (с definition digest), scoped group,
+window, quantity, effective members, distinct, completeness и reproducibility. Scoped group включает
+seller/environment и grouping dimensions; это различает даже пустые окна разных продавцов.
+Не входят receivedAt, ingest sequence, DB ids, local clock, snapshot revision и predecessor digest.
+Snapshot ref выводится из digest. Membership и exact member contributions сохраняются вместе с
+результатом: digest один не считается доказательством после pruning. При отсутствии command key
+повтор freeze сравнивает content digest с head; optional command key добавляет stored platform replay
+и конфликт при изменённом payload (D13/D19/D23/D56; owner usage).
+
+DB adapter изолирует P4.2 table knowledge. Group selector содержит registered dimensions и frozen
+subject/customer/billing-account/component/agreement/revision/attribution-version/mapping/period refs.
+Fact identity внутри aggregation — canonical `[source,factId]`, без межисточниковых коллизий.
+Source sequence отсутствует в текущем wire и остаётся null; tie использует source/fact identity.
+Event instants с ненулевой sub-microsecond частью отказываются явно, без truncation billable meaning.
+Received time и добавленный `ingest_seq` только информативны. Progress сравнивает effective membership;
+max ingest sequence не является доказательством completeness или commit frontier (D13/D56; owner usage).
+
+Completeness строится только из source evidence: больший evidence sequence перекрашивает диапазон.
+Все required sources должны покрывать [start,end) статусом complete и source watermark должен достичь
+end+grace. Delayed/gap/dropped/retention_expired удерживают freeze; repair/replay refs видны в query.
+Retry exhaustion сообщает внешний collector. Без snapshot query не возвращает quantity; при lag/hold
+также не выдаёт устаревшее количество как готовое к booking. Accept-adjust создаёт новый immutable
+snapshot с predecessor исходного окна; reject/manual-review и запрет reopening сохраняют прежний head.
+Поздние факты не переносятся в следующий период; денежную correction выполняет P4.8
+(D56/D63; COV-200/216/218; owner usage).
+
+Exact-distinct policy фиксирует identity namespace, key version и shared/source-scoped cross-source
+identity. Adapter выдаёт только opaque hex64, а его provenance.version должен совпадать с declared
+identity key version. Смена normalization/key требует новой metric version; raw PII не принимается
+и не включается в ошибки. Shared объединяет одинаковые IDs разных sources; source-scoped включает
+source в идентичность. Member tables доступны controlled runtime, публичные queries не раскрывают IDs.
+Owner-only `billium_usage_erase_distinct_members(seller,environment,snapshot_ids)` обнуляет IDs и
+атомарно добавляет erased event, сохраняя immutable quantity/history. Erasure исходных P4.2 facts
+координируется retention/privacy policy владельца отдельно; оставшаяся monetary snapshot не означает
+recomputable membership. Erased/expired либо потерянные retained source inputs запрещают финансовый
+replay; participant также отказывается. Численные retention horizons и законность сохранения денежных
+снапшотов задаёт host owner policy, а не эвристика агрегатора (D13/D56/D59; owner usage).

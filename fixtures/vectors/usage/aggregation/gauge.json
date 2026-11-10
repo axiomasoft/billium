@@ -1,0 +1,208 @@
+{
+  "id": "usage/aggregation/gauge",
+  "description": "P4.3 algorithm input executed by usage Pest tests; conformance verifies canonical fixture integrity, not the aggregation algorithm.",
+  "spec_refs": [
+    "D13",
+    "D19",
+    "D23",
+    "D56"
+  ],
+  "profiles": [
+    "php"
+  ],
+  "given": {
+    "aggregation": {
+      "tie_latest": {
+        "policy": {
+          "algorithm": "gauge_latest_as_of@1",
+          "carryForward": false,
+          "missingInitial": "refuse",
+          "scale": 0
+        },
+        "window": [
+          0,
+          3600
+        ],
+        "samples": [
+          {
+            "fact": "g1",
+            "q": "5",
+            "src": "s1",
+            "seq": 1,
+            "t": 100
+          },
+          {
+            "fact": "g2",
+            "q": "7",
+            "src": "s1",
+            "seq": 2,
+            "t": 100
+          },
+          {
+            "fact": "g3",
+            "q": "6",
+            "src": "s1",
+            "seq": 3,
+            "t": 200
+          }
+        ],
+        "expected": {
+          "quantity": "6"
+        },
+        "variant_end_150": {
+          "window": [
+            0,
+            150
+          ],
+          "expected": {
+            "quantity": "7"
+          }
+        }
+      },
+      "carry_ok": {
+        "policy": {
+          "algorithm": "gauge_latest_as_of@1",
+          "carryForward": true,
+          "maxCarrySeconds": 3600,
+          "missingInitial": "refuse",
+          "scale": 0
+        },
+        "window": [
+          0,
+          3600
+        ],
+        "samples": [
+          {
+            "fact": "g0",
+            "q": "4",
+            "src": "s1",
+            "seq": 1,
+            "t": -600
+          }
+        ],
+        "expected": {
+          "quantity": "4"
+        }
+      },
+      "carry_too_old": {
+        "policy": {
+          "algorithm": "gauge_latest_as_of@1",
+          "carryForward": true,
+          "maxCarrySeconds": 300,
+          "missingInitial": "refuse",
+          "scale": 0
+        },
+        "window": [
+          0,
+          3600
+        ],
+        "samples": [
+          {
+            "fact": "g0",
+            "q": "4",
+            "src": "s1",
+            "seq": 1,
+            "t": -600
+          }
+        ],
+        "expected": {
+          "error": "billium.usage.gauge_missing_initial"
+        }
+      },
+      "max": {
+        "policy": {
+          "algorithm": "gauge_max@1",
+          "carryForward": true,
+          "missingInitial": "refuse",
+          "scale": 0
+        },
+        "window": [
+          0,
+          3600
+        ],
+        "samples": [
+          {
+            "fact": "c",
+            "q": "5",
+            "src": "s1",
+            "seq": 1,
+            "t": -10
+          },
+          {
+            "fact": "a",
+            "q": "3",
+            "src": "s1",
+            "seq": 2,
+            "t": 10
+          },
+          {
+            "fact": "b",
+            "q": "9",
+            "src": "s1",
+            "seq": 3,
+            "t": 20
+          },
+          {
+            "fact": "d",
+            "q": "4",
+            "src": "s1",
+            "seq": 4,
+            "t": 30
+          }
+        ],
+        "expected": {
+          "quantity": "9"
+        }
+      },
+      "time_weighted": {
+        "policy": {
+          "algorithm": "gauge_time_weighted@1",
+          "carryForward": true,
+          "missingInitial": "refuse",
+          "scale": 0,
+          "unitSeconds": 3600,
+          "rounding": "half_up"
+        },
+        "window": [
+          0,
+          3600
+        ],
+        "samples": [
+          {
+            "fact": "c",
+            "q": "2",
+            "src": "s1",
+            "seq": 1,
+            "t": -10
+          },
+          {
+            "fact": "x",
+            "q": "6",
+            "src": "s1",
+            "seq": 2,
+            "t": 1800
+          }
+        ],
+        "expected": {
+          "quantity": "4",
+          "valueSeconds": "14400"
+        }
+      }
+    }
+  },
+  "script": [
+    {
+      "op": "canon.digest",
+      "args": {
+        "json_text": "{\"carry_ok\":{\"expected\":{\"quantity\":\"4\"},\"policy\":{\"algorithm\":\"gauge_latest_as_of@1\",\"carryForward\":true,\"maxCarrySeconds\":3600,\"missingInitial\":\"refuse\",\"scale\":0},\"samples\":[{\"fact\":\"g0\",\"q\":\"4\",\"seq\":1,\"src\":\"s1\",\"t\":-600}],\"window\":[0,3600]},\"carry_too_old\":{\"expected\":{\"error\":\"billium.usage.gauge_missing_initial\"},\"policy\":{\"algorithm\":\"gauge_latest_as_of@1\",\"carryForward\":true,\"maxCarrySeconds\":300,\"missingInitial\":\"refuse\",\"scale\":0},\"samples\":[{\"fact\":\"g0\",\"q\":\"4\",\"seq\":1,\"src\":\"s1\",\"t\":-600}],\"window\":[0,3600]},\"max\":{\"expected\":{\"quantity\":\"9\"},\"policy\":{\"algorithm\":\"gauge_max@1\",\"carryForward\":true,\"missingInitial\":\"refuse\",\"scale\":0},\"samples\":[{\"fact\":\"c\",\"q\":\"5\",\"seq\":1,\"src\":\"s1\",\"t\":-10},{\"fact\":\"a\",\"q\":\"3\",\"seq\":2,\"src\":\"s1\",\"t\":10},{\"fact\":\"b\",\"q\":\"9\",\"seq\":3,\"src\":\"s1\",\"t\":20},{\"fact\":\"d\",\"q\":\"4\",\"seq\":4,\"src\":\"s1\",\"t\":30}],\"window\":[0,3600]},\"tie_latest\":{\"expected\":{\"quantity\":\"6\"},\"policy\":{\"algorithm\":\"gauge_latest_as_of@1\",\"carryForward\":false,\"missingInitial\":\"refuse\",\"scale\":0},\"samples\":[{\"fact\":\"g1\",\"q\":\"5\",\"seq\":1,\"src\":\"s1\",\"t\":100},{\"fact\":\"g2\",\"q\":\"7\",\"seq\":2,\"src\":\"s1\",\"t\":100},{\"fact\":\"g3\",\"q\":\"6\",\"seq\":3,\"src\":\"s1\",\"t\":200}],\"variant_end_150\":{\"expected\":{\"quantity\":\"7\"},\"window\":[0,150]},\"window\":[0,3600]},\"time_weighted\":{\"expected\":{\"quantity\":\"4\",\"valueSeconds\":\"14400\"},\"policy\":{\"algorithm\":\"gauge_time_weighted@1\",\"carryForward\":true,\"missingInitial\":\"refuse\",\"rounding\":\"half_up\",\"scale\":0,\"unitSeconds\":3600},\"samples\":[{\"fact\":\"c\",\"q\":\"2\",\"seq\":1,\"src\":\"s1\",\"t\":-10},{\"fact\":\"x\",\"q\":\"6\",\"seq\":2,\"src\":\"s1\",\"t\":1800}],\"window\":[0,3600]}}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "digest": "sha256:8d60d3cee22b877b1ef2b0ef4d6e011eb39b588286310d2ab34747db0be84aae"
+      }
+    }
+  ]
+}

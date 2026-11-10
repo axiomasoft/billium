@@ -47,10 +47,11 @@
             "dist": {
                 "type": "path",
                 "url": "packages/core",
-                "reference": "3ff347a2962820bda826f1b7aaf53a69ebf7c8d6"
+                "reference": "e1d59bf396bff68d844f3680b72ea94c19f194a6"
             },
             "require": {
                 "axiomasoft/billium-contracts": "^0.1",
+                "ext-bcmath": "*",
                 "ext-pdo_pgsql": "*",
                 "laravel/framework": "^13.0",
                 "php": "^8.4"

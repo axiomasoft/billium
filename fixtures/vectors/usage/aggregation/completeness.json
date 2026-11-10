@@ -1,0 +1,172 @@
+{
+  "id": "usage/aggregation/completeness",
+  "description": "P4.3 algorithm input executed by usage Pest tests; conformance verifies canonical fixture integrity, not the aggregation algorithm.",
+  "spec_refs": [
+    "D13",
+    "D19",
+    "D23",
+    "D56"
+  ],
+  "profiles": [
+    "php"
+  ],
+  "given": {
+    "aggregation": {
+      "contract": {
+        "lateGraceSeconds": 300,
+        "requiredSources": [
+          "s1"
+        ]
+      },
+      "window": [
+        0,
+        3600
+      ],
+      "cases": [
+        {
+          "name": "qualified",
+          "evidence": [
+            {
+              "src": "s1",
+              "seq": 1,
+              "status": "complete",
+              "range": [
+                0,
+                3600
+              ],
+              "watermark": 3900
+            }
+          ],
+          "expected": {
+            "qualified": true
+          }
+        },
+        {
+          "name": "watermark_behind",
+          "evidence": [
+            {
+              "src": "s1",
+              "seq": 1,
+              "status": "complete",
+              "range": [
+                0,
+                3600
+              ],
+              "watermark": 3800
+            }
+          ],
+          "expected": {
+            "qualified": false,
+            "reason": "s1:watermark_behind"
+          }
+        },
+        {
+          "name": "dropped_after_retry_exhaustion",
+          "evidence": [
+            {
+              "src": "s1",
+              "seq": 1,
+              "status": "complete",
+              "range": [
+                0,
+                1800
+              ],
+              "watermark": 3900
+            },
+            {
+              "src": "s1",
+              "seq": 2,
+              "status": "dropped",
+              "range": [
+                1800,
+                3600
+              ],
+              "watermark": 3900,
+              "repair": "repair://s1/2027-01/segment-2"
+            }
+          ],
+          "expected": {
+            "qualified": false,
+            "quantityPresent": false,
+            "repairRefs": [
+              "repair://s1/2027-01/segment-2"
+            ]
+          }
+        },
+        {
+          "name": "retention_expired",
+          "evidence": [
+            {
+              "src": "s1",
+              "seq": 1,
+              "status": "retention_expired",
+              "range": [
+                0,
+                3600
+              ],
+              "watermark": 3900,
+              "repair": "replay://s1/blocked"
+            }
+          ],
+          "expected": {
+            "qualified": false,
+            "repairRefs": [
+              "replay://s1/blocked"
+            ]
+          }
+        },
+        {
+          "name": "repair_overrides_dropped",
+          "evidence": [
+            {
+              "src": "s1",
+              "seq": 1,
+              "status": "dropped",
+              "range": [
+                0,
+                3600
+              ],
+              "watermark": 3900,
+              "repair": "repair://x"
+            },
+            {
+              "src": "s1",
+              "seq": 2,
+              "status": "complete",
+              "range": [
+                0,
+                3600
+              ],
+              "watermark": 4000
+            }
+          ],
+          "expected": {
+            "qualified": true
+          }
+        },
+        {
+          "name": "no_evidence_is_gap_not_zero",
+          "evidence": [],
+          "expected": {
+            "qualified": false
+          }
+        }
+      ]
+    }
+  },
+  "script": [
+    {
+      "op": "canon.digest",
+      "args": {
+        "json_text": "{\"cases\":[{\"evidence\":[{\"range\":[0,3600],\"seq\":1,\"src\":\"s1\",\"status\":\"complete\",\"watermark\":3900}],\"expected\":{\"qualified\":true},\"name\":\"qualified\"},{\"evidence\":[{\"range\":[0,3600],\"seq\":1,\"src\":\"s1\",\"status\":\"complete\",\"watermark\":3800}],\"expected\":{\"qualified\":false,\"reason\":\"s1:watermark_behind\"},\"name\":\"watermark_behind\"},{\"evidence\":[{\"range\":[0,1800],\"seq\":1,\"src\":\"s1\",\"status\":\"complete\",\"watermark\":3900},{\"range\":[1800,3600],\"repair\":\"repair://s1/2027-01/segment-2\",\"seq\":2,\"src\":\"s1\",\"status\":\"dropped\",\"watermark\":3900}],\"expected\":{\"qualified\":false,\"quantityPresent\":false,\"repairRefs\":[\"repair://s1/2027-01/segment-2\"]},\"name\":\"dropped_after_retry_exhaustion\"},{\"evidence\":[{\"range\":[0,3600],\"repair\":\"replay://s1/blocked\",\"seq\":1,\"src\":\"s1\",\"status\":\"retention_expired\",\"watermark\":3900}],\"expected\":{\"qualified\":false,\"repairRefs\":[\"replay://s1/blocked\"]},\"name\":\"retention_expired\"},{\"evidence\":[{\"range\":[0,3600],\"repair\":\"repair://x\",\"seq\":1,\"src\":\"s1\",\"status\":\"dropped\",\"watermark\":3900},{\"range\":[0,3600],\"seq\":2,\"src\":\"s1\",\"status\":\"complete\",\"watermark\":4000}],\"expected\":{\"qualified\":true},\"name\":\"repair_overrides_dropped\"},{\"evidence\":[],\"expected\":{\"qualified\":false},\"name\":\"no_evidence_is_gap_not_zero\"}],\"contract\":{\"lateGraceSeconds\":300,\"requiredSources\":[\"s1\"]},\"window\":[0,3600]}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "digest": "sha256:f565d74e6eafa5e5d99f03fa27600daa219f0dfdc1f0d9deb65b383f789ef740"
+      }
+    }
+  ]
+}
