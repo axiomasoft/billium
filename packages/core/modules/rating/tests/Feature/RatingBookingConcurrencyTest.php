@@ -18,9 +18,58 @@ use Billium\Schedule\Enums\OccurrencePurpose;
 use Billium\Schedule\Tests\Support\Terms;
 use Billium\Usage\Tests\Support\UsageFixtures;
 use DateTimeImmutable;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 final class RatingBookingConcurrencyTest extends RatingTestCase
 {
+    /** @return iterable<string, array{string}> */
+    public static function pauseCases(): iterable
+    {
+        yield 'same-digest' => [self::inputDigest()];
+        yield 'new-digest' => ['sha256:'.str_repeat('b', 64)];
+    }
+
+    #[DataProvider('pauseCases')]
+    public function test_pause_invalidates_prepared_planned_occurrences_with_the_same_interval(string $digest): void
+    {
+        $service = $this->application()->make(OccurrenceService::class);
+        $ref = $this->occurrenceRef;
+        $prepared = $this->prepared();
+        $service->applyScheduleRevision(new ApplyScheduleRevision(sellerRef: 'seller-a', environment: 'test',
+            scheduleRef: 'schedule-a', expectedRevision: 1, expectedRowVersion: 1, newRevision: 2,
+            terms: Terms::make(['componentRef' => 'component-1', 'anchorLocal' => '2026-10-01T00:00:00',
+                'purpose' => 'usage_settlement', 'action' => 'pause']),
+            effectiveFrom: new DateTimeImmutable('2026-10-01Z'), inputsDigest: $digest, commandKey: 'pause'));
+        self::assertSame('cancelled', $this->value('SELECT state FROM billium_schedule_billing_occurrence WHERE occurrence_ref=?', [$ref]));
+        self::assertSame(1, $this->rows(table: 'billium_schedule_occurrence_amendment',
+            where: 'occurrence_ref=? AND schedule_revision=2 AND kind=?', bindings: [$ref, 'cancelled']));
+        try {
+            $this->book($prepared);
+            self::fail('Paused occurrence accepted');
+        } catch (ProblemException $error) {
+            self::assertSame('billium.rating.occurrence_not_bookable', $error->detail);
+        }
+        self::assertSame(0, array_sum($this->ratingCounts()));
+    }
+
+    public function test_a_same_interval_revision_refuses_a_previously_prepared_rating(): void
+    {
+        $prepared = $this->prepared();
+        $this->application()->make(OccurrenceService::class)->applyScheduleRevision(new ApplyScheduleRevision(
+            sellerRef: 'seller-a', environment: 'test', scheduleRef: 'schedule-a', expectedRevision: 1,
+            expectedRowVersion: 1, newRevision: 2, terms: Terms::make(['componentRef' => 'component-1',
+                'anchorLocal' => '2026-10-01T00:00:00', 'purpose' => 'usage_settlement', 'priceVersionRef' => 'price:2']),
+            effectiveFrom: new DateTimeImmutable('2026-10-01Z'), inputsDigest: self::inputDigest(), commandKey: 'revise-same-interval'));
+        self::assertSame('planned', $this->value('SELECT state FROM billium_schedule_billing_occurrence'));
+        try {
+            $this->book($prepared);
+            self::fail('Stale schedule revision accepted');
+        } catch (ProblemException $error) {
+            self::assertSame('billium.rating.occurrence_not_bookable', $error->detail);
+        }
+        self::assertSame(0, array_sum($this->ratingCounts()));
+    }
+
     public function test_five_workers_book_one_basis_and_one_obligation(): void
     {
         $prepared = $this->prepared();

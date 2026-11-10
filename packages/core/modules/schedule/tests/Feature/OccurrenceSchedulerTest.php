@@ -18,6 +18,11 @@ final class OccurrenceSchedulerTest extends OccurrenceTestCase
     public function test_future_pause_allows_earlier_intervals_and_stops_at_its_boundary(): void
     {
         $this->createSchedule();
+        $januaryRef = $this->occurrences()->ensureOccurrence($this->ensure())->body()['occurrenceRef'];
+        $marchRef = $this->occurrences()->ensureOccurrence($this->ensure([
+            'ordinal' => 2, 'commandKey' => 'pre-ensure-march',
+            'periodStart' => new DateTimeImmutable('2024-03-31Z'),
+            'periodEnd' => new DateTimeImmutable('2024-04-30Z')]))->body()['occurrenceRef'];
         $pauseDigest = 'sha256:'.str_repeat('b', 64);
         $this->occurrences()->applyScheduleRevision($this->revision([
             'expectedRevision' => 1, 'expectedRowVersion' => 1, 'newRevision' => 2, 'commandKey' => 'future-pause',
@@ -25,12 +30,14 @@ final class OccurrenceSchedulerTest extends OccurrenceTestCase
             'terms' => Terms::make(['purpose' => 'recurring_charge', 'action' => 'pause'])]));
         self::assertSame('active', $this->value('SELECT state FROM billium_schedule_billing_schedule'));
         self::assertTrue($this->value('SELECT runnable FROM billium_schedule_billing_schedule'));
+        self::assertSame('planned', $this->value('SELECT state FROM billium_schedule_billing_occurrence WHERE occurrence_ref=?', [$januaryRef]));
+        self::assertSame('cancelled', $this->value('SELECT state FROM billium_schedule_billing_occurrence WHERE occurrence_ref=?', [$marchRef]));
         $this->refusal(action: fn () => $this->occurrences()->ensureOccurrence($this->ensure([
             'scheduleRevision' => 2, 'ordinal' => 2, 'inputsDigest' => $pauseDigest, 'commandKey' => 'ensure-paused-march',
             'periodStart' => new DateTimeImmutable('2024-03-31T00:00:00Z'),
             'periodEnd' => new DateTimeImmutable('2024-04-30T00:00:00Z')])), detail: 'schedule.not_runnable');
         self::assertSame(0, $this->rows(table: 'billium_schedule_billing_occurrence',
-            where: 'period_start=? AND period_end=?', bindings: ['2024-03-31T00:00:00Z', '2024-04-30T00:00:00Z']));
+            where: 'period_start=? AND period_end=? AND state=?', bindings: ['2024-03-31T00:00:00Z', '2024-04-30T00:00:00Z', 'planned']));
         $january = $this->occurrences()->materializeNext($this->materialize(key: 'january', version: 2))->body();
         self::assertSame('2024-01-31T00:00:00.000000Z', $january['periodStart']);
         self::assertSame(1, $january['cursorOrdinal']);
@@ -43,7 +50,7 @@ final class OccurrenceSchedulerTest extends OccurrenceTestCase
         self::assertNull($this->value('SELECT next_occurrence_at FROM billium_schedule_billing_schedule'));
         self::assertSame(2, $this->value('SELECT cursor_ordinal FROM billium_schedule_billing_schedule'));
         $this->refusal(fn () => $this->occurrences()->materializeNext($this->materialize(key: 'march', version: 4)), 'schedule.not_runnable');
-        self::assertSame(2, $this->rows('billium_schedule_billing_occurrence'));
+        self::assertSame(3, $this->rows('billium_schedule_billing_occurrence'));
     }
 
     public function test_future_dated_revision_does_not_override_earlier_unmaterialized_or_pre_ensured_interval(): void

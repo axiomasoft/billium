@@ -47,6 +47,7 @@ use Billium\Rating\Data\Tax\TaxCorrectionRequest;
 use Billium\Rating\Data\Tax\TaxResolutionRequest;
 use Billium\Rating\Data\Tax\TaxSnapshot;
 use Billium\Rating\Enums\BookingOutcome;
+use Billium\Rating\Enums\ChargeKind;
 use Billium\Rating\Enums\CorrectionKind;
 use Billium\Rating\Enums\IncrementMode;
 use Billium\Rating\Enums\ProrationPolicyId;
@@ -113,6 +114,85 @@ final class P4ModuleCompositionTest extends CompositionTestCase
         } else {
             self::assertFalse($this->application()->bound(Usage::class));
         }
+    }
+
+    /** @return iterable<string, array{StrategyId}> */
+    public static function zeroQuantityCases(): iterable
+    {
+        foreach ([StrategyId::PerUnit, StrategyId::TieredGraduated, StrategyId::TieredVolume] as $strategy) {
+            yield $strategy->value => [$strategy];
+        }
+    }
+
+    #[DataProvider('zeroQuantityCases')]
+    public function test_approved_zero_quantity_at_a_nonzero_tariff_books_without_an_obligation(StrategyId $strategy): void
+    {
+        $request = $this->approvedQuantityRequest(strategy: $strategy);
+        $quantity = $request->components[0]['quantitySnapshot'] ?? null;
+        self::assertInstanceOf(QuantitySnapshot::class, $quantity);
+        $codec = new Codec;
+        $raw = RatingRows::map(json_decode($codec->encode($quantity), true, 64, JSON_THROW_ON_ERROR));
+        $raw['quantity'] = '0';
+        $raw['digest'] = $codec->digest($raw);
+        $components = $request->components;
+        $components[0]['quantitySnapshot'] = $codec->decode($codec->canonicalize($raw));
+        $prepared = $this->application()->make(RatingPreparer::class)->prepare(FixtureArguments::construct(
+            class: PrepareRating::class, arguments: [...get_object_vars($request), 'components' => $components,
+                'noChargeReason' => 'approved_zero_quantity']));
+        self::assertInstanceOf(PreparedRating::class, $prepared, json_encode($prepared, JSON_THROW_ON_ERROR));
+        self::assertSame('0', $prepared->draft->grossMinor);
+        self::assertSame(ChargeKind::NoCharge, $prepared->draft->chargeKind);
+        self::assertSame('approved_zero_quantity', $prepared->draft->noChargeReason);
+        config(['billium.modules.enabled' => ['platform', 'ledger', 'rating', 'schedule']]);
+        $this->application()->register(LedgerServiceProvider::class);
+        $this->migrateModules();
+        $this->application()->forgetInstance(DatabaseInstallation::class);
+        $this->application()->make(Installation::class)->init('inst-test');
+        $receipt = $this->application()->make(RatingBooking::class)->book(new BookRatedBasis(
+            prepared: $prepared, operationKey: 'zero-quantity'));
+        self::assertSame(BookingOutcome::NoCharge, $receipt->outcome);
+        self::assertNull($receipt->obligationRef);
+        self::assertSame(0, $this->owner()->table('billium_obligation')->count());
+    }
+
+    #[DataProvider('zeroQuantityCases')]
+    public function test_a_nonzero_quantity_rounded_to_zero_still_requires_a_zero_tariff(StrategyId $strategy): void
+    {
+        $request = $this->approvedQuantityRequest(strategy: $strategy, unitPrice: '0.0001');
+        $result = $this->application()->make(RatingPreparer::class)->prepare(FixtureArguments::construct(
+            class: PrepareRating::class, arguments: [...get_object_vars($request), 'noChargeReason' => 'approved_zero_quantity']));
+        self::assertInstanceOf(RatingHold::class, $result);
+        self::assertSame('billium.rating.zero_price_not_declared', $result->detail);
+        self::assertSame(0, $this->owner()->table('billium_rating_run')->count());
+    }
+
+    public function test_a_pause_preserves_an_unposted_basis_but_refuses_its_later_posting(): void
+    {
+        $prepared = $this->prepared();
+        $booking = $this->application()->make(RatingBooking::class);
+        self::assertSame(BookingOutcome::Unposted, $booking->book(new BookRatedBasis(
+            prepared: $prepared, operationKey: 'unposted-before-pause'))->outcome);
+        $this->application()->make(OccurrenceService::class)->applyScheduleRevision(new ApplyScheduleRevision(
+            sellerRef: 'seller-a', environment: 'test', scheduleRef: 'monthly', expectedRevision: 1,
+            expectedRowVersion: 1, newRevision: 2, terms: Terms::make(['anchorLocal' => '2026-10-01T00:00:00',
+                'priceVersionRef' => 'monthly@1', 'purpose' => 'recurring_charge', 'action' => 'pause']),
+            effectiveFrom: new DateTimeImmutable('2026-10-01Z'), inputsDigest: $prepared->inputs->occurrenceInputsDigest,
+            commandKey: 'pause-unposted'));
+        self::assertSame('rated', $this->owner()->table('billium_schedule_billing_occurrence')->value('state'));
+        config(['billium.modules.enabled' => ['platform', 'ledger', 'rating', 'schedule']]);
+        $this->application()->register(LedgerServiceProvider::class);
+        $this->migrateModules();
+        $this->application()->forgetInstance(DatabaseInstallation::class);
+        $this->application()->make(Installation::class)->init('inst-test');
+        try {
+            $booking->book(new BookRatedBasis(prepared: $prepared, operationKey: 'post-after-pause'));
+            self::fail('Paused unposted basis created an obligation');
+        } catch (ProblemException $error) {
+            self::assertSame('billium.rating.occurrence_not_bookable', $error->detail);
+        }
+        self::assertSame(1, $this->owner()->table('billium_rating_rated_basis')->count());
+        self::assertSame(0, $this->owner()->table('billium_obligation')->count());
+        self::assertSame(0, $this->owner()->table('billium_rating_booking')->count());
     }
 
     /** @return iterable<string, array{string, mixed}> */
@@ -186,7 +266,7 @@ final class P4ModuleCompositionTest extends CompositionTestCase
         self::assertSame(0, $this->owner()->table('billium_rating_run')->count());
     }
 
-    private function approvedQuantityRequest(StrategyId $strategy = StrategyId::PerUnit, bool $withUsage = false, string $selector = 'seats-1', ?TaxSnapshotPort $tax = null): PrepareRating
+    private function approvedQuantityRequest(StrategyId $strategy = StrategyId::PerUnit, bool $withUsage = false, string $selector = 'seats-1', ?TaxSnapshotPort $tax = null, string $unitPrice = '1'): PrepareRating
     {
         if ($withUsage) {
             config(['billium.modules.enabled' => ['platform', 'rating', 'schedule', 'usage'], 'billium.usage.enabled' => true]);
@@ -197,9 +277,9 @@ final class P4ModuleCompositionTest extends CompositionTestCase
         }
         $base = $this->prepared(tax: $tax)->inputs;
         $terms = match ($strategy) {
-            StrategyId::PerUnit => new PerUnitTerms(unitPrice: '1'),
-            StrategyId::TieredGraduated => new GraduatedTerms(tiers: [new Tier(index: 0, lower: '0', upper: null, unitPrice: '1', flatFee: '0')]),
-            StrategyId::TieredVolume => new VolumeTerms(tiers: [new Tier(index: 0, lower: '0', upper: null, unitPrice: '1', flatFee: '0')]),
+            StrategyId::PerUnit => new PerUnitTerms(unitPrice: $unitPrice),
+            StrategyId::TieredGraduated => new GraduatedTerms(tiers: [new Tier(index: 0, lower: '0', upper: null, unitPrice: $unitPrice, flatFee: '0')]),
+            StrategyId::TieredVolume => new VolumeTerms(tiers: [new Tier(index: 0, lower: '0', upper: null, unitPrice: $unitPrice, flatFee: '0')]),
             default => throw new \LogicException('Unsupported quantity test strategy'),
         };
         $args = [...get_object_vars($base->prices[0]->snapshot), 'priceRef' => 'seats', 'strategyId' => $strategy, 'unit' => 'seat', 'terms' => $terms, 'termsDigest' => 'draft'];

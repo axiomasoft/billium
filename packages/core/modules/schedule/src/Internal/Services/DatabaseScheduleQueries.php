@@ -24,8 +24,17 @@ final readonly class DatabaseScheduleQueries implements ScheduleQueries
     public function occurrence(string $occurrenceRef): ?array
     {
         $row = $this->store->occurrence(ref: $occurrenceRef, activeOnly: false);
+        if ($row === null) {
+            return null;
+        }
+        $revisions = $this->store->database()->table('billium_schedule_billing_schedule_revision')
+            ->where('schedule_id', $row->schedule_id);
+        $applicable = (clone $revisions)->where('effective_from', '<=', $row->period_start)->orderByDesc('revision')->first()
+            ?? $revisions->orderBy('revision')->first();
 
-        return $row === null ? null : Payload::map(get_object_vars($row));
+        return [...Payload::map(get_object_vars($row)), 'applicable_revision' => $applicable === null ? null : Payload::integer($applicable->revision),
+            'applicable_inputs_digest' => $applicable?->inputs_digest,
+            'applicable_action' => $applicable === null ? null : (Payload::decode($applicable->terms)['action'] ?? null)];
     }
 
     public function dueSchedules(string $sellerRef, DateTimeImmutable $asOf, int $limit = 100, ?string $cursor = null): DueBatch

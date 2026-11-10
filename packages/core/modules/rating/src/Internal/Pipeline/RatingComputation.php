@@ -62,7 +62,7 @@ final readonly class RatingComputation implements RatingQuoter
         }
         $priced = $groups = $groupFor = [];
         $last = '';
-        $zeroPrices = true;
+        $declaredZeroTotal = true;
         foreach ($inputs->aggregates as $i => $aggregate) {
             $window = RatingRows::map($aggregate->snapshot['window'] ?? null);
             $group = RatingRows::map($window['group'] ?? null);
@@ -91,7 +91,6 @@ final readonly class RatingComputation implements RatingQuoter
             }
             $last = $aggregate->componentRef;
             $commitment = $snapshot->commitment;
-            $zeroPrices = $zeroPrices && self::declaresZero($snapshot);
             if ($commitment !== null && $tax->mode === 'inclusive') {
                 self::refuse('unsupported_combination');
             }
@@ -104,6 +103,10 @@ final readonly class RatingComputation implements RatingQuoter
             $result = $this->strategies->resolve(id: $snapshot->strategyId, version: $snapshot->strategyVersion)->price(
                 new PricingInput(price: $snapshot, quantity: $aggregate->quantity,
                     commitmentBasis: $commitment === null ? null : new CommitmentBasis(alreadyBilledNetMinor: $price->alreadyBilledNetMinor ?? '', basisDigest: $price->commitmentBasisDigest ?? '')));
+            $declaredZeroTotal = $declaredZeroTotal && (self::declaresZero($snapshot)
+                || (! $snapshot->terms instanceof FixedTerms && Dec::parse($aggregate->quantity)->isZero()
+                    && Dec::parse($result->billableQuantity)->isZero() && Dec::parse($result->rawAmount)->isZero()
+                    && Dec::parse($result->pricedAmount)->isZero()));
             $rawPricedAmount = $result->pricedAmount;
             if ($proration !== null) {
                 $minor = (new ProrationCalculator)->prorateMinor(fullMajor: Dec::parse($result->pricedAmount), exponent: $inputs->currencyExponent,
@@ -157,7 +160,7 @@ final readonly class RatingComputation implements RatingQuoter
             $gross = bcadd($gross, RatingRows::decimal($amounts['gross']), 0);
         }
         MoneyFactory::fromMinor(minor: $gross, currency: $inputs->currency, exponent: $inputs->currencyExponent);
-        if ($gross === '0' && ! $zeroPrices && $predecessorBasisRef === null) {
+        if ($gross === '0' && ! $declaredZeroTotal && $predecessorBasisRef === null) {
             self::refuse('zero_price_not_declared');
         }
         if (bccomp($gross, '0', 0) < 0 || ($gross === '0' && $predecessorBasisRef === null && ($inputs->noChargeReason === null || $inputs->noChargeReason === ''))

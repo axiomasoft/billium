@@ -146,6 +146,12 @@ final readonly class DatabaseOccurrenceService implements OccurrenceService
                 $head->current_revision = $command->newRevision;
                 // Free all changed planned intervals first, so shifted adjacent replacements do not self-overlap.
                 foreach ($changes as [$row,$ensure,$replacement,$replacementRef]) {
+                    if ($terms->action === 'pause' && $row->state === 'planned') {
+                        $this->store->query(table: 'billing_occurrence', context: $context)->where('id', $row->id)
+                            ->update(['state' => 'cancelled', 'row_version' => $this->store->database($context)->raw('row_version+1')]);
+
+                        continue;
+                    }
                     if ($replacementRef !== $row->occurrence_ref && $row->state === 'planned') {
                         $this->store->query(table: 'billing_occurrence', context: $context)->where('id', $row->id)
                             ->update(['state' => 'superseded', 'superseded_by_occurrence_ref' => $replacementRef,
@@ -153,6 +159,12 @@ final readonly class DatabaseOccurrenceService implements OccurrenceService
                     }
                 }
                 foreach ($changes as [$row,$ensure,$replacement,$replacementRef]) {
+                    if ($terms->action === 'pause') {
+                        $this->store->amendment(context: $context, row: $row, revision: $command->newRevision,
+                            kind: $row->state === 'planned' ? 'cancelled' : 'amendment_required', detail: ['action' => 'pause']);
+
+                        continue;
+                    }
                     if ($replacementRef === $row->occurrence_ref && $row->inputs_digest === $command->inputsDigest) {
                         $this->store->amendment(context: $context, row: $row, revision: $command->newRevision, kind: 'revision_confirmed');
 
