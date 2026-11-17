@@ -3922,6 +3922,20 @@
       "source": "packages/core/database/migrations/schedule/2026_11_10_000620_allow_rated_correction_parents.php"
     },
     {
+      "kind": "migration",
+      "id": "2026_11_17_000900_bind_usage_metric_and_snapshot_semantics",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/usage/2026_11_17_000900_bind_usage_metric_and_snapshot_semantics.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_17_000901_validate_usage_metric_and_snapshot_semantics",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/usage/2026_11_17_000901_validate_usage_metric_and_snapshot_semantics.php"
+    },
+    {
       "kind": "doctor-finding",
       "id": "module.composition_forbidden",
       "status": "new",

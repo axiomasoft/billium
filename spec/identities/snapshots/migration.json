@@ -32,5 +32,7 @@
   "2026_11_10_000500_create_billium_schedule_periods",
   "2026_11_10_000600_create_billium_schedule_occurrences",
   "2026_11_10_000610_create_billium_schedule_billing_correction",
-  "2026_11_10_000620_allow_rated_correction_parents"
+  "2026_11_10_000620_allow_rated_correction_parents",
+  "2026_11_17_000900_bind_usage_metric_and_snapshot_semantics",
+  "2026_11_17_000901_validate_usage_metric_and_snapshot_semantics"
 ]
