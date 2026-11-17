@@ -15,7 +15,8 @@ final class P4MigrationSafetyTest extends TestCase
     public static function migrations(): iterable
     {
         foreach (['usage', 'rating', 'schedule'] as $module) {
-            foreach (glob(dirname(__DIR__, 5).'/packages/core/database/migrations/'.$module.'/2026_11_10_*.php') ?: [] as $path) {
+            $paths = glob(dirname(__DIR__, 5).'/packages/core/database/migrations/'.$module.'/*.php');
+            foreach ($paths === false ? [] : $paths as $path) {
                 yield basename($path) => [$path];
             }
         }

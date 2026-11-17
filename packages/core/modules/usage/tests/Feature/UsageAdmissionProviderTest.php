@@ -29,8 +29,9 @@ final class UsageAdmissionProviderTest extends TestCase
         self::assertSame(['platform', 'ledger'], $app->make(\Illuminate\Contracts\Config\Repository::class)->get('billium.modules.enabled'));
         $descriptor = ModuleCatalog::packaged()->descriptor('usage');
         self::assertNotNull($descriptor);
-        self::assertSame(2, $descriptor->currentSchemaVersion);
-        Container::setInstance(null);
+        self::assertSame(4, $descriptor->currentSchemaVersion);
+        self::assertCount(4, $descriptor->migrationIdentities);
+        Container::setInstance();
     }
 
     public function test_explicit_host_enable_discovers_owned_provider_without_booting_or_installing(): void
@@ -44,6 +45,6 @@ final class UsageAdmissionProviderTest extends TestCase
         }
         self::assertArrayHasKey(UsageServiceProvider::class, $app->getLoadedProviders());
         self::assertFalse($app->isBooted());
-        Container::setInstance(null);
+        Container::setInstance();
     }
 }

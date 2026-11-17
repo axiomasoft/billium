@@ -570,14 +570,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "usage",
-      "currentSchemaVersion": 2,
+      "currentSchemaVersion": 4,
       "supportedSchemaReadRange": {
-        "min": 2,
-        "max": 2
+        "min": 4,
+        "max": 4
       },
       "supportedSchemaWriteRange": {
-        "min": 2,
-        "max": 2
+        "min": 4,
+        "max": 4
       },
       "requiresModules": [
         {
@@ -629,6 +629,16 @@
           "id": "2026_11_10_000300_create_usage_aggregation_tables",
           "version": 2,
         "checksum": "sha256:f2fe85f16d426db5d76d7cc3bdfd31b6546a9db5717a3dcae22d970686712fa2"
+        },
+        {
+          "id": "2026_11_17_000900_bind_usage_metric_and_snapshot_semantics",
+          "version": 3,
+          "checksum": "sha256:d51f307a0c4343c3ab45b726d2b2b1e450710163b8a42cd4aaf7cc0d926b4104"
+        },
+        {
+          "id": "2026_11_17_000901_validate_usage_metric_and_snapshot_semantics",
+          "version": 4,
+          "checksum": "sha256:45d89d7504d5a48ba81ce097d91bea387be42245eed11565e9e5c9efac441cce"
         }
       ],
       "disablePolicy": {

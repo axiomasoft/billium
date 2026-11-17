@@ -16,7 +16,7 @@ use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\Group;
 
 #[Group('pg')]
-final class LateUsageCorrectionTest_Reject extends RatingTestCase
+final class LateUsageCorrectionRejectTest extends RatingTestCase
 {
     protected function policy(LatePolicy $late = LatePolicy::AcceptAdjust, ?MetricVersion $metric = null, string $algorithm = 'additive_sum',
         int $scale = 9, bool $carry = false, string $missingInitial = 'refuse', ?string $definitionDigest = null, int $algorithmVersion = 1): void

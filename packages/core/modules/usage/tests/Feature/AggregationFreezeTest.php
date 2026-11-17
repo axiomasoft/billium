@@ -322,7 +322,8 @@ final class AggregationFreezeTest extends AggregationTestCase
 
     public function test_aggregation_definition_digest_mismatch_never_writes_a_snapshot(): void
     {
-        $this->policy(definitionDigest: 'sha256:'.str_repeat('0', 64));
+        $this->policy();
+        $this->application()->instance(EffectiveFactSource::class, new ReplayFactSource('sha256:'.str_repeat('0', 64)));
         $this->completeness();
         $this->domainRefusal(fn () => $this->freeze(), 'snapshot_digest_mismatch');
         self::assertSame(0, $this->rows('billium_usage_aggregate_snapshot'));
