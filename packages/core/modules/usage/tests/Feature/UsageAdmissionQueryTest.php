@@ -68,6 +68,10 @@ final class UsageAdmissionQueryTest extends UsageTestCase
         $encoded = json_encode($plan, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR);
         self::assertStringContainsString('billium_usage_subject_window', $encoded);
         self::assertCount(5, $rows);
-        file_put_contents(dirname(__DIR__, 6).'/.phpunit.cache/p4.2/usage-explain.json', $encoded);
+        $artifactDirectory = dirname(__DIR__, 6).'/.phpunit.cache/p4.2';
+        if (! is_dir($artifactDirectory)) {
+            self::assertTrue(mkdir($artifactDirectory, 0777, true));
+        }
+        self::assertNotFalse(file_put_contents($artifactDirectory.'/usage-explain.json', $encoded));
     }
 }
