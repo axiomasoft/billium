@@ -12,6 +12,7 @@ use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Tests\Support\Concurrency\Scenario;
 use Billium\Core\Tests\Support\FixedCallerContext;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Ledger\Contracts\Ledger;
 use Billium\Ledger\Contracts\ObservationApplier;
 use Billium\Ledger\Data\Allocations\Allocate;
@@ -34,6 +35,7 @@ final readonly class ObservationScenario implements Scenario
         $authorities = is_array($granted) ? array_values(array_filter($granted, is_string(...))) : ObservationTestCase::AUTHORITIES;
         $app->instance(CallerContext::class, new FixedCallerContext(new Caller('seller-a', 'test', PlatformTestCase::INSTALLATION, 'actor-'.$index, $authorities)));
         $app->instance(FinancialSessionAdmission::class, new FixedSessionAdmission(FixedSessionAdmission::token(PlatformTestCase::INSTALLATION, processRef: 'process-'.$index)));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($app);
     }
 
     /** @param array<string, mixed> $args */

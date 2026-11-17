@@ -1277,6 +1277,208 @@
             "enum_backing": null,
             "enum_cases": []
         },
+        "Billium\\Contracts\\Data\\Envelopes\\AuthorizePayment": {
+            "kind": "class",
+            "layer": "api",
+            "since": "1.0",
+            "final": true,
+            "readonly": true,
+            "abstract": false,
+            "extends": [
+                "Billium\\Contracts\\Data\\Envelope"
+            ],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "__construct": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "raw",
+                            "type": "stdClass",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "commandKey",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "installationRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "environment",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "sellerRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "operationRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "operationKind",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "source",
+                            "type": "stdClass",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "executionProfile",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "routingEpoch",
+                            "type": "int",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "merchantAccountRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "money",
+                            "type": "Billium\\Contracts\\Data\\Money",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "bindingRevision",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "requestedAt",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "digest",
+                            "type": "?string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": true,
+                            "default": "null",
+                            "flags": 1
+                        },
+                        {
+                            "name": "returnContextRef",
+                            "type": "?string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": true,
+                            "default": "null",
+                            "flags": 1
+                        }
+                    ],
+                    "return": null,
+                    "doc": []
+                },
+                "fromRaw": {
+                    "visibility": "public",
+                    "static": true,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "raw",
+                            "type": "stdClass",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "self",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [
+                {
+                    "name": "SCHEMA",
+                    "type": "string",
+                    "visibility": "public",
+                    "final": false
+                }
+            ],
+            "enum_backing": null,
+            "enum_cases": []
+        },
         "Billium\\Contracts\\Data\\Envelopes\\BilliumQuery": {
             "kind": "class",
             "layer": "api",
@@ -1484,6 +1686,163 @@
                         },
                         {
                             "name": "operationRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "digest",
+                            "type": "?string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": true,
+                            "default": "null",
+                            "flags": 1
+                        }
+                    ],
+                    "return": null,
+                    "doc": []
+                },
+                "fromRaw": {
+                    "visibility": "public",
+                    "static": true,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "raw",
+                            "type": "stdClass",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "self",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [
+                {
+                    "name": "SCHEMA",
+                    "type": "string",
+                    "visibility": "public",
+                    "final": false
+                }
+            ],
+            "enum_backing": null,
+            "enum_cases": []
+        },
+        "Billium\\Contracts\\Data\\Envelopes\\CapturePayment": {
+            "kind": "class",
+            "layer": "api",
+            "since": "1.0",
+            "final": true,
+            "readonly": true,
+            "abstract": false,
+            "extends": [
+                "Billium\\Contracts\\Data\\Envelope"
+            ],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "__construct": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "raw",
+                            "type": "stdClass",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "commandKey",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "installationRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "environment",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "sellerRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "operationRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "originalOperationRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "source",
+                            "type": "stdClass",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "money",
+                            "type": "Billium\\Contracts\\Data\\Money",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "requestedAt",
                             "type": "string",
                             "by_reference": false,
                             "variadic": false,
@@ -2754,6 +3113,217 @@
                             "variadic": false,
                             "optional": true,
                             "default": "null",
+                            "flags": 1
+                        }
+                    ],
+                    "return": null,
+                    "doc": []
+                },
+                "fromRaw": {
+                    "visibility": "public",
+                    "static": true,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "raw",
+                            "type": "stdClass",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "self",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [
+                {
+                    "name": "SCHEMA",
+                    "type": "string",
+                    "visibility": "public",
+                    "final": false
+                }
+            ],
+            "enum_backing": null,
+            "enum_cases": []
+        },
+        "Billium\\Contracts\\Data\\Envelopes\\ExecutionStatus": {
+            "kind": "class",
+            "layer": "api",
+            "since": "1.0",
+            "final": true,
+            "readonly": true,
+            "abstract": false,
+            "extends": [
+                "Billium\\Contracts\\Data\\Envelope"
+            ],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "__construct": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "raw",
+                            "type": "stdClass",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "installationRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "environment",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "sellerRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "operationRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "rootOperationRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "bindingRevision",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "merchantAccountRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "capabilityVersion",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "driverContractVersion",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "operationKind",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "revision",
+                            "type": "int",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "status",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "requested",
+                            "type": "Billium\\Contracts\\Data\\Money",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "capacity",
+                            "type": "stdClass",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "delivery",
+                            "type": "stdClass",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "recovery",
+                            "type": "stdClass",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
                             "flags": 1
                         }
                     ],
@@ -6728,6 +7298,172 @@
             "enum_backing": null,
             "enum_cases": []
         },
+        "Billium\\Contracts\\Data\\Envelopes\\VoidAuthorization": {
+            "kind": "class",
+            "layer": "api",
+            "since": "1.0",
+            "final": true,
+            "readonly": true,
+            "abstract": false,
+            "extends": [
+                "Billium\\Contracts\\Data\\Envelope"
+            ],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "__construct": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "raw",
+                            "type": "stdClass",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "commandKey",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "installationRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "environment",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "sellerRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "operationRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "originalOperationRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "source",
+                            "type": "stdClass",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "money",
+                            "type": "Billium\\Contracts\\Data\\Money",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "reasonCode",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "requestedAt",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "digest",
+                            "type": "?string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": true,
+                            "default": "null",
+                            "flags": 1
+                        }
+                    ],
+                    "return": null,
+                    "doc": []
+                },
+                "fromRaw": {
+                    "visibility": "public",
+                    "static": true,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "raw",
+                            "type": "stdClass",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "self",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [
+                {
+                    "name": "SCHEMA",
+                    "type": "string",
+                    "visibility": "public",
+                    "final": false
+                }
+            ],
+            "enum_backing": null,
+            "enum_cases": []
+        },
         "Billium\\Contracts\\Data\\Money": {
             "kind": "class",
             "layer": "api",
@@ -7079,6 +7815,26 @@
                 {
                     "name": "ReferenceUnknown",
                     "value": "'billium.reference.unknown'"
+                },
+                {
+                    "name": "CapabilityUnsupported",
+                    "value": "'billium.capability.unsupported'"
+                },
+                {
+                    "name": "CaptureCapacityExceeded",
+                    "value": "'billium.capture.capacity_exceeded'"
+                },
+                {
+                    "name": "AuthorizationCapacityExceeded",
+                    "value": "'billium.authorization.capacity_exceeded'"
+                },
+                {
+                    "name": "OperationFinancialHold",
+                    "value": "'billium.operation.financial_hold'"
+                },
+                {
+                    "name": "LookupAmbiguous",
+                    "value": "'billium.lookup.ambiguous'"
                 }
             ]
         },
@@ -7302,6 +8058,26 @@
                 {
                     "name": "ReferenceUnknown",
                     "value": "'billium.reference_unknown'"
+                },
+                {
+                    "name": "CapabilityUnsupported",
+                    "value": "'billium.capability_unsupported'"
+                },
+                {
+                    "name": "CaptureCapacityExceeded",
+                    "value": "'billium.capture_capacity_exceeded'"
+                },
+                {
+                    "name": "AuthorizationCapacityExceeded",
+                    "value": "'billium.authorization_capacity_exceeded'"
+                },
+                {
+                    "name": "OperationFinancialHold",
+                    "value": "'billium.operation_financial_hold'"
+                },
+                {
+                    "name": "LookupAmbiguous",
+                    "value": "'billium.lookup_ambiguous'"
                 }
             ]
         },

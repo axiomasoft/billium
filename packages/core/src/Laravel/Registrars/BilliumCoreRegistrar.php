@@ -11,13 +11,16 @@ use Billium\Core\Contracts\Modules\ModuleRegistry;
 use Billium\Core\Contracts\Modules\ModuleTransitionPlanner;
 use Billium\Core\Contracts\Runner\OperationRunner;
 use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Contracts\Runtime\FinancialAuthorityEvidence;
 use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
 use Billium\Core\Diagnostics\BilliumCompatibilityDoctorCheck;
 use Billium\Core\Internal\Modules\ModuleCatalog;
 use Billium\Core\Internal\Modules\ModuleLifecycle;
 use Billium\Core\Internal\Runner\DatabaseOperationRunner;
 use Billium\Core\Internal\Runner\UnboundCallerContext;
+use Billium\Core\Internal\Runner\UnboundFinancialAuthorityEvidence;
 use Billium\Core\Internal\Runner\UnboundSessionAdmission;
+use Billium\Core\Plugins\ExecutionPlugin;
 use Billium\Core\Plugins\LedgerPlugin;
 use Billium\Core\Plugins\PlatformPlugin;
 use Billium\Platform\Contracts\Idempotency\IdempotencyStore;
@@ -64,11 +67,12 @@ final class BilliumCoreRegistrar implements PackageRegistrar
             return BilliumOptions::fromArray(is_array($raw) ? $raw : ['__invalid_root' => $raw], 'billium');
         });
 
-        ExtensionRegistrar::builtIn(PlatformPlugin::class, LedgerPlugin::class);
+        ExtensionRegistrar::builtIn(PlatformPlugin::class, LedgerPlugin::class, ExecutionPlugin::class);
 
         $coreManifest = dirname(__DIR__, 3).'/composer.json';
         $app->singletonIf(PlatformPlugin::class);
         $app->singletonIf(LedgerPlugin::class);
+        $app->singletonIf(ExecutionPlugin::class);
 
         $app->singleton(BilliumCompatibilityDoctorCheck::class, static fn (Application $app): BilliumCompatibilityDoctorCheck => new BilliumCompatibilityDoctorCheck(
             config: $app->make(Repository::class),
@@ -84,6 +88,9 @@ final class BilliumCoreRegistrar implements PackageRegistrar
                 if (self::hasCustomPort($app, FinancialSessionAdmission::class, UnboundSessionAdmission::class)) {
                     $ports[] = 'FinancialSessionAdmission';
                 }
+                if (self::hasCustomPort($app, FinancialAuthorityEvidence::class, UnboundFinancialAuthorityEvidence::class)) {
+                    $ports[] = 'FinancialAuthorityEvidence';
+                }
 
                 return $ports;
             },
@@ -91,6 +98,7 @@ final class BilliumCoreRegistrar implements PackageRegistrar
 
         ExtensionFacetRegistrar::register($app, PlatformPlugin::class, $coreManifest);
         ExtensionFacetRegistrar::register($app, LedgerPlugin::class, $coreManifest);
+        ExtensionFacetRegistrar::register($app, ExecutionPlugin::class, $coreManifest);
 
         ConfigSectionRegistration::own($app, 'billium', static function (array $section): void {
             BilliumOptions::fromArray($section, 'billium');
@@ -98,6 +106,7 @@ final class BilliumCoreRegistrar implements PackageRegistrar
 
         SchemaExtensions::register($app, PlatformPlugin::class, 'axiomasoft.billium.platform');
         SchemaExtensions::register($app, LedgerPlugin::class, 'axiomasoft.billium.ledger');
+        SchemaExtensions::register($app, ExecutionPlugin::class, 'axiomasoft.billium.execution');
 
         // D55: packaged descriptors only; validation is explicit (doctor/readiness), never a hidden boot side effect.
         $app->singleton(ModuleRegistry::class, static fn (): ModuleCatalog => ModuleCatalog::packaged());
@@ -108,6 +117,7 @@ final class BilliumCoreRegistrar implements PackageRegistrar
         // Host SPIs fail closed until the host binds its authenticated caller and its process-token authority (D62).
         $app->bindIf(CallerContext::class, UnboundCallerContext::class, shared: true);
         $app->bindIf(FinancialSessionAdmission::class, UnboundSessionAdmission::class, shared: true);
+        $app->bindIf(FinancialAuthorityEvidence::class, UnboundFinancialAuthorityEvidence::class, shared: true);
 
         $app->singleton(OperationRunner::class, static function (Application $app): DatabaseOperationRunner {
             $options = $app->make(BilliumOptions::class);

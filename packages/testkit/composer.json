@@ -1,0 +1,19 @@
+{
+    "name": "axiomasoft/billium-testkit",
+    "description": "Test-only deterministic Billium provider, receiver and recovery protocol fixtures.",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.4",
+        "axiomasoft/billium-contracts": "^0.1",
+        "axiomasoft/billium-core": "^0.1",
+        "axiomasoft/packman": "^0.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Billium\\Testkit\\": "src/"
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

@@ -12,6 +12,7 @@ use Billium\Core\Tests\Support\FixedCallerContext;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
 use Billium\Core\Tests\Support\FixtureArguments;
 use Billium\Core\Tests\Support\FixtureValues;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Rating\Contracts\RatingBooking;
 use Billium\Rating\Data\Rating\BookRatedBasis;
 use Billium\Rating\Data\Rating\FrozenRatingInputs;
@@ -34,6 +35,7 @@ final class RatingScenario implements Scenario
     {
         $app->instance(CallerContext::class, FixedCallerContext::default());
         $app->instance(FinancialSessionAdmission::class, new FixedSessionAdmission(FixedSessionAdmission::token()));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($app);
         $app->make(Repository::class)->set('billium.modules.enabled', ['platform', 'ledger', 'usage', 'rating', 'schedule']);
         $app->register(UsageServiceProvider::class);
         $app->register(RatingServiceProvider::class);

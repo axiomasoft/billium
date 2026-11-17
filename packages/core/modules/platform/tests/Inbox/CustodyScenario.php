@@ -18,6 +18,7 @@ use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Tests\Support\Concurrency\Scenario;
 use Billium\Core\Tests\Support\FixedCallerContext;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Platform\Contracts\Feed\FeedPartitions;
 use Billium\Platform\Data\Inbox\CustodyDisposition;
 use Billium\Platform\Data\Inbox\CustodyResult;
@@ -37,6 +38,7 @@ final readonly class CustodyScenario implements Scenario
         $authority = isset($args['authority']) && is_string($args['authority']) ? $args['authority'] : InboxTestCase::AUTHORITY;
         $app->instance(CallerContext::class, new FixedCallerContext(new Caller('seller-a', 'test', PlatformTestCase::INSTALLATION, 'actor-'.$index, [$authority])));
         $app->instance(FinancialSessionAdmission::class, new FixedSessionAdmission(FixedSessionAdmission::fromArray(['processRef' => 'process-'.$index])));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($app);
         $app->make(OperationRunner::class);
     }
 

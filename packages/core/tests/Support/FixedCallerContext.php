@@ -29,6 +29,6 @@ final class FixedCallerContext implements CallerContext
 
     public function as(string $sellerRef, ?string $environment = null): void
     {
-        $this->caller = new Caller($sellerRef, $environment ?? $this->caller->environment, $this->caller->installationRef, $this->caller->actorRef, $this->caller->sourceAuthorities);
+        $this->caller = new Caller($sellerRef, $environment ?? $this->caller->environment, $this->caller->installationRef, $this->caller->actorRef, $this->caller->sourceAuthorities, $this->caller->intentOwnerNamespaces);
     }
 }

@@ -9,6 +9,7 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Enums\Runtime\FinancialMode;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Platform\Contracts\Inbox\CustodyHandler;
 use Billium\Platform\Data\Inbox\CustodyDisposition;
@@ -323,6 +324,7 @@ final class CustodyProcessorTest extends InboxTestCase
     {
         $id = $this->seedPartition(10);
         $handler = new JournalHandler;
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('seal', 'seal-1', [1]);
         $this->installation()->seal('seal-1', 1);
 
         $received = $this->custody($this->envelope(11), $handler, FinancialMode::RawCustody);

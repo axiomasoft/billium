@@ -1,0 +1,29 @@
+{
+  "id": "payment/p5-contracts/capture-valid",
+  "spec_refs": [
+    "BC-ENV-01",
+    "BC-ENV-09",
+    "BC-ID-12"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"payment.capture.v1\",\"commandKey\":\"5d1f7c52-2b8e-4a31-9c47-6e0a1b2c3d4e\",\"installationRef\":\"inst-1\",\"environment\":\"test\",\"sellerRef\":\"seller-1\",\"operationRef\":\"op-2\",\"originalOperationRef\":\"op-1\",\"source\":{\"context\":\"commerz\",\"intentRef\":\"refund-int-1\"},\"money\":{\"amount\":\"490.00\",\"currency\":\"RUB\"},\"requestedAt\":\"2026-10-18T09:30:00Z\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "payment.capture.v1",
+        "digest": "sha256:342fc959f9910e6f37003076237de39761ca72490ecdbd3d4cb7f931c1797134"
+      }
+    }
+  ]
+}

@@ -15,9 +15,11 @@ use Billium\Platform\Contracts\Feed\FeedPartitions;
 use Billium\Platform\Contracts\Feed\FeedRecoveryQueries;
 use Billium\Platform\Contracts\Feed\SnapshotSource;
 use Billium\Platform\Contracts\Outbox\CommandOutbox;
+use Billium\Platform\Contracts\Outbox\FactualCommandOutbox;
 use Billium\Platform\Contracts\Outbox\Outbox;
 use Billium\Platform\Internal\CommandOutbox\CommandOutboxRelay;
 use Billium\Platform\Internal\CommandOutbox\CommandRecorder;
+use Billium\Platform\Internal\CommandOutbox\FactualCommandRecorder;
 use Billium\Platform\Internal\Feed\BootstrapCoordinator;
 use Billium\Platform\Internal\Feed\DatabaseFeedPartitions;
 use Billium\Platform\Internal\Feed\DatabaseFeedRecoveryQueries;
@@ -45,6 +47,11 @@ final class PlatformOutboxRegistrar implements PackageRegistrar
         $app->bind(FeedRecoveryQueries::class, DatabaseFeedRecoveryQueries::class);
 
         $app->singleton(CommandOutbox::class, static fn (Application $app): CommandRecorder => new CommandRecorder(
+            $app->make(DatabaseManager::class),
+            $app->make(ModuleRegistry::class),
+            static fn (): OperationRunner => $app->make(OperationRunner::class),
+        ));
+        $app->singleton(FactualCommandOutbox::class, static fn (Application $app): FactualCommandRecorder => new FactualCommandRecorder(
             $app->make(DatabaseManager::class),
             $app->make(ModuleRegistry::class),
             static fn (): OperationRunner => $app->make(OperationRunner::class),
@@ -100,6 +107,7 @@ final class PlatformOutboxRegistrar implements PackageRegistrar
                 new CustodyProcessor(
                     $app->make(PartitionStore::class),
                     static fn (): OperationRunner => $app->make(OperationRunner::class),
+                    static fn (): CallerContext => $app->make(CallerContext::class),
                     $options->inbox->retryBackoffSeconds,
                     $options->inbox->retryBudget,
                 ),

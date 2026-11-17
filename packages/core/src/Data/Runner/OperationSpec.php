@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Core\Data\Runner;
 
+use Billium\Core\Data\Runtime\FinancialScope;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Core\Enums\Runtime\FinancialMode;
 use InvalidArgumentException;
@@ -14,7 +15,9 @@ use Packman\Attributes\Api;
  * digest of its payload; the same key with another digest conflicts (INV-05). `commitKind` marks a monetary mutation:
  * it appends a diagnostic money_commit_log row in the same root Tx. `modules` is the complete participating-module
  * closure: the runner admits every module in it (rank 25) for `operationClass` before any domain work, and a
- * participant outside it is refused (D55).
+ * participant outside it is refused (D55). financialScope selects the authenticated installation, seller, environment
+ * and any owner/source used by this operation. Omitting the selection declares a namespace-neutral root. The runner
+ * checks the selected grants before receipt lookup and admitted money roots require matching host evidence.
  */
 #[Api(since: '1.0')]
 final readonly class OperationSpec
@@ -33,6 +36,7 @@ final readonly class OperationSpec
         public ?string $commandKey = null,
         public ?string $digest = null,
         public ?string $commitKind = null,
+        public ?FinancialScope $financialScope = null,
     ) {
         if (preg_match('/^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$/', $commandKind) !== 1) {
             throw new InvalidArgumentException("Invalid command kind {$commandKind}");
@@ -67,6 +71,12 @@ final readonly class OperationSpec
         }
         sort($modules, SORT_STRING);
         $this->modules = $modules;
+    }
+
+    /** Neutral legacy roots require host evidence covering every source. A selected root may use only its declared source. */
+    public function selectsSource(string $sourceAuthority): bool
+    {
+        return $this->financialScope === null || $this->financialScope->sourceAuthority === $sourceAuthority;
     }
 
     public function keyed(): bool

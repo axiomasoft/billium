@@ -37,20 +37,20 @@ final readonly class BootstrapPartitionCommand
         if ($snapshot->channel !== ParkedDrainer::CHANNEL) {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'ledger bootstraps payment.observation partitions only');
         }
-        $session = $this->roots->root(fn (TransactionContext $context): int => $this->feed->stageBootstrap($context, $snapshot), self::KIND, $mode);
-        if ($this->status($session, $mode)->status !== 'adopted') {
+        $session = $this->roots->root(fn (TransactionContext $context): int => $this->feed->stageBootstrap($context, $snapshot), self::KIND, $mode, sourceAuthority: $snapshot->sourceAuthority);
+        if ($this->status($session, $mode, $snapshot->sourceAuthority)->status !== 'adopted') {
             do {
-                $remaining = $this->roots->root(fn (TransactionContext $context): int => $this->feed->applyBootstrapItem($context, $session, $this->handler), self::KIND, $mode);
+                $remaining = $this->roots->root(fn (TransactionContext $context): int => $this->feed->applyBootstrapItem($context, $session, $this->handler), self::KIND, $mode, sourceAuthority: $snapshot->sourceAuthority);
             } while ($remaining > 0);
         }
-        $partition = $this->roots->root(fn (TransactionContext $context): int => $this->feed->adoptBootstrap($context, $session), self::KIND, $mode);
+        $partition = $this->roots->root(fn (TransactionContext $context): int => $this->feed->adoptBootstrap($context, $session), self::KIND, $mode, sourceAuthority: $snapshot->sourceAuthority);
         $this->roots->drainPartition($partition, $mode);
 
-        return $this->status($session, $mode);
+        return $this->status($session, $mode, $snapshot->sourceAuthority);
     }
 
-    private function status(int $session, FinancialMode $mode): BootstrapStatus
+    private function status(int $session, FinancialMode $mode, string $source): BootstrapStatus
     {
-        return $this->roots->root(fn (TransactionContext $context): BootstrapStatus => $this->feed->bootstrapStatus($context, $session), self::KIND, $mode, null);
+        return $this->roots->root(fn (TransactionContext $context): BootstrapStatus => $this->feed->bootstrapStatus($context, $session), self::KIND, $mode, null, $source);
     }
 }

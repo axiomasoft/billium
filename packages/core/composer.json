@@ -19,7 +19,8 @@
             "Billium\\Ledger\\": "modules/ledger/src/",
             "Billium\\Usage\\": "modules/usage/src/",
             "Billium\\Rating\\": "modules/rating/src/",
-            "Billium\\Schedule\\": "modules/schedule/src/"
+            "Billium\\Schedule\\": "modules/schedule/src/",
+            "Billium\\Execution\\": "modules/execution/src/"
         },
         "files": [
             "src/aliases.php"

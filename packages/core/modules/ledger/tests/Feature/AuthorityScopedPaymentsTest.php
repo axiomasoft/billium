@@ -8,6 +8,7 @@ use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Data\Runtime\Caller;
+use Billium\Core\Data\Runtime\FinancialScope;
 use Billium\Core\Tests\Support\ObservationFactory;
 use Billium\Ledger\Data\Allocations\ReallocatePayment;
 use Billium\Ledger\Data\Allocations\ReallocationMode;
@@ -34,6 +35,39 @@ final class AuthorityScopedPaymentsTest extends QueryTestCase
             $this->observe(ObservationFactory::charge('same-payment', 1, 1600 + $index * 1900,
                 fields: ['sourceAuthority' => $authority, 'businessIntentRef' => 'intent-'.$suffix]));
         }
+    }
+
+    public function test_source_qualified_observations_and_locked_partitions_require_the_selected_source(): void
+    {
+        $this->debt('target', 1000);
+        $this->intent('one-intent', ['target']);
+        $caller = $this->callers->current();
+        self::assertSame([], $caller->intentOwnerNamespaces);
+        $source = new FinancialScope(self::INSTALLATION, $caller->sellerRef, $caller->environment, null, 'remote-billium');
+        $token = $this->tokens->currentToken(self::INSTALLATION);
+        self::assertNotNull($token);
+        $this->authority->issueProcess($token, [$source]);
+        $this->observe(ObservationFactory::charge('remote-only', 1, 1000, fields: ['sourceAuthority' => 'remote-billium', 'businessIntentRef' => 'one-intent']));
+        self::problem(ProblemCode::InstallationQuarantined, fn () => $this->observe(ObservationFactory::charge('other-source', 1, 1000,
+            fields: ['sourceAuthority' => 'standalone-billium', 'businessIntentRef' => 'other-intent'])));
+        self::assertSame(1, $this->rows('billium_payment', "source_authority = 'remote-billium'"));
+        self::assertSame(0, $this->rows('billium_payment', "source_authority = 'standalone-billium'"));
+        $feed = $this->application()->make(FeedPartitions::class);
+        $foreign = self::integer($this->value("SELECT id FROM billium_feed_partition WHERE source_authority = 'standalone-billium'"));
+        $inbox = self::integer($this->value("SELECT id FROM billium_inbox_message WHERE source_authority = 'standalone-billium'"));
+        self::assertSame('standalone-billium', $feed->sourceForPartition($caller, 'payment.observation', $foreign));
+        self::assertSame('standalone-billium', $feed->sourceForInbox($caller, 'payment.observation', $inbox));
+        $forged = new Caller($caller->sellerRef, $caller->environment, self::INSTALLATION, $caller->actorRef, ['standalone-billium']);
+        self::problem(ProblemCode::AuthDenied, fn () => $feed->sourceForPartition($forged, 'payment.observation', $foreign));
+        self::problem(ProblemCode::AuthDenied, fn () => $feed->sourceForInbox($forged, 'payment.observation', $inbox));
+        $handler = $this->application()->make(ObservationHandler::class);
+        self::problem(ProblemCode::AuthDenied, fn () => $this->runner()->run($this->spec(financialScope: $source),
+            static function (TransactionContext $context) use ($feed, $foreign, $handler) {
+                $feed->drain($context, $foreign, $handler);
+
+                return self::receipt();
+            }));
+        self::assertSame(0, $this->rows('billium_payment', "source_authority = 'standalone-billium'"));
     }
 
     public function test_wire_refund_authorization_selects_each_authority_with_the_same_payment_ref(): void

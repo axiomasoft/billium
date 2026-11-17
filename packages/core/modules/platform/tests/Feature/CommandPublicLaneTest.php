@@ -12,6 +12,7 @@ use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Internal\Modules\ModuleCatalog;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Platform\Contracts\Outbox\CommandOutbox;
 use Billium\Platform\Contracts\Outbox\Outbox;
 use Billium\Platform\Data\EventContracts\PreparedInternalCommand;
@@ -57,9 +58,12 @@ final class CommandPublicLaneTest extends OutboxTestCase
     public function test_recovery_can_record_public_facts_but_cannot_create_outgoing_commands(ModuleOperationClass $class): void
     {
         $this->declareCommand('ledger.collection.execute.v1');
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('seal', 'seal-command-recovery', [1]);
         $this->installation()->seal('seal-command-recovery', 1);
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('open', 'open-command-recovery', ['owner-1', 1, 1, 1, 'evidence:command-recovery']);
         $this->installation()->openSession('open-command-recovery', 'owner-1', 1, 1, 1, 'evidence:command-recovery');
         $this->tokens->set(FixedSessionAdmission::token(self::INSTALLATION, modes: [FinancialMode::Recovery]));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($this->application());
 
         $eventId = (string) Str::ulid();
         $this->runner()->run($this->spec(mode: FinancialMode::Recovery, class: ModuleOperationClass::ObservedFactRecording),

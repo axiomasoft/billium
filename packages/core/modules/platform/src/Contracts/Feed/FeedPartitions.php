@@ -39,6 +39,12 @@ interface FeedPartitions
      */
     public function process(TransactionContext $context, string $channel, stdClass $envelope, CustodyHandler $handler): CustodyResult;
 
+    /** Read the authenticated source of a partition for the next financial root. */
+    public function sourceForPartition(Caller $caller, string $channel, int $partitionId): string;
+
+    /** Read the authenticated source of a retained delivery for the next financial root. */
+    public function sourceForInbox(Caller $caller, string $channel, int $inboxId): string;
+
     /** Applies the single delivery at accounted_sequence + 1 of an active partition, if it is in custody. */
     public function drain(TransactionContext $context, int $partitionId, CustodyHandler $handler): CustodyResult;
 

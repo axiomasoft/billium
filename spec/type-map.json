@@ -7,6 +7,34 @@
     "category": "Data"
   },
   {
+    "schema": "payment.authorize.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\AuthorizePayment",
+    "dart": "AuthorizePayment",
+    "category": "Data"
+  },
+  {
+    "schema": "payment.capture.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\CapturePayment",
+    "dart": "CapturePayment",
+    "category": "Data"
+  },
+  {
+    "schema": "payment.void_authorization.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\VoidAuthorization",
+    "dart": "VoidAuthorization",
+    "category": "Data"
+  },
+  {
+    "schema": "payment.execution_status.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\ExecutionStatus",
+    "dart": "ExecutionStatus",
+    "category": "Data"
+  },
+  {
     "schema": "payment.refund.v1",
     "variant": null,
     "php": "Billium\\Contracts\\Data\\Envelopes\\RequestRefund",

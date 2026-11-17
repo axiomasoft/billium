@@ -33,6 +33,16 @@
   "2026_11_10_000600_create_billium_schedule_occurrences",
   "2026_11_10_000610_create_billium_schedule_billing_correction",
   "2026_11_10_000620_allow_rated_correction_parents",
+  "2026_11_17_000001_create_billium_execution_runtime",
+  "2026_11_17_000002_guard_billium_execution_merchants",
+  "2026_11_17_000003_guard_billium_execution_identities",
+  "2026_11_17_000004_harden_billium_execution_history",
+  "2026_11_17_000005_bind_billium_execution_merchant_namespaces",
+  "2026_11_17_000006_guard_billium_execution_business_binding",
+  "2026_11_17_000007_validate_billium_execution_runtime",
+  "2026_11_17_000008_bind_billium_execution_source_context",
+  "2026_11_17_000009_validate_billium_execution_source_context",
+  "2026_11_17_000010_index_billium_execution_business_identity_digest",
   "2026_11_17_000900_bind_usage_metric_and_snapshot_semantics",
   "2026_11_17_000901_validate_usage_metric_and_snapshot_semantics"
 ]

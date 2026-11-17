@@ -49,6 +49,39 @@
         {
             "package": "axiomasoft/billium-contracts",
             "enum": "Billium\\Contracts\\Errors\\BilliumErrorCode",
+            "case": "AuthorizationCapacityExceeded",
+            "code": "billium.authorization_capacity_exceeded",
+            "type": "urn:packman:problem:billium.authorization_capacity_exceeded",
+            "status": 409,
+            "title": "Void amount exceeds available authorization capacity.",
+            "retryable": false,
+            "category": "conflict"
+        },
+        {
+            "package": "axiomasoft/billium-contracts",
+            "enum": "Billium\\Contracts\\Errors\\BilliumErrorCode",
+            "case": "CapabilityUnsupported",
+            "code": "billium.capability_unsupported",
+            "type": "urn:packman:problem:billium.capability_unsupported",
+            "status": 422,
+            "title": "Required provider capability is unsupported or unqualified.",
+            "retryable": false,
+            "category": "unsupported"
+        },
+        {
+            "package": "axiomasoft/billium-contracts",
+            "enum": "Billium\\Contracts\\Errors\\BilliumErrorCode",
+            "case": "CaptureCapacityExceeded",
+            "code": "billium.capture_capacity_exceeded",
+            "type": "urn:packman:problem:billium.capture_capacity_exceeded",
+            "status": 409,
+            "title": "Capture amount exceeds available authorization capacity.",
+            "retryable": false,
+            "category": "conflict"
+        },
+        {
+            "package": "axiomasoft/billium-contracts",
+            "enum": "Billium\\Contracts\\Errors\\BilliumErrorCode",
             "case": "IdempotencyConflict",
             "code": "billium.idempotency_conflict",
             "type": "urn:packman:problem:billium.idempotency_conflict",
@@ -115,6 +148,17 @@
         {
             "package": "axiomasoft/billium-contracts",
             "enum": "Billium\\Contracts\\Errors\\BilliumErrorCode",
+            "case": "LookupAmbiguous",
+            "code": "billium.lookup_ambiguous",
+            "type": "urn:packman:problem:billium.lookup_ambiguous",
+            "status": 503,
+            "title": "Provider lookup evidence is ambiguous.",
+            "retryable": false,
+            "category": "unavailable"
+        },
+        {
+            "package": "axiomasoft/billium-contracts",
+            "enum": "Billium\\Contracts\\Errors\\BilliumErrorCode",
             "case": "LookupUnavailable",
             "code": "billium.lookup_unavailable",
             "type": "urn:packman:problem:billium.lookup_unavailable",
@@ -166,6 +210,17 @@
             "title": "Payment observation parked pending missing prerequisite.",
             "retryable": true,
             "category": "unavailable"
+        },
+        {
+            "package": "axiomasoft/billium-contracts",
+            "enum": "Billium\\Contracts\\Errors\\BilliumErrorCode",
+            "case": "OperationFinancialHold",
+            "code": "billium.operation_financial_hold",
+            "type": "urn:packman:problem:billium.operation_financial_hold",
+            "status": 409,
+            "title": "Operation has an unresolved financial hold.",
+            "retryable": false,
+            "category": "conflict"
         },
         {
             "package": "axiomasoft/billium-contracts",

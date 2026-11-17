@@ -29,6 +29,10 @@ envelopes, `ERR` — ошибки, `EVT` — события и receipts, `CNF` �
 | schema | Файл | Направление |
 |:--|:--|:--|
 | `payment.execute.v1` | `schema/payment/execute.v1.json` | команда |
+| `payment.authorize.v1` | `schema/payment/authorize.v1.json` | команда |
+| `payment.capture.v1` | `schema/payment/capture.v1.json` | команда |
+| `payment.void_authorization.v1` | `schema/payment/void-authorization.v1.json` | команда |
+| `payment.execution_status.v1` | `schema/query/execution-status.v1.json` | ответ |
 | `payment.refund.v1` | `schema/payment/refund.v1.json` | команда |
 | `payment.cancel.v1` | `schema/payment/cancel.v1.json` | команда |
 | `payment.find.v1` | `schema/payment/find.v1.json` | запрос и ответ |

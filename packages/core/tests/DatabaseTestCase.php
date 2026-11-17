@@ -6,6 +6,7 @@ namespace Billium\Core\Tests;
 
 use Billium\Core\BilliumCoreServiceProvider;
 use Billium\Core\Contracts\Modules\ModuleRegistry;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Platform\Internal\EventContracts\DatabaseEventContractRegistrar;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -35,6 +36,7 @@ abstract class DatabaseTestCase extends TestCase
         self::assertNotContains(RefreshDatabase::class, $traits);
         self::assertNotContains(DatabaseTransactions::class, $traits);
         parent::setUp();
+        SimulatedFinancialAuthorityEvidence::reset();
         // D50: without a wrapper trait nothing else closes this application's connections; left to the cycle
         // collector they outlive the test, pile up across the suite and exhaust PostgreSQL connection slots.
         $databases = $this->app['db'];

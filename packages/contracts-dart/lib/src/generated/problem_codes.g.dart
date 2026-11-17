@@ -26,7 +26,12 @@ enum ProblemCode {
   allocationExceedsOpen('billium.allocation.exceeds_open', 'allocation', false, false, 'stored'),
   allocationExceedsAvailable('billium.allocation.exceeds_available', 'allocation', false, false, 'stored'),
   invoiceTransitionInvalid('billium.invoice.transition_invalid', 'invoice', false, false, 'stored'),
-  referenceUnknown('billium.reference.unknown', 'reference', true, true, 'none');
+  referenceUnknown('billium.reference.unknown', 'reference', true, true, 'none'),
+  capabilityUnsupported('billium.capability.unsupported', 'capability', false, true, 'none'),
+  captureCapacityExceeded('billium.capture.capacity_exceeded', 'capture', false, false, 'stored'),
+  authorizationCapacityExceeded('billium.authorization.capacity_exceeded', 'authorization', false, false, 'stored'),
+  operationFinancialHold('billium.operation.financial_hold', 'operation', false, false, 'stored'),
+  lookupAmbiguous('billium.lookup.ambiguous', 'lookup', false, true, 'none');
 
   const ProblemCode(
     this.value,

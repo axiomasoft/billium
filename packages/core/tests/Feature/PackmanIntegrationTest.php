@@ -17,6 +17,7 @@ use Billium\Core\Exceptions\Runner\LockOrderViolation;
 use Billium\Core\Exceptions\Runner\LockPlanChanged;
 use Billium\Core\Tests\Support\FixedCallerContext;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Platform\Exceptions\TransitionRefused;
 use Override;
 use Packman\Config\Exceptions\InvalidConfiguration;
@@ -74,6 +75,7 @@ final class PackmanIntegrationTest extends PackageTestCase
     {
         $this->app->instance(CallerContext::class, FixedCallerContext::default());
         $this->app->instance(FinancialSessionAdmission::class, new FixedSessionAdmission(FixedSessionAdmission::token('inst-test')));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($this->app);
 
         $check = $this->app->make(BilliumCompatibilityDoctorCheck::class);
         $ok = $check->run(new DoctorContext(production: false));

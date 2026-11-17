@@ -36,6 +36,11 @@ enum ProblemCode: string
     case AllocationExceedsAvailable = 'billium.allocation.exceeds_available';
     case InvoiceTransitionInvalid = 'billium.invoice.transition_invalid';
     case ReferenceUnknown = 'billium.reference.unknown';
+    case CapabilityUnsupported = 'billium.capability.unsupported';
+    case CaptureCapacityExceeded = 'billium.capture.capacity_exceeded';
+    case AuthorizationCapacityExceeded = 'billium.authorization.capacity_exceeded';
+    case OperationFinancialHold = 'billium.operation.financial_hold';
+    case LookupAmbiguous = 'billium.lookup.ambiguous';
 
     public function category(): string
     {
@@ -64,6 +69,11 @@ enum ProblemCode: string
             self::AllocationExceedsAvailable => 'allocation',
             self::InvoiceTransitionInvalid => 'invoice',
             self::ReferenceUnknown => 'reference',
+            self::CapabilityUnsupported => 'capability',
+            self::CaptureCapacityExceeded => 'capture',
+            self::AuthorizationCapacityExceeded => 'authorization',
+            self::OperationFinancialHold => 'operation',
+            self::LookupAmbiguous => 'lookup',
         };
     }
 
@@ -94,6 +104,11 @@ enum ProblemCode: string
             self::AllocationExceedsAvailable => false,
             self::InvoiceTransitionInvalid => false,
             self::ReferenceUnknown => true,
+            self::CapabilityUnsupported => false,
+            self::CaptureCapacityExceeded => false,
+            self::AuthorizationCapacityExceeded => false,
+            self::OperationFinancialHold => false,
+            self::LookupAmbiguous => false,
         };
     }
 
@@ -124,6 +139,11 @@ enum ProblemCode: string
             self::AllocationExceedsAvailable => false,
             self::InvoiceTransitionInvalid => false,
             self::ReferenceUnknown => true,
+            self::CapabilityUnsupported => true,
+            self::CaptureCapacityExceeded => false,
+            self::AuthorizationCapacityExceeded => false,
+            self::OperationFinancialHold => false,
+            self::LookupAmbiguous => true,
         };
     }
 
@@ -154,6 +174,11 @@ enum ProblemCode: string
             self::AllocationExceedsAvailable => 'stored',
             self::InvoiceTransitionInvalid => 'stored',
             self::ReferenceUnknown => 'none',
+            self::CapabilityUnsupported => 'none',
+            self::CaptureCapacityExceeded => 'stored',
+            self::AuthorizationCapacityExceeded => 'stored',
+            self::OperationFinancialHold => 'stored',
+            self::LookupAmbiguous => 'none',
         };
     }
 }

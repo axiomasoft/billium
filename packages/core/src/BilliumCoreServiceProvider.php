@@ -6,6 +6,7 @@ namespace Billium\Core;
 
 use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Laravel\Registrars\BilliumCoreRegistrar;
+use Billium\Execution\Internal\ExecutionServiceProvider;
 use Billium\Ledger\Internal\LedgerServiceProvider;
 use Billium\Platform\Internal\PlatformServiceProvider;
 use Billium\Rating\Internal\RatingServiceProvider;
@@ -41,6 +42,9 @@ final class BilliumCoreServiceProvider extends ServiceProvider
         $options = $this->app->make(BilliumOptions::class);
         if (in_array('ledger', $options->modules->enabled, true)) {
             $this->app->register(LedgerServiceProvider::class);
+        }
+        if (in_array('execution', $options->modules->enabled, true)) {
+            $this->app->register(ExecutionServiceProvider::class);
         }
 
         $providers = [

@@ -28,6 +28,7 @@
             <directory>packages/core/modules/usage/src</directory>
             <directory>packages/core/modules/rating/src</directory>
             <directory>packages/core/modules/schedule/src</directory>
+            <directory>packages/core/modules/execution/src</directory>
         </include>
     </source>
 

@@ -18,6 +18,7 @@ use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Tests\Support\Concurrency\Scenario;
 use Billium\Core\Tests\Support\FixedCallerContext;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Platform\Contracts\Installation\Installation;
 use Billium\Platform\Contracts\Outbox\Outbox;
 use Billium\Platform\Data\Installation\ModuleTransitionRequest;
@@ -37,6 +38,7 @@ final readonly class RetirementEvidenceScenario implements Scenario
     {
         $app->instance(CallerContext::class, FixedCallerContext::default(installationRef: PlatformTestCase::INSTALLATION));
         $app->instance(FinancialSessionAdmission::class, new FixedSessionAdmission(FixedSessionAdmission::token(PlatformTestCase::INSTALLATION)));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($app);
         $app->instance(ModuleTransitionEvidence::class, new CurrentTransitionEvidence);
         if ($index === 0) {
             // Held before the stand releases its start barrier; retirement cannot overtake admission.

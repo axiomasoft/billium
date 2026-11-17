@@ -9,6 +9,46 @@
       }
     ]
   },
+  "payment.authorize.v1": {
+    "schemaId": "urn:billium:spec:2026-10:payment/authorize.v1.json",
+    "variants": [
+      {
+        "class": "AuthorizePayment",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "payment.capture.v1": {
+    "schemaId": "urn:billium:spec:2026-10:payment/capture.v1.json",
+    "variants": [
+      {
+        "class": "CapturePayment",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "payment.void_authorization.v1": {
+    "schemaId": "urn:billium:spec:2026-10:payment/void-authorization.v1.json",
+    "variants": [
+      {
+        "class": "VoidAuthorization",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "payment.execution_status.v1": {
+    "schemaId": "urn:billium:spec:2026-10:query/execution-status.v1.json",
+    "variants": [
+      {
+        "class": "ExecutionStatus",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
   "payment.refund.v1": {
     "schemaId": "urn:billium:spec:2026-10:payment/refund.v1.json",
     "variants": [

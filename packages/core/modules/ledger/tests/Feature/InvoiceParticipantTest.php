@@ -17,6 +17,7 @@ use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Exceptions\Runner\LockOrderViolation;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
 use Billium\Core\Tests\Support\ObservationFactory;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Ledger\Contracts\LedgerParticipants;
 use Billium\Ledger\Data\Invoices\CreditNoteLine;
 use Billium\Ledger\Data\Invoices\CreditNoteMode;
@@ -64,9 +65,12 @@ final class InvoiceParticipantTest extends LedgerTestCase
         $this->obligation('obligation-a', 1000);
         $this->draft();
         $this->ledger()->declareSettlementIntent(new DeclareSettlementIntent('intent', $this->account(), 'intent-a', 'RUB', ['obligation-a']));
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('seal', 'seal-recovery', [1]);
         $this->installation()->seal('seal-recovery', 1);
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('open', 'sess-recovery-only', ['owner-1', 1, 1, 1, 'evidence:recovery']);
         $this->installation()->openSession('sess-recovery-only', 'owner-1', 1, 1, 1, 'evidence:recovery');
         $this->tokens->set(FixedSessionAdmission::token(self::INSTALLATION, modes: [FinancialMode::Recovery]));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($this->application());
         $tables = ['billium_obligation', 'billium_invoice', 'billium_allocation_receipt', 'billium_outbox_event', 'billium_money_commit_log'];
         $before = array_map($this->rows(...), $tables);
 
@@ -104,6 +108,7 @@ final class InvoiceParticipantTest extends LedgerTestCase
             $this->ledger()->declareSettlementIntent(new DeclareSettlementIntent('intent', $this->account(), 'intent-a', 'RUB', ['obligation-a']));
         }
         if ($mode === FinancialMode::RawCustody) {
+            SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('seal', 'seal-1', [1]);
             $this->installation()->seal('seal-1', 1);
         }
         $tables = ['billium_obligation', 'billium_allocation_receipt', 'billium_outbox_event', 'billium_money_commit_log'];
@@ -183,6 +188,7 @@ final class InvoiceParticipantTest extends LedgerTestCase
             $this->retireLedger();
         }
         if ($mode === FinancialMode::RawCustody) {
+            SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('seal', 'seal-outbox', [1]);
             $this->installation()->seal('seal-outbox', 1);
         }
         $tables = ['billium_outbox_event', 'billium_outbox_delivery', 'billium_outbox_command', 'billium_outbox_command_delivery', 'billium_money_commit_log'];

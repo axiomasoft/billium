@@ -302,7 +302,11 @@
     "producer": "ledger",
     "when": "сумма allocation или credit note больше открытой суммы obligation; уменьшение obligation ниже распределённого",
     "clientAction": "уменьшить сумму или пересмотреть распределения; новый ключ",
-    "basis": ["REQ-CON-20", "D31", "D47"]
+    "basis": [
+      "REQ-CON-20",
+      "D31",
+      "D47"
+    ]
   },
   {
     "code": "billium.allocation.exceeds_available",
@@ -313,7 +317,11 @@
     "producer": "ledger",
     "when": "сумма allocation больше доступного остатка платежа или customer credit",
     "clientAction": "уменьшить сумму или дождаться доступного остатка; новый ключ",
-    "basis": ["REQ-CON-20", "D31", "D47"]
+    "basis": [
+      "REQ-CON-20",
+      "D31",
+      "D47"
+    ]
   },
   {
     "code": "billium.invoice.transition_invalid",
@@ -324,7 +332,11 @@
     "producer": "ledger",
     "when": "команда недопустима в текущем статусе invoice или allocation",
     "clientAction": "выбрать допустимую для текущего статуса команду; новый ключ",
-    "basis": ["REQ-CON-20", "D31", "D47"]
+    "basis": [
+      "REQ-CON-20",
+      "D31",
+      "D47"
+    ]
   },
   {
     "code": "billium.reference.unknown",
@@ -335,6 +347,81 @@
     "producer": "ledger",
     "when": "ссылка на obligation, invoice, payment, credit или allocation не найдена в scope seller (чужой seller не раскрывается)",
     "clientAction": "проверить ссылку в scope seller или дождаться зависимости; повторить тем же ключом",
-    "basis": ["REQ-CON-20", "INV-14", "D31", "D47"]
+    "basis": [
+      "REQ-CON-20",
+      "INV-14",
+      "D31",
+      "D47"
+    ]
+  },
+  {
+    "code": "billium.capability.unsupported",
+    "category": "capability",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none",
+    "producer": "execution",
+    "when": "Exact frozen driver/capability/action/account/currency evidence not supported; refuse before admission/effect; no fallback",
+    "clientAction": "Inspect the typed refusal and resolve its stated capability, capacity, hold or evidence condition.",
+    "basis": [
+      "D31",
+      "REQ-CON-05"
+    ]
+  },
+  {
+    "code": "billium.capture.capacity_exceeded",
+    "category": "capture",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored",
+    "producer": "execution",
+    "when": "Capture exceeds locked available authorization",
+    "clientAction": "Inspect the typed refusal and resolve its stated capability, capacity, hold or evidence condition.",
+    "basis": [
+      "D31",
+      "REQ-CON-05"
+    ]
+  },
+  {
+    "code": "billium.authorization.capacity_exceeded",
+    "category": "authorization",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored",
+    "producer": "execution",
+    "when": "Void amount exceeds locked unconsumed authorization",
+    "clientAction": "Inspect the typed refusal and resolve its stated capability, capacity, hold or evidence condition.",
+    "basis": [
+      "D31",
+      "REQ-CON-05"
+    ]
+  },
+  {
+    "code": "billium.operation.financial_hold",
+    "category": "operation",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored",
+    "producer": "execution",
+    "when": "New monetary intent refused under discrepancy hold",
+    "clientAction": "Inspect the typed refusal and resolve its stated capability, capacity, hold or evidence condition.",
+    "basis": [
+      "D31",
+      "REQ-CON-05"
+    ]
+  },
+  {
+    "code": "billium.lookup.ambiguous",
+    "category": "lookup",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none",
+    "producer": "execution",
+    "when": "Provider evidence cannot identify reliable actual effect; retain unknown and reconcile",
+    "clientAction": "Inspect the typed refusal and resolve its stated capability, capacity, hold or evidence condition.",
+    "basis": [
+      "D31",
+      "REQ-CON-05"
+    ]
   }
 ]

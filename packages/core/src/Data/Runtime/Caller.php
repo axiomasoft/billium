@@ -14,13 +14,17 @@ use Packman\Attributes\Api;
 #[Api(since: '1.0')]
 final readonly class Caller
 {
-    /** @param list<string> $sourceAuthorities compound source namespaces this caller may speak for (D60) */
+    /**
+     * @param  list<string>  $sourceAuthorities  authenticated fact sources this caller may speak for (D60)
+     * @param  list<string>  $intentOwnerNamespaces  authenticated business intent owners this caller may act for
+     */
     public function __construct(
         public string $sellerRef,
         public string $environment,
         public string $installationRef,
         public string $actorRef,
         public array $sourceAuthorities = [],
+        public array $intentOwnerNamespaces = [],
     ) {
         foreach (['sellerRef' => $sellerRef, 'environment' => $environment, 'installationRef' => $installationRef, 'actorRef' => $actorRef] as $name => $value) {
             if ($value === '' || strlen($value) > 200) {

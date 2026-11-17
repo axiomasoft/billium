@@ -10,6 +10,7 @@ use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Tests\Support\Concurrency\WorkerApplication;
 use Billium\Core\Tests\Support\FixedCallerContext;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Ledger\Contracts\Ledger;
 use Billium\Ledger\Data\Allocations\Allocate;
@@ -36,6 +37,7 @@ try {
     $app = WorkerApplication::create();
     $app->instance(CallerContext::class, new FixedCallerContext(new Caller('seller-a', 'test', 'inst-test', 'rolling-'.$index)));
     $app->instance(FinancialSessionAdmission::class, new FixedSessionAdmission(FixedSessionAdmission::token('inst-test', processRef: 'rolling-'.$index)));
+    SimulatedFinancialAuthorityEvidence::admitCurrent($app);
     $ledger = $app->make(Ledger::class);
     if ($mode === 'new') {
         // Test-only trigger copies this new optional field during the same guarded allocation INSERT.

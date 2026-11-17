@@ -58,7 +58,7 @@
     },
     {
       "id": "PaymentObservationSink",
-      "providedBy": "ledger"
+      "providedBy": "host"
     },
     {
       "id": "CollectionConsentGuard",
@@ -82,6 +82,22 @@
     },
     {
       "id": "EventPublisher",
+      "providedBy": "host"
+    },
+    {
+      "id": "FinancialAuthorityEvidence",
+      "providedBy": "host"
+    },
+    {
+      "id": "DispatchEgress",
+      "providedBy": "host"
+    },
+    {
+      "id": "MerchantCredentials",
+      "providedBy": "host"
+    },
+    {
+      "id": "ProviderAbsenceVerifier",
       "providedBy": "host"
     }
   ],
@@ -171,7 +187,9 @@
         "max": 16
       },
       "requiresModules": [],
-      "requiresPorts": [],
+      "requiresPorts": [
+        "FinancialAuthorityEvidence"
+      ],
       "optionalPorts": [
         "EventPublisher"
       ],
@@ -969,14 +987,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "execution",
-      "currentSchemaVersion": 0,
+      "currentSchemaVersion": 10,
       "supportedSchemaReadRange": {
-        "min": 0,
-        "max": 0
+        "min": 10,
+        "max": 10
       },
       "supportedSchemaWriteRange": {
-        "min": 0,
-        "max": 0
+        "min": 10,
+        "max": 10
       },
       "requiresModules": [
         {
@@ -990,7 +1008,10 @@
       "requiresPorts": [
         "PaymentDrivers",
         "WriterAdmission",
-        "PaymentObservationSink"
+        "PaymentObservationSink",
+        "DispatchEgress",
+        "MerchantCredentials",
+        "ProviderAbsenceVerifier"
       ],
       "optionalPorts": [],
       "emits": [
@@ -1004,11 +1025,87 @@
         "payment.cancel.v1",
         "payment.execute.v1",
         "payment.find.v1",
-        "payment.refund.v1"
+        "payment.refund.v1",
+        "payment.authorize.v1",
+        "payment.capture.v1",
+        "payment.void_authorization.v1"
       ],
-      "ownedTables": [],
+      "ownedTables": [
+        "billium_execution_namespace",
+        "billium_execution_merchant_revision",
+        "billium_execution_capability_snapshot",
+        "billium_execution_business_binding",
+        "billium_execution_operation",
+        "billium_execution_operation_revision",
+        "billium_execution_capacity",
+        "billium_execution_reservation",
+        "billium_execution_attempt",
+        "billium_execution_provider_fact",
+        "billium_execution_discrepancy",
+        "billium_execution_observation_partition",
+        "billium_execution_observation_emission",
+        "billium_execution_authorization",
+        "billium_execution_reconciliation_run",
+        "billium_execution_repair_receipt",
+        "billium_execution_dispatch_work",
+        "billium_execution_provider_evidence",
+        "billium_execution_provider_work",
+        "billium_execution_merchant_lifecycle_event",
+        "billium_execution_merchant_credential_revision"
+      ],
       "configKeys": [],
-      "migrationIdentities": [],
+      "migrationIdentities": [
+        {
+          "id": "2026_11_17_000001_create_billium_execution_runtime",
+          "version": 1,
+          "checksum": "sha256:cafac2f20a90726e785c89d6f249ac914a2bcc5092666d16f208c4b56cb30b27"
+        },
+        {
+          "id": "2026_11_17_000002_guard_billium_execution_merchants",
+          "version": 2,
+          "checksum": "sha256:27eff7e6a72ced27829c0cd983a9d5ea5da24014bbeaf1419232bc0fc214336e"
+        },
+        {
+          "id": "2026_11_17_000003_guard_billium_execution_identities",
+          "version": 3,
+          "checksum": "sha256:31be7e649f45ae99ea315d9f22bd4f8774d9a08289e59619302a2b0052e03850"
+        },
+        {
+          "id": "2026_11_17_000004_harden_billium_execution_history",
+          "version": 4,
+          "checksum": "sha256:da92e451ea35093203344da1218bb63319a7aef0f3a119af8ecb993e34faa60c"
+        },
+        {
+          "id": "2026_11_17_000005_bind_billium_execution_merchant_namespaces",
+          "version": 5,
+          "checksum": "sha256:5cd08ee2f7a388db7cd1433c3693371edb86f25309b7ebac05f640b64a6f4a26"
+        },
+        {
+          "id": "2026_11_17_000006_guard_billium_execution_business_binding",
+          "version": 6,
+          "checksum": "sha256:c30276b6f61b9ba91d06e0ed05818668d4b77a7d1bba775cd870d0fe1d0f2079"
+        },
+        {
+          "id": "2026_11_17_000007_validate_billium_execution_runtime",
+          "version": 7,
+          "checksum": "sha256:a1bb95f645947c5097a3f1a013bfbae2f3180f89afb7dcbe3406c21ed705c3df"
+        },
+        {
+          "id": "2026_11_17_000008_bind_billium_execution_source_context",
+          "version": 8,
+          "checksum": "sha256:44727b41a32eec906f7a893887a70be959991a897a6c389ccc4ef357834638b3"
+        },
+        {
+          "id": "2026_11_17_000009_validate_billium_execution_source_context",
+          "version": 9,
+          "checksum": "sha256:ba3db3d420d7e4fb5aca32b6bf81ff92e672a54725b0c51bc6f94a8bb6d1d711"
+        },
+        {
+          "id": "2026_11_17_000010_index_billium_execution_business_identity_digest",
+          "version": 10,
+          "checksum": "sha256:c5a5d32e83c4a10a5ce517acaaf97633c3fbdeeb371fd05bc70416e007465d39"
+        }
+      ],
       "disablePolicy": {
         "dependents": "cascade",
         "keeps": [
@@ -1053,7 +1150,14 @@
           "eventContractRevision": "events-2026-10-v2"
         }
       ],
-      "internalCommands": []
+      "internalCommands": [
+        {
+          "commandType": "payment.observation.v1",
+          "commandSchema": "billium.command.v1",
+          "payloadSchemaRef": "spec/revisions/2026-10/schema/payment/observation.v1.json",
+          "payloadSchemaDigest": "sha256:da5997970adafb92e302896000dedefecf2a6413c5dfb96694a64cee14fae9fd"
+        }
+      ]
     },
     {
       "moduleId": "collection",

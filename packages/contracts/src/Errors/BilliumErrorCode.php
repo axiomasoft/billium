@@ -40,6 +40,11 @@ enum BilliumErrorCode: string implements ErrorCode
     case AllocationExceedsAvailable = 'billium.allocation_exceeds_available';
     case InvoiceTransitionInvalid = 'billium.invoice_transition_invalid';
     case ReferenceUnknown = 'billium.reference_unknown';
+    case CapabilityUnsupported = 'billium.capability_unsupported';
+    case CaptureCapacityExceeded = 'billium.capture_capacity_exceeded';
+    case AuthorizationCapacityExceeded = 'billium.authorization_capacity_exceeded';
+    case OperationFinancialHold = 'billium.operation_financial_hold';
+    case LookupAmbiguous = 'billium.lookup_ambiguous';
 
     #[Override]
     public function value(): string
@@ -74,6 +79,11 @@ enum BilliumErrorCode: string implements ErrorCode
             ProblemCode::AllocationExceedsAvailable => self::AllocationExceedsAvailable,
             ProblemCode::InvoiceTransitionInvalid => self::InvoiceTransitionInvalid,
             ProblemCode::ReferenceUnknown => self::ReferenceUnknown,
+            ProblemCode::CapabilityUnsupported => self::CapabilityUnsupported,
+            ProblemCode::CaptureCapacityExceeded => self::CaptureCapacityExceeded,
+            ProblemCode::AuthorizationCapacityExceeded => self::AuthorizationCapacityExceeded,
+            ProblemCode::OperationFinancialHold => self::OperationFinancialHold,
+            ProblemCode::LookupAmbiguous => self::LookupAmbiguous,
         };
     }
 
@@ -104,6 +114,11 @@ enum BilliumErrorCode: string implements ErrorCode
             self::AllocationExceedsAvailable => ProblemCode::AllocationExceedsAvailable,
             self::InvoiceTransitionInvalid => ProblemCode::InvoiceTransitionInvalid,
             self::ReferenceUnknown => ProblemCode::ReferenceUnknown,
+            self::CapabilityUnsupported => ProblemCode::CapabilityUnsupported,
+            self::CaptureCapacityExceeded => ProblemCode::CaptureCapacityExceeded,
+            self::AuthorizationCapacityExceeded => ProblemCode::AuthorizationCapacityExceeded,
+            self::OperationFinancialHold => ProblemCode::OperationFinancialHold,
+            self::LookupAmbiguous => ProblemCode::LookupAmbiguous,
         };
     }
 
@@ -114,10 +129,12 @@ enum BilliumErrorCode: string implements ErrorCode
             self::MoneyScaleInvalid,
             self::MoneyCurrencyMismatch,
             self::PolicyUnknown => ErrorCategory::Validation,
-            self::SchemaUnsupported => ErrorCategory::Unsupported,
+            self::SchemaUnsupported,
+            self::CapabilityUnsupported => ErrorCategory::Unsupported,
             self::AuthDenied => ErrorCategory::Authorization,
             self::ReferenceUnknown => ErrorCategory::NotFound,
             self::RecoveryRequired,
+            self::LookupAmbiguous,
             self::LookupUnavailable,
             self::ObservationParked,
             self::InstallationQuarantined,
@@ -125,6 +142,9 @@ enum BilliumErrorCode: string implements ErrorCode
             self::IdempotencyConflict,
             self::IdempotencyInFlight,
             self::KeyExpired,
+            self::CaptureCapacityExceeded,
+            self::AuthorizationCapacityExceeded,
+            self::OperationFinancialHold,
             self::RefundCapacityExceeded,
             self::OperationNotCancellable,
             self::ObservationConflict,
@@ -145,16 +165,21 @@ enum BilliumErrorCode: string implements ErrorCode
             self::KeyExpired => 410,
             self::ValidationInvalid,
             self::SchemaUnsupported,
+            self::CapabilityUnsupported,
             self::MoneyScaleInvalid,
             self::MoneyCurrencyMismatch,
             self::PolicyUnknown => 422,
             self::RecoveryRequired,
+            self::LookupAmbiguous,
             self::LookupUnavailable,
             self::ObservationParked,
             self::InstallationQuarantined,
             self::TransportUnavailable => 503,
             self::IdempotencyConflict,
             self::IdempotencyInFlight,
+            self::CaptureCapacityExceeded,
+            self::AuthorizationCapacityExceeded,
+            self::OperationFinancialHold,
             self::RefundCapacityExceeded,
             self::OperationNotCancellable,
             self::ObservationConflict,
@@ -199,6 +224,11 @@ enum BilliumErrorCode: string implements ErrorCode
             self::AllocationExceedsAvailable => 'Allocation exceeds available payment or credit balance.',
             self::InvoiceTransitionInvalid => 'Invoice transition is invalid in its current state.',
             self::ReferenceUnknown => 'Referenced entity was not found within caller scope.',
+            self::CapabilityUnsupported => 'Required provider capability is unsupported or unqualified.',
+            self::CaptureCapacityExceeded => 'Capture amount exceeds available authorization capacity.',
+            self::AuthorizationCapacityExceeded => 'Void amount exceeds available authorization capacity.',
+            self::OperationFinancialHold => 'Operation has an unresolved financial hold.',
+            self::LookupAmbiguous => 'Provider lookup evidence is ambiguous.',
         };
     }
 }

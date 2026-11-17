@@ -61,6 +61,21 @@ final class DatabaseOperationRunner implements OperationRunner
             throw new ProblemException(ProblemCode::AuthDenied, 'operation scope differs from the authenticated caller');
         }
 
+        $scope = $spec->financialScope;
+        $digest = $spec->digest;
+        if ($scope !== null) {
+            if ($scope->installationRef !== $caller->installationRef || $scope->sellerRef !== $caller->sellerRef
+                || $scope->environment !== $caller->environment
+                || ($scope->intentOwnerNamespace !== null && ! in_array($scope->intentOwnerNamespace, $caller->intentOwnerNamespaces, true))
+                || ($scope->sourceAuthority !== null && ! in_array($scope->sourceAuthority, $caller->sourceAuthorities, true))) {
+                throw new ProblemException(ProblemCode::AuthDenied, 'selected financial scope differs from the authenticated grants');
+            }
+            if ($digest !== null && ($scope->intentOwnerNamespace !== null || $scope->sourceAuthority !== null)) {
+                $digest = 'sha256:'.hash('sha256', json_encode(['billium.financial_claim.v1', $scope->installationRef,
+                    $scope->sellerRef, $scope->environment, $scope->intentOwnerNamespace, $scope->sourceAuthority, $digest], JSON_THROW_ON_ERROR));
+            }
+        }
+
         for ($attempt = 1; ; $attempt++) {
             $operation = null;
             $claimId = null;
@@ -72,8 +87,8 @@ final class DatabaseOperationRunner implements OperationRunner
                 $this->connection->statement('SET LOCAL idle_in_transaction_session_timeout = '.$this->deadlineMs);
 
                 // Step 2: the claim is the first write of the root Tx (D51); a replay needs no session or module admission.
-                if ($spec->commandKey !== null && $spec->digest !== null) {
-                    $claim = $this->idempotency->claim($caller, $spec->commandKind, $spec->commandKey, $spec->digest);
+                if ($spec->commandKey !== null && $digest !== null) {
+                    $claim = $this->idempotency->claim($caller, $spec->commandKind, $spec->commandKey, $digest);
                     if ($claim->replay !== null) {
                         $this->assertDepth(1);
                         $this->connection->commit();

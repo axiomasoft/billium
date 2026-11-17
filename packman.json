@@ -44,6 +44,21 @@
                 "Laravel",
                 "Plugins"
             ]
+        },
+        {
+            "name": "axiomasoft/billium-testkit",
+            "path": "packages/testkit",
+            "namespace": "Billium\\Testkit\\",
+            "profile": "php-library",
+            "layer": "L4",
+            "type": "dev",
+            "dev_only": true,
+            "owns": [
+                "Drivers",
+                "Fixtures",
+                "Oracles",
+                "Restore"
+            ]
         }
     ],
     "gates": {

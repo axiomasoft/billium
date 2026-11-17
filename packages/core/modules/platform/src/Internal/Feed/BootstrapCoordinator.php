@@ -9,7 +9,6 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runner\OperationRunner;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Data\Runner\LockRequest;
-use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Enums\Runner\LockRank;
 use Billium\Core\Exceptions\Runner\LockPlanChanged;
 use Billium\Platform\Contracts\Inbox\BootstrapItemHandler;
@@ -43,6 +42,7 @@ final readonly class BootstrapCoordinator
         ($this->runner)()->assertCurrent($context, 'platform');
         $caller = $context->caller();
         if ($snapshot->sellerRef !== $caller->sellerRef || $snapshot->environment !== $caller->environment
+            || ! $context->spec()->selectsSource($snapshot->sourceAuthority)
             || ! in_array($snapshot->sourceAuthority, $caller->sourceAuthorities, true)) {
             throw new ProblemException(ProblemCode::AuthDenied, 'The snapshot is outside the authenticated source scope');
         }
@@ -164,7 +164,7 @@ final readonly class BootstrapCoordinator
     {
         ($this->runner)()->assertCurrent($context, 'platform');
         $db = $this->partitions->connection($context);
-        $planned = $this->session($db, $sessionId, $context->caller());
+        $planned = $this->session($db, $sessionId, $context);
         $this->partitions->lockNamespace($db, Rows::string(Rows::field($planned, 'channel')), Rows::string(Rows::field($planned, 'source_authority')),
             Rows::string(Rows::field($planned, 'seller_ref')), Rows::string(Rows::field($planned, 'environment')), Rows::string(Rows::field($planned, 'partition_ref')));
         $session = $this->lockSession($context, $db, $sessionId);
@@ -201,9 +201,8 @@ final readonly class BootstrapCoordinator
     public function status(TransactionContext $context, int $sessionId): BootstrapStatus
     {
         ($this->runner)()->assertCurrent($context, 'platform');
-        $caller = $context->caller();
         $db = $this->partitions->connection($context);
-        $session = $this->session($db, $sessionId, $caller);
+        $session = $this->session($db, $sessionId, $context);
         $counts = [];
         foreach ($db->select('SELECT state, count(*) AS n FROM public.billium_feed_bootstrap_item WHERE session_id = ? GROUP BY state', [$sessionId]) as $row) {
             $counts[Rows::string(Rows::field($row, 'state'))] = Rows::int(Rows::field($row, 'n'));
@@ -247,11 +246,13 @@ final readonly class BootstrapCoordinator
             SQL, [$new->id, $cursor + 1, ...$scope, $cursor]);
     }
 
-    private function session(Connection $db, int $sessionId, Caller $caller): mixed
+    private function session(Connection $db, int $sessionId, TransactionContext $context): mixed
     {
+        $caller = $context->caller();
         $session = $db->selectOne('SELECT * FROM public.billium_feed_bootstrap_session WHERE id = ? AND seller_ref = ? AND environment = ?', [$sessionId, $caller->sellerRef, $caller->environment])
             ?? throw new ProblemException(ProblemCode::ReferenceUnknown, 'Unknown bootstrap session');
-        if (! in_array(Rows::string(Rows::field($session, 'source_authority')), $caller->sourceAuthorities, true)) {
+        $source = Rows::string(Rows::field($session, 'source_authority'));
+        if (! $context->spec()->selectsSource($source) || ! in_array($source, $caller->sourceAuthorities, true)) {
             throw new ProblemException(ProblemCode::AuthDenied, 'The bootstrap session is outside the authenticated source scope');
         }
 
@@ -261,7 +262,7 @@ final readonly class BootstrapCoordinator
     /** Plans partition (rank 30, segment 0) then session (segment 1), locks both and re-reads the session. */
     private function lockSession(TransactionContext $context, Connection $db, int $sessionId): mixed
     {
-        $planned = $this->session($db, $sessionId, $context->caller());
+        $planned = $this->session($db, $sessionId, $context);
         $oldId = Rows::field($planned, 'old_partition_id');
         $requests = [new LockRequest(LockRank::FeedPartition, 'billium_feed_bootstrap_session', [$sessionId], segment: self::SESSION_SEGMENT)];
         if ($oldId !== null) {
@@ -270,7 +271,7 @@ final readonly class BootstrapCoordinator
         if (count($context->lock(...$requests)) !== count($requests)) {
             throw new LockPlanChanged('Bootstrap rows are gone');
         }
-        $current = $this->session($db, $sessionId, $context->caller());
+        $current = $this->session($db, $sessionId, $context);
         if (Rows::field($current, 'old_partition_id') !== $oldId) {
             throw new LockPlanChanged('Bootstrap plan changed');
         }

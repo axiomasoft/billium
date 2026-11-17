@@ -8,6 +8,7 @@ use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runner\OperationRunner;
 use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Exceptions\Runner\LockPlanChanged;
 use Billium\Platform\Contracts\Inbox\CustodyHandler;
@@ -36,19 +37,60 @@ use stdClass;
 #[Internal]
 final readonly class CustodyProcessor
 {
-    /** @param Closure(): OperationRunner $runner */
+    /**
+     * @param  Closure(): OperationRunner  $runner
+     * @param  Closure(): CallerContext  $callers
+     */
     public function __construct(
         private PartitionStore $partitions,
         private Closure $runner,
+        private Closure $callers,
         private int $retryBackoffSeconds = 5,
         private int $retryBudget = 10,
     ) {}
+
+    public function sourceForPartition(Caller $caller, string $channel, int $partitionId): string
+    {
+        return $this->plannedSource('billium_feed_partition', $caller, $channel, $partitionId);
+    }
+
+    public function sourceForInbox(Caller $caller, string $channel, int $inboxId): string
+    {
+        return $this->plannedSource('billium_inbox_message', $caller, $channel, $inboxId);
+    }
+
+    private function plannedSource(string $table, Caller $caller, string $channel, int $id): string
+    {
+        $authenticated = ($this->callers)()->current();
+        if (get_object_vars($authenticated) !== get_object_vars($caller)) {
+            throw new ProblemException(ProblemCode::AuthDenied, 'The planning scope differs from the authenticated caller');
+        }
+        $source = $this->partitions->defaultConnection()->table($table)
+            ->where('seller_ref', $authenticated->sellerRef)->where('environment', $authenticated->environment)
+            ->where('channel', $channel)->where('id', $id)->value('source_authority');
+        if (! is_string($source)) {
+            throw new ProblemException(ProblemCode::ReferenceUnknown, 'Unknown source-scoped reference');
+        }
+        if (! in_array($source, $authenticated->sourceAuthorities, true)) {
+            throw new ProblemException(ProblemCode::AuthDenied, 'The reference is outside the authenticated source scope');
+        }
+
+        return $source;
+    }
+
+    private function assertSelectedSource(TransactionContext $context, string $source): void
+    {
+        if (! $context->spec()->selectsSource($source)) {
+            throw new ProblemException(ProblemCode::AuthDenied, 'The observation differs from the selected financial source');
+        }
+    }
 
     public function process(TransactionContext $context, string $channel, stdClass $envelope, CustodyHandler $handler): CustodyResult
     {
         ($this->runner)()->assertCurrent($context, 'platform');
         $e = InboxEnvelope::from($channel, $envelope);
         $e->authorize($context->caller());
+        $this->assertSelectedSource($context, $e->sourceAuthority);
         $db = $this->partitions->connection($context);
 
         $partition = $this->partitions->live($db, $e->channel, $e->sourceAuthority, $e->sellerRef, $e->environment, $e->partitionRef);
@@ -130,6 +172,7 @@ final readonly class CustodyProcessor
             throw new ProblemException(ProblemCode::AuthDenied, 'The partition is outside the authenticated source scope');
         }
         $partition = $this->partitions->lock($context, $planned);
+        $this->assertSelectedSource($context, $partition->sourceAuthority);
         if (! $partition->active()) {
             return new CustodyResult(CustodyDisposition::Idle);
         }
@@ -146,7 +189,9 @@ final readonly class CustodyProcessor
         if ($record === null) {
             return new CustodyResult(CustodyDisposition::Idle);
         }
-        InboxEnvelope::from($partition->channel, InboxRecords::payload($record))->authorize($caller);
+        $envelope = InboxEnvelope::from($partition->channel, InboxRecords::payload($record));
+        $envelope->authorize($caller);
+        $this->assertSelectedSource($context, $envelope->sourceAuthority);
 
         return $this->apply($context, $db, $partition, $record, $handler);
     }
@@ -165,6 +210,7 @@ final readonly class CustodyProcessor
         if (! in_array(Rows::string(Rows::field($planned, 'source_authority')), $caller->sourceAuthorities, true)) {
             throw new ProblemException(ProblemCode::AuthDenied, 'The delivery is outside the authenticated source scope');
         }
+        $this->assertSelectedSource($context, Rows::string(Rows::field($planned, 'source_authority')));
         $partitionId = Rows::field($planned, 'partition_id');
         if ($partitionId === null) {
             return new CustodyResult(CustodyDisposition::Idle, $inboxId, Rows::string(Rows::field($planned, 'status')));
@@ -177,7 +223,10 @@ final readonly class CustodyProcessor
         if ($record === null || Rows::field($record, 'status') !== 'parked_dependency') {
             return new CustodyResult(CustodyDisposition::Idle, $inboxId, $record === null ? null : Rows::string(Rows::field($record, 'status')));
         }
-        InboxEnvelope::from(Rows::string(Rows::field($record, 'channel')), InboxRecords::payload($record))->authorize($caller);
+        $envelope = InboxEnvelope::from(Rows::string(Rows::field($record, 'channel')), InboxRecords::payload($record));
+        $envelope->authorize($caller);
+        $this->assertSelectedSource($context, $envelope->sourceAuthority);
+        $this->assertSelectedSource($context, Rows::string(Rows::field($record, 'source_authority')));
         $earlier = $this->earlierParked($db, $record);
         if ($earlier !== null) {
             return new CustodyResult(CustodyDisposition::ParkedDependency, $inboxId, 'parked_dependency', null, null, $earlier);

@@ -9,6 +9,7 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runner\OperationRunner;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Contracts\Runtime\FinancialAuthorityEvidence;
 use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
 use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Enums\Runtime\FinancialMode;
@@ -122,6 +123,7 @@ final class BootstrapAtomicAdoptionTest extends InboxTestCase
             try {
                 $worker->instance(CallerContext::class, $this->callers);
                 $worker->instance(FinancialSessionAdmission::class, $this->tokens);
+                $worker->instance(FinancialAuthorityEvidence::class, $this->authority);
                 $run = function (\Closure $body) use ($worker, $spec): void {
                     $worker->make(OperationRunner::class)->run($spec, static function (TransactionContext $context) use ($body) {
                         $body($context);
@@ -250,6 +252,7 @@ final class BootstrapAtomicAdoptionTest extends InboxTestCase
             try {
                 $worker->instance(CallerContext::class, $this->callers);
                 $worker->instance(FinancialSessionAdmission::class, $this->tokens);
+                $worker->instance(FinancialAuthorityEvidence::class, $this->authority);
                 $worker->make(OperationRunner::class)->run($spec, function (TransactionContext $context) use ($worker, $session, &$adopted) {
                     $adopted = $worker->make(FeedPartitions::class)->adoptBootstrap($context, $session);
 

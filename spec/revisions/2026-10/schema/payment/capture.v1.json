@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-10:payment/capture.v1.json",
+  "title": "CapturePayment",
+  "type": "object",
+  "required": [
+    "schema",
+    "commandKey",
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "operationRef",
+    "originalOperationRef",
+    "source",
+    "money",
+    "requestedAt"
+  ],
+  "properties": {
+    "schema": {
+      "const": "payment.capture.v1"
+    },
+    "commandKey": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/commandKey"
+    },
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    },
+    "operationRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "originalOperationRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "source": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/commandSource"
+    },
+    "money": {
+      "$ref": "urn:billium:spec:2026-10:common/money-wire.json#/$defs/positive"
+    },
+    "requestedAt": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/timestamp"
+    }
+  },
+  "additionalProperties": false,
+  "description": "positive explicit amount; operationRef child, originalOperationRef root; inherit root immutable merchant/profile/version. No merchant/routing override. No omit-amount capture-all behavior."
+}

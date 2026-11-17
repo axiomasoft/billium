@@ -13,6 +13,7 @@ use Billium\Core\Contracts\Modules\ModuleTransitionPlanner;
 use Billium\Core\Contracts\Runner\OperationRunner;
 use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Contracts\Runtime\EventPublisher;
+use Billium\Core\Contracts\Runtime\FinancialAuthorityEvidence;
 use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
 use Billium\Core\Database\BilliumSchemaSetProvider;
 use Billium\Core\Diagnostics\BilliumCompatibilityDoctorCheck;
@@ -147,6 +148,7 @@ final class PlatformPlugin implements ExtensionPlugin, WithCapabilities, WithCon
             OperationRunner::class => Cardinality::OptionalSingle->value,
             CallerContext::class => Cardinality::OptionalSingle->value,
             FinancialSessionAdmission::class => Cardinality::OptionalSingle->value,
+            FinancialAuthorityEvidence::class => Cardinality::OptionalSingle->value,
             EventPublisher::class => Cardinality::OptionalSingle->value,
             ModuleRegistry::class => Cardinality::OptionalSingle->value,
             ModuleAdmissionGate::class => Cardinality::OptionalSingle->value,

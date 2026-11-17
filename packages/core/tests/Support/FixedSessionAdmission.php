@@ -10,8 +10,8 @@ use Billium\Core\Enums\Runtime\FinancialMode;
 use DateTimeImmutable;
 
 /**
- * Test double of the host authority (D62): it hands the current process the claims of a token issued outside the
- * database. Tests change the token to model worker joins, retired tokens, restores and clones without credentials.
+ * Mutable token selector only. Construction/set never issues or authenticates authority evidence.
+ * Positive fixtures explicitly request independent simulated host issuance before entering a financial root.
  */
 final class FixedSessionAdmission implements FinancialSessionAdmission
 {

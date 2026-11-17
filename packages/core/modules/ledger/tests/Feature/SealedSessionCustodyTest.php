@@ -6,6 +6,7 @@ namespace Billium\Ledger\Tests\Feature;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Core\Tests\Support\ObservationFactory;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Ledger\Tests\Observation\ObservationTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -22,6 +23,7 @@ final class SealedSessionCustodyTest extends ObservationTestCase
     {
         $this->debt('o1', 1000);
         $this->intent('intent-a', ['o1']);
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('seal', 'seal-1', [1]);
         $this->installation()->seal('seal-1', 1);
         $charge = ObservationFactory::charge('op-1', 1, 1000, sequence: 1);
 
@@ -35,7 +37,9 @@ final class SealedSessionCustodyTest extends ObservationTestCase
         }
         self::assertSame(0, $this->allocated('o1'));
 
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('open', 'open-2', ['owner-1', 1, 1, 1, 'evidence:open-2']);
         $this->installation()->openSession('open-2', 'owner-1', 1, 1, 1, 'evidence:open-2');
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('activate', 'activate-2', [2, 'certificate:2', 'admission:2', 'evidence:activate-2']);
         $this->installation()->activateSession('activate-2', 2, 'certificate:2', 'admission:2', 'evidence:activate-2');
         $drained = $this->drainer()->drainPartition(self::integer($this->partition()['id']));
 

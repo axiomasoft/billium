@@ -11,6 +11,7 @@ use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Tests\Support\Concurrency\Scenario;
 use Billium\Core\Tests\Support\FixedCallerContext;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Ledger\Contracts\Ledger;
 use Billium\Ledger\Data\Allocations\Allocate;
 use Billium\Ledger\Data\Invoices\CreditNoteLine;
@@ -34,6 +35,7 @@ final readonly class AllocationCommandScenario implements Scenario
         $step = self::step($args, $index);
         $app->instance(CallerContext::class, new FixedCallerContext(new Caller(self::text($step, 'seller', 'seller-a'), 'test', PlatformTestCase::INSTALLATION, 'actor-'.$index)));
         $app->instance(FinancialSessionAdmission::class, new FixedSessionAdmission(FixedSessionAdmission::token(PlatformTestCase::INSTALLATION, processRef: 'process-'.$index)));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($app);
     }
 
     /** @param array<string, mixed> $args */

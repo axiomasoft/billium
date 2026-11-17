@@ -122,10 +122,24 @@
     },
     {
       "kind": "envelope",
+      "id": "payment.authorize.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/authorize.v1.json"
+    },
+    {
+      "kind": "envelope",
       "id": "payment.cancel.v1",
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/payment/cancel.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "payment.capture.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/capture.v1.json"
     },
     {
       "kind": "envelope",
@@ -140,6 +154,13 @@
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/payment/execute.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "payment.execution_status.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/execution-status.v1.json"
     },
     {
       "kind": "envelope",
@@ -168,6 +189,13 @@
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/payment/refund.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "payment.void_authorization.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/void-authorization.v1.json"
     },
     {
       "kind": "envelope",
@@ -1305,6 +1333,118 @@
     },
     {
       "kind": "envelope-field",
+      "id": "payment.authorize.v1#/properties/bindingRevision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.authorize.v1#/properties/commandKey",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.authorize.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.authorize.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.authorize.v1#/properties/executionProfile",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.authorize.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.authorize.v1#/properties/merchantAccountRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.authorize.v1#/properties/money",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.authorize.v1#/properties/operationKind",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.authorize.v1#/properties/operationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.authorize.v1#/properties/requestedAt",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.authorize.v1#/properties/returnContextRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.authorize.v1#/properties/routingEpoch",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.authorize.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.authorize.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.authorize.v1#/properties/source",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
       "id": "payment.cancel.v1#/properties/commandKey",
       "status": "new",
       "since": "2026-10",
@@ -1351,6 +1491,83 @@
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/payment/cancel.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.capture.v1#/properties/commandKey",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/capture.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.capture.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/capture.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.capture.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/capture.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.capture.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/capture.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.capture.v1#/properties/money",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/capture.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.capture.v1#/properties/operationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/capture.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.capture.v1#/properties/originalOperationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/capture.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.capture.v1#/properties/requestedAt",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/capture.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.capture.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/capture.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.capture.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/capture.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.capture.v1#/properties/source",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/capture.v1.json"
     },
     {
       "kind": "envelope-field",
@@ -1575,6 +1792,125 @@
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/payment/execute.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execution_status.v1#/properties/bindingRevision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/execution-status.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execution_status.v1#/properties/capabilityVersion",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/execution-status.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execution_status.v1#/properties/capacity",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/execution-status.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execution_status.v1#/properties/delivery",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/execution-status.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execution_status.v1#/properties/driverContractVersion",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/execution-status.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execution_status.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/execution-status.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execution_status.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/execution-status.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execution_status.v1#/properties/merchantAccountRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/execution-status.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execution_status.v1#/properties/operationKind",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/execution-status.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execution_status.v1#/properties/operationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/execution-status.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execution_status.v1#/properties/recovery",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/execution-status.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execution_status.v1#/properties/requested",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/execution-status.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execution_status.v1#/properties/revision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/execution-status.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execution_status.v1#/properties/rootOperationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/execution-status.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execution_status.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/execution-status.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execution_status.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/execution-status.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.execution_status.v1#/properties/status",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/execution-status.v1.json"
     },
     {
       "kind": "envelope-field",
@@ -2051,6 +2387,90 @@
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/payment/refund.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.void_authorization.v1#/properties/commandKey",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/void-authorization.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.void_authorization.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/void-authorization.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.void_authorization.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/void-authorization.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.void_authorization.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/void-authorization.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.void_authorization.v1#/properties/money",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/void-authorization.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.void_authorization.v1#/properties/operationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/void-authorization.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.void_authorization.v1#/properties/originalOperationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/void-authorization.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.void_authorization.v1#/properties/reasonCode",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/void-authorization.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.void_authorization.v1#/properties/requestedAt",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/void-authorization.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.void_authorization.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/void-authorization.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.void_authorization.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/void-authorization.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "payment.void_authorization.v1#/properties/source",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/payment/void-authorization.v1.json"
     },
     {
       "kind": "envelope-field",
@@ -3209,6 +3629,27 @@
     },
     {
       "kind": "problem-code",
+      "id": "billium.authorization.capacity_exceeded",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.capability.unsupported",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.capture.capacity_exceeded",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
       "id": "billium.idempotency.conflict",
       "status": "new",
       "since": "2026-10",
@@ -3251,6 +3692,13 @@
     },
     {
       "kind": "problem-code",
+      "id": "billium.lookup.ambiguous",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
       "id": "billium.lookup.unavailable",
       "status": "new",
       "since": "2026-10",
@@ -3280,6 +3728,13 @@
     {
       "kind": "problem-code",
       "id": "billium.observation.parked",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.operation.financial_hold",
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/problem-codes.json"
@@ -3920,6 +4375,76 @@
       "status": "new",
       "since": "2026-10",
       "source": "packages/core/database/migrations/schedule/2026_11_10_000620_allow_rated_correction_parents.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_17_000001_create_billium_execution_runtime",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_17_000001_create_billium_execution_runtime.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_17_000002_guard_billium_execution_merchants",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_17_000002_guard_billium_execution_merchants.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_17_000003_guard_billium_execution_identities",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_17_000003_guard_billium_execution_identities.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_17_000004_harden_billium_execution_history",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_17_000004_harden_billium_execution_history.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_17_000005_bind_billium_execution_merchant_namespaces",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_17_000005_bind_billium_execution_merchant_namespaces.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_17_000006_guard_billium_execution_business_binding",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_17_000006_guard_billium_execution_business_binding.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_17_000007_validate_billium_execution_runtime",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_17_000007_validate_billium_execution_runtime.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_17_000008_bind_billium_execution_source_context",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_17_000008_bind_billium_execution_source_context.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_17_000009_validate_billium_execution_source_context",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_17_000009_validate_billium_execution_source_context.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_17_000010_index_billium_execution_business_identity_digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_17_000010_index_billium_execution_business_identity_digest.php"
     },
     {
       "kind": "migration",

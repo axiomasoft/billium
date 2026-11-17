@@ -26,6 +26,16 @@ final readonly class DatabaseFeedPartitions implements FeedPartitions
         return $this->custody->process($context, $channel, $envelope, $handler);
     }
 
+    public function sourceForPartition(Caller $caller, string $channel, int $partitionId): string
+    {
+        return $this->custody->sourceForPartition($caller, $channel, $partitionId);
+    }
+
+    public function sourceForInbox(Caller $caller, string $channel, int $inboxId): string
+    {
+        return $this->custody->sourceForInbox($caller, $channel, $inboxId);
+    }
+
     public function drain(TransactionContext $context, int $partitionId, CustodyHandler $handler): CustodyResult
     {
         return $this->custody->drain($context, $partitionId, $handler);

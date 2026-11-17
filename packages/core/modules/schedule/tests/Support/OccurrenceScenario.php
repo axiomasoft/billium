@@ -10,6 +10,7 @@ use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
 use Billium\Core\Tests\Support\Concurrency\Scenario;
 use Billium\Core\Tests\Support\FixedCallerContext;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Schedule\Contracts\OccurrenceService;
 use Billium\Schedule\Data\Commands\ApplyScheduleRevision;
 use Billium\Schedule\Data\Commands\CancelSchedule;
@@ -56,6 +57,7 @@ final class OccurrenceScenario implements Scenario
     {
         $app->instance(CallerContext::class, FixedCallerContext::default());
         $app->instance(FinancialSessionAdmission::class, new FixedSessionAdmission(FixedSessionAdmission::token()));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($app);
         $app->register(ScheduleServiceProvider::class);
     }
 }

@@ -8,6 +8,7 @@ use Billium\Contracts\Enums\ProblemCode;
 use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
 use Billium\Core\Tests\Support\ObservationFactory;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Ledger\Tests\Observation\ObservationTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -67,8 +68,10 @@ final class BootstrapRecoverySessionTest extends ObservationTestCase
     /** A new owner epoch without a seal supersedes the active one into recovery; this process may act in Recovery only. */
     private function recoverySession(): void
     {
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('open', 'open-2', ['owner-1', 1, 1, 1, 'evidence:open-2']);
         $this->installation()->openSession('open-2', 'owner-1', 1, 1, 1, 'evidence:open-2');
         $this->tokens->set(FixedSessionAdmission::token(self::INSTALLATION, modes: [FinancialMode::Recovery]));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($this->application());
         self::assertSame('recovery', $this->value('SELECT state FROM billium_financial_session ORDER BY epoch DESC LIMIT 1'));
     }
 }

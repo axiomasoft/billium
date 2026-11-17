@@ -1,0 +1,29 @@
+{
+  "id": "payment/p5-contracts/authorize-precision",
+  "spec_refs": [
+    "BC-ENV-01",
+    "BC-ENV-09",
+    "BC-ID-12"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"payment.authorize.v1\",\"commandKey\":\"0b6f2c1e-6d1a-4a44-9a51-3f0c6f2f7a10\",\"operationRef\":\"op-1\",\"operationKind\":\"charge\",\"source\":{\"context\":\"commerz\",\"orderRef\":\"ord-1\",\"intentRef\":\"int-1\"},\"installationRef\":\"inst-1\",\"environment\":\"test\",\"executionProfile\":\"remote-billium\",\"routingEpoch\":1,\"sellerRef\":\"seller-1\",\"merchantAccountRef\":\"ma-1\",\"money\":{\"amount\":\"9007199254740993.00\",\"currency\":\"RUB\"},\"bindingRevision\":\"sha256:00\",\"requestedAt\":\"2026-10-17T12:00:00Z\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "payment.authorize.v1",
+        "digest": "sha256:465743b575a9c3eac83b8328c2a4f07eb8701f9efa8ea3a6d844c567b9d7a86d"
+      }
+    }
+  ]
+}

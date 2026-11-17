@@ -12,6 +12,7 @@ use Billium\Core\Contracts\Modules\ModuleTransitionEvidence;
 use Billium\Core\Contracts\Modules\ModuleTransitionPlanner;
 use Billium\Core\Contracts\Runner\OperationRunner;
 use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Contracts\Runtime\FinancialAuthorityEvidence;
 use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
 use Billium\Platform\Contracts\EventContracts\EventContractRegistrar;
 use Billium\Platform\Contracts\Idempotency\IdempotencyStore;
@@ -65,6 +66,7 @@ final class PlatformInstallationRegistrar implements PackageRegistrar
         $app->singleton(RootAdmission::class, static fn (Application $app): PlatformRootAdmission => new PlatformRootAdmission(
             $app->make(DatabaseManager::class),
             static fn (): FinancialSessionAdmission => $app->make(FinancialSessionAdmission::class),
+            static fn (): FinancialAuthorityEvidence => $app->make(FinancialAuthorityEvidence::class),
             $app->make(ModuleRegistry::class),
             $app->make(ModuleAdmissionGate::class),
         ));
@@ -83,6 +85,7 @@ final class PlatformInstallationRegistrar implements PackageRegistrar
                 $options->modules->enabled,
                 $options->financialSession->sealLockTimeoutMs,
                 static fn (): ?ModuleTransitionEvidence => $app->bound(ModuleTransitionEvidence::class) ? $app->make(ModuleTransitionEvidence::class) : null,
+                static fn (): FinancialAuthorityEvidence => $app->make(FinancialAuthorityEvidence::class),
             );
         });
 

@@ -10,6 +10,7 @@ use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Tests\Support\Concurrency\Scenario;
 use Billium\Core\Tests\Support\FixedCallerContext;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Ledger\Contracts\Ledger;
 use Billium\Ledger\Data\Invoices\IssueInvoice;
 use Billium\Ledger\Data\Invoices\UpdateInvoiceMetadata;
@@ -25,6 +26,7 @@ final readonly class InvoiceIssueMetadataScenario implements Scenario
     {
         $app->instance(CallerContext::class, new FixedCallerContext(new Caller('seller-a', 'test', PlatformTestCase::INSTALLATION, 'actor-'.$index)));
         $app->instance(FinancialSessionAdmission::class, new FixedSessionAdmission(FixedSessionAdmission::token(PlatformTestCase::INSTALLATION, processRef: 'process-'.$index)));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($app);
     }
 
     /** @param array<string, mixed> $args */
