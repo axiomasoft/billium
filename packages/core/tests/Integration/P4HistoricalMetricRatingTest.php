@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Billium\Core\Tests\Integration;
 
-use Billium\Contracts\Enums\ProblemCode;
-use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Rating\Tests\RatingTestCase;
 use Billium\Usage\Tests\Support\UsageFixtures;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -15,16 +13,16 @@ use stdClass;
 #[Group('pg')]
 final class P4HistoricalMetricRatingTest extends RatingTestCase
 {
-    /** @return iterable<string, array{string, bool}> */
+    /** @return iterable<string, array{string}> */
     public static function revisions(): iterable
     {
         foreach (['model', 'unit', 'filter', 'extraction', 'attribution', 'correction'] as $field) {
-            yield $field => [$field, in_array($field, ['attribution', 'correction'], true)];
+            yield $field => [$field];
         }
     }
 
     #[DataProvider('revisions')]
-    public function test_metric_revision_preserves_original_aggregate_and_rated_money(string $field, bool $unsupported): void
+    public function test_metric_revision_preserves_original_aggregate_and_rated_money(string $field): void
     {
         $original = $this->prepared();
         self::assertSame('10000', $original->draft->grossMinor);
@@ -39,22 +37,26 @@ final class P4HistoricalMetricRatingTest extends RatingTestCase
                 'unit' => $raw->unit = 'byte',
                 'filter' => $raw->sourceSelection->filters[0]->value = 'false',
                 'extraction' => $raw->extraction->field = 'adjusted_quantity',
-                'attribution' => $raw->attributionPolicy->version = 2,
-                'correction' => $raw->correctionPolicy->version = 2,
+                'attribution' => $raw->attributionPolicy = (object) ['id' => 'immutable_host_snapshot', 'version' => 2,
+                    'mappingRef' => 'mapping-1', 'attribution' => UsageFixtures::fact()->attribution],
+                'correction' => $raw->correctionPolicy = (object) ['id' => 'replace_same_fact_revision', 'version' => 2, 'maxRevision' => 2],
                 default => throw new \LogicException('Unknown metric revision case'),
             };
         };
-        if ($unsupported) {
-            try {
-                $this->usage()->registerMetric(UsageFixtures::metric($change));
-                self::fail('Unregistered policy version accepted');
-            } catch (ProblemException $error) {
-                self::assertSame(ProblemCode::ValidationInvalid, $error->problem);
-                self::assertSame($metricCount, $this->rows('billium_usage_metric'));
-            }
-        } else {
-            $this->usage()->registerMetric(UsageFixtures::metric($change));
-            self::assertSame($metricCount + 1, $this->rows('billium_usage_metric'));
+        $metric = UsageFixtures::metric($change);
+        $this->usage()->registerMetric($metric);
+        self::assertSame($metricCount + 1, $this->rows('billium_usage_metric'));
+        if (in_array($field, ['attribution', 'correction'], true)) {
+            $fact = UsageFixtures::fact(static function ($raw) use ($metric): void {
+                $raw->factId = 'new-policy-fact';
+                $raw->metricVersion = $metric->metricVersion;
+                $raw->metricDigest = $metric->digest;
+                $raw->value->quantity = '7';
+            });
+            $accepted = $this->usage()->submitUsageFact($fact);
+            self::assertSame('accepted', $accepted->result);
+            self::assertEquals($accepted, $this->usage()->submitUsageFact($fact));
+            self::assertSame(2, $this->rows('billium_usage_fact'));
         }
         self::assertSame($snapshot, $this->freeze());
         $reproduced = $this->prepared();

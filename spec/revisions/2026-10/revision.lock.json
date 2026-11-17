@@ -52,11 +52,11 @@
     "schema/usage/aggregate.v1.json": "sha256:aecbce76544cbb0f9d8fe18ef36e0b539696b354ae35b7433c08437f21665a97",
     "schema/usage/fact.v1.json": "sha256:8bdae12e7925cb67f949a2857d8773aca1596851230cea97dc5b84d4622e0ef1",
     "schema/usage/fact.v2.json": "sha256:b3918c3db907b45f3b3d9a40794c62637eed01fb19eb0cb97b24e9399d8c3b94",
-    "schema/usage/metric.v1.json": "sha256:d5eaa64061151d99b9f1b9aac40a1c6b98141e45a54b7ec046f738885beac6a2",
+    "schema/usage/metric.v1.json": "sha256:3b0ef88fbcdd2d4d246a358fd638eac615547511f6961e1ab624e156390ad790",
     "schema/usage/quantity.v1.json": "sha256:ba2c70520dfb1162eeda031781b6607d3e44e353cb2435c16bc8a649551b69eb",
     "schema/usage/receipt.v1.json": "sha256:dac37e54bf25f74b5906528e98d1cf4aaa0390f432c50def89650968e34da3d4",
     "schema/usage/receipt.v2.json": "sha256:112e688f8a0bff41fe7c7c1754fd88c738fc8de7d2d18b35a9b4dfbd5812449b",
     "sources/list-one.xml": "sha256:33139b438657d1cee116ba737807ea71d19d6de4b90f799a09c56f0cc6a1b0ff",
-    "upgrade-map.json": "sha256:914588bb6f89f4d7c19bd0b403eb926e497148b369f20f61f57689f62a294d03"
+    "upgrade-map.json": "sha256:ea0acf980c49bb5e00359c1c2ed6260fbb7b78cbe76c0306497c04699c2acb96"
   }
 }

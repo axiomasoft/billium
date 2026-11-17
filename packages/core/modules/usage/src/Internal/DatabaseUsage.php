@@ -106,7 +106,7 @@ final readonly class DatabaseUsage implements Usage
                 $metric = $this->codec->decode(self::text($row->body));
                 assert($metric instanceof MetricVersion);
                 $this->validateSemantics(fact: $fact, metric: $metric);
-                $this->validateSnapshot(fact: $fact, snapshot: $snapshot);
+                $this->validateSnapshot(fact: $fact, metric: $metric, snapshot: $snapshot);
                 assert($snapshot instanceof AttributionSnapshot);
                 $previous = $db->table('billium_usage_fact')->where([
                     'seller_ref' => $caller->sellerRef, 'environment' => $caller->environment,
@@ -180,6 +180,9 @@ final readonly class DatabaseUsage implements Usage
 
     private function validateSemantics(UsageFactV2 $fact, MetricVersion $metric): void
     {
+        if ($metric->correctionPolicy->version === 2 && $fact->revision > $metric->correctionPolicy->maxRevision) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'fact exceeds immutable metric correction revision bound');
+        }
         $kind = match ($metric->model->id) {
             'additive_sum', 'gauge' => 'decimal', 'additive_count' => 'count', 'exact_distinct' => 'members',
             default => throw new ProblemException(ProblemCode::ValidationInvalid, 'unsupported metric semantics'),
@@ -196,7 +199,7 @@ final readonly class DatabaseUsage implements Usage
         }
     }
 
-    private function validateSnapshot(UsageFactV2 $fact, ?AttributionSnapshot $snapshot): void
+    private function validateSnapshot(UsageFactV2 $fact, MetricVersion $metric, ?AttributionSnapshot $snapshot): void
     {
         if ($snapshot === null || $snapshot->sellerRef !== $fact->sellerRef || $snapshot->mappingRef === '' || $snapshot->periodRef === ''
             || $this->codec->canonicalize($snapshot->attribution) !== $this->codec->canonicalize($fact->attribution)
@@ -208,6 +211,11 @@ final readonly class DatabaseUsage implements Usage
             || self::time($fact->eventAt) < self::time(self::text($fact->interval->start))
             || self::time($fact->eventAt) >= self::time(self::text($fact->interval->end))) {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'unresolved attribution or interval requires pre-split normalized facts');
+        }
+        if ($metric->attributionPolicy->version === 2
+            && ($snapshot->mappingRef !== $metric->attributionPolicy->mappingRef
+                || $this->codec->canonicalize($fact->attribution) !== $this->codec->canonicalize($metric->attributionPolicy->attribution))) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'fact differs from immutable metric attribution pin');
         }
     }
 

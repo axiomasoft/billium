@@ -67,7 +67,7 @@ final class AggregationMetricHistoryTest extends AggregationTestCase
         try {
             $metric = UsageFixtures::metric(static function (stdClass $raw) use ($policy): void {
                 $raw->metricVersion = 'api_calls/2-'.$policy;
-                $raw->{$policy}->version = 2;
+                $raw->{$policy}->version = 3;
             });
             $this->usage()->registerMetric($metric);
             self::fail('unregistered policy was accepted');
