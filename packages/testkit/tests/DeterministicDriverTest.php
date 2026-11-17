@@ -207,7 +207,7 @@ final class DeterministicDriverTest extends TestCase
         } catch (RuntimeException) {
         }
         $rotated = HarnessFactory::credentials('account-a', 'credentials-v2');
-        $lookup = $driver->lookup(new LookupRequest($request->binding, 'operation-a', 'reference-a', $first->snapshot?->stableEffectId, $rotated));
+        $lookup = $driver->lookup(new LookupRequest($request->binding, 'operation-a', 'reference-a', $first->snapshot?->providerOperationId, $rotated));
         self::assertSame(100, $lookup->snapshot?->capturedTotal->minor);
         (new IndependentFinancialOracle)->assertSendCount($this->journal(), 'operation-a', 1);
     }

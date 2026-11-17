@@ -41,7 +41,8 @@ final readonly class RootPayments implements RootPaymentCommands
     /** @param Closure():ExecutionOriginResolver $origins */
     public function __construct(private OperationRunner $runner, private CallerContext $callers, private ExecutionStore $store,
         private Closure $origins, private MerchantRegistry $merchants, private QualifiedAdapter $adapters,
-        private CollectionChecks $collection, private AdmitRoot $admission, private TransportBoundary $boundary, private ?CollectionCancellationParticipant $cancellation = null) {}
+        private CollectionChecks $collection, private AdmitRoot $admission, private TransportBoundary $boundary,
+        private ExecutionReadinessGuard $readiness, private CommandInputReplay $inputReplay, private ?CollectionCancellationParticipant $cancellation = null) {}
 
     public function admit(ExecutionScope $scope, ExecutePayment|AuthorizePayment $command): StoredOutcome
     {
@@ -94,6 +95,11 @@ final readonly class RootPayments implements RootPaymentCommands
 
     private function admitValidated(ExecutionScope $scope, ExecutePayment|AuthorizePayment $wire, FinancialScope $selected): StoredOutcome
     {
+        $inputDigest = CommandInputReplay::digest($wire);
+        $cached = $this->inputReplay->find($selected, $wire::SCHEMA, PaymentIdentity::commandKey($scope, 'charge', $this->sourceContext($wire), $wire->commandKey), $inputDigest);
+        if ($cached !== null) {
+            return $cached;
+        }
         $intent = is_string($wire->source->intentRef ?? null) ? $wire->source->intentRef : throw new ProblemException(ProblemCode::ValidationInvalid, 'Missing validated business intent');
         $existing = $this->store->operation($scope, $wire->operationRef);
         $origin = $existing === null ? ($this->origins)()->resolve($scope, $wire->operationRef, $intent)
@@ -117,16 +123,24 @@ final readonly class RootPayments implements RootPaymentCommands
             $this->adapters->select($merchant, $kind, $wire->money->currency->code);
         }
         $semantic = PaymentIdentity::semantic($scope, $wire, $merchant, $origin);
+        $orderRef = $wire->source->orderRef ?? null;
+        if ($orderRef !== null && ! is_string($orderRef)) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'Original order reference must be a string');
+        }
         $binding = new FrozenBinding($scope, $wire->executionProfile, $origin->businessIntentRef, $wire->operationRef, $merchant->revisionRef,
             $merchant->merchantAccountRef, $merchant->driverId, $merchant->driverContractVersion, $merchant->capabilityDigest, $semantic,
-            PaymentIdentity::VERSION, $origin->authorizationRef, $origin->sourceContext, $origin);
+            PaymentIdentity::VERSION, $origin->authorizationRef, $origin->sourceContext, $origin, $orderRef);
         $collection = $existing === null ? $this->collection->plan($origin->authorizationRef, ExecutionPhase::Admission, $scope) : null;
         $modules = $this->collection->modules($collection);
+        if ($existing === null) {
+            $this->readiness->assertReady($binding, $kind, $wire->money);
+        }
         $plan = new AdmissionPlan($scope, $binding, $wire->operationRef, $kind, $wire->money, $wire->commandKey, $semantic, PaymentIdentity::VERSION,
             $modules, $collection->locks ?? [], $collection);
         $spec = new OperationSpec($wire::SCHEMA, $scope->sellerRef, $scope->environment, FinancialMode::Active,
             $existing === null ? ($collection->operationClass ?? ModuleOperationClass::NewIntent) : ModuleOperationClass::ReceiptReplay, $modules,
-            PaymentIdentity::commandKey($scope, 'charge', $origin->sourceContext, $wire->commandKey), $semantic, 'execution.admission', $selected);
+            PaymentIdentity::commandKey($scope, 'charge', $origin->sourceContext, $wire->commandKey), $semantic, 'execution.admission', $selected, $inputDigest,
+            originalExecutionBindingRef: $binding->rootOperationRef);
 
         return $this->runner->run($spec, fn (TransactionContext $ctx): ExecutionReceipt => $this->admission->apply($ctx, $plan, $existing !== null));
     }
@@ -150,7 +164,8 @@ final readonly class RootPayments implements RootPaymentCommands
             throw new ProblemException(ProblemCode::RecoveryRequired, 'Collection cancellation owner is unavailable');
         }
         $spec = new OperationSpec(CancelOperation::SCHEMA, $scope->sellerRef, $scope->environment, FinancialMode::Active,
-            ModuleOperationClass::FrozenIntentCompletion, $this->collection->modules($guard), $key, $digest, 'execution.cancel', $selected);
+            ModuleOperationClass::FrozenIntentCompletion, $this->collection->modules($guard), $key, $digest, 'execution.cancel', $selected,
+            originalExecutionBindingRef: $binding->rootOperationRef);
 
         return $this->runner->run($spec, function (TransactionContext $ctx) use ($scope, $operation, $wire, $digest, $guard): ExecutionReceipt {
             $execution = $this->store->plan($scope, $operation->operationRef);

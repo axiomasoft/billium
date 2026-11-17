@@ -65,6 +65,7 @@ final readonly class SimulatedAbsenceVerifier implements ProviderAbsenceVerifier
             }
             if ($record->kind === 'host.open') {
                 $opened[$session] = true;
+                unset($retired[$session]);
             }
             if ($record->kind === 'host.retire') {
                 if (! isset($opened[$session]) || ! is_string($record->data['reason'] ?? null) || $record->data['reason'] === '') {

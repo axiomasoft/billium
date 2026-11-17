@@ -89,6 +89,7 @@ final class NamespaceRetentionTest extends ExecutionTestCase
         self::assertSame(1, $this->rows('billium_execution_dispatch_work'));
     }
 
+    #[Group('PB-18')]
     public function test_kill_before_txa_commit_rolls_back_identity_capacity_attempt_receipt_and_wakeup(): void
     {
         $owner = TestEnvironment::pdo(owner: true);
@@ -191,29 +192,48 @@ final class NamespaceRetentionTest extends ExecutionTestCase
         self::assertSame(0, UnknownResultTest::events($this->path, 'provider.call'));
     }
 
+    #[Group('PF-07')]
+    #[Group('ACC-RST-08')]
     public function test_pruned_receipts_and_closed_namespace_resolve_original_without_reacquiring_host_or_adapter(): void
     {
+        $app = $this->application();
         $scope = Fixture::scope();
-        $commands = $this->application()->make(RootPaymentCommands::class);
-        $first = $commands->admit($scope, Fixture::wire())->orThrow();
+        $commands = $app->make(RootPaymentCommands::class);
+        $original = Fixture::wire();
+        $first = $commands->admit($scope, $original)->orThrow();
+        $oldUnavailable = Fixture::wire(['commandKey' => Fixture::key(4), 'operationRef' => 'root-b', 'requestedAt' => '2020-01-01T00:00:00Z',
+            'source' => ['context' => 'legacy', 'intentRef' => 'intent-a']]);
+        $oldOrigin = Fixture::origin(context: 'legacy', operation: 'root-b');
+        Fixture::host($app, $this->path, [$oldOrigin], qualified: false);
+        try {
+            $commands->admit($scope, $oldUnavailable)->orThrow();
+            self::fail('Unqualified old command created a business identity');
+        } catch (ProblemException $e) {
+            self::assertSame(ProblemCode::CapabilityUnsupported, $e->problem);
+        }
         $this->runner()->run($this->spec(kind: 'execution.close_namespace', modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($scope): PlatformReceipt {
             $this->application()->make(ExecutionStore::class)->transitionNamespace($ctx, $scope, NamespaceState::Closed, 1, 'archived-history-receipt');
 
             return self::receipt();
         });
         $this->owner()->statement('TRUNCATE billium_idempotency_receipt');
-        Fixture::host($this->application(), $this->path, [Fixture::origin(operation: 'root-b')], qualified: false);
+        self::assertSame(0, $this->rows('billium_idempotency_receipt'));
+        $sameKey = $commands->admit($scope, $original)->orThrow();
+        self::assertSame($first->body['receiptRef'], $sameKey->body['receiptRef']);
+        self::assertSame($first->body['evidenceRefs'], $sameKey->body['evidenceRefs']);
         $restored = $commands->admit($scope, Fixture::wire(['commandKey' => Fixture::key(3)]))->orThrow();
         self::assertSame($first->body['receiptRef'], $restored->body['receiptRef']);
         self::assertSame($first->body['evidenceRefs'], $restored->body['evidenceRefs']);
-        Fixture::host($this->application(), $this->path, [Fixture::origin(operation: 'root-b')]);
+        Fixture::host($app, $this->path, [$oldOrigin]);
         try {
-            $commands->admit($scope, Fixture::wire(['commandKey' => Fixture::key(4), 'operationRef' => 'root-b']))->orThrow();
-            self::fail('Closed namespace admitted fresh effect');
+            $commands->admit($scope, $oldUnavailable)->orThrow();
+            self::fail('Closed namespace admitted an old key with no original business identity');
         } catch (ProblemException $e) {
             self::assertSame(ProblemCode::KeyExpired, $e->problem);
         }
         self::assertSame(1, $this->rows('billium_execution_attempt'));
+        self::assertSame(0, UnknownResultTest::events($this->path, 'provider.call'));
+        self::assertSame(0, $this->rows('billium_execution_operation', "operation_ref='root-b'"));
         self::assertSame(1, $this->rows('billium_execution_business_binding', "retention_policy='execution-business-identity-indefinite-v1' AND retention_deadline_at IS NULL"));
     }
 

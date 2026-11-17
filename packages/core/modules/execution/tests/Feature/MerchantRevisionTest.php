@@ -89,7 +89,7 @@ final class MerchantRevisionTest extends ExecutionTestCase
                 return new ResolvedCredentials('account-a', 'rotated-v2', new SecretRef('secret://vault/old_account_v2'), $purpose, new DateTimeImmutable('2027-01-01'), 'authenticated-continuity-a');
             }
         };
-        $resolver = new ContinuityMerchantCredentials($host, $registry, $this->application()->make(DatabaseManager::class), $this->application()->make(BilliumOptions::class));
+        $resolver = new ContinuityMerchantCredentials(static fn (): MerchantCredentials => $host, $registry, $this->application()->make(DatabaseManager::class), $this->application()->make(BilliumOptions::class));
         $resolved = $resolver->resolve($old, 'refund');
         self::assertSame('account-a', $resolved->merchantAccountRef);
         self::assertSame('rotated-v2', $resolved->credentialVersionRef);

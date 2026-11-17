@@ -175,6 +175,13 @@
     "category": "Data"
   },
   {
+    "schema": "billium.event.v3",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\ExecutionRepairEvent",
+    "dart": "ExecutionRepairEvent",
+    "category": "Data"
+  },
+  {
     "schema": "billium.feed.selection.v1",
     "variant": null,
     "php": "Billium\\Contracts\\Data\\Envelopes\\FeedSelection",

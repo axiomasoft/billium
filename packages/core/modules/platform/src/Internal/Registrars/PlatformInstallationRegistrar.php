@@ -15,10 +15,12 @@ use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Contracts\Runtime\FinancialAuthorityEvidence;
 use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
 use Billium\Platform\Contracts\EventContracts\EventContractRegistrar;
+use Billium\Platform\Contracts\Idempotency\IdempotencyReceiptQueries;
 use Billium\Platform\Contracts\Idempotency\IdempotencyStore;
 use Billium\Platform\Contracts\Installation\Installation;
 use Billium\Platform\Contracts\Installation\RootAdmission;
 use Billium\Platform\Internal\EventContracts\DatabaseEventContractRegistrar;
+use Billium\Platform\Internal\Idempotency\DatabaseIdempotencyReceiptQueries;
 use Billium\Platform\Internal\Idempotency\DatabaseIdempotencyStore;
 use Billium\Platform\Internal\Installation\DatabaseInstallation;
 use Billium\Platform\Internal\Installation\PlatformRootAdmission;
@@ -60,6 +62,14 @@ final class PlatformInstallationRegistrar implements PackageRegistrar
             return new DatabaseIdempotencyStore(
                 $databases->connection($options->connection),
                 $options->idempotency->lockTimeoutMs,
+            );
+        });
+        $app->singleton(IdempotencyReceiptQueries::class, static function (Application $app): DatabaseIdempotencyReceiptQueries {
+            $options = $app->make(BilliumOptions::class);
+
+            return new DatabaseIdempotencyReceiptQueries(
+                $app->make(DatabaseManager::class)->connection($options->connection),
+                static fn (): CallerContext => $app->make(CallerContext::class),
             );
         });
 

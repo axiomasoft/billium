@@ -21,6 +21,8 @@ use Billium\Platform\Contracts\Inbox\ObservationBootstrapAuthenticator;
 use Billium\Platform\Contracts\Outbox\CommandOutbox;
 use Billium\Platform\Contracts\Outbox\FactualCommandOutbox;
 use Billium\Platform\Contracts\Outbox\Outbox;
+use Billium\Platform\Contracts\Outbox\OutboxDeliveryQueries;
+use Billium\Platform\Data\EventContracts\PublicEventDestinations;
 use Billium\Platform\Internal\CommandOutbox\CommandOutboxRelay;
 use Billium\Platform\Internal\CommandOutbox\CommandRecorder;
 use Billium\Platform\Internal\CommandOutbox\FactualCommandRecorder;
@@ -30,6 +32,7 @@ use Billium\Platform\Internal\Feed\DatabaseFeedPartitions;
 use Billium\Platform\Internal\Feed\DatabaseFeedRecoveryQueries;
 use Billium\Platform\Internal\Feed\PartitionStore;
 use Billium\Platform\Internal\Inbox\CustodyProcessor;
+use Billium\Platform\Internal\Outbox\DatabaseOutboxDeliveryQueries;
 use Billium\Platform\Internal\Outbox\EventFeedReader;
 use Billium\Platform\Internal\Outbox\FeedTokens;
 use Billium\Platform\Internal\Outbox\OutboxPruner;
@@ -50,6 +53,7 @@ final class PlatformOutboxRegistrar implements PackageRegistrar
     public function register(Application $app): void
     {
         $app->bind(FeedRecoveryQueries::class, DatabaseFeedRecoveryQueries::class);
+        $app->bind(OutboxDeliveryQueries::class, DatabaseOutboxDeliveryQueries::class);
         $app->singleton(AuthenticatedBootstrapContext::class, static fn (Application $app): AuthenticatedBootstrapContext => new AuthenticatedBootstrapContext(
             static fn (): ObservationBootstrapAuthenticator => $app->make(ObservationBootstrapAuthenticator::class),
             static fn (): ScopedCallerContext => $app->make(ScopedCallerContext::class),
@@ -145,6 +149,7 @@ final class PlatformOutboxRegistrar implements PackageRegistrar
             $app->make(DatabaseManager::class),
             new Codec,
             static fn (): OperationRunner => $app->make(OperationRunner::class),
+            $app->bound(PublicEventDestinations::class) ? $app->make(PublicEventDestinations::class) : null,
         ));
     }
 

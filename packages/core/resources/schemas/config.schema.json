@@ -13,6 +13,30 @@
                     ],
                     "default": null
                 },
+                "execution": {
+                    "type": "object",
+                    "properties": {
+                        "outgoing_enabled": {
+                            "type": "boolean",
+                            "default": false
+                        },
+                        "release_evidence_ref": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "default": null
+                        },
+                        "retention_policy_ref": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "default": null
+                        }
+                    },
+                    "additionalProperties": false
+                },
                 "feed": {
                     "type": "object",
                     "properties": {

@@ -275,6 +275,7 @@ final class BusinessContextIdentityTest extends ExecutionTestCase
         self::assertSame(1, $this->rows('billium_execution_business_binding'));
     }
 
+    #[Group('ACC-RST-08')]
     public function test_retained_tombstone_guards_original_identity_even_without_an_operation_or_receipt(): void
     {
         $binding = $this->binding();

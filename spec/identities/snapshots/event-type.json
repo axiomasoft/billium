@@ -2,6 +2,7 @@
   "allocation.applied.v1",
   "credit_note.issued.v1",
   "discrepancy.recorded.v1",
+  "execution.repair_recorded.v1",
   "invoice.issued.v1",
   "obligation.adjusted.v1",
   "obligation.created.v1",

@@ -37,6 +37,7 @@ return [
     'usage' => ['enabled' => false],
     'rating' => ['enabled' => false],
     'schedule' => ['enabled' => false],
+    'execution' => ['release_evidence_ref' => null, 'retention_policy_ref' => null, 'outgoing_enabled' => false],
     // D55: desired module set; unlisted optional modules create no routes, workers or tables.
     'modules' => [
         'composition' => 'embedded-commerz',

@@ -18,6 +18,9 @@ use Packman\Attributes\Api;
  * participant outside it is refused (D55). financialScope selects the authenticated installation, seller, environment
  * and any owner/source used by this operation. Omitting the selection declares a namespace-neutral root. The runner
  * checks the selected grants before receipt lookup and admitted money roots require matching host evidence.
+ * inputDigest is the optional canonical command input fingerprint for a scoped keyed receipt. The runner's claim
+ * digest still identifies the semantic claim. The input fingerprint alone conveys no scope or financial authority.
+ * originalExecutionBindingRef records the owner qualified reference of the original execution root on a scoped claim.
  */
 #[Api(since: '1.0')]
 final readonly class OperationSpec
@@ -37,6 +40,8 @@ final readonly class OperationSpec
         public ?string $digest = null,
         public ?string $commitKind = null,
         public ?FinancialScope $financialScope = null,
+        public ?string $inputDigest = null,
+        public ?string $originalExecutionBindingRef = null,
     ) {
         if (preg_match('/^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$/', $commandKind) !== 1) {
             throw new InvalidArgumentException("Invalid command kind {$commandKind}");
@@ -51,6 +56,14 @@ final readonly class OperationSpec
             if ($value !== null && ($value === '' || strlen($value) > 200)) {
                 throw new InvalidArgumentException('Idempotency key and digest are nonempty bounded strings');
             }
+        }
+        if ($inputDigest !== null && ($commandKey === null || $financialScope === null
+            || preg_match('/\Asha256:[0-9a-f]{64}\z/', $inputDigest) !== 1)) {
+            throw new InvalidArgumentException('A command input digest requires a scoped keyed claim and lowercase SHA-256');
+        }
+        if ($originalExecutionBindingRef !== null && ($commandKey === null || $financialScope === null
+            || $originalExecutionBindingRef === '' || strlen($originalExecutionBindingRef) > 200 || str_contains($originalExecutionBindingRef, "\0"))) {
+            throw new InvalidArgumentException('An original execution binding reference requires a scoped keyed claim and a bounded nonempty reference');
         }
         if ($commitKind !== null && (! $mode->financial() || preg_match('/^[a-z][a-z0-9_.]*$/', $commitKind) !== 1)) {
             throw new InvalidArgumentException('Only an Active or Recovery operation is monetary and needs a valid commit kind');

@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Data\Envelopes\EventEnvelopeV2;
+use Billium\Contracts\Data\Envelopes\ExecutionRepairEvent;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 
-it('runs the independent v2 effect and feed vectors while preserving strict v1', function (): void {
+it('runs the independent effect, repair and feed vectors while preserving strict v1', function (): void {
     $root = dirname(__DIR__, 4).'/fixtures/vectors/';
-    $files = array_merge(glob($root.'event/v2/*.json') ?: [], glob($root.'payment/effects/*.json') ?: [], glob($root.'feed/*.json') ?: [], [$root.'event/envelope/event-type-unknown.json']);
+    $files = array_merge(glob($root.'event/v2/*.json') ?: [], glob($root.'event/repair/*.json') ?: [], glob($root.'payment/effects/*.json') ?: [], glob($root.'feed/*.json') ?: [], [$root.'event/envelope/event-type-unknown.json']);
     $codec = new Codec;
     foreach ($files as $file) {
         $vector = json_decode((string) file_get_contents($file), true, 512, JSON_THROW_ON_ERROR);
@@ -42,6 +43,27 @@ it('rejects v2 in a pinned old client and preserves the old canonical digest byt
     $codec = new Codec(['billium.event.v1']);
     expect($codec->digestOf($codec->decode($json)))->toBe($old['expect'][0]['ok']['digest']);
     expect($codec->encode($codec->decode($json)))->toBe((new Codec)->encode((new Codec)->decode($json)));
+});
+
+it('exposes typed repair envelopes only to capable clients', function (): void {
+    $root = dirname(__DIR__, 4).'/fixtures/vectors/event/repair/valid.json';
+    $vector = json_decode((string) file_get_contents($root), true, 512, JSON_THROW_ON_ERROR);
+    $json = $vector['script'][0]['args']['json_text'];
+    $codec = new Codec(['billium.event.v3']);
+    $event = $codec->decode($json);
+    expect($event)->toBeInstanceOf(ExecutionRepairEvent::class);
+    assert($event instanceof ExecutionRepairEvent);
+    expect($event->eventType)->toBe('execution.repair_recorded.v1');
+    expect($event->eventContractRevision)->toBe('events-2026-11-v3');
+    expect($event->aggregateRef)->toBe($event->payload->repairRef);
+    expect($event->digest)->toBe($vector['expect'][0]['ok']['digest']);
+    expect($codec->encode($event))->toBe($json);
+    try {
+        new Codec(['billium.event.v1', 'billium.event.v2'])->decode($json);
+        throw new LogicException('Pinned legacy clients must reject the new repair envelope');
+    } catch (ProblemException $error) {
+        expect($error->problem)->toBe(ProblemCode::SchemaUnsupported);
+    }
 });
 
 it('checks negotiated event capabilities throughout a feed page', function (): void {

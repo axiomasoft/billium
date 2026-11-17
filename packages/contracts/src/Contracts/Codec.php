@@ -72,6 +72,10 @@ final readonly class Codec
             && ($value->sellerRef !== $effect->sellerRef || $value->aggregateRef !== $effect->operationRef || $value->revision !== $effect->revision)) {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'effect envelope identity differs from its payload');
         }
+        $repair = $value->schema === 'billium.event.v3' ? $value->payload : null;
+        if ($repair instanceof stdClass && $value->aggregateRef !== $repair->repairRef) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'repair envelope aggregateRef differs from its payload');
+        }
 
         $variant = $entry['variants'][0];
         foreach ($entry['variants'] as $candidate) {

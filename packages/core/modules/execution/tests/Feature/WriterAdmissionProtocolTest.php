@@ -161,6 +161,7 @@ final class WriterAdmissionProtocolTest extends ExecutionTestCase
         self::assertSame(0, $this->sends);
     }
 
+    #[Group('PB-13')]
     public function test_retired_egress_after_dispatch_commit_refuses_late_send(): void
     {
         [$store,$operation,$attempt,$request,$host,$guard] = $this->fixture();
@@ -351,7 +352,7 @@ final class WriterAdmissionProtocolTest extends ExecutionTestCase
         $this->application()->instance(WriterAdmission::class, $host);
         $this->application()->instance(DispatchEgress::class, $host);
         $guard = $connectionName === null ? $this->application()->make(DispatchAuthority::class)
-            : new DispatchAuthority($databases, fn () => $this->runner(), fn () => $this->application()->make(FinancialSessionAdmission::class), fn () => $this->application()->make(FinancialAuthorityEvidence::class), $this->callers, $this->installation(), $store, $host, $host, $connectionName);
+            : new DispatchAuthority($databases, fn () => $this->runner(), fn () => $this->application()->make(FinancialSessionAdmission::class), fn () => $this->application()->make(FinancialAuthorityEvidence::class), $this->callers, $this->installation(), $store, fn () => $host, fn () => $host, $connectionName);
 
         return [$store, $operation, $attempt, $request, $host, $guard];
     }

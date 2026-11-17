@@ -22,6 +22,7 @@ use Billium\Core\Tests\ExecutionTestCase;
 use Billium\Core\Tests\Support\Concurrency\WorkerApplication;
 use Billium\Core\Tests\Support\FixedCallerContext;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
+use Billium\Core\Tests\Support\SimulatedExecutionReadiness;
 use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Execution\Contracts\AdapterQualification;
 use Billium\Execution\Contracts\DispatchEgress;
@@ -222,6 +223,7 @@ final class AdmissionIdentityTest extends ExecutionTestCase
         $app = WorkerApplication::create();
         $app->register(ExecutionServiceProvider::class);
         $app['config']->set('billium.modules.enabled', ['platform', 'ledger', 'execution']);
+        SimulatedExecutionReadiness::install($app, recompileOptions: true);
         $app->instance(CallerContext::class, new FixedCallerContext(new Caller($scope->sellerRef, $scope->environment, $scope->installationRef, 'process-'.$index,
             ['remote-billium'], [$scope->intentOwnerNamespace])));
         $app->instance(FinancialSessionAdmission::class, new FixedSessionAdmission(FixedSessionAdmission::token($scope->installationRef, processRef: 'worker-'.$index)));
@@ -244,7 +246,7 @@ final class AdmissionIdentityTest extends ExecutionTestCase
         $barrier->arrive('ready');
         $barrier->await('release', 1, 45_000);
         $changes = match ($race) {
-            'keys' => ['commandKey' => self::key($i + 1)],
+            'keys', 'seller', 'reinstall' => ['commandKey' => self::key($i + 1)],
             'changed' => ['money' => ['amount' => $i % 2 === 0 ? '1.00' : '2.00', 'currency' => 'RUB']],
             'context' => $i % 2 === 0 ? [] : ['source' => ['context' => 'support', 'intentRef' => 'intent-a'], 'operationRef' => 'root-b'],
             default => [],
@@ -253,13 +255,15 @@ final class AdmissionIdentityTest extends ExecutionTestCase
             $changes['operationRef'] = 'root-b';
         }
         $changes += ['sellerRef' => $scope->sellerRef, 'installationRef' => $scope->installationRef, 'environment' => $scope->environment, 'merchantAccountRef' => $account];
+        $command = self::wire($changes);
         try {
-            $outcome = $app->make(RootPaymentCommands::class)->admit($scope, self::wire($changes))->orThrow();
+            $outcome = $app->make(RootPaymentCommands::class)->admit($scope, $command)->orThrow();
             $record = ['result' => 'accepted', 'receipt' => json_encode($outcome->body, JSON_THROW_ON_ERROR), 'id' => $outcome->receiptId ?? 0];
         } catch (ProblemException $exception) {
-            $record = ['result' => $exception->problem->value, 'receipt' => '', 'id' => 0];
+            $record = ['result' => $exception->problem->value, 'detail' => $exception->detail, 'receipt' => '', 'id' => 0];
         }
-        $control->append(new JournalEvent('result', $record + ['index' => $i, 'backend' => self::integer($backend)], ProcessIdentity::current()));
+        $control->append(new JournalEvent('result', $record + ['index' => $i, 'backend' => self::integer($backend), 'commandKey' => $command->commandKey,
+            'sellerRef' => $scope->sellerRef, 'installationRef' => $scope->installationRef], ProcessIdentity::current()));
     }
 
     /** @return list<array{string}> */
@@ -315,6 +319,10 @@ final class AdmissionIdentityTest extends ExecutionTestCase
     }
 
     #[DataProvider('races')]
+    #[Group('ACC-CON-01')]
+    #[Group('ACC-CON-18')]
+    #[Group('PB-04')]
+    #[Group('PF-01')]
     public function test_twenty_independent_database_processes_preserve_one_effect_per_commercial_identity(string $race): void
     {
         self::seedMerchant($this->application());
@@ -341,7 +349,25 @@ final class AdmissionIdentityTest extends ExecutionTestCase
             $accepted = array_filter($results, static fn (JournalEvent $entry): bool => $entry->data['result'] === 'accepted');
             self::assertCount(in_array($race, ['changed', 'seller', 'reinstall'], true) ? 10 : 20, $accepted, $race);
             if (in_array($race, ['changed', 'seller', 'reinstall'], true)) {
-                self::assertCount(10, array_filter($results, static fn (JournalEvent $entry): bool => $entry->data['result'] === ProblemCode::IdempotencyConflict->value));
+                $conflicts = array_filter($results, static fn (JournalEvent $entry): bool => $entry->data['result'] === ProblemCode::IdempotencyConflict->value);
+                self::assertCount(10, $conflicts);
+                if ($race === 'changed') {
+                    self::assertCount(1, array_unique(array_column(array_column($results, 'data'), 'commandKey')));
+                    self::assertCount(1, array_unique(array_column(array_column($accepted, 'data'), 'id')));
+                    self::assertSame(1, $this->rows('billium_idempotency_receipt', "command_kind = 'payment.execute.v1'"));
+                } else {
+                    $scopeMember = $race === 'seller' ? 'sellerRef' : 'installationRef';
+                    $storedColumn = $race === 'seller' ? 'seller_ref' : 'installation_ref';
+                    self::assertCount(20, array_unique(array_column(array_column($results, 'data'), 'commandKey')));
+                    self::assertSame([$this->value('SELECT '.$storedColumn.' FROM billium_execution_operation')],
+                        array_values(array_unique(array_column(array_column($accepted, 'data'), $scopeMember))));
+                    foreach ($conflicts as $conflict) {
+                        self::assertSame('', $conflict->data['receipt']);
+                        self::assertIsString($conflict->data['detail']);
+                        self::assertStringNotContainsString('root-a', $conflict->data['detail']);
+                    }
+                    self::assertSame(10, $this->rows('billium_idempotency_receipt', "command_kind = 'payment.execute.v1'"));
+                }
             }
             if ($race === 'same') {
                 self::assertCount(1, array_unique(array_map(static fn (JournalEvent $entry): string => json_encode($entry->data['receipt'], JSON_THROW_ON_ERROR), $accepted)));

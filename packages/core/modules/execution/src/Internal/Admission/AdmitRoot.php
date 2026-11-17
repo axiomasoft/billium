@@ -7,11 +7,13 @@ namespace Billium\Execution\Internal\Admission;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
 use Billium\Execution\Contracts\ExecutionStore;
 use Billium\Execution\Contracts\MerchantActionGate;
 use Billium\Execution\Data\AdmissionPlan;
 use Billium\Execution\Data\ExecutionReceipt;
 use Billium\Execution\Enums\NamespaceState;
+use Billium\Execution\Internal\Authority\AuthorityClaims;
 use Billium\Execution\Internal\Identity\PaymentIdentity;
 use Billium\Execution\Internal\Storage\ExecutionCodec;
 use Packman\Attributes\Internal;
@@ -19,11 +21,11 @@ use Packman\Attributes\Internal;
 #[Internal]
 final readonly class AdmitRoot
 {
-    public function __construct(private ExecutionStore $store, private CollectionChecks $collection, private MerchantActionGate $merchants) {}
+    public function __construct(private ExecutionStore $store, private CollectionChecks $collection, private MerchantActionGate $merchants, private FinancialSessionAdmission $sessions) {}
 
     public function apply(TransactionContext $ctx, AdmissionPlan $plan, bool $replayOnly): ExecutionReceipt
     {
-        $namespace = $replayOnly ? $this->store->namespace($plan->scope) : $this->store->lockNamespace($ctx, $plan->scope);
+        $namespace = $replayOnly ? $this->store->namespace($plan->scope, $ctx) : $this->store->lockNamespace($ctx, $plan->scope);
         if (! $replayOnly && ($namespace->state !== NamespaceState::Open || $namespace->completenessReceiptRef === null
             || $namespace->canonicalizationVersion !== $plan->canonicalizationVersion)) {
             throw new ProblemException($namespace->state === NamespaceState::Closed ? ProblemCode::KeyExpired : ProblemCode::RecoveryRequired,
@@ -31,12 +33,15 @@ final readonly class AdmitRoot
         }
         if (! $replayOnly) {
             $this->merchants->lock($ctx, $plan->scope, $plan->binding->merchantRevisionRef, 'new');
+            $token = $this->sessions->currentToken($plan->scope->installationRef)
+                ?? throw new ProblemException(ProblemCode::RecoveryRequired, 'Initial partition requires the cached admitted owner token');
+            $this->store->prepareObservationPartition($ctx, $plan->binding, AuthorityClaims::sourceLineage($token, $ctx->sessionEpoch()));
         }
         // Repeat discovery inside each runner attempt. A changed row set never adds a late lower-rank lock.
-        $execution = $this->store->plan($plan->scope, $plan->operationRef);
+        $execution = $this->store->plan($plan->scope, $plan->operationRef, context: $ctx);
         $this->collection->validate($ctx, $plan->collectionGuard, $execution, $plan->operationRef, $plan->semanticDigest);
         $this->store->lock($ctx, $execution);
-        $existing = $replayOnly ? ($this->store->operation($plan->scope, $plan->operationRef)
+        $existing = $replayOnly ? ($this->store->operation($plan->scope, $plan->operationRef, $ctx)
             ?? throw new ProblemException(ProblemCode::RecoveryRequired, 'Previously admitted operation is unavailable')) : $this->store->insertBinding($ctx, $plan->binding);
         $attemptRef = PaymentIdentity::reference($plan->scope, $plan->operationRef, 'attempt');
         if ($existing === null) {

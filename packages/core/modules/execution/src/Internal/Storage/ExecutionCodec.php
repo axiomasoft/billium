@@ -7,8 +7,12 @@ namespace Billium\Execution\Internal\Storage;
 use BackedEnum;
 use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Data\Envelope;
+use Billium\Execution\Data\AuthorizationRecord;
+use Billium\Execution\Data\CapabilitySnapshot;
 use Billium\Execution\Data\ExecutionScope;
 use Billium\Execution\Data\FrozenBinding;
+use Billium\Execution\Data\MaterialSnapshot;
+use Billium\Execution\Data\MerchantRevision;
 use Billium\Execution\Data\OriginDecision;
 use Billium\Execution\Enums\EffectKind;
 use Billium\Execution\Internal\Authority\AuthorityClaims;
@@ -46,6 +50,13 @@ final class ExecutionCodec
         ]));
     }
 
+    public static function providerIdentityScope(MerchantRevision $merchant, CapabilitySnapshot $capability): string
+    {
+        return 'sha256:'.hash('sha256', (new Codec)->canonicalize(['schema' => 'billium.execution.provider-scope.v1',
+            'provider' => $merchant->providerId, 'environment' => $merchant->scope->environment, 'account' => $merchant->merchantAccountRef,
+            'namespace' => $capability->details->lookupNamespace]));
+    }
+
     public static function bindingDigest(FrozenBinding $binding): string
     {
         return AuthorityClaims::bindingDigest($binding);
@@ -62,9 +73,17 @@ final class ExecutionCodec
         if ($value instanceof DateTimeInterface) {
             return $value->format('Y-m-d\TH:i:s.uP');
         }
-        if ($value instanceof FrozenBinding && $value->origin === null) {
+        if ($value instanceof FrozenBinding) {
             $value = get_object_vars($value);
-            unset($value['origin']);
+            foreach (['origin', 'sourceOrderRef'] as $optional) {
+                if ($value[$optional] === null) {
+                    unset($value[$optional]);
+                }
+            }
+        }
+        if ($value instanceof MaterialSnapshot && $value->authorizationExpiresAt === null) {
+            $value = get_object_vars($value);
+            unset($value['authorizationExpiresAt']);
         }
         if (is_object($value)) {
             $value = get_object_vars($value);
@@ -124,7 +143,8 @@ final class ExecutionCodec
         foreach ($parameters as $parameter) {
             $name = $parameter->getName();
             if (! array_key_exists($name, $data)) {
-                if ($type === FrozenBinding::class && $name === 'origin') {
+                if (($type === FrozenBinding::class && in_array($name, ['origin', 'sourceOrderRef'], true)) || ($type === MaterialSnapshot::class && $parameter->isDefaultValueAvailable())
+                    || ($type === AuthorizationRecord::class && $name === 'releaseEvidenceRef')) {
                     $arguments[] = null;
 
                     continue;

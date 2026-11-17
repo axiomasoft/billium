@@ -11,6 +11,7 @@ use Billium\Core\Contracts\Runner\OperationRunner;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Platform\Contracts\Outbox\Outbox;
+use Billium\Platform\Data\EventContracts\PublicEventDestinations;
 use Billium\Platform\Data\EventContracts\RegisteredPublicEvent;
 use Billium\Platform\Data\Outbox\OutboxEvent;
 use Billium\Platform\Internal\EventContracts\DatabaseEventContractRegistrar;
@@ -26,7 +27,7 @@ use stdClass;
 final readonly class OutboxRecorder implements Outbox
 {
     /** @param Closure(): OperationRunner $runner */
-    public function __construct(private DatabaseManager $databases, private Codec $codec, private Closure $runner) {}
+    public function __construct(private DatabaseManager $databases, private Codec $codec, private Closure $runner, private ?PublicEventDestinations $destinations = null) {}
 
     public function record(TransactionContext $context, OutboxEvent|RegisteredPublicEvent $event): int
     {
@@ -54,6 +55,7 @@ final readonly class OutboxRecorder implements Outbox
             throw new LogicException('module.event_contract_conflict: foreign registered event');
         }
         ($this->runner)()->assertCurrent($context, $contract->ownerModuleId);
+        $destinations = $registered?->explicitDestinations() ?? $this->destinations?->forContract($contract) ?? ['default'];
         $payload = $this->codec->canonicalize($event->payload === [] ? new stdClass : $event->payload);
         if (strlen($payload) > OutboxEvent::MAX_PAYLOAD_BYTES) {
             throw new LogicException("Outbox payload of {$event->type} exceeds ".OutboxEvent::MAX_PAYLOAD_BYTES.' bytes');
@@ -66,6 +68,10 @@ final readonly class OutboxRecorder implements Outbox
             'digest' => $digest, 'payload' => json_decode($payload, false, 512, JSON_THROW_ON_ERROR)];
         if ($event->schemaVersion !== 'billium.event.v1') {
             $wire['eventContractRevision'] = $contract->contractRevision;
+        }
+        if ($event->schemaVersion === 'billium.event.v3') {
+            $digest = $this->codec->digest($wire);
+            $wire['digest'] = $digest;
         }
         // Validate every immutable public envelope before either content or destination work can be inserted.
         $decoded = $this->codec->decode($this->codec->canonicalize($wire));
@@ -101,7 +107,7 @@ final readonly class OutboxRecorder implements Outbox
             }
             $stored = array_map(static fn (mixed $delivery): string => Rows::string(Rows::field($delivery, 'destination_ref')),
                 $db->select('SELECT destination_ref FROM public.billium_outbox_delivery WHERE event_id = ? ORDER BY destination_ref', [$event->eventId]));
-            $destinations = array_values(array_unique($registered->destinations ?? ['default']));
+            $destinations = array_values(array_unique($destinations));
             sort($destinations, SORT_STRING);
             if ($stored !== $destinations) {
                 throw new ProblemException(ProblemCode::IdempotencyConflict, 'Public event destinations are frozen');
@@ -109,7 +115,7 @@ final readonly class OutboxRecorder implements Outbox
 
             return Rows::int(Rows::field($existing, 'id'));
         }
-        EventRows::deliveries($db, 'billium_outbox_delivery', $event->eventId, $registered->destinations ?? ['default']);
+        EventRows::deliveries($db, 'billium_outbox_delivery', $event->eventId, $destinations);
 
         return Rows::int(Rows::field($row, 'id'));
     }

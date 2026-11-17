@@ -31,6 +31,13 @@
     },
     {
       "kind": "envelope",
+      "id": "billium.event.v3",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/execution/repair-event.v1.json"
+    },
+    {
+      "kind": "envelope",
       "id": "billium.feed.bootstrap.v1",
       "status": "new",
       "since": "2026-10",
@@ -490,6 +497,76 @@
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/event/event.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v3#/properties/aggregateRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/execution/repair-event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v3#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/execution/repair-event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v3#/properties/eventContractRevision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/execution/repair-event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v3#/properties/eventId",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/execution/repair-event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v3#/properties/eventType",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/execution/repair-event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v3#/properties/occurredAt",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/execution/repair-event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v3#/properties/payload",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/execution/repair-event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v3#/properties/revision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/execution/repair-event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v3#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/execution/repair-event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v3#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/execution/repair-event.v1.json"
     },
     {
       "kind": "envelope-field",
@@ -3825,6 +3902,13 @@
     },
     {
       "kind": "event-type",
+      "id": "execution.repair_recorded.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/execution/repair-event.v1.json"
+    },
+    {
+      "kind": "event-type",
       "id": "invoice.issued.v1",
       "status": "new",
       "since": "2026-10",
@@ -3952,6 +4036,27 @@
     {
       "kind": "config-key",
       "id": "billium.connection",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/config/billium.php"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.execution.outgoing_enabled",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/config/billium.php"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.execution.release_evidence_ref",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/config/billium.php"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.execution.retention_policy_ref",
       "status": "new",
       "since": "2026-10",
       "source": "packages/core/config/billium.php"
@@ -4536,6 +4641,160 @@
       "status": "new",
       "since": "2026-10",
       "source": "packages/core/database/migrations/execution/2026_11_18_000016_lock_merchant_action_admission.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_000017_bind_provider_processing_provenance",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_18_000017_bind_provider_processing_provenance.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_000018_validate_provider_processing_provenance",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_18_000018_validate_provider_processing_provenance.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_000019_insert_qualified_provider_facts",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_18_000019_insert_qualified_provider_facts.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_000020_guard_contradictory_reservation_release",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_18_000020_guard_contradictory_reservation_release.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_000021_index_qualified_pending_observations",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_18_000021_index_qualified_pending_observations.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_000022_scope_admission_conflict_queries",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_18_000022_scope_admission_conflict_queries.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_000023_validate_admission_conflict_scope",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_18_000023_validate_admission_conflict_scope.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_000024_retain_child_business_identity",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_18_000024_retain_child_business_identity.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_000025_distinguish_authorization_release_evidence",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_18_000025_distinguish_authorization_release_evidence.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_000026_validate_authorization_release_evidence",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_18_000026_validate_authorization_release_evidence.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_000027_grant_authorization_release_reference",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_18_000027_grant_authorization_release_reference.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_000028_retain_qualified_reconciliation_pages",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_18_000028_retain_qualified_reconciliation_pages.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_000029_record_qualified_original_replay",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_18_000029_record_qualified_original_replay.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_000030_validate_reconciliation_review_shapes",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_18_000030_validate_reconciliation_review_shapes.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_000031_confirm_reconciliation_review_shapes",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_18_000031_confirm_reconciliation_review_shapes.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_000032_retain_original_identity_import",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_18_000032_retain_original_identity_import.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_010004_retain_command_financial_scope",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/platform/2026_11_18_010004_retain_command_financial_scope.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_010005_validate_command_financial_scope",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/platform/2026_11_18_010005_validate_command_financial_scope.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_010006_retain_command_input_digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/platform/2026_11_18_010006_retain_command_input_digest.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_010007_validate_command_input_digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/platform/2026_11_18_010007_validate_command_input_digest.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_010008_retain_original_execution_binding",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/platform/2026_11_18_010008_retain_original_execution_binding.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_010009_validate_original_execution_binding",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/platform/2026_11_18_010009_validate_original_execution_binding.php"
     },
     {
       "kind": "doctor-finding",

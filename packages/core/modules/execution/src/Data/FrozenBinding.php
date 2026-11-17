@@ -26,7 +26,11 @@ final readonly class FrozenBinding
         public ?string $collectionAuthorizationRef,
         public string $sourceContext,
         public ?OriginDecision $origin = null,
+        public ?string $sourceOrderRef = null,
     ) {
+        if ($sourceOrderRef === '' || ($sourceOrderRef !== null && (strlen($sourceOrderRef) > 200 || $origin === null))) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'Original order reference requires a verified original basis');
+        }
         if ($origin !== null && (get_object_vars($origin->scope) !== get_object_vars($scope) || $origin->operationRef !== $rootOperationRef
             || $origin->businessIntentRef !== $businessIntentRef || $origin->sourceContext !== $sourceContext
             || $origin->executionProfile !== $executionProfile || $origin->authorizationRef !== $collectionAuthorizationRef)) {

@@ -9,8 +9,12 @@ use Billium\Contracts\Data\Envelopes\CancelOperation;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Core\Tests\ExecutionTestCase;
 use Billium\Execution\Contracts\AttemptWorker;
+use Billium\Execution\Contracts\EvidenceReducer;
+use Billium\Execution\Contracts\RefundCommands;
 use Billium\Execution\Contracts\RootPaymentCommands;
+use Billium\Execution\Enums\ReductionDisposition;
 use Billium\Execution\Tests\Drill\UnknownResultTest;
+use Billium\Execution\Tests\Feature\CallbackCustodyTest;
 use Billium\Testkit\Fixtures\DurableJournal;
 use Billium\Testkit\Fixtures\ProcessBarrier;
 use DateTimeImmutable;
@@ -18,7 +22,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 
 #[Group('pg')]
-#[Group('ACC-CON-06')]
 final class DispatchCancelTest extends ExecutionTestCase
 {
     public static function command(): CancelOperation
@@ -37,6 +40,8 @@ final class DispatchCancelTest extends ExecutionTestCase
     }
 
     #[DataProvider('orderings')]
+    #[Group('ACC-CON-07')]
+    #[Group('PB-22')]
     public function test_cancellation_linearizes_at_committed_dispatch_start(string $point, int $calls): void
     {
         $app = $this->application();
@@ -66,6 +71,19 @@ final class DispatchCancelTest extends ExecutionTestCase
             self::assertSame(0, $child->wait());
             self::assertSame($calls, UnknownResultTest::events($path, 'provider.call'));
             self::assertSame(1, $this->rows('billium_execution_attempt'));
+            self::assertSame(0, $this->rows('billium_execution_operation', "kind='refund'"));
+            if ($calls === 0) {
+                self::assertSame(1, $this->rows('billium_execution_operation', "kind='charge' AND state='cancelled'"));
+            } else {
+                $effect = CallbackCustodyTest::providerInput($app);
+                self::assertSame(ReductionDisposition::Applied, $app->make(EvidenceReducer::class)->reduce(CallbackCustodyTest::work($effect))->disposition);
+                self::assertSame(1, $this->rows('billium_execution_operation', "kind='charge' AND state='succeeded'"));
+                self::assertSame(0, $this->rows('billium_execution_operation', "kind='refund'"));
+                $refund = $app->make(RefundCommands::class)->admit(AdmissionIdentityTest::scope(), RefundCapacityTest::refund('after-cancel-refusal', 25, 45))->orThrow();
+                self::assertSame('after-cancel-refusal', $refund->body['operationRef']);
+                self::assertSame(1, $this->rows('billium_execution_operation', "kind='refund' AND root_operation_ref='root-a'"));
+                self::assertSame(1, UnknownResultTest::events($path, 'provider.call'));
+            }
         } finally {
             UnknownResultTest::clean($path);
         }

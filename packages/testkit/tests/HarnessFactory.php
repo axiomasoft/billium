@@ -35,7 +35,7 @@ final class HarnessFactory
 
     public static function request(CapabilitySnapshot $capabilities, string $operation = 'operation-a', string $reference = 'reference-a', int $amount = 100, ?FrozenBinding $binding = null, ?DispatchTicket $ticket = null): DriverRequest
     {
-        return new DriverRequest(new DispatchDecision($operation, 'attempt-a', 1, 1, $ticket === null ? 'ticket-a' : $ticket->ticketRef, $ticket === null ? 'fence-a' : $ticket->egressFenceRef, null, 'request-digest'), $binding ?? self::binding($capabilities), $capabilities, new Money($amount, Currency::of('RUB')), $reference, self::credentials($capabilities->merchantAccountRef));
+        return new DriverRequest(new DispatchDecision($operation, 'attempt-a', 1, 1, $ticket === null ? 'ticket-a' : $ticket->ticketRef, $ticket === null ? 'fence-a' : $ticket->egressFenceRef, null, 'request-digest', $ticket?->expiresAt ?? new DateTimeImmutable('2026-11-17T00:00:30Z')), $binding ?? self::binding($capabilities), $capabilities, new Money($amount, Currency::of('RUB')), $reference, self::credentials($capabilities->merchantAccountRef));
     }
 
     public static function dispatch(DriverRequest $request, EffectKind $kind = EffectKind::Charge): DispatchRequest

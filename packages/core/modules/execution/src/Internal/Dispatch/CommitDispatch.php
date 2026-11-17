@@ -23,11 +23,14 @@ use Billium\Execution\Data\OperationRecord;
 use Billium\Execution\Data\ResolvedCredentials;
 use Billium\Execution\Enums\EffectKind;
 use Billium\Execution\Enums\ExecutionPhase;
+use Billium\Execution\Enums\NamespaceState;
 use Billium\Execution\Internal\Admission\CollectionChecks;
 use Billium\Execution\Internal\Authority\AuthorityClaims;
 use Billium\Execution\Internal\Authority\DispatchAuthority;
+use Billium\Execution\Internal\Authorization\AuthorizationPolicy;
 use Billium\Execution\Internal\Identity\PaymentIdentity;
 use Billium\Platform\Contracts\Installation\Installation;
+use DateTimeImmutable;
 use LogicException;
 use Packman\Attributes\Internal;
 
@@ -62,18 +65,32 @@ final readonly class CommitDispatch
             commitKind: 'execution.dispatch', financialScope: PaymentIdentity::select($this->callers->current(), $scope, $binding->executionProfile));
         $decision = null;
         $this->runner->run($spec, function (TransactionContext $ctx) use ($scope, $operation, $attempt, $ticket, $plan, $credentials, &$decision): ExecutionReceipt {
+            $namespace = $this->store->lockNamespace($ctx, $scope);
+            if ($namespace->state !== NamespaceState::Open) {
+                throw new ProblemException(ProblemCode::RecoveryRequired, 'Execution namespace is not open for a new outgoing request');
+            }
             $purpose = match ($operation->kind) {
                 EffectKind::Authorize, EffectKind::Charge => 'new',
                 default => $operation->kind->value,
             };
             $this->merchants->lock($ctx, $scope, $operation->binding->merchantRevisionRef, $purpose, $credentials);
-            $execution = $this->store->plan($scope, $operation->operationRef);
+            $execution = $this->store->plan($scope, $operation->operationRef, context: $ctx);
             $this->collection->validate($ctx, $plan, $execution, $operation->operationRef, $operation->binding->semanticDigest);
             $this->store->lock($ctx, $execution);
             if ($this->store->capacity($ctx, $operation->rootOperationRef)->financialHold) {
                 throw new ProblemException(ProblemCode::OperationFinancialHold, 'Root capacity has an active financial hold');
             }
             $decision = $this->collection->permit($ctx, $plan, $this->authority->validate($ctx, $ticket, $operation, $attempt));
+            if (in_array($operation->kind, [EffectKind::Capture, EffectKind::VoidAuthorization], true)) {
+                $authorization = $this->store->authorization($ctx, $operation->rootOperationRef);
+                AuthorizationPolicy::assertOpen($authorization, new DateTimeImmutable);
+                $expiry = $authorization?->providerExpiresAt;
+                if ($expiry !== null && ($decision->requestDeadlineAt === null || $expiry < $decision->requestDeadlineAt)) {
+                    $decision = new DispatchDecision($decision->operationRef, $decision->attemptRef, $decision->leaseFence,
+                        $decision->sessionEpoch, $decision->ticketRef, $decision->egressFenceRef, $decision->collectionDispatchPermitRef,
+                        $decision->immutableRequestDigest, $expiry);
+                }
+            }
             if (! $this->store->startDispatch($ctx, $decision)) {
                 throw new ProblemException(ProblemCode::RecoveryRequired, 'Dispatch-start compare and set failed');
             }

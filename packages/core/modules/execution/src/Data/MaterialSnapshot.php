@@ -35,7 +35,16 @@ final readonly class MaterialSnapshot
         public string $materialDigest,
         array $evidenceRefs,
         public DateTimeImmutable $observedAt,
+        public ?string $providerOperationId = null,
+        public ?string $bindingDigest = null,
+        public ?string $providerReference = null,
+        public ?Money $operationAmount = null,
+        public ?DateTimeImmutable $authorizationExpiresAt = null,
     ) {
+        if ($providerOperationId === '' || $bindingDigest === '' || $providerReference === ''
+            || ($operationAmount !== null && ($operationAmount->minor < 0 || $operationAmount->currency->code !== $currency))) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'Invalid signed operation identity or actual amount');
+        }
         if ($operationRef === '') {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'operationRef must not be empty');
         }

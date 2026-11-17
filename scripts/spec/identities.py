@@ -90,6 +90,10 @@ def collect(directory: Path) -> dict[tuple[str, str], dict[str, str]]:
         prefix = f"{envelope.schema}#/$defs/{variant}" if variant else f"{envelope.schema}#"
         for member in envelope.members:
             add("envelope-field", f"{prefix}/properties/{member.name}", source)
+        document = revision.documents[revision.document_id(envelope.source)]
+        event_type = document.get("properties", {}).get("eventType", {}).get("const")
+        if isinstance(event_type, str):
+            add("event-type", event_type, source)
     for entry in revision.codes:
         add("problem-code", str(entry["code"]), f"{base}/problem-codes.json")
     defs = revision.documents[DEFS_ID.format(revision=rev)]["$defs"]  # type: ignore[index]

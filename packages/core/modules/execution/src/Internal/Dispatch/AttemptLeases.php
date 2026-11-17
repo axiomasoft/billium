@@ -36,8 +36,8 @@ final readonly class AttemptLeases
         $claimed = null;
         $this->runner->run($spec, function (TransactionContext $ctx) use ($operation, $attempt, $worker, $until, &$claimed): ExecutionReceipt {
             $scope = $operation->binding->scope;
-            $this->store->lock($ctx, $this->store->plan($scope, $operation->operationRef));
-            $current = $this->store->attempt($scope, $attempt->attemptRef);
+            $this->store->lock($ctx, $this->store->plan($scope, $operation->operationRef, context: $ctx));
+            $current = $this->store->attempt($scope, $attempt->attemptRef, $ctx);
             if ($current === null || $current->state !== $attempt->state || $current->operationRef !== $operation->operationRef
                 || ! in_array($current->state, [AttemptState::Admitted, AttemptState::Dispatching, AttemptState::Unknown, AttemptState::Pending], true)) {
                 throw new ProblemException(ProblemCode::RecoveryRequired, 'Attempt changed before the worker lease');
@@ -56,7 +56,7 @@ final readonly class AttemptLeases
         return $this->runner->run($this->spec($operation, 'execution.finish_attempt', false),
             function (TransactionContext $ctx) use ($operation, $claim, $evidenceRef, $state, $work, $dueAt, $reason): ExecutionReceipt {
                 $scope = $operation->binding->scope;
-                $this->store->lock($ctx, $this->store->plan($scope, $operation->operationRef));
+                $this->store->lock($ctx, $this->store->plan($scope, $operation->operationRef, context: $ctx));
                 $updated = $this->store->finishAttempt($ctx, $claim->attemptRef, $claim->leaseFence, $state, $evidenceRef);
                 if ($updated && ! $this->store->finishDispatchWork($ctx, $claim->attemptRef, $claim->leaseFence, $work, $dueAt, $reason)) {
                     throw new ProblemException(ProblemCode::RecoveryRequired, 'Dispatch work lease changed before completion');

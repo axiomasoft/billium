@@ -22,6 +22,7 @@ final readonly class AuthorizationRecord
         public ?string $expiryEvidenceRef,
         public string $state,
         public int $revision,
+        public ?string $releaseEvidenceRef = null,
     ) {
         if ($authorizationRef === '') {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'authorizationRef must not be empty');
@@ -31,6 +32,9 @@ final readonly class AuthorizationRecord
         }
         if ($expiryEvidenceRef === '') {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'expiryEvidenceRef must be null or nonempty');
+        }
+        if ($releaseEvidenceRef === '') {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'releaseEvidenceRef must be null or nonempty');
         }
         if ($state === '') {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'state must not be empty');

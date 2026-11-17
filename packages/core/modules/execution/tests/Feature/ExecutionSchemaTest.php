@@ -37,6 +37,7 @@ use Billium\Execution\Enums\QualificationMode;
 use Billium\Execution\Enums\ReservationState;
 use Billium\Execution\Internal\Merchants\DatabaseMerchantRegistry;
 use Billium\Execution\Internal\Storage\DatabaseExecutionStore;
+use Billium\Execution\Internal\Storage\ExecutionCodec;
 use DateTimeImmutable;
 
 class ExecutionSchemaTest extends ExecutionTestCase
@@ -93,7 +94,7 @@ class ExecutionSchemaTest extends ExecutionTestCase
 
             return self::receipt();
         });
-        self::assertSame(22, $this->rows('pg_tables', "schemaname='public' AND tablename LIKE 'billium_execution_%'"));
+        self::assertSame(31, $this->rows('pg_tables', "schemaname='public' AND tablename LIKE 'billium_execution_%'"));
         self::assertSame(1, $this->rows('migrations', "migration='2026_11_17_000001_create_billium_execution_runtime'"));
         self::assertSame(1, $this->rows('pg_tables', "schemaname='public' AND tablename='billium_financial_session'"));
     }
@@ -128,7 +129,12 @@ class ExecutionSchemaTest extends ExecutionTestCase
     public function test_due_scoped_lookup_has_a_supporting_index(): void
     {
         $this->seedRoot();
-        $this->owner()->unprepared(<<<'SQL'
+        // Representative lookup fixtures retain matching child identities; they do not claim provider execution.
+        $this->owner()->transaction(function (): void {
+            $this->owner()->unprepared(<<<'SQL'
+            INSERT INTO billium_execution_child_identity(installation_ref,seller_ref,environment,intent_owner_namespace,source_context,business_intent_ref,operation_kind,operation_ref,root_operation_ref,semantic_digest,canonicalization_version,binding,requested_minor,currency,currency_exponent,receipt_ref)
+            SELECT o.installation_ref,o.seller_ref,o.environment,o.intent_owner_namespace,o.source_context,'lookup-intent-'||n,'capture','lookup-'||n,o.root_operation_ref,o.economic_digest,o.binding->>'canonicalizationVersion',o.binding,100,o.currency,o.currency_exponent,'fixture-admission-'||n
+            FROM billium_execution_operation o CROSS JOIN generate_series(1,2000) n WHERE o.operation_ref='root-a';
             INSERT INTO billium_execution_operation(installation_ref,seller_ref,environment,operation_ref,root_operation_ref,kind,source_context,binding,binding_digest,business_intent_ref,intent_owner_namespace,merchant_revision_ref,merchant_account_ref,driver_id,driver_contract_version,capability_digest,requested_minor,currency,currency_exponent,state,revision,economic_digest,created_at)
             SELECT o.installation_ref,o.seller_ref,o.environment,'lookup-'||n,o.root_operation_ref,'capture',o.source_context,o.binding,o.binding_digest,o.business_intent_ref,o.intent_owner_namespace,o.merchant_revision_ref,o.merchant_account_ref,o.driver_id,o.driver_contract_version,o.capability_digest,100,o.currency,o.currency_exponent,'admitted',0,o.economic_digest,o.created_at
             FROM billium_execution_operation o CROSS JOIN generate_series(1,2000) n WHERE o.operation_ref='root-a';
@@ -137,6 +143,7 @@ class ExecutionSchemaTest extends ExecutionTestCase
             ANALYZE billium_execution_operation;
             ANALYZE billium_execution_attempt;
             SQL);
+        });
         $pdo = TestEnvironment::pdo();
         $pdo->exec('SET enable_seqscan=off');
         $statement = $pdo->query("EXPLAIN SELECT id FROM billium_execution_provider_work WHERE installation_ref='inst-test' AND seller_ref='seller-a' AND environment='test' AND state='due' AND due_at<=now() ORDER BY due_at,id LIMIT 100");
@@ -163,10 +170,13 @@ class ExecutionSchemaTest extends ExecutionTestCase
         $store = $this->seedRoot();
         $this->owner()->update("UPDATE billium_execution_capacity SET authorized_limit_minor=1000 WHERE root_operation_ref='root-a'");
         $this->runner()->run($this->spec(kind: 'execution.capacity_test', modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store) {
+            $store->lockNamespace($ctx, self::scopeFixture());
             $store->lock($ctx, $store->plan(self::scopeFixture(), 'root-a', true));
             $root = $store->operation(self::scopeFixture(), 'root-a') ?? throw new \LogicException('Root missing');
             foreach (['capture-a' => 400, 'capture-b' => 700] as $ref => $minor) {
-                $store->insertOperation($ctx, new AdmissionPlan(self::scopeFixture(), $root->binding, $ref, EffectKind::Capture, new Money($minor, Currency::of('RUB')), 'key-'.$ref, 'sha256:'.str_repeat('d', 64), 'execution.intent.v1', ['execution', 'platform'], [], null));
+                $childPlan = new AdmissionPlan(self::scopeFixture(), $root->binding, $ref, EffectKind::Capture, new Money($minor, Currency::of('RUB')), 'key-'.$ref, 'sha256:'.str_repeat('d', 64), 'execution.intent.v1', ['execution', 'platform'], [], null);
+                $store->claimChildBinding($ctx, $childPlan, 'fixture-'.$ref);
+                $store->insertOperation($ctx, $childPlan);
             }
             $before = $store->capacity($ctx, 'root-a');
             $next = $store->reserveCapacity($ctx, new Reservation('reserve-a', 'root-a', 'capture-a', EffectKind::Capture, new Money(400, Currency::of('RUB')), ReservationState::Held, new Money(0, Currency::of('RUB')), null), $before);
@@ -264,15 +274,18 @@ class ExecutionSchemaTest extends ExecutionTestCase
     {
         $store = $this->seedRoot();
         $write = function (TransactionContext $ctx) use ($store): void {
-            $store->lock($ctx, $store->plan(self::scopeFixture(), 'root-a'));
-            $before = $store->operation(self::scopeFixture(), 'root-a') ?? throw new \LogicException('Root missing');
+            $store->lock($ctx, $store->plan(self::scopeFixture(), 'root-a', context: $ctx));
+            $before = $store->operation(self::scopeFixture(), 'root-a', $ctx) ?? throw new \LogicException('Root missing');
+            $store->insertAttempt($ctx, $before, 'material-attempt-a', 'material-reference-a');
             $currency = Currency::of('RUB');
             $zero = new Money(0, $currency);
             $total = new Money(1000, $currency);
-            $snapshot = new MaterialSnapshot('root-a', EffectKind::Charge, 'account-a', 'RUB', $total, $total, $zero, $zero, 'succeeded', 'provider-revision-1', 'effect-a', 'sha256:'.str_repeat('d', 64), ['material-evidence-a'], new DateTimeImmutable);
+            // This storage-level fixture supplies a prevalidated normalized fact; callback signature checks have separate subjects.
+            $snapshot = new MaterialSnapshot('root-a', EffectKind::Charge, 'account-a', 'RUB', $total, $total, $zero, $zero, 'succeeded', 'provider-revision-1', 'effect-a', 'sha256:'.str_repeat('d', 64), ['material-evidence-a'], new DateTimeImmutable,
+                null, ExecutionCodec::bindingDigest($before->binding), 'material-reference-a', $total);
             $store->appendEvidence($ctx, new ProviderEvidence('material-evidence-a', self::scopeFixture(), 'provider-a', 'account-a', 'event-a', 'sha256:'.str_repeat('f', 64), 'verified', 'handler.v1', new DateTimeImmutable, ['schema' => 'provider-sanitized.v1'], 'secure://fixture/material-evidence-a'));
             $store->enqueueProviderWork($ctx, 'material-evidence-a', 'material-work-a', 'handler.v1');
-            self::assertTrue($store->appendFact($ctx, new ProviderFact('fact-a', 'root-a', 'provider-a/test/account-a', 'effect-a', 'sha256:'.str_repeat('d', 64), ProviderEvidenceMode::StableEffectId, $snapshot, ['material-evidence-a'])));
+            self::assertTrue($store->appendFact($ctx, new ProviderFact('fact-a', 'root-a', ExecutionCodec::providerIdentityScope(self::merchantFixture(), self::capabilityFixture()), 'effect-a', 'sha256:'.str_repeat('d', 64), ProviderEvidenceMode::StableEffectId, $snapshot, ['material-evidence-a'])));
             $after = new OperationRecord($before->id, $before->operationRef, $before->rootOperationRef, $before->kind, $before->binding, $before->requested, 1, 'succeeded', 'sha256:'.str_repeat('d', 64), null, $before->createdAt);
             $capacity = new CapacitySnapshot('root-a', 1, $total, $total, $zero, $zero, $zero, $zero, $zero, false);
             $store->appendRevision($ctx, new MaterialChange($before, $after, $snapshot, $capacity, null, [], []), 'material-receipt-a');
@@ -288,6 +301,7 @@ class ExecutionSchemaTest extends ExecutionTestCase
         }
         self::assertSame(0, $this->rows('billium_execution_operation_revision'));
         self::assertSame(0, $this->rows('billium_execution_provider_evidence'));
+        self::assertSame(0, $this->rows('billium_execution_attempt'));
         self::assertSame(0, self::integer($this->value("SELECT version FROM billium_execution_capacity WHERE root_operation_ref='root-a'")));
         $this->runner()->run($this->spec(kind: 'execution.material_commit', modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($write) {
             $write($ctx);
@@ -304,14 +318,20 @@ class ExecutionSchemaTest extends ExecutionTestCase
     {
         $store = $this->seedRoot();
         $this->runner()->run($this->spec(kind: 'execution.fact_conflict', modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store) {
-            $store->lock($ctx, $store->plan(self::scopeFixture(), 'root-a'));
+            $store->lock($ctx, $store->plan(self::scopeFixture(), 'root-a', context: $ctx));
+            $operation = $store->operation(self::scopeFixture(), 'root-a', $ctx) ?? throw new \LogicException('Root missing');
+            $store->insertAttempt($ctx, $operation, 'fact-attempt-a', 'fact-reference-a');
             $currency = Currency::of('RUB');
             $zero = new Money(0, $currency);
             foreach ([100, 200] as $minor) {
                 $money = new Money($minor, $currency);
                 $digest = 'sha256:'.hash('sha256', (string) $minor);
-                $snapshot = new MaterialSnapshot('root-a', EffectKind::Charge, 'account-a', 'RUB', $money, $money, $zero, $zero, 'succeeded', 'same-provider-revision', 'same-effect', $digest, ['retained-evidence-'.$minor], new DateTimeImmutable);
-                $fact = new ProviderFact('reused-fact-ref', 'root-a', 'provider-a/test/account-a', 'same-effect', $digest, ProviderEvidenceMode::StableEffectId, $snapshot, ['retained-evidence-'.$minor]);
+                $evidenceRef = 'retained-evidence-'.$minor;
+                $store->appendEvidence($ctx, new ProviderEvidence($evidenceRef, self::scopeFixture(), 'provider-a', 'account-a', 'fact-event-'.$minor, $digest,
+                    'verified', 'handler.v1', new DateTimeImmutable, ['schema' => 'provider-sanitized.v1'], 'secure://fixture/'.$evidenceRef));
+                $snapshot = new MaterialSnapshot('root-a', EffectKind::Charge, 'account-a', 'RUB', $money, $money, $zero, $zero, 'succeeded', 'same-provider-revision', 'same-effect', $digest, [$evidenceRef], new DateTimeImmutable,
+                    null, ExecutionCodec::bindingDigest($operation->binding), 'fact-reference-a', $money);
+                $fact = new ProviderFact('reused-fact-ref', 'root-a', ExecutionCodec::providerIdentityScope(self::merchantFixture(), self::capabilityFixture()), 'same-effect', $digest, ProviderEvidenceMode::StableEffectId, $snapshot, ['retained-evidence-'.$minor]);
                 self::assertSame($minor === 100, $store->appendFact($ctx, $fact));
             }
             self::assertTrue($store->capacity($ctx, 'root-a')->financialHold);

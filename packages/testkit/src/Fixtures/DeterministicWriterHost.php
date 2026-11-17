@@ -47,6 +47,11 @@ final readonly class DeterministicWriterHost implements DispatchEgress, WriterAd
             ];
         }
 
+        if ($binding->sourceOrderRef !== null) {
+            $map['schema'] = 'billium.execution.binding.v3';
+            $map['sourceOrderRef'] = $binding->sourceOrderRef;
+        }
+
         return 'sha256:'.hash('sha256', (new Codec)->canonicalize($map));
     }
 
@@ -151,6 +156,10 @@ final readonly class DeterministicWriterHost implements DispatchEgress, WriterAd
                 if ($record instanceof JournalEvent && $record->kind === 'egress.send' && ($record->data['ticket'] ?? null) === $ticket->ticketRef) {
                     throw new RuntimeException('Simulated ticket already consumed');
                 }
+            }
+
+            if ($request->permit->requestDeadlineAt === null || $request->permit->requestDeadlineAt <= $this->clock->now) {
+                throw new RuntimeException('Simulated request has no live finite dispatch window');
             }
 
             // Persist send intent before invoking transport; a crash must not reopen it.

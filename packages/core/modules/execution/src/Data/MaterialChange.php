@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Billium\Execution\Data;
 
 use Billium\Contracts\Data\Envelopes\PaymentObservation;
+use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Platform\Data\EventContracts\RegisteredPublicEvent;
@@ -31,6 +32,9 @@ final readonly class MaterialChange
         public ?string $discrepancyRef,
         array $observations,
         array $publicFacts,
+        public ?Money $overCaptured = null,
+        public ?Money $overRefunded = null,
+        public ?string $reason = null,
     ) {
         if ($discrepancyRef === '') {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'discrepancyRef must be null or nonempty');

@@ -137,6 +137,9 @@ final class UnknownResultTest extends ExecutionTestCase
     }
 
     #[DataProvider('boundaries')]
+    #[Group('ACC-RST-01')]
+    #[Group('PB-03')]
+    #[Group('PB-05')]
     public function test_process_death_recovers_original_attempt_or_looks_up_without_replacement(string $point, int $before, int $after): void
     {
         $app = $this->application();
@@ -154,8 +157,14 @@ final class UnknownResultTest extends ExecutionTestCase
             self::assertSame($before, self::events($path, 'provider.call'));
             $operation = $this->row('SELECT operation_ref,binding_digest FROM billium_execution_operation');
             $attempt = $this->row('SELECT attempt_ref,provider_reference,request_digest FROM billium_execution_attempt');
+            $receiptId = $this->value("SELECT id FROM billium_idempotency_receipt WHERE command_kind='payment.execute.v1'");
             $child->kill();
             self::assertNotSame(0, $child->wait());
+            $originalReply = $app->make(RootPaymentCommands::class)->admit(Fixture::scope(), Fixture::wire())->orThrow();
+            self::assertTrue($originalReply->replayed);
+            self::assertSame(self::integer($receiptId), $originalReply->receiptId);
+            self::assertSame('root-a', $originalReply->body['operationRef']);
+            self::assertSame($before, self::events($path, 'provider.call'));
             $store = $app->make(ExecutionStore::class);
             self::awaitLease($store);
             $result = $app->make(AttemptWorker::class)->recover(Fixture::scope(), self::attemptRef(), 'recovery-worker', new DateTimeImmutable('+1 minute'))->orThrow();
@@ -167,6 +176,7 @@ final class UnknownResultTest extends ExecutionTestCase
             self::assertCount($after, array_filter(new DurableJournal($path)->records(), static fn (object $r): bool => $r instanceof ProviderRecord));
             $replay = $app->make(RootPaymentCommands::class)->admit(Fixture::scope(), Fixture::wire(['commandKey' => Fixture::key(99)]))->orThrow();
             self::assertSame('root-a', $replay->body['operationRef']);
+            self::assertSame($originalReply->body, $app->make(RootPaymentCommands::class)->admit(Fixture::scope(), Fixture::wire())->orThrow()->body);
             self::assertSame(1, $this->rows('billium_execution_attempt'));
             self::assertSame($after, self::events($path, 'provider.call'));
         } finally {
@@ -360,6 +370,7 @@ final class UnknownResultTest extends ExecutionTestCase
         }
     }
 
+    #[Group('PB-06')]
     public function test_accepted_then_timeout_retains_unknown_until_lookup_and_never_reinitiates(): void
     {
         $path = Fixture::tempPath();

@@ -13,6 +13,7 @@ use Billium\Core\Data\Runner\OperationSpec;
 use Billium\Core\Data\Runner\Receipt;
 use Billium\Core\Data\Runner\StoredOutcome;
 use Billium\Core\Exceptions\Runner\LockPlanChanged;
+use Billium\Platform\Contracts\Idempotency\FinancialIdempotencyStore;
 use Billium\Platform\Contracts\Idempotency\IdempotencyStore;
 use Billium\Platform\Contracts\Installation\RootAdmission;
 use Closure;
@@ -88,7 +89,12 @@ final class DatabaseOperationRunner implements OperationRunner
 
                 // Step 2: the claim is the first write of the root Tx (D51); a replay needs no session or module admission.
                 if ($spec->commandKey !== null && $digest !== null) {
-                    $claim = $this->idempotency->claim($caller, $spec->commandKind, $spec->commandKey, $digest);
+                    if ($scope !== null && ! $this->idempotency instanceof FinancialIdempotencyStore) {
+                        throw new ProblemException(ProblemCode::RecoveryRequired, 'The configured idempotency store cannot retain financial scope provenance');
+                    }
+                    $claim = $scope !== null
+                        ? $this->idempotency->claimScoped($caller, $scope, $spec->commandKind, $spec->commandKey, $digest, $spec->inputDigest, $spec->originalExecutionBindingRef)
+                        : $this->idempotency->claim($caller, $spec->commandKind, $spec->commandKey, $digest);
                     if ($claim->replay !== null) {
                         $this->assertDepth(1);
                         $this->connection->commit();

@@ -29,9 +29,13 @@ use Billium\Core\Plugins\ExecutionPlugin;
 use Billium\Core\Plugins\LedgerPlugin;
 use Billium\Core\Plugins\PlatformPlugin;
 use Billium\Execution\Contracts\AdapterQualification;
+use Billium\Execution\Contracts\CallbackPayloadArchive;
 use Billium\Execution\Contracts\DispatchEgress;
 use Billium\Execution\Contracts\ExecutionOriginResolver;
+use Billium\Execution\Contracts\ExecutionReadiness;
 use Billium\Execution\Contracts\MerchantCredentials;
+use Billium\Execution\Contracts\OriginalIdentityArchive;
+use Billium\Execution\Contracts\OriginalReplayAuthority;
 use Billium\Execution\Contracts\PaymentDrivers;
 use Billium\Execution\Contracts\PaymentObservationSink;
 use Billium\Execution\Contracts\ProviderAbsenceVerifier;
@@ -121,6 +125,10 @@ final class BilliumCoreRegistrar implements PackageRegistrar
                     'ProviderAbsenceVerifier' => ProviderAbsenceVerifier::class,
                     'ExecutionOriginResolver' => ExecutionOriginResolver::class,
                     'AdapterQualification' => AdapterQualification::class,
+                    'CallbackPayloadArchive' => CallbackPayloadArchive::class,
+                    'ExecutionReadiness' => ExecutionReadiness::class,
+                    'OriginalReplayAuthority' => OriginalReplayAuthority::class,
+                    'OriginalIdentityArchive' => OriginalIdentityArchive::class,
                 ] as $port => $contract) {
                     if ($app->bound($contract)) {
                         $ports[] = $port;

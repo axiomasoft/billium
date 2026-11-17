@@ -7,7 +7,12 @@ import 'package:test/test.dart';
 void main() {
   final root = Directory('../../fixtures/vectors');
   final files = [
-    for (final directory in ['event/v2', 'payment/effects', 'feed'])
+    for (final directory in [
+      'event/v2',
+      'event/repair',
+      'payment/effects',
+      'feed',
+    ])
       ...Directory('${root.path}/$directory').listSync().whereType<File>(),
     File('${root.path}/event/envelope/event-type-unknown.json'),
   ];
@@ -57,6 +62,32 @@ void main() {
     final json = vector['script'][0]['args']['json_text'] as String;
     expect(old.digestOf(old.decode(json)), vector['expect'][0]['ok']['digest']);
     expect(old.encode(old.decode(json)), codec.encode(codec.decode(json)));
+  });
+  test('exposes typed repair envelopes only to capable clients', () {
+    const repairCodec = Codec(supportedSchemas: ['billium.event.v3']);
+    const old = Codec(
+      supportedSchemas: ['billium.event.v1', 'billium.event.v2'],
+    );
+    final vector = jsonDecode(
+      File('${root.path}/event/repair/valid.json').readAsStringSync(),
+    ) as Map;
+    final json = vector['script'][0]['args']['json_text'] as String;
+    final event = repairCodec.decode(json) as ExecutionRepairEvent;
+    expect(event.eventType, 'execution.repair_recorded.v1');
+    expect(event.eventContractRevision, 'events-2026-11-v3');
+    expect(event.aggregateRef, event.payload['repairRef']);
+    expect(event.digest, vector['expect'][0]['ok']['digest']);
+    expect(repairCodec.encode(event), json);
+    expect(
+      () => old.decode(json),
+      throwsA(
+        isA<ProblemException>().having(
+          (e) => e.problem,
+          'code',
+          ProblemCode.schemaUnsupported,
+        ),
+      ),
+    );
   });
   test('checks negotiated event capabilities throughout a feed page', () {
     const old = Codec(

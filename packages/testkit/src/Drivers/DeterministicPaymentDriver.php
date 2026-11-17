@@ -121,7 +121,16 @@ final readonly class DeterministicPaymentDriver implements PaymentDriver
             $status = match ($this->mode) {
                 ResponseMode::Pending => 'pending', ResponseMode::Declined => 'declined', default => 'succeeded'
             };
-            $record = new ProviderRecord($identity, $kind, $request, $this->clock->now, ProcessIdentity::current(), $status);
+            $amount = $request->amount->minor;
+            $legs = match ($kind) {
+                EffectKind::Charge => ['authorized' => $amount, 'captured' => $amount],
+                EffectKind::Authorize => ['authorized' => $amount],
+                EffectKind::Capture => ['captured' => $amount],
+                EffectKind::Refund => ['refunded' => $amount],
+                EffectKind::VoidAuthorization => ['voided' => $amount],
+            };
+            $record = new ProviderRecord($identity, $kind, $request, $this->clock->now, ProcessIdentity::current(), $status,
+                'simulated-operation-'.bin2hex(random_bytes(16)), $legs);
 
             return ['value' => $record, 'append' => [$record]];
         });
@@ -172,14 +181,7 @@ final readonly class DeterministicPaymentDriver implements PaymentDriver
             if (! in_array($status, ['succeeded', 'pending'], true)) {
                 continue;
             }
-            $field = match ($record->kind) {
-                EffectKind::Authorize => 'authorized', EffectKind::Charge, EffectKind::Capture => 'captured', EffectKind::Refund => 'refunded', EffectKind::VoidAuthorization => 'voided'
-            };
-            $amount = $record->request->amount->minor;
-            if ($amount > PHP_INT_MAX - $totals[$field]) {
-                throw new RuntimeException('Simulated provider overflow');
-            }
-            $totals[$field] += $amount;
+            $this->addEffectAmounts($totals, $record);
             if ($record->kind === EffectKind::Capture) {
                 $captures++;
             }
@@ -197,6 +199,32 @@ final readonly class DeterministicPaymentDriver implements PaymentDriver
         }
         if ($kind === EffectKind::Refund && ($amount > $totals['captured'] - $totals['refunded'] || (! $this->capabilities->partialRefund && $amount !== $totals['captured']) || (! $this->capabilities->details->multipleRefund && $refunds !== 0))) {
             throw new ProblemException(ProblemCode::CapabilityUnsupported, 'Simulated refund mode/capacity refuses request');
+        }
+    }
+
+    private function assignedId(ProviderRecord $record): ?string
+    {
+        // Restored v1 journal objects predate the promoted property.
+        return $record->providerOperationId ?? null;
+    }
+
+    /** @param array<string,int> $totals */
+    private function addEffectAmounts(array &$totals, ProviderRecord $record): void
+    {
+        // Old journal rows retain their original protocol's single leg.
+        $amounts = $this->assignedId($record) !== null ? $record->effectAmounts : [];
+        if ($amounts === []) {
+            $field = match ($record->kind) {
+                EffectKind::Authorize => 'authorized', EffectKind::Charge, EffectKind::Capture => 'captured',
+                EffectKind::Refund => 'refunded', EffectKind::VoidAuthorization => 'voided',
+            };
+            $amounts = [$field => $record->request->amount->minor];
+        }
+        foreach ($amounts as $field => $amount) {
+            if (! isset($totals[$field]) || $amount < 0 || $amount > PHP_INT_MAX - $totals[$field]) {
+                throw new RuntimeException('Invalid simulated provider journal amount');
+            }
+            $totals[$field] += $amount;
         }
     }
 
@@ -229,13 +257,7 @@ final readonly class DeterministicPaymentDriver implements PaymentDriver
             if ($status !== 'succeeded') {
                 continue;
             }
-            $field = match ($entry->kind) {
-                EffectKind::Authorize => 'authorized', EffectKind::Charge, EffectKind::Capture => 'captured', EffectKind::Refund => 'refunded', EffectKind::VoidAuthorization => 'voided'
-            };
-            if ($entry->request->amount->minor > PHP_INT_MAX - $totals[$field]) {
-                throw new RuntimeException('Simulated provider overflow');
-            }
-            $totals[$field] += $entry->request->amount->minor;
+            $this->addEffectAmounts($totals, $entry);
         }
         $currency = $record->request->amount->currency;
         foreach ($entries as $settlement) {
@@ -250,11 +272,22 @@ final readonly class DeterministicPaymentDriver implements PaymentDriver
             'reference' => $record->request->providerReference, 'operationRef' => $record->request->permit->operationRef,
             'kind' => $record->kind->value, 'providerId' => 'simulated-provider', 'merchantAccountRef' => $record->request->binding->merchantAccountRef,
             'capabilityDigest' => $this->capabilities->digest, 'handlerContractVersion' => $this->contractVersion(),
-            'currency' => $currency->code, 'authorized' => (new Money($totals['authorized'], $currency))->toWire(),
-            'captured' => (new Money($totals['captured'], $currency))->toWire(), 'refunded' => (new Money($totals['refunded'], $currency))->toWire(),
-            'voided' => (new Money($totals['voided'], $currency))->toWire(), 'status' => $effectiveStatus, 'revision' => (string) $revision,
+            'currency' => $currency->code, 'authorized' => new Money($totals['authorized'], $currency)->toWire(),
+            'captured' => new Money($totals['captured'], $currency)->toWire(), 'refunded' => new Money($totals['refunded'], $currency)->toWire(),
+            'voided' => new Money($totals['voided'], $currency)->toWire(), 'status' => $effectiveStatus, 'revision' => (string) $revision,
             'stableEffectId' => $record->identity, 'observedAt' => $observedAt->format('Y-m-d\TH:i:s.uP'),
         ];
+        $assignedId = $this->assignedId($record);
+        if ($assignedId !== null) {
+            $material['schema'] = 'billium.testkit.provider-material.v2';
+            $material['providerOperationId'] = $assignedId;
+            $leg = match ($record->kind) {
+                EffectKind::Charge, EffectKind::Capture => 'captured', EffectKind::Authorize => 'authorized',
+                EffectKind::Refund => 'refunded', EffectKind::VoidAuthorization => 'voided',
+            };
+            $actual = $record->effectAmounts[$leg] ?? throw new RuntimeException('Assigned provider operation lacks its original journal amount');
+            $material['operationAmount'] = $effectiveStatus === 'pending' ? null : new Money($effectiveStatus === 'succeeded' ? $actual : 0, $currency)->toWire();
+        }
         $canonical = (new Codec)->canonicalize($material);
         $digest = hash('sha256', $canonical);
         $event = 'simulated-event:'.$record->identity.':'.$revision;
@@ -294,12 +327,14 @@ final readonly class DeterministicPaymentDriver implements PaymentDriver
         $this->outsideTransaction();
         $this->binding($lookupRequest->binding, $lookupRequest->credentials);
         $this->capabilities->requireCapability($lookupRequest->providerOperationId === null ? DriverCapability::LookupByReference : DriverCapability::LookupByProviderId, false);
-        $this->journal->append(new JournalEvent('provider.lookup', ['operation' => $lookupRequest->operationRef], ProcessIdentity::current()));
+        $this->journal->append(new JournalEvent('provider.lookup', array_filter(['operation' => $lookupRequest->operationRef,
+            'providerOperationId' => $lookupRequest->providerOperationId, 'reference' => $lookupRequest->providerReference, 'account' => $lookupRequest->binding->merchantAccountRef],
+            static fn (?string $value): bool => $value !== null), ProcessIdentity::current()));
         foreach (array_reverse($this->journal->records()) as $record) {
             if (! $record instanceof ProviderRecord || DeterministicWriterHost::bindingDigest($record->request->binding) !== DeterministicWriterHost::bindingDigest($lookupRequest->binding) || $record->request->binding->merchantAccountRef !== $lookupRequest->binding->merchantAccountRef || $record->request->binding->rootOperationRef !== $lookupRequest->binding->rootOperationRef || $record->request->permit->operationRef !== $lookupRequest->operationRef) {
                 continue;
             }
-            if (($lookupRequest->providerOperationId !== null ? $record->identity === $lookupRequest->providerOperationId : $record->request->providerReference === $lookupRequest->providerReference)) {
+            if (($lookupRequest->providerOperationId !== null ? $this->assignedId($record) === $lookupRequest->providerOperationId : $record->request->providerReference === $lookupRequest->providerReference)) {
                 $retention = $this->capabilities->details->lookupRetentionSeconds;
                 if ($retention !== null && $record->acceptedAt->getTimestamp() + $retention <= $this->clock->now->getTimestamp()) {
                     break;
@@ -341,7 +376,7 @@ final readonly class DeterministicPaymentDriver implements PaymentDriver
     {
         $m = $providerEvidence->sanitizedPayload['material'] ?? null;
         $signature = $providerEvidence->sanitizedPayload['fixtureSignature'] ?? null;
-        if (! is_array($m) || ! is_string($signature) || ($m['schema'] ?? null) !== 'billium.testkit.provider-material.v1'
+        if (! is_array($m) || ! is_string($signature) || ! in_array($m['schema'] ?? null, ['billium.testkit.provider-material.v1', 'billium.testkit.provider-material.v2'], true)
             || $providerEvidence->signatureVerdict !== 'simulated-valid' || ! FixtureValue::same($capabilitySnapshot, $this->capabilities)) {
             throw new RuntimeException('Invalid simulated evidence envelope');
         }
@@ -367,8 +402,23 @@ final readonly class DeterministicPaymentDriver implements PaymentDriver
             throw new RuntimeException('Invalid simulated provider event identity');
         }
 
+        $expiresAt = null;
+        if (($m['authorizationExpiresAt'] ?? null) !== null) {
+            $date = $field('authorizationExpiresAt');
+            if (preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/D', $date) !== 1) {
+                throw new RuntimeException('Invalid signed authorization expiry timestamp');
+            }
+            $expiresAt = new DateTimeImmutable($date);
+            if (DateTimeImmutable::getLastErrors() !== false) {
+                throw new RuntimeException('Invalid signed authorization expiry date');
+            }
+        }
+
         return new MaterialSnapshot($field('operationRef'), EffectKind::from($field('kind')), $field('merchantAccountRef'), $field('currency'),
             Money::fromWire($m['authorized'] ?? null), Money::fromWire($m['captured'] ?? null), Money::fromWire($m['refunded'] ?? null), Money::fromWire($m['voided'] ?? null),
-            $field('status'), $revision, $id, $digest, [$providerEvidence->evidenceRef], new DateTimeImmutable($field('observedAt')));
+            $field('status'), $revision, $id, $digest, [$providerEvidence->evidenceRef], new DateTimeImmutable($field('observedAt')),
+            $m['schema'] === 'billium.testkit.provider-material.v2' ? $field('providerOperationId') : null, $field('bindingDigest'), $field('reference'),
+            $m['schema'] === 'billium.testkit.provider-material.v2' && ($m['operationAmount'] ?? null) !== null
+                ? Money::fromWire($m['operationAmount']) : null, $expiresAt);
     }
 }

@@ -86,6 +86,7 @@ final class LedgerSnapshotSourceTest extends QueryTestCase
         self::assertCount(1, $tail->events);
     }
 
+    #[Group('PB-23')]
     public function test_a_refund_only_revision_after_bootstrap_emits_one_payment_event_and_replay_emits_none(): void
     {
         $this->debt('o1', 10000);

@@ -32,6 +32,7 @@ const Map<String, Envelope Function(Map<String, Object?>)> envelopeBuilders = {
   'PaymentEffectOutcome': PaymentEffectOutcome.fromRaw,
   'EventCatalog': EventCatalog.fromRaw,
   'EventEnvelopeV2': EventEnvelopeV2.fromRaw,
+  'ExecutionRepairEvent': ExecutionRepairEvent.fromRaw,
   'FeedSelection': FeedSelection.fromRaw,
   'FeedPage': FeedPage.fromRaw,
   'FeedBootstrap': FeedBootstrap.fromRaw,
@@ -1150,6 +1151,48 @@ final class EventEnvelopeV2 extends Envelope {
 
   /// Builds the typed envelope from an object that passed the schema of the revision.
   factory EventEnvelopeV2.fromRaw(Map<String, Object?> raw) => EventEnvelopeV2(
+        raw: raw,
+        eventId: requireString(raw, 'eventId'),
+        eventType: requireString(raw, 'eventType'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        aggregateRef: requireString(raw, 'aggregateRef'),
+        revision: requireInt(raw, 'revision'),
+        occurredAt: requireString(raw, 'occurredAt'),
+        digest: requireString(raw, 'digest'),
+        payload: requireObject(raw, 'payload'),
+        eventContractRevision: requireString(raw, 'eventContractRevision'),
+      );
+
+  final String eventId;
+  final String eventType;
+  final String sellerRef;
+  final String aggregateRef;
+  final int revision;
+  final String occurredAt;
+  final String digest;
+  final Map<String, Object?> payload;
+  final String eventContractRevision;
+}
+
+/// `billium.event.v3`.
+final class ExecutionRepairEvent extends Envelope {
+  static const String schemaName = 'billium.event.v3';
+
+  ExecutionRepairEvent({
+    required super.raw,
+    required this.eventId,
+    required this.eventType,
+    required this.sellerRef,
+    required this.aggregateRef,
+    required this.revision,
+    required this.occurredAt,
+    required this.digest,
+    required this.payload,
+    required this.eventContractRevision,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory ExecutionRepairEvent.fromRaw(Map<String, Object?> raw) => ExecutionRepairEvent(
         raw: raw,
         eventId: requireString(raw, 'eventId'),
         eventType: requireString(raw, 'eventType'),

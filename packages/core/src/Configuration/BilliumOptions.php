@@ -31,6 +31,7 @@ final readonly class BilliumOptions implements OptionsFactory
         'usage',
         'rating',
         'schedule',
+        'execution',
     ];
 
     public function __construct(
@@ -48,6 +49,7 @@ final readonly class BilliumOptions implements OptionsFactory
         public OptionalModuleOptions $usage = new OptionalModuleOptions,
         public OptionalModuleOptions $rating = new OptionalModuleOptions,
         public OptionalModuleOptions $schedule = new OptionalModuleOptions,
+        public ExecutionOptions $execution = new ExecutionOptions,
     ) {}
 
     /** @param array<array-key, mixed> $config */
@@ -72,6 +74,7 @@ final readonly class BilliumOptions implements OptionsFactory
         $usage = OptionalModuleOptions::fromSection($config['usage'] ?? [], $path.'.usage', $validator);
         $rating = OptionalModuleOptions::fromSection($config['rating'] ?? [], $path.'.rating', $validator);
         $schedule = OptionalModuleOptions::fromSection($config['schedule'] ?? [], $path.'.schedule', $validator);
+        $execution = ExecutionOptions::fromSection($config['execution'] ?? [], $path.'.execution', $validator);
 
         $validator->failIfAny();
 
@@ -90,6 +93,7 @@ final readonly class BilliumOptions implements OptionsFactory
             usage: $usage,
             rating: $rating,
             schedule: $schedule,
+            execution: $execution,
         );
     }
 

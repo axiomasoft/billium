@@ -52,6 +52,7 @@ envelopes, `ERR` — ошибки, `EVT` — события и receipts, `CNF` �
 | `payment.effect.outcome.v1` | `schema/payment/effect-outcome.v1.json` | исход child (D63) |
 | `billium.event.catalog.v1` | `schema/event/catalog.v1.json` | pinned catalog (D63) |
 | `billium.event.v2` | `schema/event/event.v2.json` | negotiated событие (D63) |
+| `billium.event.v3` | `schema/execution/repair-event.v1.json` | зарегистрированное событие repair |
 | `billium.feed.selection.v1` | `schema/feed/selection.v1.json` | pinned подписка (D63) |
 | `billium.feed.page.v1` | `schema/feed/page.v1.json` | страница safe feed (D52, D63) |
 | `billium.feed.bootstrap.v1` | `schema/feed/bootstrap.v1.json` | snapshot с retention pin (D60, D63) |

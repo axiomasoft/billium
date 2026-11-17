@@ -245,6 +245,16 @@
       }
     ]
   },
+  "billium.event.v3": {
+    "schemaId": "urn:billium:spec:2026-10:execution/repair-event.v1.json",
+    "variants": [
+      {
+        "class": "ExecutionRepairEvent",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
   "billium.feed.selection.v1": {
     "schemaId": "urn:billium:spec:2026-10:feed/selection.v1.json",
     "variants": [

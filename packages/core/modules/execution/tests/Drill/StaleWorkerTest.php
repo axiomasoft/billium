@@ -70,6 +70,7 @@ final class StaleWorkerTest extends ExecutionTestCase
         }
     }
 
+    #[Group('PB-13')]
     public function test_a_delayed_original_response_is_retained_after_a_new_workers_lookup(): void
     {
         $app = $this->application();

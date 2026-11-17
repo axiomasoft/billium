@@ -26,6 +26,7 @@ use Billium\Execution\Data\DispatchTicket;
 use Billium\Execution\Data\DriverRequest;
 use Billium\Execution\Data\OperationRecord;
 use Billium\Execution\Data\ProviderLookupResult;
+use Billium\Execution\Data\ReplayAuthorization;
 use Billium\Execution\Enums\AttemptState;
 use Billium\Execution\Enums\EffectKind;
 use Billium\Platform\Contracts\Installation\Installation;
@@ -45,6 +46,8 @@ final class DispatchAuthority
     /**
      * @param  Closure(): OperationRunner  $runner
      * @param  Closure(): FinancialSessionAdmission  $tokens
+     * @param  Closure(): WriterAdmission  $writer
+     * @param  Closure(): DispatchEgress  $egress
      * @param  Closure(): FinancialAuthorityEvidence  $evidence
      */
     public function __construct(
@@ -55,8 +58,8 @@ final class DispatchAuthority
         private readonly CallerContext $callers,
         private readonly Installation $installation,
         private readonly ExecutionStore $store,
-        private readonly WriterAdmission $writer,
-        private readonly DispatchEgress $egress,
+        private readonly Closure $writer,
+        private readonly Closure $egress,
         private readonly string $connectionName,
     ) {}
 
@@ -81,8 +84,11 @@ final class DispatchAuthority
         }
         $this->assertProcess($request, $operation->binding->executionProfile);
         $this->assertActiveSession($request);
-        $ticket = $this->writer->ticket($request);
-        $this->writer->verify($ticket, $request);
+        $writer = ($this->writer)();
+        // Resolve the required egress port before the irreversible dispatch-start decision.
+        ($this->egress)();
+        $ticket = $writer->ticket($request);
+        $writer->verify($ticket, $request);
         if (AuthorityClaims::requestDigest($ticket->claims) !== AuthorityClaims::requestDigest($request)) {
             $this->refuse('Host ticket differs from requested immutable dispatch');
         }
@@ -95,17 +101,30 @@ final class DispatchAuthority
     /** Caller has acquired the complete collection/root/child/capacity/attempt plan through ExecutionStore::lock. */
     public function validate(TransactionContext $context, DispatchTicket $ticket, OperationRecord $operation, AttemptRecord $attempt): DispatchDecision
     {
+        return $this->validateAction($context, $ticket, $operation, $attempt, false);
+    }
+
+    public function validateReplay(TransactionContext $context, DispatchTicket $ticket, OperationRecord $operation, AttemptRecord $attempt): DispatchDecision
+    {
+        return $this->validateAction($context, $ticket, $operation, $attempt, true);
+    }
+
+    private function validateAction(TransactionContext $context, DispatchTicket $ticket, OperationRecord $operation, AttemptRecord $attempt, bool $replay): DispatchDecision
+    {
         ($this->runner)()->assertCurrent($context, 'platform');
         ($this->runner)()->assertCurrent($context, 'execution');
         $context->assertActive($this->connectionName);
+        if ($replay && ($context->spec()->commandKind !== 'execution.original_replay' || ! in_array('execution.replay', $context->caller()->permissions, true))) {
+            $this->refuse('Current caller lacks original replay permission');
+        }
         if ($context->spec()->mode !== FinancialMode::Active || ! in_array($context->spec()->operationClass,
             [ModuleOperationClass::NewIntent, ModuleOperationClass::FrozenIntentCompletion, ModuleOperationClass::OriginalOwnerRefund], true)) {
             $this->refuse('Only an active outgoing-effect operation may dispatch');
         }
         $this->assertCached($ticket);
         $r = $ticket->claims;
-        $currentOperation = $this->store->operation($r->scope, $operation->operationRef);
-        $currentAttempt = $this->store->attempt($r->scope, $attempt->attemptRef);
+        $currentOperation = $this->store->operation($r->scope, $operation->operationRef, $context);
+        $currentAttempt = $this->store->attempt($r->scope, $attempt->attemptRef, $context);
         if ($currentOperation === null || $currentAttempt === null) {
             $this->refuse('Locked dispatch identity disappeared');
         }
@@ -135,9 +154,9 @@ final class DispatchAuthority
             || AuthorityClaims::bindingDigest($operation->binding) !== $r->bindingDigest
             || get_object_vars($operation->binding->scope) !== get_object_vars($r->scope)
             || $r->capabilityDigest !== $operation->binding->capabilityDigest
-            || $attempt->leaseFence !== $r->leaseFence || $attempt->state !== AttemptState::Admitted
+            || $attempt->leaseFence !== $r->leaseFence
             || $attempt->leaseOwner === null || $attempt->leaseExpiresAt === null || $attempt->leaseExpiresAt <= new DateTimeImmutable
-            || $operation->state !== 'admitted') {
+            || ($replay ? ! $this->uncertainOriginal($attempt, $operation) : ($attempt->state !== AttemptState::Admitted || $operation->state !== 'admitted'))) {
             $this->refuse('Locked operation/attempt differs from verified dispatch claims');
         }
 
@@ -148,11 +167,26 @@ final class DispatchAuthority
     /** @param Closure(): ProviderLookupResult $send */
     public function send(DispatchTicket $ticket, DriverRequest $request, Closure $send): ProviderLookupResult
     {
+        $this->verifyEgress($ticket, $request, null);
+
+        return ($this->egress)()->invoke($ticket, $request, $send);
+    }
+
+    public function verifyReplayEgress(DispatchTicket $ticket, DriverRequest $request, ReplayAuthorization $approval): void
+    {
+        $this->verifyEgress($ticket, $request, $approval);
+    }
+
+    private function verifyEgress(DispatchTicket $ticket, DriverRequest $request, ?ReplayAuthorization $approval): void
+    {
         $this->assertTx0();
         $this->assertCached($ticket);
         $r = $ticket->claims;
         $this->assertProcess($r, $request->binding->executionProfile);
         $this->assertActiveSession($r);
+        if ($approval !== null && ! in_array('execution.replay', $this->callers->current()->permissions, true)) {
+            $this->refuse('Current caller lacks original replay permission at egress');
+        }
         $p = $request->permit;
         $digest = AuthorityClaims::immutableDriverRequestDigest($request->binding, $p->operationRef, $p->attemptRef, $request->providerReference, $r->kind, $request->amount);
         if ($p->immutableRequestDigest !== $digest || $p->operationRef !== $r->operationRef || $p->attemptRef !== $r->attemptRef
@@ -171,21 +205,41 @@ final class DispatchAuthority
         $attempt = $this->store->attempt($r->scope, $r->attemptRef);
         $operation = $this->store->operation($r->scope, $r->operationRef);
         if ($attempt === null || $operation === null || $attempt->operationRef !== $r->operationRef
-            || $attempt->providerReference !== $r->providerReference || $attempt->state !== AttemptState::Dispatching
+            || $attempt->providerReference !== $r->providerReference
             || $attempt->leaseFence !== $r->leaseFence || $attempt->leaseExpiresAt === null || $attempt->leaseExpiresAt <= new DateTimeImmutable
-            || $attempt->sessionEpoch !== $r->localSessionEpoch || $attempt->ownerSessionRef !== $r->ownerSessionRef
-            || $attempt->dispatchPermitRef !== $ticket->ticketRef || $attempt->immutableRequestDigest !== $digest
-            || $attempt->collectionDispatchPermitRef !== $p->collectionDispatchPermitRef
-            || $attempt->requestDeadlineAt === null || $attempt->requestDeadlineAt <= new DateTimeImmutable
-            || $attempt->requestDeadlineAt->format('U.u') !== $p->requestDeadlineAt?->format('U.u') || $operation->kind !== $r->kind
-            || AuthorityClaims::bindingDigest($operation->binding) !== $r->bindingDigest) {
-            $this->refuse('No committed current dispatch-start permit');
+            || $attempt->immutableRequestDigest !== $digest || $operation->kind !== $r->kind
+            || AuthorityClaims::bindingDigest($operation->binding) !== $r->bindingDigest
+            || $p->requestDeadlineAt === null || $p->requestDeadlineAt <= new DateTimeImmutable) {
+            $this->refuse('No committed current outbound permit');
         }
-        $this->writer->verify($ticket, $r);
-        // Consume local permission before crossing the transport; an unknown result never authorizes another send.
+        if ($approval === null) {
+            if ($attempt->state !== AttemptState::Dispatching || $attempt->sessionEpoch !== $r->localSessionEpoch
+                || $attempt->ownerSessionRef !== $r->ownerSessionRef || $attempt->dispatchPermitRef !== $ticket->ticketRef
+                || $attempt->collectionDispatchPermitRef !== $p->collectionDispatchPermitRef
+                || $attempt->requestDeadlineAt?->format('U.u') !== $p->requestDeadlineAt->format('U.u')) {
+                $this->refuse('No committed current dispatch-start permit');
+            }
+        } else {
+            $s = $r->scope;
+            $marker = $this->databases->connection($this->connectionName)->table('billium_execution_original_replay')
+                ->where(['installation_ref' => $s->installationRef, 'seller_ref' => $s->sellerRef, 'environment' => $s->environment,
+                    'intent_owner_namespace' => $s->intentOwnerNamespace, 'approval_ref' => $approval->approvalRef,
+                    'writer_ticket_ref' => $ticket->ticketRef, 'original_request_digest' => $approval->requestDigest, 'attempt_ref' => $r->attemptRef,
+                    'operation_ref' => $r->operationRef, 'lease_fence' => $r->leaseFence, 'deadline' => $p->requestDeadlineAt->format('Y-m-d H:i:s.uP')])
+                ->whereRaw('deadline > clock_timestamp()')->exists();
+            if (! $marker || ! $this->uncertainOriginal($attempt, $operation) || $approval->writerTicketRef !== $ticket->ticketRef
+                || $approval->expiresAt <= new DateTimeImmutable) {
+                $this->refuse('No committed current original-request replay approval');
+            }
+        }
+        ($this->writer)()->verify($ticket, $r);
         unset($this->verified[$ticket->ticketRef]);
+    }
 
-        return $this->egress->invoke($ticket, $request, $send);
+    private function uncertainOriginal(AttemptRecord $attempt, OperationRecord $operation): bool
+    {
+        return $attempt->startedAt !== null && in_array($attempt->state, [AttemptState::Dispatching, AttemptState::Pending, AttemptState::Unknown], true)
+            && in_array($operation->state, ['admitted', 'pending', 'unknown'], true);
     }
 
     private function assertCached(DispatchTicket $ticket): void

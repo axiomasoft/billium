@@ -47,6 +47,7 @@ ENVELOPES = (
     ("PaymentEffectOutcome", "payment.effect.outcome.v1", "payment/effect-outcome.v1.json", None),
     ("EventCatalog", "billium.event.catalog.v1", "event/catalog.v1.json", None),
     ("EventEnvelopeV2", "billium.event.v2", "event/event.v2.json", None),
+    ("ExecutionRepairEvent", "billium.event.v3", "execution/repair-event.v1.json", None),
     ("FeedSelection", "billium.feed.selection.v1", "feed/selection.v1.json", None),
     ("FeedPage", "billium.feed.page.v1", "feed/page.v1.json", None),
     ("FeedBootstrap", "billium.feed.bootstrap.v1", "feed/bootstrap.v1.json", None),

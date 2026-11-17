@@ -20,6 +20,7 @@ use RuntimeException;
 #[Group('pg')]
 final class FeedPruneBootstrapTest extends OutboxTestCase
 {
+    #[Group('PB-23')]
     public function test_pruned_old_cursor_requires_bootstrap_and_retains_the_complete_tail(): void
     {
         $selection = $this->selection();

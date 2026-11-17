@@ -90,6 +90,13 @@ final class Codec {
         'effect envelope identity differs from its payload',
       );
     }
+    final repair = schema == 'billium.event.v3' ? raw['payload'] : null;
+    if (repair is Map && raw['aggregateRef'] != repair['repairRef']) {
+      throw const ProblemException(
+        ProblemCode.validationInvalid,
+        'repair envelope aggregateRef differs from its payload',
+      );
+    }
     final variant = entry.variants.firstWhere(
       (candidate) =>
           candidate.requires == null || raw.containsKey(candidate.requires),

@@ -1,0 +1,28 @@
+{
+  "id": "event/repair/unexpected-payload-field",
+  "spec_refs": [
+    "BC-ENV-01",
+    "BC-ENV-03",
+    "BC-ID-12"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"aggregateRef\":\"repair:close:1\",\"digest\":\"sha256:1ae79396fda536f2ea2268094c24d8189a2d5961d44f2bf953860493c079db84\",\"eventContractRevision\":\"events-2026-11-v3\",\"eventId\":\"01JBX5Q0Z8M3N4P7R9S2T6V1WC\",\"eventType\":\"execution.repair_recorded.v1\",\"occurredAt\":\"2026-11-18T10:00:00.000001Z\",\"payload\":{\"action\":\"close_namespace\",\"afterDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"beforeDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"money\":{\"amount\":\"1.00\",\"currency\":\"RUB\"},\"originalReviewRef\":\"review:1\",\"repairRef\":\"repair:close:1\",\"reviewEventRef\":\"repair-review:1\",\"rootOperationRef\":\"authorization:1\"},\"revision\":1,\"schema\":\"billium.event.v3\",\"sellerRef\":\"seller-a\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

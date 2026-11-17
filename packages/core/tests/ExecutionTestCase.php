@@ -9,6 +9,7 @@ use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Data\Runtime\FinancialScope;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Core\Enums\Runtime\FinancialMode;
+use Billium\Core\Tests\Support\SimulatedExecutionReadiness;
 use Billium\Execution\Internal\ExecutionServiceProvider;
 use Billium\Platform\Tests\PlatformTestCase;
 use Illuminate\Contracts\Config\Repository;
@@ -29,6 +30,7 @@ abstract class ExecutionTestCase extends PlatformTestCase
     {
         parent::defineEnvironment($app);
         $app->make(Repository::class)->set('billium.modules.enabled', ['platform', 'ledger', 'execution']);
+        SimulatedExecutionReadiness::install($app);
     }
 
     /** @param list<string> $modules */

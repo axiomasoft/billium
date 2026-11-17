@@ -1,5 +1,8 @@
 [
   "billium.connection",
+  "billium.execution.outgoing_enabled",
+  "billium.execution.release_evidence_ref",
+  "billium.execution.retention_policy_ref",
   "billium.feed.bootstrap_batch",
   "billium.feed.bootstrap_lease_seconds",
   "billium.feed.drain_batch",

@@ -49,6 +49,11 @@ final class AuthorityClaims
             ];
         }
 
+        if ($binding->sourceOrderRef !== null) {
+            $map['schema'] = 'billium.execution.binding.v3';
+            $map['sourceOrderRef'] = $binding->sourceOrderRef;
+        }
+
         return self::digest($map);
     }
 

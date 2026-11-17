@@ -58,7 +58,7 @@
     },
     {
       "id": "PaymentObservationSink",
-      "providedBy": "host"
+      "providedBy": "execution"
     },
     {
       "id": "CollectionConsentGuard",
@@ -106,6 +106,22 @@
     },
     {
       "id": "AdapterQualification",
+      "providedBy": "host"
+    },
+    {
+      "id": "CallbackPayloadArchive",
+      "providedBy": "host"
+    },
+    {
+      "id": "ExecutionReadiness",
+      "providedBy": "host"
+    },
+    {
+      "id": "OriginalReplayAuthority",
+      "providedBy": "host"
+    },
+    {
+      "id": "OriginalIdentityArchive",
       "providedBy": "host"
     }
   ],
@@ -185,14 +201,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "platform",
-      "currentSchemaVersion": 19,
+      "currentSchemaVersion": 25,
       "supportedSchemaReadRange": {
-        "min": 19,
-        "max": 19
+        "min": 25,
+        "max": 25
       },
       "supportedSchemaWriteRange": {
-        "min": 19,
-        "max": 19
+        "min": 25,
+        "max": 25
       },
       "requiresModules": [],
       "requiresPorts": [
@@ -348,6 +364,36 @@
           "id": "2026_11_17_010003_bind_billium_observation_command",
           "version": 19,
           "checksum": "sha256:5f20834938e039c01e3eda1248d449d3c8b8e72a43e898368ab6170d1591acd8"
+        },
+        {
+          "id": "2026_11_18_010004_retain_command_financial_scope",
+          "version": 20,
+          "checksum": "sha256:6945be84dbec7272fee2cbfff76f320663c64ac148896d44a7e34327c2a186ce"
+        },
+        {
+          "id": "2026_11_18_010005_validate_command_financial_scope",
+          "version": 21,
+          "checksum": "sha256:976955cedd324468085e82dd46d1db063cffdf9cfe2918d769e1de945694336d"
+        },
+        {
+          "id": "2026_11_18_010006_retain_command_input_digest",
+          "version": 22,
+          "checksum": "sha256:c6d140aab4ae59d00ca07aee9368ffd348ccf74e30f964da64fee5bdc0f8cc37"
+        },
+        {
+          "id": "2026_11_18_010007_validate_command_input_digest",
+          "version": 23,
+          "checksum": "sha256:f5eda384cad603b52274a8217cba0808accc208ba163d6302dcd9b30e2dea8f1"
+        },
+        {
+          "id": "2026_11_18_010008_retain_original_execution_binding",
+          "version": 24,
+          "checksum": "sha256:67bbaa3cfce72988efe94995eaba4a63a6bb161bf73e9379755e8b08a97e6508"
+        },
+        {
+          "id": "2026_11_18_010009_validate_original_execution_binding",
+          "version": 25,
+          "checksum": "sha256:d582b90fe1e7e9cfd3c4817b84df34257abf87e4dd987b147a3c3a6d470e2b9f"
         }
       ],
       "disablePolicy": {
@@ -1025,14 +1071,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "execution",
-      "currentSchemaVersion": 16,
+      "currentSchemaVersion": 32,
       "supportedSchemaReadRange": {
-        "min": 16,
-        "max": 16
+        "min": 32,
+        "max": 32
       },
       "supportedSchemaWriteRange": {
-        "min": 16,
-        "max": 16
+        "min": 32,
+        "max": 32
       },
       "requiresModules": [
         {
@@ -1046,19 +1092,24 @@
       "requiresPorts": [
         "PaymentDrivers",
         "WriterAdmission",
-        "PaymentObservationSink",
         "DispatchEgress",
         "MerchantCredentials",
         "ProviderAbsenceVerifier",
         "ExecutionOriginResolver",
-        "AdapterQualification"
+        "AdapterQualification",
+        "ExecutionReadiness"
       ],
-      "optionalPorts": [],
+      "optionalPorts": [
+        "CallbackPayloadArchive",
+        "OriginalReplayAuthority",
+        "OriginalIdentityArchive"
+      ],
       "emits": [
         "payment.observation.v1",
         "payment.outcome.v1",
         "payment.effect.outcome.v1",
-        "billium.event.v2"
+        "billium.event.v2",
+        "billium.event.v3"
       ],
       "consumes": [
         "payment.admission.v1",
@@ -1092,9 +1143,22 @@
         "billium_execution_provider_work",
         "billium_execution_merchant_lifecycle_event",
         "billium_execution_merchant_credential_revision",
-        "billium_execution_admission_conflict"
+        "billium_execution_admission_conflict",
+        "billium_execution_provider_identity",
+        "billium_execution_certified_absence",
+        "billium_execution_child_identity",
+        "billium_execution_recon_binding",
+        "billium_execution_recon_page",
+        "billium_execution_recon_item",
+        "billium_execution_recon_review",
+        "billium_execution_original_replay",
+        "billium_execution_original_identity_import"
       ],
-      "configKeys": [],
+      "configKeys": [
+        "billium.execution.release_evidence_ref",
+        "billium.execution.retention_policy_ref",
+        "billium.execution.outgoing_enabled"
+      ],
       "migrationIdentities": [
         {
           "id": "2026_11_17_000001_create_billium_execution_runtime",
@@ -1175,6 +1239,86 @@
           "id": "2026_11_18_000016_lock_merchant_action_admission",
           "version": 16,
           "checksum": "sha256:5d297d898eb631dbc5a4d458f0df189af08bcde09b120e227187368d93096e6f"
+        },
+        {
+          "id": "2026_11_18_000017_bind_provider_processing_provenance",
+          "version": 17,
+          "checksum": "sha256:91a0e5268c9fb06e8f0eafd46e87ddad0001ce4f29019922edeb7c92dbb51334"
+        },
+        {
+          "id": "2026_11_18_000018_validate_provider_processing_provenance",
+          "version": 18,
+          "checksum": "sha256:121349d5e3e537c0019ff7a535d9c77c013af703aa24fdb0d36e6437d8861ecd"
+        },
+        {
+          "id": "2026_11_18_000019_insert_qualified_provider_facts",
+          "version": 19,
+          "checksum": "sha256:5037cb6ad6d5962b4e92a59c747e8399fad4325c26d339fd1d55b9afaed8a27c"
+        },
+        {
+          "id": "2026_11_18_000020_guard_contradictory_reservation_release",
+          "version": 20,
+          "checksum": "sha256:7311d95207c9d4057f82356d4981f99bdc6261d1260b7d988dc47218721dc319"
+        },
+        {
+          "id": "2026_11_18_000021_index_qualified_pending_observations",
+          "version": 21,
+          "checksum": "sha256:b8291d54bc51608ef797f5d986dfb192f10c1757a187d41ad75684b4cbc6161d"
+        },
+        {
+          "id": "2026_11_18_000022_scope_admission_conflict_queries",
+          "version": 22,
+          "checksum": "sha256:2142adeec5fde09bf8efe65f1eadfef0a57ada0fb2adfb158526e6d8233f0443"
+        },
+        {
+          "id": "2026_11_18_000023_validate_admission_conflict_scope",
+          "version": 23,
+          "checksum": "sha256:0360e8ae52d83b6cc0f2d6a4c1c94e762d5958d3c76ce3f0cb22fe3384b15816"
+        },
+        {
+          "id": "2026_11_18_000024_retain_child_business_identity",
+          "version": 24,
+          "checksum": "sha256:f78064612a7f481e35cfdb357a9eea6001341cd5c52703f53eb2eab93d7bdc44"
+        },
+        {
+          "id": "2026_11_18_000025_distinguish_authorization_release_evidence",
+          "version": 25,
+          "checksum": "sha256:050f311b1be7fdcf45f166baf941d0bccb9a06685328695c2609ad8b136f38e4"
+        },
+        {
+          "id": "2026_11_18_000026_validate_authorization_release_evidence",
+          "version": 26,
+          "checksum": "sha256:86358738870f2881febc73375002ca1ade196903af3222697f12163d7907779b"
+        },
+        {
+          "id": "2026_11_18_000027_grant_authorization_release_reference",
+          "version": 27,
+          "checksum": "sha256:af9b376cd264419959b017b5401972e692d26a439ac5566fd0fd7625889a5f84"
+        },
+        {
+          "id": "2026_11_18_000028_retain_qualified_reconciliation_pages",
+          "version": 28,
+          "checksum": "sha256:facfe8693287a3db24d74506911a760b553e8a86e2fa87bd59b5cbff86ac2d7f"
+        },
+        {
+          "id": "2026_11_18_000029_record_qualified_original_replay",
+          "version": 29,
+          "checksum": "sha256:cc73f71c54be2825a115e93d8ad10ae019fa19d99b140a526acb4cc49bdf0a12"
+        },
+        {
+          "id": "2026_11_18_000030_validate_reconciliation_review_shapes",
+          "version": 30,
+          "checksum": "sha256:09f7d3b2e37a29bd343885286900bfb4f79d66d289651b3bdce8c45cb7c1cf20"
+        },
+        {
+          "id": "2026_11_18_000031_confirm_reconciliation_review_shapes",
+          "version": 31,
+          "checksum": "sha256:587b870dfae06f8d11a960881e9b3fe22a33abe38bf9f794704f1f5e38823dcd"
+        },
+        {
+          "id": "2026_11_18_000032_retain_original_identity_import",
+          "version": 32,
+          "checksum": "sha256:df72bd736d97429bed0cef6c9441f4363dbd54a6be588ddefd981d1bb48983d7"
         }
       ],
       "disablePolicy": {
@@ -1219,6 +1363,15 @@
           "bootstrapMode": "replay_only",
           "retentionPolicyRef": "financial-permanent",
           "eventContractRevision": "events-2026-10-v2"
+        },
+        {
+          "eventType": "execution.repair_recorded.v1",
+          "envelopeSchema": "billium.event.v3",
+          "payloadSchemaRef": "spec/revisions/2026-10/schema/execution/repair-event.v1.json#/properties/payload",
+          "payloadSchemaDigest": "sha256:5c2a095b31053150fbf08453e91d79ae27dc1e51b156c207a39f2d53d03a8b1f",
+          "bootstrapMode": "replay_only",
+          "retentionPolicyRef": "financial-permanent",
+          "eventContractRevision": "events-2026-11-v3"
         }
       ],
       "internalCommands": [

@@ -66,9 +66,10 @@ final readonly class AttemptJournal
                 $ref = $this->store->appendEvidence($ctx, $captured);
                 $work = 'provider-work:'.substr(PaymentIdentity::digest(['scope' => get_object_vars($captured->scope),
                     'handler' => $captured->handlerContractVersion, 'evidenceRef' => $ref]), 7);
-                $this->store->enqueueProviderWork($ctx, $ref, $work, $captured->handlerContractVersion);
+                $actualWork = $this->store->enqueueProviderWork($ctx, $ref, $work, $captured->handlerContractVersion, $operation->operationRef);
                 $fields = $record->sanitizedPayload;
                 $fields['retainedProviderEvidenceRef'] = $ref;
+                $fields['retainedProviderWorkRef'] = $actualWork;
                 $observation = new ProviderEvidence($record->evidenceRef, $record->scope, $record->providerId, $record->merchantAccountRef, null,
                     PaymentIdentity::digest($fields), $record->signatureVerdict, $record->handlerContractVersion, $record->receivedAt, $fields, $record->securePayloadRef);
                 $refs[] = $ref;
@@ -76,7 +77,7 @@ final readonly class AttemptJournal
             array_unshift($refs, $this->store->appendEvidence($ctx, $observation));
             if ($verifiedAbsence || $foreignDelivery) {
                 $work = 'transport-work:'.substr($record->payloadDigest, 7).':'.substr($record->evidenceRef, -16);
-                $this->store->enqueueProviderWork($ctx, $record->evidenceRef, $work, $record->handlerContractVersion);
+                $this->store->enqueueProviderWork($ctx, $record->evidenceRef, $work, $record->handlerContractVersion, $operation->operationRef);
             }
 
             return new ExecutionReceipt($record->evidenceRef, $attempt->attemptRef, $operation->operationRef,

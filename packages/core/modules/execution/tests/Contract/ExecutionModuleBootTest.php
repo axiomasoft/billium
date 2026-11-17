@@ -44,14 +44,14 @@ final class ExecutionModuleBootTest extends TestCase
                 $count++;
             }
         }
-        self::assertSame(73, $count);
+        self::assertSame(103, $count);
     }
 
     public function test_store_mutations_require_the_current_transaction_context(): void
     {
         $store = new ReflectionClass(ExecutionStore::class);
-        self::assertCount(39, $store->getMethods());
-        $reads = ['plan', 'namespace', 'operation', 'merchantRevision', 'attempt'];
+        self::assertCount(58, $store->getMethods());
+        $reads = ['plan', 'namespace', 'operation', 'merchantRevision', 'attempt', 'providerWork', 'attemptForOperation', 'providerOperationId', 'operationByProviderId', 'childByIdentity'];
         foreach ($store->getMethods() as $method) {
             if (! in_array($method->name, $reads, true)) {
                 self::assertSame(TransactionContext::class, (string) $method->getParameters()[0]->getType(), $method->name);

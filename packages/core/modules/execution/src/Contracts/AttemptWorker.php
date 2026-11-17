@@ -16,4 +16,7 @@ interface AttemptWorker
     public function dispatch(ExecutionScope $scope, string $attemptRef, string $worker, DateTimeImmutable $leaseUntil): StoredOutcome;
 
     public function recover(ExecutionScope $scope, string $attemptRef, string $worker, DateTimeImmutable $leaseUntil): StoredOutcome;
+
+    /** Separately authorized exact original request replay; never a generic initiation fallback. */
+    public function replayOriginalWithinWindow(ExecutionScope $scope, string $attemptRef, string $worker, DateTimeImmutable $leaseUntil, string $approvalRef): StoredOutcome;
 }
