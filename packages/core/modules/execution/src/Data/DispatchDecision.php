@@ -6,6 +6,7 @@ namespace Billium\Execution\Data;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use DateTimeImmutable;
 use Packman\Attributes\Api;
 
 #[Api(since: '1.0')]
@@ -20,6 +21,7 @@ final readonly class DispatchDecision
         public string $egressFenceRef,
         public ?string $collectionDispatchPermitRef,
         public string $immutableRequestDigest,
+        public ?DateTimeImmutable $requestDeadlineAt = null,
     ) {
         if ($operationRef === '') {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'operationRef must not be empty');

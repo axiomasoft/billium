@@ -10,6 +10,8 @@ use Billium\Ledger\Contracts\Ledger;
 use Billium\Ledger\Contracts\LedgerParticipants;
 use Billium\Ledger\Contracts\LedgerQueries;
 use Billium\Ledger\Contracts\ObservationApplier;
+use Billium\Ledger\Contracts\QualifiedObservationApplier;
+use Billium\Ledger\Contracts\SettlementIntentLocks;
 use Override;
 use Packman\Attributes\Api;
 use Packman\Extensions\Concerns\Composition\ContributesToSlots;
@@ -78,6 +80,8 @@ final class LedgerPlugin implements ExtensionPlugin, WithCapabilities, WithSchem
             'discrepancy_event',
             'observation_park',
             'refund_reconcile_progress',
+            'observation_owner_binding',
+            'observed_revision_owner_proof',
         ];
     }
 
@@ -98,6 +102,8 @@ final class LedgerPlugin implements ExtensionPlugin, WithCapabilities, WithSchem
             LedgerParticipants::class => Cardinality::OptionalSingle->value,
             LedgerQueries::class => Cardinality::OptionalSingle->value,
             ObservationApplier::class => Cardinality::OptionalSingle->value,
+            QualifiedObservationApplier::class => Cardinality::OptionalSingle->value,
+            SettlementIntentLocks::class => Cardinality::OptionalSingle->value,
         ];
     }
 }

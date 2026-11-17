@@ -1747,6 +1747,72 @@
             "enum_cases": [],
             "spi_kind": "call"
         },
+        "Billium\\Core\\Contracts\\Runtime\\AuthenticatedObservationContext": {
+            "kind": "interface",
+            "layer": "spi",
+            "since": "1.0",
+            "final": false,
+            "readonly": false,
+            "abstract": false,
+            "extends": [],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "assertOrigin": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "caller",
+                            "type": "Billium\\Core\\Data\\Runtime\\Caller",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "scope",
+                            "type": "Billium\\Core\\Data\\Runtime\\FinancialScope",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "payload",
+                            "type": "stdClass",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "proofDigest",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "array",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": [],
+            "spi_kind": "call"
+        },
         "Billium\\Core\\Contracts\\Runtime\\CallerContext": {
             "kind": "interface",
             "layer": "spi",
@@ -2044,6 +2110,65 @@
             "enum_backing": null,
             "enum_cases": [],
             "spi_kind": "call"
+        },
+        "Billium\\Core\\Contracts\\Runtime\\QualifiedFactualCommandPublisher": {
+            "kind": "interface",
+            "layer": "spi",
+            "since": "1.0",
+            "final": false,
+            "readonly": false,
+            "abstract": false,
+            "extends": [
+                "Billium\\Core\\Contracts\\Runtime\\EventPublisher"
+            ],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "publishQualified": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "destinationRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "message",
+                            "type": "array",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "scope",
+                            "type": "Billium\\Core\\Data\\Runtime\\FinancialScope",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "void",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": [],
+            "spi_kind": "implement"
         },
         "Billium\\Core\\Contracts\\Runtime\\ScopedCallerContext": {
             "kind": "interface",
@@ -5123,6 +5248,62 @@
             "enum_backing": null,
             "enum_cases": []
         },
+        "Billium\\Core\\Data\\Runtime\\FactualCommandBinding": {
+            "kind": "class",
+            "layer": "api",
+            "since": "1.0",
+            "final": true,
+            "readonly": false,
+            "abstract": false,
+            "extends": [],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "digest": {
+                    "visibility": "public",
+                    "static": true,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "destinationRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "message",
+                            "type": "array",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "scope",
+                            "type": "Billium\\Core\\Data\\Runtime\\FinancialScope",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "string",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": []
+        },
         "Billium\\Core\\Data\\Runtime\\FinancialAdmissionToken": {
             "kind": "class",
             "layer": "api",
@@ -5842,6 +6023,24 @@
                             "variadic": false,
                             "optional": false,
                             "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "intentOwnerNamespace",
+                            "type": "?string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": true,
+                            "default": "null",
+                            "flags": 1
+                        },
+                        {
+                            "name": "commandBindingDigest",
+                            "type": "?string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": true,
+                            "default": "null",
                             "flags": 1
                         }
                     ],
@@ -6778,6 +6977,14 @@
                     "value": "25"
                 },
                 {
+                    "name": "IntentNamespace",
+                    "value": "27"
+                },
+                {
+                    "name": "MerchantRevision",
+                    "value": "28"
+                },
+                {
                     "name": "FeedPartition",
                     "value": "30"
                 },
@@ -7268,13 +7475,25 @@
             "extends": [],
             "implements": [
                 "Packman\\Plugins\\Contracts\\Registry\\ExtensionPlugin",
+                "Packman\\Extensions\\Contracts\\Composition\\WithCapabilities",
                 "Packman\\Extensions\\Contracts\\Persistence\\WithSchema"
             ],
             "uses": [
-                "Packman\\Extensions\\Concerns\\Persistence\\OwnsSchema"
+                "Packman\\Extensions\\Concerns\\Persistence\\OwnsSchema",
+                "Packman\\Extensions\\Concerns\\Composition\\ProvidesCapabilities"
             ],
             "doc": [],
             "methods": {
+                "definedCapabilities": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [],
+                    "return": "array",
+                    "doc": []
+                },
                 "manifest": {
                     "visibility": "public",
                     "static": false,

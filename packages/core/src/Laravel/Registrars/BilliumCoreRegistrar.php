@@ -10,9 +10,12 @@ use Billium\Core\Contracts\Modules\ModuleAdmissionGate;
 use Billium\Core\Contracts\Modules\ModuleRegistry;
 use Billium\Core\Contracts\Modules\ModuleTransitionPlanner;
 use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runtime\AuthenticatedObservationContext;
 use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Contracts\Runtime\FinancialAuthorityEvidence;
 use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
+use Billium\Core\Contracts\Runtime\IncomingCommandAuthenticator;
+use Billium\Core\Contracts\Runtime\InternalCommandReceiver;
 use Billium\Core\Diagnostics\BilliumCompatibilityDoctorCheck;
 use Billium\Core\Internal\Modules\ModuleCatalog;
 use Billium\Core\Internal\Modules\ModuleLifecycle;
@@ -20,9 +23,19 @@ use Billium\Core\Internal\Runner\DatabaseOperationRunner;
 use Billium\Core\Internal\Runner\UnboundCallerContext;
 use Billium\Core\Internal\Runner\UnboundFinancialAuthorityEvidence;
 use Billium\Core\Internal\Runner\UnboundSessionAdmission;
+use Billium\Core\Internal\Runtime\PaymentObservationCommandReceiver;
+use Billium\Core\Internal\Runtime\TransportObservationContext;
 use Billium\Core\Plugins\ExecutionPlugin;
 use Billium\Core\Plugins\LedgerPlugin;
 use Billium\Core\Plugins\PlatformPlugin;
+use Billium\Execution\Contracts\AdapterQualification;
+use Billium\Execution\Contracts\DispatchEgress;
+use Billium\Execution\Contracts\ExecutionOriginResolver;
+use Billium\Execution\Contracts\MerchantCredentials;
+use Billium\Execution\Contracts\PaymentDrivers;
+use Billium\Execution\Contracts\PaymentObservationSink;
+use Billium\Execution\Contracts\ProviderAbsenceVerifier;
+use Billium\Execution\Contracts\WriterAdmission;
 use Billium\Platform\Contracts\Idempotency\IdempotencyStore;
 use Billium\Platform\Contracts\Installation\RootAdmission;
 use Illuminate\Contracts\Config\Repository;
@@ -73,6 +86,12 @@ final class BilliumCoreRegistrar implements PackageRegistrar
         $app->singletonIf(PlatformPlugin::class);
         $app->singletonIf(LedgerPlugin::class);
         $app->singletonIf(ExecutionPlugin::class);
+        $app->singleton(TransportObservationContext::class, static fn (Application $app): TransportObservationContext => new TransportObservationContext(
+            static fn (): IncomingCommandAuthenticator => $app->make(IncomingCommandAuthenticator::class),
+            $app->make(DatabaseManager::class),
+        ));
+        $app->alias(TransportObservationContext::class, AuthenticatedObservationContext::class);
+        $app->bindIf(InternalCommandReceiver::class, PaymentObservationCommandReceiver::class);
 
         $app->singleton(BilliumCompatibilityDoctorCheck::class, static fn (Application $app): BilliumCompatibilityDoctorCheck => new BilliumCompatibilityDoctorCheck(
             config: $app->make(Repository::class),
@@ -90,6 +109,22 @@ final class BilliumCoreRegistrar implements PackageRegistrar
                 }
                 if (self::hasCustomPort($app, FinancialAuthorityEvidence::class, UnboundFinancialAuthorityEvidence::class)) {
                     $ports[] = 'FinancialAuthorityEvidence';
+                }
+
+                // Report configured bindings without resolving host services or performing qualification I/O.
+                foreach ([
+                    'PaymentDrivers' => PaymentDrivers::class,
+                    'WriterAdmission' => WriterAdmission::class,
+                    'PaymentObservationSink' => PaymentObservationSink::class,
+                    'DispatchEgress' => DispatchEgress::class,
+                    'MerchantCredentials' => MerchantCredentials::class,
+                    'ProviderAbsenceVerifier' => ProviderAbsenceVerifier::class,
+                    'ExecutionOriginResolver' => ExecutionOriginResolver::class,
+                    'AdapterQualification' => AdapterQualification::class,
+                ] as $port => $contract) {
+                    if ($app->bound($contract)) {
+                        $ports[] = $port;
+                    }
                 }
 
                 return $ports;

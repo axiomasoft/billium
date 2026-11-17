@@ -127,7 +127,8 @@ final class DispatchAuthority
         if (! in_array($context->spec()->operationClass, $allowedClasses, true)) {
             $this->refuse('Dispatch operation class does not authorize this effect kind');
         }
-        if ($r->localSessionEpoch !== $context->sessionEpoch()
+        $digest = AuthorityClaims::immutableDriverRequestDigest($operation->binding, $operation->operationRef, $attempt->attemptRef, $attempt->providerReference, $operation->kind, $operation->requested);
+        if ($attempt->immutableRequestDigest !== $digest || $r->localSessionEpoch !== $context->sessionEpoch()
             || $r->operationRef !== $operation->operationRef || $r->attemptRef !== $attempt->attemptRef
             || $attempt->operationRef !== $operation->operationRef || $attempt->providerReference !== $r->providerReference
             || $r->kind !== $operation->kind || $r->amount->toWire() !== $operation->requested->toWire()
@@ -141,7 +142,7 @@ final class DispatchAuthority
         }
 
         return new DispatchDecision($r->operationRef, $r->attemptRef, $r->leaseFence, $r->localSessionEpoch,
-            $ticket->ticketRef, $ticket->egressFenceRef, null, $operation->economicDigest);
+            $ticket->ticketRef, $ticket->egressFenceRef, null, $digest, min($attempt->leaseExpiresAt, $ticket->expiresAt));
     }
 
     /** @param Closure(): ProviderLookupResult $send */
@@ -153,11 +154,13 @@ final class DispatchAuthority
         $this->assertProcess($r, $request->binding->executionProfile);
         $this->assertActiveSession($r);
         $p = $request->permit;
-        if ($p->operationRef !== $r->operationRef || $p->attemptRef !== $r->attemptRef
+        $digest = AuthorityClaims::immutableDriverRequestDigest($request->binding, $p->operationRef, $p->attemptRef, $request->providerReference, $r->kind, $request->amount);
+        if ($p->immutableRequestDigest !== $digest || $p->operationRef !== $r->operationRef || $p->attemptRef !== $r->attemptRef
             || $p->ticketRef !== $ticket->ticketRef || $p->egressFenceRef !== $ticket->egressFenceRef
             || $p->sessionEpoch !== $r->localSessionEpoch || $p->leaseFence !== $r->leaseFence
             || AuthorityClaims::bindingDigest($request->binding) !== $r->bindingDigest
             || $request->capabilities->digest !== $r->capabilityDigest || $request->capabilities->merchantAccountRef !== $request->binding->merchantAccountRef
+            || $request->capabilities->driverId !== $request->binding->driverId || $request->capabilities->driverContractVersion !== $request->binding->driverContractVersion
             || $request->providerReference !== $r->providerReference || $request->amount->toWire() !== $r->amount->toWire()
             || $request->credentials->merchantAccountRef !== $request->binding->merchantAccountRef
             || $request->credentials->expiresAt <= new DateTimeImmutable
@@ -171,7 +174,10 @@ final class DispatchAuthority
             || $attempt->providerReference !== $r->providerReference || $attempt->state !== AttemptState::Dispatching
             || $attempt->leaseFence !== $r->leaseFence || $attempt->leaseExpiresAt === null || $attempt->leaseExpiresAt <= new DateTimeImmutable
             || $attempt->sessionEpoch !== $r->localSessionEpoch || $attempt->ownerSessionRef !== $r->ownerSessionRef
-            || $attempt->dispatchPermitRef !== $ticket->ticketRef || $operation->economicDigest !== $p->immutableRequestDigest
+            || $attempt->dispatchPermitRef !== $ticket->ticketRef || $attempt->immutableRequestDigest !== $digest
+            || $attempt->collectionDispatchPermitRef !== $p->collectionDispatchPermitRef
+            || $attempt->requestDeadlineAt === null || $attempt->requestDeadlineAt <= new DateTimeImmutable
+            || $attempt->requestDeadlineAt->format('U.u') !== $p->requestDeadlineAt?->format('U.u') || $operation->kind !== $r->kind
             || AuthorityClaims::bindingDigest($operation->binding) !== $r->bindingDigest) {
             $this->refuse('No committed current dispatch-start permit');
         }
@@ -237,7 +243,7 @@ final class DispatchAuthority
     private function assertTx0(): void
     {
         foreach ($this->databases->getConnections() as $connection) {
-            if ($connection->transactionLevel() !== 0) {
+            if ($connection->transactionLevel() !== 0 || $connection->getPdo()->inTransaction()) {
                 throw new LogicException('Writer verification and egress require transaction level zero');
             }
         }

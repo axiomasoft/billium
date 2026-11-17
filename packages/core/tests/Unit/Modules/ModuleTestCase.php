@@ -17,7 +17,9 @@ use PHPUnit\Framework\TestCase;
 abstract class ModuleTestCase extends TestCase
 {
     /** Host ports the default embedded-commerz composition needs. */
-    protected const array LEDGER_PORTS = ['AuthContext', 'SellerContext', 'AuthorizationVerdict', 'FinancialSessionAdmission'];
+    protected const array LEDGER_PORTS = ['AuthContext', 'SellerContext', 'AuthorizationVerdict', 'FinancialSessionAdmission', 'FinancialAuthorityEvidence'];
+
+    protected const array EXECUTION_PORTS = ['PaymentDrivers', 'WriterAdmission', 'PaymentObservationSink', 'DispatchEgress', 'MerchantCredentials', 'ProviderAbsenceVerifier', 'ExecutionOriginResolver', 'AdapterQualification'];
 
     /** @return array<string, mixed> */
     protected static function document(): array

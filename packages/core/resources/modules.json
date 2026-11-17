@@ -99,6 +99,14 @@
     {
       "id": "ProviderAbsenceVerifier",
       "providedBy": "host"
+    },
+    {
+      "id": "ExecutionOriginResolver",
+      "providedBy": "host"
+    },
+    {
+      "id": "AdapterQualification",
+      "providedBy": "host"
     }
   ],
   "compositions": [
@@ -177,14 +185,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "platform",
-      "currentSchemaVersion": 16,
+      "currentSchemaVersion": 19,
       "supportedSchemaReadRange": {
-        "min": 10,
-        "max": 16
+        "min": 19,
+        "max": 19
       },
       "supportedSchemaWriteRange": {
-        "min": 10,
-        "max": 16
+        "min": 19,
+        "max": 19
       },
       "requiresModules": [],
       "requiresPorts": [
@@ -215,7 +223,10 @@
         "billium_feed_bootstrap_session",
         "billium_feed_bootstrap_item",
         "billium_inbox_message",
-        "billium_inbox_conflict"
+        "billium_inbox_conflict",
+        "billium_feed_observation_root_scope",
+        "billium_feed_observation_scope_link",
+        "billium_feed_observation_command"
       ],
       "configKeys": [
         "billium.connection",
@@ -322,6 +333,21 @@
           "id": "2026_10_29_000013_bind_billium_bootstrap_items_to_manifest",
           "version": 16,
           "checksum": "sha256:83ef3ccb8ad131d39ea94dc0e5509ac8856d1f27b2ca1f27ea7f072dd3899f12"
+        },
+        {
+          "id": "2026_11_17_010001_bind_billium_observation_scope",
+          "version": 17,
+          "checksum": "sha256:d2004da64886ae82d61e7ee71ecc50565da668f017981ffc8d128f133764d55e"
+        },
+        {
+          "id": "2026_11_17_010002_guard_billium_qualified_partition_adoption",
+          "version": 18,
+          "checksum": "sha256:f30012e0412d070f644943112c7b47fbc83d99aaf4fb7f7a4724911e63d69666"
+        },
+        {
+          "id": "2026_11_17_010003_bind_billium_observation_command",
+          "version": 19,
+          "checksum": "sha256:5f20834938e039c01e3eda1248d449d3c8b8e72a43e898368ab6170d1591acd8"
         }
       ],
       "disablePolicy": {
@@ -365,14 +391,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "ledger",
-      "currentSchemaVersion": 10,
+      "currentSchemaVersion": 12,
       "supportedSchemaReadRange": {
-        "min": 2,
-        "max": 10
+        "min": 12,
+        "max": 12
       },
       "supportedSchemaWriteRange": {
-        "min": 2,
-        "max": 10
+        "min": 12,
+        "max": 12
       },
       "requiresModules": [
         {
@@ -417,7 +443,9 @@
         "billium_ledger_discrepancy",
         "billium_discrepancy_event",
         "billium_observation_park",
-        "billium_refund_reconcile_progress"
+        "billium_refund_reconcile_progress",
+        "billium_observation_owner_binding",
+        "billium_observed_revision_owner_proof"
       ],
       "configKeys": [
         "billium.ledger.refund_reconcile_after_seconds"
@@ -472,6 +500,16 @@
           "id": "2026_11_09_000010_guard_billium_payment_terminal_state",
           "version": 10,
           "checksum": "sha256:69b116f0a2ebe8eb8eff15f0f19633c88603485ed16a465e7f3732ca16906631"
+        },
+        {
+          "id": "2026_11_17_020001_bind_billium_observed_owner",
+          "version": 11,
+          "checksum": "sha256:99445dd3e8e0ce25b620834716d2adf06929a4b525cb9529e7a1bb6f86d2b974"
+        },
+        {
+          "id": "2026_11_17_020002_prove_billium_observed_revision_owner",
+          "version": 12,
+          "checksum": "sha256:bb91b228a927e1b54fb41bf484cd9a6aad5cd5dfe8245b823b821d1c86dadfca"
         }
       ],
       "disablePolicy": {
@@ -987,14 +1025,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "execution",
-      "currentSchemaVersion": 10,
+      "currentSchemaVersion": 16,
       "supportedSchemaReadRange": {
-        "min": 10,
-        "max": 10
+        "min": 16,
+        "max": 16
       },
       "supportedSchemaWriteRange": {
-        "min": 10,
-        "max": 10
+        "min": 16,
+        "max": 16
       },
       "requiresModules": [
         {
@@ -1011,7 +1049,9 @@
         "PaymentObservationSink",
         "DispatchEgress",
         "MerchantCredentials",
-        "ProviderAbsenceVerifier"
+        "ProviderAbsenceVerifier",
+        "ExecutionOriginResolver",
+        "AdapterQualification"
       ],
       "optionalPorts": [],
       "emits": [
@@ -1051,7 +1091,8 @@
         "billium_execution_provider_evidence",
         "billium_execution_provider_work",
         "billium_execution_merchant_lifecycle_event",
-        "billium_execution_merchant_credential_revision"
+        "billium_execution_merchant_credential_revision",
+        "billium_execution_admission_conflict"
       ],
       "configKeys": [],
       "migrationIdentities": [
@@ -1104,6 +1145,36 @@
           "id": "2026_11_17_000010_index_billium_execution_business_identity_digest",
           "version": 10,
           "checksum": "sha256:c5a5d32e83c4a10a5ce517acaaf97633c3fbdeeb371fd05bc70416e007465d39"
+        },
+        {
+          "id": "2026_11_17_000011_persist_dispatch_permit_and_due_state",
+          "version": 11,
+          "checksum": "sha256:3f838474f91ce8e79ed1f9fcb5d3fb7c5a88053e328c133aba9d6eec95dfc4b6"
+        },
+        {
+          "id": "2026_11_17_000012_validate_dispatch_permit_and_due_state",
+          "version": 12,
+          "checksum": "sha256:23b5e9ee53198a4df9cfb7543cfa9ce321d7e65787a6ce7e8712ed693f8398aa"
+        },
+        {
+          "id": "2026_11_17_000013_grant_dispatch_collection_permit",
+          "version": 13,
+          "checksum": "sha256:7ccf99fba86dd6603d4992de8ed22c83785a91ca468dd51d43bae5a498925036"
+        },
+        {
+          "id": "2026_11_17_000014_record_admission_conflicts_and_identity_retention",
+          "version": 14,
+          "checksum": "sha256:1a54e08f604c4c501ccc0e2be9e9fa65e79e163ca230bcef91f11eed40f46af8"
+        },
+        {
+          "id": "2026_11_17_000015_validate_business_identity_retention",
+          "version": 15,
+          "checksum": "sha256:a448e15a8a527fe93e21d1beb6dbac0ba921c59ae6b47b1f74f4c72d414e773b"
+        },
+        {
+          "id": "2026_11_18_000016_lock_merchant_action_admission",
+          "version": 16,
+          "checksum": "sha256:5d297d898eb631dbc5a4d458f0df189af08bcde09b120e227187368d93096e6f"
         }
       ],
       "disablePolicy": {

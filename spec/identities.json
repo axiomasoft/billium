@@ -4448,6 +4448,41 @@
     },
     {
       "kind": "migration",
+      "id": "2026_11_17_000011_persist_dispatch_permit_and_due_state",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_17_000011_persist_dispatch_permit_and_due_state.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_17_000012_validate_dispatch_permit_and_due_state",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_17_000012_validate_dispatch_permit_and_due_state.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_17_000013_grant_dispatch_collection_permit",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_17_000013_grant_dispatch_collection_permit.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_17_000014_record_admission_conflicts_and_identity_retention",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_17_000014_record_admission_conflicts_and_identity_retention.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_17_000015_validate_business_identity_retention",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_17_000015_validate_business_identity_retention.php"
+    },
+    {
+      "kind": "migration",
       "id": "2026_11_17_000900_bind_usage_metric_and_snapshot_semantics",
       "status": "new",
       "since": "2026-10",
@@ -4459,6 +4494,48 @@
       "status": "new",
       "since": "2026-10",
       "source": "packages/core/database/migrations/usage/2026_11_17_000901_validate_usage_metric_and_snapshot_semantics.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_17_010001_bind_billium_observation_scope",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/platform/2026_11_17_010001_bind_billium_observation_scope.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_17_010002_guard_billium_qualified_partition_adoption",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/platform/2026_11_17_010002_guard_billium_qualified_partition_adoption.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_17_010003_bind_billium_observation_command",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/platform/2026_11_17_010003_bind_billium_observation_command.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_17_020001_bind_billium_observed_owner",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/ledger/2026_11_17_020001_bind_billium_observed_owner.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_17_020002_prove_billium_observed_revision_owner",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/ledger/2026_11_17_020002_prove_billium_observed_revision_owner.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_000016_lock_merchant_action_admission",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_18_000016_lock_merchant_action_admission.php"
     },
     {
       "kind": "doctor-finding",

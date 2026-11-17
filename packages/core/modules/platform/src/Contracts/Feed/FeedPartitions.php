@@ -7,11 +7,13 @@ namespace Billium\Platform\Contracts\Feed;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Data\Runtime\Caller;
+use Billium\Core\Data\Runtime\FinancialScope;
 use Billium\Platform\Contracts\Inbox\BootstrapItemHandler;
 use Billium\Platform\Contracts\Inbox\CustodyHandler;
 use Billium\Platform\Data\Inbox\BootstrapPartition;
 use Billium\Platform\Data\Inbox\BootstrapStatus;
 use Billium\Platform\Data\Inbox\CustodyResult;
+use Billium\Platform\Data\Inbox\VerifiedObservationBootstrap;
 use Packman\Attributes\Spi;
 use Packman\Attributes\SpiKind;
 use stdClass;
@@ -40,6 +42,12 @@ interface FeedPartitions
     public function process(TransactionContext $context, string $channel, stdClass $envelope, CustodyHandler $handler): CustodyResult;
 
     /** Read the authenticated source of a partition for the next financial root. */
+    public function processQualified(TransactionContext $context, string $channel, stdClass $envelope, CustodyHandler $handler, string $rootOperationRef, string $proofDigest): CustodyResult;
+
+    public function scopeForPartition(Caller $caller, string $channel, int $partitionId): FinancialScope;
+
+    public function scopeForInbox(Caller $caller, string $channel, int $inboxId): FinancialScope;
+
     public function sourceForPartition(Caller $caller, string $channel, int $partitionId): string;
 
     /** Read the authenticated source of a retained delivery for the next financial root. */
@@ -66,6 +74,8 @@ interface FeedPartitions
      *
      * @throws ProblemException billium.validation.invalid for an incomplete or altered snapshot, billium.auth.denied
      */
+    public function stageQualifiedBootstrap(TransactionContext $context, BootstrapPartition $snapshot, VerifiedObservationBootstrap $grant): int;
+
     public function stageBootstrap(TransactionContext $context, BootstrapPartition $snapshot): int;
 
     /** Applies the next undisposed item (one per root Tx). Returns the number of items still undisposed. */

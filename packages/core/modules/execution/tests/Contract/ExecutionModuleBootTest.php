@@ -29,7 +29,11 @@ final class ExecutionModuleBootTest extends TestCase
                     self::fail('Contract type did not autoload: '.$type);
                 }
                 $reflection = new ReflectionClass($type);
-                self::assertCount(1, $reflection->getAttributes($section === 'Contracts' ? Spi::class : Api::class));
+                $surfaces = $reflection->getAttributes(Api::class);
+                if ($section === 'Contracts') {
+                    $surfaces = [...$surfaces, ...$reflection->getAttributes(Spi::class)];
+                }
+                self::assertCount(1, $surfaces, $type);
                 if ($section === 'Contracts') {
                     self::assertTrue($reflection->isInterface(), $type);
                 } elseif ($section === 'Data') {
@@ -40,13 +44,13 @@ final class ExecutionModuleBootTest extends TestCase
                 $count++;
             }
         }
-        self::assertSame(65, $count);
+        self::assertSame(73, $count);
     }
 
     public function test_store_mutations_require_the_current_transaction_context(): void
     {
         $store = new ReflectionClass(ExecutionStore::class);
-        self::assertCount(35, $store->getMethods());
+        self::assertCount(39, $store->getMethods());
         $reads = ['plan', 'namespace', 'operation', 'merchantRevision', 'attempt'];
         foreach ($store->getMethods() as $method) {
             if (! in_array($method->name, $reads, true)) {

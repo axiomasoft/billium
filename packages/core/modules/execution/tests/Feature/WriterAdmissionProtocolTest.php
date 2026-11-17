@@ -329,7 +329,8 @@ final class WriterAdmissionProtocolTest extends ExecutionTestCase
             $store->transitionNamespace($ctx, $binding->scope, NamespaceState::Open, 0, 'complete-history');
             $store->insertBinding($ctx, $binding);
             $operation = $store->insertOperation($ctx, new AdmissionPlan($binding->scope, $binding, 'root-a', EffectKind::Charge, Money::parse('10.00', 'RUB'), 'command-a', $binding->semanticDigest, 'execution.intent.v1', ['execution', 'platform'], [], null));
-            $store->insertAttempt($ctx, $operation, 'attempt-a', 'reference-a');
+            $admittedAttempt = $store->insertAttempt($ctx, $operation, 'attempt-a', 'reference-a');
+            $store->insertDispatchWork($ctx, $admittedAttempt, 'dispatch-a', 'dispatch.v1');
 
             return self::receipt();
         });

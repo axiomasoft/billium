@@ -19,6 +19,7 @@ use Billium\Platform\Data\EventContracts\PreparedFactualCommand;
 use Billium\Platform\Data\EventContracts\PreparedInternalCommand;
 use Billium\Platform\Data\Installation\FinancialSessionView;
 use Billium\Platform\Internal\Installation\Sessions;
+use Billium\Platform\Internal\Outbox\EventRows;
 use Closure;
 use Illuminate\Database\DatabaseManager;
 use LogicException;
@@ -90,7 +91,8 @@ final readonly class FactualCommandRecorder implements FactualCommandOutbox
             $command->commandRef, $command->businessRef, PreparedFactualCommand::OWNER_MODULE_ID,
             PreparedFactualCommand::COMMAND_TYPE, PreparedFactualCommand::COMMAND_SCHEMA, $body,
             [PreparedFactualCommand::DESTINATION],
-        ));
+        ), QualifiedCommandScope::encode($selected, $observation->sourceLineage, $observation->partitionRef, $command->businessRef,
+            EventRows::scope($this->db->connection($context->connectionName()), $context)->lineage));
     }
 
     private static function sourceLineage(FinancialSessionView $session): string

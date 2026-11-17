@@ -10,8 +10,6 @@ use Billium\Core\Enums\Modules\CompatibilityFindingCode as Code;
 
 final class ModuleCompositionTest extends ModuleTestCase
 {
-    private const array EXECUTION_PORTS = ['PaymentDrivers', 'WriterAdmission'];
-
     public function test_default_desired_config_is_a_valid_minimal_platform_ledger_composition(): void
     {
         $config = require dirname(__DIR__, 3).'/config/billium.php';

@@ -5,19 +5,25 @@ declare(strict_types=1);
 namespace Billium\Core\Plugins;
 
 use Billium\Core\Database\ExecutionSchemaSetProvider;
+use Billium\Execution\Contracts\AttemptWorker;
+use Billium\Execution\Contracts\RootPaymentCommands;
 use Override;
 use Packman\Attributes\Api;
+use Packman\Extensions\Concerns\Composition\ProvidesCapabilities;
 use Packman\Extensions\Concerns\Persistence\OwnsSchema;
+use Packman\Extensions\Contracts\Composition\WithCapabilities;
 use Packman\Extensions\Contracts\Persistence\WithSchema;
 use Packman\Plugins\Contracts\Registry\ExtensionPlugin;
 use Packman\Plugins\Data\Plugin\PluginManifest;
+use Packman\Plugins\Enums\Contributions\Cardinality;
 use Packman\Plugins\Laravel\PluginRegistrar;
 
 /** Execution owns its additive schema; platform session and ledger storage retain their owners. */
 #[Api(since: '1.0')]
-final class ExecutionPlugin implements ExtensionPlugin, WithSchema
+final class ExecutionPlugin implements ExtensionPlugin, WithCapabilities, WithSchema
 {
     use OwnsSchema;
+    use ProvidesCapabilities;
 
     public function manifest(): PluginManifest
     {
@@ -26,6 +32,16 @@ final class ExecutionPlugin implements ExtensionPlugin, WithSchema
     }
 
     public function register(PluginRegistrar $registrar): void {}
+
+    /** @return array<class-string, string> */
+    #[Override]
+    public function definedCapabilities(): array
+    {
+        return [
+            RootPaymentCommands::class => Cardinality::OptionalSingle->value,
+            AttemptWorker::class => Cardinality::OptionalSingle->value,
+        ];
+    }
 
     #[Override]
     public function tablePrefix(): string

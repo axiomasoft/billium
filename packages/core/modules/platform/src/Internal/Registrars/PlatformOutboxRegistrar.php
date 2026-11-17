@@ -8,18 +8,23 @@ use Billium\Contracts\Contracts\Codec;
 use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Contracts\Modules\ModuleRegistry;
 use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runtime\AuthenticatedObservationContext;
 use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Contracts\Runtime\EventPublisher;
+use Billium\Core\Contracts\Runtime\ScopedCallerContext;
 use Billium\Platform\Contracts\Feed\EventFeed;
 use Billium\Platform\Contracts\Feed\FeedPartitions;
 use Billium\Platform\Contracts\Feed\FeedRecoveryQueries;
 use Billium\Platform\Contracts\Feed\SnapshotSource;
+use Billium\Platform\Contracts\Inbox\AuthenticatedObservationBootstrap;
+use Billium\Platform\Contracts\Inbox\ObservationBootstrapAuthenticator;
 use Billium\Platform\Contracts\Outbox\CommandOutbox;
 use Billium\Platform\Contracts\Outbox\FactualCommandOutbox;
 use Billium\Platform\Contracts\Outbox\Outbox;
 use Billium\Platform\Internal\CommandOutbox\CommandOutboxRelay;
 use Billium\Platform\Internal\CommandOutbox\CommandRecorder;
 use Billium\Platform\Internal\CommandOutbox\FactualCommandRecorder;
+use Billium\Platform\Internal\Feed\AuthenticatedBootstrapContext;
 use Billium\Platform\Internal\Feed\BootstrapCoordinator;
 use Billium\Platform\Internal\Feed\DatabaseFeedPartitions;
 use Billium\Platform\Internal\Feed\DatabaseFeedRecoveryQueries;
@@ -45,6 +50,12 @@ final class PlatformOutboxRegistrar implements PackageRegistrar
     public function register(Application $app): void
     {
         $app->bind(FeedRecoveryQueries::class, DatabaseFeedRecoveryQueries::class);
+        $app->singleton(AuthenticatedBootstrapContext::class, static fn (Application $app): AuthenticatedBootstrapContext => new AuthenticatedBootstrapContext(
+            static fn (): ObservationBootstrapAuthenticator => $app->make(ObservationBootstrapAuthenticator::class),
+            static fn (): ScopedCallerContext => $app->make(ScopedCallerContext::class),
+            $app->make(DatabaseManager::class),
+        ));
+        $app->alias(AuthenticatedBootstrapContext::class, AuthenticatedObservationBootstrap::class);
 
         $app->singleton(CommandOutbox::class, static fn (Application $app): CommandRecorder => new CommandRecorder(
             $app->make(DatabaseManager::class),
@@ -110,8 +121,13 @@ final class PlatformOutboxRegistrar implements PackageRegistrar
                     static fn (): CallerContext => $app->make(CallerContext::class),
                     $options->inbox->retryBackoffSeconds,
                     $options->inbox->retryBudget,
+                    $app->make(AuthenticatedObservationContext::class),
                 ),
-                new BootstrapCoordinator($app->make(PartitionStore::class), static fn (): OperationRunner => $app->make(OperationRunner::class)),
+                new BootstrapCoordinator(
+                    $app->make(PartitionStore::class),
+                    static fn (): OperationRunner => $app->make(OperationRunner::class),
+                    $app->make(AuthenticatedObservationBootstrap::class),
+                ),
             );
         });
 

@@ -43,7 +43,7 @@ final readonly class LedgerPrivileges
             'invoice', 'invoice_line', 'observed_payment', 'observed_payment_revision', 'payment', 'payment_revision', 'allocation',
             'allocation_receipt', 'credit_note', 'ledger_discrepancy', 'discrepancy_event'];
         // Tables of later migrations of the stream, granted once the migration that creates them runs.
-        $stagedTables = array_filter(['observation_park', 'refund_reconcile_progress'], static function (string $table): bool {
+        $stagedTables = array_filter(['observation_park', 'refund_reconcile_progress', 'observation_owner_binding', 'observed_revision_owner_proof'], static function (string $table): bool {
             $row = DB::selectOne('SELECT to_regclass(?) IS NOT NULL AS present', ['public.billium_'.$table]);
 
             return is_object($row) && ($row->present ?? false) === true;
@@ -73,7 +73,7 @@ final readonly class LedgerPrivileges
         // that creates them grants again. InvoiceCommandsTest asserts their runtime EXECUTE grants.
         $staged = ['billium_create_invoice', 'billium_update_invoice_metadata', 'billium_issue_invoice', 'billium_close_invoice', 'billium_mark_invoice_uncollectible',
             'billium_reverse_allocation', 'billium_issue_credit_note', 'billium_reallocate_payment',
-            'billium_record_observation', 'billium_project_payment', 'billium_record_refund_detail', 'billium_park_observation',
+            'billium_prove_observation_revision', 'billium_claim_observation_owner', 'billium_record_observation', 'billium_project_payment', 'billium_record_refund_detail', 'billium_park_observation',
             'billium_release_observation_park', 'billium_reconcile_refund_basis', 'billium_amend_obligation_due_policy'];
         $stagedPrivate = ['billium_invoice_replay', 'billium_ledger_lock_scope', 'billium_ledger_release', 'billium_observation_park_guard'];
         $present = static fn (string $name): bool => DB::selectOne("SELECT 1 AS present FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname=?", [$name]) !== null;

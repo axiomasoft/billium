@@ -71,6 +71,7 @@ final readonly class PaymentProjection
             return HandlerOutcome::conflict($refusal->value);
         }
         $db = $this->databases->connection($context->connectionName());
+        ObservationOwnership::check($db, $context, $observation);
         $material = EconomicDigest::of($observation);
         try {
             $recorded = $this->routines->call($db, 'record_observation', [

@@ -20,6 +20,7 @@ use Billium\Core\Enums\Runner\LockRank;
 use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Exceptions\Runner\LockPlanChanged;
 use Billium\Execution\Contracts\ExecutionStore;
+use Billium\Execution\Data\AdmissionConflict;
 use Billium\Execution\Data\AdmissionPlan;
 use Billium\Execution\Data\AttemptRecord;
 use Billium\Execution\Data\AuthorizationRecord;
@@ -48,6 +49,8 @@ use Billium\Execution\Enums\AttemptState;
 use Billium\Execution\Enums\EffectKind;
 use Billium\Execution\Enums\NamespaceState;
 use Billium\Execution\Enums\ReservationState;
+use Billium\Execution\Enums\WorkState;
+use Billium\Execution\Internal\Authority\AuthorityClaims;
 use DateTimeImmutable;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
@@ -147,13 +150,28 @@ final class DatabaseExecutionStore implements ExecutionStore
         return new NamespaceRecord($executionScope, NamespaceState::from(self::text($row->state)), self::text($row->canonicalization_version), self::date($row->history_from), self::nullableText($row->completeness_receipt_ref), self::integer($row->generation));
     }
 
+    public function lockNamespace(TransactionContext $context, ExecutionScope $scope): NamespaceRecord
+    {
+        $this->financial($context);
+        $id = $this->query('namespace', $scope, $context)->where('intent_owner_namespace', $scope->intentOwnerNamespace)->value('id');
+        if ($id === null) {
+            throw new ProblemException(ProblemCode::RecoveryRequired, 'Business namespace lacks durable history');
+        }
+        $request = new LockRequest(LockRank::IntentNamespace, 'billium_execution_namespace', [self::integer($id)], shared: true);
+        if ($context->lock($request) !== $request->keys) {
+            throw new LockPlanChanged('Business namespace changed during admission');
+        }
+
+        return $this->namespace($scope);
+    }
+
     public function insertBinding(TransactionContext $transactionContext, FrozenBinding $frozenBinding): ?OperationRecord
     {
         $this->financial($transactionContext);
         $this->assertScope($frozenBinding->scope, $transactionContext, $frozenBinding->executionProfile);
-        $namespace = $this->namespace($frozenBinding->scope);
+        $namespace = $this->lockNamespace($transactionContext, $frozenBinding->scope);
         if ($namespace->state !== NamespaceState::Open || $namespace->canonicalizationVersion !== $frozenBinding->canonicalizationVersion) {
-            $this->refuse('Business namespace is not proven open');
+            throw new ProblemException($namespace->state === NamespaceState::Closed ? ProblemCode::KeyExpired : ProblemCode::RecoveryRequired, 'Business namespace is not proven open');
         }
         $identity = [
             'intent_owner_namespace' => $frozenBinding->scope->intentOwnerNamespace,
@@ -256,9 +274,10 @@ final class DatabaseExecutionStore implements ExecutionStore
             $this->refuse('Operation changed before attempt');
         }
         $merchant = $this->merchantRevision($s, $operationRecord->binding->merchantRevisionRef);
-        $id = $this->database($transactionContext)->table('billium_execution_attempt')->insertGetId($this->scope($s) + ['attempt_ref' => $attemptRef, 'operation_ref' => $operationRecord->operationRef, 'provider_reference' => $providerReference, 'provider_id' => $merchant->providerId, 'merchant_account_ref' => $merchant->merchantAccountRef, 'request_digest' => $operationRecord->economicDigest]);
+        $digest = AuthorityClaims::immutableDriverRequestDigest($operationRecord->binding, $operationRecord->operationRef, $attemptRef, $providerReference, $operationRecord->kind, $operationRecord->requested);
+        $id = $this->database($transactionContext)->table('billium_execution_attempt')->insertGetId($this->scope($s) + ['attempt_ref' => $attemptRef, 'operation_ref' => $operationRecord->operationRef, 'provider_reference' => $providerReference, 'provider_id' => $merchant->providerId, 'merchant_account_ref' => $merchant->merchantAccountRef, 'request_digest' => $digest]);
 
-        return new AttemptRecord($id, $attemptRef, $operationRecord->operationRef, $providerReference, AttemptState::Admitted, 0, null, null, null, null, null);
+        return new AttemptRecord($id, $attemptRef, $operationRecord->operationRef, $providerReference, AttemptState::Admitted, 0, null, null, null, null, null, $digest, null, null, null);
     }
 
     public function insertDispatchWork(TransactionContext $transactionContext, AttemptRecord $attemptRecord, string $workRef, string $handlerVersion): void
@@ -273,21 +292,172 @@ final class DatabaseExecutionStore implements ExecutionStore
     {
         $this->financial($transactionContext);
         $q = $this->callerQuery('attempt', $transactionContext)->where('attempt_ref', $attemptRef);
-        $r = (clone $q)->lockForUpdate()->first() ?? throw new LogicException('Attempt absent');
+        $r = (clone $q)->first() ?? throw new LogicException('Attempt absent');
         $this->requireOperationLock($transactionContext, self::text($r->operation_ref));
-        if ($leaseOwner === '' || $leaseUntil <= new DateTimeImmutable || ($r->lease_expires_at !== null && new DateTimeImmutable(self::text($r->lease_expires_at)) > new DateTimeImmutable)) {
-            $this->refuse('Attempt lease unavailable');
+        $until = $leaseUntil->format('Y-m-d H:i:s.uP');
+        $fence = self::integer($r->lease_fence) + 1;
+        $work = $this->callerQuery('dispatch_work', $transactionContext)->where('attempt_ref', $attemptRef)->where('operation_ref', $r->operation_ref)
+            ->where('lease_fence', $fence - 1)->whereRaw('?::timestamptz > clock_timestamp()', [$until])
+            ->whereRaw("((state = 'due' AND due_at <= clock_timestamp()) OR (state = 'leased' AND lease_expires_at <= clock_timestamp()))");
+        if ($leaseOwner === '' || ! in_array($r->state, ['admitted', 'dispatching', 'pending', 'unknown'], true)
+            || $work->incrementEach(['attempt_count' => 1], ['state' => 'leased', 'lease_owner' => $leaseOwner, 'lease_fence' => $fence, 'lease_expires_at' => $until]) !== 1) {
+            throw new ProblemException(ProblemCode::RecoveryRequired, 'Dispatch work is not available for this attempt');
         }
-        $q->update(['lease_owner' => $leaseOwner, 'lease_fence' => self::integer($r->lease_fence) + 1, 'lease_expires_at' => $leaseUntil]);
+        $q->update(['lease_owner' => $leaseOwner, 'lease_fence' => $fence, 'lease_expires_at' => $until]);
 
         return $this->attemptRow($q->first() ?? throw new LogicException('Attempt absent'));
+    }
+
+    public function recordAdmissionConflict(TransactionContext $context, AdmissionConflict $conflict): string
+    {
+        $db = $this->database($context);
+        $scope = $conflict->scope;
+        $this->assertScope($scope, $context);
+        $selected = $context->spec()->financialScope;
+        if ($context->spec()->mode !== FinancialMode::RawCustody || $selected === null || $selected->installationRef !== $scope->installationRef
+            || $selected->sellerRef !== $scope->sellerRef || $selected->environment !== $scope->environment
+            || $selected->intentOwnerNamespace !== $scope->intentOwnerNamespace) {
+            throw new ProblemException(ProblemCode::AuthDenied, 'Conflict audit requires exact authenticated raw custody');
+        }
+        if ($conflict->originalOperationRef !== null) {
+            $original = $this->operation($scope, $conflict->originalOperationRef);
+            if ($original === null || ! in_array($original->binding->executionProfile, $context->caller()->sourceAuthorities, true)
+                || $original->binding->executionProfile !== $selected->sourceAuthority) {
+                throw new ProblemException(ProblemCode::AuthDenied, 'Original operation is outside the selected scope');
+            }
+        }
+        $material = $this->scope($scope) + ['intent_owner_namespace' => $scope->intentOwnerNamespace, 'actor_ref' => $context->caller()->actorRef,
+            'command_kind' => $conflict->commandKind, 'command_key_digest' => $conflict->commandKeyDigest, 'semantic_digest' => $conflict->semanticDigest,
+            'original_operation_ref' => $conflict->originalOperationRef, 'problem_code' => ProblemCode::IdempotencyConflict->value];
+        $ref = 'conflict:'.hash('sha256', (new Codec)->canonicalize(['schema' => 'billium.execution.admission-conflict.v1', ...$material]));
+        $table = $db->table('billium_execution_admission_conflict');
+        if ($table->insertOrIgnore(['audit_ref' => $ref, ...$material]) !== 1 && ! $table->where('audit_ref', $ref)->where($material)->exists()) {
+            throw new LogicException('Admission conflict receipt identity collision');
+        }
+
+        return $ref;
+    }
+
+    public function cancelAdmitted(TransactionContext $context, OperationRecord $operation, string $attemptRef, string $receiptRef): bool
+    {
+        $this->financial($context);
+        $current = $this->admittedOperation($context, $operation->operationRef);
+        $this->requireLock($context, $current->rootOperationRef);
+        if ($receiptRef === '' || ExecutionCodec::encode($current) !== ExecutionCodec::encode($operation) || $current->rootOperationRef !== $current->operationRef
+            || ! in_array($current->kind, [EffectKind::Charge, EffectKind::Authorize], true) || $current->state !== 'admitted') {
+            return false;
+        }
+        $attempt = $this->callerQuery('attempt', $context)->where('attempt_ref', $attemptRef)->where('operation_ref', $current->operationRef);
+        if ($attempt->where('state', 'admitted')->whereNull('started_at')->whereNull('dispatch_ticket_ref')->whereNull('collection_dispatch_permit_ref')
+            ->update(['state' => 'cancelled', 'finish_evidence_ref' => $receiptRef, 'lease_owner' => null, 'lease_expires_at' => null]) !== 1) {
+            return false;
+        }
+        $work = $this->callerQuery('dispatch_work', $context)->where('operation_ref', $current->operationRef)->where('attempt_ref', $attemptRef);
+        if ($work->whereIn('state', ['due', 'leased'])->update(['state' => 'processed', 'lease_owner' => null, 'lease_expires_at' => null, 'due_at' => null]) !== 1) {
+            throw new LogicException('Local cancellation requires the original dispatch work');
+        }
+        $revision = $current->revision + 1;
+        $material = ['schema' => 'billium.execution.cancel-before-dispatch.v1', 'operationRef' => $current->operationRef, 'attemptRef' => $attemptRef,
+            'originalBindingDigest' => AuthorityClaims::bindingDigest($current->binding), 'receiptRef' => $receiptRef];
+        $digest = 'sha256:'.hash('sha256', (new Codec)->canonicalize($material));
+        $this->callerQuery('operation', $context)->where('id', $current->id)->update(['state' => 'cancelled', 'revision' => $revision, 'economic_digest' => $digest]);
+        $capacity = $this->capacity($context, $current->rootOperationRef);
+        $this->database($context)->table('billium_execution_operation_revision')->insert($this->callerScope($context) + [
+            'operation_ref' => $current->operationRef, 'revision' => $revision, 'material_digest' => $digest,
+            'requested_minor' => $current->requested->minor, 'currency' => $current->requested->currency->code,
+            'observed' => ExecutionCodec::encode($material), 'last_consistent_applied' => ExecutionCodec::encode($capacity),
+            'financial_hold' => ExecutionCodec::encode($capacity->financialHold),
+            'exposure' => '{}', 'evidence_refs' => ExecutionCodec::encode([$receiptRef]), 'receipt_ref' => $receiptRef, 'occurred_at' => new DateTimeImmutable,
+        ]);
+
+        return true;
+    }
+
+    public function finishDispatchWork(TransactionContext $context, string $attemptRef, int $expectedFence, WorkState $state, ?DateTimeImmutable $dueAt, ?string $errorCode): bool
+    {
+        $this->financial($context);
+        if ($state === WorkState::Leased || (($state === WorkState::Due) !== ($dueAt !== null))) {
+            $this->refuse('Invalid dispatch work completion');
+        }
+        $q = $this->callerQuery('attempt', $context)->where('attempt_ref', $attemptRef);
+        $attempt = (clone $q)->first() ?? throw new LogicException('Attempt absent');
+        $this->requireOperationLock($context, self::text($attempt->operation_ref));
+        if (self::integer($attempt->lease_fence) !== $expectedFence || $attempt->lease_owner === null) {
+            return false;
+        }
+        $work = $this->callerQuery('dispatch_work', $context)->where('operation_ref', $attempt->operation_ref)->where('attempt_ref', $attemptRef)
+            ->where('state', 'leased')->where('lease_owner', $attempt->lease_owner)->where('lease_fence', $expectedFence)->whereRaw('lease_expires_at > clock_timestamp()');
+        if (! (clone $work)->exists()) {
+            return false;
+        }
+        if ($state === WorkState::Processed && ! $this->hasQueuedEvidence($context, $attempt)) {
+            throw new ProblemException(ProblemCode::RecoveryRequired, 'Dispatch completion requires original durable provider evidence work');
+        }
+        if ($work->update(['state' => $state->value, 'due_at' => $dueAt?->format('Y-m-d H:i:s.uP'), 'lease_owner' => null,
+            'lease_expires_at' => null, 'last_error_code' => $errorCode, 'last_error_at' => $errorCode === null ? null : new DateTimeImmutable]) !== 1) {
+            return false;
+        }
+        $q->update(['lease_owner' => null, 'lease_expires_at' => null, 'dispatch_ticket_ref' => null]);
+
+        return true;
+    }
+
+    private function hasQueuedEvidence(TransactionContext $context, stdClass $attempt): bool
+    {
+        $scope = $this->selectedScope($context);
+        $records = $this->callerQuery('provider_evidence', $context)->where('intent_owner_namespace', $scope->intentOwnerNamespace)
+            ->where('provider_id', $attempt->provider_id)->where('merchant_account_ref', $attempt->merchant_account_ref);
+        $record = (clone $records)->where('evidence_ref', $attempt->finish_evidence_ref)->first();
+        if ($record === null) {
+            return false;
+        }
+        $data = $this->transportData($record, $attempt, self::integer($attempt->lease_fence));
+        if ($data === null) {
+            return false;
+        }
+        if ($record->signature_verdict === 'verified_no_effect' && ($data['verifiedAbsence'] ?? null) === true) {
+            $evidence = $record;
+        } else {
+            $ref = $data['retainedProviderEvidenceRef'] ?? null;
+            if ($record->signature_verdict !== 'local_transport' || ! is_string($ref)) {
+                return false;
+            }
+            $evidence = $records->where('evidence_ref', $ref)->first();
+        }
+
+        return $evidence !== null && $evidence->signature_verdict !== 'quarantined_conflict'
+            && $this->callerQuery('provider_work', $context)->where('evidence_ref', $evidence->evidence_ref)
+                ->where('handler_contract_version', $evidence->handler_contract_version)->where('state', '<>', 'quarantined')->exists();
+    }
+
+    /** @return array<string,mixed>|null */
+    private function transportData(stdClass $record, stdClass $attempt, int $fence): ?array
+    {
+        if ($record->handler_contract_version !== 'execution.transport.v1' || ! in_array($record->signature_verdict, ['local_transport', 'verified_no_effect'], true)) {
+            return null;
+        }
+        $data = ExecutionCodec::map(self::text($record->sanitized_payload));
+        if (($data['schema'] ?? null) !== 'billium.execution.transport-observation.v1' || ($data['operationRef'] ?? null) !== $attempt->operation_ref
+            || ($data['attemptRef'] ?? null) !== $attempt->attempt_ref || ($data['providerReference'] ?? null) !== $attempt->provider_reference
+            || ($data['leaseFence'] ?? null) !== (string) $fence) {
+            return null;
+        }
+
+        return $data;
     }
 
     public function startDispatch(TransactionContext $transactionContext, DispatchDecision $dispatchDecision): bool
     {
         $this->financial($transactionContext);
         $this->requireOperationLock($transactionContext, $dispatchDecision->operationRef);
-        if ($dispatchDecision->sessionEpoch !== $transactionContext->sessionEpoch()) {
+        $operation = $this->admittedOperation($transactionContext, $dispatchDecision->operationRef);
+        $attempt = $this->attempt($operation->binding->scope, $dispatchDecision->attemptRef);
+        if ($attempt === null || $attempt->operationRef !== $operation->operationRef
+            || AuthorityClaims::immutableDriverRequestDigest($operation->binding, $operation->operationRef, $attempt->attemptRef, $attempt->providerReference, $operation->kind, $operation->requested) !== $dispatchDecision->immutableRequestDigest) {
+            return false;
+        }
+        if ($dispatchDecision->sessionEpoch !== $transactionContext->sessionEpoch() || $dispatchDecision->requestDeadlineAt === null
+            || $operation->state !== 'admitted' || (($operation->binding->collectionAuthorizationRef === null) !== ($dispatchDecision->collectionDispatchPermitRef === null))) {
             return false;
         }
 
@@ -296,7 +466,14 @@ final class DatabaseExecutionStore implements ExecutionStore
             throw new LogicException('Cached admitted owner identity is absent');
         }
 
-        return $this->callerQuery('attempt', $transactionContext)->where('attempt_ref', $dispatchDecision->attemptRef)->where('operation_ref', $dispatchDecision->operationRef)->where('state', 'admitted')->where('request_digest', $dispatchDecision->immutableRequestDigest)->where('lease_fence', $dispatchDecision->leaseFence)->where('lease_expires_at', '>', new DateTimeImmutable)->update(['state' => 'dispatching', 'session_epoch' => $transactionContext->sessionEpoch(), 'owner_session_ref' => $token->ownerSessionRef, 'dispatch_ticket_ref' => $dispatchDecision->ticketRef, 'started_at' => new DateTimeImmutable]) === 1;
+        $deadline = $dispatchDecision->requestDeadlineAt->format('Y-m-d H:i:s.uP');
+
+        return $this->callerQuery('attempt', $transactionContext)->where('attempt_ref', $dispatchDecision->attemptRef)->where('operation_ref', $dispatchDecision->operationRef)
+            ->where('state', 'admitted')->where('request_digest', $dispatchDecision->immutableRequestDigest)->where('lease_fence', $dispatchDecision->leaseFence)
+            ->whereNotNull('lease_owner')->where('lease_expires_at', '>=', $deadline)->whereRaw('?::timestamptz > clock_timestamp()', [$deadline])
+            ->update(['state' => 'dispatching', 'session_epoch' => $transactionContext->sessionEpoch(), 'owner_session_ref' => $token->ownerSessionRef,
+                'dispatch_ticket_ref' => $dispatchDecision->ticketRef, 'collection_dispatch_permit_ref' => $dispatchDecision->collectionDispatchPermitRef,
+                'started_at' => $this->database($transactionContext)->raw('clock_timestamp()'), 'request_deadline_at' => $deadline]) === 1;
     }
 
     public function capacity(TransactionContext $transactionContext, string $rootRef): CapacitySnapshot
@@ -347,15 +524,68 @@ final class DatabaseExecutionStore implements ExecutionStore
         if (strlen($payload) > 65536 || preg_match('/"(?:pan|cvc|cvv|password|secret|accessToken|refreshToken|providerToken)"\s*:/i', $payload) === 1) {
             $this->refuse('Evidence payload is not sanitized/bounded');
         }
-        $this->database($transactionContext)->table('billium_execution_provider_evidence')->insert($this->scope($providerEvidence->scope) + ['intent_owner_namespace' => $providerEvidence->scope->intentOwnerNamespace, 'evidence_ref' => $providerEvidence->evidenceRef, 'provider_id' => $providerEvidence->providerId, 'merchant_account_ref' => $providerEvidence->merchantAccountRef, 'provider_event_id' => $providerEvidence->providerEventId, 'payload_digest' => $providerEvidence->payloadDigest, 'signature_verdict' => $providerEvidence->signatureVerdict, 'handler_contract_version' => $providerEvidence->handlerContractVersion, 'received_at' => $providerEvidence->receivedAt, 'sanitized_payload' => $payload, 'secure_payload_ref' => $providerEvidence->securePayloadRef]);
+        $db = $this->database($transactionContext);
+        $scope = $this->scope($providerEvidence->scope);
+        $fields = ['intent_owner_namespace' => $providerEvidence->scope->intentOwnerNamespace, 'provider_id' => $providerEvidence->providerId,
+            'merchant_account_ref' => $providerEvidence->merchantAccountRef, 'provider_event_id' => $providerEvidence->providerEventId,
+            'payload_digest' => $providerEvidence->payloadDigest, 'signature_verdict' => $providerEvidence->signatureVerdict,
+            'handler_contract_version' => $providerEvidence->handlerContractVersion, 'secure_payload_ref' => $providerEvidence->securePayloadRef];
+        $delivery = $scope + $fields + ['received_at' => $providerEvidence->receivedAt, 'sanitized_payload' => $payload, 'evidence_ref' => $providerEvidence->evidenceRef];
+        $rows = $db->table('billium_execution_provider_evidence')->where($scope);
+        $conflict = false;
+        if ($providerEvidence->providerEventId !== null) {
+            // Serialize first deliveries with different receipt references for the same provider event.
+            $key = ['schema' => 'billium.execution.evidence-event.v1', ...$scope, 'provider' => $providerEvidence->providerId,
+                'account' => $providerEvidence->merchantAccountRef, 'event' => $providerEvidence->providerEventId];
+            $db->selectOne('SELECT pg_advisory_xact_lock(hashtextextended(?, 0))', [(new Codec)->canonicalize($key)]);
+            $event = (clone $rows)->where('provider_id', $providerEvidence->providerId)->where('merchant_account_ref', $providerEvidence->merchantAccountRef)
+                ->where('provider_event_id', $providerEvidence->providerEventId)->orderBy('id')->first();
+            $conflict = $event !== null && ! $this->sameDelivery($event, $fields, $payload);
+        }
+        if (! $conflict) {
+            if ($db->table('billium_execution_provider_evidence')->insertOrIgnore($delivery) === 1) {
+                return $providerEvidence->evidenceRef;
+            }
+            $existing = $rows->where('evidence_ref', $providerEvidence->evidenceRef)->first();
+            if ($existing !== null && $this->sameDelivery($existing, $fields, $payload)) {
+                return $providerEvidence->evidenceRef;
+            }
+        }
+        $ref = 'conflict:'.bin2hex(random_bytes(20));
+        $delivery['evidence_ref'] = $ref;
+        $delivery['signature_verdict'] = 'quarantined_conflict';
+        $delivery['sanitized_payload'] = ExecutionCodec::encode(['externalEvidenceRef' => $providerEvidence->evidenceRef,
+            'originalVerdict' => $providerEvidence->signatureVerdict, 'originalPayload' => $providerEvidence->sanitizedPayload]);
+        $db->table('billium_execution_provider_evidence')->insert($delivery);
 
-        return $providerEvidence->evidenceRef;
+        return $ref;
+    }
+
+    /** @param array<string,string|null> $fields */
+    private function sameDelivery(stdClass $row, array $fields, string $payload): bool
+    {
+        foreach ($fields as $column => $value) {
+            if ($row->{$column} !== $value) {
+                return false;
+            }
+        }
+
+        return ExecutionCodec::encode(json_decode(self::text($row->sanitized_payload), true, 64, JSON_THROW_ON_ERROR)) === $payload;
     }
 
     public function enqueueProviderWork(TransactionContext $transactionContext, string $evidenceRef, string $workRef, string $handlerVersion): void
     {
         $this->custody($transactionContext);
-        $this->database($transactionContext)->table('billium_execution_provider_work')->insertOrIgnore($this->callerScope($transactionContext) + ['evidence_ref' => $evidenceRef, 'work_ref' => $workRef, 'handler_contract_version' => $handlerVersion]);
+        $evidence = $this->callerQuery('provider_evidence', $transactionContext)->where('evidence_ref', $evidenceRef)->first() ?? throw new LogicException('Evidence absent');
+        $caller = $transactionContext->caller();
+        $namespace = self::text($evidence->intent_owner_namespace);
+        if (! in_array($namespace, $caller->intentOwnerNamespaces, true)
+            || ($transactionContext->spec()->financialScope !== null && $transactionContext->spec()->financialScope->intentOwnerNamespace !== $namespace)) {
+            throw new ProblemException(ProblemCode::AuthDenied, 'Provider work differs from custody scope');
+        }
+        $state = $evidence->signature_verdict === 'quarantined_conflict' ? 'quarantined' : 'due';
+        $this->database($transactionContext)->table('billium_execution_provider_work')->insertOrIgnore($this->callerScope($transactionContext) + ['evidence_ref' => $evidenceRef,
+            'work_ref' => $workRef, 'handler_contract_version' => $handlerVersion, 'state' => $state]);
     }
 
     public function claimProviderWork(TransactionContext $transactionContext, string $workRef, string $leaseOwner, DateTimeImmutable $until): ?ProviderWorkClaim
@@ -494,9 +724,9 @@ final class DatabaseExecutionStore implements ExecutionStore
         }
     }
 
-    public function merchantRevision(ExecutionScope $executionScope, string $revisionRef): MerchantRevision
+    public function merchantRevision(ExecutionScope $executionScope, string $revisionRef, ?TransactionContext $context = null): MerchantRevision
     {
-        $r = $this->query('merchant_revision', $executionScope)->where('revision_ref', $revisionRef)->first() ?? throw new LogicException('Historical merchant revision unavailable');
+        $r = $this->query('merchant_revision', $executionScope, $context)->where('revision_ref', $revisionRef)->first() ?? throw new LogicException('Historical merchant revision unavailable');
 
         return new MerchantRevision(self::text($r->revision_ref), $executionScope, self::text($r->merchant_account_ref), self::text($r->provider_id), self::text($r->driver_id), self::text($r->driver_contract_version), self::text($r->capability_snapshot_ref), self::text($r->capability_digest), new SecretRef(self::text($r->credential_ref)), self::text($r->credential_version_ref), self::listJson(self::text($r->currency_codes)), self::text($r->digest), new DateTimeImmutable(self::text($r->created_at)), new MerchantRevisionPolicy(new DateTimeImmutable(self::text($r->valid_from)), self::date($r->valid_until), self::nullableText($r->predecessor_ref), self::text($r->api_profile_version), self::text($r->webhook_route_ref), self::text($r->continuity_evidence_ref), self::text($r->settlement_account_ref), self::text($r->mandate_namespace_ref)));
     }
@@ -621,8 +851,12 @@ final class DatabaseExecutionStore implements ExecutionStore
             if ($inserted !== 1) {
                 $this->refuse('Namespace creation race');
             }
-        } elseif ($q->where('generation', $expectedGeneration)->update(['state' => $namespaceState->value, 'completeness_receipt_ref' => $authorityEvidenceRef, 'generation' => $expectedGeneration + 1]) !== 1) {
-            $this->refuse('Namespace generation conflict');
+        } else {
+            $id = (clone $q)->value('id');
+            if ($id === null || $transactionContext->lock(new LockRequest(LockRank::IntentNamespace, 'billium_execution_namespace', [self::integer($id)])) !== [self::integer($id)]
+                || $q->where('generation', $expectedGeneration)->update(['state' => $namespaceState->value, 'completeness_receipt_ref' => $authorityEvidenceRef, 'generation' => $expectedGeneration + 1]) !== 1) {
+                $this->refuse('Namespace generation conflict');
+            }
         }
 
         return $this->namespace($executionScope);
@@ -635,11 +869,17 @@ final class DatabaseExecutionStore implements ExecutionStore
         $q = $this->callerQuery('attempt', $transactionContext)->where('attempt_ref', $attemptRef);
         $row = (clone $q)->first() ?? throw new LogicException('Attempt absent');
         $this->requireOperationLock($transactionContext, self::text($row->operation_ref));
-        if ($row->merchant_account_ref !== $evidence->merchant_account_ref || $row->provider_id !== $evidence->provider_id || in_array($attemptState, [AttemptState::Admitted, AttemptState::Dispatching], true)) {
-            $this->refuse('Attempt finish identity/state mismatch');
+        if (self::integer($row->lease_fence) !== $expectedFence) {
+            return false;
+        }
+        if ($row->merchant_account_ref !== $evidence->merchant_account_ref || $row->provider_id !== $evidence->provider_id
+            || $evidence->intent_owner_namespace !== $this->selectedScope($transactionContext)->intentOwnerNamespace
+            || ! in_array($attemptState, [AttemptState::Pending, AttemptState::Unknown], true)
+            || $this->transportData($evidence, $row, $expectedFence) === null) {
+            $this->refuse('Attempt completion requires the current scoped transport observation');
         }
 
-        return $q->where('lease_fence', $expectedFence)->where('lease_expires_at', '>', new DateTimeImmutable)->whereIn('state', ['dispatching', 'pending', 'unknown'])->update(['state' => $attemptState->value, 'finish_evidence_ref' => $evidenceRef]) === 1;
+        return $q->where('lease_fence', $expectedFence)->whereRaw('lease_expires_at > clock_timestamp()')->whereIn('state', ['dispatching', 'pending', 'unknown'])->update(['state' => $attemptState->value, 'finish_evidence_ref' => $evidenceRef]) === 1;
     }
 
     public function capability(ExecutionScope $scope, string $ref): CapabilitySnapshot
@@ -693,6 +933,11 @@ final class DatabaseExecutionStore implements ExecutionStore
         $caller = $context?->caller() ?? $this->callers->current();
         if ([$scope->installationRef, $scope->sellerRef, $scope->environment] !== [$caller->installationRef, $caller->sellerRef, $caller->environment] || ! in_array($scope->intentOwnerNamespace, $caller->intentOwnerNamespaces, true)) {
             throw new ProblemException(ProblemCode::AuthDenied, 'Execution scope is not authenticated');
+        }
+        $declared = $context?->spec()->financialScope;
+        if ($declared !== null && ($declared->installationRef !== $scope->installationRef || $declared->sellerRef !== $scope->sellerRef
+            || $declared->environment !== $scope->environment || $declared->intentOwnerNamespace !== $scope->intentOwnerNamespace)) {
+            throw new ProblemException(ProblemCode::AuthDenied, 'Execution differs from the declared root scope');
         }
         if ($context !== null && $context->spec()->mode->financial()) {
             $selected = $this->selectedScope($context);
@@ -763,7 +1008,7 @@ final class DatabaseExecutionStore implements ExecutionStore
 
     private function attemptRow(stdClass $r): AttemptRecord
     {
-        return new AttemptRecord(self::integer($r->id), self::text($r->attempt_ref), self::text($r->operation_ref), self::text($r->provider_reference), AttemptState::from(self::text($r->state)), self::integer($r->lease_fence), self::nullableText($r->lease_owner), self::date($r->lease_expires_at), $r->session_epoch === null ? null : self::integer($r->session_epoch), self::nullableText($r->owner_session_ref), self::nullableText($r->dispatch_ticket_ref));
+        return new AttemptRecord(self::integer($r->id), self::text($r->attempt_ref), self::text($r->operation_ref), self::text($r->provider_reference), AttemptState::from(self::text($r->state)), self::integer($r->lease_fence), self::nullableText($r->lease_owner), self::date($r->lease_expires_at), $r->session_epoch === null ? null : self::integer($r->session_epoch), self::nullableText($r->owner_session_ref), self::nullableText($r->dispatch_ticket_ref), self::text($r->request_digest), self::date($r->started_at), self::date($r->request_deadline_at), self::nullableText($r->collection_dispatch_permit_ref));
     }
 
     private function capacityRow(stdClass $r): CapacitySnapshot

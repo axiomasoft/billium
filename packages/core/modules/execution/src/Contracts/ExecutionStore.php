@@ -6,6 +6,7 @@ namespace Billium\Execution\Contracts;
 
 use Billium\Contracts\Data\Money;
 use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Execution\Data\AdmissionConflict;
 use Billium\Execution\Data\AdmissionPlan;
 use Billium\Execution\Data\AttemptRecord;
 use Billium\Execution\Data\AuthorizationRecord;
@@ -31,6 +32,7 @@ use Billium\Execution\Data\Reservation;
 use Billium\Execution\Enums\AttemptState;
 use Billium\Execution\Enums\NamespaceState;
 use Billium\Execution\Enums\ReservationState;
+use Billium\Execution\Enums\WorkState;
 use DateTimeImmutable;
 use Packman\Attributes\Spi;
 use Packman\Attributes\SpiKind;
@@ -51,6 +53,16 @@ interface ExecutionStore
 
     /** read only */
     public function namespace(ExecutionScope $executionScope): NamespaceRecord;
+
+    /** Acquire the exact namespace at rank 27 before collection or root rows and reread its state. */
+    public function lockNamespace(TransactionContext $context, ExecutionScope $scope): NamespaceRecord;
+
+    /** Retain a refused command after its root rolls back, using only authenticated raw custody. */
+    public function recordAdmissionConflict(TransactionContext $context, AdmissionConflict $conflict): string;
+
+    public function cancelAdmitted(TransactionContext $context, OperationRecord $operation, string $attemptRef, string $receiptRef): bool;
+
+    public function finishDispatchWork(TransactionContext $context, string $attemptRef, int $expectedFence, WorkState $state, ?DateTimeImmutable $dueAt, ?string $errorCode): bool;
 
     /** insert-first durable semantic business identity; null means new binding, existing same digest returns operation, conflict refuses */
     public function insertBinding(TransactionContext $transactionContext, FrozenBinding $frozenBinding): ?OperationRecord;

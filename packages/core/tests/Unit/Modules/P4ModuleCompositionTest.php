@@ -20,8 +20,8 @@ final class P4ModuleCompositionTest extends ModuleTestCase
         $cases = [
             'embedded-commerz' => [['platform', 'ledger'], self::LEDGER_PORTS],
             'ledger-only' => [['platform', 'ledger', 'rating', 'schedule'], self::LEDGER_PORTS],
-            'standalone-billium' => [['platform', 'ledger', 'rating', 'schedule', 'execution'], [...self::LEDGER_PORTS, 'PaymentDrivers', 'WriterAdmission']],
-            'remote-billium' => [['platform', 'ledger', 'execution'], [...self::LEDGER_PORTS, 'PaymentDrivers', 'WriterAdmission']],
+            'standalone-billium' => [['platform', 'ledger', 'rating', 'schedule', 'execution'], [...self::LEDGER_PORTS, ...self::EXECUTION_PORTS]],
+            'remote-billium' => [['platform', 'ledger', 'execution'], [...self::LEDGER_PORTS, ...self::EXECUTION_PORTS]],
         ];
         foreach ($cases as $profile => [$modules, $ports]) {
             $report = self::catalog()->check(self::input(composition: $profile, enabled: $modules, ports: $ports));

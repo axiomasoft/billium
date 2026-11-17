@@ -11,6 +11,8 @@ use Billium\Ledger\Contracts\Ledger;
 use Billium\Ledger\Contracts\LedgerParticipants;
 use Billium\Ledger\Contracts\LedgerQueries;
 use Billium\Ledger\Contracts\ObservationApplier;
+use Billium\Ledger\Contracts\QualifiedObservationApplier;
+use Billium\Ledger\Contracts\SettlementIntentLocks;
 use Billium\Ledger\Internal\LedgerFacade;
 use Billium\Ledger\Internal\Observation\ObservationHandler;
 use Billium\Ledger\Internal\Observation\ObservationIntake;
@@ -18,6 +20,7 @@ use Billium\Ledger\Internal\Participants\DatabaseCorrectionCreditParticipants;
 use Billium\Ledger\Internal\Participants\DatabaseCorrectionLocks;
 use Billium\Ledger\Internal\Participants\DatabaseLedgerParticipants;
 use Billium\Ledger\Internal\Queries\DatabaseLedgerQueries;
+use Billium\Ledger\Internal\Queries\DatabaseSettlementIntentLocks;
 use Billium\Ledger\Internal\Repositories\LedgerPrivileges;
 use Billium\Ledger\Internal\Snapshot\LedgerSnapshotSource;
 use Billium\Platform\Contracts\Feed\FeedRecoveryQueries;
@@ -40,7 +43,9 @@ final class LedgerRuntimeRegistrar implements PackageRegistrar
         $app->bind(CorrectionCreditParticipants::class, DatabaseCorrectionCreditParticipants::class);
         $app->bind(LedgerParticipants::class, DatabaseLedgerParticipants::class);
         $app->bind(ObservationApplier::class, ObservationIntake::class);
+        $app->bind(QualifiedObservationApplier::class, ObservationIntake::class);
         $app->bind(LedgerQueries::class, DatabaseLedgerQueries::class);
+        $app->bind(SettlementIntentLocks::class, DatabaseSettlementIntentLocks::class);
 
         foreach (LedgerSnapshotSource::KEYS as $key) {
             $service = 'billium.snapshot.'.$key;

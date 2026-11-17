@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Testkit\Drivers;
 
+use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
@@ -23,6 +24,7 @@ use Billium\Execution\Enums\DriverCapability;
 use Billium\Execution\Enums\EffectKind;
 use Billium\Execution\Enums\ProviderLookupState;
 use Billium\Execution\Enums\QualificationMode;
+use Billium\Testkit\Fixtures\DeterministicWriterHost;
 use Billium\Testkit\Fixtures\DurableJournal;
 use Billium\Testkit\Fixtures\FixtureClock;
 use Billium\Testkit\Fixtures\FixtureValue;
@@ -203,6 +205,7 @@ final readonly class DeterministicPaymentDriver implements PaymentDriver
         $effectiveStatus = $record->status;
         $totals = ['authorized' => 0, 'captured' => 0, 'refunded' => 0, 'voided' => 0];
         $revision = 0;
+        $observedAt = $record->acceptedAt;
         $identities = [];
         $entries = $this->journal->records();
         foreach ($entries as $entry) {
@@ -216,6 +219,7 @@ final readonly class DeterministicPaymentDriver implements PaymentDriver
             }
             $revision++;
             $identities[$entry->identity] = true;
+            $observedAt = max($observedAt, $entry->acceptedAt);
             $status = $entry->status;
             foreach ($entries as $settlement) {
                 if ($settlement instanceof ProviderSettlement && $settlement->identity === $entry->identity) {
@@ -237,11 +241,27 @@ final readonly class DeterministicPaymentDriver implements PaymentDriver
         foreach ($entries as $settlement) {
             if ($settlement instanceof ProviderSettlement && isset($identities[$settlement->identity])) {
                 $revision++;
+                $observedAt = max($observedAt, $settlement->at);
             }
         }
-        $digest = hash('sha256', serialize([$record->identity, $totals, $revision, $effectiveStatus]));
-        $snapshot = new MaterialSnapshot($record->request->permit->operationRef, $record->kind, $record->request->binding->merchantAccountRef, $currency->code, new Money($totals['authorized'], $currency), new Money($totals['captured'], $currency), new Money($totals['refunded'], $currency), new Money($totals['voided'], $currency), $effectiveStatus, (string) $revision, $record->identity, $digest, ['evidence:'.$digest], $this->clock->now);
-        $evidence = new ProviderEvidence('evidence:'.$digest, $record->request->binding->scope, 'simulated-provider', $record->request->binding->merchantAccountRef, 'simulated-event:'.$record->identity.':'.$revision, $digest, 'simulated-valid', $this->contractVersion(), $this->clock->now, ['snapshot' => $snapshot, 'fixtureSignature' => hash_hmac('sha256', serialize([$snapshot, $record->request->binding->scope]), 'simulated-public-fixture-key-not-production')], null);
+        $material = [
+            'schema' => 'billium.testkit.provider-material.v1', 'scope' => get_object_vars($record->request->binding->scope),
+            'bindingDigest' => DeterministicWriterHost::bindingDigest($record->request->binding),
+            'reference' => $record->request->providerReference, 'operationRef' => $record->request->permit->operationRef,
+            'kind' => $record->kind->value, 'providerId' => 'simulated-provider', 'merchantAccountRef' => $record->request->binding->merchantAccountRef,
+            'capabilityDigest' => $this->capabilities->digest, 'handlerContractVersion' => $this->contractVersion(),
+            'currency' => $currency->code, 'authorized' => (new Money($totals['authorized'], $currency))->toWire(),
+            'captured' => (new Money($totals['captured'], $currency))->toWire(), 'refunded' => (new Money($totals['refunded'], $currency))->toWire(),
+            'voided' => (new Money($totals['voided'], $currency))->toWire(), 'status' => $effectiveStatus, 'revision' => (string) $revision,
+            'stableEffectId' => $record->identity, 'observedAt' => $observedAt->format('Y-m-d\TH:i:s.uP'),
+        ];
+        $canonical = (new Codec)->canonicalize($material);
+        $digest = hash('sha256', $canonical);
+        $event = 'simulated-event:'.$record->identity.':'.$revision;
+        $evidence = new ProviderEvidence('evidence:'.$digest, $record->request->binding->scope, 'simulated-provider',
+            $record->request->binding->merchantAccountRef, $event, $digest, 'simulated-valid', $this->contractVersion(), $this->clock->now,
+            ['material' => $material, 'fixtureSignature' => hash_hmac('sha256', $canonical, 'simulated-public-fixture-key-not-production')], 'fixture-journal:'.$record->identity);
+        $snapshot = $this->normalize($evidence, $this->capabilities);
 
         return new ProviderLookupResult($effectiveStatus === 'pending' ? ProviderLookupState::Pending : ProviderLookupState::Found, $evidence, $snapshot, null, null, null);
     }
@@ -276,7 +296,7 @@ final readonly class DeterministicPaymentDriver implements PaymentDriver
         $this->capabilities->requireCapability($lookupRequest->providerOperationId === null ? DriverCapability::LookupByReference : DriverCapability::LookupByProviderId, false);
         $this->journal->append(new JournalEvent('provider.lookup', ['operation' => $lookupRequest->operationRef], ProcessIdentity::current()));
         foreach (array_reverse($this->journal->records()) as $record) {
-            if (! $record instanceof ProviderRecord || ! FixtureValue::same($record->request->binding->scope, $lookupRequest->binding->scope) || $record->request->binding->merchantAccountRef !== $lookupRequest->binding->merchantAccountRef || $record->request->binding->rootOperationRef !== $lookupRequest->binding->rootOperationRef || $record->request->permit->operationRef !== $lookupRequest->operationRef) {
+            if (! $record instanceof ProviderRecord || DeterministicWriterHost::bindingDigest($record->request->binding) !== DeterministicWriterHost::bindingDigest($lookupRequest->binding) || $record->request->binding->merchantAccountRef !== $lookupRequest->binding->merchantAccountRef || $record->request->binding->rootOperationRef !== $lookupRequest->binding->rootOperationRef || $record->request->permit->operationRef !== $lookupRequest->operationRef) {
                 continue;
             }
             if (($lookupRequest->providerOperationId !== null ? $record->identity === $lookupRequest->providerOperationId : $record->request->providerReference === $lookupRequest->providerReference)) {
@@ -319,12 +339,36 @@ final readonly class DeterministicPaymentDriver implements PaymentDriver
 
     public function normalize(ProviderEvidence $providerEvidence, CapabilitySnapshot $capabilitySnapshot): MaterialSnapshot
     {
-        $snapshot = $providerEvidence->sanitizedPayload['snapshot'] ?? null;
+        $m = $providerEvidence->sanitizedPayload['material'] ?? null;
         $signature = $providerEvidence->sanitizedPayload['fixtureSignature'] ?? null;
-        if (! $snapshot instanceof MaterialSnapshot || ! is_string($signature) || ! hash_equals(hash_hmac('sha256', serialize([$snapshot, $providerEvidence->scope]), 'simulated-public-fixture-key-not-production'), $signature) || $providerEvidence->signatureVerdict !== 'simulated-valid' || ! FixtureValue::same($capabilitySnapshot, $this->capabilities) || $providerEvidence->merchantAccountRef !== $capabilitySnapshot->merchantAccountRef || $snapshot->merchantAccountRef !== $providerEvidence->merchantAccountRef || $snapshot->materialDigest !== $providerEvidence->payloadDigest) {
-            throw new RuntimeException('Invalid simulated evidence');
+        if (! is_array($m) || ! is_string($signature) || ($m['schema'] ?? null) !== 'billium.testkit.provider-material.v1'
+            || $providerEvidence->signatureVerdict !== 'simulated-valid' || ! FixtureValue::same($capabilitySnapshot, $this->capabilities)) {
+            throw new RuntimeException('Invalid simulated evidence envelope');
+        }
+        $canonical = (new Codec)->canonicalize($m);
+        $digest = hash('sha256', $canonical);
+        if (! hash_equals(hash_hmac('sha256', $canonical, 'simulated-public-fixture-key-not-production'), $signature)
+            || $providerEvidence->evidenceRef !== 'evidence:'.$digest || $providerEvidence->payloadDigest !== $digest
+            || (new Codec)->canonicalize($m['scope'] ?? null) !== (new Codec)->canonicalize(get_object_vars($providerEvidence->scope))
+            || ($m['providerId'] ?? null) !== $providerEvidence->providerId || $providerEvidence->providerId !== 'simulated-provider'
+            || ($m['handlerContractVersion'] ?? null) !== $providerEvidence->handlerContractVersion || $providerEvidence->handlerContractVersion !== $this->contractVersion()
+            || ($m['merchantAccountRef'] ?? null) !== $providerEvidence->merchantAccountRef || $providerEvidence->merchantAccountRef !== $capabilitySnapshot->merchantAccountRef
+            || ($m['capabilityDigest'] ?? null) !== $capabilitySnapshot->digest) {
+            throw new RuntimeException('Invalid simulated evidence signature or delivery identity');
+        }
+        $field = static function (string $name) use ($m): string {
+            $value = $m[$name] ?? null;
+
+            return is_string($value) && $value !== '' ? $value : throw new RuntimeException('Invalid simulated material field');
+        };
+        $id = $field('stableEffectId');
+        $revision = $field('revision');
+        if ($providerEvidence->providerEventId !== 'simulated-event:'.$id.':'.$revision) {
+            throw new RuntimeException('Invalid simulated provider event identity');
         }
 
-        return $snapshot;
+        return new MaterialSnapshot($field('operationRef'), EffectKind::from($field('kind')), $field('merchantAccountRef'), $field('currency'),
+            Money::fromWire($m['authorized'] ?? null), Money::fromWire($m['captured'] ?? null), Money::fromWire($m['refunded'] ?? null), Money::fromWire($m['voided'] ?? null),
+            $field('status'), $revision, $id, $digest, [$providerEvidence->evidenceRef], new DateTimeImmutable($field('observedAt')));
     }
 }

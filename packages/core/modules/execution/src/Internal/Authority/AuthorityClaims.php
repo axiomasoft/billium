@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace Billium\Execution\Internal\Authority;
 
 use Billium\Contracts\Contracts\Codec;
+use Billium\Contracts\Data\Money;
 use Billium\Core\Data\Runtime\FinancialAdmissionToken;
 use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Execution\Data\DispatchRequest;
 use Billium\Execution\Data\DispatchTicket;
 use Billium\Execution\Data\FrozenBinding;
+use Billium\Execution\Enums\EffectKind;
 use Packman\Attributes\Internal;
 
 /** Explicit canonical maps shared by local checks; no PHP object serialization is an identity. */
@@ -18,7 +20,7 @@ final class AuthorityClaims
 {
     public static function bindingDigest(FrozenBinding $binding): string
     {
-        return self::digest([
+        $map = [
             'schema' => 'billium.execution.binding.v1',
             'scope' => get_object_vars($binding->scope),
             'executionProfile' => $binding->executionProfile,
@@ -33,6 +35,31 @@ final class AuthorityClaims
             'canonicalizationVersion' => $binding->canonicalizationVersion,
             'collectionAuthorizationRef' => $binding->collectionAuthorizationRef,
             'sourceContext' => $binding->sourceContext,
+        ];
+        $origin = $binding->origin;
+        if ($origin !== null) {
+            $map['schema'] = 'billium.execution.binding.v2';
+            $map['origin'] = [
+                'scope' => ['installationRef' => $origin->scope->installationRef, 'sellerRef' => $origin->scope->sellerRef,
+                    'environment' => $origin->scope->environment, 'intentOwnerNamespace' => $origin->scope->intentOwnerNamespace],
+                'operationRef' => $origin->operationRef, 'businessIntentRef' => $origin->businessIntentRef,
+                'sourceContext' => $origin->sourceContext, 'executionProfile' => $origin->executionProfile,
+                'routingEpoch' => (string) $origin->routingEpoch, 'authorizationRef' => $origin->authorizationRef,
+                'basisDigest' => $origin->basisDigest, 'policyVersion' => $origin->policyVersion, 'periodRef' => $origin->periodRef,
+            ];
+        }
+
+        return self::digest($map);
+    }
+
+    public static function immutableDriverRequestDigest(FrozenBinding $binding, string $operationRef, string $attemptRef, string $providerReference, EffectKind $kind, Money $amount): string
+    {
+        return self::digest([
+            'schema' => 'billium.execution.driver-request.v1', 'bindingDigest' => self::bindingDigest($binding),
+            'operationRef' => $operationRef, 'attemptRef' => $attemptRef, 'providerReference' => $providerReference,
+            'kind' => $kind->value, 'amount' => $amount->toWire(), 'merchantAccountRef' => $binding->merchantAccountRef,
+            'driverId' => $binding->driverId, 'driverContractVersion' => $binding->driverContractVersion,
+            'capabilityDigest' => $binding->capabilityDigest,
         ]);
     }
 

@@ -14,7 +14,9 @@ interface IncomingCommandAuthenticator
 {
     /**
      * Verify transport credentials and the configured execution owner, audience, source scope and lineage.
-     * Never manufacture a grant from an unsigned message or restored database row.
+     * Pin qualified or legacy mode to authenticated credentials. For the qualified route verify a detached signature,
+     * issuer, audience, expiry, original frozen owner and producer lineage against an independent origin journal.
+     * Refuse a missing attestation on that route. Never manufacture a grant from an unsigned message or restored database row.
      *
      * @param  array<string, mixed>  $message
      */

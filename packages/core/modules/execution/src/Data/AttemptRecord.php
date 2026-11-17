@@ -25,6 +25,10 @@ final readonly class AttemptRecord
         public ?int $sessionEpoch,
         public ?string $ownerSessionRef,
         public ?string $dispatchPermitRef,
+        public string $immutableRequestDigest,
+        public ?DateTimeImmutable $startedAt,
+        public ?DateTimeImmutable $requestDeadlineAt,
+        public ?string $collectionDispatchPermitRef,
     ) {
         if ($attemptRef === '') {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'attemptRef must not be empty');

@@ -18,6 +18,8 @@ enum LockRank: int
     case FinancialSession = 15;
     case InstallationState = 20;
     case ModuleAdmission = 25;
+    case IntentNamespace = 27;
+    case MerchantRevision = 28;
     case FeedPartition = 30;
     case UsageSeries = 35;
     case BillingSchedule = 40;

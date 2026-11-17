@@ -9,7 +9,11 @@ use Closure;
 use Packman\Attributes\Spi;
 use Packman\Attributes\SpiKind;
 
-/** Host binds this same instance as CallerContext; run restores the prior caller even on failure. */
+/**
+ * Bind the same service as CallerContext. During run(), current() returns the exact supplied Caller object.
+ * Verified observation origins bind to that object's callback lifetime. Restore the previous caller in finally,
+ * including nested calls and exceptions.
+ */
 #[Spi(kind: SpiKind::Implement, since: '1.0')]
 interface ScopedCallerContext extends CallerContext
 {

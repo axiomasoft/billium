@@ -8,14 +8,18 @@ use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runner\OperationRunner;
 use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\AuthenticatedObservationContext;
 use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Data\Runtime\Caller;
+use Billium\Core\Data\Runtime\FinancialScope;
 use Billium\Core\Exceptions\Runner\LockPlanChanged;
 use Billium\Platform\Contracts\Inbox\CustodyHandler;
 use Billium\Platform\Data\Inbox\CustodyDisposition;
 use Billium\Platform\Data\Inbox\CustodyResult;
 use Billium\Platform\Data\Inbox\HandlerOutcome;
 use Billium\Platform\Data\Inbox\HandlerOutcomeKind;
+use Billium\Platform\Internal\Feed\ObservationCommandHistory;
+use Billium\Platform\Internal\Feed\ObservationScopes;
 use Billium\Platform\Internal\Feed\PartitionRow;
 use Billium\Platform\Internal\Feed\PartitionStore;
 use Billium\Platform\Internal\Installation\Rows;
@@ -47,19 +51,30 @@ final readonly class CustodyProcessor
         private Closure $callers,
         private int $retryBackoffSeconds = 5,
         private int $retryBudget = 10,
+        private ?AuthenticatedObservationContext $origins = null,
     ) {}
 
     public function sourceForPartition(Caller $caller, string $channel, int $partitionId): string
     {
-        return $this->plannedSource('billium_feed_partition', $caller, $channel, $partitionId);
+        return Rows::string($this->scopeForPartition($caller, $channel, $partitionId)->sourceAuthority);
     }
 
     public function sourceForInbox(Caller $caller, string $channel, int $inboxId): string
     {
-        return $this->plannedSource('billium_inbox_message', $caller, $channel, $inboxId);
+        return Rows::string($this->scopeForInbox($caller, $channel, $inboxId)->sourceAuthority);
     }
 
-    private function plannedSource(string $table, Caller $caller, string $channel, int $id): string
+    public function scopeForPartition(Caller $caller, string $channel, int $partitionId): FinancialScope
+    {
+        return $this->plannedScope('billium_feed_partition', 'partition_id', $caller, $channel, $partitionId);
+    }
+
+    public function scopeForInbox(Caller $caller, string $channel, int $inboxId): FinancialScope
+    {
+        return $this->plannedScope('billium_inbox_message', 'inbox_id', $caller, $channel, $inboxId);
+    }
+
+    private function plannedScope(string $table, string $target, Caller $caller, string $channel, int $id): FinancialScope
     {
         $authenticated = ($this->callers)()->current();
         if (get_object_vars($authenticated) !== get_object_vars($caller)) {
@@ -75,7 +90,7 @@ final readonly class CustodyProcessor
             throw new ProblemException(ProblemCode::AuthDenied, 'The reference is outside the authenticated source scope');
         }
 
-        return $source;
+        return ObservationScopes::selection($caller, $source, ObservationScopes::binding($this->partitions->defaultConnection(), $target, $id));
     }
 
     private function assertSelectedSource(TransactionContext $context, string $source): void
@@ -85,7 +100,7 @@ final readonly class CustodyProcessor
         }
     }
 
-    public function process(TransactionContext $context, string $channel, stdClass $envelope, CustodyHandler $handler): CustodyResult
+    public function process(TransactionContext $context, string $channel, stdClass $envelope, CustodyHandler $handler, ?string $rootOperationRef = null, ?string $proofDigest = null): CustodyResult
     {
         ($this->runner)()->assertCurrent($context, 'platform');
         $e = InboxEnvelope::from($channel, $envelope);
@@ -93,6 +108,33 @@ final readonly class CustodyProcessor
         $this->assertSelectedSource($context, $e->sourceAuthority);
         $db = $this->partitions->connection($context);
 
+        if ($proofDigest === null && $context->spec()->financialScope?->intentOwnerNamespace !== null) {
+            throw new ProblemException(ProblemCode::AuthDenied, 'Qualified custody requires authenticated original provenance');
+        }
+        $account = $envelope->providerAccountRef ?? null;
+        $rootRef = $envelope->originalPaymentRef ?? $e->operationRef;
+        if ($proofDigest !== null && ($channel !== 'payment.observation' || $rootOperationRef !== $rootRef || ! is_string($account) || $account === '')) {
+            throw new ProblemException(ProblemCode::AuthDenied, 'Observation differs from authenticated root');
+        }
+        $command = null;
+        $selection = $context->spec()->financialScope;
+        if ($proofDigest !== null) {
+            if ($selection === null || $this->origins === null) {
+                throw new ProblemException(ProblemCode::AuthDenied, 'No authenticated custody context');
+            }
+            $command = $this->origins->assertOrigin($context->caller(), $selection, $envelope, $proofDigest);
+            if (ObservationCommandHistory::conflicts($db, $selection, $command, $envelope, $proofDigest)) {
+                return new CustodyResult(CustodyDisposition::Conflict, status: 'quarantined');
+            }
+        }
+        $root = is_string($account) && is_string($rootRef) ? ObservationScopes::claim($db, $context, $channel, $e->sourceAuthority, $account,
+            $rootRef, $e->sourceLineage, $e->partitionRef, $proofDigest) : null;
+        if ($root !== null && $command !== null) {
+            ObservationCommandHistory::store($db, $selection, $command, $envelope, $proofDigest, Rows::int($root->id));
+        }
+        $active = $root === null ? null : ObservationScopes::live($db, Rows::int($root->id));
+        $changed = $root !== null && (($active->sourceLineage ?? $root->first_source_lineage) !== $e->sourceLineage
+            || ($active->partitionRef ?? $root->first_partition_ref) !== $e->partitionRef);
         $partition = $this->partitions->live($db, $e->channel, $e->sourceAuthority, $e->sellerRef, $e->environment, $e->partitionRef);
         if ($partition === null && ($e->sourceSequence === 1 || $this->retiredNamespace($db, $e) || $this->bootstrapOpen($db, $e))) {
             // Bootstrap can admit a partition at any sequence, including in a fresh namespace.
@@ -100,29 +142,60 @@ final readonly class CustodyProcessor
             $this->partitions->lockNamespace($db, $e->channel, $e->sourceAuthority, $e->sellerRef, $e->environment, $e->partitionRef);
             $partition = $this->partitions->live($db, $e->channel, $e->sourceAuthority, $e->sellerRef, $e->environment, $e->partitionRef);
         }
+        $heldCollision = false;
+        if ($changed && $partition === null && $active !== null && ! $this->retiredNamespace($db, $e)) {
+            $active = $this->partitions->lock($context, $active);
+            $this->partitions->requireRecovery($db, $active, 'lineage_changed');
+        }
+        $created = false;
         if ($partition !== null) {
             $partition = $this->partitions->lock($context, $partition);
-        } elseif ($e->sourceSequence === 1 && ! $this->bootstrapOpen($db, $e) && ! $this->retiredNamespace($db, $e)) {
+            $physicalRoot = ObservationScopes::binding($db, 'partition_id', $partition->id);
+            if ($root !== null && $physicalRoot !== null && $root->id !== $physicalRoot->id) {
+                // Keep the competing authenticated delivery without touching the original physical stream.
+                $partition = null;
+                $heldCollision = true;
+            }
+        } elseif (! $changed && ($root === null || ObservationScopes::openBootstrap($db, Rows::int($root->id)) === null) && $e->sourceSequence === 1 && ! $this->bootstrapOpen($db, $e) && ! $this->retiredNamespace($db, $e)) {
             // The first delivery of a namespace opens its partition (cursor 0); anything later waits for earlier sequences.
             $partition = $this->partitions->create($db, $e->channel, $e->sourceAuthority, $e->sourceLineage, $e->sellerRef, $e->environment, $e->partitionRef);
+            $created = $partition !== null;
             if ($partition === null) {
                 $live = $this->partitions->live($db, $e->channel, $e->sourceAuthority, $e->sellerRef, $e->environment, $e->partitionRef);
                 $partition = $live === null ? throw new LockPlanChanged('Concurrent partition creation') : $this->partitions->lock($context, $live);
             }
         }
+        $existing = $this->identity($db, $e);
+        if ($existing !== null && $root !== null && Rows::field($existing, 'content_digest') === $e->contentDigest) {
+            ObservationScopes::link($db, 'inbox_id', Rows::int(Rows::field($existing, 'id')), $root, $proofDigest);
+        }
         if ($partition !== null) {
+            $linked = ObservationScopes::binding($db, 'partition_id', $partition->id);
+            if ($linked?->id !== $root?->id && ! $created) {
+                if ($root === null || $linked !== null) {
+                    throw new ProblemException(ProblemCode::ObservationConflict, 'Physical partition has a different original owner');
+                }
+                if ($existing === null || $partition->sourceLineage !== $e->sourceLineage || Rows::field($existing, 'content_digest') !== $e->contentDigest
+                    || Rows::field($existing, 'partition_id') !== $partition->id) {
+                    throw new ProblemException(ProblemCode::RecoveryRequired, 'Existing partition generation needs independent replay proof');
+                }
+                if ($db->selectOne('SELECT 1 FROM public.billium_inbox_message m WHERE m.partition_id=? AND NOT EXISTS
+                    (SELECT FROM public.billium_feed_observation_scope_link l WHERE l.inbox_id=m.id AND l.scope_id=?) LIMIT 1', [$partition->id, $root->id]) !== null) {
+                    return new CustodyResult(CustodyDisposition::RecoveryRequired, Rows::int(Rows::field($existing, 'id')), 'held_recovery');
+                }
+            }
+            ObservationScopes::link($db, 'partition_id', $partition->id, $root, $proofDigest);
             // An orphan may have committed after this partition's opening root scanned pre-partition custody.
             // Reattach before replaying an identity so duplicates can hand the recovered tail to a new drain root.
             $this->partitions->attachParkedGaps($db, $partition);
             $partition = $this->partitions->find($db, $partition->id, $e->sellerRef, $e->environment) ?? throw new LogicException('Locked partition vanished');
         }
 
-        $existing = $this->identity($db, $e);
         if ($existing !== null) {
-            return $this->duplicate($db, $e, $existing);
+            return $this->duplicate($db, $e, $this->identity($db, $e) ?? $existing, $root, $proofDigest);
         }
 
-        $status = $this->decide($db, $e, $partition);
+        $status = $changed || $heldCollision ? 'held_recovery' : $this->decide($db, $e, $partition);
         $record = $db->selectOne(<<<'SQL'
             INSERT INTO public.billium_inbox_message
                 (channel, source_authority, source_lineage, seller_ref, environment, external_event_id, content_digest, payload,
@@ -137,10 +210,11 @@ final readonly class CustodyProcessor
         ]);
         if ($record === null) {
             // A concurrent root claimed the same identity (no partition to serialise on): replay it.
-            return $this->duplicate($db, $e, $this->identity($db, $e) ?? throw new LogicException('Delivery claim conflict without a committed row'));
+            return $this->duplicate($db, $e, $this->identity($db, $e) ?? throw new LogicException('Delivery claim conflict without a committed row'), $root, $proofDigest);
         }
         $id = Rows::int(Rows::field($record, 'id'));
 
+        ObservationScopes::link($db, 'inbox_id', $id, $root, $proofDigest);
         if ($partition === null || $status === 'held_recovery') {
             return new CustodyResult($status === 'held_recovery' ? CustodyDisposition::RecoveryRequired : CustodyDisposition::ParkedGap, $id, $status);
         }
@@ -173,6 +247,7 @@ final readonly class CustodyProcessor
         }
         $partition = $this->partitions->lock($context, $planned);
         $this->assertSelectedSource($context, $partition->sourceAuthority);
+        ObservationScopes::check($context, $partition->sourceAuthority, ObservationScopes::binding($db, 'partition_id', $partition->id));
         if (! $partition->active()) {
             return new CustodyResult(CustodyDisposition::Idle);
         }
@@ -189,6 +264,7 @@ final readonly class CustodyProcessor
         if ($record === null) {
             return new CustodyResult(CustodyDisposition::Idle);
         }
+        ObservationScopes::check($context, $partition->sourceAuthority, ObservationScopes::binding($db, 'inbox_id', Rows::int(Rows::field($record, 'id'))));
         $envelope = InboxEnvelope::from($partition->channel, InboxRecords::payload($record));
         $envelope->authorize($caller);
         $this->assertSelectedSource($context, $envelope->sourceAuthority);
@@ -211,6 +287,7 @@ final readonly class CustodyProcessor
             throw new ProblemException(ProblemCode::AuthDenied, 'The delivery is outside the authenticated source scope');
         }
         $this->assertSelectedSource($context, Rows::string(Rows::field($planned, 'source_authority')));
+        ObservationScopes::check($context, Rows::string(Rows::field($planned, 'source_authority')), ObservationScopes::binding($db, 'inbox_id', $inboxId));
         $partitionId = Rows::field($planned, 'partition_id');
         if ($partitionId === null) {
             return new CustodyResult(CustodyDisposition::Idle, $inboxId, Rows::string(Rows::field($planned, 'status')));
@@ -220,6 +297,11 @@ final readonly class CustodyProcessor
             $this->partitions->lock($context, $partitionRow);
         }
         $record = $db->selectOne('SELECT * FROM public.billium_inbox_message WHERE id = ?', [$inboxId]);
+        if ($record !== null && Rows::field($record, 'partition_id') !== $partitionId) {
+            throw new LockPlanChanged('Retained delivery moved to another partition generation');
+        }
+        ObservationScopes::check($context, $partitionRow->sourceAuthority, ObservationScopes::binding($db, 'partition_id', $partitionRow->id));
+        ObservationScopes::check($context, $partitionRow->sourceAuthority, ObservationScopes::binding($db, 'inbox_id', $inboxId));
         if ($record === null || Rows::field($record, 'status') !== 'parked_dependency') {
             return new CustodyResult(CustodyDisposition::Idle, $inboxId, $record === null ? null : Rows::string(Rows::field($record, 'status')));
         }
@@ -248,6 +330,9 @@ final readonly class CustodyProcessor
     /** @param  list<int>  $excludeInboxIds */
     public function nextUnblockedDependency(string $channel, Caller $caller, array $excludeInboxIds = []): ?int
     {
+        if (get_object_vars(($this->callers)()->current()) !== get_object_vars($caller)) {
+            throw new ProblemException(ProblemCode::AuthDenied, 'Work selection differs from authenticated caller');
+        }
         if ($caller->sourceAuthorities === []) {
             return null;
         }
@@ -258,15 +343,19 @@ final readonly class CustodyProcessor
               AND m.status = 'parked_dependency' AND m.park_kind = 'operation_revision' AND m.park_ref LIKE 'inbox:%'
               AND m.partition_id IS NOT NULL
               AND m.source_authority IN ({$authorities}) AND (m.payload->>'installationRef') = ?
+              AND NOT EXISTS (SELECT FROM public.billium_feed_observation_scope_link l JOIN public.billium_feed_observation_root_scope r ON r.id=l.scope_id
+                   WHERE l.inbox_id=m.id AND (r.installation_ref<>? OR NOT (r.intent_owner_namespace IN (SELECT jsonb_array_elements_text(?::jsonb)))))
               AND NOT (m.id = ANY(?::bigint[]))
               AND NOT EXISTS (
                 SELECT 1 FROM public.billium_inbox_message m2
                 WHERE m2.channel = m.channel AND m2.source_authority = m.source_authority
                   AND m2.seller_ref = m.seller_ref AND m2.environment = m.environment AND m2.operation_ref = m.operation_ref
+                  AND (SELECT scope_id FROM public.billium_feed_observation_scope_link WHERE inbox_id=m2.id)
+                      IS NOT DISTINCT FROM (SELECT scope_id FROM public.billium_feed_observation_scope_link WHERE inbox_id=m.id)
                   AND m2.status = 'parked_dependency' AND m2.operation_revision < m.operation_revision AND m2.id <> m.id)
             ORDER BY m.operation_revision, m.id LIMIT 1
             SQL, [$caller->sellerRef, $caller->environment, $channel, ...$caller->sourceAuthorities,
-            $caller->installationRef, '{'.implode(',', $excludeInboxIds).'}']);
+            $caller->installationRef, $caller->installationRef, json_encode($caller->intentOwnerNamespaces, JSON_THROW_ON_ERROR), '{'.implode(',', $excludeInboxIds).'}']);
 
         return $row === null ? null : Rows::int(Rows::field($row, 'id'));
     }
@@ -366,9 +455,14 @@ final readonly class CustodyProcessor
         return $e->sourceSequence === $partition->accountedSequence + 1 ? 'ready' : 'parked_gap';
     }
 
-    private function duplicate(Connection $db, InboxEnvelope $e, mixed $existing): CustodyResult
+    private function duplicate(Connection $db, InboxEnvelope $e, mixed $existing, ?stdClass $root, ?string $proof): CustodyResult
     {
         $id = Rows::int(Rows::field($existing, 'id'));
+        $prior = ObservationScopes::binding($db, 'inbox_id', $id);
+        if ($prior?->id !== $root?->id && ($prior !== null || Rows::field($existing, 'content_digest') !== $e->contentDigest)) {
+            throw new ProblemException(ProblemCode::ObservationConflict, 'Delivery identity already has different immutable provenance');
+        }
+        ObservationScopes::link($db, 'inbox_id', $id, $root, $proof);
         $status = Rows::string(Rows::field($existing, 'status'));
         $result = Rows::field($existing, 'result_ref');
         if (Rows::field($existing, 'content_digest') !== $e->contentDigest) {
@@ -418,11 +512,13 @@ final readonly class CustodyProcessor
         $earlier = $db->selectOne(<<<'SQL'
             SELECT id FROM public.billium_inbox_message
             WHERE channel = ? AND source_authority = ? AND seller_ref = ? AND environment = ? AND operation_ref = ?
+              AND (SELECT scope_id FROM public.billium_feed_observation_scope_link WHERE inbox_id=billium_inbox_message.id)
+                 IS NOT DISTINCT FROM (SELECT scope_id FROM public.billium_feed_observation_scope_link WHERE inbox_id=?)
               AND status = 'parked_dependency' AND operation_revision < ? AND id <> ?
             ORDER BY operation_revision, id LIMIT 1
             SQL, [
             Rows::field($record, 'channel'), Rows::field($record, 'source_authority'), Rows::field($record, 'seller_ref'), Rows::field($record, 'environment'),
-            Rows::field($record, 'operation_ref'), Rows::field($record, 'operation_revision'), Rows::field($record, 'id'),
+            Rows::field($record, 'operation_ref'), Rows::field($record, 'id'), Rows::field($record, 'operation_revision'), Rows::field($record, 'id'),
         ]);
 
         return $earlier === null ? null : Rows::int(Rows::field($earlier, 'id'));
@@ -434,11 +530,13 @@ final readonly class CustodyProcessor
         $later = $db->selectOne(<<<'SQL'
             SELECT id FROM public.billium_inbox_message
             WHERE channel = ? AND source_authority = ? AND seller_ref = ? AND environment = ? AND operation_ref = ?
+              AND (SELECT scope_id FROM public.billium_feed_observation_scope_link WHERE inbox_id=billium_inbox_message.id)
+                 IS NOT DISTINCT FROM (SELECT scope_id FROM public.billium_feed_observation_scope_link WHERE inbox_id=?)
               AND status = 'parked_dependency' AND operation_revision > ?
             ORDER BY operation_revision, id LIMIT 1
             SQL, [
             Rows::field($record, 'channel'), Rows::field($record, 'source_authority'), Rows::field($record, 'seller_ref'), Rows::field($record, 'environment'),
-            Rows::field($record, 'operation_ref'), Rows::field($record, 'operation_revision'),
+            Rows::field($record, 'operation_ref'), Rows::field($record, 'id'), Rows::field($record, 'operation_revision'),
         ]);
 
         return $later === null ? null : Rows::int(Rows::field($later, 'id'));

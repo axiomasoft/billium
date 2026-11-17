@@ -11,4 +11,5 @@ enum ExecutionPhase: string
 {
     case Admission = 'admission';
     case Dispatch = 'dispatch';
+    case Cancellation = 'cancellation';
 }

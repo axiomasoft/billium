@@ -25,7 +25,13 @@ final readonly class FrozenBinding
         public string $canonicalizationVersion,
         public ?string $collectionAuthorizationRef,
         public string $sourceContext,
+        public ?OriginDecision $origin = null,
     ) {
+        if ($origin !== null && (get_object_vars($origin->scope) !== get_object_vars($scope) || $origin->operationRef !== $rootOperationRef
+            || $origin->businessIntentRef !== $businessIntentRef || $origin->sourceContext !== $sourceContext
+            || $origin->executionProfile !== $executionProfile || $origin->authorizationRef !== $collectionAuthorizationRef)) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'Verified origin differs from the original root binding');
+        }
         if (! in_array($executionProfile, ['remote-billium', 'standalone-billium'], true)) {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'Unsupported Billium executionProfile');
         }

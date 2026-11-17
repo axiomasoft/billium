@@ -124,6 +124,9 @@ final class PlatformPlugin implements ExtensionPlugin, WithCapabilities, WithCon
             'feed_bootstrap_item',
             'inbox_message',
             'inbox_conflict',
+            'feed_observation_root_scope',
+            'feed_observation_scope_link',
+            'feed_observation_command',
         ];
     }
 

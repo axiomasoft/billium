@@ -7,7 +7,9 @@ namespace Billium\Execution\Internal\Storage;
 use BackedEnum;
 use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Data\Envelope;
+use Billium\Execution\Data\ExecutionScope;
 use Billium\Execution\Data\FrozenBinding;
+use Billium\Execution\Data\OriginDecision;
 use Billium\Execution\Enums\EffectKind;
 use Billium\Execution\Internal\Authority\AuthorityClaims;
 use DateTimeImmutable;
@@ -59,6 +61,10 @@ final class ExecutionCodec
         }
         if ($value instanceof DateTimeInterface) {
             return $value->format('Y-m-d\TH:i:s.uP');
+        }
+        if ($value instanceof FrozenBinding && $value->origin === null) {
+            $value = get_object_vars($value);
+            unset($value['origin']);
         }
         if (is_object($value)) {
             $value = get_object_vars($value);
@@ -113,13 +119,31 @@ final class ExecutionCodec
     {
         $reflection = new ReflectionClass($type);
         $arguments = [];
-        foreach ($reflection->getConstructor()?->getParameters() ?? [] as $parameter) {
+        $parameters = $reflection->getConstructor()?->getParameters() ?? [];
+        $strictBinding = in_array($type, [FrozenBinding::class, OriginDecision::class, ExecutionScope::class], true);
+        foreach ($parameters as $parameter) {
             $name = $parameter->getName();
             if (! array_key_exists($name, $data)) {
+                if ($type === FrozenBinding::class && $name === 'origin') {
+                    $arguments[] = null;
+
+                    continue;
+                }
                 throw new LogicException('Missing stored field '.$name);
             }
             $value = $data[$name];
+            unset($data[$name]);
             $hint = $parameter->getType();
+            if ($strictBinding && $hint instanceof ReflectionNamedType) {
+                $valid = $value === null ? $hint->allowsNull() : match ($hint->getName()) {
+                    'string' => is_string($value),
+                    'int' => is_int($value),
+                    default => is_array($value) && ! array_is_list($value),
+                };
+                if (! $valid) {
+                    throw new LogicException('Invalid stored original binding field '.$name);
+                }
+            }
             if ($value !== null && $hint instanceof ReflectionNamedType && ! $hint->isBuiltin()) {
                 $nested = $hint->getName();
                 if ($nested === DateTimeImmutable::class) {
@@ -133,6 +157,10 @@ final class ExecutionCodec
                 $value = array_map(static fn (mixed $effect): EffectKind => EffectKind::from(self::text($effect)), $value);
             }
             $arguments[] = $value;
+        }
+
+        if ($strictBinding && $data !== []) {
+            throw new LogicException('Unrecognized stored original binding fields');
         }
 
         return $reflection->newInstanceArgs($arguments);

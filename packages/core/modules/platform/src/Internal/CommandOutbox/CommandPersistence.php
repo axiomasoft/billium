@@ -22,7 +22,7 @@ final readonly class CommandPersistence
 {
     public function __construct(private DatabaseManager $db) {}
 
-    public function record(TransactionContext $context, PreparedInternalCommand $command): int
+    public function record(TransactionContext $context, PreparedInternalCommand $command, ?string $qualifiedScope = null): int
     {
         $codec = new Codec;
         $payload = $codec->canonicalize($command->payload === [] ? new stdClass : $command->payload);
@@ -30,16 +30,17 @@ final readonly class CommandPersistence
             throw new LogicException('Command payload exceeds bound');
         }
         $db = $this->db->connection($context->connectionName());
+        $scope = $qualifiedScope ?? EventRows::scope($db, $context)->key();
         $row = $db->selectOne(<<<'SQL'
             INSERT INTO public.billium_outbox_command(command_ref,business_ref,owner_module_id,command_schema,command_type,source_scope,payload_digest,payload)
             VALUES (?,?,?,?,?,?,?,?::jsonb) ON CONFLICT (command_ref) DO NOTHING RETURNING id
             SQL, [$command->commandRef, $command->businessRef, $command->ownerModuleId, $command->commandSchema, $command->commandType,
-            EventRows::scope($db, $context)->key(), 'sha256:'.hash('sha256', $payload), $payload]);
+            $scope, 'sha256:'.hash('sha256', $payload), $payload]);
         if ($row === null) {
             $row = $db->selectOne('SELECT * FROM public.billium_outbox_command WHERE command_ref = ?', [$command->commandRef]);
             $same = $row !== null && Rows::field($row, 'business_ref') === $command->businessRef
                 && Rows::field($row, 'owner_module_id') === $command->ownerModuleId && Rows::field($row, 'command_schema') === $command->commandSchema
-                && Rows::field($row, 'command_type') === $command->commandType && EventRows::sameScope(Rows::field($row, 'source_scope'), EventRows::scope($db, $context))
+                && Rows::field($row, 'command_type') === $command->commandType && $codec->canonicalize(json_decode(Rows::string(Rows::field($row, 'source_scope')), false, 64, JSON_THROW_ON_ERROR)) === $scope
                 && Rows::field($row, 'payload_digest') === 'sha256:'.hash('sha256', $payload);
             if (! $same) {
                 throw new ProblemException(ProblemCode::IdempotencyConflict, 'Command ref already has different immutable content');

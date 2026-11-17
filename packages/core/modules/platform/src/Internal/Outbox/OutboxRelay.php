@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Billium\Platform\Internal\Outbox;
 
 use Billium\Core\Contracts\Runtime\EventPublisher;
+use Billium\Core\Contracts\Runtime\QualifiedFactualCommandPublisher;
 use Billium\Platform\Data\Feed\RelayReport;
+use Billium\Platform\Internal\CommandOutbox\QualifiedCommandScope;
 use Billium\Platform\Internal\Installation\Rows;
 use Illuminate\Database\Connection;
 use LogicException;
@@ -37,7 +39,14 @@ final readonly class OutboxRelay
         foreach ($claims as $claim) {
             try {
                 $this->outsideTransaction();
-                $this->publisher->publish($claim['destination'], $claim['message']);
+                $scope = isset($claim['commandScope']) ? QualifiedCommandScope::read($claim['commandScope'], $claim['destination'], $claim['message']) : null;
+                if ($scope === null) {
+                    $this->publisher->publish($claim['destination'], $claim['message']);
+                } elseif ($this->publisher instanceof QualifiedFactualCommandPublisher) {
+                    $this->publisher->publishQualified($claim['destination'], $claim['message'], $scope);
+                } else {
+                    throw new LogicException('Qualified factual transport is unavailable');
+                }
                 $this->outsideTransaction();
                 $changed = $this->acknowledge($claim['id'], $claim['token']);
                 $changed ? $delivered++ : $stale++;
@@ -52,7 +61,7 @@ final readonly class OutboxRelay
         return new RelayReport(count($claims), $delivered, $failed, $stale);
     }
 
-    /** @return list<array{id:int,token:string,destination:string,message:array<string,mixed>,failures:int}> */
+    /** @return list<array{id:int,token:string,destination:string,message:array<string,mixed>,commandScope?:string,failures:int}> */
     public function claim(int $limit = 100): array
     {
         $this->outsideTransaction();
@@ -93,7 +102,7 @@ final readonly class OutboxRelay
                     'payload' => json_decode(Rows::string(Rows::field($row, 'payload')), false, 512, JSON_THROW_ON_ERROR),
                 ];
                 $claims[] = ['id' => $id, 'token' => $token, 'destination' => Rows::string(Rows::field($row, 'destination_ref')),
-                    'message' => $message, 'failures' => $failures];
+                    'message' => $message, ...($this->lane === 'command' ? ['commandScope' => Rows::string(Rows::field($row, 'source_scope'))] : []), 'failures' => $failures];
             }
 
             return $claims;

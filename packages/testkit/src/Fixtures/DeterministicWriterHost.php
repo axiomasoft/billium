@@ -25,7 +25,7 @@ final readonly class DeterministicWriterHost implements DispatchEgress, WriterAd
 
     public static function bindingDigest(FrozenBinding $binding): string
     {
-        return 'sha256:'.hash('sha256', (new Codec)->canonicalize([
+        $map = [
             'schema' => 'billium.execution.binding.v1',
             'sourceContext' => $binding->sourceContext,
             'scope' => ['installationRef' => $binding->scope->installationRef, 'sellerRef' => $binding->scope->sellerRef, 'environment' => $binding->scope->environment, 'intentOwnerNamespace' => $binding->scope->intentOwnerNamespace],
@@ -34,7 +34,20 @@ final readonly class DeterministicWriterHost implements DispatchEgress, WriterAd
             'driverId' => $binding->driverId, 'driverContractVersion' => $binding->driverContractVersion,
             'capabilityDigest' => $binding->capabilityDigest, 'semanticDigest' => $binding->semanticDigest,
             'canonicalizationVersion' => $binding->canonicalizationVersion, 'collectionAuthorizationRef' => $binding->collectionAuthorizationRef,
-        ]));
+        ];
+        if ($binding->origin !== null) {
+            $o = $binding->origin;
+            $map['schema'] = 'billium.execution.binding.v2';
+            $map['origin'] = [
+                'scope' => ['installationRef' => $o->scope->installationRef, 'sellerRef' => $o->scope->sellerRef, 'environment' => $o->scope->environment,
+                    'intentOwnerNamespace' => $o->scope->intentOwnerNamespace],
+                'operationRef' => $o->operationRef, 'businessIntentRef' => $o->businessIntentRef, 'sourceContext' => $o->sourceContext,
+                'executionProfile' => $o->executionProfile, 'routingEpoch' => (string) $o->routingEpoch, 'authorizationRef' => $o->authorizationRef,
+                'basisDigest' => $o->basisDigest, 'policyVersion' => $o->policyVersion, 'periodRef' => $o->periodRef,
+            ];
+        }
+
+        return 'sha256:'.hash('sha256', (new Codec)->canonicalize($map));
     }
 
     private function outsideTransaction(): void
@@ -53,13 +66,13 @@ final readonly class DeterministicWriterHost implements DispatchEgress, WriterAd
     public function openSession(DispatchRequest $request): void
     {
         $this->outsideTransaction();
-        $this->journal->append(new JournalEvent('host.open', ['session' => $this->session($request), 'scope' => hash('sha256', serialize($request->scope))], ProcessIdentity::current()));
+        $this->journal->append(new JournalEvent('host.open', ['session' => $this->session($request), 'scope' => hash('sha256', (new Codec)->canonicalize(get_object_vars($request->scope)))], ProcessIdentity::current()));
     }
 
     public function retire(DispatchRequest $request, string $reason): void
     {
         $this->outsideTransaction();
-        $this->journal->append(new JournalEvent('host.retire', ['session' => $this->session($request), 'scope' => hash('sha256', serialize($request->scope)), 'reason' => $reason], ProcessIdentity::current()));
+        $this->journal->append(new JournalEvent('host.retire', ['session' => $this->session($request), 'scope' => hash('sha256', (new Codec)->canonicalize(get_object_vars($request->scope))), 'reason' => $reason], ProcessIdentity::current()));
     }
 
     public function revoke(DispatchTicket $ticket): void

@@ -75,12 +75,12 @@ final readonly class ParkedDrainer
      * @param  Closure(TransactionContext): T  $body
      * @return T
      */
-    public function root(Closure $body, string $kind = 'ledger.observation_apply', FinancialMode $mode = FinancialMode::Active, ?string $commitKind = 'ledger.observation', ?string $sourceAuthority = null): mixed
+    public function root(Closure $body, string $kind = 'ledger.observation_apply', FinancialMode $mode = FinancialMode::Active, ?string $commitKind = 'ledger.observation', ?string $sourceAuthority = null, ?FinancialScope $scope = null): mixed
     {
         $caller = $this->callers->current();
         $spec = new OperationSpec($kind, $caller->sellerRef, $caller->environment, $mode, ModuleOperationClass::ObservedFactRecording, ['ledger', 'platform'],
-            null, null, $commitKind, $sourceAuthority === null ? null : new FinancialScope($caller->installationRef,
-                $caller->sellerRef, $caller->environment, null, $sourceAuthority));
+            null, null, $commitKind, $scope ?? ($sourceAuthority === null ? null : new FinancialScope($caller->installationRef,
+                $caller->sellerRef, $caller->environment, null, $sourceAuthority)));
         $captured = null;
         $done = false;
         $this->runner->run($spec, static function (TransactionContext $context) use ($body, &$captured, &$done): Receipt {
@@ -101,19 +101,27 @@ final readonly class ParkedDrainer
      * Raw custody of one authenticated delivery (D60): a RawCustody root takes no financial session barrier and no
      * monetary commit kind, so custody commits even while financial application is sealed. It never invokes a handler.
      */
-    public function custody(stdClass $envelope, CustodyHandler $handler): CustodyResult
+    public function custody(stdClass $envelope, CustodyHandler $handler, ?FinancialScope $scope = null, ?string $proof = null): CustodyResult
     {
         $caller = $this->callers->current();
         $spec = new OperationSpec('platform.inbox_custody', $caller->sellerRef, $caller->environment, FinancialMode::RawCustody,
-            ModuleOperationClass::CallbackCustody, ['platform']);
+            ModuleOperationClass::CallbackCustody, ['platform'], financialScope: $scope);
         $captured = null;
-        $this->runner->run($spec, function (TransactionContext $context) use ($envelope, $handler, &$captured): Receipt {
-            $captured = $this->feed->process($context, self::CHANNEL, $envelope, $handler);
+        $this->runner->run($spec, function (TransactionContext $context) use ($envelope, $handler, $proof, &$captured): Receipt {
+            $captured = $proof === null ? $this->feed->process($context, self::CHANNEL, $envelope, $handler)
+                : $this->feed->processQualified($context, self::CHANNEL, $envelope, $handler, self::rootRef($envelope), $proof);
 
             return new LedgerReceipt('ledger.observation_custody', ['kind' => 'custody']);
         });
 
         return $captured instanceof CustodyResult ? $captured : throw new LogicException('The custody root did not run its body');
+    }
+
+    private static function rootRef(stdClass $envelope): string
+    {
+        $root = $envelope->originalPaymentRef ?? $envelope->operationRef ?? null;
+
+        return is_string($root) ? $root : throw new ProblemException(ProblemCode::ValidationInvalid, 'Missing observation root');
     }
 
     /** The configured Billium connection (billium.connection), never the host's default database, for work selection. */
@@ -138,8 +146,8 @@ final readonly class ParkedDrainer
             $next = [];
             if ($current->drainPartitionId !== null) {
                 $partition = $current->drainPartitionId;
-                $source = $this->feed->sourceForPartition($this->callers->current(), self::CHANNEL, $partition);
-                $next[] = $this->root(fn (TransactionContext $context): CustodyResult => $this->feed->drain($context, $partition, $handler), mode: $mode, sourceAuthority: $source);
+                $scope = $this->feed->scopeForPartition($this->callers->current(), self::CHANNEL, $partition);
+                $next[] = $this->root(fn (TransactionContext $context): CustodyResult => $this->feed->drain($context, $partition, $handler), mode: $mode, scope: $scope);
             }
             if ($current->retryInboxId !== null && ($current->disposition === CustodyDisposition::Duplicate || $current->retryInboxId !== $current->inboxId)) {
                 $inbox = $current->retryInboxId;
@@ -176,44 +184,61 @@ final readonly class ParkedDrainer
         $authorities = implode(',', array_fill(0, count($caller->sourceAuthorities), '?'));
         $ready = self::DEPENDENCY_READY;
         $statuses = [];
+        $refusal = null;
         $attemptedParks = [];
         $attemptedInboxes = [];
         while (count($statuses) < $limit) {
             // Re-select after each root so releasing an earlier bootstrap park admits its waiting revision.
             $row = $this->connection()->selectOne(<<<SQL
-            SELECT k.id, k.inbox_id, o.source_authority FROM public.billium_observation_park k
+            SELECT k.id, k.inbox_id, o.source_authority, binding.intent_owner_namespace FROM public.billium_observation_park k
             JOIN public.billium_observed_payment o
               ON o.id = k.observed_payment_id AND o.seller_ref = k.seller_ref AND o.environment = k.environment
-            WHERE k.seller_ref = ? AND k.environment = ? AND k.released_at IS NULL
+            LEFT JOIN public.billium_observation_owner_binding binding ON binding.seller_ref=o.seller_ref AND binding.environment=o.environment
+               AND binding.installation_ref=o.installation_ref AND binding.source_authority=o.source_authority AND binding.operation_ref=o.operation_ref
+               AND binding.provider_account_ref=o.provider_account_ref
+            WHERE (binding.intent_owner_namespace IS NULL OR binding.intent_owner_namespace IN (SELECT jsonb_array_elements_text(?::jsonb)))
+              AND k.seller_ref = ? AND k.environment = ? AND k.released_at IS NULL
               AND o.installation_ref = ? AND o.source_authority IN ({$authorities})
               AND NOT (k.id = ANY(?::bigint[])) AND ({$ready})
             ORDER BY k.revision, k.id LIMIT 1
-            SQL, [$caller->sellerRef, $caller->environment, $caller->installationRef, ...$caller->sourceAuthorities, '{'.implode(',', $attemptedParks).'}']);
-            if ($row === null) {
-                // Custody can park a later revision before the ledger handler sees it. Recover it even if the
-                // worker that released its predecessor died after commit and before following the retry pointer.
-                $inbox = $this->feed->nextUnblockedDependency(self::CHANNEL, $caller, $attemptedInboxes);
-                if ($inbox === null) {
-                    break;
-                }
-                $attemptedInboxes[] = $inbox;
-                $result = $this->retryRoot($inbox, $this->handler, $mode);
-                $statuses[] = $result->status ?? $result->disposition->value;
-                $this->follow($result, mode: $mode);
+            SQL, [json_encode($caller->intentOwnerNamespaces, JSON_THROW_ON_ERROR), $caller->sellerRef, $caller->environment, $caller->installationRef, ...$caller->sourceAuthorities, '{'.implode(',', $attemptedParks).'}']);
+            try {
+                if ($row === null) {
+                    // Custody can park a later revision before the ledger handler sees it. Recover it even if the
+                    // worker that released its predecessor died after commit and before following the retry pointer.
+                    $inbox = $this->feed->nextUnblockedDependency(self::CHANNEL, $caller, $attemptedInboxes);
+                    if ($inbox === null) {
+                        break;
+                    }
+                    $attemptedInboxes[] = $inbox;
+                    $result = $this->retryRoot($inbox, $this->handler, $mode);
+                    $statuses[] = $result->status ?? $result->disposition->value;
+                    $this->follow($result, mode: $mode);
 
-                continue;
+                    continue;
+                }
+                $park = is_object($row) && is_int($row->id ?? null) ? $row->id : throw new LogicException('Expected a park id');
+                $attemptedParks[] = $park;
+                $inbox = is_int($row->inbox_id ?? null) ? $row->inbox_id : null;
+                if ($inbox !== null) {
+                    $result = $this->retryRoot($inbox, $this->handler, $mode);
+                    $statuses[] = $result->status ?? $result->disposition->value;
+                    $this->follow($result, mode: $mode);
+                } else {
+                    $source = is_string($row->source_authority ?? null) ? $row->source_authority : throw new LogicException('Expected an observed source');
+                    $owner = is_string($row->intent_owner_namespace ?? null) ? $row->intent_owner_namespace : null;
+                    $scope = new FinancialScope($caller->installationRef, $caller->sellerRef, $caller->environment, $owner, $source);
+                    $statuses[] = $this->root(fn (TransactionContext $context): string => $this->reproject($context, $park), mode: $mode, scope: $scope);
+                }
+            } catch (ProblemException $error) {
+                if ($error->problem !== ProblemCode::InstallationQuarantined) {
+                    throw $error;
+                }
+                $refusal = $error;
             }
-            $park = is_object($row) && is_int($row->id ?? null) ? $row->id : throw new LogicException('Expected a park id');
-            $attemptedParks[] = $park;
-            $inbox = is_int($row->inbox_id ?? null) ? $row->inbox_id : null;
-            if ($inbox !== null) {
-                $result = $this->retryRoot($inbox, $this->handler, $mode);
-                $statuses[] = $result->status ?? $result->disposition->value;
-                $this->follow($result, mode: $mode);
-            } else {
-                $source = is_string($row->source_authority ?? null) ? $row->source_authority : throw new LogicException('Expected an observed source');
-                $statuses[] = $this->root(fn (TransactionContext $context): string => $this->reproject($context, $park), mode: $mode, sourceAuthority: $source);
-            }
+        }
+        if ($statuses === [] && $refusal !== null) {
+            throw $refusal;
         }
 
         return $statuses;
@@ -221,9 +246,9 @@ final readonly class ParkedDrainer
 
     private function retryRoot(int $inbox, CustodyHandler $handler, FinancialMode $mode): CustodyResult
     {
-        $source = $this->feed->sourceForInbox($this->callers->current(), self::CHANNEL, $inbox);
+        $scope = $this->feed->scopeForInbox($this->callers->current(), self::CHANNEL, $inbox);
 
-        return $this->root(fn (TransactionContext $context): CustodyResult => $this->retry($context, $inbox, $handler), mode: $mode, sourceAuthority: $source);
+        return $this->root(fn (TransactionContext $context): CustodyResult => $this->retry($context, $inbox, $handler), mode: $mode, scope: $scope);
     }
 
     /** The platform retry of one parked delivery; a delivery no longer parked releases its ledger marker. */
