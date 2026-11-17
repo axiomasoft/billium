@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Billium\Ledger\Internal\Registrars;
 
-use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Ledger\Contracts\CorrectionCreditParticipants;
 use Billium\Ledger\Contracts\CorrectionLocks;
 use Billium\Ledger\Contracts\Ledger;
@@ -24,12 +23,14 @@ use Billium\Ledger\Internal\Queries\DatabaseLedgerQueries;
 use Billium\Ledger\Internal\Queries\DatabaseObservationCheckpointQueries;
 use Billium\Ledger\Internal\Queries\DatabaseSettlementIntentLocks;
 use Billium\Ledger\Internal\Repositories\LedgerPrivileges;
-use Billium\Ledger\Internal\Snapshot\LedgerSnapshotSource;
-use Billium\Platform\Contracts\Feed\FeedRecoveryQueries;
+use Billium\Ledger\Internal\Snapshot\AllocationsSnapshotSource;
+use Billium\Ledger\Internal\Snapshot\DiscrepanciesSnapshotSource;
+use Billium\Ledger\Internal\Snapshot\InvoicesSnapshotSource;
+use Billium\Ledger\Internal\Snapshot\ObligationsSnapshotSource;
+use Billium\Ledger\Internal\Snapshot\PaymentsSnapshotSource;
 use Billium\Platform\Contracts\Inbox\CustodyHandler;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Foundation\Application;
-use Illuminate\Database\DatabaseManager;
 use Override;
 use Packman\Attributes\Internal;
 use Packman\Foundation\Contracts\PackageRegistrar;
@@ -50,15 +51,16 @@ final class LedgerRuntimeRegistrar implements PackageRegistrar
         $app->bind(ObservationCheckpointQueries::class, DatabaseObservationCheckpointQueries::class);
         $app->bind(SettlementIntentLocks::class, DatabaseSettlementIntentLocks::class);
 
-        foreach (LedgerSnapshotSource::KEYS as $key) {
-            $service = 'billium.snapshot.'.$key;
-            $app->bind($service, static fn (Application $app): LedgerSnapshotSource => new LedgerSnapshotSource(
-                $app->make(DatabaseManager::class),
-                $app->make(CallerContext::class),
-                $key,
-                $app->make(FeedRecoveryQueries::class),
-            ));
-            $app->tag($service, 'billium.snapshot_sources');
+        foreach ([
+            'ledger.obligations' => ObligationsSnapshotSource::class,
+            'ledger.invoices' => InvoicesSnapshotSource::class,
+            'ledger.allocations' => AllocationsSnapshotSource::class,
+            'ledger.payments' => PaymentsSnapshotSource::class,
+            'ledger.discrepancies' => DiscrepanciesSnapshotSource::class,
+        ] as $key => $class) {
+            $app->bind($class);
+            $app->alias($class, 'billium.snapshot.'.$key);
+            $app->tag($class, 'billium.snapshot_sources');
         }
 
         $app->when(ObservationIntake::class)->needs(CustodyHandler::class)->give(ObservationHandler::class);

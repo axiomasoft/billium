@@ -13,7 +13,7 @@ use Packman\Schema\Enums\SchemaLifecycle;
 use Packman\Schema\Enums\SchemaScope;
 
 /**
- * Declares Billium's ordered central PostgreSQL schema sets (`billium-platform` and `billium-ledger`).
+ * Declares Billium's central PostgreSQL schema sets (`billium-platform` platform stream and module streams).
  */
 #[Spi(kind: SpiKind::Call, since: '1.0')]
 final readonly class BilliumSchemaSetProvider implements SchemaSetProvider
@@ -41,7 +41,38 @@ final readonly class BilliumSchemaSetProvider implements SchemaSetProvider
                 path: $migrationsRoot.'/ledger',
                 version: 1,
                 drivers: ['pgsql'],
-                lifecycle: SchemaLifecycle::Platform,
+                lifecycle: SchemaLifecycle::Module,
+                requires: ['axiomasoft/billium-core'],
+            ),
+            new SchemaSet(
+                package: 'axiomasoft/billium-core',
+                name: 'billium-usage',
+                scope: SchemaScope::Central,
+                path: $migrationsRoot.'/usage',
+                version: 1,
+                drivers: ['pgsql'],
+                lifecycle: SchemaLifecycle::Module,
+                requires: ['axiomasoft/billium-core'],
+            ),
+            new SchemaSet(
+                package: 'axiomasoft/billium-core',
+                name: 'billium-schedule',
+                scope: SchemaScope::Central,
+                path: $migrationsRoot.'/schedule',
+                version: 1,
+                drivers: ['pgsql'],
+                lifecycle: SchemaLifecycle::Module,
+                requires: ['axiomasoft/billium-core'],
+            ),
+            new SchemaSet(
+                package: 'axiomasoft/billium-core',
+                name: 'billium-rating',
+                scope: SchemaScope::Central,
+                path: $migrationsRoot.'/rating',
+                version: 1,
+                drivers: ['pgsql'],
+                lifecycle: SchemaLifecycle::Module,
+                requires: ['axiomasoft/billium-core'],
             ),
         ];
     }

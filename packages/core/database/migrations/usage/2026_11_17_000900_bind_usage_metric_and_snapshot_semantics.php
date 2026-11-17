@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Packman\Schema\Laravel\PackmanMigration;
 
-return new class extends Migration
+return new class extends PackmanMigration
 {
     public function up(): void
     {

@@ -64,20 +64,27 @@ layer_derived() {
 layer_php() {
     need_tool composer
     need_path vendor/bin/pest
+    need_path vendor/bin/packman
     local manifest
     composer validate --strict
-    for manifest in packages/*/composer.json; do
-        [[ -f "$manifest" ]] || fail "php: no packages/*/composer.json"
+    for manifest in packages/*/composer.json packages/core/modules/*/composer.json; do
+        [[ -f "$manifest" ]] || fail "php: missing manifest $manifest"
         composer validate --strict "$manifest"
     done
     vendor/bin/pint --test
     vendor/bin/phpstan analyse --memory-limit=1G
     vendor/bin/rector process --dry-run
+    php vendor/bin/packman gate
+    php vendor/bin/packman php-api --check
+    php vendor/bin/packman error-codes --check
+    php vendor/bin/packman config-schema --check
+    php vendor/bin/packman ai:sync --dry-run
     need_path scripts/db/preflight.php
-    php scripts/db/preflight.php
+    PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 php scripts/db/preflight.php
     python3 -m unittest discover -s scripts/lint/tests -p test_test_discovery.py
     python3 scripts/lint/test-discovery.py
-    vendor/bin/pest
+    vendor/bin/pest --exclude-group=pg
+    PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 vendor/bin/pest --group=pg
     need_path scripts/smoke/consumer-install.sh
     bash scripts/smoke/consumer-install.sh php
 }
@@ -106,7 +113,7 @@ layer_conformance() {
     need_path conformance/oracles/jcs/oracle.py
     python3 -m unittest discover -s conformance/tests
     python3 conformance/runner/run.py --check-golden
-    php conformance/adapters/php/bin/with-database-lease.php python3 conformance/runner/run.py --adapter php
+    PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 php conformance/adapters/php/bin/with-database-lease.php python3 conformance/runner/run.py --adapter php
     python3 conformance/runner/run.py --adapter dart
 }
 

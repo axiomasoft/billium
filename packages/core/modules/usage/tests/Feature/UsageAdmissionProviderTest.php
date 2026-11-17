@@ -11,7 +11,7 @@ use Billium\Usage\Contracts\AggregationQueries;
 use Billium\Usage\Contracts\AggregationService;
 use Billium\Usage\Contracts\SourceCompletenessIntake;
 use Billium\Usage\Contracts\Usage;
-use Billium\Usage\Internal\UsageServiceProvider;
+use Billium\Usage\Laravel\UsageServiceProvider;
 use Illuminate\Config\Repository;
 use Illuminate\Container\Container;
 use Illuminate\Foundation\Application;

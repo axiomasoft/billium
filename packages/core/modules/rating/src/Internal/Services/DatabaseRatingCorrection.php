@@ -64,10 +64,11 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
         private CallerContext $callers, private RatingStore $store, private CorrectionStore $corrections,
         private CorrectionCalculator $calculator, private TaxPolicyFrontier $policyFrontier,
         private UsageAggregateAdapter $usage, private ScheduleOccurrenceAdapter $occurrences,
-        private CorrectionParticipants $schedule, private LedgerParticipants $ledger, private CorrectionLocks $ledgerLocks,
-        private CorrectionCreditParticipants $creditParticipants,
+        private CorrectionParticipants $schedule,
         private CommandOutbox $outbox, private RatingComputation $rating, private ProrationCalculator $proration,
-        private AmendmentSupport $amendmentSupport) {}
+        private AmendmentSupport $amendmentSupport,
+        private ?LedgerParticipants $ledger = null, private ?CorrectionLocks $ledgerLocks = null,
+        private ?CorrectionCreditParticipants $creditParticipants = null) {}
 
     public function prepare(PrepareCorrection $command): PreparedCorrection|RatingHold
     {
@@ -144,12 +145,12 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
                 $scope = new BillingAccountScope(sellerRef: $in->sellerRef, environment: $in->environment, billingAccountRef: $in->billingAccountRef);
                 if ($sign > 0) {
                     if ($p->originalObligationRef !== null) {
-                        $this->ledgerLocks->acquireParent(context: $context, obligationRef: $p->originalObligationRef, accountRef: $in->billingAccountRef);
+                        ($this->ledgerLocks ?? throw new LogicException('Ledger capability absent'))->acquireParent(context: $context, obligationRef: $p->originalObligationRef, accountRef: $in->billingAccountRef);
                     }
                     $attribution = RatingRows::map(json_decode($in->attribution, true, 32, JSON_THROW_ON_ERROR));
                     $obligationRef = 'rating:'.$child->correctionRef;
                     $price = $in->prices[0];
-                    $this->ledger->recordObligation(context: $context, command: new RecordObligation(commandKey: 'rating:'.$child->correctionRef,
+                    ($this->ledger ?? throw new LogicException('Ledger capability absent'))->recordObligation(context: $context, command: new RecordObligation(commandKey: 'rating:'.$child->correctionRef,
                         scope: $scope, obligationRef: $obligationRef, basisRef: $basis,
                         customerRef: RatingRows::text($attribution['customerRef'] ?? null), componentRef: $price->componentRef,
                         money: MoneyFactory::fromMinor(minor: $c->deltaGrossMinor, currency: $in->currency, exponent: $in->currencyExponent),
@@ -186,9 +187,9 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
                             mode: CreditNoteMode::from($p->releasePolicy->value), lines: $lines, reason: $p->command->reasonCode);
                     }
                     if (count($commands) === 1) {
-                        $this->ledger->issueCreditNote(context: $context, command: $commands[0]);
+                        ($this->ledger ?? throw new LogicException('Ledger capability absent'))->issueCreditNote(context: $context, command: $commands[0]);
                     } else {
-                        $this->creditParticipants->issue(context: $context, commands: $commands);
+                        ($this->creditParticipants ?? throw new LogicException('Ledger capability absent'))->issue(context: $context, commands: $commands);
                         $suffixes = array_map(static fn (IssueCreditNote $item): string => substr($item->creditNoteRef, -16), $commands);
                         $creditNoteRef .= ':group:'.implode('.', $suffixes);
                     }

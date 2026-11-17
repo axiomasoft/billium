@@ -2,18 +2,22 @@
 
 declare(strict_types=1);
 
-namespace Billium\Ledger\Internal;
+namespace Billium\Ledger\Laravel;
 
 use Billium\Ledger\Internal\Console\DrainParkedCommand;
 use Billium\Ledger\Internal\Console\ReconcileRefundsCommand;
 use Billium\Ledger\Internal\Registrars\LedgerRuntimeRegistrar;
 use Illuminate\Support\ServiceProvider;
 use Override;
-use Packman\Attributes\Internal;
+use Packman\Attributes\Spi;
+use Packman\Attributes\SpiKind;
 use Packman\Foundation\Concerns\RegistersPackageRegistrars;
 use Packman\Foundation\Contracts\PackageRegistrar;
 
-#[Internal]
+/**
+ * Laravel service provider registering the Billium Ledger module runtime and console commands.
+ */
+#[Spi(kind: SpiKind::Call, since: '1.0')]
 final class LedgerServiceProvider extends ServiceProvider
 {
     use RegistersPackageRegistrars {
@@ -34,7 +38,6 @@ final class LedgerServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->loadMigrationsFrom(__DIR__.'/../../../../database/migrations/ledger');
         $this->bootRegistrars();
 
         if ($this->app->runningInConsole()) {

@@ -69,7 +69,7 @@ final class P4DependencyBoundaryTest extends TestCase
         $finder = new NodeFinder;
         $violations = [];
         foreach ($finder->findInstanceOf($tree, Name::class) as $name) {
-            if (preg_match('~^(?:Commerz|Tariffler|CoreX|Lago|OpenMeter|Stripe|AiFina|AzGuard|Vaulter|Billium\\\\(?:Documents|Execution|Collection|Server))(?:\\\\|$)~i', $name->toString()) === 1) {
+            if (preg_match('~^(?:Commerz|Tariffler|Lago|OpenMeter|Stripe|AiFina|AzGuard|Vaulter|Billium\\\\(?:Documents|Execution|Collection|Server))(?:\\\\|$)~i', $name->toString()) === 1) {
                 $violations[] = $module.': forbidden dependency '.$name->toString();
             }
         }

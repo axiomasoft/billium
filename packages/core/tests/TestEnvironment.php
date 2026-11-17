@@ -14,6 +14,8 @@ use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Events\MigrationsStarted;
 use Illuminate\Foundation\Application;
+use Packman\Testkit\Data\Database\TestDatabaseIdentity;
+use Packman\Testkit\Support\Database\TestDatabaseGuard;
 use PDO;
 use PDOException;
 use RuntimeException;
@@ -137,10 +139,29 @@ final class TestEnvironment
 
     public static function configure(Application $app): void
     {
+        TestDatabaseGuard::assertSafe(self::identity(owner: true));
         $app['config']->set('database.default', 'pgsql');
         $app['config']->set('database.connections.pgsql', self::connection());
         $app['config']->set('database.connections.billium_owner', self::connection(owner: true));
         $app['config']->set('billium.connection', 'pgsql');
+    }
+
+    public static function assertDestructiveResetAllowed(bool $owner = true): void
+    {
+        TestDatabaseGuard::assertDestructiveSafe(self::identity(owner: $owner));
+    }
+
+    public static function identity(bool $owner = false): TestDatabaseIdentity
+    {
+        $database = self::databaseName();
+
+        return new TestDatabaseIdentity(
+            driver: 'pgsql',
+            host: self::required('DB_HOST'),
+            port: (int) self::required('DB_PORT'),
+            database: $database,
+            username: self::required($owner ? 'DB_OWNER_USERNAME' : 'DB_USERNAME'),
+        );
     }
 
     public static function databaseName(): string
@@ -236,6 +257,8 @@ final class TestEnvironment
         self::databaseName();
         self::connection();
         self::connection(owner: true);
+        TestDatabaseGuard::assertSafe(self::identity(owner: true));
+        self::assertDestructiveResetAllowed(owner: true);
         if (! extension_loaded('pdo_pgsql')) {
             throw new RuntimeException('D50/M-33: pdo_pgsql is required');
         }

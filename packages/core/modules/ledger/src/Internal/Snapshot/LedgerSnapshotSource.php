@@ -20,7 +20,7 @@ use Packman\Attributes\Internal;
 
 /** D60/D63: registered ledger snapshot streams share the feed's pinned read-only snapshot and source scope. */
 #[Internal]
-final readonly class LedgerSnapshotSource implements SnapshotSource
+readonly class LedgerSnapshotSource implements SnapshotSource
 {
     public const array KEYS = ['ledger.obligations', 'ledger.invoices', 'ledger.allocations', 'ledger.payments', 'ledger.discrepancies'];
 

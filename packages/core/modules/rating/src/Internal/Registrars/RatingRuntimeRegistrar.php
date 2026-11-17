@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Billium\Rating\Internal;
+namespace Billium\Rating\Internal\Registrars;
 
 use Billium\Rating\Contracts\PriceVersionStore;
 use Billium\Rating\Contracts\PricingStrategy;
@@ -18,6 +18,7 @@ use Billium\Rating\Contracts\TaxSnapshotPort;
 use Billium\Rating\Contracts\TaxSnapshotStore;
 use Billium\Rating\Internal\Pipeline\RatingComputation;
 use Billium\Rating\Internal\Proration\ProrationPolicyCatalog;
+use Billium\Rating\Internal\RatingConformance;
 use Billium\Rating\Internal\Services\DatabaseRatingBooking;
 use Billium\Rating\Internal\Services\DatabaseRatingCorrection;
 use Billium\Rating\Internal\Services\DatabaseRatingPreparer;
@@ -25,36 +26,48 @@ use Billium\Rating\Internal\Services\DatabaseRatingQueries;
 use Billium\Rating\Internal\Storage\DatabasePriceVersionStore;
 use Billium\Rating\Internal\Storage\TaxPolicyFrontier;
 use Billium\Rating\Internal\Strategies\StrategyCatalog;
+use Billium\Rating\Internal\UnboundTaxSnapshotPort;
+use Billium\Schedule\Contracts\ScheduleQueries;
 use Illuminate\Contracts\Foundation\Application;
-use Illuminate\Support\ServiceProvider;
 use LogicException;
+use Override;
 use Packman\Attributes\Internal;
+use Packman\Foundation\Contracts\PackageRegistrar;
 
 #[Internal]
-final class RatingServiceProvider extends ServiceProvider
+final class RatingRuntimeRegistrar implements PackageRegistrar
 {
-    public function register(): void
+    #[Override]
+    public function register(Application $app): void
     {
-        $this->app->bindIf(PricingStrategyRegistry::class, static fn (Application $app): StrategyCatalog => new StrategyCatalog(
+        $app->bindIf(PricingStrategyRegistry::class, static fn (Application $app): StrategyCatalog => new StrategyCatalog(
             strategies: self::strategies($app),
         ), shared: true);
-        $this->app->bind(ProrationPolicyRegistry::class, ProrationPolicyCatalog::class);
-        $this->app->bind(PriceVersionStore::class, DatabasePriceVersionStore::class);
-        $this->app->bind(TaxSnapshotStore::class, DatabasePriceVersionStore::class);
-        $this->app->bind(TaxCorrectionPolicyFrontier::class, TaxPolicyFrontier::class);
-        $this->app->bindIf(TaxSnapshotPort::class, UnboundTaxSnapshotPort::class);
-        $this->app->bind(RatingQuoter::class, RatingComputation::class);
-        $this->app->bind(RatingPreparer::class, DatabaseRatingPreparer::class);
-        $this->app->bind(RatingBooking::class, DatabaseRatingBooking::class);
-        $this->app->bind(RatingCorrection::class, DatabaseRatingCorrection::class);
-        $this->app->bind(RatingQueries::class, DatabaseRatingQueries::class);
-        $this->app->bind('billium.conformance.rating', RatingConformance::class);
+        $app->bind(ProrationPolicyRegistry::class, ProrationPolicyCatalog::class);
+        $app->bind(PriceVersionStore::class, DatabasePriceVersionStore::class);
+        $app->bind(TaxSnapshotStore::class, DatabasePriceVersionStore::class);
+        $app->bind(TaxCorrectionPolicyFrontier::class, TaxPolicyFrontier::class);
+        $app->bindIf(TaxSnapshotPort::class, UnboundTaxSnapshotPort::class);
+        $app->bind(RatingQuoter::class, RatingComputation::class);
+        $app->bind(RatingQueries::class, DatabaseRatingQueries::class);
+        $app->bind('billium.conformance.rating', RatingConformance::class);
+        $this->bindScheduledCapabilities($app);
     }
 
-    public function boot(): void
+    #[Override]
+    public function boot(Application $app): void
     {
-        // D55: migration discovery only; install and upgrade are explicit host operations.
-        $this->loadMigrationsFrom(__DIR__.'/../../../../database/migrations/rating');
+        $this->bindScheduledCapabilities($app);
+    }
+
+    private function bindScheduledCapabilities(Application $app): void
+    {
+        if (! $app->bound(ScheduleQueries::class)) {
+            return;
+        }
+        $app->bindIf(RatingPreparer::class, DatabaseRatingPreparer::class);
+        $app->bindIf(RatingBooking::class, DatabaseRatingBooking::class);
+        $app->bindIf(RatingCorrection::class, DatabaseRatingCorrection::class);
     }
 
     /** @return iterable<PricingStrategy> */

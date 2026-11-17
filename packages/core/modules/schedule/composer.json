@@ -1,0 +1,34 @@
+{
+    "name": "axiomasoft/billium-schedule",
+    "description": "Billium Schedule module: deterministic commercial period resolution, occurrences, and billing schedule revisions.",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.4",
+        "axiomasoft/billium-contracts": "^0.1",
+        "axiomasoft/billium-core": "^0.1",
+        "axiomasoft/packman": "^0.1",
+        "laravel/framework": "^13.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Billium\\Schedule\\": "src/"
+        }
+    },
+    "extra": {
+        "packman": {
+            "schema-version": 1,
+            "package-type": "domain",
+            "stability": "dev",
+            "owns": [
+                "Contracts",
+                "Data",
+                "Enums",
+                "Internal",
+                "Laravel"
+            ]
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

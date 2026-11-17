@@ -20,6 +20,9 @@
             "spec_rev": "2026-10"
         },
         "packman": {
+            "schema-version": 1,
+            "package-type": "domain",
+            "stability": "dev",
             "error-prefix": "billium",
             "owns": [
                 "Attributes",

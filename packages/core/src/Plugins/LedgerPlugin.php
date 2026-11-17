@@ -12,6 +12,7 @@ use Billium\Ledger\Contracts\LedgerQueries;
 use Billium\Ledger\Contracts\ObservationApplier;
 use Billium\Ledger\Contracts\QualifiedObservationApplier;
 use Billium\Ledger\Contracts\SettlementIntentLocks;
+use Billium\Ledger\Laravel\LedgerCapabilities;
 use Override;
 use Packman\Attributes\Api;
 use Packman\Extensions\Concerns\Composition\ContributesToSlots;
@@ -105,5 +106,19 @@ final class LedgerPlugin implements ExtensionPlugin, WithCapabilities, WithSchem
             QualifiedObservationApplier::class => Cardinality::OptionalSingle->value,
             SettlementIntentLocks::class => Cardinality::OptionalSingle->value,
         ];
+    }
+
+    /** @return array<class-string, class-string> */
+    #[Override]
+    public function providedCapabilities(): array
+    {
+        return LedgerCapabilities::map();
+    }
+
+    /** @return list<array{slot: class-string, id: string, implementation: class-string, priority?: int, key?: string|null}> */
+    #[Override]
+    public function slotContributions(): array
+    {
+        return LedgerCapabilities::slots();
     }
 }

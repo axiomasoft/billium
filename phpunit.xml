@@ -46,7 +46,6 @@
         <env name="DB_PASSWORD" value="billium_runtime"/>
         <env name="DB_OWNER_USERNAME" value="skm"/>
         <env name="DB_OWNER_PASSWORD" value="skm_dev"/>
-        <env name="PACKMAN_TEST_DESTRUCTIVE_OPT_IN" value="1"/>
         <env name="PGSQL_HOST" value="127.0.0.1"/>
         <env name="PGSQL_PORT" value="54329"/>
         <env name="PGSQL_DATABASE" value="billium_test"/>

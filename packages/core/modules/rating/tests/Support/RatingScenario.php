@@ -18,13 +18,13 @@ use Billium\Rating\Data\Rating\BookRatedBasis;
 use Billium\Rating\Data\Rating\FrozenRatingInputs;
 use Billium\Rating\Data\Rating\PreparedRating;
 use Billium\Rating\Internal\Pipeline\RatingComputation;
-use Billium\Rating\Internal\RatingServiceProvider;
 use Billium\Rating\Internal\Storage\FrozenInputsCodec;
+use Billium\Rating\Laravel\RatingServiceProvider;
 use Billium\Schedule\Contracts\OccurrenceService;
 use Billium\Schedule\Data\Commands\ApplyScheduleRevision;
-use Billium\Schedule\Internal\ScheduleServiceProvider;
+use Billium\Schedule\Laravel\ScheduleServiceProvider;
 use Billium\Schedule\Tests\Support\Terms;
-use Billium\Usage\Internal\UsageServiceProvider;
+use Billium\Usage\Laravel\UsageServiceProvider;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Application;
@@ -38,8 +38,8 @@ final class RatingScenario implements Scenario
         SimulatedFinancialAuthorityEvidence::admitCurrent($app);
         $app->make(Repository::class)->set('billium.modules.enabled', ['platform', 'ledger', 'usage', 'rating', 'schedule']);
         $app->register(UsageServiceProvider::class);
-        $app->register(RatingServiceProvider::class);
         $app->register(ScheduleServiceProvider::class);
+        $app->register(RatingServiceProvider::class);
     }
 
     public function run(Application $app, int $index, array $args): array

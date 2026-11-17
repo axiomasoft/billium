@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Tests\Feature;
 
+use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Contracts\Modules\ModuleStateReader;
 use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
@@ -46,6 +47,7 @@ final class InstallationInitTest extends PlatformTestCase
     public function test_init_without_a_ref_fails(): void
     {
         config(['billium.installation_ref' => null]);
+        $this->application()->forgetInstance(BilliumOptions::class);
         self::assertSame(1, $this->init([]));
         self::assertSame(0, $this->rows('billium_installation_state'));
     }

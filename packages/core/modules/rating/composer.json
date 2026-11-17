@@ -1,0 +1,38 @@
+{
+    "name": "axiomasoft/billium-rating",
+    "description": "Billium Rating module: deterministic pricing versions, proration, rating pipelines, and tax-aware correction workflows.",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.4",
+        "axiomasoft/billium-contracts": "^0.1",
+        "axiomasoft/billium-core": "^0.1",
+        "axiomasoft/billium-ledger": "^0.1",
+        "axiomasoft/billium-platform": "^0.1",
+        "axiomasoft/billium-schedule": "^0.1",
+        "axiomasoft/billium-usage": "^0.1",
+        "axiomasoft/packman": "^0.1",
+        "laravel/framework": "^13.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Billium\\Rating\\": "src/"
+        }
+    },
+    "extra": {
+        "packman": {
+            "schema-version": 1,
+            "package-type": "domain",
+            "stability": "dev",
+            "owns": [
+                "Contracts",
+                "Data",
+                "Enums",
+                "Internal",
+                "Laravel"
+            ]
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

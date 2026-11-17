@@ -46,10 +46,84 @@
             ]
         },
         {
+            "name": "axiomasoft/billium-platform",
+            "path": "packages/core/modules/platform",
+            "namespace": "Billium\\Platform\\",
+            "profile": "laravel-package",
+            "layer": "L2",
+            "type": "domain",
+            "owns": [
+                "Contracts",
+                "Data",
+                "Exceptions",
+                "Internal",
+                "Laravel"
+            ]
+        },
+        {
+            "name": "axiomasoft/billium-ledger",
+            "path": "packages/core/modules/ledger",
+            "namespace": "Billium\\Ledger\\",
+            "profile": "laravel-package",
+            "layer": "L2",
+            "type": "domain",
+            "owns": [
+                "Contracts",
+                "Data",
+                "Internal",
+                "Laravel"
+            ]
+        },
+        {
+            "name": "axiomasoft/billium-usage",
+            "path": "packages/core/modules/usage",
+            "namespace": "Billium\\Usage\\",
+            "profile": "laravel-package",
+            "layer": "L2",
+            "type": "domain",
+            "owns": [
+                "Contracts",
+                "Data",
+                "Enums",
+                "Internal",
+                "Laravel"
+            ]
+        },
+        {
+            "name": "axiomasoft/billium-schedule",
+            "path": "packages/core/modules/schedule",
+            "namespace": "Billium\\Schedule\\",
+            "profile": "laravel-package",
+            "layer": "L2",
+            "type": "domain",
+            "owns": [
+                "Contracts",
+                "Data",
+                "Enums",
+                "Internal",
+                "Laravel"
+            ]
+        },
+        {
+            "name": "axiomasoft/billium-rating",
+            "path": "packages/core/modules/rating",
+            "namespace": "Billium\\Rating\\",
+            "profile": "laravel-package",
+            "layer": "L2",
+            "type": "domain",
+            "owns": [
+                "Contracts",
+                "Data",
+                "Enums",
+                "Internal",
+                "Laravel"
+            ]
+        },
+        {
             "name": "axiomasoft/billium-testkit",
             "path": "packages/testkit",
             "namespace": "Billium\\Testkit\\",
-            "profile": "php-library",
+            "profile": "laravel-package",
             "layer": "L4",
             "type": "dev",
             "dev_only": true,

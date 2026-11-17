@@ -51,6 +51,9 @@ use Billium\Platform\Contracts\Installation\Installation;
 use Billium\Platform\Data\Inbox\BootstrapItem;
 use Billium\Platform\Data\Inbox\BootstrapPartition;
 use Billium\Platform\Internal\EventContracts\DatabaseEventContractRegistrar;
+use Billium\Rating\Laravel\RatingServiceProvider;
+use Billium\Schedule\Laravel\ScheduleServiceProvider;
+use Billium\Usage\Laravel\UsageServiceProvider;
 use DateTimeImmutable;
 use Illuminate\Console\Application as ConsoleApplication;
 use Illuminate\Container\Container;
@@ -76,9 +79,16 @@ final class LedgerAdapter
     /** @var list<string> */
     private array $bootModules = [];
 
+    /** @var array<string, class-string> */
+    public const array RUNTIME_MODULE_PROVIDERS = [
+        'usage' => UsageServiceProvider::class,
+        'rating' => RatingServiceProvider::class,
+        'schedule' => ScheduleServiceProvider::class,
+    ];
+
     public function p4(): P4RuntimeAdapter
     {
-        $available = array_filter($this->runtimeModules, static fn (string $module): bool => class_exists('Billium\\'.ucfirst($module).'\\Internal\\'.ucfirst($module).'ServiceProvider'));
+        $available = array_filter($this->runtimeModules, static fn (string $module): bool => isset(self::RUNTIME_MODULE_PROVIDERS[$module]));
         if ($available !== [] && ($this->app === null || $this->bootModules !== $this->runtimeModules)) {
             $this->app = null;
             $this->boot();
@@ -233,8 +243,8 @@ final class LedgerAdapter
                     // Testbench configures the environment after provider registration.
                     // Enroll the selected binaries explicitly, before their boot/migration discovery.
                     foreach ($this->runtimeModules as $module) {
-                        $provider = 'Billium\\'.ucfirst($module).'\\Internal\\'.ucfirst($module).'ServiceProvider';
-                        if (class_exists($provider)) {
+                        $provider = LedgerAdapter::RUNTIME_MODULE_PROVIDERS[$module] ?? null;
+                        if ($provider !== null) {
                             $providers[] = $provider;
                         }
                     }
@@ -260,7 +270,7 @@ final class LedgerAdapter
             restore_exception_handler();
         }
         $output = new BufferedOutput;
-        if ($app->make(Kernel::class)->call('migrate', ['--database' => 'billium_owner', '--force' => true], $output) !== 0) {
+        if ($app->make(Kernel::class)->call('packman:schema:migrate', ['--scope' => 'central', '--database' => 'billium_owner', '--modules' => true, '--force' => true], $output) !== 0) {
             throw new LogicException('Ledger migrations failed: '.$output->fetch());
         }
         TestEnvironment::assertRuntimeSafe($app['db']->connection('pgsql')->getPdo());

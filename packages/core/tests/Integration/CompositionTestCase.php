@@ -19,8 +19,8 @@ use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Testing\PendingCommand;
 use Orchestra\Testbench\TestCase;
+use Packman\Schema\Contracts\Migration\SchemaMigrator;
 
 /** Fresh database per composition, committed roots and distinct migration/runtime roles (D50/D55). */
 abstract class CompositionTestCase extends TestCase
@@ -88,9 +88,22 @@ abstract class CompositionTestCase extends TestCase
 
     protected function migrateModules(): void
     {
-        $command = $this->artisan('migrate', ['--database' => 'billium_owner', '--force' => true]);
-        self::assertInstanceOf(PendingCommand::class, $command);
-        $command->assertExitCode(0);
+        $map = [
+            'platform' => 'axiomasoft/billium-core:billium-platform',
+            'ledger' => 'axiomasoft/billium-core:billium-ledger',
+            'usage' => 'axiomasoft/billium-core:billium-usage',
+            'schedule' => 'axiomasoft/billium-core:billium-schedule',
+            'rating' => 'axiomasoft/billium-core:billium-rating',
+        ];
+        $enabled = $this->application()->make(Repository::class)->get('billium.modules.enabled', $this->modules());
+        /** @var list<string> $ids */
+        $ids = [];
+        foreach (is_array($enabled) ? $enabled : $this->modules() as $module) {
+            if (is_string($module) && isset($map[$module])) {
+                $ids[] = $map[$module];
+            }
+        }
+        $this->application()->make(SchemaMigrator::class)->migrateSets($ids, 'billium_owner');
     }
 
     /** @param class-string<ServiceProvider> $provider */

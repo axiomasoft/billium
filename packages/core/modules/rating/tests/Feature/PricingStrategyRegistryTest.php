@@ -28,7 +28,7 @@ use Billium\Rating\Enums\StrategyId;
 use Billium\Rating\Enums\TaxMode;
 use Billium\Rating\Enums\TaxSnapshotKind;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
-use Billium\Rating\Internal\RatingServiceProvider;
+use Billium\Rating\Laravel\RatingServiceProvider;
 use DateTimeImmutable;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Foundation\Application;

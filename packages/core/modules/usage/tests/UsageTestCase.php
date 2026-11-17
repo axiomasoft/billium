@@ -9,7 +9,7 @@ use Billium\Core\Data\Runtime\Caller;
 use Billium\Platform\Tests\PlatformTestCase;
 use Billium\Usage\Contracts\Usage;
 use Billium\Usage\Contracts\UsageAttribution;
-use Billium\Usage\Internal\UsageServiceProvider;
+use Billium\Usage\Laravel\UsageServiceProvider;
 use Billium\Usage\Tests\Support\UsageFixtures;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Foundation\Application;

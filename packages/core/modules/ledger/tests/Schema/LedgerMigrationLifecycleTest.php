@@ -38,7 +38,9 @@ final class LedgerMigrationLifecycleTest extends LedgerTestCase
             $owner->getPdo()->exec('DROP TABLE '.implode(', ', $tables).' CASCADE');
             TestEnvironment::prepareLedgerRebuild($owner);
             $owner->table('migrations')->whereIn('migration', $migrations)->delete();
-            $command = $this->artisan('migrate', ['--database' => 'billium_owner', '--force' => true]);
+            $command = $this->artisan('packman:schema:migrate', [
+                '--scope' => 'central', '--database' => 'billium_owner', '--modules' => true, '--force' => true,
+            ]);
             self::assertInstanceOf(PendingCommand::class, $command);
             $command->assertExitCode(0)->run();
             TestEnvironment::assertRuntimeSafe(TestEnvironment::pdo());

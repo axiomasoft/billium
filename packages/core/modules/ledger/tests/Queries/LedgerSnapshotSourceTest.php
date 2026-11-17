@@ -6,6 +6,7 @@ namespace Billium\Ledger\Tests\Queries;
 
 use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Enums\ProblemCode;
+use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Tests\Support\ObservationFactory;
 use Billium\Ledger\Internal\Snapshot\LedgerSnapshotSource;
@@ -27,6 +28,7 @@ final class LedgerSnapshotSourceTest extends QueryTestCase
         $this->tryObserve(ObservationFactory::charge('unbound', 1, 1234, sequence: 3, fields: ['businessIntentRef' => 'missing']));
         $this->observe(ObservationFactory::charge('op-1', 2, 10000, 14000, sequence: 4));
         config(['billium.feed.signing_key' => str_repeat('k', 32)]);
+        $this->application()->forgetInstance(BilliumOptions::class);
         $feed = $this->application()->make(EventFeed::class);
         $selection = $feed->openFeed(new FeedScope(self::INSTALLATION, 'seller-a', 'test', '1'), 'events-2026-10-v1', ['billium.event.v1'], ['payment.outcome.v1', 'discrepancy.recorded.v1']);
         $snapshot = $feed->bootstrap($selection);
@@ -53,6 +55,7 @@ final class LedgerSnapshotSourceTest extends QueryTestCase
         $this->seedQueryState();
         $this->creditNote('note-a', ['obligation-a' => '10.00'])->orThrow();
         config(['billium.feed.signing_key' => str_repeat('k', 32)]);
+        $this->application()->forgetInstance(BilliumOptions::class);
         $feed = $this->application()->make(EventFeed::class);
         $types = ['obligation.created.v1', 'invoice.issued.v1', 'allocation.applied.v1', 'payment.outcome.v1', 'discrepancy.recorded.v1'];
         $selection = $feed->openFeed(new FeedScope(self::INSTALLATION, 'seller-a', 'test', '1'), 'events-2026-10-v1', ['billium.event.v1'], $types);
@@ -94,6 +97,7 @@ final class LedgerSnapshotSourceTest extends QueryTestCase
         $this->observe(ObservationFactory::charge('op-1', 1, 10000, sequence: 1));
         self::assertSame(10000, $this->allocated('o1'));
         config(['billium.feed.signing_key' => str_repeat('k', 32)]);
+        $this->application()->forgetInstance(BilliumOptions::class);
         $feed = $this->application()->make(EventFeed::class);
         $selection = $feed->openFeed(new FeedScope(self::INSTALLATION, 'seller-a', 'test', '1'),
             'events-2026-10-v1', ['billium.event.v1'], ['payment.outcome.v1']);
@@ -128,6 +132,7 @@ final class LedgerSnapshotSourceTest extends QueryTestCase
     {
         $this->obligation();
         config(['billium.feed.signing_key' => str_repeat('k', 32)]);
+        $this->application()->forgetInstance(BilliumOptions::class);
         $feed = $this->application()->make(EventFeed::class);
         $selection = $feed->openFeed(new FeedScope(self::INSTALLATION, 'seller-a', 'test', '1'), 'events-2026-10-v1', ['billium.event.v1'], ['obligation.created.v1']);
         $source = $this->application()->make('billium.snapshot.ledger.obligations');

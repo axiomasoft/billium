@@ -46,6 +46,7 @@ services:
       DB_PASSWORD: billium_runtime
       DB_OWNER_USERNAME: billium
       DB_OWNER_PASSWORD: billium
+      PACKMAN_TEST_DESTRUCTIVE_OPT_IN: "1"
 
 configs:
   test-database-roles:

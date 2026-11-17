@@ -6,6 +6,7 @@ namespace Billium\Platform\Tests\Concurrency;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Data\Runner\Receipt;
 use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Tests\Support\Concurrency\ConcurrencyStand;
@@ -62,6 +63,7 @@ final class FinancialSessionSealTest extends PlatformTestCase
     public function test_seal_lock_timeout_refuses_without_asserting_a_seal(): void
     {
         config(['billium.financial_session.seal_lock_timeout_ms' => 200]);
+        $this->application()->forgetInstance(BilliumOptions::class);
         $this->application()->forgetInstance(DatabaseInstallation::class);
         $holder = TestEnvironment::pdo();
         $holder->beginTransaction();

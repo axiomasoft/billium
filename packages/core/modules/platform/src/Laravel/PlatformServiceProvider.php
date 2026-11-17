@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Billium\Platform\Internal;
+namespace Billium\Platform\Laravel;
 
 use Billium\Platform\Internal\Console\PruneCommand;
 use Billium\Platform\Internal\Console\RegisterEventContractsCommand;
@@ -12,11 +12,15 @@ use Billium\Platform\Internal\Registrars\PlatformInstallationRegistrar;
 use Billium\Platform\Internal\Registrars\PlatformOutboxRegistrar;
 use Illuminate\Support\ServiceProvider;
 use Override;
-use Packman\Attributes\Internal;
+use Packman\Attributes\Spi;
+use Packman\Attributes\SpiKind;
 use Packman\Foundation\Concerns\RegistersPackageRegistrars;
 use Packman\Foundation\Contracts\PackageRegistrar;
 
-#[Internal]
+/**
+ * Laravel service provider registering the Billium Platform module runtime and console commands.
+ */
+#[Spi(kind: SpiKind::Call, since: '1.0')]
 final class PlatformServiceProvider extends ServiceProvider
 {
     use RegistersPackageRegistrars {

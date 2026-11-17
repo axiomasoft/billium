@@ -6,6 +6,7 @@ namespace Billium\Platform\Tests\Inbox;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Enums\Runtime\FinancialMode;
@@ -424,6 +425,7 @@ final class CustodyProcessorTest extends InboxTestCase
     public function test_a_retry_rejects_ungranted_sources_before_the_retry_budget_check(): void
     {
         config(['billium.inbox.retry_budget' => 1]);
+        $this->application()->forgetInstance(BilliumOptions::class);
         $id = $this->seedPartition(10);
         $handler = new JournalHandler(['evt-L1-11' => HandlerOutcome::parkedDependency('payment', 'charge-1')]);
         $parked = $this->custody($this->envelope(11), $handler);

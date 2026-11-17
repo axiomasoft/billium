@@ -50,9 +50,9 @@ use Throwable;
 final readonly class DatabaseCorrectionPreparer
 {
     public function __construct(private CallerContext $callers, private RatingStore $store, private CorrectionStore $corrections, private ScheduleQueries $schedule,
-        private LedgerQueries $ledger, private TaxSnapshotPort $tax,
-        private TaxPolicyFrontier $policyFrontier, private RatingComputation $rating, private CorrectionCalculator $calculator,
-        private AmendmentSupport $amendmentSupport, private ProrationCalculator $proration, private ?AggregationQueries $usage = null) {}
+        private TaxSnapshotPort $tax, private TaxPolicyFrontier $policyFrontier, private RatingComputation $rating,
+        private CorrectionCalculator $calculator, private AmendmentSupport $amendmentSupport, private ProrationCalculator $proration,
+        private ?LedgerQueries $ledger = null, private ?AggregationQueries $usage = null) {}
 
     public function prepare(PrepareCorrection $command): PreparedCorrection|RatingHold
     {
@@ -212,14 +212,19 @@ final readonly class DatabaseCorrectionPreparer
         if (bccomp(RatingRows::decimal($computation->deltaGrossMinor), '0', 0) < 0 && $command->releasePolicy === null) {
             RatingComputation::refuse('release_policy_required');
         }
-        $obligation = $booking->obligation_ref === null ? null : $this->ledger->obligation($booking->obligation_ref);
+        $ledger = $this->ledger;
+        $obligation = $booking->obligation_ref === null
+            ? null
+            : ($ledger ?? throw new LogicException('Ledger capability absent'))->obligation($booking->obligation_ref);
         $invoiceRef = is_string($obligation['billedInvoiceRef'] ?? null) ? $obligation['billedInvoiceRef'] : null;
         $creditParts = [];
         if (bccomp(RatingRows::decimal($computation->deltaGrossMinor), '0', 0) < 0) {
             $remaining = bcsub('0', RatingRows::decimal($computation->deltaGrossMinor), 0);
             $obligationRefs = $booking->obligation_ref === null ? [] : [$booking->obligation_ref];
             foreach ([...$obligationRefs, ...$this->corrections->childObligations($command->parentOccurrenceRef)] as $ref) {
-                $view = $ref === $booking->obligation_ref ? $obligation : $this->ledger->obligation($ref);
+                $view = $ref === $booking->obligation_ref
+                    ? $obligation
+                    : ($ledger ?? throw new LogicException('Ledger capability absent'))->obligation($ref);
                 $amount = $command->releasePolicy === ReleasePolicy::OpenOnly
                     ? (string) Money::fromWire($view['open'] ?? null)->minor
                     : bcsub(bcadd((string) Money::fromWire($view['originalDue'] ?? null)->minor,

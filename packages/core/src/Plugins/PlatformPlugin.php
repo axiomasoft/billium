@@ -18,6 +18,11 @@ use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
 use Billium\Core\Database\BilliumSchemaSetProvider;
 use Billium\Core\Diagnostics\BilliumCompatibilityDoctorCheck;
 use Billium\Core\Errors\BilliumCoreProblemDefinitions;
+use Billium\Core\Internal\Modules\ModuleCatalog;
+use Billium\Core\Internal\Modules\ModuleLifecycle;
+use Billium\Core\Internal\Runner\DatabaseOperationRunner;
+use Billium\Core\Internal\Runner\UnboundCallerContext;
+use Billium\Core\Internal\Runner\UnboundSessionAdmission;
 use Billium\Platform\Contracts\EventContracts\EventContractRegistrar;
 use Billium\Platform\Contracts\Feed\EventFeed;
 use Billium\Platform\Contracts\Feed\FeedPartitions;
@@ -30,6 +35,7 @@ use Billium\Platform\Contracts\Installation\Installation;
 use Billium\Platform\Contracts\Installation\RootAdmission;
 use Billium\Platform\Contracts\Outbox\CommandOutbox;
 use Billium\Platform\Contracts\Outbox\Outbox;
+use Billium\Platform\Laravel\PlatformCapabilities;
 use Override;
 use Packman\Attributes\Api;
 use Packman\Extensions\Concerns\Composition\ContributesToSlots;
@@ -167,6 +173,21 @@ final class PlatformPlugin implements ExtensionPlugin, WithCapabilities, WithCon
             FeedRecoveryQueries::class => Cardinality::OptionalSingle->value,
             RootAdmission::class => Cardinality::OptionalSingle->value,
             EventContractRegistrar::class => Cardinality::OptionalSingle->value,
+        ];
+    }
+
+    /** @return array<class-string, class-string> */
+    #[Override]
+    public function providedCapabilities(): array
+    {
+        return [
+            OperationRunner::class => DatabaseOperationRunner::class,
+            CallerContext::class => UnboundCallerContext::class,
+            FinancialSessionAdmission::class => UnboundSessionAdmission::class,
+            ModuleRegistry::class => ModuleCatalog::class,
+            ModuleAdmissionGate::class => ModuleLifecycle::class,
+            ModuleTransitionPlanner::class => ModuleLifecycle::class,
+            ...PlatformCapabilities::map(),
         ];
     }
 

@@ -14,6 +14,7 @@ use Billium\Platform\Tests\PlatformTestCase;
 use DateTimeImmutable;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Testing\PendingCommand;
+use Packman\Schema\Contracts\Migration\SchemaMigrator;
 use PHPUnit\Framework\Attributes\Group;
 
 #[Group('pg')]
@@ -36,9 +37,13 @@ final class RuntimeGrantsTest extends PlatformTestCase
         // Retain the historical PostgreSQL functions and give the forward-only P5 additions a fresh installation.
         TestEnvironment::prepareFreshRebuild($this->application());
         $this->beforeApplicationDestroyed(fn () => TestEnvironment::restoreSuiteMigrations($this->application()));
-        $migration = $this->artisan('migrate:fresh', ['--database' => 'billium_owner', '--force' => true]);
-        self::assertInstanceOf(PendingCommand::class, $migration);
-        self::assertSame(0, $migration->run());
+        $wipe = $this->artisan('db:wipe', ['--database' => 'billium_owner', '--force' => true]);
+        self::assertInstanceOf(PendingCommand::class, $wipe);
+        $wipe->assertExitCode(0);
+        $this->application()->make(SchemaMigrator::class)->migrateSets(
+            ['axiomasoft/billium-core:billium-platform', 'axiomasoft/billium-core:billium-ledger'],
+            'billium_owner',
+        );
         self::assertSame('pgsql', config('database.default'));
         self::assertSame($runtimeRole, RuntimeGrants::role());
         TestEnvironment::assertRuntimeSafe($runtime);

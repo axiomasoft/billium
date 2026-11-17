@@ -6,12 +6,15 @@ namespace Billium\Core\Tests\Arch;
 
 use Billium\Core\BilliumCoreServiceProvider;
 use Billium\Core\Internal\Modules\ModuleCatalog;
-use Billium\Ledger\Internal\LedgerServiceProvider;
-use Billium\Platform\Internal\PlatformServiceProvider;
+use Billium\Ledger\Laravel\LedgerServiceProvider;
+use Billium\Platform\Laravel\PlatformServiceProvider;
 use Illuminate\Support\Facades\DB;
 use Orchestra\Testbench\TestCase;
 use Packman\Attributes\Api;
 use Packman\Attributes\Spi;
+use Packman\Schema\Contracts\Migration\SchemaSets;
+use Packman\Schema\Enums\SchemaLifecycle;
+use Packman\Schema\Enums\SchemaScope;
 use PhpParser\Node\Name;
 use PhpParser\NodeFinder;
 use PhpParser\NodeTraverser;
@@ -35,9 +38,17 @@ final class ModuleBoundariesTest extends TestCase
         self::assertSame(100, config('billium.feed.drain_batch'));
         self::assertTrue(config('billium.runtime_role.preflight'));
         $paths = array_map(realpath(...), $this->app['migrator']->paths());
-        foreach (['platform', 'ledger'] as $module) {
-            self::assertContains(realpath(dirname(__DIR__, 2).'/database/migrations/'.$module), $paths);
+        foreach (['platform', 'ledger', 'usage', 'rating', 'schedule'] as $module) {
+            self::assertNotContains(realpath(dirname(__DIR__, 2).'/database/migrations/'.$module), $paths);
         }
+
+        $sets = $this->app->make(SchemaSets::class);
+        $platformOnly = $sets->forScope(SchemaScope::Central, includeModules: false);
+        self::assertSame(['axiomasoft/billium-core:billium-platform'], array_map(static fn ($set): string => $set->id(), $platformOnly));
+
+        $withModules = $sets->forScope(SchemaScope::Central, includeModules: true);
+        self::assertSame(SchemaLifecycle::Module, $sets->get('axiomasoft/billium-core:billium-ledger')->lifecycle);
+        self::assertCount(5, $withModules);
     }
 
     public function test_modules_keep_internal_dependencies_and_database_access_private(): void
@@ -124,7 +135,7 @@ final class ModuleBoundariesTest extends TestCase
         $violations = [];
         $root = dirname(__DIR__, 2).'/modules';
         foreach (self::phpFiles($root) as $file) {
-            if (preg_match('~^modules/([^/]+)/src/(Contracts|Data|Enums|Events|Exceptions)/(.+)\.php$~', substr($file, strlen(dirname(__DIR__, 2)) + 1), $match) === 1) {
+            if (preg_match('~^modules/([^/]+)/src/(Contracts|Data|Enums|Events|Exceptions|Laravel)/(.+)\.php$~', substr($file, strlen(dirname(__DIR__, 2)) + 1), $match) === 1) {
                 $violations = array_merge($violations, self::internalSignatureTypes(new ReflectionClass(
                     'Billium\\'.ucfirst($match[1]).'\\'.$match[2].'\\'.str_replace('/', '\\', $match[3]),
                 )));
@@ -206,7 +217,7 @@ final class ModuleBoundariesTest extends TestCase
         preg_match('~^modules/([^/]+)/src/([^/]+)~', $path, $location);
         $module = $location[1] ?? 'core';
         $category = $location[2] ?? 'Internal';
-        if (! in_array($category, ['Internal', 'Contracts', 'Data', 'Enums', 'Events', 'Exceptions'], true)) {
+        if (! in_array($category, ['Internal', 'Contracts', 'Data', 'Enums', 'Events', 'Exceptions', 'Laravel'], true)) {
             $violations[] = $path.': unsupported public category (M-38)';
         }
         $tree = (new ParserFactory)->createForNewestSupportedVersion()->parse($source) ?? [];
@@ -222,12 +233,9 @@ final class ModuleBoundariesTest extends TestCase
             [$type, $value] = $token;
             if (in_array($type, [T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED], true)) {
                 $name = ltrim($value, '\\');
-                if (preg_match('/^Billium\\\\(Platform|Ledger|Core)\\\\Internal(?:\\\\|$)/', $name, $dependency) === 1
+                if (preg_match('/^Billium\\\\(Platform|Ledger|Usage|Rating|Schedule|Core)\\\\Internal(?:\\\\|$)/', $name, $dependency) === 1
                     && strtolower($dependency[1]) !== $module) {
-                    $provider = 'Billium\\'.$dependency[1].'\\Internal\\'.$dependency[1].'ServiceProvider';
-                    if ($path !== 'src/BilliumCoreServiceProvider.php' || $name !== $provider) {
-                        $violations[] = $path.': foreign Internal dependency '.$name.' (D55/INV-01)';
-                    }
+                    $violations[] = $path.': foreign Internal dependency '.$name.' (D55/INV-01)';
                 }
                 if (str_starts_with($name, 'Illuminate\\Database\\Eloquent')
                     || ($category !== 'Internal' && (str_starts_with($name, 'Illuminate\\Database\\') || $name === DB::class))) {

@@ -9,6 +9,7 @@ use Billium\Contracts\Data\Envelopes\UsageFactV2;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Tests\Support\Concurrency\ConcurrencyStand;
@@ -232,6 +233,7 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
     public function test_an_unposted_positive_basis_cannot_be_corrected_as_a_no_charge_booking(): void
     {
         config(['billium.modules.enabled' => ['platform', 'rating', 'usage', 'schedule']]);
+        $this->application()->forgetInstance(BilliumOptions::class);
         $receipt = $this->book($this->prepared());
         self::assertSame('unposted', $receipt->outcome->value);
         try {

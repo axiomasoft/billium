@@ -10,7 +10,7 @@ use Billium\Core\Tests\Support\Concurrency\Scenario;
 use Billium\Core\Tests\Support\FixedCallerContext;
 use Billium\Usage\Contracts\Usage;
 use Billium\Usage\Contracts\UsageAttribution;
-use Billium\Usage\Internal\UsageServiceProvider;
+use Billium\Usage\Laravel\UsageServiceProvider;
 use Billium\Usage\Tests\Support\UsageFixtures;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Application;

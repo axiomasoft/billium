@@ -6,6 +6,7 @@ namespace Billium\Ledger\Tests\Feature;
 
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
+use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Data\Runtime\FinancialScope;
@@ -123,6 +124,7 @@ final class AuthorityScopedPaymentsTest extends QueryTestCase
         self::problem(ProblemCode::ValidationInvalid, fn () => $this->queries()->allocationByOperation('same-payment'));
 
         config(['billium.feed.signing_key' => str_repeat('k', 32)]);
+        $this->application()->forgetInstance(BilliumOptions::class);
         $feed = $this->application()->make(EventFeed::class);
         $selection = $feed->openFeed(new FeedScope(self::INSTALLATION, 'seller-a', 'test', '1'), 'events-2026-10-v1',
             ['billium.event.v1'], ['payment.outcome.v1']);
@@ -201,6 +203,7 @@ final class AuthorityScopedPaymentsTest extends QueryTestCase
     public function test_another_authoritys_original_charge_never_consumes_a_parked_refunds_retry_budget(): void
     {
         config(['billium.inbox.retry_backoff_seconds' => 0]);
+        $this->application()->forgetInstance(BilliumOptions::class);
         $this->debt('o1', 1000);
         $this->intent('intent-a', ['o1']);
         $this->observe(ObservationFactory::charge('same-payment', 1, 500));

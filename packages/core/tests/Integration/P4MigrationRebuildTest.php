@@ -28,7 +28,9 @@ final class P4MigrationRebuildTest extends RatingTestCase
         self::assertNull($this->value("SELECT to_regclass('public.billium_rating_rated_basis')"));
         self::assertSame($before, $this->functions());
 
-        $rebuild = $this->artisan('migrate', ['--database' => 'billium_owner', '--force' => true]);
+        $rebuild = $this->artisan('packman:schema:migrate', [
+            '--scope' => 'central', '--database' => 'billium_owner', '--modules' => true, '--force' => true,
+        ]);
         self::assertInstanceOf(PendingCommand::class, $rebuild);
         self::assertSame(0, $rebuild->run());
         self::assertSame($before, $this->functions(), 'Function identity, ownership and security attributes must survive replacement');

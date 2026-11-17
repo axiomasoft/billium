@@ -12,6 +12,13 @@
         "axiomasoft/packman-schema": "^0.1",
         "laravel/framework": "^13.0"
     },
+    "suggest": {
+        "axiomasoft/billium-platform": "Required Billium financial platform module runtime.",
+        "axiomasoft/billium-ledger": "Required Billium financial ledger module runtime.",
+        "axiomasoft/billium-usage": "Optional Billium usage admission and aggregation module.",
+        "axiomasoft/billium-rating": "Optional Billium pricing and rating module.",
+        "axiomasoft/billium-schedule": "Optional Billium billing schedule module."
+    },
     "autoload": {
         "psr-4": {
             "Billium\\Core\\": "src/",
@@ -33,6 +40,9 @@
             ]
         },
         "packman": {
+            "schema-version": 1,
+            "package-type": "domain",
+            "stability": "dev",
             "error-prefix": "billium",
             "owns": [
                 "Configuration",

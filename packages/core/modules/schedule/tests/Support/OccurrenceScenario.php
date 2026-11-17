@@ -17,7 +17,7 @@ use Billium\Schedule\Data\Commands\CancelSchedule;
 use Billium\Schedule\Data\Commands\EnsureOccurrence;
 use Billium\Schedule\Data\Commands\MaterializeNext;
 use Billium\Schedule\Enums\OccurrencePurpose;
-use Billium\Schedule\Internal\ScheduleServiceProvider;
+use Billium\Schedule\Laravel\ScheduleServiceProvider;
 use DateTimeImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Application;

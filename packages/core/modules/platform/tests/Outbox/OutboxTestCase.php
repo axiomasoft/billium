@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Tests\Outbox;
 
+use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Contracts\Modules\ModuleRegistry;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Contracts\Runtime\EventPublisher;
@@ -27,6 +28,7 @@ abstract class OutboxTestCase extends PlatformTestCase
     {
         parent::setUp();
         config(['billium.feed.signing_key' => str_repeat('k', 32)]);
+        $this->application()->forgetInstance(BilliumOptions::class);
         $this->activeSession();
     }
 

@@ -15,13 +15,44 @@ use Billium\Core\Data\Modules\ModuleManifest;
 use Billium\Core\Data\Modules\PublicEventDeclaration;
 use Billium\Core\Enums\Modules\CompatibilityFindingCode as Code;
 use Billium\Core\Enums\Modules\ModulePresence;
+use Billium\Core\Plugins\LedgerPlugin;
+use Billium\Core\Plugins\PlatformPlugin;
+use Billium\Core\Plugins\RatingPlugin;
+use Billium\Core\Plugins\SchedulePlugin;
+use Billium\Core\Plugins\UsagePlugin;
+use Illuminate\Contracts\Container\Container;
 use Packman\Attributes\Internal;
+use Packman\Plugins\Contracts\Contributions\Contributions;
+use Packman\Plugins\Contracts\Registry\ExtensionPlugin;
+use Packman\Plugins\Contracts\Registry\PluginActivationGate;
+use Packman\Plugins\Contracts\Registry\PluginInspector;
+use Packman\Plugins\Testing\PluginGraph;
 
 /** Descriptor set + desired config + capabilities + checkpoints → report. Pure: no database, no filesystem after load. */
 #[Internal]
 final readonly class ModuleCatalog implements ModuleRegistry
 {
+    /** @var list<class-string<ExtensionPlugin>> */
+    public const array PACKAGED_PLUGINS = [
+        PlatformPlugin::class,
+        LedgerPlugin::class,
+        UsagePlugin::class,
+        SchedulePlugin::class,
+        RatingPlugin::class,
+    ];
+
     public function __construct(private ModuleManifest $manifest) {}
+
+    public static function compilePluginGraph(Container $container, ?PluginActivationGate $activationGate = null): Contributions&PluginInspector
+    {
+        return PluginGraph::compile(
+            container: $container,
+            plugins: [],
+            corePluginId: 'axiomasoft.billium.platform',
+            builtIn: self::PACKAGED_PLUGINS,
+            activationGate: $activationGate,
+        );
+    }
 
     /** Loads the packaged resource only; the installed package never reads the monorepo spec/ directory. */
     public static function packaged(): self
@@ -166,8 +197,8 @@ final readonly class ModuleCatalog implements ModuleRegistry
                 }
             }
         }
-        $cycle = $this->cycle($byId);
-        if ($cycle !== null) {
+        [, $cycle] = self::topologicalSort($byId);
+        if ($cycle !== []) {
             $findings[] = new CompatibilityFinding(Code::DependencyCycle, null, 'dependency cycle: '.implode(' -> ', $cycle));
         }
 
@@ -216,51 +247,6 @@ final readonly class ModuleCatalog implements ModuleRegistry
     }
 
     /**
-     * @param  array<string, ModuleDescriptor>  $byId
-     * @return list<string>|null
-     */
-    private function cycle(array $byId): ?array
-    {
-        $state = [];
-        foreach (array_keys($byId) as $id) {
-            $found = $this->visit($id, [], $state, $byId);
-            if ($found !== null) {
-                return $found;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Depth-first walk; state 1 = on the current path, 2 = finished.
-     *
-     * @param  list<string>  $path
-     * @param  array<string, int>  $state
-     * @param  array<string, ModuleDescriptor>  $byId
-     * @return list<string>|null
-     */
-    private function visit(string $id, array $path, array &$state, array $byId): ?array
-    {
-        if (! isset($byId[$id]) || ($state[$id] ?? 0) === 2) {
-            return null;
-        }
-        if (($state[$id] ?? 0) === 1) {
-            return [...array_slice($path, (int) array_search($id, $path, true)), $id];
-        }
-        $state[$id] = 1;
-        foreach ($byId[$id]->requiredModuleIds() as $required) {
-            $found = $this->visit($required, [...$path, $id], $state, $byId);
-            if ($found !== null) {
-                return $found;
-            }
-        }
-        $state[$id] = 2;
-
-        return null;
-    }
-
-    /**
      * Dependency order of the enabled modules; empty when they contain a cycle.
      *
      * @param  array<string, ModuleDescriptor>  $enabled
@@ -268,25 +254,20 @@ final readonly class ModuleCatalog implements ModuleRegistry
      */
     private function bootOrder(array $enabled): array
     {
-        $order = [];
-        $remaining = $enabled;
-        while ($remaining !== []) {
-            $ready = array_filter(
-                $remaining,
-                static fn (ModuleDescriptor $descriptor): bool => array_all(
-                    $descriptor->requiredModuleIds(),
-                    static fn (string $required): bool => ! isset($enabled[$required]) || in_array($required, $order, true),
-                ),
-            );
-            if ($ready === []) {
-                return [];
-            }
-            $next = array_key_first($ready);
-            $order[] = $next;
-            unset($remaining[$next]);
-        }
+        [$order, $cycle] = self::topologicalSort($enabled);
 
-        return $order;
+        return $cycle === [] ? $order : [];
+    }
+
+    /**
+     * Delegates Kahn topological sort and cycle detection to Packman's PluginGraph compiler.
+     *
+     * @param  array<string, ModuleDescriptor>  $nodes
+     * @return array{0: list<string>, 1: list<string>}
+     */
+    private static function topologicalSort(array $nodes): array
+    {
+        return ModuleGraphPluginBridge::sort($nodes);
     }
 
     private static function samePublicEvent(PublicEventDeclaration $a, PublicEventDeclaration $b): bool

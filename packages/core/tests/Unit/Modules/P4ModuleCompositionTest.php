@@ -7,7 +7,7 @@ namespace Billium\Core\Tests\Unit\Modules;
 use Billium\Core\BilliumCoreServiceProvider;
 use Billium\Core\Enums\Modules\CompatibilityFindingCode as Code;
 use Billium\Rating\Contracts\RatingQuoter;
-use Billium\Schedule\Internal\ScheduleServiceProvider;
+use Billium\Schedule\Laravel\ScheduleServiceProvider;
 use Billium\Usage\Contracts\Usage;
 use Illuminate\Config\Repository;
 use Illuminate\Container\Container;

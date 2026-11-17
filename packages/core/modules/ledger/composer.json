@@ -1,0 +1,34 @@
+{
+    "name": "axiomasoft/billium-ledger",
+    "description": "Billium Ledger module: obligations, invoices, allocations, settlement intents, customer credits, and observations.",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.4",
+        "axiomasoft/billium-contracts": "^0.1",
+        "axiomasoft/billium-core": "^0.1",
+        "axiomasoft/billium-platform": "^0.1",
+        "axiomasoft/packman": "^0.1",
+        "laravel/framework": "^13.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Billium\\Ledger\\": "src/"
+        }
+    },
+    "extra": {
+        "packman": {
+            "schema-version": 1,
+            "package-type": "domain",
+            "stability": "dev",
+            "owns": [
+                "Contracts",
+                "Data",
+                "Internal",
+                "Laravel"
+            ]
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

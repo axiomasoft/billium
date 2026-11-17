@@ -12,9 +12,12 @@ use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Orchestra\Testbench\TestCase;
+use Packman\Testkit\Concerns\Database\UsesSuiteDatabase;
 
 abstract class DatabaseTestCase extends TestCase
 {
+    use UsesSuiteDatabase;
+
     private static bool $migratedInProcess = false;
 
     private static ?int $expectedMigrationCount = null;
@@ -47,6 +50,8 @@ abstract class DatabaseTestCase extends TestCase
         });
 
         TestEnvironment::preflight();
+        TestEnvironment::assertDestructiveResetAllowed();
+        $this->assertDestructiveSuitePgsqlAllowed('billium_owner');
         TestEnvironment::acquireSuiteLease();
         $expectedCount = self::$expectedMigrationCount ??= count(glob(__DIR__.'/../database/migrations/*/*.php') ?: []);
         $owner = $this->app['db']->connection('billium_owner');
@@ -63,7 +68,12 @@ abstract class DatabaseTestCase extends TestCase
             }
         }
         if ($needsMigration) {
-            $this->artisan('migrate', ['--database' => 'billium_owner', '--force' => true])->assertExitCode(0);
+            $this->artisan('packman:schema:migrate', [
+                '--scope' => 'central',
+                '--database' => 'billium_owner',
+                '--modules' => true,
+                '--force' => true,
+            ])->assertExitCode(0);
             TestEnvironment::assertRuntimeSafe($this->app['db']->connection('pgsql')->getPdo());
             self::$migratedInProcess = true;
         }
@@ -78,7 +88,9 @@ abstract class DatabaseTestCase extends TestCase
                 non_empty_tables text[] := ARRAY[]::text[];
             BEGIN
                 FOR r IN SELECT tablename FROM pg_tables
-                    WHERE schemaname = 'public' AND tablename NOT IN ('migrations', 'billium_event_contract')
+                    WHERE schemaname = 'public'
+                      AND starts_with(tablename, 'billium_')
+                      AND tablename <> 'billium_event_contract'
                     ORDER BY tablename
                 LOOP
                     EXECUTE format('SELECT EXISTS (SELECT 1 FROM public.%I LIMIT 1)', r.tablename) INTO has_rows;

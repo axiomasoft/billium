@@ -8,11 +8,12 @@ use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Internal\Runtime\ExecutionCompositionGuard;
 use Billium\Core\Laravel\Registrars\BilliumCoreRegistrar;
 use Billium\Execution\Internal\ExecutionServiceProvider;
-use Billium\Ledger\Internal\LedgerServiceProvider;
-use Billium\Platform\Internal\PlatformServiceProvider;
-use Billium\Rating\Internal\RatingServiceProvider;
-use Billium\Schedule\Internal\ScheduleServiceProvider;
-use Billium\Usage\Internal\UsageServiceProvider;
+use Billium\Ledger\Laravel\LedgerServiceProvider;
+use Billium\Platform\Laravel\PlatformServiceProvider;
+use Billium\Rating\Laravel\RatingServiceProvider;
+use Billium\Schedule\Laravel\ScheduleServiceProvider;
+use Billium\Usage\Laravel\UsageServiceProvider;
+use Illuminate\Contracts\Config\Repository;
 use Illuminate\Support\ServiceProvider;
 use Override;
 use Packman\Attributes\Api;
@@ -35,28 +36,40 @@ final class BilliumCoreServiceProvider extends ServiceProvider
         BilliumCoreRegistrar::class,
     ];
 
+    /** @var array<string, class-string<ServiceProvider>> */
+    private const array OPTIONAL_MODULES = [
+        'ledger' => LedgerServiceProvider::class,
+        'execution' => ExecutionServiceProvider::class,
+        'usage' => UsageServiceProvider::class,
+        'schedule' => ScheduleServiceProvider::class,
+        'rating' => RatingServiceProvider::class,
+    ];
+
     #[Override]
     public function register(): void
     {
         $this->registerRegistrars();
         $this->app->register(PlatformServiceProvider::class);
-        $options = $this->app->make(BilliumOptions::class);
-        if (in_array('ledger', $options->modules->enabled, true)) {
-            $this->app->register(LedgerServiceProvider::class);
-        }
-        if (in_array('execution', $options->modules->enabled, true)) {
-            new ExecutionCompositionGuard()->assertReady($this->app, $options);
-            $this->app->register(ExecutionServiceProvider::class);
-        }
 
-        $providers = [
-            'usage' => [UsageServiceProvider::class, $options->usage->enabled],
-            'rating' => [RatingServiceProvider::class, $options->rating->enabled],
-            'schedule' => [ScheduleServiceProvider::class, $options->schedule->enabled],
-        ];
-        foreach ($providers as $module => [$provider, $enabled]) {
-            if ($enabled && in_array($module, $options->modules->enabled, true) && class_exists($provider)) {
-                $this->app->register($provider);
+        // Read raw config here without freezing BilliumOptions singleton before host/Testbench defineEnvironment finishes.
+        $raw = $this->app->bound(Repository::class) ? $this->app->make(Repository::class)->get('billium', []) : [];
+        $options = BilliumOptions::fromArray(is_array($raw) ? $raw : ['__invalid_root' => $raw], 'billium');
+
+        foreach (self::OPTIONAL_MODULES as $module => $providerClass) {
+            if (! in_array($module, $options->modules->enabled, true)) {
+                continue;
+            }
+            if ($module === 'execution') {
+                (new ExecutionCompositionGuard)->assertReady($this->app, $options);
+            }
+            $enabled = match ($module) {
+                'usage' => $options->usage->enabled,
+                'rating' => $options->rating->enabled,
+                'schedule' => $options->schedule->enabled,
+                default => true,
+            };
+            if ($enabled) {
+                $this->app->register($providerClass);
             }
         }
     }
@@ -64,6 +77,5 @@ final class BilliumCoreServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->bootRegistrars();
-        $this->loadMigrationsFrom(__DIR__.'/../database/migrations/platform');
     }
 }

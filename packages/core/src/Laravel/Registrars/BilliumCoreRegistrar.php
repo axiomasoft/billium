@@ -10,8 +10,10 @@ use Billium\Core\Contracts\Modules\ModuleAdmissionGate;
 use Billium\Core\Contracts\Modules\ModuleRegistry;
 use Billium\Core\Contracts\Modules\ModuleTransitionPlanner;
 use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Contracts\Runtime\AuthenticatedObservationContext;
 use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Contracts\Runtime\EventPublisher;
 use Billium\Core\Contracts\Runtime\FinancialAuthorityEvidence;
 use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
 use Billium\Core\Contracts\Runtime\IncomingCommandAuthenticator;
@@ -28,6 +30,9 @@ use Billium\Core\Internal\Runtime\TransportObservationContext;
 use Billium\Core\Plugins\ExecutionPlugin;
 use Billium\Core\Plugins\LedgerPlugin;
 use Billium\Core\Plugins\PlatformPlugin;
+use Billium\Core\Plugins\RatingPlugin;
+use Billium\Core\Plugins\SchedulePlugin;
+use Billium\Core\Plugins\UsagePlugin;
 use Billium\Execution\Contracts\AdapterQualification;
 use Billium\Execution\Contracts\CallbackPayloadArchive;
 use Billium\Execution\Contracts\DispatchEgress;
@@ -40,8 +45,19 @@ use Billium\Execution\Contracts\PaymentDrivers;
 use Billium\Execution\Contracts\PaymentObservationSink;
 use Billium\Execution\Contracts\ProviderAbsenceVerifier;
 use Billium\Execution\Contracts\WriterAdmission;
+use Billium\Platform\Contracts\EventContracts\EventContractRegistrar;
+use Billium\Platform\Contracts\Feed\EventFeed;
+use Billium\Platform\Contracts\Feed\FeedPartitions;
+use Billium\Platform\Contracts\Feed\FeedRecoveryQueries;
+use Billium\Platform\Contracts\Feed\SnapshotSource;
 use Billium\Platform\Contracts\Idempotency\IdempotencyStore;
+use Billium\Platform\Contracts\Inbox\BootstrapItemHandler;
+use Billium\Platform\Contracts\Inbox\CustodyHandler;
+use Billium\Platform\Contracts\Installation\Installation;
 use Billium\Platform\Contracts\Installation\RootAdmission;
+use Billium\Platform\Contracts\Outbox\CommandOutbox;
+use Billium\Platform\Contracts\Outbox\Outbox;
+use Illuminate\Container\Container;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\DatabaseManager;
@@ -53,10 +69,12 @@ use Packman\Errors\Laravel\ProblemDefinitions;
 use Packman\Extensions\Laravel\ExtensionFacetRegistrar;
 use Packman\Foundation\Contracts\PackageRegistrar;
 use Packman\PackmanServiceProvider;
+use Packman\Plugins\Contracts\Registry\PluginActivationGate;
 use Packman\Plugins\Laravel\ExtensionRegistrar;
 use Packman\Plugins\Laravel\PluginsServiceProvider;
 use Packman\Schema\Laravel\SchemaExtensions;
 use Packman\Schema\Laravel\SchemaServiceProvider;
+use ReflectionProperty;
 use Throwable;
 
 /**
@@ -65,6 +83,34 @@ use Throwable;
 #[Spi(kind: SpiKind::Call, since: '1.0')]
 final class BilliumCoreRegistrar implements PackageRegistrar
 {
+    /** @var array<class-string, array{0: string, 1: string}> */
+    private const array LEGACY_CONTRACT_SPECS = [
+        CallerContext::class => ['Core', 'CallerContext'],
+        EventPublisher::class => ['Core', 'EventPublisher'],
+        FinancialSessionAdmission::class => ['Core', 'FinancialSessionAdmission'],
+        OperationRunner::class => ['Core', 'OperationRunner'],
+        TransactionContext::class => ['Core', 'TransactionContext'],
+        BootstrapItemHandler::class => ['Platform', 'BootstrapItemHandler'],
+        CommandOutbox::class => ['Platform', 'CommandOutbox'],
+        CustodyHandler::class => ['Platform', 'CustodyHandler'],
+        EventContractRegistrar::class => ['Platform', 'EventContractRegistrar'],
+        EventFeed::class => ['Platform', 'EventFeed'],
+        FeedPartitions::class => ['Platform', 'FeedPartitions'],
+        FeedRecoveryQueries::class => ['Platform', 'FeedRecoveryQueries'],
+        IdempotencyStore::class => ['Platform', 'IdempotencyStore'],
+        Installation::class => ['Platform', 'Installation'],
+        Outbox::class => ['Platform', 'Outbox'],
+        RootAdmission::class => ['Platform', 'RootAdmission'],
+        SnapshotSource::class => ['Platform', 'SnapshotSource'],
+    ];
+
+    /** @var array<class-string, true> */
+    private const array HOST_PORT_CONTRACTS = [
+        CallerContext::class => true,
+        FinancialSessionAdmission::class => true,
+        EventPublisher::class => true,
+    ];
+
     #[Override]
     public function register(Application $app): void
     {
@@ -78,18 +124,55 @@ final class BilliumCoreRegistrar implements PackageRegistrar
             ?? dirname(__DIR__, 4).'/contracts/composer.json';
         ProblemDefinitions::register($app, $contractsManifest, BilliumProblemDefinitions::class);
 
-        $app->bind(BilliumOptions::class, static function (Application $app): BilliumOptions {
+        $app->singletonIf(BilliumOptions::class, static function (Application $app): BilliumOptions {
             $raw = $app->bound(Repository::class) ? $app->make(Repository::class)->get('billium', []) : [];
 
             return BilliumOptions::fromArray(is_array($raw) ? $raw : ['__invalid_root' => $raw], 'billium');
         });
 
-        ExtensionRegistrar::builtIn(PlatformPlugin::class, LedgerPlugin::class, ExecutionPlugin::class);
+        ExtensionRegistrar::builtIn(
+            PlatformPlugin::class,
+            LedgerPlugin::class,
+            ExecutionPlugin::class,
+            UsagePlugin::class,
+            SchedulePlugin::class,
+            RatingPlugin::class,
+        );
+
+        $app->singletonIf(PluginActivationGate::class, static fn (Application $app): PluginActivationGate => new class($app) implements PluginActivationGate
+        {
+            public function __construct(private Application $app) {}
+
+            public function isEnabled(string $pluginId): bool
+            {
+                $options = $this->app->make(BilliumOptions::class);
+                $enabled = $options->modules->enabled;
+
+                return match ($pluginId) {
+                    'axiomasoft.billium.platform' => true,
+                    'axiomasoft.billium.ledger' => in_array('ledger', $enabled, true),
+                    'axiomasoft.billium.execution' => in_array('execution', $enabled, true),
+                    'axiomasoft.billium.usage' => $options->usage->enabled && in_array('usage', $enabled, true),
+                    'axiomasoft.billium.schedule' => $options->schedule->enabled && in_array('schedule', $enabled, true),
+                    'axiomasoft.billium.rating' => $options->rating->enabled && in_array('rating', $enabled, true),
+                    default => true,
+                };
+            }
+        });
 
         $coreManifest = dirname(__DIR__, 3).'/composer.json';
-        $app->singletonIf(PlatformPlugin::class);
-        $app->singletonIf(LedgerPlugin::class);
-        $app->singletonIf(ExecutionPlugin::class);
+        $plugins = [
+            'axiomasoft.billium.platform' => PlatformPlugin::class,
+            'axiomasoft.billium.ledger' => LedgerPlugin::class,
+            'axiomasoft.billium.execution' => ExecutionPlugin::class,
+            'axiomasoft.billium.usage' => UsagePlugin::class,
+            'axiomasoft.billium.schedule' => SchedulePlugin::class,
+            'axiomasoft.billium.rating' => RatingPlugin::class,
+        ];
+        foreach ($plugins as $pluginClass) {
+            $app->singletonIf($pluginClass);
+        }
+
         $app->singleton(TransportObservationContext::class, static fn (Application $app): TransportObservationContext => new TransportObservationContext(
             static fn (): IncomingCommandAuthenticator => $app->make(IncomingCommandAuthenticator::class),
             $app->make(DatabaseManager::class),
@@ -100,7 +183,6 @@ final class BilliumCoreRegistrar implements PackageRegistrar
         $app->singleton(BilliumCompatibilityDoctorCheck::class, static fn (Application $app): BilliumCompatibilityDoctorCheck => new BilliumCompatibilityDoctorCheck(
             config: $app->make(Repository::class),
             registry: $app->make(ModuleRegistry::class),
-            optionsResolver: static fn (): BilliumOptions => $app->make(BilliumOptions::class),
             portsResolver: static function () use ($app): array {
                 $ports = [];
                 if (self::hasCustomPort($app, CallerContext::class, UnboundCallerContext::class)) {
@@ -137,19 +219,24 @@ final class BilliumCoreRegistrar implements PackageRegistrar
 
                 return $ports;
             },
+            databases: $app->make(DatabaseManager::class),
         ));
-
-        ExtensionFacetRegistrar::register($app, PlatformPlugin::class, $coreManifest);
-        ExtensionFacetRegistrar::register($app, LedgerPlugin::class, $coreManifest);
-        ExtensionFacetRegistrar::register($app, ExecutionPlugin::class, $coreManifest);
 
         ConfigSectionRegistration::own($app, 'billium', static function (array $section): void {
             BilliumOptions::fromArray($section, 'billium');
         });
 
-        SchemaExtensions::register($app, PlatformPlugin::class, 'axiomasoft.billium.platform');
-        SchemaExtensions::register($app, LedgerPlugin::class, 'axiomasoft.billium.ledger');
-        SchemaExtensions::register($app, ExecutionPlugin::class, 'axiomasoft.billium.execution');
+        if ($app->bound(Repository::class)) {
+            $repo = $app->make(Repository::class);
+            if (! $repo->has('packman.schema.module_prerequisite_set')) {
+                $repo->set('packman.schema.module_prerequisite_set', 'axiomasoft/billium-core:billium-platform');
+            }
+        }
+
+        foreach ($plugins as $ownerId => $pluginClass) {
+            ExtensionFacetRegistrar::register($app, $pluginClass, $coreManifest);
+            SchemaExtensions::register($app, $pluginClass, $ownerId);
+        }
 
         // D55: packaged descriptors only; validation is explicit (doctor/readiness), never a hidden boot side effect.
         $app->singleton(ModuleRegistry::class, static fn (): ModuleCatalog => ModuleCatalog::packaged());
@@ -157,12 +244,11 @@ final class BilliumCoreRegistrar implements PackageRegistrar
         $app->alias(ModuleLifecycle::class, ModuleAdmissionGate::class);
         $app->alias(ModuleLifecycle::class, ModuleTransitionPlanner::class);
 
-        // Host SPIs fail closed until the host binds its authenticated caller and its process-token authority (D62).
-        $app->bindIf(CallerContext::class, UnboundCallerContext::class, shared: true);
-        $app->bindIf(FinancialSessionAdmission::class, UnboundSessionAdmission::class, shared: true);
+        self::registerHostPortFallbacks($app);
+        self::registerLegacyContractAliases($app);
         $app->bindIf(FinancialAuthorityEvidence::class, UnboundFinancialAuthorityEvidence::class, shared: true);
 
-        $app->singleton(OperationRunner::class, static function (Application $app): DatabaseOperationRunner {
+        $app->singletonIf(OperationRunner::class, static function (Application $app): DatabaseOperationRunner {
             $options = $app->make(BilliumOptions::class);
             $databases = $app->make(DatabaseManager::class);
 
@@ -186,7 +272,9 @@ final class BilliumCoreRegistrar implements PackageRegistrar
      */
     private static function hasCustomPort(Application $app, string $contract, string $default): bool
     {
-        if (! $app->bound($contract)) {
+        $legacy = isset(self::LEGACY_CONTRACT_SPECS[$contract]) ? self::legacyName($contract) : null;
+
+        if (! $app->bound($contract) && ($legacy === null || ! $app->bound($legacy))) {
             return false;
         }
 
@@ -197,5 +285,77 @@ final class BilliumCoreRegistrar implements PackageRegistrar
         } catch (Throwable) {
             return true;
         }
+    }
+
+    private static function registerHostPortFallbacks(Application $app): void
+    {
+        // Host SPIs fail closed until the host binds its authenticated caller and process-token authority (D62),
+        // while still forwarding host bindings registered under pre-reorganization legacy interface aliases.
+        foreach ([
+            CallerContext::class => UnboundCallerContext::class,
+            FinancialSessionAdmission::class => UnboundSessionAdmission::class,
+        ] as $canonical => $default) {
+            $app->singletonIf($default);
+            $legacy = self::legacyName($canonical);
+
+            $app->bindIf(
+                $canonical,
+                static fn (Application $app): mixed => self::isLegacyConcreteBound($app, $legacy, $canonical)
+                    ? $app->make($legacy)
+                    : $app->make($default),
+            );
+        }
+
+        $legacyPublisher = self::legacyName(EventPublisher::class);
+        $app->beforeResolving(EventPublisher::class, static function (string $abstract, array $parameters, mixed $container) use ($legacyPublisher): void {
+            if (! $container instanceof Application) {
+                return;
+            }
+            if (! $container->bound(EventPublisher::class) && self::isLegacyConcreteBound($container, $legacyPublisher, EventPublisher::class)) {
+                $container->bind(EventPublisher::class, static fn (Application $app): mixed => $app->make($legacyPublisher));
+            }
+        });
+    }
+
+    private static function registerLegacyContractAliases(Application $app): void
+    {
+        foreach (array_keys(self::LEGACY_CONTRACT_SPECS) as $canonical) {
+            $legacy = self::legacyName($canonical);
+            if (self::isLegacyConcreteBound($app, $legacy, $canonical)) {
+                if (! $app->bound($canonical) || isset(self::HOST_PORT_CONTRACTS[$canonical])) {
+                    $app->bind($canonical, static fn (Application $app): mixed => $app->make($legacy));
+                }
+
+                continue;
+            }
+
+            if (! $app->bound($legacy)) {
+                $app->alias($canonical, $legacy);
+            }
+        }
+    }
+
+    /** @param class-string $canonical */
+    private static function legacyName(string $canonical): string
+    {
+        [$module, $name] = self::LEGACY_CONTRACT_SPECS[$canonical];
+
+        return 'Billium\\'.$module.'\\Contracts\\'.$name;
+    }
+
+    /** @param class-string $canonical */
+    private static function isLegacyConcreteBound(Application $app, string $legacy, string $canonical): bool
+    {
+        if (! $app->bound($legacy)) {
+            return false;
+        }
+        if ($app instanceof Container) {
+            $aliases = new ReflectionProperty(Container::class, 'aliases')->getValue($app);
+            if (is_array($aliases) && ($aliases[$legacy] ?? null) === $canonical) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

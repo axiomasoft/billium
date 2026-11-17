@@ -38,6 +38,7 @@ use Billium\Platform\Internal\Outbox\FeedTokens;
 use Billium\Platform\Internal\Outbox\OutboxPruner;
 use Billium\Platform\Internal\Outbox\OutboxRecorder;
 use Billium\Platform\Internal\Outbox\OutboxRelay;
+use Illuminate\Container\Container;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\DatabaseManager;
@@ -45,6 +46,8 @@ use LogicException;
 use Override;
 use Packman\Attributes\Internal;
 use Packman\Foundation\Contracts\PackageRegistrar;
+use Packman\Plugins\Contracts\Contributions\Extensions;
+use ReflectionProperty;
 
 #[Internal]
 final class PlatformOutboxRegistrar implements PackageRegistrar
@@ -159,12 +162,62 @@ final class PlatformOutboxRegistrar implements PackageRegistrar
     /** @return iterable<SnapshotSource> */
     private static function sources(Application $app): iterable
     {
+        $seen = [];
+        $contributions = $app->bound(Extensions::class)
+            ? $app->make(Extensions::class)->contributions(SnapshotSource::class)
+            : [];
+        $pluginImplementations = [];
+        $explicitKeyOverrides = [];
+
+        $aliases = $app instanceof Container ? new ReflectionProperty(Container::class, 'aliases')->getValue($app) : [];
+        foreach ($contributions as $contribution) {
+            $pluginImplementations[$contribution->implementation] = true;
+            if ($contribution->key === null) {
+                continue;
+            }
+            $overrideKey = 'billium.snapshot.'.$contribution->key;
+            $isAlias = is_array($aliases) && isset($aliases[$overrideKey]);
+            if ($app->bound($overrideKey) && ! $isAlias) {
+                $explicitKeyOverrides[$contribution->key] = true;
+                $source = $app->make($overrideKey);
+                if (! $source instanceof SnapshotSource) {
+                    throw new LogicException('Snapshot source slot contains an invalid reader');
+                }
+                $key = $source->key();
+                if (! isset($seen[$key])) {
+                    $seen[$key] = true;
+                    yield $source;
+                }
+            }
+        }
+
         foreach ($app->tagged('billium.snapshot_sources') as $source) {
             if (! $source instanceof SnapshotSource) {
                 throw new LogicException('Snapshot source tag contains an invalid reader');
             }
+            if (isset($pluginImplementations[$source::class])) {
+                continue;
+            }
+            $key = $source->key();
+            if (! isset($seen[$key])) {
+                $seen[$key] = true;
+                yield $source;
+            }
+        }
 
-            yield $source;
+        foreach ($contributions as $contribution) {
+            if ($contribution->key !== null && isset($explicitKeyOverrides[$contribution->key])) {
+                continue;
+            }
+            $source = $app->make($contribution->implementation);
+            if (! $source instanceof SnapshotSource) {
+                throw new LogicException('Snapshot source slot contains an invalid reader');
+            }
+            $key = $source->key();
+            if (! isset($seen[$key])) {
+                $seen[$key] = true;
+                yield $source;
+            }
         }
     }
 }
