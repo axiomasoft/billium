@@ -1,0 +1,48 @@
+{
+  "owner": "contracts (PLAN1.P4.1; D13/D56)",
+  "revision": "2026-10",
+  "historicalEnvelopesRetained": true,
+  "entries": [
+    {
+      "from": "usage.fact.v1",
+      "to": "usage.fact.v2",
+      "mode": "explicit_host_enrichment_and_negotiation",
+      "requiredEvidence": ["immutable attribution at original effective cutoff", "registered MetricVersion digest/model/unit", "source provenance digest", "exclusive billable stream commercial basis", "Billium receivedAt", "correction revision identity when applicable"],
+      "forbiddenInference": ["current subject payer", "observedAt as receivedAt", "distinct quantity as member evidence", "gross usage as normalized overage"],
+      "onMissing": "billium.policy.unknown"
+    },
+    {
+      "from": "usage.receipt.v1",
+      "to": "usage.receipt.v2",
+      "mode": "new_acceptance_receipt_only",
+      "requiredEvidence": ["sellerRef", "original fact digest", "stable receiptRef"],
+      "onMissing": "billium.policy.unknown"
+    },
+    {
+      "from": "occurrence.ensure.v1",
+      "to": "occurrence.ensure.v2",
+      "mode": "explicit_host_enrichment_and_negotiation",
+      "requiredEvidence": ["persisted CommercialPeriod", "immutable PriceVersion ref/digest"],
+      "identityRetained": ["sellerRef", "componentRef", "purpose", "interval"],
+      "provenanceOnly": ["scheduleRevision"],
+      "onMissing": "billium.policy.unknown"
+    },
+    {
+      "from": "obligation.prepare.v1",
+      "to": "obligation.prepare.v2",
+      "mode": "explicit_rated_basis_required",
+      "requiredEvidence": ["RatedBasis independent of invoice/payment", "original immutable payer, period, price, quantity, tax and rounding evidence"],
+      "onMissing": "billium.policy.unknown"
+    },
+    {
+      "from": "Tariffler.OverageEvent.v1",
+      "to": "usage.fact.v2",
+      "mode": "external_source_owned_adapter_only",
+      "requiredEvidence": ["explicit normalized_net_billable stream", "original attribution", "normalization/commercial basis", "registered MetricVersion"],
+      "sourceContractChanged": false,
+      "onMissing": "billium.policy.unknown"
+    }
+  ],
+  "extensionGate": ["stable policy/strategy identity and version", "typed schema and owner-approved commercial input", "scope/order/combination matrix", "unit/precision/tax/rounding rules", "positive/negative/boundary expected amount vectors", "replay/concurrency/compatibility proof", "type/identity/upgrade registration", "retained historical implementation"],
+  "runtimeDisposition": "P4.1 prepares codec contracts and refusal dispatch only; usage/rating/schedule owners implement and install algorithms in P4.2/P4.4/P4.5 before activation"
+}

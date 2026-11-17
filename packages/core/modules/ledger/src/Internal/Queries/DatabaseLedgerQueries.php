@@ -33,7 +33,7 @@ final readonly class DatabaseLedgerQueries implements LedgerQueries
 
     public function obligation(string $obligationRef): array
     {
-        return $this->read(static fn (LedgerReader $reader): array => View::obligation($reader->one('billium_obligation', 'obligation_ref', $obligationRef)));
+        return $this->read(static fn (LedgerReader $reader): array => $reader->obligation($obligationRef));
     }
 
     public function invoice(string $invoiceRef): array
@@ -48,7 +48,46 @@ final readonly class DatabaseLedgerQueries implements LedgerQueries
 
     public function receipt(string $receiptRef): array
     {
-        return $this->read(static fn (LedgerReader $reader): array => View::json($reader->one('billium_allocation_receipt', 'receipt_ref', $receiptRef)->body));
+        return $this->read(static function (LedgerReader $reader) use ($receiptRef): array {
+            $row = $reader->scoped('billium_allocation_receipt')->where('receipt_ref', $receiptRef)->first();
+            if ($row !== null) {
+                return View::json($row->body);
+            }
+            $marker = strrpos($receiptRef, ':group:');
+            if (! str_starts_with($receiptRef, 'credit-note:rating:') || $marker === false) {
+                throw LedgerReader::unknown();
+            }
+            $prefix = substr($receiptRef, 0, $marker).':';
+            $suffixes = explode('.', substr($receiptRef, $marker + strlen(':group:')));
+            if (count($suffixes) < 2 || count($suffixes) !== count(array_unique($suffixes))) {
+                throw LedgerReader::unknown();
+            }
+            foreach ($suffixes as $suffix) {
+                if (preg_match('/^[a-f0-9]{16}$/D', $suffix) !== 1) {
+                    throw LedgerReader::unknown();
+                }
+            }
+            $refs = array_map(static fn (string $suffix): string => $prefix.$suffix, $suffixes);
+            $parts = [];
+            $scope = null;
+            foreach ($reader->scoped('billium_allocation_receipt')->whereIn('receipt_ref', $refs)->orderBy('receipt_ref')->get() as $part) {
+                $ref = View::text($part->receipt_ref);
+                if ($part->kind !== 'credit_note') {
+                    throw LedgerReader::unknown();
+                }
+                $partScope = [$part->billing_account_ref, $part->currency];
+                if ($scope !== null && $scope !== $partScope) {
+                    throw LedgerReader::unknown();
+                }
+                $scope = $partScope;
+                $parts[] = ['receiptRef' => $ref, 'receipt' => View::json($part->body)];
+            }
+            if (count($parts) !== count($refs)) {
+                throw LedgerReader::unknown();
+            }
+
+            return ['receiptRef' => $receiptRef, 'parts' => $parts];
+        });
     }
 
     public function refundAuthorization(string $paymentRef, ?Money $amount = null): array
@@ -118,8 +157,8 @@ final readonly class DatabaseLedgerQueries implements LedgerQueries
             'obligation' => $this->obligation($ref('obligationRef')),
             'invoice' => $this->invoice($ref('invoiceRef')),
             'allocationByOperation' => $this->allocationByOperation($ref('operationRef'), $authority),
-            'refundAuthorization' => $this->read(static function (LedgerReader $reader) use ($ref, $selector): array {
-                $payment = $reader->payment($ref('paymentRef'));
+            'refundAuthorization' => $this->read(static function (LedgerReader $reader) use ($ref, $selector, $authority): array {
+                $payment = $reader->payment($ref('paymentRef'), $authority);
                 $exposure = is_array($payment['exposure']) ? $payment['exposure'] : throw self::invalid();
                 $amount = isset($selector['amount']) ? Money::parse($ref('amount'), View::text($exposure['currency'])) : null;
 

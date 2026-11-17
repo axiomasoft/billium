@@ -3,9 +3,10 @@
 Статус: требования уровня A корпуса (PLAN1.P1.1), дописанные строки уровней B и C (PLAN1.P1.2) и строки,
 добавленные по заявкам аудита решениями D20–D26 (PLAN1.P1.6);
 существующие строки не перенумерованы, новые получили свободные номера в своих разделах. Источник каждой строки — ID `SRC-NNN` из
-`plans/2026.10.14-№1-BILLIUM-V1/research/P1-corpus.md` (`BRAIN` = `/home/vostrikov/Vaults/Brain`);
+`research/P1-corpus.md` плана `2026.10.14-№1-BILLIUM-V1` в [workspace](planning.md)
+(`BRAIN` = `/home/vostrikov/Vaults/Brain`);
 `§` указывает раздел документа. Диспозиция каждого прочитанного документа — в
-`plans/2026.10.14-№1-BILLIUM-V1/knowledge/corpus-ledger.md`.
+`knowledge/corpus-ledger.md` того же плана в workspace.
 
 Правила документа:
 

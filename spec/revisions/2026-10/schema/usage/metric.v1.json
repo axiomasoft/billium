@@ -1,0 +1,260 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-10:usage/metric.v1.json",
+  "title": "usage.metric.v1 (D56; owner usage)",
+  "type": "object",
+  "required": [
+    "schema",
+    "sellerRef",
+    "metricRef",
+    "metricVersion",
+    "unit",
+    "quantityPrecision",
+    "sourceSelection",
+    "model",
+    "extraction",
+    "groupingDimensions",
+    "attributionPolicy",
+    "effectiveCutoffPolicy",
+    "correctionPolicy",
+    "latePolicy",
+    "finalityPolicy",
+    "billableStream",
+    "digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "usage.metric.v1"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "metricRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "metricVersion": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "unit": {
+      "$ref": "urn:billium:spec:2026-10:common/usage-rating.json#/$defs/unit"
+    },
+    "quantityPrecision": {
+      "const": "decimal_24_9/1"
+    },
+    "sourceSelection": {
+      "type": "object",
+      "required": [
+        "sources",
+        "filters"
+      ],
+      "properties": {
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+          }
+        },
+        "filters": {
+          "type": "array",
+          "minItems": 0,
+          "items": {
+            "type": "object",
+            "required": [
+              "field",
+              "operator",
+              "value"
+            ],
+            "properties": {
+              "field": {
+                "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+              },
+              "operator": {
+                "const": "equals"
+              },
+              "value": {
+                "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "model": {
+      "$ref": "urn:billium:spec:2026-10:common/usage-rating.json#/$defs/model"
+    },
+    "extraction": {
+      "$ref": "urn:billium:spec:2026-10:common/usage-rating.json#/$defs/extraction"
+    },
+    "groupingDimensions": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+      }
+    },
+    "attributionPolicy": {
+      "type": "object",
+      "required": [
+        "id",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/p4AttributionPolicy"
+        },
+        "version": {
+          "const": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "effectiveCutoffPolicy": {
+      "type": "object",
+      "required": [
+        "id",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/p4EffectiveCutoff"
+        },
+        "version": {
+          "const": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "correctionPolicy": {
+      "type": "object",
+      "required": [
+        "id",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/p4CorrectionPolicy"
+        },
+        "version": {
+          "const": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "latePolicy": {
+      "type": "object",
+      "required": [
+        "id",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/p4LatePolicy"
+        },
+        "version": {
+          "const": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "finalityPolicy": {
+      "type": "object",
+      "required": [
+        "id",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/p4FinalityPolicy"
+        },
+        "version": {
+          "const": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "billableStream": {
+      "$ref": "urn:billium:spec:2026-10:common/usage-rating.json#/$defs/stream"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "model": {
+            "properties": {
+              "id": {
+                "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/p4DecimalModels"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "extraction": {
+            "properties": {
+              "kind": {
+                "const": "decimal_field"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "model": {
+            "properties": {
+              "id": {
+                "const": "additive_count"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "extraction": {
+            "properties": {
+              "kind": {
+                "const": "each_fact"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "model": {
+            "properties": {
+              "id": {
+                "const": "exact_distinct"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "extraction": {
+            "properties": {
+              "kind": {
+                "const": "member_field"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

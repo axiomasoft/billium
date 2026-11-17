@@ -1,6 +1,7 @@
 services:
   postgres:
     image: postgres:16.15-bookworm
+    command: ["postgres", "-c", "synchronous_commit=off", "-c", "full_page_writes=off"]
     environment:
       POSTGRES_DB: billium_test
       POSTGRES_USER: billium
@@ -22,19 +23,21 @@ services:
         condition: service_healthy
     volumes:
       - .:/workspace
-      # Resolve the managed external plans symlink for spec source-reference checks.
+      # Composer path dependency used by the Packman integration.
+      - ../packman:/packman:ro
+      - composer-cache:/tmp/composer
+      - pub-cache:/tmp/pub-cache
       - type: bind
-        source: ./plans
-        target: /workspace/plans
+        source: ${SKM_WORKSPACES_ROOT:-${SKM_WORKSPACES:-${SKM_HOME:-${HOME}/.local/share/swissknifeman}/workspaces}}
+        target: /skm-workspaces
         read_only: true
         bind:
           create_host_path: false
-      - composer-cache:/tmp/composer
-      - pub-cache:/tmp/pub-cache
     environment:
       HOME: /tmp/home
       COMPOSER_HOME: /tmp/composer
       PUB_CACHE: /tmp/pub-cache
+      SKM_WORKSPACES: /skm-workspaces
       DB_CONNECTION: pgsql
       DB_HOST: postgres
       DB_PORT: 5432

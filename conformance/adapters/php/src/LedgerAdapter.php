@@ -68,9 +68,38 @@ final class LedgerAdapter
 
     private FixedCallerContext $callers;
 
+    /** @var list<string> */
+    private array $runtimeModules = [];
+
+    /** @var list<string> */
+    private array $bootModules = [];
+
+    public function p4(): P4RuntimeAdapter
+    {
+        $available = array_filter($this->runtimeModules, static fn (string $module): bool => class_exists('Billium\\'.ucfirst($module).'\\Internal\\'.ucfirst($module).'ServiceProvider'));
+        if ($available !== [] && ($this->app === null || $this->bootModules !== $this->runtimeModules)) {
+            $this->app = null;
+            $this->boot();
+        }
+
+        // Unavailable implementations refuse without opening a DB or installing future SQL.
+        return new P4RuntimeAdapter($this->app ?? new Container);
+    }
+
     public function given(stdClass $given): void
     {
         $this->callerInput = $given->caller ?? new stdClass;
+        $modules = $given->modules ?? [];
+        if (! is_array($modules) || ! array_is_list($modules)) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'given.modules must be a module list');
+        }
+        $this->runtimeModules = [];
+        foreach ($modules as $module) {
+            if (! is_string($module) || ! in_array($module, ['usage', 'rating', 'schedule'], true)) {
+                throw new ProblemException(ProblemCode::ValidationInvalid, 'unknown P4 runtime module');
+            }
+            $this->runtimeModules[] = $module;
+        }
     }
 
     /** @return array<string, mixed> */
@@ -192,11 +221,36 @@ final class LedgerAdapter
         try {
             $host = new class extends Testbench
             {
+                /** @var list<string> */
+                public array $runtimeModules = [];
+
+                /** @return list<class-string> */
+                protected function getPackageProviders($app): array
+                {
+                    $providers = [BilliumCoreServiceProvider::class];
+                    // Testbench configures the environment after provider registration.
+                    // Enroll the selected binaries explicitly, before their boot/migration discovery.
+                    foreach ($this->runtimeModules as $module) {
+                        $provider = 'Billium\\'.ucfirst($module).'\\Internal\\'.ucfirst($module).'ServiceProvider';
+                        if (class_exists($provider)) {
+                            $providers[] = $provider;
+                        }
+                    }
+
+                    return $providers;
+                }
+
+                /** @param Application $app */
                 protected function defineEnvironment($app): void
                 {
                     TestEnvironment::configure($app);
+                    $app['config']->set('billium.modules.enabled', ['platform', 'ledger', ...$this->runtimeModules]);
+                    foreach ($this->runtimeModules as $module) {
+                        $app['config']->set("billium.{$module}.enabled", true);
+                    }
                 }
             };
+            $host->runtimeModules = $this->runtimeModules;
             $app = $host->configure(['extra' => ['providers' => [BilliumCoreServiceProvider::class]]])->createApplication();
         } finally {
             // The CLI protocol (and PHPUnit host) owns diagnostics, not Laravel's global handlers.
@@ -209,6 +263,7 @@ final class LedgerAdapter
         }
         TestEnvironment::assertRuntimeSafe($app['db']->connection('pgsql')->getPdo());
         $this->app = $app;
+        $this->bootModules = $this->runtimeModules;
         $this->callers = FixedCallerContext::default();
         $app->instance(CallerContext::class, $this->callers);
     }
@@ -225,15 +280,41 @@ final class LedgerAdapter
         $this->setCaller($this->callerInput);
         $owner = $app['db']->connection('billium_owner');
         // D50: committed fixtures, no RefreshDatabase transaction. Never truncate host tables.
-        $tables = $owner->select("SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND starts_with(tablename, 'billium_') ORDER BY tablename");
-        if ($tables !== []) {
-            $names = array_map(static fn (stdClass $row): string => '"public"."'.str_replace('"', '""', $row->tablename).'"', $tables);
-            $owner->unprepared('TRUNCATE '.implode(', ', $names).' RESTART IDENTITY CASCADE');
+        $owner->unprepared(<<<'SQL'
+            DO $$
+            DECLARE
+                r record;
+                has_rows boolean;
+                non_empty_tables text[] := ARRAY[]::text[];
+            BEGIN
+                FOR r IN SELECT tablename FROM pg_tables
+                    WHERE schemaname = 'public' AND starts_with(tablename, 'billium_')
+                      AND tablename <> 'billium_event_contract'
+                    ORDER BY tablename
+                LOOP
+                    EXECUTE format('SELECT EXISTS (SELECT 1 FROM public.%I LIMIT 1)', r.tablename) INTO has_rows;
+                    IF has_rows THEN
+                        non_empty_tables := array_append(non_empty_tables, format('public.%I', r.tablename));
+                    END IF;
+                END LOOP;
+                IF cardinality(non_empty_tables) > 0 THEN
+                    EXECUTE 'TRUNCATE ' || array_to_string(non_empty_tables, ', ') || ' RESTART IDENTITY CASCADE';
+                END IF;
+            END $$
+            SQL);
+        $contractsIntact = $owner->scalar(<<<'SQL'
+            SELECT (SELECT count(*) FROM public.billium_event_contract) = 7 AND NOT EXISTS (
+                SELECT 1 FROM public.billium_event_contract
+                WHERE contract_revision <> 'events-2026-10-v1' OR status <> 'registered'
+            )
+            SQL);
+        if (! $contractsIntact) {
+            $owner->unprepared('TRUNCATE public.billium_event_contract RESTART IDENTITY CASCADE');
+            $modules = $app->make(ModuleRegistry::class);
+            $descriptor = $modules->descriptor('ledger') ?? throw new LogicException('Ledger module is missing');
+            $registrar = new DatabaseEventContractRegistrar($owner, $modules);
+            $registrar->register($registrar->plan($descriptor, true));
         }
-        $modules = $app->make(ModuleRegistry::class);
-        $descriptor = $modules->descriptor('ledger') ?? throw new LogicException('Ledger module is missing');
-        $registrar = new DatabaseEventContractRegistrar($owner, $modules);
-        $registrar->register($registrar->plan($descriptor, true));
         $ref = $this->callers->current()->installationRef;
         $installation = $app->make(Installation::class);
         $installation->init($ref);

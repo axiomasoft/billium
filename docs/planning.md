@@ -1,25 +1,50 @@
 # Billium implementation plan
 
-[PLAN1](../plans/2026.10.14-№1-BILLIUM-V1/plan.md) describes phases P1–P10.
-P1 is the preparation phase; later phases remain skeletons until its findings are available.
-The [design dossier](../plans/2026.10.14-№1-BILLIUM-V1/research/P1-design.md) maps the owner’s
-requirements to items and defines the money invariants that the architecture must address.
-The [handoff](../plans/2026.10.14-№1-BILLIUM-V1/handoff.md) records the next eligible command.
+Plans live exclusively in the SwissKnifeman workspace, in
+`axioma/projects/billium/plans/`. The repository marker `.swissknifeman/project.json`
+names the workspace and project and must declare `plans_store: workspace`.
+The checkout has no plan store; scripts never fall back to a repository `plans/` directory.
 
-Run from the repository root with Python 3 (standard library only):
+Resolve the workspace plans from the repository root:
 
 ```bash
-python3 plans/2026.10.14-№1-BILLIUM-V1/artifacts/P1-design/test-check-p1.py
+python3 scripts/spec/workspace.py
 ```
 
-These synthetic regressions validate the acceptance checker, including rejection of missing
-scenarios, unresolved evidence and a RED review. They do not prove Billium implementation behavior.
+Location precedence: `SKM_WORKSPACES_ROOT`, then `SKM_WORKSPACES`, then
+`$SKM_HOME/workspaces`, otherwise `~/.local/share/swissknifeman/workspaces`.
+Environment overrides must be absolute directories. The workspace code and project code
+always come from the marker. A missing marker, a different store type or a missing workspace
+fails explicitly; no files are copied back into the product repository.
 
-Once P1 artifacts exist, check one item with `check-p1.py P1.1` (or another item ID).
-Before writing the final review, use `check-p1.py pre-review` to check P1.1–P1.8.
-After writing the verdict, `check-p1.py all` also requires a GREEN P1.9 review.
-Missing outputs before execution correctly fail these checks.
+Under the resolved directory, `2026.10.14-№1-BILLIUM-V1/plan.json` describes phases P1–P10;
+phase/item JSON and `log.jsonl` hold execution state. Decisions are in `decisions/D*.json`; development methods
+are in `artifacts/P1-methods/methods.json`. The spec linter reads these workspace sources
+alongside the product requirements in `docs/requirements.md`.
 
-The design-only command `build-acceptance-inventory.py --check` verifies the 82-scenario snapshot
-against the six local Brain sources. Its default Brain root is the owner’s workspace path;
-use `--brain <path>` elsewhere. Source drift requires a recorded design decision before regeneration.
+The 2026-10-24 redesign preserves completed P1/P2 and details the remaining delivery path.
+Its accepted decisions start at D53. `knowledge/` contains scoped, self-contained JSON design
+sections; `research/2026-10-24-redesign/` holds the baseline export, archived research source,
+atomic coverage inventory, model research, review findings and validation evidence. The
+implementation inputs do not depend on the repository audit file. The design is summarized in
+[architecture coverage](architecture/design-coverage.md); planned checks are distinct from
+checks that have actually run.
+
+Use the project launcher to inspect the current next step and validate the plan graph:
+
+```bash
+python3 -I .swissknifeman/launcher.py planner next PLAN1 --json
+python3 -I .swissknifeman/launcher.py planner get PLAN1 P4
+python3 -I .swissknifeman/launcher.py planner context PLAN1 P4.1 --stdout
+python3 -I .swissknifeman/launcher.py planner check PLAN1 --json
+```
+
+Implementation remains subject to each item's dependencies and checks. Production seller,
+provider, fiscal/tax, retention and service-level inputs belong to deployment qualification;
+the design does not fabricate them or authorize live charges or publishing.
+
+The legacy P1 acceptance checker and its synthetic regressions are retained in the
+workspace's `artifacts/P1-design/` as historical artifacts. They predate workspace migration
+and assume repository-local plans; they are not current product validation commands.
+Use `bash scripts/ci.sh` for product checks. Its lint layer also tests workspace resolution,
+spec generators and lint refusals, including isolation from local and other-project plans.

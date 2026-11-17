@@ -7,6 +7,7 @@ namespace Billium\Platform\Tests\Inbox;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Platform\Contracts\Inbox\CustodyHandler;
@@ -15,6 +16,7 @@ use Billium\Platform\Data\Inbox\CustodyResult;
 use Billium\Platform\Data\Inbox\HandlerOutcome;
 use Billium\Platform\Data\Inbox\InboxRow;
 use Billium\Platform\Tests\PlatformTestCase;
+use Closure;
 use PHPUnit\Framework\Attributes\Group;
 use RuntimeException;
 
@@ -116,6 +118,91 @@ final class CustodyProcessorTest extends InboxTestCase
         self::assertSame(0, $handler->calls);
     }
 
+    public function test_opening_a_partition_attaches_its_pre_partition_gap_and_duplicate_can_drain_it(): void
+    {
+        $handler = new JournalHandler;
+        $parked = $this->custody($this->envelope(2), $handler);
+        self::assertSame(CustodyDisposition::ParkedGap, $parked->disposition);
+        self::assertNull($this->inbox('evt-L1-2')['partition_id']);
+
+        $first = $this->custody($this->envelope(1), $handler);
+        $id = self::integer($this->inbox('evt-L1-1')['partition_id']);
+        self::assertSame($id, $this->inbox('evt-L1-2')['partition_id']);
+        self::assertSame($id, $first->drainPartitionId);
+        self::assertSame([2, 1], [$this->partitionRow($id)['custody_sequence'], $this->partitionRow($id)['accounted_sequence']]);
+        self::assertSame(['evt-L1-1'], $this->journal());
+
+        $duplicate = $this->custody($this->envelope(2), $handler);
+        self::assertSame(CustodyDisposition::Duplicate, $duplicate->disposition);
+        self::assertSame($parked->inboxId, $duplicate->inboxId);
+        self::assertSame($id, $duplicate->drainPartitionId);
+        self::assertCount(1, $this->drainAll($id, $handler));
+        self::assertSame(['evt-L1-1', 'evt-L1-2'], $this->journal());
+        self::assertSame(['applied', 'applied'], [$this->inbox('evt-L1-1')['status'], $this->inbox('evt-L1-2')['status']]);
+        self::assertSame([2, 2], [$this->partitionRow($id)['custody_sequence'], $this->partitionRow($id)['accounted_sequence']]);
+        self::assertSame(2, $handler->calls);
+    }
+
+    public function test_opening_a_partition_leaves_other_namespaces_and_held_deliveries_unattached(): void
+    {
+        $handler = new JournalHandler;
+        $others = [
+            $this->envelope(2, event: 'other-lineage', lineage: 'L2'),
+            $this->envelope(2, event: 'other-partition', partition: 'part-2'),
+            $this->envelope(2, event: 'other-authority', authority: 'remote-billium'),
+            $this->envelope(2, event: 'other-seller', seller: 'seller-b'),
+            $this->envelope(2, event: 'other-environment', environment: 'live'),
+        ];
+        foreach ($others as $envelope) {
+            $this->callers->set(new Caller(self::text($envelope->sellerRef), self::text($envelope->environment), self::INSTALLATION, 'actor-1', [self::text($envelope->sourceAuthority)]));
+            self::assertSame(CustodyDisposition::ParkedGap, $this->custody($envelope, $handler)->disposition);
+        }
+        $this->callers->set(new Caller('seller-a', 'test', self::INSTALLATION, 'actor-1', [self::AUTHORITY]));
+        $this->custody($this->envelope(2), $handler);
+        self::assertSame(CustodyDisposition::RecoveryRequired, $this->custody($this->envelope(2, event: 'forked'), $handler)->disposition);
+
+        $this->custody($this->envelope(1), $handler);
+
+        self::assertNotNull($this->inbox('evt-L1-2')['partition_id']);
+        foreach ($others as $envelope) {
+            $row = $this->inbox(self::text($envelope->eventId));
+            self::assertSame(['parked_gap', null], [$row['status'], $row['partition_id']]);
+        }
+        self::assertSame(['held_recovery', null], [$this->inbox('forked')['status'], $this->inbox('forked')['partition_id']]);
+    }
+
+    public function test_an_existing_partition_reattaches_orphans_before_processing_a_new_delivery(): void
+    {
+        $handler = new JournalHandler;
+        $this->custody($this->envelope(2), $handler);
+        $this->custody($this->envelope(2, lineage: 'L2'), $handler);
+        $this->custody($this->envelope(2, event: 'forked'), $handler);
+        $id = $this->seedPartition(1);
+
+        $this->custody($this->envelope(3), $handler);
+
+        self::assertSame($id, $this->inbox('evt-L1-2')['partition_id']);
+        self::assertSame([3, 1], [$this->partitionRow($id)['custody_sequence'], $this->partitionRow($id)['accounted_sequence']]);
+        self::assertSame(['parked_gap', null], [$this->inbox('evt-L2-2')['status'], $this->inbox('evt-L2-2')['partition_id']]);
+        self::assertSame(['held_recovery', null], [$this->inbox('forked')['status'], $this->inbox('forked')['partition_id']]);
+        self::assertCount(2, $this->drainAll($id, $handler));
+        self::assertSame(['evt-L1-2', 'evt-L1-3'], $this->journal());
+    }
+
+    public function test_a_recovering_partition_leaves_orphan_gaps_unattached(): void
+    {
+        $handler = new JournalHandler;
+        $this->custody($this->envelope(2), $handler);
+        $id = $this->seedPartition(1, state: 'recovery_required');
+
+        self::assertSame(CustodyDisposition::RecoveryRequired, $this->custody($this->envelope(3), $handler)->disposition);
+        self::assertSame(CustodyDisposition::Idle, $this->drain($id, $handler)->disposition);
+
+        self::assertSame(['parked_gap', null], [$this->inbox('evt-L1-2')['status'], $this->inbox('evt-L1-2')['partition_id']]);
+        self::assertSame([1, 1], [$this->partitionRow($id)['custody_sequence'], $this->partitionRow($id)['accounted_sequence']]);
+        self::assertSame(0, $handler->calls);
+    }
+
     public function test_a_regressed_sequence_requires_recovery_and_has_no_effect(): void
     {
         $id = $this->seedPartition(10);
@@ -197,6 +284,11 @@ final class CustodyProcessorTest extends InboxTestCase
 
         $firstId = self::integer($this->inbox('evt-L1-11')['id']);
         $laterId = self::integer($row['id']);
+        $duplicate = $this->custody($this->envelope(12, revision: 2), $handler);
+        self::assertSame(CustodyDisposition::Duplicate, $duplicate->disposition);
+        self::assertSame($firstId, $duplicate->retryInboxId, 'redelivery retries the earlier parked revision first');
+        self::assertSame($firstId, $this->custody($this->envelope(11, revision: 1), $handler)->retryInboxId);
+        self::assertSame(1, $handler->calls, 'duplicate custody never invokes the handler');
         // The later one cannot be retried first.
         $blocked = $this->retry($laterId, $handler);
         self::assertSame($firstId, $blocked->retryInboxId);
@@ -207,6 +299,8 @@ final class CustodyProcessorTest extends InboxTestCase
         $resolved = $this->retry($firstId, $handler);
         self::assertSame(CustodyDisposition::Applied, $resolved->disposition);
         self::assertSame($laterId, $resolved->retryInboxId);
+        self::assertSame($laterId, $this->custody($this->envelope(12, revision: 2), $handler)->retryInboxId,
+            'after the earlier revision resolves, duplicate custody schedules its own retry');
         self::assertSame(CustodyDisposition::Applied, $this->retry($laterId, $handler)->disposition);
         self::assertSame(['evt-L1-11', 'evt-L1-11', 'evt-L1-12'], $this->journal());
         self::assertSame(['applied', 'applied'], [$this->inbox('evt-L1-11')['status'], $this->inbox('evt-L1-12')['status']]);
@@ -303,5 +397,88 @@ final class CustodyProcessorTest extends InboxTestCase
         $result = $this->root(fn (TransactionContext $context) => $this->feed()->retryDependency($context, $inboxId, $handler));
 
         return $result instanceof CustodyResult ? $result : self::fail('retry returned no result');
+    }
+
+    public function test_a_drain_rejects_ungranted_sources_without_changing_custody(): void
+    {
+        $id = $this->seedPartition(10);
+        $handler = new JournalHandler;
+        $this->custody($this->envelope(11), $handler, FinancialMode::RawCustody);
+        $before = $this->inbox('evt-L1-11');
+        $partition = $this->partitionRow($id);
+
+        foreach ([['remote-billium'], []] as $authorities) {
+            $this->callers->set(new Caller('seller-a', 'test', self::INSTALLATION, 'actor-1', $authorities));
+            $this->assertAuthDenied(fn () => $this->drain($id, $handler));
+            self::assertSame($before, $this->inbox('evt-L1-11'));
+            self::assertSame($partition, $this->partitionRow($id));
+            self::assertSame(0, $handler->calls);
+        }
+
+        $this->callers->set(new Caller('seller-a', 'test', self::INSTALLATION, 'actor-1', [self::AUTHORITY]));
+        self::assertSame(CustodyDisposition::Applied, $this->drain($id, $handler)->disposition);
+    }
+
+    public function test_a_retry_rejects_ungranted_sources_before_the_retry_budget_check(): void
+    {
+        config(['billium.inbox.retry_budget' => 1]);
+        $id = $this->seedPartition(10);
+        $handler = new JournalHandler(['evt-L1-11' => HandlerOutcome::parkedDependency('payment', 'charge-1')]);
+        $parked = $this->custody($this->envelope(11), $handler);
+        $before = $this->inbox('evt-L1-11');
+        $partition = $this->partitionRow($id);
+
+        foreach ([['remote-billium'], []] as $authorities) {
+            $this->callers->set(new Caller('seller-a', 'test', self::INSTALLATION, 'actor-1', $authorities));
+            $this->assertAuthDenied(fn () => $this->retry(self::integer($parked->inboxId), $handler));
+            self::assertSame($before, $this->inbox('evt-L1-11'));
+            self::assertSame($partition, $this->partitionRow($id));
+            self::assertSame(1, $handler->calls);
+        }
+    }
+
+    public function test_a_drain_does_not_quarantine_a_handler_authorization_denial(): void
+    {
+        $id = $this->seedPartition(10);
+        $handler = new JournalHandler(['evt-L1-11' => HandlerOutcome::conflict(ProblemCode::AuthDenied->value)]);
+        $this->custody($this->envelope(11), $handler, FinancialMode::RawCustody);
+        $before = $this->inbox('evt-L1-11');
+        $partition = $this->partitionRow($id);
+
+        $this->assertAuthDenied(fn () => $this->drain($id, $handler));
+        self::assertSame($before, $this->inbox('evt-L1-11'));
+        self::assertSame($partition, $this->partitionRow($id));
+        self::assertSame([], $this->journal());
+
+        $handler->script = [];
+        self::assertSame(CustodyDisposition::Applied, $this->drain($id, $handler)->disposition);
+    }
+
+    public function test_a_retry_does_not_quarantine_or_consume_attempts_on_handler_authorization_denial(): void
+    {
+        $id = $this->seedPartition(10);
+        $handler = new JournalHandler(['evt-L1-11' => HandlerOutcome::parkedDependency('payment', 'charge-1')]);
+        $parked = $this->custody($this->envelope(11), $handler);
+        $before = $this->inbox('evt-L1-11');
+        $partition = $this->partitionRow($id);
+        $handler->script = ['evt-L1-11' => HandlerOutcome::conflict(ProblemCode::AuthDenied->value)];
+
+        $this->assertAuthDenied(fn () => $this->retry(self::integer($parked->inboxId), $handler));
+        self::assertSame($before, $this->inbox('evt-L1-11'));
+        self::assertSame($partition, $this->partitionRow($id));
+        self::assertSame(['evt-L1-11'], $this->journal());
+
+        $handler->script = [];
+        self::assertSame(CustodyDisposition::Applied, $this->retry(self::integer($parked->inboxId), $handler)->disposition);
+    }
+
+    private function assertAuthDenied(Closure $action): void
+    {
+        try {
+            $action();
+            self::fail('Expected authorization denial');
+        } catch (ProblemException $problem) {
+            self::assertSame(ProblemCode::AuthDenied, $problem->problem);
+        }
     }
 }

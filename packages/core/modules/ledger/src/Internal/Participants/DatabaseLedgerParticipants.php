@@ -70,6 +70,7 @@ final readonly class DatabaseLedgerParticipants implements LedgerParticipants
     public function closeSettlementIntentNoEffect(TransactionContext $context, CloseSettlementIntentNoEffect $command): Receipt
     {
         $this->runner->assertCurrent($context, 'ledger');
+        $this->routines->assertMonetary($context);
         $caller = $context->caller();
         if ($caller->sellerRef !== $command->scope->sellerRef || $caller->environment !== $command->scope->environment) {
             throw new ProblemException(ProblemCode::AuthDenied, 'participant scope differs from caller');

@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace Billium\Core;
 
+use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Laravel\Registrars\BilliumCoreRegistrar;
 use Billium\Ledger\Internal\LedgerServiceProvider;
 use Billium\Platform\Internal\PlatformServiceProvider;
+use Billium\Rating\Internal\RatingServiceProvider;
+use Billium\Schedule\Internal\ScheduleServiceProvider;
+use Billium\Usage\Internal\UsageServiceProvider;
 use Illuminate\Support\ServiceProvider;
 use Override;
 use Packman\Attributes\Api;
@@ -34,15 +38,26 @@ final class BilliumCoreServiceProvider extends ServiceProvider
     {
         $this->registerRegistrars();
         $this->app->register(PlatformServiceProvider::class);
-        $this->app->register(LedgerServiceProvider::class);
+        $options = $this->app->make(BilliumOptions::class);
+        if (in_array('ledger', $options->modules->enabled, true)) {
+            $this->app->register(LedgerServiceProvider::class);
+        }
+
+        $providers = [
+            'usage' => [UsageServiceProvider::class, $options->usage->enabled],
+            'rating' => [RatingServiceProvider::class, $options->rating->enabled],
+            'schedule' => [ScheduleServiceProvider::class, $options->schedule->enabled],
+        ];
+        foreach ($providers as $module => [$provider, $enabled]) {
+            if ($enabled && in_array($module, $options->modules->enabled, true) && class_exists($provider)) {
+                $this->app->register($provider);
+            }
+        }
     }
 
     public function boot(): void
     {
         $this->bootRegistrars();
-        $this->loadMigrationsFrom([
-            __DIR__.'/../database/migrations/platform',
-            __DIR__.'/../database/migrations/ledger',
-        ]);
+        $this->loadMigrationsFrom(__DIR__.'/../database/migrations/platform');
     }
 }

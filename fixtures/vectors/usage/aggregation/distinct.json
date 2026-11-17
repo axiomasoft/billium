@@ -1,0 +1,104 @@
+{
+  "id": "usage/aggregation/distinct",
+  "description": "P4.3 algorithm input executed by usage Pest tests; conformance verifies canonical fixture integrity, not the aggregation algorithm.",
+  "spec_refs": [
+    "D13",
+    "D19",
+    "D23",
+    "D56"
+  ],
+  "profiles": [
+    "php"
+  ],
+  "given": {
+    "aggregation": {
+      "policy": {
+        "algorithm": "distinct_exact_union@1",
+        "scale": 0
+      },
+      "window": [
+        0,
+        3600
+      ],
+      "overlap": {
+        "facts": [
+          {
+            "fact": "A",
+            "memberSeeds": [
+              "m1",
+              "m2"
+            ],
+            "rev": 1,
+            "t": 10
+          },
+          {
+            "fact": "B",
+            "memberSeeds": [
+              "m2",
+              "m3"
+            ],
+            "rev": 1,
+            "t": 20
+          }
+        ],
+        "expected": {
+          "quantity": "3",
+          "wrongSumOfPartials": 4
+        }
+      },
+      "supersede_keeps_shared_member": {
+        "facts": [
+          {
+            "fact": "A",
+            "memberSeeds": [
+              "m1",
+              "m2"
+            ],
+            "rev": 1,
+            "t": 10
+          },
+          {
+            "fact": "A",
+            "memberSeeds": [
+              "m4"
+            ],
+            "rev": 2,
+            "t": 10
+          },
+          {
+            "fact": "B",
+            "memberSeeds": [
+              "m2",
+              "m3"
+            ],
+            "rev": 1,
+            "t": 20
+          }
+        ],
+        "expected": {
+          "quantity": "3",
+          "members": [
+            "m2",
+            "m3",
+            "m4"
+          ]
+        }
+      }
+    }
+  },
+  "script": [
+    {
+      "op": "canon.digest",
+      "args": {
+        "json_text": "{\"overlap\":{\"expected\":{\"quantity\":\"3\",\"wrongSumOfPartials\":4},\"facts\":[{\"fact\":\"A\",\"memberSeeds\":[\"m1\",\"m2\"],\"rev\":1,\"t\":10},{\"fact\":\"B\",\"memberSeeds\":[\"m2\",\"m3\"],\"rev\":1,\"t\":20}]},\"policy\":{\"algorithm\":\"distinct_exact_union@1\",\"scale\":0},\"supersede_keeps_shared_member\":{\"expected\":{\"members\":[\"m2\",\"m3\",\"m4\"],\"quantity\":\"3\"},\"facts\":[{\"fact\":\"A\",\"memberSeeds\":[\"m1\",\"m2\"],\"rev\":1,\"t\":10},{\"fact\":\"A\",\"memberSeeds\":[\"m4\"],\"rev\":2,\"t\":10},{\"fact\":\"B\",\"memberSeeds\":[\"m2\",\"m3\"],\"rev\":1,\"t\":20}]},\"window\":[0,3600]}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "digest": "sha256:46bc96276a5038e4f3bc0b89bd11d7365e3424ed07ca02b28e7ac2d87a90756e"
+      }
+    }
+  ]
+}

@@ -19,7 +19,10 @@ enum LockRank: int
     case InstallationState = 20;
     case ModuleAdmission = 25;
     case FeedPartition = 30;
+    case UsageSeries = 35;
     case BillingSchedule = 40;
+    case RatingPriceVersion = 44;
+    case RatingFrontier = 45;
     case BillingOccurrence = 50;
     case DunningCase = 60;
     case SettlementIntent = 65;

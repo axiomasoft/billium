@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-10:occurrence/no-charge.v1.json",
+  "title": "occurrence.no_charge.v1 (D56; owner occurrence)",
+  "type": "object",
+  "required": [
+    "schema",
+    "receiptRef",
+    "billingOccurrenceRef",
+    "ratedBasisRef",
+    "sellerRef",
+    "periodRef",
+    "priceVersionRef",
+    "priceDigest",
+    "result",
+    "reason",
+    "approvalRef",
+    "approvalDigest",
+    "digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "occurrence.no_charge.v1"
+    },
+    "receiptRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "billingOccurrenceRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "ratedBasisRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "periodRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "priceVersionRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "priceDigest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    },
+    "result": {
+      "const": "no_charge"
+    },
+    "reason": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/p4NoChargeReason"
+    },
+    "approvalRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "approvalDigest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    }
+  },
+  "additionalProperties": false
+}

@@ -20,6 +20,8 @@ from referencing import Registry
 from referencing.exceptions import Unresolvable
 from referencing.jsonschema import DRAFT202012
 
+from workspace import WorkspaceError, plans_root
+
 ROOT = Path(__file__).resolve().parents[2]
 DRAFT = "https://json-schema.org/draft/2020-12/schema"
 SCHEMA_NAME = re.compile(r"^[a-z][a-z_]*(?:\.[a-z][a-z_]*)+\.v[1-9][0-9]*$")
@@ -44,7 +46,8 @@ OPEN = {
     ("billium.event.v1", ""),
 }
 NON_ENVELOPE_DIRS = {"common", "problem", "conformance"}
-NON_ENVELOPE_FILES = {"feed/defs.json"}
+# D63: rating correction.applied is an internal event payload, not a public wire envelope.
+NON_ENVELOPE_FILES = {"feed/defs.json", "rating/correction-applied.v1.json"}
 
 NORMATIVE = re.compile(r"\b(MUST|SHALL|SHOULD)\b|\b(долж(ен|на|но|ны)|обязан(а|о|ы)?)\b", re.IGNORECASE)
 AMOUNT_KEY = re.compile(r"^(amount|quantity|money|requested)$|Total$")
@@ -73,6 +76,7 @@ class Lint:
     def __init__(self, rev: Path, repo: Path) -> None:
         self.rev = rev
         self.repo = repo
+        self.plans = plans_root(repo)
         self.urn = f"urn:billium:spec:{rev.name}:"
         self.errors: list[str] = []
         self.schemas: dict[str, Any] = {}
@@ -257,11 +261,12 @@ class Lint:
             known |= set(re.findall(r"\bSRC-\d{3}\b", text))
         else:
             self.error(requirements, "missing; REQ/INV references cannot be resolved")
-        for decision in self.repo.glob("plans/**/decisions/D*.json"):
+        for decision in self.plans.glob("**/decisions/D*.json"):
             known.add(decision.stem)
-        for methods in self.repo.glob("plans/**/artifacts/P1-methods/methods.json"):
-            document = json.loads(methods.read_text(encoding="utf-8"))
-            known |= {practice["id"] for practice in document.get("practices", [])}
+        for methods in self.plans.glob("**/artifacts/P1-methods/methods.json"):
+            document = self.load_json(methods)
+            if isinstance(document, dict):
+                known |= {practice["id"] for practice in document.get("practices", [])}
         return known
 
     def check_ref_list(self, where: str, refs: list[str], known: set[str]) -> None:
@@ -445,7 +450,11 @@ def main() -> int:
     repo = args.repo_root.resolve()
     rev = (args.rev if args.rev.is_absolute() else Path.cwd() / args.rev).resolve()
     contracts = args.contracts_doc or repo / "docs/contracts/billium-contracts-v1.md"
-    errors = Lint(rev, repo).run(contracts.resolve())
+    try:
+        errors = Lint(rev, repo).run(contracts.resolve())
+    except WorkspaceError as error:
+        print(f"lint: {error}", file=sys.stderr)
+        return 1
     for line in errors:
         print(f"lint: {line}", file=sys.stderr)
     if errors:

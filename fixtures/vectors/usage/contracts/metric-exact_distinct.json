@@ -1,0 +1,41 @@
+{
+  "id": "usage/contracts/metric-exact_distinct",
+  "description": "P4 contract/unsupported boundary; algorithm cases freeze expected output and do not claim a runtime calculation.",
+  "spec_refs": [
+    "BC-ENV-33",
+    "BC-ENV-34",
+    "BC-ENV-35",
+    "BC-ENV-36",
+    "BC-ENV-37",
+    "BC-ENV-38",
+    "BC-ENV-39",
+    "BC-ENV-40",
+    "BC-ENV-41",
+    "BC-ENV-42",
+    "BC-ENV-43",
+    "BC-ENV-44",
+    "BC-CNF-16",
+    "D56"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"usage.metric.v1\",\"sellerRef\":\"seller-1\",\"metricRef\":\"api_calls\",\"metricVersion\":\"api_calls/exact_distinct\",\"unit\":\"call\",\"quantityPrecision\":\"decimal_24_9/1\",\"sourceSelection\":{\"sources\":[\"tariffler\"],\"filters\":[{\"field\":\"billable\",\"operator\":\"equals\",\"value\":\"true\"}]},\"model\":{\"id\":\"exact_distinct\",\"version\":1,\"reducer\":\"set_union\"},\"extraction\":{\"kind\":\"member_field\",\"field\":\"members\"},\"groupingDimensions\":[\"region\"],\"attributionPolicy\":{\"id\":\"immutable_host_snapshot\",\"version\":1},\"effectiveCutoffPolicy\":{\"id\":\"event_at\",\"version\":1},\"correctionPolicy\":{\"id\":\"replace_same_fact_revision\",\"version\":1},\"latePolicy\":{\"id\":\"original_period_adjustment\",\"version\":1},\"finalityPolicy\":{\"id\":\"source_watermark\",\"version\":1},\"billableStream\":{\"mode\":\"normalized_net_billable\",\"policy\":\"exclusive_commercial_basis/1\",\"commercialBasisRef\":\"commercial-units-1\",\"normalizationRef\":\"net-overage-1\"},\"digest\":\"sha256:684de91e98d2b107fadb00c813457bc5d31da11b77f22a0a81b43ebee64b9d36\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "usage.metric.v1",
+        "digest": "sha256:684de91e98d2b107fadb00c813457bc5d31da11b77f22a0a81b43ebee64b9d36"
+      }
+    }
+  ]
+}

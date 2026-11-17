@@ -46,6 +46,17 @@ ENVELOPES = (
     ("FeedSelection", "billium.feed.selection.v1", "feed/selection.v1.json", None),
     ("FeedPage", "billium.feed.page.v1", "feed/page.v1.json", None),
     ("FeedBootstrap", "billium.feed.bootstrap.v1", "feed/bootstrap.v1.json", None),
+    ("MetricVersion", "usage.metric.v1", "usage/metric.v1.json", None),
+    ("UsageFactV2", "usage.fact.v2", "usage/fact.v2.json", None),
+    ("UsageReceiptV2", "usage.receipt.v2", "usage/receipt.v2.json", None),
+    ("AggregateSnapshot", "usage.aggregate.v1", "usage/aggregate.v1.json", None),
+    ("QuantitySnapshot", "usage.quantity.v1", "usage/quantity.v1.json", None),
+    ("PriceVersion", "rating.price.v1", "rating/price.v1.json", None),
+    ("CommercialPeriod", "period.commercial.v1", "period/commercial.v1.json", None),
+    ("RatedBasis", "rating.basis.v1", "rating/basis.v1.json", None),
+    ("EnsureBillingOccurrenceV2", "occurrence.ensure.v2", "occurrence/ensure.v2.json", None),
+    ("PrepareObligationV2", "obligation.prepare.v2", "obligation/prepare.v2.json", None),
+    ("NoChargeReceipt", "occurrence.no_charge.v1", "occurrence/no-charge.v1.json", None),
 )
 
 KINDS = {"integer": "int", "string": "string", "object": "object", "array": "list", "boolean": "bool"}

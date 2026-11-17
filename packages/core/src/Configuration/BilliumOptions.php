@@ -28,6 +28,9 @@ final readonly class BilliumOptions implements OptionsFactory
         'runtime_role',
         'ledger',
         'modules',
+        'usage',
+        'rating',
+        'schedule',
     ];
 
     public function __construct(
@@ -42,6 +45,9 @@ final readonly class BilliumOptions implements OptionsFactory
         public RuntimeRoleOptions $runtimeRole = new RuntimeRoleOptions,
         public LedgerOptions $ledger = new LedgerOptions,
         public ModulesOptions $modules = new ModulesOptions,
+        public OptionalModuleOptions $usage = new OptionalModuleOptions,
+        public OptionalModuleOptions $rating = new OptionalModuleOptions,
+        public OptionalModuleOptions $schedule = new OptionalModuleOptions,
     ) {}
 
     /** @param array<array-key, mixed> $config */
@@ -63,6 +69,9 @@ final readonly class BilliumOptions implements OptionsFactory
         $runtimeRole = RuntimeRoleOptions::fromSection($config['runtime_role'] ?? [], $path.'.runtime_role', $validator);
         $ledger = LedgerOptions::fromSection($config['ledger'] ?? [], $path.'.ledger', $validator);
         $modules = ModulesOptions::fromSection($config['modules'] ?? [], $path.'.modules', $validator);
+        $usage = OptionalModuleOptions::fromSection($config['usage'] ?? [], $path.'.usage', $validator);
+        $rating = OptionalModuleOptions::fromSection($config['rating'] ?? [], $path.'.rating', $validator);
+        $schedule = OptionalModuleOptions::fromSection($config['schedule'] ?? [], $path.'.schedule', $validator);
 
         $validator->failIfAny();
 
@@ -78,6 +87,9 @@ final readonly class BilliumOptions implements OptionsFactory
             runtimeRole: $runtimeRole,
             ledger: $ledger,
             modules: $modules,
+            usage: $usage,
+            rating: $rating,
+            schedule: $schedule,
         );
     }
 

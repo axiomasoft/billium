@@ -21,6 +21,8 @@ final class TestEnvironment
 
     private static ?string $suiteLeaseToken = null;
 
+    private static bool $preflightVerified = false;
+
     private const string SUITE_LEASE_ENV = 'BILLIUM_TEST_SUITE_LEASE';
 
     public static function configure(Application $app): void
@@ -78,6 +80,9 @@ final class TestEnvironment
         if (! extension_loaded('pdo_pgsql')) {
             throw new RuntimeException('D50/M-33: pdo_pgsql is required');
         }
+        if (self::$preflightVerified) {
+            return;
+        }
         $deadline = microtime(true) + $timeoutSeconds;
         do {
             try {
@@ -99,6 +104,7 @@ final class TestEnvironment
             throw new RuntimeException('D60: runtime and fixture owner must be different roles');
         }
         self::assertRuntimeSafe($runtime);
+        self::$preflightVerified = true;
     }
 
     /**
@@ -208,16 +214,20 @@ final class TestEnvironment
             static fn (string $module): bool => $module === 'ledger',
         ));
         $probe = $runtime->prepare(<<<'SQL'
-            SELECT has_table_privilege(current_user, c.oid, 'INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
-                OR has_any_column_privilege(current_user, c.oid, 'INSERT,UPDATE,REFERENCES')
+            SELECT c.relname
             FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-            WHERE n.nspname = 'public' AND c.relname = :table
+            WHERE n.nspname = 'public' AND c.relname = ANY(CAST(:tables AS text[]))
+              AND (has_table_privilege(current_user, c.oid, 'INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+                   OR has_any_column_privilege(current_user, c.oid, 'INSERT,UPDATE,REFERENCES'))
+            ORDER BY c.relname LIMIT 1
             SQL);
-        foreach ($protectedTables as $table) {
-            $probe->execute(['table' => $table]);
-            if ($probe->fetchColumn()) {
-                throw new RuntimeException("D60: runtime has direct DML grants on protected ledger table {$table}");
-            }
+        $probe->execute(['tables' => '{'.implode(',', array_map(
+            static fn (string $table): string => '"'.str_replace(['\\', '"'], ['\\\\', '\\"'], $table).'"',
+            $protectedTables,
+        )).'}']);
+        $table = $probe->fetchColumn();
+        if ($table !== false) {
+            throw new RuntimeException("D60: runtime has direct DML grants on protected ledger table {$table}");
         }
     }
 

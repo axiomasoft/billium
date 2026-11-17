@@ -1,0 +1,44 @@
+{
+  "id": "rating/contracts/wrong-control",
+  "description": "P4 contract/unsupported boundary; algorithm cases freeze expected output and do not claim a runtime calculation.",
+  "spec_refs": [
+    "BC-ENV-33",
+    "BC-ENV-34",
+    "BC-ENV-35",
+    "BC-ENV-36",
+    "BC-ENV-37",
+    "BC-ENV-38",
+    "BC-ENV-39",
+    "BC-ENV-40",
+    "BC-ENV-41",
+    "BC-ENV-42",
+    "BC-ENV-43",
+    "BC-ENV-44",
+    "BC-CNF-16",
+    "D56"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"rating.price.v1\",\"sellerRef\":\"seller-1\",\"priceVersionRef\":\"price-1\",\"componentRef\":\"component-1\",\"effectiveInterval\":{\"start\":\"2026-10-01T00:00:00Z\",\"end\":\"2026-11-01T00:00:00Z\"},\"unit\":\"call\",\"quantityPrecision\":\"decimal_24_9/1\",\"amountPrecision\":\"decimal_24_12/1\",\"currency\":\"RUB\",\"currencyExponentVersion\":\"ISO4217-2026-10\",\"strategy\":{\"id\":\"per_unit\",\"version\":1,\"unitPrice\":\"0.125000000001\"},\"commitment\":{\"policy\":\"same_component_period/1\",\"scope\":\"seller_customer_component_period\",\"minimumMinor\":\"0\",\"maximumMinor\":\"9223372036854775807\"},\"modifierOrder\":\"strategy_bounds_tax_round/1\",\"rounding\":{\"policy\":\"named_boundaries/1\",\"mode\":\"HALF_EVEN\",\"boundaries\":\"subtotal_then_bounds_then_tax\"},\"taxSnapshot\":{\"snapshotRef\":\"host-tax-1\",\"snapshotDigest\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\",\"policyVersion\":\"host-approved-tax/1\",\"correctionPolicyVersion\":\"host-approved-correction/1\",\"mode\":\"exclusive\",\"rate\":\"0.20\"},\"chargeTiming\":\"arrears\",\"quantityBasis\":\"aggregate\",\"billableStream\":{\"mode\":\"normalized_net_billable\",\"policy\":\"exclusive_commercial_basis/1\",\"commercialBasisRef\":\"commercial-units-1\",\"normalizationRef\":\"net-overage-1\"},\"allowancePolicy\":\"none/1\",\"commercialPolicyRef\":\"approved-agreement-1\",\"digest\":\"sha256:e8bb1005aa9385590d8dedfcea5da5a3a502a78050f26e1b4b37b02286f38a97\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "rating.price.v1",
+        "digest": {
+          "golden": "canon/digest/rating-control-wrong-golden.txt"
+        }
+      }
+    }
+  ],
+  "control": "must-fail"
+}

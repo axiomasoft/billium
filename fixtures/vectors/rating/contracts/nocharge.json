@@ -1,0 +1,41 @@
+{
+  "id": "rating/contracts/nocharge",
+  "description": "P4 contract/unsupported boundary; algorithm cases freeze expected output and do not claim a runtime calculation.",
+  "spec_refs": [
+    "BC-ENV-33",
+    "BC-ENV-34",
+    "BC-ENV-35",
+    "BC-ENV-36",
+    "BC-ENV-37",
+    "BC-ENV-38",
+    "BC-ENV-39",
+    "BC-ENV-40",
+    "BC-ENV-41",
+    "BC-ENV-42",
+    "BC-ENV-43",
+    "BC-ENV-44",
+    "BC-CNF-16",
+    "D56"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"occurrence.no_charge.v1\",\"receiptRef\":\"no-charge-1\",\"billingOccurrenceRef\":\"occurrence-zero\",\"ratedBasisRef\":\"basis-zero\",\"sellerRef\":\"seller-1\",\"periodRef\":\"period-1\",\"priceVersionRef\":\"price-zero\",\"priceDigest\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\",\"result\":\"no_charge\",\"reason\":\"approved_zero_price\",\"approvalRef\":\"host-approved-trial-phase\",\"approvalDigest\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\",\"digest\":\"sha256:c5a237ffc18727e8bb7b2222cb836c7eba1171000c4620ba2d65f1eb84be8833\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "occurrence.no_charge.v1",
+        "digest": "sha256:c5a237ffc18727e8bb7b2222cb836c7eba1171000c4620ba2d65f1eb84be8833"
+      }
+    }
+  ]
+}

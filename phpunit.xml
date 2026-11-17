@@ -25,6 +25,9 @@
             <directory>packages/core/src</directory>
             <directory>packages/core/modules/platform/src</directory>
             <directory>packages/core/modules/ledger/src</directory>
+            <directory>packages/core/modules/usage/src</directory>
+            <directory>packages/core/modules/rating/src</directory>
+            <directory>packages/core/modules/schedule/src</directory>
         </include>
     </source>
 

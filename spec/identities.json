@@ -87,10 +87,31 @@
     },
     {
       "kind": "envelope",
+      "id": "obligation.prepare.v2",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/obligation/prepare.v2.json"
+    },
+    {
+      "kind": "envelope",
       "id": "occurrence.ensure.v1",
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/occurrence/ensure.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "occurrence.ensure.v2",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/ensure.v2.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "occurrence.no_charge.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/no-charge.v1.json"
     },
     {
       "kind": "envelope",
@@ -150,6 +171,34 @@
     },
     {
       "kind": "envelope",
+      "id": "period.commercial.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/period/commercial.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "rating.basis.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/basis.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "rating.price.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/price.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "usage.aggregate.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/aggregate.v1.json"
+    },
+    {
+      "kind": "envelope",
       "id": "usage.fact.v1",
       "status": "new",
       "since": "2026-10",
@@ -157,10 +206,38 @@
     },
     {
       "kind": "envelope",
+      "id": "usage.fact.v2",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v2.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "usage.metric.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/metric.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "usage.quantity.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/quantity.v1.json"
+    },
+    {
+      "kind": "envelope",
       "id": "usage.receipt.v1",
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/usage/receipt.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "usage.receipt.v2",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/receipt.v2.json"
     },
     {
       "kind": "envelope-field",
@@ -878,6 +955,55 @@
     },
     {
       "kind": "envelope-field",
+      "id": "obligation.prepare.v2#/properties/commandKey",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/obligation/prepare.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "obligation.prepare.v2#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/obligation/prepare.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "obligation.prepare.v2#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/obligation/prepare.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "obligation.prepare.v2#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/obligation/prepare.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "obligation.prepare.v2#/properties/ratedBasis",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/obligation/prepare.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "obligation.prepare.v2#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/obligation/prepare.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "obligation.prepare.v2#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/obligation/prepare.v2.json"
+    },
+    {
+      "kind": "envelope-field",
       "id": "occurrence.ensure.v1#/properties/commandKey",
       "status": "new",
       "since": "2026-10",
@@ -945,6 +1071,188 @@
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/occurrence/ensure.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.ensure.v2#/properties/commandKey",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/ensure.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.ensure.v2#/properties/componentRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/ensure.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.ensure.v2#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/ensure.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.ensure.v2#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/ensure.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.ensure.v2#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/ensure.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.ensure.v2#/properties/interval",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/ensure.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.ensure.v2#/properties/period",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/ensure.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.ensure.v2#/properties/priceDigest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/ensure.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.ensure.v2#/properties/priceVersionRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/ensure.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.ensure.v2#/properties/purpose",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/ensure.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.ensure.v2#/properties/scheduleRevision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/ensure.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.ensure.v2#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/ensure.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.ensure.v2#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/ensure.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.no_charge.v1#/properties/approvalDigest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/no-charge.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.no_charge.v1#/properties/approvalRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/no-charge.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.no_charge.v1#/properties/billingOccurrenceRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/no-charge.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.no_charge.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/no-charge.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.no_charge.v1#/properties/periodRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/no-charge.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.no_charge.v1#/properties/priceDigest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/no-charge.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.no_charge.v1#/properties/priceVersionRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/no-charge.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.no_charge.v1#/properties/ratedBasisRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/no-charge.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.no_charge.v1#/properties/reason",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/no-charge.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.no_charge.v1#/properties/receiptRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/no-charge.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.no_charge.v1#/properties/result",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/no-charge.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.no_charge.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/no-charge.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "occurrence.no_charge.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/occurrence/no-charge.v1.json"
     },
     {
       "kind": "envelope-field",
@@ -1746,6 +2054,559 @@
     },
     {
       "kind": "envelope-field",
+      "id": "period.commercial.v1#/properties/agreementRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/period/commercial.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "period.commercial.v1#/properties/agreementRevision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/period/commercial.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "period.commercial.v1#/properties/anchor",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/period/commercial.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "period.commercial.v1#/properties/calendarPolicy",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/period/commercial.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "period.commercial.v1#/properties/chargeTiming",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/period/commercial.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "period.commercial.v1#/properties/componentRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/period/commercial.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "period.commercial.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/period/commercial.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "period.commercial.v1#/properties/dstFoldPolicy",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/period/commercial.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "period.commercial.v1#/properties/dstGapPolicy",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/period/commercial.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "period.commercial.v1#/properties/externalCorrelationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/period/commercial.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "period.commercial.v1#/properties/frequency",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/period/commercial.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "period.commercial.v1#/properties/interval",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/period/commercial.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "period.commercial.v1#/properties/localEnd",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/period/commercial.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "period.commercial.v1#/properties/localStart",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/period/commercial.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "period.commercial.v1#/properties/periodRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/period/commercial.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "period.commercial.v1#/properties/prorationPolicy",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/period/commercial.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "period.commercial.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/period/commercial.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "period.commercial.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/period/commercial.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "period.commercial.v1#/properties/shortMonthPolicy",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/period/commercial.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "period.commercial.v1#/properties/timezone",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/period/commercial.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "period.commercial.v1#/properties/tzdbVersion",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/period/commercial.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.basis.v1#/properties/amount",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/basis.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.basis.v1#/properties/attribution",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/basis.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.basis.v1#/properties/billableStream",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/basis.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.basis.v1#/properties/billingOccurrenceRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/basis.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.basis.v1#/properties/commitmentScopeKey",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/basis.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.basis.v1#/properties/correction",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/basis.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.basis.v1#/properties/currencyExponentVersion",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/basis.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.basis.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/basis.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.basis.v1#/properties/period",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/basis.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.basis.v1#/properties/priceDigest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/basis.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.basis.v1#/properties/priceVersionRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/basis.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.basis.v1#/properties/quantity",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/basis.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.basis.v1#/properties/quantityEvidence",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/basis.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.basis.v1#/properties/ratedBasisRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/basis.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.basis.v1#/properties/rounding",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/basis.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.basis.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/basis.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.basis.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/basis.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.basis.v1#/properties/taxSnapshot",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/basis.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.basis.v1#/properties/unit",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/basis.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.price.v1#/properties/allowancePolicy",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/price.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.price.v1#/properties/amountPrecision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/price.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.price.v1#/properties/billableStream",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/price.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.price.v1#/properties/chargeTiming",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/price.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.price.v1#/properties/commercialPolicyRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/price.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.price.v1#/properties/commitment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/price.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.price.v1#/properties/componentRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/price.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.price.v1#/properties/currency",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/price.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.price.v1#/properties/currencyExponentVersion",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/price.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.price.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/price.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.price.v1#/properties/effectiveInterval",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/price.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.price.v1#/properties/modifierOrder",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/price.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.price.v1#/properties/priceVersionRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/price.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.price.v1#/properties/quantityBasis",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/price.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.price.v1#/properties/quantityPrecision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/price.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.price.v1#/properties/rounding",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/price.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.price.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/price.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.price.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/price.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.price.v1#/properties/strategy",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/price.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.price.v1#/properties/taxSnapshot",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/price.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "rating.price.v1#/properties/unit",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/rating/price.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.aggregate.v1#/properties/attribution",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/aggregate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.aggregate.v1#/properties/billableStream",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/aggregate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.aggregate.v1#/properties/completeness",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/aggregate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.aggregate.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/aggregate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.aggregate.v1#/properties/effectiveRevision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/aggregate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.aggregate.v1#/properties/grouping",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/aggregate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.aggregate.v1#/properties/metricDigest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/aggregate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.aggregate.v1#/properties/metricRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/aggregate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.aggregate.v1#/properties/metricVersion",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/aggregate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.aggregate.v1#/properties/model",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/aggregate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.aggregate.v1#/properties/quantity",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/aggregate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.aggregate.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/aggregate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.aggregate.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/aggregate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.aggregate.v1#/properties/snapshotRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/aggregate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.aggregate.v1#/properties/sourceDigest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/aggregate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.aggregate.v1#/properties/sourceFrontier",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/aggregate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.aggregate.v1#/properties/unit",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/aggregate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.aggregate.v1#/properties/window",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/aggregate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
       "id": "usage.fact.v1#/properties/correctsFactId",
       "status": "new",
       "since": "2026-10",
@@ -1865,6 +2726,349 @@
     },
     {
       "kind": "envelope-field",
+      "id": "usage.fact.v2#/properties/attribution",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v2#/properties/billableStream",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v2#/properties/correction",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v2#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v2#/properties/eventAt",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v2#/properties/factId",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v2#/properties/grouping",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v2#/properties/interval",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v2#/properties/metricDigest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v2#/properties/metricRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v2#/properties/metricVersion",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v2#/properties/provenance",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v2#/properties/receivedAt",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v2#/properties/revision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v2#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v2#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v2#/properties/source",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v2#/properties/unit",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.fact.v2#/properties/value",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/fact.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.metric.v1#/properties/attributionPolicy",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/metric.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.metric.v1#/properties/billableStream",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/metric.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.metric.v1#/properties/correctionPolicy",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/metric.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.metric.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/metric.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.metric.v1#/properties/effectiveCutoffPolicy",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/metric.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.metric.v1#/properties/extraction",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/metric.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.metric.v1#/properties/finalityPolicy",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/metric.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.metric.v1#/properties/groupingDimensions",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/metric.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.metric.v1#/properties/latePolicy",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/metric.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.metric.v1#/properties/metricRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/metric.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.metric.v1#/properties/metricVersion",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/metric.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.metric.v1#/properties/model",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/metric.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.metric.v1#/properties/quantityPrecision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/metric.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.metric.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/metric.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.metric.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/metric.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.metric.v1#/properties/sourceSelection",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/metric.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.metric.v1#/properties/unit",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/metric.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.quantity.v1#/properties/approvalDigest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/quantity.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.quantity.v1#/properties/approvedBy",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/quantity.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.quantity.v1#/properties/attribution",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/quantity.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.quantity.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/quantity.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.quantity.v1#/properties/effectiveInterval",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/quantity.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.quantity.v1#/properties/effectiveRevision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/quantity.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.quantity.v1#/properties/prorationPolicy",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/quantity.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.quantity.v1#/properties/quantity",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/quantity.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.quantity.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/quantity.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.quantity.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/quantity.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.quantity.v1#/properties/snapshotRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/quantity.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.quantity.v1#/properties/sourceDigest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/quantity.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.quantity.v1#/properties/unit",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/quantity.v1.json"
+    },
+    {
+      "kind": "envelope-field",
       "id": "usage.receipt.v1#/properties/digest",
       "status": "new",
       "since": "2026-10",
@@ -1904,6 +3108,76 @@
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/usage/receipt.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.receipt.v2#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/receipt.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.receipt.v2#/properties/factDigest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/receipt.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.receipt.v2#/properties/factId",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/receipt.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.receipt.v2#/properties/receiptRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/receipt.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.receipt.v2#/properties/refusal",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/receipt.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.receipt.v2#/properties/result",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/receipt.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.receipt.v2#/properties/revision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/receipt.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.receipt.v2#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/receipt.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.receipt.v2#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/receipt.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "usage.receipt.v2#/properties/source",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/usage/receipt.v2.json"
     },
     {
       "kind": "problem-code",
@@ -2369,6 +3643,13 @@
     },
     {
       "kind": "config-key",
+      "id": "billium.rating.enabled",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/config/billium.php"
+    },
+    {
+      "kind": "config-key",
       "id": "billium.runner.max_attempts",
       "status": "new",
       "since": "2026-10",
@@ -2384,6 +3665,20 @@
     {
       "kind": "config-key",
       "id": "billium.runtime_role.preflight",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/config/billium.php"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.schedule.enabled",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/config/billium.php"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium.usage.enabled",
       "status": "new",
       "since": "2026-10",
       "source": "packages/core/config/billium.php"
@@ -2562,6 +3857,69 @@
       "status": "new",
       "since": "2026-10",
       "source": "packages/core/database/migrations/platform/2026_10_29_000013_bind_billium_bootstrap_items_to_manifest.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_09_000010_guard_billium_payment_terminal_state",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/ledger/2026_11_09_000010_guard_billium_payment_terminal_state.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_10_000001_create_billium_usage",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/usage/2026_11_10_000001_create_billium_usage.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_10_000100_create_rating_pricing_tables",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/rating/2026_11_10_000100_create_rating_pricing_tables.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_10_000300_create_usage_aggregation_tables",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/usage/2026_11_10_000300_create_usage_aggregation_tables.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_10_000400_create_rating_run_basis_booking",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/rating/2026_11_10_000400_create_rating_run_basis_booking.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_10_000500_create_billium_schedule_periods",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/schedule/2026_11_10_000500_create_billium_schedule_periods.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_10_000600_create_billium_schedule_occurrences",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/schedule/2026_11_10_000600_create_billium_schedule_occurrences.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_10_000610_create_billium_schedule_billing_correction",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/schedule/2026_11_10_000610_create_billium_schedule_billing_correction.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_10_000620_allow_rated_correction_parents",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/schedule/2026_11_10_000620_allow_rated_correction_parents.php"
     },
     {
       "kind": "doctor-finding",

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Internal\Feed;
 
+use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Data\Runner\LockRequest;
 use Billium\Core\Enums\Runner\LockRank;
@@ -21,11 +22,27 @@ use Packman\Attributes\Internal;
 #[Internal]
 final readonly class PartitionStore
 {
-    public function __construct(private DatabaseManager $databases) {}
+    public function __construct(private DatabaseManager $databases, private BilliumOptions $options) {}
 
     public function connection(TransactionContext $context): Connection
     {
         return $this->databases->connection($context->connectionName());
+    }
+
+    public function defaultConnection(): Connection
+    {
+        return $this->databases->connection($this->options->connection);
+    }
+
+    /**
+     * Serializes bootstrap staging/adoption with first-delivery creation and custody in retired-only namespaces.
+     * Precedes partition/session row locks; fresh orphan gaps can commit without namespace admission.
+     */
+    public function lockNamespace(Connection $db, string $channel, string $authority, string $seller, string $environment, string $partitionRef): void
+    {
+        // Lineage is deliberately absent: its replacement recovers the same namespace.
+        $key = json_encode(['billium.feed.namespace', $channel, $authority, $seller, $environment, $partitionRef], JSON_THROW_ON_ERROR);
+        $db->selectOne('SELECT pg_advisory_xact_lock(hashtextextended(?::text, 0))', [$key]);
     }
 
     public function live(Connection $db, string $channel, string $authority, string $seller, string $environment, string $partitionRef): ?PartitionRow
@@ -73,6 +90,51 @@ final readonly class PartitionStore
             SQL, [$channel, $authority, $lineage, $seller, $environment, $partitionRef, $generation, $cursor, $cursor]);
 
         return $row === null ? null : PartitionRow::from($row);
+    }
+
+    /** Under the inserted/locked active partition, reattaches orphan custody and restores its contiguous frontier. */
+    public function attachParkedGaps(Connection $db, PartitionRow $partition): void
+    {
+        if (! $partition->active()) {
+            return;
+        }
+        $namespace = [$partition->channel, $partition->sourceAuthority, $partition->sourceLineage,
+            $partition->sellerRef, $partition->environment, $partition->partitionRef];
+        // Custody can commit after adoption has already scanned the tail. Covered orphans have
+        // the same durable disposition as arrivals seen during adoption, even below the cursor.
+        $db->update(<<<'SQL'
+            UPDATE public.billium_inbox_message m
+            SET partition_id = ?, status = 'quarantined', last_error_class = 'superseded_by_bootstrap', park_kind = NULL, park_ref = NULL
+            WHERE m.partition_id IS NULL AND m.status = 'parked_gap'
+              AND m.channel = ? AND m.source_authority = ? AND m.source_lineage = ?
+              AND m.seller_ref = ? AND m.environment = ? AND m.partition_ref = ? AND m.source_sequence <= ?
+              AND EXISTS (SELECT 1 FROM public.billium_feed_bootstrap_session s
+                  WHERE s.new_partition_id = ? AND s.status = 'adopted' AND m.source_sequence <= s.cursor_sequence)
+            SQL, [$partition->id, ...$namespace, $partition->accountedSequence, $partition->id]);
+        $regressed = $db->update(<<<'SQL'
+            UPDATE public.billium_inbox_message SET status = 'held_recovery'
+            WHERE partition_id IS NULL AND status = 'parked_gap'
+              AND channel = ? AND source_authority = ? AND source_lineage = ?
+              AND seller_ref = ? AND environment = ? AND partition_ref = ? AND source_sequence <= ?
+              AND NOT EXISTS (SELECT 1 FROM public.billium_feed_bootstrap_session s
+                  WHERE s.new_partition_id = ? AND s.status = 'adopted' AND billium_inbox_message.source_sequence <= s.cursor_sequence)
+            SQL, [...$namespace, $partition->accountedSequence, $partition->id]);
+        if ($regressed > 0) {
+            $this->requireRecovery($db, $partition, 'sequence_regressed');
+
+            return;
+        }
+        $attached = $db->update(<<<'SQL'
+            UPDATE public.billium_inbox_message SET partition_id = ?
+            WHERE partition_id IS NULL AND status = 'parked_gap'
+              AND channel = ? AND source_authority = ? AND source_lineage = ?
+              AND seller_ref = ? AND environment = ? AND partition_ref = ?
+              AND source_sequence > ?
+            SQL, [$partition->id, $partition->channel, $partition->sourceAuthority, $partition->sourceLineage,
+            $partition->sellerRef, $partition->environment, $partition->partitionRef, $partition->accountedSequence]);
+        if ($attached > 0) {
+            $this->extendCustody($db, $partition);
+        }
     }
 
     public function requireRecovery(Connection $db, PartitionRow $partition, string $reason): void

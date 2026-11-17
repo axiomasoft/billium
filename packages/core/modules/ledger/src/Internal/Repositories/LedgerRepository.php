@@ -9,7 +9,9 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runner\OperationRunner;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Core\Enums\Runner\LockRank;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Exceptions\Runner\LockPlanChanged;
 use Billium\Ledger\Data\Credits\RecordCustomerCredit;
 use Billium\Ledger\Data\Obligations\AdjustObligation;
@@ -29,9 +31,54 @@ final readonly class LedgerRepository
 {
     public function __construct(private DatabaseManager $databases, private OperationRunner $runner) {}
 
+    /**
+     * @param  list<ModuleOperationClass>  $allowedClasses
+     * @param  list<FinancialMode>  $allowedModes
+     */
+    public function assertMonetary(
+        TransactionContext $context,
+        array $allowedClasses = [
+            ModuleOperationClass::NewIntent,
+            ModuleOperationClass::FrozenIntentCompletion,
+            ModuleOperationClass::OriginalOwnerRefund,
+        ],
+        array $allowedModes = [FinancialMode::Active],
+    ): void {
+        $this->runner->assertCurrent($context, 'ledger');
+        if ($allowedModes === [] || ! in_array($context->spec()->mode, $allowedModes, true) || ! $context->spec()->monetary()) {
+            throw new LogicException('Monetary ledger operations require an admitted financial session and commit accounting (D54, D60, D62)');
+        }
+        $context->sessionEpoch(); // Throws when the root has no admitted financial session.
+        if (! in_array($context->spec()->operationClass, $allowedClasses, true)) {
+            throw new LogicException('Monetary ledger operation is not permitted for operation class '.$context->spec()->operationClass->value.' (D55, D60)');
+        }
+    }
+
+    /**
+     * @param  list<ModuleOperationClass>  $allowedClasses
+     * @param  list<FinancialMode>  $allowedModes
+     */
+    public function assertFinancialSession(
+        TransactionContext $context,
+        array $allowedClasses = [
+            ModuleOperationClass::ObservedFactRecording,
+            ModuleOperationClass::UnknownResolution,
+        ],
+        array $allowedModes = [FinancialMode::Active],
+    ): void {
+        $this->runner->assertCurrent($context, 'ledger');
+        if ($allowedModes === [] || ! in_array($context->spec()->mode, $allowedModes, true)) {
+            throw new LogicException('Ledger operations require an admitted financial session (D54, D60)');
+        }
+        $context->sessionEpoch(); // Throws when the root has no admitted financial session.
+        if (! in_array($context->spec()->operationClass, $allowedClasses, true)) {
+            throw new LogicException('Ledger operation is not permitted for operation class '.$context->spec()->operationClass->value.' (D55, D60)');
+        }
+    }
+
     public function execute(TransactionContext $context, RecordObligation|AdjustObligation|AmendObligationDuePolicy|RecordCustomerCredit|DeclareSettlementIntent $command): LedgerReceipt
     {
-        $this->runner->assertCurrent($context, 'ledger');
+        $this->assertMonetary($context);
         CommandPayload::validate($command);
         $caller = $context->caller();
         if ($caller->sellerRef !== $command->scope->sellerRef || $caller->environment !== $command->scope->environment) {

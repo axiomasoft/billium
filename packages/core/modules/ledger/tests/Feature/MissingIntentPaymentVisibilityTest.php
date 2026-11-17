@@ -5,9 +5,17 @@ declare(strict_types=1);
 namespace Billium\Ledger\Tests\Feature;
 
 use Billium\Contracts\Enums\ProblemCode;
+use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Tests\Support\ObservationFactory;
+use Billium\Ledger\Contracts\LedgerQueries;
+use Billium\Ledger\Internal\Observation\ObservationHandler;
 use Billium\Ledger\Tests\Observation\ObservationTestCase;
+use Billium\Platform\Contracts\Feed\FeedPartitions;
+use Billium\Platform\Data\Inbox\CustodyResult;
+use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Events\QueryExecuted;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\TestWith;
 
 /**
  * D60 (observation-apply 2/4, REQ-FAIL-12): a confirmed capture without a settlement intent (no authenticated account
@@ -18,6 +26,85 @@ use PHPUnit\Framework\Attributes\Group;
 #[Group('pg')]
 final class MissingIntentPaymentVisibilityTest extends ObservationTestCase
 {
+    #[TestWith([false])]
+    #[TestWith([true])]
+    public function test_duplicate_redeliveries_while_intent_is_missing_do_not_exhaust_retry_budget(bool $retryFeedDirectly): void
+    {
+        $charge = ObservationFactory::charge('op-1', 1, 1000);
+        self::assertSame(ProblemCode::ObservationParked->value, $this->tryObserve($charge));
+        $inboxId = self::integer($this->value('SELECT id FROM billium_inbox_message WHERE external_event_id = ?', [self::eventId($charge)]));
+        $recordings = 0;
+        $this->application()->make(DatabaseManager::class)->listen(static function (QueryExecuted $query) use (&$recordings): void {
+            if (str_contains($query->sql, 'billium_record_observation(')) {
+                $recordings++;
+            }
+        });
+        $feed = $this->application()->make(FeedPartitions::class);
+        $handler = $this->application()->make(ObservationHandler::class);
+        for ($delivery = 0; $delivery < 12; $delivery++) {
+            self::assertSame(ProblemCode::ObservationParked->value, $this->tryObserve($charge));
+            if ($retryFeedDirectly) {
+                self::assertSame('parked_dependency', $this->drainer()->root(
+                    fn (TransactionContext $context): CustodyResult => $feed->retryDependency($context, $inboxId, $handler))->status);
+            }
+        }
+        self::assertSame(1, self::integer($this->value('SELECT attempts FROM billium_inbox_message WHERE id = ?', [$inboxId])));
+        self::assertSame($retryFeedDirectly ? 12 : 0, $recordings, 'the drainer must skip economic retries until the dependency exists');
+
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        self::assertSame(['applied'], $this->drainer()->retryParked());
+        self::assertSame('applied', $this->inboxStatus(self::eventId($charge)));
+        self::assertSame(1000, $this->allocated('o1'));
+        self::assertSame(1, $this->rows('billium_allocation'));
+    }
+
+    #[TestWith([false])]
+    #[TestWith([true])]
+    public function test_an_inbox_only_revision_stays_pending_and_recovers_after_a_crash_before_follow(bool $redeliver): void
+    {
+        $this->debt('o1', 1000);
+        $first = ObservationFactory::charge('op-1', 1, 2000, sequence: 1);
+        $second = ObservationFactory::charge('op-1', 2, 2000, 1500, sequence: 2);
+        self::assertSame(ProblemCode::ObservationParked->value, $this->tryObserve($first));
+        self::assertSame(ProblemCode::ObservationParked->value, $this->tryObserve($second));
+        $firstId = self::integer($this->value('SELECT id FROM billium_inbox_message WHERE external_event_id = ?', [self::eventId($first)]));
+        $secondId = self::integer($this->value('SELECT id FROM billium_inbox_message WHERE external_event_id = ?', [self::eventId($second)]));
+        self::assertSame(0, $this->rows('billium_observation_park', 'inbox_id = '.$secondId));
+
+        $this->intent('intent-a', ['o1']);
+        $feed = $this->application()->make(FeedPartitions::class);
+        $handler = $this->application()->make(ObservationHandler::class);
+        // Commit revision 1, then discard its follow-up as if the process died before follow().
+        $this->drainer()->root(fn (TransactionContext $context): CustodyResult => $feed->retryDependency($context, $firstId, $handler));
+
+        self::assertSame('applied', $this->inboxStatus(self::eventId($first)));
+        self::assertSame('parked_dependency', $this->inboxStatus(self::eventId($second)));
+        self::assertSame(0, $this->rows('billium_observation_park', 'released_at IS NULL'));
+        $queries = $this->application()->make(LedgerQueries::class);
+        $pending = $queries->paymentStatus('op-1');
+        self::assertSame(1, self::arr($pending['applied'])['revision']);
+        self::assertSame('allocation_pending', $pending['projectionStatus']);
+        self::assertSame('operation_revision', $pending['pendingAllocationReason']);
+        self::assertSame('0.00', self::arr($pending['spendable'])['amount']);
+
+        if ($redeliver) {
+            $receipt = $this->observe($second);
+            self::assertFalse($receipt->replayed, 'a parked delivery applied now is not an already-applied replay');
+            self::assertTrue($this->observe($second)->replayed);
+        } else {
+            self::assertSame(['applied'], $this->drainer()->retryParked());
+            self::assertSame([], $this->drainer()->retryParked());
+        }
+        self::assertSame('applied', $this->inboxStatus(self::eventId($second)));
+        $current = $queries->paymentStatus('op-1');
+        $applied = self::arr($current['applied']);
+        self::assertSame(2, $applied['revision']);
+        self::assertSame('15.00', self::arr($applied['refundedTotal'])['amount']);
+        self::assertSame('current', $current['projectionStatus']);
+        self::assertSame('0.00', self::arr($current['spendable'])['amount']);
+    }
+
     public function test_an_observed_capture_without_intent_is_visible_parks_allocation_and_applies_after_declare(): void
     {
         $this->debt('o1', 1000);

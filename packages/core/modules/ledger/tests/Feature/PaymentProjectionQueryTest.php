@@ -7,6 +7,7 @@ namespace Billium\Ledger\Tests\Feature;
 use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
+use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Tests\Support\ObservationFactory;
 use Billium\Ledger\Tests\Observation\OverRefundVector;
 use Billium\Ledger\Tests\Queries\QueryTestCase;
@@ -87,6 +88,29 @@ final class PaymentProjectionQueryTest extends QueryTestCase
         self::assertCount(1, self::arr($this->queries()->allocationByOperation('op-1')['receipts']), 'No allocated parts does not erase the applied business receipt');
         $this->observe(ObservationFactory::charge('op-1', 2, 0, sequence: 2, fields: ['requested' => 10000, 'state' => 'accepted-unknown']));
         self::assertSame('accepted-unknown', self::arr($this->queries()->paymentStatus('op-1')['applied'])['state']);
+    }
+
+    public function test_recovery_blocks_spending_and_refunds_for_callers_without_source_authorities(): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $this->observe(ObservationFactory::charge('op-1', 1, 10000));
+        $before = $this->queries()->paymentStatus('op-1');
+        self::assertSame('100.00', self::arr(self::arr($before['applied'])['capturedTotal'])['amount']);
+        self::assertSame('10.00', self::arr(self::arr($before['applied'])['allocated'])['amount']);
+        self::assertSame('90.00', self::arr($before['spendable'])['amount']);
+        self::assertTrue($this->queries()->refundAuthorization('op-1', Money::parse('1.00', 'RUB'))['allowed']);
+
+        self::assertSame(ProblemCode::RecoveryRequired->value,
+            $this->tryObserve(ObservationFactory::charge('op-1', 2, 10000, sequence: 2, fields: ['sourceLineage' => 'L2'])));
+        $this->callers->set(new Caller('seller-a', 'test', self::INSTALLATION, 'actor-1', []));
+
+        $status = $this->queries()->paymentStatus('op-1');
+        self::assertSame('recovery_required', $status['projectionStatus']);
+        self::assertSame('100.00', self::arr(self::arr($status['applied'])['capturedTotal'])['amount']);
+        self::assertSame('10.00', self::arr(self::arr($status['applied'])['allocated'])['amount']);
+        self::assertSame('0.00', self::arr($status['spendable'])['amount']);
+        self::assertFalse($this->queries()->refundAuthorization('op-1', Money::parse('1.00', 'RUB'))['allowed']);
     }
 
     public function test_recovery_and_bootstrap_are_visible_without_query_mutation(): void

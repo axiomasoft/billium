@@ -1,0 +1,47 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Billium\Rating\Data\Rating;
+
+use Billium\Rating\Internal\Pipeline\InputsDigest;
+use Packman\Attributes\Api;
+
+#[Api]
+final readonly class FrozenRatingInputs
+{
+    /**
+     * @param  list<FrozenAggregate>  $aggregates
+     * @param  list<FrozenPrice>  $prices
+     * @param  list<FrozenTax>  $taxes
+     */
+    public function __construct(
+        public string $sellerRef,
+        public string $environment,
+        public string $billingAccountRef,
+        public string $occurrenceRef,
+        public int $periodStartMicros,
+        public int $periodEndMicros,
+        public string $attribution,
+        public string $agreementRevision,
+        public string $currency,
+        public int $currencyExponent,
+        public array $aggregates,
+        public array $prices,
+        public array $taxes,
+        public string $occurrenceInputsDigest,
+        public string $sourceDigest,
+        public string $frontierExpectedDigest,
+        public int $frontierExpectedRowVersion,
+        public ?string $noChargeReason = null,
+        /** @var array{elapsed: string, total: string, amendmentRef: string, revision: int, effectiveAt: string, policy: string, timezone: ?string}|null */
+        public ?array $proration = null,
+        /** @var array<string, mixed>|null */
+        public ?array $correctionEvidence = null,
+    ) {}
+
+    public function digest(): string
+    {
+        return InputsDigest::compute($this);
+    }
+}

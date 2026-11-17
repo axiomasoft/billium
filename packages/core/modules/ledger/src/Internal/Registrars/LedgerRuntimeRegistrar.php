@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Billium\Ledger\Internal\Registrars;
 
 use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Ledger\Contracts\CorrectionCreditParticipants;
+use Billium\Ledger\Contracts\CorrectionLocks;
 use Billium\Ledger\Contracts\Ledger;
 use Billium\Ledger\Contracts\LedgerParticipants;
 use Billium\Ledger\Contracts\LedgerQueries;
@@ -12,6 +14,8 @@ use Billium\Ledger\Contracts\ObservationApplier;
 use Billium\Ledger\Internal\LedgerFacade;
 use Billium\Ledger\Internal\Observation\ObservationHandler;
 use Billium\Ledger\Internal\Observation\ObservationIntake;
+use Billium\Ledger\Internal\Participants\DatabaseCorrectionCreditParticipants;
+use Billium\Ledger\Internal\Participants\DatabaseCorrectionLocks;
 use Billium\Ledger\Internal\Participants\DatabaseLedgerParticipants;
 use Billium\Ledger\Internal\Queries\DatabaseLedgerQueries;
 use Billium\Ledger\Internal\Repositories\LedgerPrivileges;
@@ -32,6 +36,8 @@ final class LedgerRuntimeRegistrar implements PackageRegistrar
     public function register(Application $app): void
     {
         $app->bind(Ledger::class, LedgerFacade::class);
+        $app->bind(CorrectionLocks::class, DatabaseCorrectionLocks::class);
+        $app->bind(CorrectionCreditParticipants::class, DatabaseCorrectionCreditParticipants::class);
         $app->bind(LedgerParticipants::class, DatabaseLedgerParticipants::class);
         $app->bind(ObservationApplier::class, ObservationIntake::class);
         $app->bind(LedgerQueries::class, DatabaseLedgerQueries::class);

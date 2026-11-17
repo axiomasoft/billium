@@ -15,6 +15,9 @@
   `docs/`; run the relevant PHP/Dart checks once their tooling exists.
 - Preserve unrelated worktree changes. Keep credentials and machine-specific
   agent settings out of Git.
+- Plans exist only in the SwissKnifeman workspace named by
+  `.swissknifeman/project.json`; resolve them with `python3 scripts/spec/workspace.py`.
+  Never read or create a repository-local plan store. See `docs/planning.md`.
 - Skills use the swissknifeman connect channel. Project memory is accessed
   explicitly through mAInd in scope `project:billium`; code navigation uses
   Serena with PHP and Dart language servers.
@@ -23,7 +26,7 @@
 
 <!-- swissknifeman:hub:start -->
 <!-- swissknifeman hub: stub — skills and task-commands are connected natively; index and priority rules are not duplicated here. -->
-<!-- swissknifeman:registry sha=4a7f58cd2b84 skills=209 -->
+<!-- swissknifeman:registry sha=695f52f0312f skills=209 -->
 <!-- Full index: `skiller status` or generate-hub.sh --target <dir> --full-index. -->
 <!-- swissknifeman:hub:end -->
 <!-- maind:healthcheck hash=278951e58880 (managed by maind — do not edit manually) -->

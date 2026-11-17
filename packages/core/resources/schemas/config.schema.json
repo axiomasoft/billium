@@ -154,6 +154,16 @@
                     },
                     "additionalProperties": false
                 },
+                "rating": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    },
+                    "additionalProperties": false
+                },
                 "runner": {
                     "type": "object",
                     "properties": {
@@ -174,6 +184,26 @@
                         "preflight": {
                             "type": "boolean",
                             "default": true
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "schedule": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "usage": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean",
+                            "default": false
                         }
                     },
                     "additionalProperties": false

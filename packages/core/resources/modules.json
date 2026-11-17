@@ -347,14 +347,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "ledger",
-      "currentSchemaVersion": 9,
+      "currentSchemaVersion": 10,
       "supportedSchemaReadRange": {
         "min": 2,
-        "max": 9
+        "max": 10
       },
       "supportedSchemaWriteRange": {
         "min": 2,
-        "max": 9
+        "max": 10
       },
       "requiresModules": [
         {
@@ -449,6 +449,11 @@
           "id": "2026_10_29_000009_sync_billium_draft_invoice_adjustments",
           "version": 9,
           "checksum": "sha256:5724001aec8a7b8f57562df3c5c167331f27b849b90bb0e57bf34bc1818a1f2c"
+        },
+        {
+          "id": "2026_11_09_000010_guard_billium_payment_terminal_state",
+          "version": 10,
+          "checksum": "sha256:69b116f0a2ebe8eb8eff15f0f19633c88603485ed16a465e7f3732ca16906631"
         }
       ],
       "disablePolicy": {
@@ -565,14 +570,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "usage",
-      "currentSchemaVersion": 0,
+      "currentSchemaVersion": 2,
       "supportedSchemaReadRange": {
-        "min": 0,
-        "max": 0
+        "min": 2,
+        "max": 2
       },
       "supportedSchemaWriteRange": {
-        "min": 0,
-        "max": 0
+        "min": 2,
+        "max": 2
       },
       "requiresModules": [
         {
@@ -586,14 +591,46 @@
       "requiresPorts": [],
       "optionalPorts": [],
       "emits": [
-        "usage.receipt.v1"
+        "usage.receipt.v1",
+        "usage.receipt.v2",
+        "usage.aggregate.v1"
       ],
       "consumes": [
-        "usage.fact.v1"
+        "usage.fact.v1",
+        "usage.fact.v2",
+        "usage.metric.v1",
+        "usage.quantity.v1"
       ],
-      "ownedTables": [],
-      "configKeys": [],
-      "migrationIdentities": [],
+      "ownedTables": [
+        "billium_usage_stream",
+        "billium_usage_metric",
+        "billium_usage_fact",
+        "billium_usage_source_finality_contract",
+        "billium_usage_aggregation_policy",
+        "billium_usage_source_head",
+        "billium_usage_source_completeness",
+        "billium_usage_aggregate_series_head",
+        "billium_usage_aggregate_snapshot",
+        "billium_usage_aggregate_member",
+        "billium_usage_aggregate_distinct_member",
+        "billium_usage_aggregate_reproducibility_event",
+        "billium_usage_aggregate_event"
+      ],
+      "configKeys": [
+        "billium.usage.enabled"
+      ],
+      "migrationIdentities": [
+        {
+          "id": "2026_11_10_000001_create_billium_usage",
+          "version": 1,
+          "checksum": "sha256:be77f5cc8d7e4812ea5eb08518a0c03127e35e86dc3a304a69f3beaae11460e6"
+        },
+        {
+          "id": "2026_11_10_000300_create_usage_aggregation_tables",
+          "version": 2,
+          "checksum": "sha256:f2fe85f16d426db5d76d7cc3bdfd31b6546a9db5717a3dcae22d970686712fa2"
+        }
+      ],
       "disablePolicy": {
         "dependents": "block",
         "keeps": [
@@ -631,14 +668,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "rating",
-      "currentSchemaVersion": 0,
+      "currentSchemaVersion": 2,
       "supportedSchemaReadRange": {
-        "min": 0,
-        "max": 0
+        "min": 1,
+        "max": 2
       },
       "supportedSchemaWriteRange": {
-        "min": 0,
-        "max": 0
+        "min": 2,
+        "max": 2
       },
       "requiresModules": [
         {
@@ -647,22 +684,48 @@
             "min": "1.0.0",
             "maxExclusive": "2.0.0"
           }
-        },
-        {
-          "moduleId": "ledger",
-          "apiRange": {
-            "min": "1.0.0",
-            "maxExclusive": "2.0.0"
-          }
         }
       ],
       "requiresPorts": [],
       "optionalPorts": [],
-      "emits": [],
-      "consumes": [],
-      "ownedTables": [],
-      "configKeys": [],
-      "migrationIdentities": [],
+      "emits": [
+        "rating.basis.v1"
+      ],
+      "consumes": [
+        "rating.price.v1",
+        "usage.aggregate.v1",
+        "usage.quantity.v1"
+      ],
+      "ownedTables": [
+        "billium_rating_price_publication",
+        "billium_rating_price_version",
+        "billium_rating_price_tier",
+        "billium_rating_commitment_term",
+        "billium_rating_tax_snapshot",
+        "billium_rating_run",
+        "billium_rating_rated_basis",
+        "billium_rating_rated_line",
+        "billium_rating_booking",
+        "billium_rating_source_frontier",
+        "billium_rating_event",
+        "billium_rating_correction",
+        "billium_rating_correction_booking"
+      ],
+      "configKeys": [
+        "billium.rating.enabled"
+      ],
+      "migrationIdentities": [
+        {
+          "id": "2026_11_10_000100_create_rating_pricing_tables",
+          "version": 1,
+          "checksum": "sha256:f22499d005baee90043cac21172e6a93ff28a4b14065e65b7e7af088c0a1a08a"
+        },
+        {
+          "id": "2026_11_10_000400_create_rating_run_basis_booking",
+          "version": 2,
+          "checksum": "sha256:3339df60fd41d09134a06840c9ca926a9d5fbea9394d49d0745741dff7fd4370"
+        }
+      ],
       "disablePolicy": {
         "dependents": "block",
         "keeps": [
@@ -690,7 +753,14 @@
       },
       "retentionClass": "financial-permanent",
       "publicEvents": [],
-      "internalCommands": []
+      "internalCommands": [
+        {
+          "commandType": "rating.correction.applied.v1",
+          "commandSchema": "billium.command.v1",
+          "payloadSchemaRef": "spec/revisions/2026-10/schema/rating/correction-applied.v1.json",
+          "payloadSchemaDigest": "sha256:b36cd4245c03372730dba91f8908bc08a976e8c4dbc8685f5048530729d1d712"
+        }
+      ]
     },
     {
       "moduleId": "schedule",
@@ -701,14 +771,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "schedule",
-      "currentSchemaVersion": 0,
+      "currentSchemaVersion": 4,
       "supportedSchemaReadRange": {
-        "min": 0,
-        "max": 0
+        "min": 3,
+        "max": 4
       },
       "supportedSchemaWriteRange": {
-        "min": 0,
-        "max": 0
+        "min": 4,
+        "max": 4
       },
       "requiresModules": [
         {
@@ -724,24 +794,56 @@
             "min": "1.0.0",
             "maxExclusive": "2.0.0"
           }
-        },
-        {
-          "moduleId": "ledger",
-          "apiRange": {
-            "min": "1.0.0",
-            "maxExclusive": "2.0.0"
-          }
         }
       ],
       "requiresPorts": [],
       "optionalPorts": [],
-      "emits": [],
-      "consumes": [
-        "occurrence.ensure.v1"
+      "emits": [
+        "occurrence.no_charge.v1"
       ],
-      "ownedTables": [],
-      "configKeys": [],
-      "migrationIdentities": [],
+      "consumes": [
+        "occurrence.ensure.v1",
+        "period.commercial.v1",
+        "occurrence.ensure.v2"
+      ],
+      "ownedTables": [
+        "billium_schedule_component",
+        "billium_schedule_quote",
+        "billium_schedule_revision",
+        "billium_schedule_period",
+        "billium_schedule_billing_schedule",
+        "billium_schedule_billing_schedule_revision",
+        "billium_schedule_billing_occurrence",
+        "billium_schedule_occurrence_amendment",
+        "billium_schedule_occurrence_outbox",
+        "billium_schedule_correction_head",
+        "billium_schedule_billing_correction"
+      ],
+      "configKeys": [
+        "billium.schedule.enabled"
+      ],
+      "migrationIdentities": [
+        {
+          "id": "2026_11_10_000500_create_billium_schedule_periods",
+          "version": 1,
+          "checksum": "sha256:f176767dd6bac790978a6b5e0bbf5efb2ccba90616f02f721155ea4ceaeecf15"
+        },
+        {
+          "id": "2026_11_10_000600_create_billium_schedule_occurrences",
+          "version": 2,
+          "checksum": "sha256:dbd42b2ce8f79643d4b7b67a767354c1923a9f4b624b72be06877378a31d0a05"
+        },
+        {
+          "id": "2026_11_10_000610_create_billium_schedule_billing_correction",
+          "version": 3,
+          "checksum": "sha256:99af4eaf85b06ebaffff48238b62fbd74e61c8c1ce020f535c3390c8921e7ddb"
+        },
+        {
+          "id": "2026_11_10_000620_allow_rated_correction_parents",
+          "version": 4,
+          "checksum": "sha256:fbc2d931e40b3fba0a43330e38c465f4f9025e8a46e17c9ed43e3458e4c46cdc"
+        }
+      ],
       "disablePolicy": {
         "dependents": "block",
         "keeps": [

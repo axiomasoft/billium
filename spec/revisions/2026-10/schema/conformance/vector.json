@@ -97,7 +97,15 @@
         "ledger.drain",
         "ledger.reconcile_refunds",
         "ledger.query",
-        "ledger.bootstrap"
+        "ledger.bootstrap",
+        "usage.ingest",
+        "usage.aggregate",
+        "usage.quantity",
+        "rating.rate",
+        "rating.correct",
+        "schedule.ensure",
+        "schedule.generate",
+        "schedule.revise"
       ]
     },
     "step": {

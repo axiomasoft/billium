@@ -1,0 +1,202 @@
+{
+  "id": "schedule/periods/calendar-cases",
+  "description": "D56 calendar oracles executed by CommercialPeriodResolverTest; protocol step checks canonical fixture retention, not a financial runtime.",
+  "spec_refs": [
+    "D56",
+    "INV-11",
+    "REQ-OWN-02"
+  ],
+  "profiles": [
+    "php"
+  ],
+  "given": {
+    "cases": [
+      {
+        "id": "jan31-nonleap",
+        "anchor": "2023-01-31T00:00:00",
+        "ordinal": 0,
+        "policy": {
+          "timezone": "Etc/UTC",
+          "frequency": "month"
+        },
+        "start": "2023-01-31T00:00:00Z",
+        "end": "2023-02-28T00:00:00Z"
+      },
+      {
+        "id": "march-no-drift",
+        "anchor": "2023-01-31T00:00:00",
+        "ordinal": 1,
+        "policy": {
+          "timezone": "Etc/UTC",
+          "frequency": "month"
+        },
+        "start": "2023-02-28T00:00:00Z",
+        "end": "2023-03-31T00:00:00Z"
+      },
+      {
+        "id": "jan31-leap",
+        "anchor": "2024-01-31T00:00:00",
+        "ordinal": 0,
+        "policy": {
+          "timezone": "Etc/UTC",
+          "frequency": "month"
+        },
+        "start": "2024-01-31T00:00:00Z",
+        "end": "2024-02-29T00:00:00Z"
+      },
+      {
+        "id": "march-no-leap-drift",
+        "anchor": "2024-01-31T00:00:00",
+        "ordinal": 1,
+        "policy": {
+          "timezone": "Etc/UTC",
+          "frequency": "month"
+        },
+        "start": "2024-02-29T00:00:00Z",
+        "end": "2024-03-31T00:00:00Z"
+      },
+      {
+        "id": "feb29-year",
+        "anchor": "2024-02-29T12:00:00",
+        "ordinal": 0,
+        "policy": {
+          "timezone": "Etc/UTC",
+          "frequency": "year"
+        },
+        "start": "2024-02-29T12:00:00Z",
+        "end": "2025-02-28T12:00:00Z"
+      },
+      {
+        "id": "feb29-year-recovery",
+        "anchor": "2024-02-29T12:00:00",
+        "ordinal": 3,
+        "policy": {
+          "timezone": "Etc/UTC",
+          "frequency": "year"
+        },
+        "start": "2027-02-28T12:00:00Z",
+        "end": "2028-02-29T12:00:00Z"
+      },
+      {
+        "id": "end-of-month",
+        "anchor": "2024-04-30T12:00:00",
+        "ordinal": 0,
+        "policy": {
+          "timezone": "Etc/UTC",
+          "frequency": "month",
+          "endOfMonth": true
+        },
+        "start": "2024-04-30T12:00:00Z",
+        "end": "2024-05-31T12:00:00Z"
+      },
+      {
+        "id": "dst-gap-shift",
+        "anchor": "2024-03-31T02:30:00",
+        "ordinal": 0,
+        "policy": {
+          "timezone": "Europe/Berlin",
+          "frequency": "month"
+        },
+        "resolvedStart": "2024-03-31T03:30:00",
+        "start": "2024-03-31T01:30:00Z",
+        "end": "2024-04-30T00:30:00Z"
+      },
+      {
+        "id": "dst-gap-reject",
+        "anchor": "2024-03-31T02:30:00",
+        "ordinal": 0,
+        "policy": {
+          "timezone": "Europe/Berlin",
+          "frequency": "month",
+          "dstGapPolicy": "reject"
+        },
+        "refusal": "skipped_local_time"
+      },
+      {
+        "id": "dst-fold-earlier",
+        "anchor": "2024-10-27T02:30:00",
+        "ordinal": 0,
+        "policy": {
+          "timezone": "Europe/Berlin",
+          "frequency": "month"
+        },
+        "start": "2024-10-27T00:30:00Z",
+        "end": "2024-11-27T01:30:00Z"
+      },
+      {
+        "id": "dst-fold-later",
+        "anchor": "2024-10-27T02:30:00",
+        "ordinal": 0,
+        "policy": {
+          "timezone": "Europe/Berlin",
+          "frequency": "month",
+          "dstFoldPolicy": "later_offset"
+        },
+        "start": "2024-10-27T01:30:00Z",
+        "end": "2024-11-27T01:30:00Z"
+      },
+      {
+        "id": "half-hour-gap",
+        "anchor": "2024-10-06T02:15:00",
+        "ordinal": 0,
+        "policy": {
+          "timezone": "Australia/Lord_Howe",
+          "frequency": "month"
+        },
+        "resolvedStart": "2024-10-06T02:45:00",
+        "start": "2024-10-05T15:45:00Z",
+        "end": "2024-11-05T15:15:00Z"
+      },
+      {
+        "id": "skipped-local-date",
+        "anchor": "2011-12-30T00:00:00",
+        "ordinal": 0,
+        "policy": {
+          "timezone": "Pacific/Apia",
+          "frequency": "month"
+        },
+        "resolvedStart": "2011-12-31T00:00:00",
+        "start": "2011-12-30T10:00:00Z",
+        "end": "2012-01-29T10:00:00Z"
+      },
+      {
+        "id": "calendar-quarter",
+        "anchor": "2024-01-31T00:00:00",
+        "ordinal": 0,
+        "policy": {
+          "timezone": "Etc/UTC",
+          "frequency": "month",
+          "intervalCount": 3
+        },
+        "start": "2024-01-31T00:00:00Z",
+        "end": "2024-04-30T00:00:00Z"
+      },
+      {
+        "id": "year-boundary-zone",
+        "anchor": "2024-12-31T00:00:00",
+        "ordinal": 0,
+        "policy": {
+          "timezone": "Pacific/Auckland",
+          "frequency": "month"
+        },
+        "start": "2024-12-30T11:00:00Z",
+        "end": "2025-01-30T11:00:00Z"
+      }
+    ]
+  },
+  "script": [
+    {
+      "op": "canon.canonicalize",
+      "args": {
+        "json_text": "[{\"anchor\":\"2023-01-31T00:00:00\",\"end\":\"2023-02-28T00:00:00Z\",\"id\":\"jan31-nonleap\",\"ordinal\":0,\"policy\":{\"frequency\":\"month\",\"timezone\":\"Etc/UTC\"},\"start\":\"2023-01-31T00:00:00Z\"},{\"anchor\":\"2023-01-31T00:00:00\",\"end\":\"2023-03-31T00:00:00Z\",\"id\":\"march-no-drift\",\"ordinal\":1,\"policy\":{\"frequency\":\"month\",\"timezone\":\"Etc/UTC\"},\"start\":\"2023-02-28T00:00:00Z\"},{\"anchor\":\"2024-01-31T00:00:00\",\"end\":\"2024-02-29T00:00:00Z\",\"id\":\"jan31-leap\",\"ordinal\":0,\"policy\":{\"frequency\":\"month\",\"timezone\":\"Etc/UTC\"},\"start\":\"2024-01-31T00:00:00Z\"},{\"anchor\":\"2024-01-31T00:00:00\",\"end\":\"2024-03-31T00:00:00Z\",\"id\":\"march-no-leap-drift\",\"ordinal\":1,\"policy\":{\"frequency\":\"month\",\"timezone\":\"Etc/UTC\"},\"start\":\"2024-02-29T00:00:00Z\"},{\"anchor\":\"2024-02-29T12:00:00\",\"end\":\"2025-02-28T12:00:00Z\",\"id\":\"feb29-year\",\"ordinal\":0,\"policy\":{\"frequency\":\"year\",\"timezone\":\"Etc/UTC\"},\"start\":\"2024-02-29T12:00:00Z\"},{\"anchor\":\"2024-02-29T12:00:00\",\"end\":\"2028-02-29T12:00:00Z\",\"id\":\"feb29-year-recovery\",\"ordinal\":3,\"policy\":{\"frequency\":\"year\",\"timezone\":\"Etc/UTC\"},\"start\":\"2027-02-28T12:00:00Z\"},{\"anchor\":\"2024-04-30T12:00:00\",\"end\":\"2024-05-31T12:00:00Z\",\"id\":\"end-of-month\",\"ordinal\":0,\"policy\":{\"endOfMonth\":true,\"frequency\":\"month\",\"timezone\":\"Etc/UTC\"},\"start\":\"2024-04-30T12:00:00Z\"},{\"anchor\":\"2024-03-31T02:30:00\",\"end\":\"2024-04-30T00:30:00Z\",\"id\":\"dst-gap-shift\",\"ordinal\":0,\"policy\":{\"frequency\":\"month\",\"timezone\":\"Europe/Berlin\"},\"resolvedStart\":\"2024-03-31T03:30:00\",\"start\":\"2024-03-31T01:30:00Z\"},{\"anchor\":\"2024-03-31T02:30:00\",\"id\":\"dst-gap-reject\",\"ordinal\":0,\"policy\":{\"dstGapPolicy\":\"reject\",\"frequency\":\"month\",\"timezone\":\"Europe/Berlin\"},\"refusal\":\"skipped_local_time\"},{\"anchor\":\"2024-10-27T02:30:00\",\"end\":\"2024-11-27T01:30:00Z\",\"id\":\"dst-fold-earlier\",\"ordinal\":0,\"policy\":{\"frequency\":\"month\",\"timezone\":\"Europe/Berlin\"},\"start\":\"2024-10-27T00:30:00Z\"},{\"anchor\":\"2024-10-27T02:30:00\",\"end\":\"2024-11-27T01:30:00Z\",\"id\":\"dst-fold-later\",\"ordinal\":0,\"policy\":{\"dstFoldPolicy\":\"later_offset\",\"frequency\":\"month\",\"timezone\":\"Europe/Berlin\"},\"start\":\"2024-10-27T01:30:00Z\"},{\"anchor\":\"2024-10-06T02:15:00\",\"end\":\"2024-11-05T15:15:00Z\",\"id\":\"half-hour-gap\",\"ordinal\":0,\"policy\":{\"frequency\":\"month\",\"timezone\":\"Australia/Lord_Howe\"},\"resolvedStart\":\"2024-10-06T02:45:00\",\"start\":\"2024-10-05T15:45:00Z\"},{\"anchor\":\"2011-12-30T00:00:00\",\"end\":\"2012-01-29T10:00:00Z\",\"id\":\"skipped-local-date\",\"ordinal\":0,\"policy\":{\"frequency\":\"month\",\"timezone\":\"Pacific/Apia\"},\"resolvedStart\":\"2011-12-31T00:00:00\",\"start\":\"2011-12-30T10:00:00Z\"},{\"anchor\":\"2024-01-31T00:00:00\",\"end\":\"2024-04-30T00:00:00Z\",\"id\":\"calendar-quarter\",\"ordinal\":0,\"policy\":{\"frequency\":\"month\",\"intervalCount\":3,\"timezone\":\"Etc/UTC\"},\"start\":\"2024-01-31T00:00:00Z\"},{\"anchor\":\"2024-12-31T00:00:00\",\"end\":\"2025-01-30T11:00:00Z\",\"id\":\"year-boundary-zone\",\"ordinal\":0,\"policy\":{\"frequency\":\"month\",\"timezone\":\"Pacific/Auckland\"},\"start\":\"2024-12-30T11:00:00Z\"}]"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "text": "[{\"anchor\":\"2023-01-31T00:00:00\",\"end\":\"2023-02-28T00:00:00Z\",\"id\":\"jan31-nonleap\",\"ordinal\":0,\"policy\":{\"frequency\":\"month\",\"timezone\":\"Etc/UTC\"},\"start\":\"2023-01-31T00:00:00Z\"},{\"anchor\":\"2023-01-31T00:00:00\",\"end\":\"2023-03-31T00:00:00Z\",\"id\":\"march-no-drift\",\"ordinal\":1,\"policy\":{\"frequency\":\"month\",\"timezone\":\"Etc/UTC\"},\"start\":\"2023-02-28T00:00:00Z\"},{\"anchor\":\"2024-01-31T00:00:00\",\"end\":\"2024-02-29T00:00:00Z\",\"id\":\"jan31-leap\",\"ordinal\":0,\"policy\":{\"frequency\":\"month\",\"timezone\":\"Etc/UTC\"},\"start\":\"2024-01-31T00:00:00Z\"},{\"anchor\":\"2024-01-31T00:00:00\",\"end\":\"2024-03-31T00:00:00Z\",\"id\":\"march-no-leap-drift\",\"ordinal\":1,\"policy\":{\"frequency\":\"month\",\"timezone\":\"Etc/UTC\"},\"start\":\"2024-02-29T00:00:00Z\"},{\"anchor\":\"2024-02-29T12:00:00\",\"end\":\"2025-02-28T12:00:00Z\",\"id\":\"feb29-year\",\"ordinal\":0,\"policy\":{\"frequency\":\"year\",\"timezone\":\"Etc/UTC\"},\"start\":\"2024-02-29T12:00:00Z\"},{\"anchor\":\"2024-02-29T12:00:00\",\"end\":\"2028-02-29T12:00:00Z\",\"id\":\"feb29-year-recovery\",\"ordinal\":3,\"policy\":{\"frequency\":\"year\",\"timezone\":\"Etc/UTC\"},\"start\":\"2027-02-28T12:00:00Z\"},{\"anchor\":\"2024-04-30T12:00:00\",\"end\":\"2024-05-31T12:00:00Z\",\"id\":\"end-of-month\",\"ordinal\":0,\"policy\":{\"endOfMonth\":true,\"frequency\":\"month\",\"timezone\":\"Etc/UTC\"},\"start\":\"2024-04-30T12:00:00Z\"},{\"anchor\":\"2024-03-31T02:30:00\",\"end\":\"2024-04-30T00:30:00Z\",\"id\":\"dst-gap-shift\",\"ordinal\":0,\"policy\":{\"frequency\":\"month\",\"timezone\":\"Europe/Berlin\"},\"resolvedStart\":\"2024-03-31T03:30:00\",\"start\":\"2024-03-31T01:30:00Z\"},{\"anchor\":\"2024-03-31T02:30:00\",\"id\":\"dst-gap-reject\",\"ordinal\":0,\"policy\":{\"dstGapPolicy\":\"reject\",\"frequency\":\"month\",\"timezone\":\"Europe/Berlin\"},\"refusal\":\"skipped_local_time\"},{\"anchor\":\"2024-10-27T02:30:00\",\"end\":\"2024-11-27T01:30:00Z\",\"id\":\"dst-fold-earlier\",\"ordinal\":0,\"policy\":{\"frequency\":\"month\",\"timezone\":\"Europe/Berlin\"},\"start\":\"2024-10-27T00:30:00Z\"},{\"anchor\":\"2024-10-27T02:30:00\",\"end\":\"2024-11-27T01:30:00Z\",\"id\":\"dst-fold-later\",\"ordinal\":0,\"policy\":{\"dstFoldPolicy\":\"later_offset\",\"frequency\":\"month\",\"timezone\":\"Europe/Berlin\"},\"start\":\"2024-10-27T01:30:00Z\"},{\"anchor\":\"2024-10-06T02:15:00\",\"end\":\"2024-11-05T15:15:00Z\",\"id\":\"half-hour-gap\",\"ordinal\":0,\"policy\":{\"frequency\":\"month\",\"timezone\":\"Australia/Lord_Howe\"},\"resolvedStart\":\"2024-10-06T02:45:00\",\"start\":\"2024-10-05T15:45:00Z\"},{\"anchor\":\"2011-12-30T00:00:00\",\"end\":\"2012-01-29T10:00:00Z\",\"id\":\"skipped-local-date\",\"ordinal\":0,\"policy\":{\"frequency\":\"month\",\"timezone\":\"Pacific/Apia\"},\"resolvedStart\":\"2011-12-31T00:00:00\",\"start\":\"2011-12-30T10:00:00Z\"},{\"anchor\":\"2024-01-31T00:00:00\",\"end\":\"2024-04-30T00:00:00Z\",\"id\":\"calendar-quarter\",\"ordinal\":0,\"policy\":{\"frequency\":\"month\",\"intervalCount\":3,\"timezone\":\"Etc/UTC\"},\"start\":\"2024-01-31T00:00:00Z\"},{\"anchor\":\"2024-12-31T00:00:00\",\"end\":\"2025-01-30T11:00:00Z\",\"id\":\"year-boundary-zone\",\"ordinal\":0,\"policy\":{\"frequency\":\"month\",\"timezone\":\"Pacific/Auckland\"},\"start\":\"2024-12-30T11:00:00Z\"}]"
+      }
+    }
+  ]
+}

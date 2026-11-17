@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-10:usage/quantity.v1.json",
+  "title": "usage.quantity.v1 (D56; owner usage)",
+  "type": "object",
+  "required": [
+    "schema",
+    "snapshotRef",
+    "sellerRef",
+    "attribution",
+    "unit",
+    "quantity",
+    "effectiveRevision",
+    "effectiveInterval",
+    "approvedBy",
+    "approvalDigest",
+    "sourceDigest",
+    "prorationPolicy",
+    "digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "usage.quantity.v1"
+    },
+    "snapshotRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "attribution": {
+      "$ref": "urn:billium:spec:2026-10:common/usage-rating.json#/$defs/attribution"
+    },
+    "unit": {
+      "$ref": "urn:billium:spec:2026-10:common/usage-rating.json#/$defs/unit"
+    },
+    "quantity": {
+      "$ref": "urn:billium:spec:2026-10:common/usage-rating.json#/$defs/quantity"
+    },
+    "effectiveRevision": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/counter"
+    },
+    "effectiveInterval": {
+      "$ref": "urn:billium:spec:2026-10:common/usage-rating.json#/$defs/interval"
+    },
+    "approvedBy": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "approvalDigest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    },
+    "sourceDigest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    },
+    "prorationPolicy": {
+      "const": "whole_interval/1"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    }
+  },
+  "additionalProperties": false
+}

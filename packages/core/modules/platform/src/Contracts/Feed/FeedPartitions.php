@@ -6,6 +6,7 @@ namespace Billium\Platform\Contracts\Feed;
 
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runtime\Caller;
 use Billium\Platform\Contracts\Inbox\BootstrapItemHandler;
 use Billium\Platform\Contracts\Inbox\CustodyHandler;
 use Billium\Platform\Data\Inbox\BootstrapPartition;
@@ -16,7 +17,7 @@ use Packman\Attributes\SpiKind;
 use stdClass;
 
 /**
- * Source-scoped observation custody and staged partition bootstrap (REQ-CON-27, REQ-FAIL-12/13/22/23). Every method runs
+ * Source-scoped observation custody and staged partition bootstrap (REQ-CON-27, REQ-FAIL-12/13/22/23). Mutating methods run
  * inside the already open root Tx of the caller's OperationRunner; one economic event per root Tx, so a caller drains
  * `CustodyResult::drainPartitionId` and `retryInboxId` with a new root operation each (fresh context and lock plan).
  *
@@ -43,6 +44,13 @@ interface FeedPartitions
 
     /** Retries the earliest parked dependency of one operation; a later revision never overtakes an earlier parked one. */
     public function retryDependency(TransactionContext $context, int $inboxId, CustodyHandler $handler): CustodyResult;
+
+    /**
+     * Next inbox-only parked revision (`park_kind = 'operation_revision'`) whose earlier inbox blocker has resolved, if any.
+     *
+     * @param  list<int>  $excludeInboxIds
+     */
+    public function nextUnblockedDependency(string $channel, Caller $caller, array $excludeInboxIds = []): ?int;
 
     /**
      * Verifies scope, digest and completeness of the whole snapshot and stages it durably; the live partition becomes

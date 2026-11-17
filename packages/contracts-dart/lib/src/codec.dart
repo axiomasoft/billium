@@ -7,6 +7,7 @@ import 'generated/envelopes.g.dart';
 import 'generated/problem_codes.g.dart';
 import 'jcs.dart';
 import 'money.dart';
+import 'p4_wire.dart';
 import 'problem.dart';
 import 'problem_exception.dart';
 import 'schema_validator.dart';
@@ -59,6 +60,14 @@ final class Codec {
     final problem = SchemaValidator(schemas).check(entry.schemaId, raw);
     if (problem != null) {
       throw ProblemException(problem, 'the object does not match $schema');
+    }
+    if (p4Schemas.contains(schema)) {
+      validateP4Wire(raw);
+      for (final child in raw.values) {
+        if (child is Map && child.containsKey('schema')) {
+          decode(canonicalizeValue(child));
+        }
+      }
     }
 
     final effect = schema == 'payment.effect.outcome.v1'

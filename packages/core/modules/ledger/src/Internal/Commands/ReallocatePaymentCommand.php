@@ -52,6 +52,7 @@ final readonly class ReallocatePaymentCommand
     public function execute(TransactionContext $context, ReallocatePayment $command): LedgerReceipt
     {
         $this->runner->assertCurrent($context, 'ledger');
+        $this->writer->assertMonetary($context);
         self::validate($command);
         $caller = $context->caller();
         if ($caller->sellerRef !== $command->sellerRef || $caller->environment !== $command->environment || $caller->installationRef !== $command->installationRef) {

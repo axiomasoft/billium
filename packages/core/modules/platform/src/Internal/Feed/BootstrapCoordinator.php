@@ -47,6 +47,7 @@ final readonly class BootstrapCoordinator
             throw new ProblemException(ProblemCode::AuthDenied, 'The snapshot is outside the authenticated source scope');
         }
         $db = $this->partitions->connection($context);
+        $this->partitions->lockNamespace($db, $snapshot->channel, $snapshot->sourceAuthority, $snapshot->sellerRef, $snapshot->environment, $snapshot->partitionRef);
         $existing = $db->selectOne('SELECT * FROM public.billium_feed_bootstrap_session WHERE bootstrap_ref = ?', [$snapshot->bootstrapRef]);
         if ($existing !== null) {
             if (Rows::field($existing, 'snapshot_digest') !== $snapshot->snapshotDigest || Rows::field($existing, 'seller_ref') !== $caller->sellerRef
@@ -139,8 +140,11 @@ final readonly class BootstrapCoordinator
             if (! BootstrapPartition::contains($item, $namespace) || ($item->payload->installationRef ?? null) !== $context->caller()->installationRef) {
                 throw new ProblemException(ProblemCode::ValidationInvalid, 'The bootstrap item is outside its manifest namespace');
             }
-            $db->update("UPDATE public.billium_feed_bootstrap_session SET status = 'applying', updated_at = now() WHERE id = ? AND status = 'verified'", [$sessionId]);
             $outcome = $handler->apply($context, $item);
+            if ($outcome->kind === HandlerOutcomeKind::Conflict && $outcome->reference === ProblemCode::AuthDenied->value) {
+                throw new ProblemException(ProblemCode::AuthDenied, 'The bootstrap item is outside the authenticated source scope');
+            }
+            $db->update("UPDATE public.billium_feed_bootstrap_session SET status = 'applying', updated_at = now() WHERE id = ? AND status = 'verified'", [$sessionId]);
             [$state, $ref] = match ($outcome->kind) {
                 HandlerOutcomeKind::Applied => ['applied', $outcome->reference],
                 HandlerOutcomeKind::ParkedDependency => ['parked', $outcome->dependencyKind.':'.$outcome->reference],
@@ -160,6 +164,9 @@ final readonly class BootstrapCoordinator
     {
         ($this->runner)()->assertCurrent($context, 'platform');
         $db = $this->partitions->connection($context);
+        $planned = $this->session($db, $sessionId, $context->caller());
+        $this->partitions->lockNamespace($db, Rows::string(Rows::field($planned, 'channel')), Rows::string(Rows::field($planned, 'source_authority')),
+            Rows::string(Rows::field($planned, 'seller_ref')), Rows::string(Rows::field($planned, 'environment')), Rows::string(Rows::field($planned, 'partition_ref')));
         $session = $this->lockSession($context, $db, $sessionId);
         $status = Rows::string(Rows::field($session, 'status'));
         if ($status === 'adopted') {
@@ -242,8 +249,13 @@ final readonly class BootstrapCoordinator
 
     private function session(Connection $db, int $sessionId, Caller $caller): mixed
     {
-        return $db->selectOne('SELECT * FROM public.billium_feed_bootstrap_session WHERE id = ? AND seller_ref = ? AND environment = ?', [$sessionId, $caller->sellerRef, $caller->environment])
+        $session = $db->selectOne('SELECT * FROM public.billium_feed_bootstrap_session WHERE id = ? AND seller_ref = ? AND environment = ?', [$sessionId, $caller->sellerRef, $caller->environment])
             ?? throw new ProblemException(ProblemCode::ReferenceUnknown, 'Unknown bootstrap session');
+        if (! in_array(Rows::string(Rows::field($session, 'source_authority')), $caller->sourceAuthorities, true)) {
+            throw new ProblemException(ProblemCode::AuthDenied, 'The bootstrap session is outside the authenticated source scope');
+        }
+
+        return $session;
     }
 
     /** Plans partition (rank 30, segment 0) then session (segment 1), locks both and re-reads the session. */

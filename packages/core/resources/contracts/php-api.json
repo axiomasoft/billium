@@ -170,6 +170,33 @@
                             "optional": true,
                             "default": "new \\Billium\\Core\\Configuration\\ModulesOptions()",
                             "flags": 1
+                        },
+                        {
+                            "name": "usage",
+                            "type": "Billium\\Core\\Configuration\\OptionalModuleOptions",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": true,
+                            "default": "new \\Billium\\Core\\Configuration\\OptionalModuleOptions()",
+                            "flags": 1
+                        },
+                        {
+                            "name": "rating",
+                            "type": "Billium\\Core\\Configuration\\OptionalModuleOptions",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": true,
+                            "default": "new \\Billium\\Core\\Configuration\\OptionalModuleOptions()",
+                            "flags": 1
+                        },
+                        {
+                            "name": "schedule",
+                            "type": "Billium\\Core\\Configuration\\OptionalModuleOptions",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": true,
+                            "default": "new \\Billium\\Core\\Configuration\\OptionalModuleOptions()",
+                            "flags": 1
                         }
                     ],
                     "return": null,
@@ -719,6 +746,82 @@
                             "variadic": false,
                             "optional": true,
                             "default": "['platform', 'ledger']",
+                            "flags": 1
+                        }
+                    ],
+                    "return": null,
+                    "doc": []
+                },
+                "fromSection": {
+                    "visibility": "public",
+                    "static": true,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "raw",
+                            "type": "mixed",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "path",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "validator",
+                            "type": "Packman\\Config\\Laravel\\ConfigurationValidator",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "self",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": []
+        },
+        "Billium\\Core\\Configuration\\OptionalModuleOptions": {
+            "kind": "class",
+            "layer": "api",
+            "since": "1.0",
+            "final": true,
+            "readonly": true,
+            "abstract": false,
+            "extends": [],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "__construct": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "enabled",
+                            "type": "bool",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": true,
+                            "default": "false",
                             "flags": 1
                         }
                     ],
@@ -5256,8 +5359,20 @@
                     "value": "30"
                 },
                 {
+                    "name": "UsageSeries",
+                    "value": "35"
+                },
+                {
                     "name": "BillingSchedule",
                     "value": "40"
+                },
+                {
+                    "name": "RatingPriceVersion",
+                    "value": "44"
+                },
+                {
+                    "name": "RatingFrontier",
+                    "value": "45"
                 },
                 {
                     "name": "BillingOccurrence",

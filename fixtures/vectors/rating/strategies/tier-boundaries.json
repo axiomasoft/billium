@@ -1,0 +1,68 @@
+{
+  "id": "rating/strategies/tier-boundaries",
+  "description": "P4.4 test-only exact algorithm example; amounts and rate are explicit test inputs.",
+  "spec_refs": [
+    "D19",
+    "D56"
+  ],
+  "profiles": [
+    "php"
+  ],
+  "given": {
+    "example": {
+      "tiers": [
+        {
+          "lower": "0",
+          "upper": "100",
+          "price": "1",
+          "flat": "0"
+        },
+        {
+          "lower": "100",
+          "upper": null,
+          "price": "0.8",
+          "flat": "0"
+        }
+      ],
+      "graduated": [
+        {
+          "quantity": "0",
+          "raw": "0"
+        },
+        {
+          "quantity": "100",
+          "raw": "100"
+        },
+        {
+          "quantity": "150",
+          "raw": "140"
+        }
+      ],
+      "volume": [
+        {
+          "quantity": "100",
+          "raw": "80"
+        },
+        {
+          "quantity": "150",
+          "raw": "120"
+        }
+      ]
+    }
+  },
+  "script": [
+    {
+      "op": "canon.digest",
+      "args": {
+        "json_text": "{\"graduated\":[{\"quantity\":\"0\",\"raw\":\"0\"},{\"quantity\":\"100\",\"raw\":\"100\"},{\"quantity\":\"150\",\"raw\":\"140\"}],\"tiers\":[{\"flat\":\"0\",\"lower\":\"0\",\"price\":\"1\",\"upper\":\"100\"},{\"flat\":\"0\",\"lower\":\"100\",\"price\":\"0.8\",\"upper\":null}],\"volume\":[{\"quantity\":\"100\",\"raw\":\"80\"},{\"quantity\":\"150\",\"raw\":\"120\"}]}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "digest": "sha256:79eaebbb9d946be2be0b66235e4088508d9d013cf956adaa50396a707376e9b1"
+      }
+    }
+  ]
+}

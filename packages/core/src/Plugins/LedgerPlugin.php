@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Billium\Core\Plugins;
 
+use Billium\Ledger\Contracts\CorrectionCreditParticipants;
+use Billium\Ledger\Contracts\CorrectionLocks;
 use Billium\Ledger\Contracts\Ledger;
 use Billium\Ledger\Contracts\LedgerParticipants;
 use Billium\Ledger\Contracts\LedgerQueries;
@@ -90,6 +92,8 @@ final class LedgerPlugin implements ExtensionPlugin, WithCapabilities, WithSchem
     public function definedCapabilities(): array
     {
         return [
+            CorrectionCreditParticipants::class => Cardinality::OptionalSingle->value,
+            CorrectionLocks::class => Cardinality::OptionalSingle->value,
             Ledger::class => Cardinality::OptionalSingle->value,
             LedgerParticipants::class => Cardinality::OptionalSingle->value,
             LedgerQueries::class => Cardinality::OptionalSingle->value,

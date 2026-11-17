@@ -34,6 +34,18 @@ final readonly class LedgerReader
     }
 
     /** @return array<string, mixed> */
+    public function obligation(string $ref): array
+    {
+        $row = $this->one('billium_obligation', 'obligation_ref', $ref);
+        $invoice = $row->billed_invoice_id === null ? null : $this->scoped('billium_invoice')->where('id', $row->billed_invoice_id)->first();
+        if ($row->billed_invoice_id !== null && $invoice === null) {
+            throw self::unknown();
+        }
+
+        return [...View::obligation($row), 'billedInvoiceRef' => $invoice?->invoice_ref, 'billedInvoiceStatus' => $invoice?->status];
+    }
+
+    /** @return array<string, mixed> */
     public function invoice(string $ref): array
     {
         $row = $this->one('billium_invoice', 'invoice_ref', $ref);
@@ -83,7 +95,11 @@ final readonly class LedgerReader
             }
         }
         $payload = View::json($current->payload ?? '{}');
-        $discrepancies = $this->scoped('billium_ledger_discrepancy')->where('observed_payment_id', $observed->id)
+        $discrepancies = $this->scoped('billium_ledger_discrepancy')->where(function (Builder $q) use ($observed, $ref): void {
+            $q->where('observed_payment_id', $observed->id)->orWhereIn('observed_payment_id',
+                $this->scoped('billium_observed_payment')->select('id')->where('source_authority', $observed->source_authority)
+                    ->where('kind', 'refund')->where('original_ref', $ref));
+        })
             ->whereNotExists(function (Builder $q): void {
                 $q->selectRaw('1')->from('billium_discrepancy_event as e')->whereColumn('e.discrepancy_id', 'billium_ledger_discrepancy.id')->where('e.kind', 'resolved');
             })->orderBy('id')->get();
@@ -98,10 +114,14 @@ final readonly class LedgerReader
             }
         }
         $park = $this->scoped('billium_observation_park')->where('observed_payment_id', $observed->id)->whereNull('released_at')->orderByDesc('id')->first();
+        $connectionName = $this->db->getName() ?? throw new LogicException('Query connection must be named');
+        $inboxPark = $park !== null ? null : $this->feedRecovery->pendingOperationPark($connectionName,
+            ParkedDrainer::CHANNEL, View::text($observed->source_authority), View::text($observed->operation_ref));
+        $pendingPark = $park !== null || $inboxPark !== null;
         $partitionRef = is_string($payload['partitionRef'] ?? null) ? $payload['partitionRef'] : null;
-        $recovery = $this->feedRecovery->state($this->db->getName() ?? throw new LogicException('Query connection must be named'),
+        $recovery = $this->feedRecovery->state($connectionName,
             ParkedDrainer::CHANNEL, View::text($observed->source_authority), $partitionRef);
-        $status = $recovery['recoveryRequired'] ? 'recovery_required' : ($held ? 'held_discrepancy' : ($park !== null || $payment === null ? 'allocation_pending' : 'current'));
+        $status = $recovery['recoveryRequired'] ? 'recovery_required' : ($held ? 'held_discrepancy' : ($pendingPark || $payment === null ? 'allocation_pending' : 'current'));
         $result = ['paymentRef' => $ref, 'sourceAuthority' => $observed->source_authority, 'sourceLineage' => $observed->source_lineage,
             'providerAccountRef' => $observed->provider_account_ref,
             'observed' => ['revision' => $observed->revision, 'state' => self::state(View::text($observed->state)),
@@ -117,6 +137,8 @@ final readonly class LedgerReader
             'reconciliation' => ['status' => $discrepancies->isEmpty() ? ($observed->refunded_minor > 0 ? 'pending' : 'not_started') : 'discrepancy']];
         if ($park !== null) {
             $result['pendingAllocationReason'] = $park->dependency_kind;
+        } elseif ($inboxPark !== null) {
+            $result['pendingAllocationReason'] = $inboxPark;
         } elseif ($payment === null) {
             $result['pendingAllocationReason'] = 'unapplied_observation';
         }

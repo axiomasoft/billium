@@ -48,6 +48,7 @@ final readonly class ReverseAllocationCommand
     public function execute(TransactionContext $context, ReverseAllocation $command): LedgerReceipt
     {
         $this->runner->assertCurrent($context, 'ledger');
+        $this->writer->assertMonetary($context);
         self::validate($command);
         $caller = $context->caller();
         if ($caller->sellerRef !== $command->scope->sellerRef || $caller->environment !== $command->scope->environment) {

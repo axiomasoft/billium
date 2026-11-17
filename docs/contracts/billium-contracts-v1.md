@@ -118,8 +118,10 @@ Cancel запрещает новые отправки; отправленное 
 ## Usage и overage
 
 CD-15: Billium принимает факты по своему контракту и не импортирует источник (REQ-CON-15…17, D13).
-OverageEvent v1 Tariffler не меняется; его адаптер у источника отображает событие в `usage.fact.v1`
-по compatibility map, которую ведёт владелец источника.
+OverageEvent v1 Tariffler не меняется; историческое отображение в `usage.fact.v1` сохраняется.
+Новый P4 путь использует `usage.fact.v2` только после явного обогащения исходной immutable attribution
+и negotiation; текущий payer не восстанавливает исторического. Compatibility map находится в
+`spec/revisions/2026-10/upgrade-map.json`; адаптер остаётся у владельца источника (D13, D56).
 
 ### usage.fact.v1
 
@@ -140,8 +142,97 @@ OverageEvent v1 Tariffler не меняется; его адаптер у ист
 | `digest` | string | да | sha256 RFC 8785 |
 
 Ответ `usage.receipt.v1`: `accepted` | `duplicate` (тот же digest) | `conflict` (иной digest при той же
-identity и revision). Поздний факт после закрытого периода — adjustment по policy метрики
-(REQ-FAIL-21), не тихий перерасчёт.
+identity и revision). Эти wire shapes сохраняются историческими и сами по себе не доказывают
+готовность P4 financial input. Поздний факт после закрытого периода использует исходные период,
+tiers/commitment scope и PriceVersion; positive delta после issue — linked correction obligation,
+negative — credit note через frozen correction policy (REQ-FAIL-21, D56, D63).
+
+### P4 versioned contracts — PLAN1.P4.1
+
+Нормативные правила и владельцы: BC-ENV-33…44, BC-CNF-16 в ревизии `2026-10` (D56).
+Все новые envelope закрыты, digest — RFC 8785 SHA-256 всего объекта без top-level digest;
+вложенные period/RatedBasis несут собственный проверяемый digest. Старые v1 не меняют свою
+открытость, поля или digest (BC-ENV-43, owner contracts).
+
+| Public PHP/Dart type | Schema | Frozen meaning / owner |
+|:--|:--|:--|
+| MetricVersion | usage.metric.v1 | source/filter/extraction/grouping/unit, immutable attribution/cutoff/correction/finality; usage |
+| UsageFactV2 / UsageReceiptV2 | usage.fact.v2 / usage.receipt.v2 | seller/source/fact/revision + original payer and business receipt; usage |
+| AggregateSnapshot | usage.aggregate.v1 | exact window, grouping/attribution, effective source frontier, watermark/digest; usage |
+| QuantitySnapshot | usage.quantity.v1 | host-approved immutable seat/quantity interval, no live user count; usage |
+| PriceVersion | rating.price.v1 | strategy/version, unit/precision, same-scope bounds/order, currency/tax/rounding, charge timing; rating |
+| CommercialPeriod | period.commercial.v1 | original calendar anchor, timezone/tzdb/DST and persisted UTC boundaries; schedule |
+| RatedBasis | rating.basis.v1 | occurrence/period/price/effective quantity basis, independent of invoice/payment; rating |
+| EnsureBillingOccurrenceV2 / PrepareObligationV2 | occurrence.ensure.v2 / obligation.prepare.v2 | frozen period or RatedBasis command; schedule/ledger |
+| NoChargeReceipt | occurrence.no_charge.v1 | approved zero phase with immutable reason/approval; schedule |
+
+Registered v1: additive_sum, additive_count, gauge with highest-fact-revision plus latest/max
+sample reducer, exact_distinct set union; fixed/per_unit/graduated/volume pricing. decimal_24_9
+means at most 24 integral and 9 fractional digits (future SQL numeric(33,9)); decimal_24_12 means
+24 integral and 12 fractional digits, strings throughout. Monetary bounds remain int64 minor
+units. Units are the closed registry in common/defs.json; a new unit/model needs an explicit
+revision. Duration, rate integration, time-weighted gauge, package/block tiers, coupons/discounts,
+allowance deductions, midperiod seat proration and unsupported commitment compositions refuse
+before booking (BC-ENV-33, 35, 37…39; owners usage/rating).
+
+Included commercial quantity is pricing policy only. This revision registers allowancePolicy=none/1;
+net overage never receives another allowance deduction. Gross and net inputs cannot rate the same
+commercial units twice. Trial/access/grant lifecycle belongs to host/Tariffler; an approved zero
+phase yields no-charge receipt, while unknown policy never becomes zero debt. Advance fixed or
+approved quantity and arrears final aggregate are distinct; prepaid money uses ledger customer
+credit, never product credits or quota (BC-ENV-36, 39, 42; owners rating/schedule).
+
+TaxSnapshotPort remains host policy authority; agreement inputs are host/ProductCoordinator
+approval snapshots, not local business choices. The supported commitment composition is scoped to
+one seller, customer, component, currency and period, and excludes inclusive tax. Exclusive tax
+uses the exact post-bound amount; net and group tax are rounded after tax, with deterministic
+largest-remainder allocation. Inclusive tax is supported without commitment. Host policy/version
+refs must resolve outside a transaction before financial writes; decoding a DTO grants no activation
+or write authority (D19/D56/D63, BC-ENV-38…39, 44; owners rating/host).
+
+Runtime preparation: Composer exposes Billium Usage/Rating/Schedule and their test namespaces,
+with existing `packages/core/modules/*/tests` discovery. The rating descriptor has schema version 1;
+defaults disable the optional modules. Providers use
+Billium\\{Usage,Rating,Schedule}\\Internal\\{Usage,Rating,Schedule}ServiceProvider, are loaded only
+when both the module is listed in billium.modules.enabled and billium.<module>.enabled=true,
+and when the provider exists. Module owners provide explicit install/upgrade registration and module
+bindings; boot discovers migration paths but does not execute SQL (D55, BC-CNF-16; owner core/module).
+
+### Rating: pricing and tax snapshots
+
+The closed rating registry retains `fixed@1`, `per_unit@1`, `tiered_graduated@1`, and
+`tiered_volume@1`. Typed price terms carry a canonical digest, explicit quantity conversion and
+increment, currency exponent version and rounding policy. Fixed is per component occurrence;
+graduated tiers sum reached slices, while volume tiers use the selected rate for all quantity.
+Tiers are contiguous half-open ranges, with equality choosing the upper volume tier; the final
+tier is unbounded. Negative quantities and unknown versions refuse (D19/D56; owner rating).
+
+For the supported single-component period commitment, frozen already-billed net amounts consume
+both bounds. The floor then cap changes the same priced line; unused minimum is not a separate
+charge. Discount, allowance, package/block, prorated minimum, cross-component and inclusive-tax
+commitment compositions refuse. The caller must supply a frozen basis and verify its digest when
+booking (D56/D63; owner rating).
+
+The host resolves standard or correction tax evidence outside the root transaction and supplies
+the immutable snapshot to `TaxSnapshotStore`. It carries jurisdiction, code, exact rate string,
+effective date, tax point, resolver/version and input/evidence digests; correction policy includes
+its version, treatment, effective interval and input/output digests. A no-tax declaration requires a
+zero rate and explicit reason. Missing evidence is never replaced with zero. Tax allocation uses
+absolute largest remainders with bytewise line-key ties and restores the group sign; mixed-sign
+groups refuse. Each line conserves net plus tax equals gross (D19/D56/D63; owners rating/host).
+
+PHP conformance registers usage.ingest/aggregate/quantity, rating.rate/correct and
+schedule.ensure/generate/revise. A module supplies callable billium.conformance.<module>
+(operation string, stdClass arguments) -> array through its installed provider; absent bindings
+return billium.policy.unknown without DB setup. Future PHP fixtures select installed providers with
+given.modules=[usage,rating,schedule] (only the modules they need); the host boots on runtime dispatch
+only when a requested provider binary exists, with explicit migration registration from that owner.
+Changing this test-host selection rebuilds the host before dispatch, retaining the database history.
+Codec fixtures execute in PHP and Dart; runtime
+and expected algorithm cases have profiles=[php]. P4.1 cases freeze exact expected quantities/
+amounts plus unavailable-runtime refusal. They do not claim implemented aggregation, rating,
+calendar generation, DB backstops or live qualification; those domain owners replace/add positive
+runtime assertions and replay/concurrency proof before activation (BC-CNF-16, BC-ENV-44, D59).
 
 ## Obligations и invoices
 

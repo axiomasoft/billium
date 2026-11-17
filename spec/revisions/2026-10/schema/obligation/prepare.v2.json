@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-10:obligation/prepare.v2.json",
+  "title": "obligation.prepare.v2 (D56; owner obligation)",
+  "type": "object",
+  "required": [
+    "schema",
+    "commandKey",
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "ratedBasis",
+    "digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "obligation.prepare.v2"
+    },
+    "commandKey": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/commandKey"
+    },
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "ratedBasis": {
+      "$ref": "urn:billium:spec:2026-10:rating/basis.v1.json"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    }
+  },
+  "additionalProperties": false
+}

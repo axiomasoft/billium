@@ -49,6 +49,31 @@ class RevisionCopy(unittest.TestCase):
 
 
 class GeneratorTest(RevisionCopy):
+    def test_p4_occurrence_vectors_and_control_have_valid_distinct_goldens(self) -> None:
+        vectors = self.tmp / "vectors"
+        golden = self.tmp / "golden"
+        names = [
+            "schedule/occurrences/business-identity",
+            "schedule/occurrences/annual-money-monthly-grants",
+            "rating/contracts/wrong-control",
+            "canon/digest/control-wrong-golden",
+        ]
+        for name in names:
+            target = vectors / (name + ".json")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(ROOT / "fixtures/vectors" / (name + ".json"), target)
+        result = run("build-golden.py", "--rev", self.rev, "--vectors", vectors, "--golden", golden)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for path in golden.rglob("*.txt"):
+            self.assertEqual(path.read_bytes(), (ROOT / "fixtures/golden" / path.relative_to(golden)).read_bytes())
+        control = vectors / "rating/contracts/wrong-control.json"
+        document = json.loads(control.read_text())
+        document["expect"][0]["ok"]["digest"]["golden"] = "canon/digest/control-wrong-golden.txt"
+        control.write_text(json.dumps(document), encoding="utf-8")
+        result = run("build-golden.py", "--rev", self.rev, "--vectors", vectors, "--golden", golden, "--check")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("would get two different contents", result.stderr)
+
     def assert_deterministic(self, script: str, out: Path, *args: str | Path) -> None:
         self.assertEqual(run(script, *args).returncode, 0)
         first = out.read_bytes()
@@ -111,6 +136,17 @@ class GeneratorTest(RevisionCopy):
 
 
 class LintTest(RevisionCopy):
+    def test_internal_correction_payload_is_not_a_wire_envelope(self) -> None:
+        checker = spec_lint.Lint(self.rev, ROOT)
+        payload = json.loads((self.rev / "schema/rating/correction-applied.v1.json").read_text())
+        checker.schemas = {"rating/correction-applied.v1.json": payload}
+        checker.check_envelopes({})
+        self.assertFalse(any("convention 7" in error for error in checker.errors), checker.errors)
+        checker.errors.clear()
+        checker.schemas = {"rating/unregistered-payload.v1.json": payload}
+        checker.check_envelopes({})
+        self.assertTrue(any("convention 7" in error for error in checker.errors), checker.errors)
+
     def assert_refused(self, needle: str) -> None:
         result = self.lint()
         self.assertEqual(result.returncode, 1, result.stdout)

@@ -91,7 +91,7 @@ final class PlatformOutboxRegistrar implements PackageRegistrar
             );
         });
 
-        $app->singleton(PartitionStore::class, static fn (Application $app): PartitionStore => new PartitionStore($app->make(DatabaseManager::class)));
+        $app->singleton(PartitionStore::class, static fn (Application $app): PartitionStore => new PartitionStore($app->make(DatabaseManager::class), $app->make(BilliumOptions::class)));
 
         $app->singleton(FeedPartitions::class, static function (Application $app): DatabaseFeedPartitions {
             $options = $app->make(BilliumOptions::class);

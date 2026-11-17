@@ -1,0 +1,25 @@
+{
+  "id": "rating/runtime/unavailable-schedule-ensure",
+  "spec_refs": [
+    "BC-CNF-16",
+    "D55",
+    "D56"
+  ],
+  "profiles": [
+    "php"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "schedule.ensure",
+      "args": {}
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.policy.unknown"
+      }
+    }
+  ]
+}

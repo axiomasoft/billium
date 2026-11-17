@@ -114,6 +114,10 @@ class RegistryTest(unittest.TestCase):
         self.assertRejected(document, "not in the strict billium.event.v1 enum")
 
         document = self.mutated()
+        self.module(document, "ledger")["publicEvents"][0]["eventType"] = "unknown.event.v1"
+        self.assertRejected(document, "not in the strict billium.event.v1 enum")
+
+        document = self.mutated()
         ledger = self.module(document, "ledger")
         ledger["publicEvents"][0]["snapshotSourceKey"] = "usage.facts"
         self.assertRejected(document, "snapshotSourceKey must be owned by ledger")
@@ -131,6 +135,20 @@ class RegistryTest(unittest.TestCase):
             "payloadSchemaDigest": ledger["publicEvents"][0]["payloadSchemaDigest"],
         }]
         self.assertRejected(document, "reuses a public event type")
+
+    def test_v2_event_types_do_not_expand_v1_enum(self) -> None:
+        event_type = "payment.effect.outcome.v1"
+        registered_types = json.loads((CHECK.SNAPSHOTS / "event-type.json").read_text(encoding="utf-8"))
+        self.assertIn(event_type, registered_types)
+        self.assertNotIn(event_type, self.types)
+
+        document = self.mutated()
+        event = next(e for e in self.module(document, "execution")["publicEvents"] if e["eventType"] == event_type)
+        self.assertEqual("billium.event.v2", event["envelopeSchema"])
+        self.assertEqual([], self.errors(document))
+        event["envelopeSchema"] = "billium.event.v1"
+        event["eventContractRevision"] = "events-2026-10-v1"
+        self.assertRejected(document, "not in the strict billium.event.v1 enum")
 
     def test_schema_requires_a_bootstrap_declaration(self) -> None:
         document = self.mutated()

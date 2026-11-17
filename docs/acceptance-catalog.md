@@ -1,6 +1,7 @@
 # Billium — каталог приёмки
 
-Статус: PLAN1.P1.7 (2026-10-17), корректировки PLAN1.P1.11 и PLAN1.P1.13 по review P1.9. Источник ID — `plans/2026.10.14-№1-BILLIUM-V1/research/P1-acceptance-inventory.md`
+Статус: PLAN1.P1.7 (2026-10-17), корректировки PLAN1.P1.11 и PLAN1.P1.13 по review P1.9.
+Источник ID — `research/P1-acceptance-inventory.md` плана `2026.10.14-№1-BILLIUM-V1` в [workspace](planning.md)
 (82 сценария: PB 24, PF 14, MG 12, FD 10, SB 10, EC 12); ID не переименованы. Одна строка — один сценарий.
 Фаза — провизорная фаза реализации по roadmap (D1); контракт/модель — `docs/contracts/billium-contracts-v1.md`
 и `docs/architecture/data-model.md`.
@@ -75,7 +76,7 @@
 | MG-05 | Параллельные подписка и резервы/consume на лимите | сосед:memster | — | REQ-OUT-10, REQ-NBR-07 | — | Резервы и квоты — Memster/Tariffler; денежная уникальность occurrence — MG-04 |
 | MG-06 | Cancel до/после ensure, поздний ответ, старый dispatcher: денежный сбор закрыт generation хоста | billium | P7 | REQ-FAIL-19, REQ-FAIL-27, REQ-NBR-06, REQ-OWN-06 | dunning_case; billing_schedule.cancellation_generation | Реактивация grant — Memster/хост |
 | MG-07 | Отмена в конце срока против немедленной, просроченный Active/trial | сосед:memster | — | REQ-OUT-01, REQ-NBR-06 | — | Допуск к сервису решает продукт/хост по принятому cutoff |
-| MG-08 | Upgrade/downgrade в середине периода: proration по исходным условиям цены | billium | P4 | REQ-ACC-20, INV-12, REQ-CON-33, REQ-OWN-01 | rated_line; adjustment | Квоты при смене — Tariffler |
+| MG-08 | Upgrade/downgrade в середине периода: proration по исходным условиям цены | billium | P4 | REQ-ACC-20, INV-12, REQ-CON-33, REQ-OWN-01 | rated_line; correction child | Квоты при смене — Tariffler; P4.8 V1, V903–V905 |
 | MG-09 | Поздняя выдача после конца периода, календарные края: денежный интервал заморожен | billium | P4 | INV-11, REQ-CON-11 | billing_occurrence.interval | Выдача grant — Memster |
 | MG-10 | Частичный refund при потреблённых единицах: точная денежная коррекция компонента | billium | P7 | REQ-ACC-20, REQ-OWN-19, INV-10, REQ-ACC-04 | payment.refund.v1; credit_note | Коррекция прав — владелец прав (REQ-OUT-01); фаза P7 — нужны PriceVersion компонента (P4) и refund (P5) |
 | MG-11 | Replay импорта legacy: без сгенерированных provider ID и прошлых начислений | billium | P9 | REQ-ACC-20, REQ-NBR-16, REQ-FAIL-28, REQ-NBR-11 | import port |  |
@@ -98,7 +99,7 @@
 | SB-06 | Payout после refund/удаления контента — reversal без стирания | сосед:settlement | — | REQ-OUT-09 | — | Reversal payout — Settlement; refund Billium — PB-09 |
 | SB-07 | Bundle из двух компонентов: точная allocation, налог, округление, lineage | billium | P3 | REQ-ACC-23, REQ-OWN-13, REQ-ACC-06, REQ-CON-30, REQ-PROF-20 | allocation; ledger/conservation |  |
 | SB-08 | Частичный fulfilment, поздний grant, cutoff — receipt каждого владельца | сосед:host | — | REQ-NBR-06, REQ-OUT-11 | — | Fulfilment и grant — хост; оплата Billium не меняется |
-| SB-09 | Частичная отмена отдельно от потреблённой квоты и позднего usage | billium | P4 | REQ-ACC-23, REQ-OWN-19, REQ-ACC-19 | credit_note; adjustment | Квота — Tariffler |
+| SB-09 | Частичная отмена отдельно от потреблённой квоты и позднего usage | billium | P4 | REQ-ACC-23, REQ-OWN-19, REQ-ACC-19 | credit_note; correction child | Квота — Tariffler; P4.8 V1, V903–V905 |
 | SB-10 | Retention/restore/clone без повторной выдачи, выплаты и проводки | billium | P6 | REQ-CON-34, REQ-FAIL-15, REQ-ACC-19, REQ-CON-22, REQ-CON-35, REQ-NBR-09 | outbox_event (finbridge) | Выплаты — Settlement |
 | EC-01 | Текущая недоступная композиция | сосед:edufy | — | REQ-OUT-05 | — | Credits и композиция прогонов — Edufy |
 | EC-02 | 20 одновременных резервов | сосед:edufy | — | REQ-OUT-05, REQ-OUT-10 | — | Резервы credits — Edufy |
@@ -110,7 +111,7 @@
 | EC-08 | Cancel до/во время отправки/после settlement | сосед:edufy | — | REQ-OUT-05 | — | Settlement прогонов — Edufy |
 | EC-09 | Подтверждение после TTL, параллельный допуск | сосед:edufy | — | REQ-OUT-05 | — | Допуск прогонов — Edufy |
 | EC-10 | Adjustment commit, затем сбой audit/outbox/cache и повтор | сосед:edufy | — | REQ-OUT-05 | — | Adjustments credits — Edufy |
-| EC-11 | Факт сверх резерва или после закрытого invoice: исходный период, явная доплата/долг/discrepancy | billium | P4 | REQ-ACC-22, REQ-FAIL-21, REQ-ACC-07, REQ-ACC-09, REQ-CON-17 | usage.fact.v1; adjustment |  |
+| EC-11 | Факт сверх резерва или после закрытого invoice: исходный период, явная доплата/долг/discrepancy | billium | P4 | REQ-ACC-22, REQ-FAIL-21, REQ-ACC-07, REQ-ACC-09, REQ-CON-17 | usage.fact.v1; correction child | P4.8 V2–V3, V903–V905; original-period fixture |
 | EC-12 | Restore и ревизия цены не меняют исходный quote и не повторяют consume | billium | P4 | REQ-ACC-22, INV-12, REQ-ACC-07, REQ-OWN-01 | price_version; obligation |  |
 
 ## Concurrency
@@ -131,7 +132,7 @@ N-процессные тесты на PostgreSQL ≥ 16 (REQ-ACC-11): N про�
 | ACC-CON-08 | Allocation одного платежа на две obligations | billium | P3 | INV-09, REQ-ACC-11, REQ-ACC-10, REQ-OWN-12, REQ-PROF-22 | allocation | — | 10 | барьер перед Tx | payment 100.00, две obligations по 80.00 | Σ allocation ≤ 100.00, каждая ≤ 80.00 | CHECK payment/obligation; порядок locks |
 | ACC-CON-09 | Allocation и credit note одной invoice | billium | P3 | INV-09, INV-13, REQ-ACC-11 | allocation; credit_note | — | 4 | барьер | issued invoice 100.00 | open ≥ 0; credit ≤ open + reversal по policy | CHECK obligation |
 | ACC-CON-10 | Выпуск invoice одной серии | billium | P6 | REQ-OWN-07, INV-13, REQ-ACC-11 | document_series; legal_document | — | 20 | барьер перед issue | серия с next_number = 1 | 20 уникальных номеров без повторов | UNIQUE номер; lock series |
-| ACC-CON-11 | Дубль rating job и supersession расписания | billium | P4 | INV-11, INV-12, REQ-ACC-11 | billing_occurrence; obligation | — | 5 | барьер перед материализацией | расписание rev 1, occurrence planned | одна obligation на интервал; supersede только planned | EXCLUDE; UNIQUE basis |
+| ACC-CON-11 | Дубль rating job и supersession расписания | billium | P4 | INV-11, INV-12, REQ-ACC-11 | billing_occurrence; obligation | — | 5 | барьер перед материализацией | расписание rev 1, occurrence planned | одна obligation на интервал; supersede только planned | EXCLUDE; UNIQUE basis; P4.8 V3 |
 | ACC-CON-12 | Один usage-факт от нескольких доставщиков | billium | P4 | REQ-CON-15, REQ-CON-16, REQ-ACC-11, REQ-CON-39 | usage.fact.v1 | — | 10 | барьер | пусто | один факт; иной digest — conflict | UNIQUE (seller, source, fact_id, revision) |
 | ACC-CON-13 | Шаг collection и allocation одной obligation | billium | P7 | REQ-FAIL-19, INV-09, REQ-ACC-11, REQ-CON-12, REQ-OWN-06 | dunning_case; collection_step | — | 4 | барьер | obligation open 50.00 | после allocation шаг не создаётся; повтор job — UNIQUE | UNIQUE (case, step); lock obligation |
 | ACC-CON-14 | Несколько relay одного outbox | billium | P3 | REQ-CON-18, INV-08, REQ-ACC-11 | outbox_event | — | 4 | одновременный старт relay | 100 событий | каждое доставлено ≥ 1 раз; потребитель применяет 1 раз | SKIP LOCKED; dedupe event_id |
@@ -147,6 +148,22 @@ N-процессные тесты на PostgreSQL ≥ 16 (REQ-ACC-11): N про�
 | ACC-CON-24 | Применение наблюдений одной partition: дубль eventId, пропуск sequence, конфликт revision, чужой seller, несогласованные totals | billium | P3 | REQ-CON-27, REQ-CON-13, REQ-FAIL-13, REQ-FAIL-12, INV-06, INV-14, REQ-ACC-11 | payment.observation.v1; feed_partition; inbox_message | P19-F03; PE-06, PE-09 | 6 | барьер перед apply | applied_sequence = 10; payment captured 30.00 rev 2 | один эффект на eventId; seq 12 до 11 — parked; та же revision с иным digest — conflict; чужой seller — auth.denied без эффекта; rev 3 captured 60.00 — totals присвоены (60.00, не 90.00) | UNIQUE inbox eventId; applied_sequence монотонна; payment.captured_minor = 6000 |
 | ACC-CON-25 | Смена маршрута, затем refund старого charge | billium | P5 | INV-07, REQ-OWN-20, REQ-OWN-21, REQ-ACC-11 | payment.refund.v1; execution_binding | P19-F09 | 2 | барьер: смена маршрута по умолчанию и refund admission | charge succeeded на binding 1; маршрут по умолчанию переключён на binding 2 | refund получает binding 1 исходного charge; иной binding отвергнут триггером | refund.binding_id = charge.binding_id; 0 refund на binding 2 |
 | ACC-CON-26 | Refund 30.00 из charge 100.00: наблюдение charge (`refundedTotal` 30.00) и наблюдение refund-операции (`capturedTotal` 30.00) в любом порядке | billium | P3 | REQ-CON-27, REQ-ACC-10, INV-06, INV-09, REQ-FAIL-18, REQ-ACC-11 | payment.observation.v1; payment.refund.v1 | P19R2-F02, D41 | 4 | барьер: оба наблюдения и повторная доставка каждого | charge captured 100.00 распределён на invoice; refund 30.00 succeeded у источника | `refunded_minor` = 30.00 при любом порядке и дублях; расхождение Σ refund и `refundedTotal` — discrepancy без изменения ledger | `payment.refunded_minor` = 3000; `reallocation_required` на 30.00; 0 строк conflict; discrepancy при расхождении |
+
+P4.8: `fixtures/vectors/rating/corrections/original-period.json` содержит ожидаемые полные суммы,
+дельты и partial-cancel пример (D19/D56/D63; owner rating). `ProrationCalculatorTest` проверяет
+временные дроби и отказ неподдержанных комбинаций; `CorrectionIntegrationSmokeTest` проверяет
+исходную цену и период, issued volume/graduated, release policies, выбор и stale tax policy,
+повтор, гонки и rollback участников. V1–V3 и V903–V905 остаются отдельными проверками conductor;
+их покрытие COV-199–205, COV-502 и COV-538 фиксируется только после фактического прохождения.
+
+P4.10: [машинный manifest](architecture/p4-acceptance.json) связывает ACC-CON-11/12, MG-08,
+SB-02/SB-09, EC-11, COV-AC-520 и calendar/tier/commitment/tax/gauge/distinct/finality/composition
+с конкретными fixtures и PHP test paths. [Evidence guide](architecture/p4-acceptance.md) описывает
+точные суммы, logical PostgreSQL restore, N-процессные gates и обязательные owner inputs
+(D53/D56/D59; owner PLAN1.P4.10). `P4AcceptanceManifestTest` делает отсутствие обязательного
+предмета/feature disposition красным; наличие ссылки само по себе не считается пройденной проверкой.
+Manifest сохраняет красные результаты `checks.1` V1/V3/V4/V5/V6; исправления ожидают повторной
+приёмки conductor. Независимый фазовый gate остаётся pending (D59/D64/D66; owner PLAN1.P4.10).
 
 ## Restore, clone, lost response
 

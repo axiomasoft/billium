@@ -223,6 +223,24 @@ final class ObservationApplyTest extends ObservationTestCase
         self::assertSame(1000, $this->allocated('o1'), 'a confirmed refund never reverses allocations by itself');
     }
 
+    public function test_older_refund_revisions_use_the_nearest_successor_and_keep_the_latest_validated_basis(): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $this->observe(ObservationFactory::charge('op-1', 1, 1000, 400));
+        $this->observe(ObservationFactory::refund('op-r1', 'op-1', 4, 400, sequence: 2));
+        $older = $this->observe(ObservationFactory::refund('op-r1', 'op-1', 3, 300, sequence: 3));
+        self::assertSame('refund_detail', $older->mode());
+        self::assertSame(['compared' => 1, 'recorded' => 0, 'resolved' => 0], $this->reconciler()->reconcile(0));
+
+        $held = $this->observe(ObservationFactory::refund('op-r1', 'op-1', 2, 500, sequence: 4));
+        self::assertSame('hold', $held->mode());
+        self::assertSame('regression_captured', self::arr($held->body['discrepancy'])['reason']);
+        self::assertSame('300', self::arr($held->body['discrepancy'])['expected_minor']);
+        self::assertSame(4, self::integer($this->observedRow('op-r1')['revision']));
+        self::assertTrue($this->paymentRow()['financial_hold']);
+    }
+
     /** @return array{0: string, 1: int} */
     private function invoiceState(): array
     {

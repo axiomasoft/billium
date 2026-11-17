@@ -1,0 +1,94 @@
+{
+  "id": "usage/aggregation/additive",
+  "description": "P4.3 algorithm input executed by usage Pest tests; conformance verifies canonical fixture integrity, not the aggregation algorithm.",
+  "spec_refs": [
+    "D13",
+    "D19",
+    "D23",
+    "D56"
+  ],
+  "profiles": [
+    "php"
+  ],
+  "given": {
+    "aggregation": {
+      "policy": {
+        "algorithm": "additive_sum@1",
+        "allowNegative": false,
+        "scale": 0
+      },
+      "window": [
+        0,
+        3600
+      ],
+      "revisions": [
+        {
+          "fact": "f1",
+          "q": "10",
+          "rev": 1,
+          "t": 100
+        },
+        {
+          "fact": "f1",
+          "q": "12",
+          "rev": 2,
+          "t": 100
+        },
+        {
+          "fact": "f2",
+          "q": "5",
+          "rev": 1,
+          "t": 200
+        },
+        {
+          "fact": "f3",
+          "q": "7",
+          "rev": 1,
+          "t": 300
+        },
+        {
+          "fact": "f3",
+          "q": "7",
+          "rev": 2,
+          "t": 300,
+          "retracted": true
+        },
+        {
+          "fact": "f4",
+          "q": "99",
+          "rev": 1,
+          "t": 3600
+        }
+      ],
+      "expected": {
+        "quantity": "17",
+        "membership": [
+          [
+            "f1",
+            2
+          ],
+          [
+            "f2",
+            1
+          ]
+        ],
+        "digest": "sha256:d4bfa3be6f764310f861c0063964cfc263d4b6a914731aba4559865ac1af7bf5"
+      }
+    }
+  },
+  "script": [
+    {
+      "op": "canon.digest",
+      "args": {
+        "json_text": "{\"expected\":{\"digest\":\"sha256:d4bfa3be6f764310f861c0063964cfc263d4b6a914731aba4559865ac1af7bf5\",\"membership\":[[\"f1\",2],[\"f2\",1]],\"quantity\":\"17\"},\"policy\":{\"algorithm\":\"additive_sum@1\",\"allowNegative\":false,\"scale\":0},\"revisions\":[{\"fact\":\"f1\",\"q\":\"10\",\"rev\":1,\"t\":100},{\"fact\":\"f1\",\"q\":\"12\",\"rev\":2,\"t\":100},{\"fact\":\"f2\",\"q\":\"5\",\"rev\":1,\"t\":200},{\"fact\":\"f3\",\"q\":\"7\",\"rev\":1,\"t\":300},{\"fact\":\"f3\",\"q\":\"7\",\"retracted\":true,\"rev\":2,\"t\":300},{\"fact\":\"f4\",\"q\":\"99\",\"rev\":1,\"t\":3600}],\"window\":[0,3600]}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "digest": "sha256:4d1d87a01005c8e52971ca8feb8e8a5b0978c415077c405bca7e0ffccbbfec1d"
+      }
+    }
+  ]
+}

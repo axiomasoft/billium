@@ -33,6 +33,10 @@ return [
     ],
     'runtime_role' => ['preflight' => true],
     'ledger' => ['refund_reconcile_after_seconds' => 3600],
+    // D55/D56: optional usage admission is discovered only when explicitly enabled; boot never installs SQL.
+    'usage' => ['enabled' => false],
+    'rating' => ['enabled' => false],
+    'schedule' => ['enabled' => false],
     // D55: desired module set; unlisted optional modules create no routes, workers or tables.
     'modules' => [
         'composition' => 'embedded-commerz',

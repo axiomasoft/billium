@@ -1,0 +1,1592 @@
+{
+  "version": 1,
+  "owner": "PLAN1.P4.10",
+  "decision_refs": [
+    "D13",
+    "D19",
+    "D23",
+    "D27",
+    "D53",
+    "D55",
+    "D56",
+    "D59",
+    "D63",
+    "D64",
+    "D66"
+  ],
+  "qualification": "implementation_evidence_only_independent_phase_gate_pending",
+  "cases": [
+    {
+      "id": "ACC-CON-11",
+      "owner": "schedule/rating",
+      "fixture": "fixtures/vectors/schedule/occurrences/business-identity.json",
+      "tests": [
+        "packages/core/modules/rating/tests/Feature/RatingBookingConcurrencyTest.php::test_five_workers_book_one_basis_and_one_obligation",
+        "packages/core/modules/rating/tests/Feature/RatingBookingConcurrencyTest.php::test_duplicate_rating_jobs_racing_schedule_revision_never_supersede_booked_work"
+      ],
+      "expectation": "5 workers: one rated basis and obligation; revision supersedes planned work only",
+      "check": "concurrency"
+    },
+    {
+      "id": "ACC-CON-12",
+      "owner": "usage",
+      "fixture": "fixtures/vectors/usage/contracts/fact.json",
+      "tests": [
+        "packages/core/modules/usage/tests/Concurrency/UsageAdmissionConcurrencyTest.php::test_ten_independent_postgresql_couriers_admit_one_fact_and_receipt",
+        "packages/core/modules/usage/tests/Concurrency/UsageAdmissionConcurrencyTest.php::test_ten_conflicting_couriers_produce_one_winner"
+      ],
+      "expectation": "10 couriers: one source fact/receipt; changed digest conflicts",
+      "check": "concurrency"
+    },
+    {
+      "id": "MG-08",
+      "owner": "rating",
+      "fixture": "fixtures/vectors/rating/corrections/original-period.json",
+      "tests": [
+        "packages/core/modules/rating/tests/Unit/ProrationCalculatorTest.php::test_periods_use_exact_seconds_or_local_days",
+        "packages/core/modules/rating/tests/Feature/CorrectionIntegrationSmokeTest.php::test_partial_cancel_credits_issued_invoice_and_keeps_original_amount"
+      ],
+      "expectation": "January 31.00 partial cancellation: corrected 1500 minor; delta -1600; issued invoice unchanged",
+      "check": "policies"
+    },
+    {
+      "id": "SB-02",
+      "owner": "rating",
+      "fixture": "fixtures/vectors/rating/contracts/no-charge-unknown-policy.json",
+      "tests": [
+        "packages/core/modules/rating/tests/Feature/RatingPipelineUnknownPolicyTest.php::test_missing_price_and_tax_hold_without_zero_or_financial_rows"
+      ],
+      "expectation": "Missing price/tax holds; no rated basis or obligation",
+      "check": "policies"
+    },
+    {
+      "id": "SB-09",
+      "owner": "rating/ledger",
+      "fixture": "fixtures/vectors/rating/corrections/original-period.json",
+      "tests": [
+        "packages/core/modules/rating/tests/Feature/CorrectionIntegrationSmokeTest.php::test_partial_cancel_credits_issued_invoice_and_keeps_original_amount"
+      ],
+      "expectation": "Negative adjustment has a linked credit note; no implicit PSP refund or product quota mutation",
+      "check": "policies"
+    },
+    {
+      "id": "EC-11",
+      "owner": "usage/rating/ledger",
+      "fixture": "fixtures/p4/acceptance-replay.json",
+      "tests": [
+        "packages/core/tests/Integration/P4AcceptanceReplayTest.php::test_restore_permutation_and_late_revision_converge"
+      ],
+      "expectation": "100 -> 150 -> 160: graduated gross 12000 -> 16800 -> 17760; volume 12000 -> 14400 -> 15360; counts 1/1/1 -> 3/2/2 -> 4/3/3",
+      "check": "replay"
+    },
+    {
+      "id": "COV-AC-520",
+      "owner": "rating",
+      "fixture": "fixtures/p4/acceptance-replay.json",
+      "tests": [
+        "packages/core/tests/Integration/P4AcceptanceReplayTest.php::test_fixed_fee_restore_reuses_frozen_price_tax_and_receipt",
+        "packages/core/tests/Integration/P4AcceptanceReplayTest.php::test_restore_permutation_and_late_revision_converge"
+      ],
+      "expectation": "Frozen fixed 49.00 + 20% tax = 5880 minor; additive metered original-period amounts as EC-11; no duplicate booking on restore/retry",
+      "check": "replay"
+    },
+    {
+      "id": "P4-calendar",
+      "owner": "schedule",
+      "fixture": "fixtures/vectors/schedule/periods/calendar-cases.json",
+      "tests": [
+        "packages/core/modules/schedule/tests/Unit/CommercialPeriodResolverTest.php::test_explicit_calendar_boundaries",
+        "packages/core/modules/schedule/tests/Unit/CommercialPeriodResolverTest.php::test_january_anchor_survives_short_months_and_replay_ignores_process_timezone",
+        "packages/core/modules/schedule/tests/Feature/CommercialPeriodPersistenceTest.php"
+      ],
+      "expectation": "Fixture-pinned Jan31, leap year, explicit timezone and DST boundaries; no anchor drift",
+      "check": "policies"
+    },
+    {
+      "id": "P4-tiers",
+      "owner": "rating",
+      "fixture": "fixtures/vectors/rating/strategies/tier-boundaries.json",
+      "tests": [
+        "packages/core/modules/rating/tests/Unit/PricingStrategyTest.php::test_pricing_strategy_fixture_examples_execute"
+      ],
+      "expectation": "Fixed/per-unit/graduated/volume boundaries execute PHP pricing, not only canonical fixture hashing",
+      "check": "policies"
+    },
+    {
+      "id": "P4-commitment",
+      "owner": "rating",
+      "fixture": "fixtures/vectors/rating/contracts/cross-component-commitment.json",
+      "tests": [
+        "packages/core/modules/rating/tests/Unit/PricingStrategyTest.php::test_pricing_strategy_commitment_consumes_frozen_basis",
+        "packages/core/modules/rating/tests/Feature/CorrectionIntegrationSmokeTest.php::test_commitment_scope_uses_latest_full_corrected_basis_once"
+      ],
+      "expectation": "Same-scope min/max and already-billed basis; late total 26000 net versus original minimum 20000, delta 6000",
+      "check": "policies"
+    },
+    {
+      "id": "P4-tax",
+      "owner": "rating",
+      "fixture": "fixtures/vectors/rating/tax/residual-corrections.json",
+      "tests": [
+        "packages/core/modules/rating/tests/Unit/TaxSnapshotRoundingTest.php",
+        "packages/core/modules/rating/tests/Feature/RatingPipelineTaxTest.php"
+      ],
+      "expectation": "Exact currency exponents, signed residual conservation and registered rounding; inclusive commitment combination refuses",
+      "check": "policies"
+    },
+    {
+      "id": "P4-gauge",
+      "owner": "usage/rating",
+      "fixture": "fixtures/vectors/usage/aggregation/gauge.json",
+      "tests": [
+        "packages/core/modules/usage/tests/Unit/AggregationGaugeTest.php",
+        "packages/core/modules/rating/tests/Feature/CorrectionIntegrationSmokeTest.php::test_gauge_revision_replaces_the_sample_before_closed_period_rating"
+      ],
+      "expectation": "Revision replaces sample before sample reduction; corrected net 1500, delta 500",
+      "check": "policies"
+    },
+    {
+      "id": "P4-distinct",
+      "owner": "usage",
+      "fixture": "fixtures/vectors/usage/aggregation/distinct.json",
+      "tests": [
+        "packages/core/modules/usage/tests/Unit/AggregationDistinctTest.php",
+        "packages/core/modules/usage/tests/Feature/AggregationFreezeTest.php::test_aggregation_distinct_retains_shared_member_contributions_and_erasure_refuses_replay"
+      ],
+      "expectation": "Exact member union; shared contributions survive retraction; partial counts refuse",
+      "check": "policies"
+    },
+    {
+      "id": "P4-finality",
+      "owner": "usage/rating",
+      "fixture": "fixtures/vectors/usage/aggregation/completeness.json",
+      "tests": [
+        "packages/core/modules/usage/tests/Unit/AggregationCompletenessTest.php",
+        "packages/core/modules/usage/tests/Feature/AggregationFreezeTest.php",
+        "packages/core/modules/rating/tests/Feature/RatingPipelineUnknownPolicyTest.php::test_incomplete_source_and_erased_aggregate_hold_instead_of_zero"
+      ],
+      "expectation": "Gap, missing membership, dropped/retry-exhausted source or erased evidence never produces final zero",
+      "check": "policies"
+    },
+    {
+      "id": "P4-composition",
+      "owner": "core/usage/rating/schedule",
+      "fixture": "docs/architecture/optional-commercial-modules.md",
+      "tests": [
+        "packages/core/tests/Integration/P4ModuleCompositionTest.php",
+        "packages/core/tests/Integration/Usage/P4ModuleCompositionTest.php",
+        "packages/core/tests/Unit/Modules/P4ModuleCompositionTest.php"
+      ],
+      "expectation": "A-D authority matrix, fixed without usage/ledger, ledger posting without legal render, exact versioned extension/refusal",
+      "check": "composition"
+    },
+    {
+      "id": "P4-source-conflict",
+      "owner": "usage",
+      "fixture": "fixtures/vectors/usage/contracts/fact.json",
+      "tests": [
+        "packages/core/tests/Integration/P4AcceptanceReplayTest.php::test_replayed_source_with_changed_payload_refuses_without_money"
+      ],
+      "expectation": "Same source identity with changed payload: billium.idempotency.conflict; source/rated/obligation counts unchanged",
+      "check": "replay"
+    }
+  ],
+  "feature_dispositions": [
+    {
+      "id": "trials_free_tiers",
+      "owner": "PLAN1.P4.10",
+      "decision": "D56",
+      "disposition": "Explicit approved zero price/reason is supported; unknown zero policy and second allowance deduction refuse.",
+      "cases": [
+        "P4-tiers",
+        "SB-02"
+      ],
+      "tests": [
+        "packages/core/modules/rating/tests/Feature/RatingPipelineUnknownPolicyTest.php::test_explicit_approved_zero_has_a_reason_and_no_obligation",
+        "packages/contracts/tests/Unit/P4ContractsTest.php"
+      ],
+      "fixtures": [
+        "fixtures/vectors/rating/contracts/nocharge.json",
+        "fixtures/vectors/rating/contracts/second-allowance-refused.json"
+      ]
+    },
+    {
+      "id": "seat_quantity",
+      "owner": "PLAN1.P4.10",
+      "decision": "D56",
+      "disposition": "Host-approved retained quantity snapshot is supported; live-user counting and unregistered midperiod seat revisions refuse.",
+      "cases": [
+        "MG-08"
+      ],
+      "tests": [
+        "packages/core/modules/rating/tests/Feature/CorrectionIntegrationSmokeTest.php::test_partial_cancel_accepts_retained_approved_quantity_snapshot",
+        "packages/core/modules/rating/tests/Unit/ProrationCalculatorTest.php::test_unsupported_amendment_combinations_are_refused",
+        "packages/contracts/tests/Unit/P4ContractsTest.php"
+      ],
+      "fixtures": [
+        "fixtures/vectors/usage/contracts/quantity.json",
+        "fixtures/vectors/usage/contracts/seat-live-count-refused.json"
+      ]
+    },
+    {
+      "id": "discounts_coupons",
+      "owner": "PLAN1.P4.10",
+      "decision": "D56",
+      "disposition": "Unsupported generic discount/coupon fields and strategies refuse; retail promotions stay host/Commerz-owned.",
+      "cases": [
+        "P4-tiers"
+      ],
+      "tests": [
+        "packages/contracts/tests/Unit/P4ContractsTest.php",
+        "packages/core/modules/rating/tests/Unit/ProrationCalculatorTest.php::test_unsupported_amendment_combinations_are_refused"
+      ],
+      "fixtures": [
+        "fixtures/vectors/rating/contracts/discount-refused.json"
+      ]
+    },
+    {
+      "id": "prepaid_postpaid",
+      "owner": "PLAN1.P4.10",
+      "decision": "D56",
+      "disposition": "Advance fixed/approved quantity is a wire capability; aggregate usage in advance refuses. Final usage requires explicit completeness; no product credit or quota inference.",
+      "cases": [
+        "P4-finality"
+      ],
+      "tests": [
+        "packages/contracts/tests/Unit/P4ContractsTest.php",
+        "packages/core/modules/rating/tests/Feature/RatingPipelineUnknownPolicyTest.php::test_incomplete_source_and_erased_aggregate_hold_instead_of_zero",
+        "packages/core/tests/Unit/Modules/P4AcceptanceManifestTest.php::test_advance_fixed_and_approved_quantity_are_explicit_codec_inputs"
+      ],
+      "fixtures": [
+        "fixtures/vectors/rating/contracts/prepaid-usage-is-not-final.json",
+        "fixtures/p4/advance-codecs.json"
+      ]
+    },
+    {
+      "id": "package_block_tiers",
+      "owner": "PLAN1.P4.10",
+      "decision": "D56",
+      "disposition": "Unsupported package strategy refuses; never approximated by volume/graduated.",
+      "cases": [
+        "P4-tiers"
+      ],
+      "tests": [
+        "packages/contracts/tests/Unit/P4ContractsTest.php"
+      ],
+      "fixtures": [
+        "fixtures/vectors/rating/contracts/unknown-strategy.json"
+      ]
+    },
+    {
+      "id": "minimum_maximum",
+      "owner": "PLAN1.P4.10",
+      "decision": "D56",
+      "disposition": "Only registered same-component original-period scope/order; cross-component and inclusive-tax compositions refuse.",
+      "cases": [
+        "P4-commitment",
+        "P4-tax"
+      ],
+      "tests": [
+        "packages/core/modules/rating/tests/Unit/PricingStrategyTest.php",
+        "packages/core/modules/rating/tests/Unit/TaxSnapshotRoundingTest.php"
+      ],
+      "fixtures": [
+        "fixtures/vectors/rating/contracts/cross-component-commitment.json",
+        "fixtures/vectors/rating/contracts/inverted-bounds.json"
+      ]
+    },
+    {
+      "id": "pause_resume_backdate",
+      "owner": "PLAN1.P4.10",
+      "decision": "D56",
+      "disposition": "Future planned-work supersession is supported; posted work appends an amendment; unsupported midperiod pause/seat/backdate financial policies refuse.",
+      "cases": [
+        "ACC-CON-11",
+        "MG-08"
+      ],
+      "tests": [
+        "packages/core/modules/schedule/tests/Feature/OccurrenceSupersessionTest.php",
+        "packages/core/modules/rating/tests/Unit/ProrationCalculatorTest.php::test_backdate_is_rejected_before_proration",
+        "packages/core/modules/rating/tests/Unit/ProrationCalculatorTest.php::test_unsupported_amendment_combinations_are_refused",
+        "packages/core/modules/schedule/tests/Feature/CommercialPeriodPersistenceTest.php::test_future_boundary_pause_resume_retains_anchor_without_grant_work"
+      ],
+      "fixtures": [
+        "fixtures/vectors/schedule/occurrences/business-identity.json"
+      ]
+    },
+    {
+      "id": "calendar",
+      "owner": "PLAN1.P4.10",
+      "decision": "D56",
+      "disposition": "Explicit month/end-of-month/leap/timezone/DST policies and persisted boundaries; unknown policies refuse.",
+      "cases": [
+        "P4-calendar"
+      ],
+      "tests": [
+        "packages/core/modules/schedule/tests/Unit/CommercialPeriodResolverTest.php",
+        "packages/core/modules/schedule/tests/Feature/CommercialPeriodPersistenceTest.php"
+      ],
+      "fixtures": [
+        "fixtures/vectors/schedule/periods/calendar-cases.json"
+      ]
+    },
+    {
+      "id": "extension_gate",
+      "owner": "PLAN1.P4.10",
+      "decision": "D56",
+      "disposition": "Exact trusted versions within existing typed families; duplicate/missing versions refuse. New shapes require versioned contracts and fixtures; historical implementations remain available.",
+      "cases": [
+        "P4-composition"
+      ],
+      "tests": [
+        "packages/core/tests/Unit/Modules/RoleRegistrationTest.php",
+        "packages/core/tests/Integration/P4ModuleCompositionTest.php",
+        "packages/core/tests/Integration/Usage/P4ModuleCompositionTest.php"
+      ],
+      "fixtures": [
+        "docs/architecture/optional-commercial-modules.md"
+      ]
+    }
+  ],
+  "execution_evidence": [
+    {
+      "id": "closure",
+      "cmd": "docker compose run --rm toolchain vendor/bin/pest packages/core/tests/Integration/P4AcceptanceReplayTest.php packages/core/tests/Unit/Modules/P4AcceptanceManifestTest.php",
+      "exit": 0,
+      "started_at": "2026-11-10T08:04:04.819754+00:00",
+      "finished_at": "2026-11-10T08:04:14.078434+00:00",
+      "log": ".phpunit.cache/p4.10/closure.log",
+      "log_sha256": "10e6390ea0bf7c0223b5fc87571a5a2ecb119abc49082a0732522d287b3df16e"
+    },
+    {
+      "id": "concurrency",
+      "cmd": "docker compose run --rm toolchain vendor/bin/pest packages/core/modules/usage/tests/Concurrency/UsageAdmissionConcurrencyTest.php packages/core/modules/rating/tests/Feature/RatingBookingConcurrencyTest.php packages/core/modules/rating/tests/Feature/RatingCorrectionConcurrencyTest.php packages/core/modules/schedule/tests/Feature/OccurrenceRevisionConcurrencyTest.php --filter=\"test_ten_independent_postgresql_couriers_admit_one_fact_and_receipt|test_ten_conflicting_couriers_produce_one_winner|test_five_workers_book_one_basis_and_one_obligation|test_duplicate_rating_jobs_racing_schedule_revision_never_supersede_booked_work|test_five_identical_corrections_create_one_financial_delta|test_five_postgresql_workers_materialize_one_business_occurrence\"",
+      "exit": 0,
+      "started_at": "2026-11-10T08:04:14.078646+00:00",
+      "finished_at": "2026-11-10T08:04:17.548706+00:00",
+      "log": ".phpunit.cache/p4.10/concurrency.log",
+      "log_sha256": "f06bb98e4328070e490bd07fda07542838f975ad4e808e5a20eab9f032225d37"
+    },
+    {
+      "id": "policies",
+      "cmd": "docker compose run --rm toolchain vendor/bin/pest packages/core/modules/schedule/tests/Unit/CommercialPeriodResolverTest.php packages/core/modules/schedule/tests/Feature/CommercialPeriodPersistenceTest.php packages/core/modules/schedule/tests/Feature/OccurrenceSupersessionTest.php packages/core/modules/rating/tests/Unit/PricingStrategyTest.php packages/core/modules/rating/tests/Unit/ProrationCalculatorTest.php packages/core/modules/rating/tests/Unit/TaxSnapshotRoundingTest.php packages/core/modules/rating/tests/Feature/RatingPipelineTaxTest.php packages/core/modules/rating/tests/Feature/RatingPipelineUnknownPolicyTest.php packages/core/modules/usage/tests/Unit/AggregationGaugeTest.php packages/core/modules/usage/tests/Unit/AggregationDistinctTest.php packages/core/modules/usage/tests/Unit/AggregationCompletenessTest.php packages/core/modules/usage/tests/Feature/AggregationFreezeTest.php packages/core/modules/rating/tests/Feature/CorrectionIntegrationSmokeTest.php",
+      "exit": 0,
+      "started_at": "2026-11-10T08:05:51.641147+00:00",
+      "finished_at": "2026-11-10T08:06:14.472298+00:00",
+      "log": ".phpunit.cache/p4.10/policies.log",
+      "log_sha256": "d3e6d3aad968212a89739d3b4577ba82daa2a5ed6460ea4725f06935c2532083"
+    },
+    {
+      "id": "composition",
+      "cmd": "docker compose run --rm toolchain vendor/bin/pest packages/core/tests/Integration/P4ModuleCompositionTest.php packages/core/tests/Integration/Usage/P4ModuleCompositionTest.php packages/core/tests/Unit/Modules/P4ModuleCompositionTest.php packages/core/tests/Unit/Modules/RoleRegistrationTest.php",
+      "exit": 0,
+      "started_at": "2026-11-10T08:06:14.472669+00:00",
+      "finished_at": "2026-11-10T08:06:20.221378+00:00",
+      "log": ".phpunit.cache/p4.10/composition.log",
+      "log_sha256": "1744b0bf1ff568135989c8a106b6779cfff0704eb3602a035737098bb007cc28"
+    },
+    {
+      "id": "codecs",
+      "cmd": "docker compose run --rm toolchain vendor/bin/pest packages/contracts/tests/Unit/P4ContractsTest.php",
+      "exit": 0,
+      "started_at": "2026-11-10T08:06:20.221599+00:00",
+      "finished_at": "2026-11-10T08:06:21.194784+00:00",
+      "log": ".phpunit.cache/p4.10/codecs.log",
+      "log_sha256": "2c5e3bb19e5f0bf7fb312eb294c41a0d796340b0a6f58777110c7b04f07b75f2"
+    },
+    {
+      "id": "replay",
+      "cmd": "docker compose run --rm toolchain vendor/bin/pest packages/core/tests/Integration/P4AcceptanceReplayTest.php",
+      "exit": 0,
+      "started_at": "2026-11-10T08:09:11.210524+00:00",
+      "finished_at": "2026-11-10T08:09:20.522145+00:00",
+      "log": ".phpunit.cache/p4.10/replay-recorded-counts.log",
+      "log_sha256": "8bd76fa31c6fd703d9774d4ea41e3d01e28bfdd4a5e47da95e56877e138f50f7"
+    }
+  ],
+  "runtime_observations": {
+    "graduated": {
+      "fixture": "p4-acceptance-replay/1",
+      "expectation": {
+        "first_delta_gross_minor": "4800",
+        "revision_delta_gross_minor": "960",
+        "effective_gross_minor": "17760"
+      },
+      "observations": [
+        {
+          "delivery": [
+            "late-a",
+            "late-b"
+          ],
+          "before": {
+            "source": 1,
+            "rated": 1,
+            "obligation": 1
+          },
+          "after_first_correction": {
+            "source": 3,
+            "rated": 2,
+            "obligation": 2
+          },
+          "counts": {
+            "source": 4,
+            "rated": 3,
+            "obligation": 3
+          },
+          "first_receipt": {
+            "correctionRef": "corr_f5eeaad3d25729b0f8fbbd7d1f6f66e969df2e815fb9446c",
+            "correctionRevision": 1,
+            "outcome": "obligation",
+            "deltaGrossMinor": "4800",
+            "obligationRef": "rating:corr_f5eeaad3d25729b0f8fbbd7d1f6f66e969df2e815fb9446c",
+            "creditNoteRef": null,
+            "currency": "USD",
+            "legalRequirementPending": true
+          },
+          "revision_receipt": {
+            "correctionRef": "corr_8d05ed5e1efa96b21a64b1d888436a270448d1e4e5659bf3",
+            "correctionRevision": 2,
+            "outcome": "obligation",
+            "deltaGrossMinor": "960",
+            "obligationRef": "rating:corr_8d05ed5e1efa96b21a64b1d888436a270448d1e4e5659bf3",
+            "creditNoteRef": null,
+            "currency": "USD",
+            "legalRequirementPending": true
+          },
+          "lineage": [
+            {
+              "basis_ref": "rb_3927f14ce704f8d68fa5675536122b726f20d3c795fe1868",
+              "predecessor_basis_ref": null,
+              "net_minor": 10000,
+              "tax_minor": 2000,
+              "gross_minor": 12000,
+              "inputs_digest": "sha256:7845809a62075572a4b6fa265e687cc814df77a1a6856e18e177e9cb098f7129"
+            },
+            {
+              "basis_ref": "rb_5adaf4f9f924e39527df98a8f155e4edc15d43db9883b24a",
+              "predecessor_basis_ref": "rb_3927f14ce704f8d68fa5675536122b726f20d3c795fe1868",
+              "net_minor": 14000,
+              "tax_minor": 2800,
+              "gross_minor": 16800,
+              "inputs_digest": "sha256:fb407aee1b4c970542df11968b2f6011e3e213e448c8815fcd7361a301de864e"
+            },
+            {
+              "basis_ref": "rb_83a80efc20ce0f015d8a92eb660eafb044b54ff8b64ea184",
+              "predecessor_basis_ref": "rb_5adaf4f9f924e39527df98a8f155e4edc15d43db9883b24a",
+              "net_minor": 14800,
+              "tax_minor": 2960,
+              "gross_minor": 17760,
+              "inputs_digest": "sha256:475f7852f9b9645ead32dab73c554552e3b09afde56fb81d69545fa335891eca"
+            }
+          ],
+          "effective_gross_minor": 17760
+        },
+        {
+          "delivery": [
+            "late-b",
+            "late-a"
+          ],
+          "before": {
+            "source": 1,
+            "rated": 1,
+            "obligation": 1
+          },
+          "after_first_correction": {
+            "source": 3,
+            "rated": 2,
+            "obligation": 2
+          },
+          "counts": {
+            "source": 4,
+            "rated": 3,
+            "obligation": 3
+          },
+          "first_receipt": {
+            "correctionRef": "corr_f5eeaad3d25729b0f8fbbd7d1f6f66e969df2e815fb9446c",
+            "correctionRevision": 1,
+            "outcome": "obligation",
+            "deltaGrossMinor": "4800",
+            "obligationRef": "rating:corr_f5eeaad3d25729b0f8fbbd7d1f6f66e969df2e815fb9446c",
+            "creditNoteRef": null,
+            "currency": "USD",
+            "legalRequirementPending": true
+          },
+          "revision_receipt": {
+            "correctionRef": "corr_8d05ed5e1efa96b21a64b1d888436a270448d1e4e5659bf3",
+            "correctionRevision": 2,
+            "outcome": "obligation",
+            "deltaGrossMinor": "960",
+            "obligationRef": "rating:corr_8d05ed5e1efa96b21a64b1d888436a270448d1e4e5659bf3",
+            "creditNoteRef": null,
+            "currency": "USD",
+            "legalRequirementPending": true
+          },
+          "lineage": [
+            {
+              "basis_ref": "rb_3927f14ce704f8d68fa5675536122b726f20d3c795fe1868",
+              "predecessor_basis_ref": null,
+              "net_minor": 10000,
+              "tax_minor": 2000,
+              "gross_minor": 12000,
+              "inputs_digest": "sha256:7845809a62075572a4b6fa265e687cc814df77a1a6856e18e177e9cb098f7129"
+            },
+            {
+              "basis_ref": "rb_5adaf4f9f924e39527df98a8f155e4edc15d43db9883b24a",
+              "predecessor_basis_ref": "rb_3927f14ce704f8d68fa5675536122b726f20d3c795fe1868",
+              "net_minor": 14000,
+              "tax_minor": 2800,
+              "gross_minor": 16800,
+              "inputs_digest": "sha256:fb407aee1b4c970542df11968b2f6011e3e213e448c8815fcd7361a301de864e"
+            },
+            {
+              "basis_ref": "rb_83a80efc20ce0f015d8a92eb660eafb044b54ff8b64ea184",
+              "predecessor_basis_ref": "rb_5adaf4f9f924e39527df98a8f155e4edc15d43db9883b24a",
+              "net_minor": 14800,
+              "tax_minor": 2960,
+              "gross_minor": 17760,
+              "inputs_digest": "sha256:475f7852f9b9645ead32dab73c554552e3b09afde56fb81d69545fa335891eca"
+            }
+          ],
+          "effective_gross_minor": 17760
+        }
+      ],
+      "timestamp": "2026-11-10T08:09:15+00:00",
+      "php": "8.4.27",
+      "postgresql": "16.15 (Debian 16.15-1.pgdg12+2)"
+    },
+    "volume": {
+      "fixture": "p4-acceptance-replay/1",
+      "expectation": {
+        "first_delta_gross_minor": "2400",
+        "revision_delta_gross_minor": "960",
+        "effective_gross_minor": "15360"
+      },
+      "observations": [
+        {
+          "delivery": [
+            "late-a",
+            "late-b"
+          ],
+          "before": {
+            "source": 1,
+            "rated": 1,
+            "obligation": 1
+          },
+          "after_first_correction": {
+            "source": 3,
+            "rated": 2,
+            "obligation": 2
+          },
+          "counts": {
+            "source": 4,
+            "rated": 3,
+            "obligation": 3
+          },
+          "first_receipt": {
+            "correctionRef": "corr_f5eeaad3d25729b0f8fbbd7d1f6f66e969df2e815fb9446c",
+            "correctionRevision": 1,
+            "outcome": "obligation",
+            "deltaGrossMinor": "2400",
+            "obligationRef": "rating:corr_f5eeaad3d25729b0f8fbbd7d1f6f66e969df2e815fb9446c",
+            "creditNoteRef": null,
+            "currency": "USD",
+            "legalRequirementPending": true
+          },
+          "revision_receipt": {
+            "correctionRef": "corr_8d05ed5e1efa96b21a64b1d888436a270448d1e4e5659bf3",
+            "correctionRevision": 2,
+            "outcome": "obligation",
+            "deltaGrossMinor": "960",
+            "obligationRef": "rating:corr_8d05ed5e1efa96b21a64b1d888436a270448d1e4e5659bf3",
+            "creditNoteRef": null,
+            "currency": "USD",
+            "legalRequirementPending": true
+          },
+          "lineage": [
+            {
+              "basis_ref": "rb_cce7dea05b4515ff990208b3ce0b7d0eaed360f95e34695b",
+              "predecessor_basis_ref": null,
+              "net_minor": 10000,
+              "tax_minor": 2000,
+              "gross_minor": 12000,
+              "inputs_digest": "sha256:0cacd15e4dcc231ad03f4b76803fd058be7c0e9074efff55ff8066fc172865ac"
+            },
+            {
+              "basis_ref": "rb_771cf8774f7e04350663047252ebce591a8334f7d1ed24b0",
+              "predecessor_basis_ref": "rb_cce7dea05b4515ff990208b3ce0b7d0eaed360f95e34695b",
+              "net_minor": 12000,
+              "tax_minor": 2400,
+              "gross_minor": 14400,
+              "inputs_digest": "sha256:d6ddb47b35ec21cbdedd05d74dea2a237295c834e2a281a08b1282fdfaf542c1"
+            },
+            {
+              "basis_ref": "rb_add7d81574b0dcdc5363658713d69f40cc96fbf32e794add",
+              "predecessor_basis_ref": "rb_771cf8774f7e04350663047252ebce591a8334f7d1ed24b0",
+              "net_minor": 12800,
+              "tax_minor": 2560,
+              "gross_minor": 15360,
+              "inputs_digest": "sha256:332c167c6cf6e8ac7caf8a7d3f1a2425b8b6cb378ce39847a40e705adc7d4032"
+            }
+          ],
+          "effective_gross_minor": 15360
+        },
+        {
+          "delivery": [
+            "late-b",
+            "late-a"
+          ],
+          "before": {
+            "source": 1,
+            "rated": 1,
+            "obligation": 1
+          },
+          "after_first_correction": {
+            "source": 3,
+            "rated": 2,
+            "obligation": 2
+          },
+          "counts": {
+            "source": 4,
+            "rated": 3,
+            "obligation": 3
+          },
+          "first_receipt": {
+            "correctionRef": "corr_f5eeaad3d25729b0f8fbbd7d1f6f66e969df2e815fb9446c",
+            "correctionRevision": 1,
+            "outcome": "obligation",
+            "deltaGrossMinor": "2400",
+            "obligationRef": "rating:corr_f5eeaad3d25729b0f8fbbd7d1f6f66e969df2e815fb9446c",
+            "creditNoteRef": null,
+            "currency": "USD",
+            "legalRequirementPending": true
+          },
+          "revision_receipt": {
+            "correctionRef": "corr_8d05ed5e1efa96b21a64b1d888436a270448d1e4e5659bf3",
+            "correctionRevision": 2,
+            "outcome": "obligation",
+            "deltaGrossMinor": "960",
+            "obligationRef": "rating:corr_8d05ed5e1efa96b21a64b1d888436a270448d1e4e5659bf3",
+            "creditNoteRef": null,
+            "currency": "USD",
+            "legalRequirementPending": true
+          },
+          "lineage": [
+            {
+              "basis_ref": "rb_cce7dea05b4515ff990208b3ce0b7d0eaed360f95e34695b",
+              "predecessor_basis_ref": null,
+              "net_minor": 10000,
+              "tax_minor": 2000,
+              "gross_minor": 12000,
+              "inputs_digest": "sha256:0cacd15e4dcc231ad03f4b76803fd058be7c0e9074efff55ff8066fc172865ac"
+            },
+            {
+              "basis_ref": "rb_771cf8774f7e04350663047252ebce591a8334f7d1ed24b0",
+              "predecessor_basis_ref": "rb_cce7dea05b4515ff990208b3ce0b7d0eaed360f95e34695b",
+              "net_minor": 12000,
+              "tax_minor": 2400,
+              "gross_minor": 14400,
+              "inputs_digest": "sha256:d6ddb47b35ec21cbdedd05d74dea2a237295c834e2a281a08b1282fdfaf542c1"
+            },
+            {
+              "basis_ref": "rb_add7d81574b0dcdc5363658713d69f40cc96fbf32e794add",
+              "predecessor_basis_ref": "rb_771cf8774f7e04350663047252ebce591a8334f7d1ed24b0",
+              "net_minor": 12800,
+              "tax_minor": 2560,
+              "gross_minor": 15360,
+              "inputs_digest": "sha256:332c167c6cf6e8ac7caf8a7d3f1a2425b8b6cb378ce39847a40e705adc7d4032"
+            }
+          ],
+          "effective_gross_minor": 15360
+        }
+      ],
+      "timestamp": "2026-11-10T08:09:18+00:00",
+      "php": "8.4.27",
+      "postgresql": "16.15 (Debian 16.15-1.pgdg12+2)"
+    },
+    "fixed": {
+      "fixture": "p4-acceptance-replay/1#fixed",
+      "expectation": {
+        "amount": "49.00",
+        "tax_rate": "0.20",
+        "gross_minor": "5880"
+      },
+      "before": {
+        "source": 1,
+        "rated": 0,
+        "obligation": 0
+      },
+      "after": {
+        "source": 1,
+        "rated": 1,
+        "obligation": 1
+      },
+      "receipt": {
+        "basisRef": "rb_2434413682e30327548eac3ed777127f826754ac57a4c4d2",
+        "outcome": "booked",
+        "obligationRef": "rating:rb_2434413682e30327548eac3ed777127f826754ac57a4c4d2",
+        "grossMinor": "5880",
+        "currency": "USD"
+      },
+      "timestamp": "2026-11-10T08:09:19+00:00",
+      "php": "8.4.27",
+      "postgresql": "16.15 (Debian 16.15-1.pgdg12+2)"
+    }
+  },
+  "development_runs": [
+    {
+      "cmd": "docker compose run --rm toolchain vendor/bin/pest packages/core/tests/Integration/P4AcceptanceReplayTest.php",
+      "exit": 2,
+      "log": ".phpunit.cache/p4.10/replay-first.log",
+      "outcome": "Restore helper initially attempted to insert generated open_minor; negative test initially checked diagnostic detail instead of typed code. Both corrected."
+    },
+    {
+      "cmd": "docker compose run --rm toolchain vendor/bin/pest packages/core/tests/Integration/P4AcceptanceReplayTest.php",
+      "exit": 1,
+      "log": ".phpunit.cache/p4.10/replay-second.log",
+      "outcome": "Preparation correctly held without a published tax policy; fixture now asserts the hold and publishes before application."
+    },
+    {
+      "cmd": "docker compose run --rm toolchain vendor/bin/pest packages/core/tests/Integration/P4AcceptanceReplayTest.php",
+      "exit": 0,
+      "log": ".phpunit.cache/p4.10/replay-third.log",
+      "outcome": "Initial three tests passed; superseded by closure evidence after adding fixed-fee restore, full snapshot comparisons and observed receipts."
+    },
+    {
+      "id": "replay-final",
+      "cmd": "docker compose run --rm toolchain vendor/bin/pest packages/core/tests/Integration/P4AcceptanceReplayTest.php",
+      "exit": 1,
+      "started_at": "2026-11-10T08:08:30.959241+00:00",
+      "finished_at": "2026-11-10T08:08:33.706811+00:00",
+      "log": ".phpunit.cache/p4.10/replay-final.log",
+      "log_sha256": "fb896023e7b0a94b031deb6d16adb39b74c684956136cab47e92f7ad7ac8d04b",
+      "outcome": "Fixture quantity assertion compared padded decimal text; changed to exact bccomp at scale 9. Superseded by replay exit 0."
+    }
+  ],
+  "source_sha256": {
+    "fixtures/p4/acceptance-replay.json": "6829586ecc31b7afad88be5b4beabfffec9963e6e0835f226692ccaed7cb36d3",
+    "fixtures/p4/advance-codecs.json": "e0bc0d97bb02bb0249718358b9905195aa1bef42a531529e5ab3cbb3dcfbfd65",
+    "packages/core/tests/Integration/P4AcceptanceReplayTest.php": "19edbf9764d39d851a11350e786f31669629ae92856d3a98080cb69d61430b27",
+    "packages/core/tests/Integration/Support/P4DatabaseSnapshot.php": "e9abb95b077d27631afdc432a151471d493a876d4bc8b8a86a91be5ca93bc6a6",
+    "packages/core/tests/Integration/Support/P4TaxPolicy.php": "29b46309e42d46a256861f5d90a8af969a064db9f545062617d3043a0d12f564",
+    "packages/core/tests/Unit/Modules/P4AcceptanceManifestTest.php": "fe31ddacc0588280f60e8e354b5751777a3036834e52541a831236d6dfee830b"
+  },
+  "correction": {
+    "source_stage": "checks.1",
+    "status": "fixed_pending_conductor_recheck",
+    "reported_acceptance": [
+      {
+        "id": "V1",
+        "exit": 2,
+        "status": "red_checks.1_awaiting_recheck",
+        "source_stage": "checks.1",
+        "log": ".phpunit.cache/p4.10/correction/acceptance-V1.log",
+        "log_sha256": "d3b560c269cb4228bb7143720a180391ed40829f5911b2cbdd4500ca32ebb2e3"
+      },
+      {
+        "id": "V3",
+        "exit": 1,
+        "status": "red_checks.1_awaiting_recheck",
+        "source_stage": "checks.1",
+        "log": ".phpunit.cache/p4.10/correction/acceptance-V3.log",
+        "log_sha256": "8c4ea0cb1b08880a5b6e56013b3fde8cee28db8e665213dc4a9ce51c6bbfb1e3"
+      },
+      {
+        "id": "V4",
+        "exit": 1,
+        "status": "red_checks.1_awaiting_recheck",
+        "source_stage": "checks.1",
+        "log": ".phpunit.cache/p4.10/correction/acceptance-V4.log",
+        "log_sha256": "74b27a99c6a67eeb06445376517babfc1d0457f8183b83a534e6204575884559"
+      },
+      {
+        "id": "V5",
+        "exit": 1,
+        "status": "red_checks.1_awaiting_recheck",
+        "source_stage": "checks.1",
+        "log": ".phpunit.cache/p4.10/correction/acceptance-V5.log",
+        "log_sha256": "68cba88e2a1df8f5d4e8723eb098787092b3e7fa4a2737ac54574ec3175c9868"
+      },
+      {
+        "id": "V6",
+        "exit": 1,
+        "status": "red_checks.1_awaiting_recheck",
+        "source_stage": "checks.1",
+        "log": ".phpunit.cache/p4.10/correction/acceptance-V6.log",
+        "log_sha256": "df3de4abf89c409381e6aa131bef4c5f89b57dc20c562ec43a1e245a87a8e9ef"
+      }
+    ],
+    "focused_checks": [
+      {
+        "id": "correction-targeted",
+        "cmd": [
+          "docker",
+          "compose",
+          "run",
+          "--rm",
+          "toolchain",
+          "vendor/bin/pest",
+          "packages/core/modules/rating/tests/Feature/CorrectionIntegrationSmokeTest.php",
+          "packages/core/modules/rating/tests/Feature/LateUsageCorrectionTest_Reject.php",
+          "packages/core/modules/rating/tests/Feature/PricingStrategyRegistryTest.php",
+          "packages/core/modules/rating/tests/Feature/RatingBookingConcurrencyTest.php",
+          "packages/core/modules/rating/tests/Feature/RatingPipelineQuoteTest.php",
+          "packages/core/modules/rating/tests/Feature/RatingPipelineSnapshotTest.php",
+          "packages/core/modules/rating/tests/Feature/RatingPipelineTaxTest.php",
+          "packages/core/modules/rating/tests/Feature/RatingPipelineUnknownPolicyTest.php",
+          "packages/core/modules/rating/tests/Feature/RatingPipelineValidationTest.php",
+          "packages/core/modules/rating/tests/Unit/CorrectionDigestTest.php",
+          "packages/core/modules/rating/tests/Unit/PricingStrategyTest.php",
+          "packages/core/modules/rating/tests/Unit/RatingPipelineDigestTest.php",
+          "packages/core/modules/rating/tests/Unit/TaxSnapshotRoundingTest.php",
+          "packages/core/modules/schedule/tests/Feature/CommercialPeriodPersistenceTest.php",
+          "packages/core/modules/schedule/tests/Feature/OccurrenceCorrectionParticipantTest.php",
+          "packages/core/modules/schedule/tests/Feature/OccurrenceExclusionTest.php",
+          "packages/core/modules/schedule/tests/Feature/OccurrenceIdentityTest.php",
+          "packages/core/modules/schedule/tests/Feature/OccurrenceRevisionConcurrencyTest.php",
+          "packages/core/modules/schedule/tests/Feature/OccurrenceSchedulerTest.php",
+          "packages/core/modules/schedule/tests/Feature/ScheduleSchemaTest.php",
+          "packages/core/modules/schedule/tests/Unit/CommercialPeriodResolverTest.php",
+          "packages/core/modules/schedule/tests/Unit/ScheduleProviderTest.php",
+          "packages/core/modules/usage/tests/Concurrency/UsageAdmissionConcurrencyTest.php",
+          "packages/core/modules/usage/tests/Feature/AggregationFreezeTest.php",
+          "packages/core/modules/usage/tests/Feature/UsageAdmissionProviderTest.php",
+          "packages/core/modules/usage/tests/Feature/UsageAdmissionQueryTest.php",
+          "packages/core/modules/usage/tests/Feature/UsageAdmissionTest.php",
+          "packages/core/modules/usage/tests/Feature/UsageReplayPermutationTest.php",
+          "packages/core/modules/usage/tests/Unit/AggregationGaugeTest.php",
+          "packages/core/tests/Unit/FixtureArgumentsTest.php",
+          "packages/contracts/tests/Unit/P4ContractsTest.php"
+        ],
+        "exit": 0,
+        "started_at": "2026-11-10T08:34:17.316415+00:00",
+        "finished_at": "2026-11-10T08:35:00.114565+00:00",
+        "log": ".phpunit.cache/p4.10/correction/targeted-tests.log",
+        "log_sha256": "48dc347491b5aa479e203c9b8e54e5ac6bf7006be7854b6cd38c7b933163a62c"
+      },
+      {
+        "id": "correction-types",
+        "cmd": [
+          "docker",
+          "compose",
+          "run",
+          "--rm",
+          "toolchain",
+          "vendor/bin/phpstan",
+          "analyse",
+          "--no-progress",
+          "--error-format=json",
+          "packages/core/modules/rating/tests/Feature/CorrectionIntegrationSmokeTest.php",
+          "packages/core/modules/rating/tests/Feature/LateUsageCorrectionTest_Reject.php",
+          "packages/core/modules/rating/tests/Feature/PricingStrategyRegistryTest.php",
+          "packages/core/modules/rating/tests/Feature/RatingBookingConcurrencyTest.php",
+          "packages/core/modules/rating/tests/Feature/RatingPipelineQuoteTest.php",
+          "packages/core/modules/rating/tests/Feature/RatingPipelineSnapshotTest.php",
+          "packages/core/modules/rating/tests/Feature/RatingPipelineTaxTest.php",
+          "packages/core/modules/rating/tests/Feature/RatingPipelineUnknownPolicyTest.php",
+          "packages/core/modules/rating/tests/Feature/RatingPipelineValidationTest.php",
+          "packages/core/modules/rating/tests/RatingTestCase.php",
+          "packages/core/modules/rating/tests/Support/CorrectionScenario.php",
+          "packages/core/modules/rating/tests/Support/RatingScenario.php",
+          "packages/core/modules/rating/tests/Support/rating-crash-worker.php",
+          "packages/core/modules/rating/tests/Unit/CorrectionDigestTest.php",
+          "packages/core/modules/rating/tests/Unit/PricingStrategyTest.php",
+          "packages/core/modules/rating/tests/Unit/RatingPipelineDigestTest.php",
+          "packages/core/modules/rating/tests/Unit/TaxSnapshotRoundingTest.php",
+          "packages/core/modules/schedule/tests/Feature/CommercialPeriodPersistenceTest.php",
+          "packages/core/modules/schedule/tests/Feature/OccurrenceCorrectionParticipantTest.php",
+          "packages/core/modules/schedule/tests/Feature/OccurrenceExclusionTest.php",
+          "packages/core/modules/schedule/tests/Feature/OccurrenceIdentityTest.php",
+          "packages/core/modules/schedule/tests/Feature/OccurrenceRevisionConcurrencyTest.php",
+          "packages/core/modules/schedule/tests/Feature/OccurrenceSchedulerTest.php",
+          "packages/core/modules/schedule/tests/Feature/ScheduleSchemaTest.php",
+          "packages/core/modules/schedule/tests/OccurrenceTestCase.php",
+          "packages/core/modules/schedule/tests/ScheduleTestCase.php",
+          "packages/core/modules/schedule/tests/Support/OccurrenceScenario.php",
+          "packages/core/modules/schedule/tests/Support/Terms.php",
+          "packages/core/modules/schedule/tests/Unit/CommercialPeriodResolverTest.php",
+          "packages/core/modules/schedule/tests/Unit/ScheduleProviderTest.php",
+          "packages/core/modules/usage/tests/Concurrency/UsageAdmissionConcurrencyTest.php",
+          "packages/core/modules/usage/tests/Concurrency/UsageAdmissionScenario.php",
+          "packages/core/modules/usage/tests/Feature/AggregationFreezeTest.php",
+          "packages/core/modules/usage/tests/Feature/UsageAdmissionProviderTest.php",
+          "packages/core/modules/usage/tests/Feature/UsageAdmissionQueryTest.php",
+          "packages/core/modules/usage/tests/Feature/UsageAdmissionTest.php",
+          "packages/core/modules/usage/tests/Feature/UsageReplayPermutationTest.php",
+          "packages/core/modules/usage/tests/Support/AggregationVectors.php",
+          "packages/core/modules/usage/tests/Support/ReplayFactSource.php",
+          "packages/core/modules/usage/tests/Support/UsageFixtures.php",
+          "packages/core/modules/usage/tests/Unit/AggregationAdditiveTest.php",
+          "packages/core/modules/usage/tests/Unit/AggregationCompletenessTest.php",
+          "packages/core/modules/usage/tests/Unit/AggregationDigestTest.php",
+          "packages/core/modules/usage/tests/Unit/AggregationDistinctTest.php",
+          "packages/core/modules/usage/tests/Unit/AggregationGaugeTest.php",
+          "packages/core/modules/usage/tests/UsageTestCase.php",
+          "packages/core/tests/Support/FixtureArguments.php",
+          "packages/core/tests/Support/FixtureValues.php",
+          "packages/core/tests/Unit/FixtureArgumentsTest.php"
+        ],
+        "exit": 0,
+        "started_at": "2026-11-10T08:35:05.306054+00:00",
+        "finished_at": "2026-11-10T08:35:08.858956+00:00",
+        "log": ".phpunit.cache/p4.10/correction/types-final.json",
+        "log_sha256": "54e6eb194ee0b354574ec566f17799b533a8be4c7d81b0e9a532389caf087687"
+      },
+      {
+        "id": "correction-style",
+        "cmd": [
+          "docker",
+          "compose",
+          "run",
+          "--rm",
+          "toolchain",
+          "vendor/bin/pint",
+          "--test",
+          "packages/core/modules/rating/tests/Feature/CorrectionIntegrationSmokeTest.php",
+          "packages/core/modules/rating/tests/Feature/LateUsageCorrectionTest_Reject.php",
+          "packages/core/modules/rating/tests/Feature/PricingStrategyRegistryTest.php",
+          "packages/core/modules/rating/tests/Feature/RatingBookingConcurrencyTest.php",
+          "packages/core/modules/rating/tests/Feature/RatingPipelineQuoteTest.php",
+          "packages/core/modules/rating/tests/Feature/RatingPipelineSnapshotTest.php",
+          "packages/core/modules/rating/tests/Feature/RatingPipelineTaxTest.php",
+          "packages/core/modules/rating/tests/Feature/RatingPipelineUnknownPolicyTest.php",
+          "packages/core/modules/rating/tests/Feature/RatingPipelineValidationTest.php",
+          "packages/core/modules/rating/tests/RatingTestCase.php",
+          "packages/core/modules/rating/tests/Support/CorrectionScenario.php",
+          "packages/core/modules/rating/tests/Support/RatingScenario.php",
+          "packages/core/modules/rating/tests/Support/rating-crash-worker.php",
+          "packages/core/modules/rating/tests/Unit/CorrectionDigestTest.php",
+          "packages/core/modules/rating/tests/Unit/PricingStrategyTest.php",
+          "packages/core/modules/rating/tests/Unit/RatingPipelineDigestTest.php",
+          "packages/core/modules/rating/tests/Unit/TaxSnapshotRoundingTest.php",
+          "packages/core/modules/schedule/tests/Feature/CommercialPeriodPersistenceTest.php",
+          "packages/core/modules/schedule/tests/Feature/OccurrenceCorrectionParticipantTest.php",
+          "packages/core/modules/schedule/tests/Feature/OccurrenceExclusionTest.php",
+          "packages/core/modules/schedule/tests/Feature/OccurrenceIdentityTest.php",
+          "packages/core/modules/schedule/tests/Feature/OccurrenceRevisionConcurrencyTest.php",
+          "packages/core/modules/schedule/tests/Feature/OccurrenceSchedulerTest.php",
+          "packages/core/modules/schedule/tests/Feature/ScheduleSchemaTest.php",
+          "packages/core/modules/schedule/tests/OccurrenceTestCase.php",
+          "packages/core/modules/schedule/tests/ScheduleTestCase.php",
+          "packages/core/modules/schedule/tests/Support/OccurrenceScenario.php",
+          "packages/core/modules/schedule/tests/Support/Terms.php",
+          "packages/core/modules/schedule/tests/Unit/CommercialPeriodResolverTest.php",
+          "packages/core/modules/schedule/tests/Unit/ScheduleProviderTest.php",
+          "packages/core/modules/usage/tests/Concurrency/UsageAdmissionConcurrencyTest.php",
+          "packages/core/modules/usage/tests/Concurrency/UsageAdmissionScenario.php",
+          "packages/core/modules/usage/tests/Feature/AggregationFreezeTest.php",
+          "packages/core/modules/usage/tests/Feature/UsageAdmissionProviderTest.php",
+          "packages/core/modules/usage/tests/Feature/UsageAdmissionQueryTest.php",
+          "packages/core/modules/usage/tests/Feature/UsageAdmissionTest.php",
+          "packages/core/modules/usage/tests/Feature/UsageReplayPermutationTest.php",
+          "packages/core/modules/usage/tests/Support/AggregationVectors.php",
+          "packages/core/modules/usage/tests/Support/ReplayFactSource.php",
+          "packages/core/modules/usage/tests/Support/UsageFixtures.php",
+          "packages/core/modules/usage/tests/Unit/AggregationGaugeTest.php",
+          "packages/core/modules/usage/tests/UsageTestCase.php",
+          "packages/core/tests/Support/FixtureArguments.php",
+          "packages/core/tests/Support/FixtureValues.php",
+          "packages/core/tests/Unit/FixtureArgumentsTest.php"
+        ],
+        "exit": 0,
+        "started_at": "2026-11-10T08:36:46.438593+00:00",
+        "finished_at": "2026-11-10T08:36:48.408270+00:00",
+        "log": ".phpunit.cache/p4.10/correction/style-final.log",
+        "log_sha256": "9b1c488db9b825390852955c9dd836499b2288f7a48e3f8950a7beeac81aac85"
+      },
+      {
+        "id": "correction-lint",
+        "cmd": "docker compose run --rm toolchain python3 -m unittest discover -s scripts/spec/tests -p test_spec_tools.py -k internal_correction_payload -v",
+        "exit": 0,
+        "evidence_timestamp": "2026-11-10T08:35:06.109172+00:00",
+        "timestamp_source": "output_file_mtime",
+        "log": ".phpunit.cache/p4.10/correction/lint-regression.log",
+        "log_sha256": "b8b06f3793a11c5c34ac4c00cd542980fac7f65166ead3638e3f4b0e9ba8e8b5"
+      },
+      {
+        "id": "correction-golden",
+        "cmd": "docker compose run --rm toolchain python3 -m unittest discover -s scripts/spec/tests -p test_spec_tools.py -k p4_occurrence_vectors -v",
+        "exit": 0,
+        "evidence_timestamp": "2026-11-10T08:35:06.239603+00:00",
+        "timestamp_source": "output_file_mtime",
+        "log": ".phpunit.cache/p4.10/correction/golden-regression.log",
+        "log_sha256": "697ce450744bf0bf1080ce6663d28681d286056e60a131e31ff08a068f035aa0"
+      },
+      {
+        "id": "correction-generation",
+        "cmd": "docker compose run --rm toolchain python3 scripts/spec/build-golden.py",
+        "exit": 0,
+        "evidence_timestamp": "2026-11-10T08:19:12.538118+00:00",
+        "timestamp_source": "output_file_mtime",
+        "log": ".phpunit.cache/p4.10/correction/golden-generation-final.log",
+        "log_sha256": "34df9d37a69e6daec991468dc3133a9868d94f94895e19bc7a8436cc83e16709"
+      }
+    ],
+    "source_sha256": {
+      "fixtures/golden/canon/digest/rating-control-wrong-golden.txt": "6b56eff93ec17ec97eee84ff7ec9e86970e641198da4417b6f43833c229a5972",
+      "fixtures/golden/canon/digest/schedule-annual-money-monthly-grants-digest.txt": "9c3e38978ecbc7d3f0d5fe6841155e71438579a9185168a3a8fc4e7d22827330",
+      "fixtures/golden/canon/digest/schedule-business-identity-digest.txt": "a0df4454c7f5932c8a07288109f7b2a66c766942f7d982fff1044e2b6c2e4979",
+      "fixtures/vectors/rating/contracts/wrong-control.json": "38f0b59a9c4399c7807c0cdf5898d526bc437336f9075e7d70ba0e52fda50482",
+      "fixtures/vectors/schedule/occurrences/annual-money-monthly-grants.json": "477f33fed7ed6a91a3cee4562c24c591a7e9cfa05b2169c918438d7793db2e90",
+      "fixtures/vectors/schedule/occurrences/business-identity.json": "48e62c7a8739033d78179287c08249c37f07c6950f41158eafa8379c9c6f676a",
+      "packages/core/modules/rating/tests/Feature/CorrectionIntegrationSmokeTest.php": "244cdeae28c69b2b6953c9a5a351ad85b30a403a43426e181f5999dcdb2789f1",
+      "packages/core/modules/rating/tests/Feature/LateUsageCorrectionTest_Reject.php": "52a074b98eb8013eb6356828059dafebeea8b1f188e19e89e26115415c3d8076",
+      "packages/core/modules/rating/tests/Feature/PricingStrategyRegistryTest.php": "7c70aec79f70abe0df2ee4f13d38e557adf7dc65e392329811310981873718be",
+      "packages/core/modules/rating/tests/Feature/RatingBookingConcurrencyTest.php": "7c7038481807cd2c36579a72b7d1eea33e30647f5415b88743cd1e163ef67447",
+      "packages/core/modules/rating/tests/Feature/RatingPipelineQuoteTest.php": "de28345161cf4fd4b38d21fdf1fa7bb9de9b44a396ff64848dac84a4265179e6",
+      "packages/core/modules/rating/tests/Feature/RatingPipelineSnapshotTest.php": "ca6d6c9c162de24f1c39f417ed678bd57d21db86f35426fdb6edf49192cc9801",
+      "packages/core/modules/rating/tests/Feature/RatingPipelineTaxTest.php": "b42a77f27ca68127e2e49c6ff035bfd4fff7435417e3c4d991589a0ef6039991",
+      "packages/core/modules/rating/tests/Feature/RatingPipelineUnknownPolicyTest.php": "6c8dfd0331d11454061666d9f2f96fc9a5269df9277c4733adea0df29fc29c6c",
+      "packages/core/modules/rating/tests/Feature/RatingPipelineValidationTest.php": "b2aa11283c52b0bc8ef34a1663f019ded75a004661dd481cb5a042899e39c0c9",
+      "packages/core/modules/rating/tests/RatingTestCase.php": "d17fe54f7903e75fe3b3f749dc293d93c097a3c1711f9113ee91759749616b62",
+      "packages/core/modules/rating/tests/Support/CorrectionScenario.php": "28e2fea838b8cd7c93237e8655f793e49475b5a8c3e364646b55ec81a8b938b8",
+      "packages/core/modules/rating/tests/Support/RatingScenario.php": "5cbd7e631d6564c5d3b59122e925376669d80028e6a2512a63daf3af3acf5237",
+      "packages/core/modules/rating/tests/Support/rating-crash-worker.php": "7bf31423a0fb1ba5c10a91ca098248ac6b97606d22daea960edfd27b00b48489",
+      "packages/core/modules/rating/tests/Unit/CorrectionDigestTest.php": "9e4b031ee25ebcccd43f8baab812ca9821c8da98cbf8be712a00f643cc368288",
+      "packages/core/modules/rating/tests/Unit/PricingStrategyTest.php": "309c44da9673b6b719bdf2c9c3f7c05b543c346c7177d76ca520144c21aa81db",
+      "packages/core/modules/rating/tests/Unit/RatingPipelineDigestTest.php": "1e82ea834165d92364ffc07298203ce75530bdf7a986a620a3d34db4e4e93e94",
+      "packages/core/modules/rating/tests/Unit/TaxSnapshotRoundingTest.php": "9367f0c7ec4e2f08798009221aded2e0cafd463478aae718ed26b955dc1cfcf2",
+      "packages/core/modules/schedule/tests/Feature/CommercialPeriodPersistenceTest.php": "30ed1fbaa2d17d97de1b3d0c9b70df3f1955e9880fc43aee6c141aad427170a2",
+      "packages/core/modules/schedule/tests/Feature/OccurrenceCorrectionParticipantTest.php": "ccc3cdff939be2909561634969c1a9cac2f325d374c0858c61c653dfb6946f40",
+      "packages/core/modules/schedule/tests/Feature/OccurrenceExclusionTest.php": "a6ca52e249e93fb18f63ca7ea43fe6c3ae316552d99e55f0a6009cb2476374f8",
+      "packages/core/modules/schedule/tests/Feature/OccurrenceIdentityTest.php": "ccf3b44ffeecbda69a680f5526c425ea4936b757763e4ef6e490e4481b23a4f2",
+      "packages/core/modules/schedule/tests/Feature/OccurrenceRevisionConcurrencyTest.php": "561e01f4f14caafd6525d99f525923b3521fd78009d8f12c9a05c09d275fdc44",
+      "packages/core/modules/schedule/tests/Feature/OccurrenceSchedulerTest.php": "da85c22d8b33a41c9e866ce7de80e2eec8090d89b28664b7fba477f93186e787",
+      "packages/core/modules/schedule/tests/Feature/ScheduleSchemaTest.php": "e01c447ab5ad682ff9a783dec50d87c155db34e8b821f9cd575b6d2c85a8fcad",
+      "packages/core/modules/schedule/tests/OccurrenceTestCase.php": "a2819236ef829ae3197f5acc7c5d45e3c32f498ed2c4469951722177d9655f7c",
+      "packages/core/modules/schedule/tests/ScheduleTestCase.php": "c96a4bf551c9bb95681c38282727b60112ffbb26a9983b88804aef7ff019b59f",
+      "packages/core/modules/schedule/tests/Support/OccurrenceScenario.php": "8f40f68be4a2afb080cc2a5dbc96c769f38408d73c7e266f00ad34b6820f969d",
+      "packages/core/modules/schedule/tests/Support/Terms.php": "eaa857c6f3692ac16c91aeffc7a213e50ef49db026f7eed51838b12b9c5bd523",
+      "packages/core/modules/schedule/tests/Unit/CommercialPeriodResolverTest.php": "0b76230ae57e7d4bab48ba231b34b17bc80ab55af81bba44b2b8d57973968c5f",
+      "packages/core/modules/schedule/tests/Unit/ScheduleProviderTest.php": "1dd757284a7b74c47df813afd66cca4b86ecbaf2c820775c96d759ee68b6e270",
+      "packages/core/modules/usage/tests/Concurrency/UsageAdmissionConcurrencyTest.php": "b35d65ab02174b66e89e4f8eefa1c3949f8145c700a8567eabe81bf557990e0b",
+      "packages/core/modules/usage/tests/Concurrency/UsageAdmissionScenario.php": "2658afb8e0bfd7eb42b0e1ad217c763d6cf94a6970949d50f115d6d09f6818ba",
+      "packages/core/modules/usage/tests/Feature/AggregationFreezeTest.php": "589a0d5a21390d6f4c649b6cac9432a5187780d1193fb8ad67bf924b54d7c600",
+      "packages/core/modules/usage/tests/Feature/UsageAdmissionProviderTest.php": "7f441045eaaec2b5c93bbbcba646d9a44eb536fe719942a5077337eeec51be3e",
+      "packages/core/modules/usage/tests/Feature/UsageAdmissionQueryTest.php": "5a2c17e7d65a95bc4bffa231adb6996fd661e1e3fda7f7efaf0535803ca76378",
+      "packages/core/modules/usage/tests/Feature/UsageAdmissionTest.php": "14774a2fd46900092df45e53ff0f55191f57c869a7ec2f2a0265cc083f79b287",
+      "packages/core/modules/usage/tests/Feature/UsageReplayPermutationTest.php": "a04e39ecd66400e992d291499d0da550cbef0358550eb374ae86699507b50121",
+      "packages/core/modules/usage/tests/Support/AggregationVectors.php": "6f61b0557addae8775d7adefe6b15cb3320262ca153ad72ed05d075086aa491b",
+      "packages/core/modules/usage/tests/Support/ReplayFactSource.php": "e077a9ee2beb8e96764c3737f94760220e07a84e74bd7a10be8f3174846e332b",
+      "packages/core/modules/usage/tests/Support/UsageFixtures.php": "8c473226f7d087d0fbf3357f32e92c6d5587c5bd2e59e8d6ff659a1a13c8f0db",
+      "packages/core/modules/usage/tests/Unit/AggregationGaugeTest.php": "27593484332d8a419c63c4df79fbfc135bdf98523ae09d69eec4235c281abbce",
+      "packages/core/modules/usage/tests/UsageTestCase.php": "b9823037e7450b64b2d294013968d1e5969820355123a30b2ed439a96a091476",
+      "packages/core/tests/Integration/P4AcceptanceReplayTest.php": "19edbf9764d39d851a11350e786f31669629ae92856d3a98080cb69d61430b27",
+      "packages/core/tests/Integration/Support/P4DatabaseSnapshot.php": "e9abb95b077d27631afdc432a151471d493a876d4bc8b8a86a91be5ca93bc6a6",
+      "packages/core/tests/Integration/Support/P4TaxPolicy.php": "29b46309e42d46a256861f5d90a8af969a064db9f545062617d3043a0d12f564",
+      "packages/core/tests/Support/FixtureArguments.php": "c0179c8e69cdc6534ee5f9cca8988af973345cc9b7ffdaba147bf97d2ff7a4c5",
+      "packages/core/tests/Support/FixtureValues.php": "b3588598f6c55851d8d5ec4210d9bdec21d1f7bd86f1de7770366d1fdff94e7f",
+      "packages/core/tests/Unit/FixtureArgumentsTest.php": "bda7f884c32ebd00309b48e5af954f70c7b99c9991a71a2c0807bb0259036876",
+      "packages/core/tests/Unit/Modules/P4AcceptanceManifestTest.php": "fe31ddacc0588280f60e8e354b5751777a3036834e52541a831236d6dfee830b",
+      "scripts/spec/lint.py": "2f3bedbb00e229ea59b4e19bfc733a822e14be7dfc9fd5e9618d14b1cb88eaed",
+      "scripts/spec/tests/test_spec_tools.py": "7409c2317e73a01c02df76c57f5a809a023637d7b23323610477703f5a6de51b"
+    },
+    "continuation": {
+      "source_stage": "checks.1",
+      "reason": "Repeated checks.1 input matched the already repaired source snapshot; preserve existing fixes and strengthen the named identity-sequence regression.",
+      "changed_source": "packages/core/modules/usage/tests/Feature/UsageAdmissionQueryTest.php",
+      "previous_source_sha256": "84687ee7dc8f4c2bfc1a46ddc851b2b598b85fdba07c0fff2f5b0a7a885346b4",
+      "current_source_sha256": "5a2c17e7d65a95bc4bffa231adb6996fd661e1e3fda7f7efaf0535803ca76378",
+      "assertions": {
+        "source_rows_after_expansion": 2001,
+        "cloned_rows_with_sequence_above_seed": 2000,
+        "distinct_ingest_sequences": 2001,
+        "original_sequence": "unchanged"
+      },
+      "focused_checks": [
+        {
+          "id": "query-regression",
+          "cmd": "docker compose run --rm toolchain vendor/bin/pest packages/core/modules/usage/tests/Feature/UsageAdmissionQueryTest.php",
+          "exit": 0,
+          "started_at": "2026-11-10T09:56:52.608789+00:00",
+          "finished_at": "2026-11-10T09:56:55.415298+00:00",
+          "log": ".phpunit.cache/p4.10/correction-continuation/query-regression.log",
+          "log_sha256": "e98b70abc7e208706a2e9185250f37fa2b25197ac0ca49d14c212747fa784d3c"
+        },
+        {
+          "id": "query-types",
+          "cmd": "docker compose run --rm toolchain vendor/bin/phpstan analyse --no-progress packages/core/modules/usage/tests/Feature/UsageAdmissionQueryTest.php",
+          "exit": 0,
+          "started_at": "2026-11-10T09:56:55.415499+00:00",
+          "finished_at": "2026-11-10T09:56:57.658148+00:00",
+          "log": ".phpunit.cache/p4.10/correction-continuation/query-types.log",
+          "log_sha256": "efe6395edcd688f4afd4f1af642dab783179678e2bb8bf812b548f87fe8999d1"
+        }
+      ],
+      "revalidation": "Reuse earlier checks for unchanged sources; the changed query test has fresh Pest and PHPStan evidence.",
+      "acceptance_status": "awaiting_conductor_recheck"
+    },
+    "rector_lock_correction": {
+      "operator_note_sha256": "20d550bf105261b4cdf921caece120729293b925768b527e0e4fd6bbafa63a9e",
+      "verified_findings": {
+        "revision_lock_missing_entries": [
+          "schema/rating/correction-applied.v1.json"
+        ],
+        "rector_changed_files": 23
+      },
+      "previous_source_sha256": {
+        "packages/core/modules/rating/src/Internal/Corrections/TaxCorrectionGroup.php": "e1415b361c9bb4a7c1958a296c63e6bf325ae04bbfc197e859b0c25a3500208b",
+        "packages/core/modules/rating/src/Internal/Pipeline/FrozenInputsBuilder.php": "c5a4552777cbc93e4b84ce6e21e603a4f908b5fe7a5f890a4f2c90746ce2b5af",
+        "packages/core/tests/Unit/Modules/P4BootstrapTest.php": "51a93c141d4724ac7eb66a7eaa7a7682ca8632bedb8715957d1a0c8f75089bf5",
+        "packages/core/tests/Unit/Modules/P4ModuleCompositionTest.php": "4dff7297c1d5cc1daf73c6785b36e2e3c9df4de4026031215a092a823db7798d",
+        "packages/core/tests/Unit/Modules/RoleRegistrationTest.php": "385a3d4c764190e51aa374f34e14737d2e7f9d670130450d65a75b4c5e1cfcc4",
+        "packages/core/modules/usage/tests/Support/AggregationVectors.php": "8fbe2a7ca439ec38447f2c4cd9be6248dc511cebaf01f466295c8a72b9769432",
+        "packages/core/modules/usage/tests/Support/ReplayFactSource.php": "47f3b9523551e6a45f37a023d2c0c6472e0fdfff3c2d4482d8b81e5acb8ac486",
+        "packages/core/modules/usage/tests/Unit/AggregationDigestTest.php": "e430f0081b98aafa380978d32575c9ad96501fbdca4bc5f65029e62f6d29e9ff",
+        "packages/core/modules/rating/tests/Unit/RatingPipelineDigestTest.php": "cd7911574fc48c16fb6e0ba9a0952e7bf3f0a35e67562998c7ba6cf7228c6e69",
+        "packages/core/modules/schedule/src/Internal/CalendarIntervalResolver.php": "08292553a563de38f95330a0d182b9b8bf5240978052b649df00b907d20bed73",
+        "packages/core/modules/schedule/src/Internal/Services/DatabaseScheduleQueries.php": "1dd7b02deba6ef664d3d6c7c90b3f5f655a71e03bf4ebca36edd6986de31fcdf",
+        "packages/core/modules/schedule/tests/Feature/OccurrenceRevisionConcurrencyTest.php": "c2f36e3fc8767b82117515f71029090798c100cb0e17c98bec3394e764e7ec16",
+        "packages/core/modules/schedule/tests/Unit/CommercialPeriodResolverTest.php": "38481190e984d30d4792477c8fefa94d8b8a7babaf3cdd7a6065e63fcea4daeb",
+        "packages/core/modules/usage/src/Internal/Storage/DatabaseEffectiveFactSource.php": "eee53f81325d0cd9df54d030dc731609c430d9fd7547b70075e8da4125ba3dd8",
+        "packages/core/modules/usage/tests/AggregationTestCase.php": "4e1a4fae6e0177b894cf2d3e55626e9626f7324f11bbe531f79415f19028e68d",
+        "packages/core/modules/usage/tests/Concurrency/UsageAdmissionScenario.php": "74cf4c3925ce05d08ab029fcdc2e60937cd6cd4b99224fc5d8afc67dc2d70f64",
+        "packages/core/modules/ledger/src/Internal/Participants/DatabaseCorrectionCreditParticipants.php": "5807b1cd132925d22f81db4dc8b62cc79e98d25dd9f26a69a23887275fd8fe36",
+        "packages/core/modules/rating/src/Internal/Proration/QuantitySnapshotScope.php": "e6cc17fea3d4c5cab8a846766570940e5e662179c514900fb87b05ac33eba8ad",
+        "packages/core/modules/rating/src/Internal/Storage/CorrectionStore.php": "e2408f2e4f35ddf0d1d06cf930b2975782c63036e28fd18bfe4f65e1536a1bd9",
+        "packages/core/modules/rating/tests/Feature/CorrectionIntegrationSmokeTest.php": "244cdeae28c69b2b6953c9a5a351ad85b30a403a43426e181f5999dcdb2789f1",
+        "packages/core/modules/rating/tests/Feature/RatingBookingConcurrencyTest.php": "17a7e9f6add78c2eb0f05948146499bbc178d18a7a7d1aa34375730d9dca4c7d",
+        "packages/core/modules/rating/tests/Feature/RatingPipelineUnknownPolicyTest.php": "aff18afa6d935511dca780ad6426f1658e6933dc30cc3c260e5f959e82e8cc37",
+        "packages/core/tests/Architecture/P4DependencyBoundaryTest.php": "00a60972a173aad11c5598a08a850f4594282509aa745dd24e4bcc1f1c1af744"
+      },
+      "source_sha256": {
+        "packages/core/modules/rating/src/Internal/Corrections/TaxCorrectionGroup.php": "fb5cb42e5ad37ff2eea24c29e10f6ad1c4f8fb844a1e6a13d4569a50b4723437",
+        "packages/core/modules/rating/src/Internal/Pipeline/FrozenInputsBuilder.php": "84753dd7dbbb3b5230b6dc3f209de1262c28df441bd551a1cd8555ba3237e896",
+        "packages/core/tests/Unit/Modules/P4BootstrapTest.php": "152276768e8775dd4ddcffac0499e30eadf9abef62e10f3c156eb32e1e862423",
+        "packages/core/tests/Unit/Modules/P4ModuleCompositionTest.php": "ea81a11e421e4104ff87ae43995df9b82463be3876a6280b411c84bc4444bf5d",
+        "packages/core/tests/Unit/Modules/RoleRegistrationTest.php": "d32c6a67b557ac920b4bfd7174f6b8bc5276c5addba7f19cea2d6bee91e4a2d9",
+        "packages/core/modules/usage/tests/Support/AggregationVectors.php": "6f61b0557addae8775d7adefe6b15cb3320262ca153ad72ed05d075086aa491b",
+        "packages/core/modules/usage/tests/Support/ReplayFactSource.php": "e077a9ee2beb8e96764c3737f94760220e07a84e74bd7a10be8f3174846e332b",
+        "packages/core/modules/usage/tests/Unit/AggregationDigestTest.php": "c42914f19fa352b3b75564fd9d06a187bad127b797b300e8b81a285f517f5959",
+        "packages/core/modules/rating/tests/Unit/RatingPipelineDigestTest.php": "1e82ea834165d92364ffc07298203ce75530bdf7a986a620a3d34db4e4e93e94",
+        "packages/core/modules/schedule/src/Internal/CalendarIntervalResolver.php": "68ae8cf6874af61ac6dfed7f3868da7b788bb4222293f947dd28f0c4fdcfe88c",
+        "packages/core/modules/schedule/src/Internal/Services/DatabaseScheduleQueries.php": "fb5c7b8b5da217412edfb5cab821a4991df7063eb5d9ef45de9e47a3942f57fc",
+        "packages/core/modules/schedule/tests/Feature/OccurrenceRevisionConcurrencyTest.php": "561e01f4f14caafd6525d99f525923b3521fd78009d8f12c9a05c09d275fdc44",
+        "packages/core/modules/schedule/tests/Unit/CommercialPeriodResolverTest.php": "0b76230ae57e7d4bab48ba231b34b17bc80ab55af81bba44b2b8d57973968c5f",
+        "packages/core/modules/usage/src/Internal/Storage/DatabaseEffectiveFactSource.php": "edd9bb4d4806c48e15c2b8a44d57a43792bec6e104a7b61ecaaaa49f4fea51da",
+        "packages/core/modules/usage/tests/AggregationTestCase.php": "38b61d998616b4cb27ebfd96006b9798c8ff009fcb761e149804167529fea336",
+        "packages/core/modules/usage/tests/Concurrency/UsageAdmissionScenario.php": "2658afb8e0bfd7eb42b0e1ad217c763d6cf94a6970949d50f115d6d09f6818ba",
+        "packages/core/modules/ledger/src/Internal/Participants/DatabaseCorrectionCreditParticipants.php": "6b69c8dc480ce573f29c43b171936446557b86000b9a9b903446b9d7d73eb40c",
+        "packages/core/modules/rating/src/Internal/Proration/QuantitySnapshotScope.php": "e9cc4b06c41a535b5db693402b6c5de7113825d61758561e875899a4e1a6b312",
+        "packages/core/modules/rating/src/Internal/Storage/CorrectionStore.php": "f0af81968fb9decda229569e8a7e6bd9fb8b60118b948e095e85604aeccc1c46",
+        "packages/core/modules/rating/tests/Feature/CorrectionIntegrationSmokeTest.php": "244cdeae28c69b2b6953c9a5a351ad85b30a403a43426e181f5999dcdb2789f1",
+        "packages/core/modules/rating/tests/Feature/RatingBookingConcurrencyTest.php": "7c7038481807cd2c36579a72b7d1eea33e30647f5415b88743cd1e163ef67447",
+        "packages/core/modules/rating/tests/Feature/RatingPipelineUnknownPolicyTest.php": "6c8dfd0331d11454061666d9f2f96fc9a5269df9277c4733adea0df29fc29c6c",
+        "packages/core/tests/Architecture/P4DependencyBoundaryTest.php": "55305d57b88410cac999722436e0cd3298f226dc46747bbfb9422aefd784fa69",
+        "spec/revisions/2026-10/revision.lock.json": "9e540bcd29cafa117b9c87e06ed5f073450df93bddaa0fc70c042297c2917764"
+      },
+      "focused_checks": [
+        {
+          "id": "rector-fix",
+          "cmd": "docker compose run --rm toolchain vendor/bin/rector process packages/core/modules/rating/src/Internal/Corrections/TaxCorrectionGroup.php packages/core/modules/rating/src/Internal/Pipeline/FrozenInputsBuilder.php packages/core/tests/Unit/Modules/P4BootstrapTest.php packages/core/tests/Unit/Modules/P4ModuleCompositionTest.php packages/core/tests/Unit/Modules/RoleRegistrationTest.php packages/core/modules/usage/tests/Support/AggregationVectors.php packages/core/modules/usage/tests/Support/ReplayFactSource.php packages/core/modules/usage/tests/Unit/AggregationDigestTest.php packages/core/modules/rating/tests/Unit/RatingPipelineDigestTest.php packages/core/modules/schedule/src/Internal/CalendarIntervalResolver.php packages/core/modules/schedule/src/Internal/Services/DatabaseScheduleQueries.php packages/core/modules/schedule/tests/Feature/OccurrenceRevisionConcurrencyTest.php packages/core/modules/schedule/tests/Unit/CommercialPeriodResolverTest.php packages/core/modules/usage/src/Internal/Storage/DatabaseEffectiveFactSource.php packages/core/modules/usage/tests/AggregationTestCase.php packages/core/modules/usage/tests/Concurrency/UsageAdmissionScenario.php packages/core/modules/ledger/src/Internal/Participants/DatabaseCorrectionCreditParticipants.php packages/core/modules/rating/src/Internal/Proration/QuantitySnapshotScope.php packages/core/modules/rating/src/Internal/Storage/CorrectionStore.php packages/core/modules/rating/tests/Feature/CorrectionIntegrationSmokeTest.php packages/core/modules/rating/tests/Feature/RatingBookingConcurrencyTest.php packages/core/modules/rating/tests/Feature/RatingPipelineUnknownPolicyTest.php packages/core/tests/Architecture/P4DependencyBoundaryTest.php --output-format=json",
+          "exit": 0,
+          "started_at": "2026-11-10T10:05:43.030941+00:00",
+          "finished_at": "2026-11-10T10:05:47.532361+00:00",
+          "log": ".phpunit.cache/p4.10/rector-lock/rector-fix.log",
+          "log_sha256": "f4ad1959788d8daf2c4d9d06e87d16eb7992714b91a3719246c76b9bffe1bb35"
+        },
+        {
+          "id": "pint-fix",
+          "cmd": "docker compose run --rm toolchain vendor/bin/pint packages/core/modules/rating/src/Internal/Corrections/TaxCorrectionGroup.php packages/core/modules/rating/src/Internal/Pipeline/FrozenInputsBuilder.php packages/core/tests/Unit/Modules/P4BootstrapTest.php packages/core/tests/Unit/Modules/P4ModuleCompositionTest.php packages/core/tests/Unit/Modules/RoleRegistrationTest.php packages/core/modules/usage/tests/Support/AggregationVectors.php packages/core/modules/usage/tests/Support/ReplayFactSource.php packages/core/modules/usage/tests/Unit/AggregationDigestTest.php packages/core/modules/rating/tests/Unit/RatingPipelineDigestTest.php packages/core/modules/schedule/src/Internal/CalendarIntervalResolver.php packages/core/modules/schedule/src/Internal/Services/DatabaseScheduleQueries.php packages/core/modules/schedule/tests/Feature/OccurrenceRevisionConcurrencyTest.php packages/core/modules/schedule/tests/Unit/CommercialPeriodResolverTest.php packages/core/modules/usage/src/Internal/Storage/DatabaseEffectiveFactSource.php packages/core/modules/usage/tests/AggregationTestCase.php packages/core/modules/usage/tests/Concurrency/UsageAdmissionScenario.php packages/core/modules/ledger/src/Internal/Participants/DatabaseCorrectionCreditParticipants.php packages/core/modules/rating/src/Internal/Proration/QuantitySnapshotScope.php packages/core/modules/rating/src/Internal/Storage/CorrectionStore.php packages/core/modules/rating/tests/Feature/CorrectionIntegrationSmokeTest.php packages/core/modules/rating/tests/Feature/RatingBookingConcurrencyTest.php packages/core/modules/rating/tests/Feature/RatingPipelineUnknownPolicyTest.php packages/core/tests/Architecture/P4DependencyBoundaryTest.php",
+          "exit": 0,
+          "started_at": "2026-11-10T10:05:47.532546+00:00",
+          "finished_at": "2026-11-10T10:05:49.168425+00:00",
+          "log": ".phpunit.cache/p4.10/rector-lock/pint-fix.log",
+          "log_sha256": "4e7af896d2c9a78d854dc4899f5c663ab7fdc4337b5fe4b8c62dccb8652ee804"
+        },
+        {
+          "id": "rector-check",
+          "cmd": "docker compose run --rm toolchain vendor/bin/rector process packages/core/modules/rating/src/Internal/Corrections/TaxCorrectionGroup.php packages/core/modules/rating/src/Internal/Pipeline/FrozenInputsBuilder.php packages/core/tests/Unit/Modules/P4BootstrapTest.php packages/core/tests/Unit/Modules/P4ModuleCompositionTest.php packages/core/tests/Unit/Modules/RoleRegistrationTest.php packages/core/modules/usage/tests/Support/AggregationVectors.php packages/core/modules/usage/tests/Support/ReplayFactSource.php packages/core/modules/usage/tests/Unit/AggregationDigestTest.php packages/core/modules/rating/tests/Unit/RatingPipelineDigestTest.php packages/core/modules/schedule/src/Internal/CalendarIntervalResolver.php packages/core/modules/schedule/src/Internal/Services/DatabaseScheduleQueries.php packages/core/modules/schedule/tests/Feature/OccurrenceRevisionConcurrencyTest.php packages/core/modules/schedule/tests/Unit/CommercialPeriodResolverTest.php packages/core/modules/usage/src/Internal/Storage/DatabaseEffectiveFactSource.php packages/core/modules/usage/tests/AggregationTestCase.php packages/core/modules/usage/tests/Concurrency/UsageAdmissionScenario.php packages/core/modules/ledger/src/Internal/Participants/DatabaseCorrectionCreditParticipants.php packages/core/modules/rating/src/Internal/Proration/QuantitySnapshotScope.php packages/core/modules/rating/src/Internal/Storage/CorrectionStore.php packages/core/modules/rating/tests/Feature/CorrectionIntegrationSmokeTest.php packages/core/modules/rating/tests/Feature/RatingBookingConcurrencyTest.php packages/core/modules/rating/tests/Feature/RatingPipelineUnknownPolicyTest.php packages/core/tests/Architecture/P4DependencyBoundaryTest.php --dry-run --output-format=json",
+          "exit": 0,
+          "started_at": "2026-11-10T10:07:02.225213+00:00",
+          "finished_at": "2026-11-10T10:07:06.507331+00:00",
+          "log": ".phpunit.cache/p4.10/rector-lock/rector-check.log",
+          "log_sha256": "bd0541c8c0d079a7fe20a261bd435182bf5fc1d3d765711dc42f9d31d5536654"
+        },
+        {
+          "id": "types-configured",
+          "cmd": "docker compose run --rm toolchain vendor/bin/phpstan analyse --no-progress packages/core/modules/rating/src/Internal/Corrections/TaxCorrectionGroup.php packages/core/modules/rating/src/Internal/Pipeline/FrozenInputsBuilder.php packages/core/modules/usage/tests/Support/AggregationVectors.php packages/core/modules/usage/tests/Support/ReplayFactSource.php packages/core/modules/usage/tests/Unit/AggregationDigestTest.php packages/core/modules/rating/tests/Unit/RatingPipelineDigestTest.php packages/core/modules/schedule/src/Internal/CalendarIntervalResolver.php packages/core/modules/schedule/src/Internal/Services/DatabaseScheduleQueries.php packages/core/modules/schedule/tests/Feature/OccurrenceRevisionConcurrencyTest.php packages/core/modules/schedule/tests/Unit/CommercialPeriodResolverTest.php packages/core/modules/usage/src/Internal/Storage/DatabaseEffectiveFactSource.php packages/core/modules/usage/tests/AggregationTestCase.php packages/core/modules/usage/tests/Concurrency/UsageAdmissionScenario.php packages/core/modules/ledger/src/Internal/Participants/DatabaseCorrectionCreditParticipants.php packages/core/modules/rating/src/Internal/Proration/QuantitySnapshotScope.php packages/core/modules/rating/src/Internal/Storage/CorrectionStore.php packages/core/modules/rating/tests/Feature/CorrectionIntegrationSmokeTest.php packages/core/modules/rating/tests/Feature/RatingBookingConcurrencyTest.php packages/core/modules/rating/tests/Feature/RatingPipelineUnknownPolicyTest.php",
+          "exit": 0,
+          "started_at": "2026-11-10T10:08:35.701458+00:00",
+          "finished_at": "2026-11-10T10:08:39.030686+00:00",
+          "log": ".phpunit.cache/p4.10/rector-lock/types-configured.log",
+          "log_sha256": "a9efa4a7b83a96d3f09131eabed0986a9d65268dca99c6e137bd5200043af6a3",
+          "scope": "Changed files inside the repository-configured PHPStan paths; the separate diagnostic of core tests is retained."
+        },
+        {
+          "id": "lock-test",
+          "cmd": "docker compose run --rm toolchain python3 -m unittest discover -s scripts/spec/tests -p test_spec_tools.py -k committed_derived_files_are_fresh -v",
+          "exit": 0,
+          "started_at": "2026-11-10T10:07:02.233643+00:00",
+          "finished_at": "2026-11-10T10:07:03.227812+00:00",
+          "log": ".phpunit.cache/p4.10/rector-lock/lock-test.log",
+          "log_sha256": "b6146cc72297821dc6efd3aede4bfb888b3ea6ee22baaed5fd6975e8aaa5054a"
+        },
+        {
+          "id": "targeted-tests",
+          "cmd": "docker compose run --rm toolchain vendor/bin/pest packages/core/tests/Unit/Modules/P4BootstrapTest.php packages/core/tests/Unit/Modules/P4ModuleCompositionTest.php packages/core/tests/Unit/Modules/RoleRegistrationTest.php packages/core/modules/usage/tests/Unit/AggregationDigestTest.php packages/core/modules/rating/tests/Unit/RatingPipelineDigestTest.php packages/core/modules/schedule/tests/Feature/OccurrenceRevisionConcurrencyTest.php packages/core/modules/schedule/tests/Unit/CommercialPeriodResolverTest.php packages/core/modules/rating/tests/Feature/CorrectionIntegrationSmokeTest.php packages/core/modules/rating/tests/Feature/RatingBookingConcurrencyTest.php packages/core/modules/rating/tests/Feature/RatingPipelineUnknownPolicyTest.php packages/core/tests/Architecture/P4DependencyBoundaryTest.php packages/core/modules/rating/tests/Unit/CorrectionDigestTest.php packages/core/modules/rating/tests/Feature/RatingPipelineSnapshotTest.php packages/core/modules/rating/tests/Feature/RatingPipelineValidationTest.php packages/core/modules/usage/tests/Feature/AggregationFreezeTest.php packages/core/modules/usage/tests/Feature/UsageReplayPermutationTest.php packages/core/modules/usage/tests/Concurrency/UsageAdmissionConcurrencyTest.php packages/core/modules/schedule/tests/Feature/CommercialPeriodPersistenceTest.php packages/core/modules/schedule/tests/Feature/OccurrenceSchedulerTest.php",
+          "exit": 0,
+          "started_at": "2026-11-10T10:07:02.230113+00:00",
+          "finished_at": "2026-11-10T10:07:33.855419+00:00",
+          "log": ".phpunit.cache/p4.10/rector-lock/targeted-tests.log",
+          "log_sha256": "b46f2e7332ca231e7a583045567bed7a1c97227251e557a28101d68a2ba3f896"
+        }
+      ],
+      "additional_diagnostics": [
+        {
+          "id": "types-check",
+          "cmd": "docker compose run --rm toolchain vendor/bin/phpstan analyse --no-progress packages/core/modules/rating/src/Internal/Corrections/TaxCorrectionGroup.php packages/core/modules/rating/src/Internal/Pipeline/FrozenInputsBuilder.php packages/core/tests/Unit/Modules/P4BootstrapTest.php packages/core/tests/Unit/Modules/P4ModuleCompositionTest.php packages/core/tests/Unit/Modules/RoleRegistrationTest.php packages/core/modules/usage/tests/Support/AggregationVectors.php packages/core/modules/usage/tests/Support/ReplayFactSource.php packages/core/modules/usage/tests/Unit/AggregationDigestTest.php packages/core/modules/rating/tests/Unit/RatingPipelineDigestTest.php packages/core/modules/schedule/src/Internal/CalendarIntervalResolver.php packages/core/modules/schedule/src/Internal/Services/DatabaseScheduleQueries.php packages/core/modules/schedule/tests/Feature/OccurrenceRevisionConcurrencyTest.php packages/core/modules/schedule/tests/Unit/CommercialPeriodResolverTest.php packages/core/modules/usage/src/Internal/Storage/DatabaseEffectiveFactSource.php packages/core/modules/usage/tests/AggregationTestCase.php packages/core/modules/usage/tests/Concurrency/UsageAdmissionScenario.php packages/core/modules/ledger/src/Internal/Participants/DatabaseCorrectionCreditParticipants.php packages/core/modules/rating/src/Internal/Proration/QuantitySnapshotScope.php packages/core/modules/rating/src/Internal/Storage/CorrectionStore.php packages/core/modules/rating/tests/Feature/CorrectionIntegrationSmokeTest.php packages/core/modules/rating/tests/Feature/RatingBookingConcurrencyTest.php packages/core/modules/rating/tests/Feature/RatingPipelineUnknownPolicyTest.php packages/core/tests/Architecture/P4DependencyBoundaryTest.php",
+          "exit": 1,
+          "started_at": "2026-11-10T10:07:02.228157+00:00",
+          "finished_at": "2026-11-10T10:07:05.584946+00:00",
+          "log": ".phpunit.cache/p4.10/rector-lock/types-check.log",
+          "log_sha256": "fee8131904963728b34737c26ad79dc27440cb12a40cdd8d84ff4bcd5c7f2de4"
+        }
+      ],
+      "diagnostic_scope": "The all-23-file diagnostic included P4BootstrapTest.php, which is outside the configured PHPStan paths and reported 17 errors. The configured-path check passed; no PHPStan configuration was changed.",
+      "revalidation": "Prior results remain historical; fresh targeted evidence covers this correction. Full acceptance remains conductor-owned.",
+      "acceptance_status": "awaiting_conductor_recheck"
+    },
+    "control_dart_memory_correction": {
+      "operator_note_sha256": "bb198c3dc5910f022b81fcab4b1f77c57fe4ee31c8eff2144fd885d2c6fee9d7",
+      "fixes": [
+        "Remove every control marker in the temporary corpus for the no-control negative test.",
+        "Regenerate Dart and PHP schema bundles from the current revision.",
+        "Set PHPUnit memory_limit to 512M; verify the effective value in a focused runner."
+      ],
+      "source_sha256": {
+        "scripts/spec/tests/test_lint_vectors.py": "faf0dc55e14a28cdc60290f81dcf641cf2fc77a6f00ddf7abc97f7f04c6f7685",
+        "phpunit.xml.dist": "0c3dfe43b7a7805e55e582c1dfe1c4166c01252536d1542c86e34a2c85321928",
+        "packages/contracts-dart/lib/src/generated/spec_data.g.dart": "3a18a1f111a0c71bedd21c2260b01b2102a5fa7bd9733ff2f7f158a6ab80b55b",
+        "packages/contracts/resources/spec/schemas.json": "2ef541a61ae4637eb7c557a64d917fa5f5335e27eccf36dac730659a5a5b60c0"
+      },
+      "focused_checks": [
+        {
+          "id": "generate-dart",
+          "cmd": "docker compose run --rm toolchain python3 scripts/spec/export-dart.py",
+          "exit": 0,
+          "started_at": "2026-11-10T10:30:44.612743+00:00",
+          "finished_at": "2026-11-10T10:30:45.483553+00:00",
+          "log": ".phpunit.cache/p4.10/control-dart-memory/generate-dart.log",
+          "log_sha256": "920d01e69077349fcf3f685494b93a9584d67be1b3f25b9b2d4e92e66f393f8a"
+        },
+        {
+          "id": "generate-php",
+          "cmd": "docker compose run --rm toolchain python3 scripts/spec/export-php.py",
+          "exit": 0,
+          "started_at": "2026-11-10T10:30:45.483813+00:00",
+          "finished_at": "2026-11-10T10:30:46.335476+00:00",
+          "log": ".phpunit.cache/p4.10/control-dart-memory/generate-php.log",
+          "log_sha256": "315eb3f0fd851230dcfa8963363100676ef77400f5fd4490e7551785b73f6979"
+        },
+        {
+          "id": "control-tests",
+          "cmd": "docker compose run --rm toolchain python3 -m unittest discover -s scripts/spec/tests -p test_lint_vectors.py -v",
+          "exit": 0,
+          "started_at": "2026-11-10T10:31:37.120010+00:00",
+          "finished_at": "2026-11-10T10:31:42.228101+00:00",
+          "log": ".phpunit.cache/p4.10/control-dart-memory/control-tests.log",
+          "log_sha256": "50511877ad429496acaa12bf1529f704a34158f7105c04c711d1ccc28931721d"
+        },
+        {
+          "id": "dart-freshness",
+          "cmd": "docker compose run --rm toolchain python3 scripts/spec/export-dart.py --check",
+          "exit": 0,
+          "started_at": "2026-11-10T10:31:37.121241+00:00",
+          "finished_at": "2026-11-10T10:31:38.025612+00:00",
+          "log": ".phpunit.cache/p4.10/control-dart-memory/dart-freshness.log",
+          "log_sha256": "9bb8e7a45d1a7f4e652528cd710e387ddefaeb395021744f778f4b0ea122b597"
+        },
+        {
+          "id": "php-freshness",
+          "cmd": "docker compose run --rm toolchain python3 scripts/spec/export-php.py --check",
+          "exit": 0,
+          "started_at": "2026-11-10T10:31:37.120476+00:00",
+          "finished_at": "2026-11-10T10:31:38.022446+00:00",
+          "log": ".phpunit.cache/p4.10/control-dart-memory/php-freshness.log",
+          "log_sha256": "9ab8105d3202f1718c6f970f9de545c806362866029edb8cb0a6670ffe1d3a04"
+        },
+        {
+          "id": "memory-codec-tests",
+          "cmd": "docker compose run --rm toolchain vendor/bin/pest --bootstrap=.phpunit.cache/p4.10/control-dart-memory/memory-bootstrap.php packages/core/tests/Unit/Modules/P4BootstrapTest.php packages/contracts/tests/Unit/P4ContractsTest.php",
+          "exit": 0,
+          "started_at": "2026-11-10T10:31:37.122326+00:00",
+          "finished_at": "2026-11-10T10:31:38.470005+00:00",
+          "log": ".phpunit.cache/p4.10/control-dart-memory/memory-codec-tests.log",
+          "log_sha256": "0fe66c950ed0a5196954f8e8c8f55ddea3770eb8e2c8b315333b7657d76056c6"
+        },
+        {
+          "id": "dart-tests",
+          "cmd": "docker compose run --rm --workdir /workspace/packages/contracts-dart toolchain dart test test/p4_contracts_test.dart test/codec_test.dart",
+          "exit": 0,
+          "started_at": "2026-11-10T10:31:37.122731+00:00",
+          "finished_at": "2026-11-10T10:31:39.553310+00:00",
+          "log": ".phpunit.cache/p4.10/control-dart-memory/dart-tests.log",
+          "log_sha256": "89aca2906d43216e1d50f2620ad573fc80632b4ea683cf43518d1aaa29054b46"
+        }
+      ],
+      "runtime_observation": {
+        "memory_limit": "512M",
+        "peak_usage_bytes": 20971520
+      },
+      "observation_bootstrap": {
+        "path": ".phpunit.cache/p4.10/control-dart-memory/memory-bootstrap.php",
+        "sha256": "7e9b6c12177efb730efeb3394f829f1b7243434133f2fcc34bd757d64b260bae"
+      },
+      "conditional_typing_fix": "Not required by configured PHPStan paths, which exclude packages/core/tests; no unrelated typing changes made.",
+      "acceptance_status": "awaiting_conductor_recheck",
+      "qualification": "The focused runner confirms 512M, not the complete-suite memory outcome. Full acceptance and plan artifact registration remain conductor-owned."
+    },
+    "migration_rebuild_correction": {
+      "operator_note_sha256": "d0d4ee814ab07cb25604a661f82b1a07adfe8da3f5f890474e20a2decaee5c28",
+      "fixes": [
+        "Seven P4 migrations explicitly refuse rollback with the REQ-FAIL-29 exception; Rector chooses the equivalent never return type.",
+        "Six retained PostgreSQL function definitions use CREATE OR REPLACE, preserving function identities and security attributes across a platform/ledger migrate:fresh followed by P4 migration.",
+        "Both module registries contain the final formatted migration checksums; migration identities and versions are unchanged. Identity regeneration produced no identity changes."
+      ],
+      "source_sha256": {
+        "packages/core/database/migrations/usage/2026_11_10_000001_create_billium_usage.php": "be77f5cc8d7e4812ea5eb08518a0c03127e35e86dc3a304a69f3beaae11460e6",
+        "packages/core/database/migrations/usage/2026_11_10_000300_create_usage_aggregation_tables.php": "f2fe85f16d426db5d76d7cc3bdfd31b6546a9db5717a3dcae22d970686712fa2",
+        "packages/core/database/migrations/rating/2026_11_10_000100_create_rating_pricing_tables.php": "f22499d005baee90043cac21172e6a93ff28a4b14065e65b7e7af088c0a1a08a",
+        "packages/core/database/migrations/rating/2026_11_10_000400_create_rating_run_basis_booking.php": "4d47559b72bad51078c7eecbd88ea191352860f259f099bc7b205949c1ecbfef",
+        "packages/core/database/migrations/schedule/2026_11_10_000500_create_billium_schedule_periods.php": "f176767dd6bac790978a6b5e0bbf5efb2ccba90616f02f721155ea4ceaeecf15",
+        "packages/core/database/migrations/schedule/2026_11_10_000600_create_billium_schedule_occurrences.php": "dbd42b2ce8f79643d4b7b67a767354c1923a9f4b624b72be06877378a31d0a05",
+        "packages/core/database/migrations/schedule/2026_11_10_000610_create_billium_schedule_billing_correction.php": "99af4eaf85b06ebaffff48238b62fbd74e61c8c1ce020f535c3390c8921e7ddb",
+        "spec/modules.json": "b0eb029b5efebffd27eb2dd58152afd73780dd0a5cfa44ddc6d230f8f2e172e0",
+        "packages/core/resources/modules.json": "1f4b8d806034973db0b3a8e7fa92fd93bc9e95233d306640a7be483164a39092",
+        "packages/core/tests/Integration/P4MigrationRebuildTest.php": "52fdf3a100008d25b03ca14720ad04314961868532328b0c8d13eff56fdec088",
+        "packages/core/tests/Unit/Modules/P4MigrationSafetyTest.php": "037d5da4c4b1506a82019cfb9f0136fcfa8029aebaf68d7cb2bd6ad80ac7d81d"
+      },
+      "negative_reproduction": {
+        "cmd": "docker compose run --rm toolchain vendor/bin/pest packages/core/tests/Unit/Modules/P4MigrationSafetyTest.php packages/core/tests/Integration/P4MigrationRebuildTest.php",
+        "exit": 2,
+        "log": ".phpunit.cache/p4.10/migration-rebuild/before.log",
+        "log_sha256": "3f241f16ac31decafefb972055978d4c1c574bfa5b96b32c782403d3dd5f6759",
+        "log_modified_at": "2026-11-10T10:53:20.937443+00:00",
+        "observed": "Seven missing rollback refusals and duplicate billium_rating_check_price_shape at integration setup; eight failing cases before the migration changes."
+      },
+      "intermediate_diagnostics": [
+        {
+          "id": "focused-migration-rebuild-replay-schema",
+          "cmd": "docker compose run --rm toolchain vendor/bin/pest packages/core/tests/Unit/Modules/P4MigrationSafetyTest.php packages/core/tests/Integration/P4MigrationRebuildTest.php packages/core/tests/Integration/P4AcceptanceReplayTest.php packages/core/modules/schedule/tests/Feature/ScheduleSchemaTest.php",
+          "exit": 1,
+          "started_at": "2026-11-10T10:57:55.910489+00:00",
+          "finished_at": "2026-11-10T10:58:04.818595+00:00",
+          "log": ".phpunit.cache/p4.10/migration-rebuild/focused-tests.log",
+          "log_sha256": "74459c91a9d60b3e8e07a8c37115a4625332ec33be6bc2fa67bc209b476f82fa",
+          "diagnosis": "Four replay and three schedule-schema cases passed, as did seven rollback cases. The new rebuild test held a deferred Artisan command without running it before its table assertion; fixed by explicit run()."
+        },
+        {
+          "id": "test-types",
+          "cmd": "docker compose run --rm toolchain vendor/bin/phpstan analyse --memory-limit=1G --no-progress packages/core/tests/Integration/P4MigrationRebuildTest.php packages/core/tests/Unit/Modules/P4MigrationSafetyTest.php",
+          "exit": 1,
+          "started_at": "2026-11-10T10:59:05.398034+00:00",
+          "finished_at": "2026-11-10T10:59:07.586209+00:00",
+          "log": ".phpunit.cache/p4.10/migration-rebuild/test-types.log",
+          "log_sha256": "75cc960af3d803b270dd13cdbb97b50424668e0d72cdc2fcf3308435daf45fb1",
+          "diagnosis": "Migration base class does not declare down(); the rollback test now asserts a callable before invoking it. Final focused PHPStan is green."
+        }
+      ],
+      "focused_checks": [
+        {
+          "id": "export-modules-final",
+          "cmd": "docker compose run --rm toolchain python3 scripts/spec/export-modules.py",
+          "exit": 0,
+          "started_at": "2026-11-10T10:57:45.695207+00:00",
+          "finished_at": "2026-11-10T10:57:46.618769+00:00",
+          "log": ".phpunit.cache/p4.10/migration-rebuild/export-modules-final.log",
+          "log_sha256": "ee9b54de3373a2a675d04c5156bf275fa0926da9845b8e82a7ca35fa49dcfc3e"
+        },
+        {
+          "id": "identities-final",
+          "cmd": "docker compose run --rm toolchain python3 scripts/spec/identities.py",
+          "exit": 0,
+          "started_at": "2026-11-10T10:57:46.618937+00:00",
+          "finished_at": "2026-11-10T10:57:47.465342+00:00",
+          "log": ".phpunit.cache/p4.10/migration-rebuild/identities-final.log",
+          "log_sha256": "daa11affa59f856db72a3c400568486bae03e0395251438380b76fd18a8265df"
+        },
+        {
+          "id": "migration-lint",
+          "cmd": "docker compose run --rm toolchain python3 scripts/lint/migrations.py packages/core/database/migrations/usage/2026_11_10_000001_create_billium_usage.php packages/core/database/migrations/usage/2026_11_10_000300_create_usage_aggregation_tables.php packages/core/database/migrations/rating/2026_11_10_000100_create_rating_pricing_tables.php packages/core/database/migrations/rating/2026_11_10_000400_create_rating_run_basis_booking.php packages/core/database/migrations/schedule/2026_11_10_000500_create_billium_schedule_periods.php packages/core/database/migrations/schedule/2026_11_10_000600_create_billium_schedule_occurrences.php packages/core/database/migrations/schedule/2026_11_10_000610_create_billium_schedule_billing_correction.php",
+          "exit": 0,
+          "started_at": "2026-11-10T10:58:11.369249+00:00",
+          "finished_at": "2026-11-10T10:58:12.225852+00:00",
+          "log": ".phpunit.cache/p4.10/migration-rebuild/migration-lint.log",
+          "log_sha256": "3787f2217869aafd40652fe79271c38a369351ba0ca6ce6ecf6ad5e8a3e8b9b3"
+        },
+        {
+          "id": "module-compatibility",
+          "cmd": "docker compose run --rm toolchain python3 scripts/spec/check-module-compatibility.py --check",
+          "exit": 0,
+          "started_at": "2026-11-10T10:58:11.369650+00:00",
+          "finished_at": "2026-11-10T10:58:12.348424+00:00",
+          "log": ".phpunit.cache/p4.10/migration-rebuild/module-compatibility.log",
+          "log_sha256": "703fe8ff3b408e031b9047533c9cb21659f435bc0be574a60b2e5ccf54941160"
+        },
+        {
+          "id": "registry-freshness",
+          "cmd": "docker compose run --rm toolchain python3 scripts/spec/export-modules.py --check",
+          "exit": 0,
+          "started_at": "2026-11-10T10:58:11.362411+00:00",
+          "finished_at": "2026-11-10T10:58:12.300321+00:00",
+          "log": ".phpunit.cache/p4.10/migration-rebuild/registry-freshness.log",
+          "log_sha256": "b82ed3f86c2b658837c631ea6a0c961c98c732a243f4501ca7cd0c53941be059"
+        },
+        {
+          "id": "identity-freshness",
+          "cmd": "docker compose run --rm toolchain python3 scripts/spec/identities.py --check",
+          "exit": 0,
+          "started_at": "2026-11-10T10:58:11.363606+00:00",
+          "finished_at": "2026-11-10T10:58:12.293138+00:00",
+          "log": ".phpunit.cache/p4.10/migration-rebuild/identity-freshness.log",
+          "log_sha256": "098cfa779420ec2976ccfe6a132c472e48a7b5ac53d582b06fc8dff67c80ef03"
+        },
+        {
+          "id": "rector-final",
+          "cmd": "docker compose run --rm toolchain vendor/bin/rector process packages/core/tests/Integration/P4MigrationRebuildTest.php packages/core/tests/Unit/Modules/P4MigrationSafetyTest.php packages/core/database/migrations/usage/2026_11_10_000001_create_billium_usage.php packages/core/database/migrations/usage/2026_11_10_000300_create_usage_aggregation_tables.php packages/core/database/migrations/rating/2026_11_10_000100_create_rating_pricing_tables.php packages/core/database/migrations/rating/2026_11_10_000400_create_rating_run_basis_booking.php packages/core/database/migrations/schedule/2026_11_10_000500_create_billium_schedule_periods.php packages/core/database/migrations/schedule/2026_11_10_000600_create_billium_schedule_occurrences.php packages/core/database/migrations/schedule/2026_11_10_000610_create_billium_schedule_billing_correction.php --dry-run",
+          "exit": 0,
+          "started_at": "2026-11-10T10:58:11.369421+00:00",
+          "finished_at": "2026-11-10T10:58:13.545447+00:00",
+          "log": ".phpunit.cache/p4.10/migration-rebuild/rector-final.log",
+          "log_sha256": "bbdae4633f9f5b735b616fa1fd0f6c2cec84440529a3d8ee63bb192d334181bd"
+        },
+        {
+          "id": "rebuild-test-rector",
+          "cmd": "docker compose run --rm toolchain vendor/bin/rector process packages/core/tests/Integration/P4MigrationRebuildTest.php --dry-run",
+          "exit": 0,
+          "started_at": "2026-11-10T10:59:05.398044+00:00",
+          "finished_at": "2026-11-10T10:59:07.251984+00:00",
+          "log": ".phpunit.cache/p4.10/migration-rebuild/rebuild-test-rector.log",
+          "log_sha256": "0d5201dd32234f0f7ca62ee30df12c9e95de502112d9f0abc918d9812d7a92db"
+        },
+        {
+          "id": "format-test",
+          "cmd": "docker compose run --rm toolchain vendor/bin/pint packages/core/tests/Integration/P4MigrationRebuildTest.php",
+          "exit": 0,
+          "started_at": "2026-11-10T10:58:36.776398+00:00",
+          "finished_at": "2026-11-10T10:58:37.680742+00:00",
+          "log": ".phpunit.cache/p4.10/migration-rebuild/format-test.log",
+          "log_sha256": "ab67f0836aa98b4ed63c2d2b8629fa5132a70bf2c00b9cdd0e9fbc48f2ef2c12"
+        },
+        {
+          "id": "rebuild-test",
+          "cmd": "docker compose run --rm toolchain vendor/bin/pest packages/core/tests/Integration/P4MigrationRebuildTest.php",
+          "exit": 0,
+          "started_at": "2026-11-10T10:58:37.680940+00:00",
+          "finished_at": "2026-11-10T10:58:39.326030+00:00",
+          "log": ".phpunit.cache/p4.10/migration-rebuild/rebuild-test.log",
+          "log_sha256": "f9f62db6e742e489d586f92b5f794f19aad1417ece06c182da0bc646db8902dc"
+        },
+        {
+          "id": "format-tests-final",
+          "cmd": "docker compose run --rm toolchain vendor/bin/pint packages/core/tests/Integration/P4MigrationRebuildTest.php packages/core/tests/Unit/Modules/P4MigrationSafetyTest.php",
+          "exit": 0,
+          "started_at": "2026-11-10T10:59:30.046669+00:00",
+          "finished_at": "2026-11-10T10:59:30.978537+00:00",
+          "log": ".phpunit.cache/p4.10/migration-rebuild/format-tests-final.log",
+          "log_sha256": "7893880231682d9d54d5047c5bdc3d0a21eca8bb5d4f2ffb6fca12e897c28caf"
+        },
+        {
+          "id": "test-types-final",
+          "cmd": "docker compose run --rm toolchain vendor/bin/phpstan analyse --memory-limit=1G --no-progress packages/core/tests/Integration/P4MigrationRebuildTest.php packages/core/tests/Unit/Modules/P4MigrationSafetyTest.php",
+          "exit": 0,
+          "started_at": "2026-11-10T10:59:30.978948+00:00",
+          "finished_at": "2026-11-10T10:59:33.055128+00:00",
+          "log": ".phpunit.cache/p4.10/migration-rebuild/test-types-final.log",
+          "log_sha256": "4ff6d8ca796a299634928d0f2b8e4b8eee47e013dae4ac1c45ee90f5b1f54a98"
+        },
+        {
+          "id": "safety-test-final",
+          "cmd": "docker compose run --rm toolchain vendor/bin/pest packages/core/tests/Unit/Modules/P4MigrationSafetyTest.php",
+          "exit": 0,
+          "started_at": "2026-11-10T10:59:33.055368+00:00",
+          "finished_at": "2026-11-10T10:59:33.910874+00:00",
+          "log": ".phpunit.cache/p4.10/migration-rebuild/safety-test-final.log",
+          "log_sha256": "277d970ea0ef1b7a630e82d73c9818a31cbbd44d085c62b2dc02d546ce9eae63"
+        }
+      ],
+      "runtime_observations": {
+        "rebuild_cases_passed": 1,
+        "rebuild_assertions": 18,
+        "rollback_cases_passed": 7,
+        "rollback_assertions": 28,
+        "replay_cases_passed": 4,
+        "schedule_schema_cases_passed": 3,
+        "preserved_function_attributes": [
+          "oid",
+          "owner",
+          "security_definer",
+          "acl",
+          "settings"
+        ],
+        "database_setup": "The focused suite recovered the partially migrated test database through the corrected migrations; no manual function removal was needed."
+      },
+      "acceptance_status": "awaiting_conductor_recheck",
+      "qualification": "Focused migration, replay and schema evidence only. Historical acceptance records remain unchanged; full acceptance, plan artifact registration and independent phase review are coordinator/conductor responsibilities."
+    },
+    "write_set_deviations": [
+      "scripts/spec/lint.py",
+      "scripts/spec/tests/test_spec_tools.py",
+      "spec/revisions/2026-10/revision.lock.json",
+      "scripts/spec/tests/test_lint_vectors.py",
+      "phpunit.xml.dist",
+      "packages/contracts-dart/lib/src/generated/spec_data.g.dart",
+      "packages/contracts/resources/spec/schemas.json"
+    ]
+  },
+  "acceptance_checks": [
+    {
+      "id": "V1",
+      "status": "red_checks.1_awaiting_recheck",
+      "exit": 2,
+      "evidence": ".phpunit.cache/p4.10/correction/acceptance-V1.log"
+    },
+    {
+      "id": "V2",
+      "status": "pending_conductor",
+      "exit": null
+    },
+    {
+      "id": "V3",
+      "status": "red_checks.1_awaiting_recheck",
+      "exit": 1,
+      "evidence": ".phpunit.cache/p4.10/correction/acceptance-V3.log"
+    },
+    {
+      "id": "V4",
+      "status": "red_checks.1_awaiting_recheck",
+      "exit": 1,
+      "evidence": ".phpunit.cache/p4.10/correction/acceptance-V4.log"
+    },
+    {
+      "id": "V5",
+      "status": "red_checks.1_awaiting_recheck",
+      "exit": 1,
+      "evidence": ".phpunit.cache/p4.10/correction/acceptance-V5.log"
+    },
+    {
+      "id": "V6",
+      "status": "red_checks.1_awaiting_recheck",
+      "exit": 1,
+      "evidence": ".phpunit.cache/p4.10/correction/acceptance-V6.log"
+    },
+    {
+      "id": "V7",
+      "status": "pending_conductor",
+      "exit": null
+    }
+  ],
+  "owner_inputs": [
+    "Approved immutable prices, currency/exponent table, units/precision, rounding and strategy versions",
+    "Agreement/quantity attribution and revisions, commercial period/anchor/timezone/DST/timing policies",
+    "TaxSnapshotPort result and correction policy publication; TEST rates are fixture examples only",
+    "Source completeness/finality/revision evidence and host-approved retention horizon",
+    "Grants, quota, consumption/reservation and product credits stay outside Billium"
+  ],
+  "limitations": [
+    "Logical public-table/sequence restore preserves the installed schema and grants; it is not a pg_dump/PITR or production recovery drill.",
+    "PHP algorithm fixtures and PostgreSQL runtime assertions are distinct from PHP+Dart wire codec vectors.",
+    "No PSP/vendor qualification, live tax/price selection, payment execution or independent phase approval is claimed.",
+    "Coordinator records plan-local acceptance.json and freezes the review candidate after genuine V1-V7 evidence and native executor session receipts are available."
+  ]
+}

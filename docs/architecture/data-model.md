@@ -1,11 +1,13 @@
 # Billium — модель данных
 
-Синхронизация PLAN1.P3.12, 2026-10-29. Реализованный слой — platform и ledger;
-execution, usage/rating/schedule, documents и collection ниже обозначены как будущие владельцы.
+Синхронизация PLAN1.P3.12, 2026-10-29, дополнения P4.2–P4.9. Реализованы platform, ledger,
+usage admission/aggregation, rating booking/corrections, schedule commercial periods и monetary occurrences.
+Execution, documents и collection ниже сохраняют явно обозначенные будущие потоки (D55/D56/D63; owners core modules).
 Основания: INV-01–INV-14, D21, D45–D52, D54/D55/D57/D60/D62/D63.
-DDL: `packages/core/database/migrations/{platform,ledger}/`. Реестр модулей:
+DDL: `packages/core/database/migrations/{platform,ledger,usage,rating,schedule}/`. Реестр модулей:
 [`spec/modules.json`](../../spec/modules.json); контракты композиции:
 [module-compatibility.md](module-compatibility.md) (D55).
+[Полнота дизайна](design-coverage.md) задаёт поддерживаемые границы и оставшийся объём реализации.
 
 Общие правила реализованной схемы (D19/D21/D22/D23/D45/D60):
 
@@ -189,14 +191,191 @@ unknown не освобождает резерв по таймеру. Succeeded 
 атомарно, закрывая долг; `reversal` оставляет долг открытым с запретом автоматического collection
 до разрешённой policy. До подтверждённого refund ledger не уменьшает allocation (D35/D41/D60).
 
-Будущие usage/rating/schedule сохраняют metric/price versions, immutable usage revision и occurrence
-business interval identity (EXCLUDE overlapping non-superseded intervals), basis UNIQUE obligation.
+Usage сохраняет immutable metric versions и append-only fact revisions (D13/D56; owner usage, P4.2).
+Schedule сохраняет commercial periods по immutable business interval identity (P4.5).
+Rating/occurrence booking сохраняют price versions, non-overlapping non-superseded
+occurrences и basis UNIQUE obligation (D12/D56; owner rating/schedule).
 Новые условия действуют вперёд; после issue positive late delta создаёт linked correction obligation,
 negative delta — credit note по versioned correction policy (INV-11/12/13, D12/D13/D63).
 Будущий collection guard проверяет authorization/generation до admission и dispatch через port+context;
 автосбор не начинается после refund reversal без policy. Documents хранит series/number/economic identity,
 render provenance; cash/fiscal export опирается на actual unique effects, receivable export — ledger
 (D35/D55/D63). Эти будущие таблицы/PSP integrations не заявлены реализованными в P3.
+
+## Commercial period evidence и accepted terms (P4.5)
+
+Все четыре таблицы принадлежат schedule; ключи включают seller/environment. Grant, quota,
+consume и host subscription state здесь отсутствуют (D22/D23/D45/D56; owner schedule).
+
+| Таблица | Состояние и backstop |
+|:--|:--|
+| `billium_schedule_quote` | append-only quoteRef, exact terms/period/quote digests, host revision/cancellation generation, validity и bounded frozen body |
+| `billium_schedule_component` | mutable serialization head: scoped component key, immutable host agreement correlation, последняя accepted revision/generation/funding revision, effective boundary/covered-until и exact terms |
+| `billium_schedule_revision` | append-only accepted host monetary terms + immutable integration receipt; UNIQUE component/revision и quoteRef; composite FK связывает exact revision/generation/terms digest с quote |
+| `billium_schedule_period` | append-only resolved UTC [start,end), local policy/evidence, source revision/funding revision; UNIQUE component/purpose/start/end, coverageRef и occurrenceRef; revision не входит в business uniqueness |
+
+Резолвер сохраняет source anchor, explicit policy, requested и resolved local boundaries, UTC offsets,
+ordinal и tzdb marker. Исторический replay не вызывает resolver; source policy и stored boundary evidence
+сохраняются вместе. Commercial identity определяется интервалом, price/host/funding revisions — provenance.
+Runtime получает SELECT/INSERT, immutable triggers запрещают UPDATE/DELETE history; только head получает
+ограниченные UPDATE columns. FK периода на accepted revision deferred до commit, поэтому обе записи
+создаются в одной root Tx. Boot SQL не выполняет (INV-11/12, D22/D55/D56; owner schedule).
+
+Lock path: claim → session/install/module admission → transaction-local host approval guard →
+`BillingSchedule (40)` на `component_key`. Guard хоста обязан сериализовать exact approved revision и
+cancellation generation до commit; default отказывает. После lock повторно проверяется business replay,
+затем validity, monotonic revision/generations, future boundary и anchor policy. Accepted revision,
+period, head, receipt и diagnostic money commit log коммитятся одной root; business refusal сохраняет
+только свой idempotency receipt. Пересчёт posted money и supersession planned occurrences принадлежат
+отдельному occurrence/correction протоколу, не прямому UPDATE periods (D27/D56/D63; owner schedule/platform).
+
+Integration query `coverage` возвращает immutable `billium.schedule.coverage/1` в authenticated scope,
+не новый strict public event. Coverage/occurrence refs стабильны при transport replay. Funding revision
+в notice — frozen host provenance, не подтверждение оплаты и не команда grant owner. Annual monetary
+coverage и monthly grants не размножают друг друга; P4.5 не вызывает ledger booking и не пишет grant state
+(REQ-OWN-02/03, REQ-OUT-01/02/10, D56; owner schedule/host).
+
+## Schedule occurrences (P4.6)
+
+`schedule` owns the following tables. Every business scope includes seller/environment
+(D12/D22/D23/D56; owner schedule).
+
+| Table | Responsibility and backstop |
+|:--|:--|
+| `billium_schedule_billing_schedule` | Revision/generation CAS, strict state/runnable/next_occurrence_at, next calendar ordinal, claim lease, attempts/retry_at and row_version |
+| `billium_schedule_billing_schedule_revision` | Append-only calendar terms, inputs digest and effective boundary; immutable provenance |
+| `billium_schedule_billing_occurrence` | Immutable resolved interval/evidence and inputs; stable occurrence_ref plus historical incarnation; normal monetary purposes only |
+| `billium_schedule_occurrence_amendment` | Append-only revision confirmation, planned replacement, cancellation or amendment request pointing to the original occurrence |
+| `billium_schedule_occurrence_outbox` | Atomic module-owned notifications; preserves the frozen public event catalogue (D63; owner schedule/platform) |
+| `billium_schedule_correction_head` | Approved correction revision/source frontier CAS, serialized by the original occurrence lock |
+| `billium_schedule_billing_correction` | Append-only correction children with original period, predecessor, reason, optional tax policy provenance, registered digest and canonical obligation basis |
+
+Normal business identity is `seller/environment/component/purpose/[start,end)`, resolved to UTC
+microseconds. `occurrence_ref = occ_ + first48(sha256(canonical identity))`; schedule reference,
+schedule revision, transport key and inputs digest do not enter identity. The active-reference
+partial UNIQUE and GiST exclusion arbitrate inserts. The exclusion remains
+`(seller_ref =, environment =, component_ref =, coverage_class =, service_period &&)` for
+planned/rated/obligated rows. `usage_settlement` uses coverage class usage; recurring_charge and
+proration share time coverage. Proration requires a same-component original parent and lies
+inside its interval; its parent link never exempts it from overlap protection. Historical
+superseded rows remain immutable; returning to an old interval creates the next incarnation
+(INV-11/12, D12/D56; owner schedule).
+
+`occurrence.ensure.v1` inserts using a PostgreSQL arbiter and recovers exclusion errors at a
+savepoint. Another key with the same identity and inputs returns the existing occurrence with
+created=false. Changed inputs require explicit correction. A revision can replace only planned
+work; rated/obligated originals receive amendment_required records and retain their bytes.
+Cancellation increments the schedule generation and cancels planned work only. FSM permits
+planned→rated/obligated/superseded/cancelled and rated→obligated; triggers reject deletion,
+revival and immutable-column changes (INV-05/11/12, D12/D27/D56; owner schedule).
+
+Roots lock schedule rank 40 before the complete occurrence rank 50 set. They recheck their
+planned row set under locks and retry LockPlanChanged. Outer rating/correction roots use the
+public `OccurrenceLocks` port before ranks 65/70: it delegates to the root LockSet and remembers
+the rows locked in that live context. Participants assert that remembered parent lock and
+runner/module/scope authority; they acquire no additional lock, create no root/claim/outbox and
+write only schedule tables. This adapter supplies lock inspection without changing the shared
+TransactionContext contract (D27/D60/D63, FA03; owner schedule).
+
+Correction is a literal purpose exclusively in billing_correction. Its obligated normal parent
+and original [start,end) are rechecked; original_period_ref is the stable period correlation
+derived from the parent occurrence. UNIQUE parent/revision and parent/source-frontier plus
+head CAS reject duplicates/reordering. Exact frontier replay is checked before head CAS.
+`CorrectionBasis::derive(parentOccurrenceRef, correctionRevision)` canonically binds the
+obligation basis. A correction can overlap only through its registered parent lineage and
+never enters the normal scheduler/exclusion table. The outer P4.8 root owns rating/ledger work;
+registering lineage alone books no obligation (INV-11/12, D56/D63/FA03; owner schedule/rating).
+
+Due reads are authenticated, seller/environment scoped, bounded to 500 schedules and use
+keyset `(next_occurrence_at,id)` with a scope/asOf-bound cursor. The partial index
+`billium_schedule_due_idx(seller_ref,state,next_occurrence_at,id) WHERE runnable` covers the scan;
+claim expiry and retry_at filter unavailable work. Each schedule materializes in its own root:
+occurrence, cursor, persisted calendar evidence and outbox commit together. The resolver's
+zero-based next ordinal is advanced only after successful materialization; unfinished batch
+tails remain due. CAS refuses parallel stale jobs. Separate recordFailure roots clear leases,
+increment attempts and schedule `asOf + min(2^attempts*60,3600)` seconds. dueStats exposes due
+count/oldest age. The resolver's ordinal bound completes a schedule after its final supported
+interval (D12/D22/D27/D56, COV-329; owner schedule).
+
+`fixtures/vectors/schedule/occurrences/annual-money-monthly-grants.json` records the selection
+gate for one annual monetary occurrence correlated with twelve external grant windows. The
+host grant owner supplies those windows; entitlement_grant and collection_* cannot create
+monetary occurrences. Collection references existing debt. This fixture establishes no live
+grant delivery or provider qualification (REQ-OWN-02/03, D56/D59, COV-500/544; owner schedule/host).
+
+## Rating runs & booking
+
+P4.7 freezes the account/customer attribution, agreement revision, original service interval,
+metric version, aggregate reference/digest and source completeness frontier, source digest,
+price/strategy/terms versions, commitment scope and already-booked basis digest, rounding and
+currency exponent versions, and the tax resolver/input/evidence snapshot. Explicit typed
+price and tax snapshots in retained inputs permit deterministic replay without current
+configuration or vendor access (D19/D22/D23/D56; COV-206…213/498; owner rating).
+
+| Table | Ownership and persistence |
+|:--|:--|
+| `billium_rating_run` | append-only retained FrozenRatingInputs and original period/account |
+| `billium_rating_rated_basis` | append-only original/correction basis, totals and input/rated digests |
+| `billium_rating_rated_line` | append-only relational price/metric/window/tax/rounding fields and exact intermediates |
+| `billium_rating_booking` | insert-once basis → obligation mapping, or explicit no-charge disposition |
+| `billium_rating_source_frontier` | scoped canonical lock heads; row-version and digest CAS |
+| `billium_rating_event` | append-only internal transactional outbox; never extends public v1 events |
+| `billium_rating_correction`, `billium_rating_correction_booking` | rating-owned schema provisioned by P4.7; financial writes belong to P4.8 |
+
+The original basis is unique per seller/environment/occurrence, independently of transport
+keys; its ledger basis is `rating:<basisRef>`. Inputs identity excludes volatile frontier
+coordinates and operation keys. Booking is unique per basis and per obligation basis. Each
+line and basis enforces gross = net + tax. Immutable triggers and SELECT/INSERT runtime
+privileges protect history; frontier updates require the next row version and preserve
+scope/key identity (INV-05/11/12/14, D19/D22/D23/D56/D60; owner rating/ledger).
+
+Quote computes from frozen inputs, returns financial=false and writes no state. Price and
+tax snapshot publication admit platform/rating only, so inputs can be provisioned while
+ledger is disabled. Prepare resolves pinned versions and tax outside the root; incomplete sources, unavailable retained
+aggregates, missing prices/tax and unknown policies hold work without inventing zero.
+An explicit zero price and frozen reason produce a no_charge disposition and no obligation
+(D55/D56/D60; owner rating).
+
+One `rating.book.v1` OperationRunner root asserts its live rating capability first, then
+acquires the complete UsageSeries (35) set through AggregationLocks for metered inputs, the sorted
+RatingFrontier (45) set, and BillingOccurrence (50) through OccurrenceLocks. Usage participants
+revalidate both snapshot identity and supplied quantity/window/frontier. Commitment heads
+share rank 45 with occurrence heads, using separate canonical keys; under that lock the
+root rechecks the digest and sum of booked contributions for the original commitment scope.
+This prevents parallel occurrences consuming the same minimum twice. Schedule revision
+and period/state are revalidated through the public schedule port (D27/D56/D60; owner
+usage/rating/schedule).
+
+The root calls the actual LedgerParticipants::recordObligation with the same context and
+gross Money. Detailed net/tax lines, occurrence/source and rated/input digests remain in
+immutable rating records linked by the stable ledger basis (P4.7 Q1=a, D56/D60; owner
+rating/ledger). A newly inserted obligation has no existing row for a rank-70 row lock;
+the locked occurrence/frontier serializes creation and ledger's scoped basis UNIQUE is
+the final creation arbiter. Existing debt is never changed by rating booking. Basis, lines,
+frontier, booking mapping, ledger obligation, root receipt, internal notification and ledger
+outbox commit or roll back together. Participants create no separate root/claim/outer receipt;
+there is no LedgerRecording placeholder or split commit (D27/D60/D63; owner rating/ledger).
+
+When ledger is disabled the closure admits usage/rating/schedule and stores an unposted
+basis while advancing the occurrence to rated. The rating and schedule descriptors therefore
+depend on platform (and schedule on rating); financial booking adds ledger explicitly.
+If lifecycle admission rejects disabled/absent ledger while desired configuration still
+lists it, that root rolls back before its body. A fresh root admits the unposted closure;
+schema incompatibility and refusals from other modules propagate without this fallback
+(D55/D60; owner platform/rating).
+After ledger admission resumes, the same frozen basis can be posted once without querying
+current prices/tax or re-inserting its lines. A changed commitment requires explicit repair
+rather than silently repricing that immutable basis. Booked and no-charge mappings are
+terminal. Legal issue/render and execution are independent optional capabilities
+(D55/D56/D60; REQ-OWN-03; owner platform/rating/schedule/ledger).
+
+P4.9 additionally supports an explicit `snapshotRef="fixed"` component input for a pinned fixed
+price. Its `fixed_occurrence/1` evidence freezes one original component occurrence, attribution,
+interval and price terms; recomputation validates the entire evidence before writes. This path
+does not admit usage or access usage tables. Schedule-owned roots admit platform/rating/schedule
+without ledger; adding ledger to rating booking enables debt through its participant. Pure quote
+requires neither provider nor schema for ledger. See the [capability matrix](optional-commercial-modules.md)
+for provider, migration and trusted role/version ownership (D55/D56; owners rating/schedule/core).
 
 ## Expand/contract и доказательства
 
@@ -207,3 +386,167 @@ Lint запрещает enum, destructive down, смешанный column expand
 conservation и journal/receipt/commit completeness, отдельный VALIDATE и old-code replay.
 Contract DROP COLUMN отложен за rollback window. Поколения приложения и host authority — test doubles;
 это не live rolling deployment и не PSP qualification (D21/D50/D59).
+
+## Usage admission (D13/D19/D22/D23/D55/D56; owner usage, P4.2)
+
+`billium_usage_metric` хранит immutable MetricVersion; `billium_usage_stream` фиксирует единственный
+gross/net mode и normalization ref для `(seller, environment, commercialBasisRef)`. Конфликт mode
+или normalization не создаёт вторую billable basis. `billium_usage_fact` хранит ревизии, frozen
+subject/customer/billing account/component/agreement, mapping revision, validity и исходный commercial
+period. Canonical envelopes и receipt сохраняются как bounded immutable evidence; scope, keys, numeric
+quantity, correction links и индексируемые dimensions представлены отдельными колонками (D13/D19/D22/D56).
+
+`Usage::submitUsageFact` сначала проверяет contract digest, authenticated seller/source и получает
+host-owned `UsageAttribution` snapshot вне Tx. Host port подтверждает normalized provenance и source
+selection/filters и возвращает историческую mapping revision с validity/cutoff и исходным периодом;
+default port отказывает unresolved input. Интервал целиком помещается в mapping validity и один period,
+eventAt находится внутри интервала. receivedAt не выбирает payer или period. Пересекающий границу факт
+требует pre-split input; exact splitting policy пока не зарегистрирована (D13/D56; COV-214/215).
+
+Root OperationRunner берёт claim → session shared barrier в Administrative mode → platform/usage
+module admission → usage-owned advisory leaf lock `(seller,environment,source,factId)`. Usage body
+не берёт последующих platform/financial locks и не вызывает сеть. Факт, immutable business receipt и
+platform claim коммитятся атомарно; rating, obligation, money commit и outbox event здесь не создаются.
+UsageReceipt `accepted` подтверждает durable admission; transport ACK и rated/applied monetary result
+имеют отдельный смысл. Replay после disable возвращает прежний receipt без нового admission
+(INV-05/08/14, D27/D55/D56; owner platform/usage).
+
+Business uniqueness — `(seller,environment,source,factId,revision)`. Тот же canonical digest возвращает
+stored receipt; другой payload конфликтует. Revision 1 не имеет predecessor; revision N продолжает
+ровно N−1 того же seller/source/fact, с originalFactDigest. Missing predecessor отказывается без claim
+и допускает retry после его поступления. Cycles, forks, cross-metric links и изменение frozen attribution,
+period, event time, interval или grouping запрещены. Effective revision — наибольшая принятая revision.
+Policy `replace_same_fact_revision/1` допускает меньшую nonnegative replacement quantity; signed negative
+quantity не входит в wire contract. Это не refund. Attribution correction требует будущей authorized
+financial correction policy с lineage и здесь отказывается (D13/D56/D63; owner usage, corrections P4.8).
+
+UTC instants в usage хранятся fixed-width nanosecond text с C collation: PostgreSQL timestamptz теряет
+sub-microsecond precision wire contract. Numeric quantity — `numeric(33,9)`, не деньги. SQL PK/FK/CHECK
+и append-only triggers защищают историю. Runtime получает только SELECT/INSERT usage tables;
+boot provider только объявляет migration path при явном enable. Миграции и platform module registry
+устанавливает host отдельно; disabled/uninstalled module при свежей установке не создаёт таблиц,
+registry rows, workers или routes (D13/D19/D22/D55/D56; owner usage/platform).
+
+`UsageQueries::period` всегда фильтрует authenticated seller/environment, subject, metricVersion и frozen
+mappingRef, `[start,end)` event window; LIMIT 1…500 и keyset `(event_at,fact_id,revision,source)` ограничивают
+страницу. Индекс `billium_usage_subject_window` начинается с
+`(seller_ref,subject_ref,metric_version,event_at,fact_id,revision)`; отдельный chain index обслуживает
+effective revision anti-join. Query tests содержат out-of-order/nanosecond pages, seller isolation и
+EXPLAIN fixture с 2,000 rows. Между страницами новые corrections требуют fresh scan; final aggregate
+snapshot/frontier — владелец P4.3. Duration semantics пока unsupported contract-ом, поэтому GiST overlap
+index для duration не создаётся (D56; COV-334, owner usage; ACC-CON-12).
+
+## Usage aggregation (D13/D19/D22/D23/D27/D56/D63; owner usage, P4.3)
+
+Usage хранит immutable aggregation policies и source-finality contracts отдельно от immutable wire
+MetricVersion. Версия метрики остаётся непрозрачной строкой P4.2; алгоритмы замкнуты:
+`additive_sum@1`, `gauge_latest_as_of@1`, `gauge_max@1`, `gauge_time_weighted@1`,
+`distinct_exact_union@1`. Реестр отказывает неизвестным/approximate алгоритмам. DB adapter проверяет
+соответствие immutable model, grouping и полного набора источников. Текущий wire gauge допускает
+latest/max; time-weighted реализован в reducer registry и не подменяет wire latest/max
+(D13/D56; owner usage).
+
+| Таблица | Состояние и защита |
+|:--|:--|
+| `billium_usage_source_finality_contract` | append-only required sources, grace, post-final policy, reopening и digest |
+| `billium_usage_aggregation_policy` | append-only metric digest, algorithm/version, quantity scale, gauge и identity policies |
+| `billium_usage_source_head` | seller/environment/source row для сериализации внешнего evidence |
+| `billium_usage_source_completeness` | append-only source-assigned evidence sequence, range, watermark, status и repair reference |
+| `billium_usage_aggregate_series_head` | mutable head revision/digest и row-version CAS; canonical `series_key` |
+| `billium_usage_aggregate_snapshot` | immutable quantity, predecessor, completeness frontier и gauge reduction evidence |
+| `billium_usage_aggregate_member` | immutable effective fact revisions, digests, source, event time и exact unscaled input |
+| `billium_usage_aggregate_distinct_member` | controlled opaque member identities с identity key/namespace и contributing fact; только privileged erasure |
+| `billium_usage_aggregate_reproducibility_event` | append-only `retention_expired`/`erased` dispositions |
+| `billium_usage_aggregate_event` | immutable internal `usage.aggregate.frozen.v1` notification в Tx снапшота |
+
+Глобальный порядок дополняется `FeedPartition (30) < UsageSeries (35) < BillingSchedule (40)`.
+Freeze создаёт head через INSERT ON CONFLICT, берёт ranked row lock по canonical `series_key`,
+после чего читает все входные ревизии одним SQL statement. Intake evidence блокирует source head
+того же ранга. Snapshot, retained contributions, CAS head и internal notification коммитятся одной Tx.
+Нет сети, obligation или публичного v1/v2 outbox event. Внешний rating root заранее планирует
+`AggregateStore::lockRequest(window)`; participant reassert-ит этот lock через текущий LockSet,
+проверяет head, effective inputs, completeness и reproducibility. Пропущенный ранний lock
+после более высокого ранга отказывается по глобальному порядку (D27/D56/D63; owner usage).
+
+Effective revision выбирается до event-window filter; superseded/retracted вклады не складываются.
+Additive суммирует только effective quantities. Gauge заменяет ревизию факта отдельно от sample
+reducer; ties идут по event time/source/source sequence/fact identity, без arrival order.
+Carry и declared-zero заданы policy и сохраняются как reduction evidence; интерполяции нет.
+Time-weighted использует integer value-microseconds с одним явно выбранным округлением в конце.
+Distinct — union retained opaque hex64 IDs, а не сумма partial counts; contribution rows сохраняют
+shared member при замене другого contributing fact (D19/D56; owner usage).
+
+Canonical snapshot digest содержит ровно algorithm, metric (с definition digest), scoped group,
+window, quantity, effective members, distinct, completeness и reproducibility. Scoped group включает
+seller/environment и grouping dimensions; это различает даже пустые окна разных продавцов.
+Не входят receivedAt, ingest sequence, DB ids, local clock, snapshot revision и predecessor digest.
+Snapshot ref выводится из digest. Membership и exact member contributions сохраняются вместе с
+результатом: digest один не считается доказательством после pruning. При отсутствии command key
+повтор freeze сравнивает content digest с head; optional command key добавляет stored platform replay
+и конфликт при изменённом payload (D13/D19/D23/D56; owner usage).
+
+DB adapter изолирует P4.2 table knowledge. Group selector содержит registered dimensions и frozen
+subject/customer/billing-account/component/agreement/revision/attribution-version/mapping/period refs.
+Fact identity внутри aggregation — canonical `[source,factId]`, без межисточниковых коллизий.
+Source sequence отсутствует в текущем wire и остаётся null; tie использует source/fact identity.
+Event instants с ненулевой sub-microsecond частью отказываются явно, без truncation billable meaning.
+Received time и добавленный `ingest_seq` только информативны. Progress сравнивает effective membership;
+max ingest sequence не является доказательством completeness или commit frontier (D13/D56; owner usage).
+
+Completeness строится только из source evidence: больший evidence sequence перекрашивает диапазон.
+Все required sources должны покрывать [start,end) статусом complete и source watermark должен достичь
+end+grace. Delayed/gap/dropped/retention_expired удерживают freeze; repair/replay refs видны в query.
+Retry exhaustion сообщает внешний collector. Без snapshot query не возвращает quantity; при lag/hold
+также не выдаёт устаревшее количество как готовое к booking. Accept-adjust создаёт новый immutable
+snapshot с predecessor исходного окна; reject/manual-review и запрет reopening сохраняют прежний head.
+Поздние факты не переносятся в следующий период; денежную correction выполняет P4.8
+(D56/D63; COV-200/216/218; owner usage).
+
+Exact-distinct policy фиксирует identity namespace, key version и shared/source-scoped cross-source
+identity. Adapter выдаёт только opaque hex64, а его provenance.version должен совпадать с declared
+identity key version. Смена normalization/key требует новой metric version; raw PII не принимается
+и не включается в ошибки. Shared объединяет одинаковые IDs разных sources; source-scoped включает
+source в идентичность. Member tables доступны controlled runtime, публичные queries не раскрывают IDs.
+Owner-only `billium_usage_erase_distinct_members(seller,environment,snapshot_ids)` обнуляет IDs и
+атомарно добавляет erased event, сохраняя immutable quantity/history. Erasure исходных P4.2 facts
+координируется retention/privacy policy владельца отдельно; оставшаяся monetary snapshot не означает
+recomputable membership. Erased/expired либо потерянные retained source inputs запрещают финансовый
+replay; participant также отказывается. Численные retention horizons и законность сохранения денежных
+снапшотов задаёт host owner policy, а не эвристика агрегатора (D13/D56/D59; owner usage).
+
+Rating владеет append-only `billium_rating_price_version`, tiers, commitment terms и tax snapshots.
+`billium_rating_price_publication` одновременно является scoped lock head и внутренним событием
+публикации; один root transaction фиксирует его вместе с версией и всеми terms. Ранг 44 следует
+за billing schedule и предшествует occurrence; unique seller/environment/price/version остаётся
+конечным арбитром. Deferred checks отказывают разрывы tiers и несовместимый commitment; runtime
+получает только SELECT/INSERT и UPDATE колонки head для row lock, но immutable trigger запрещает
+изменение. Tax evidence host разрешает до транзакции, rating фиксирует точную строку ставки,
+resolver и digests; ошибку или отсутствие ставки нулём не заменяет (D19/D22/D23/D27/D56/D63;
+owner rating).
+
+### Original-period corrections (D19/D27/D56/D63; owner rating/schedule/ledger, P4.8)
+
+Rating сохраняет frozen commercial terms и полный corrected basis с predecessor; денежный результат —
+разность с последним effective basis, а не сумма самостоятельного позднего потребления. При частичной
+отмене сохраняются host amendment и зарегистрированная дробь периода: `elapsed_seconds`,
+`local_calendar_days` или `none`. Вне зарегистрированной комбинации correction отказывается.
+Tax resolver вызывается до Tx, а versioned host policy и исходные налоговые evidence сохраняются во
+frozen inputs. Host публикует policy frontier в rating; correction проверяет его под lock перед записью.
+Digest correction frontier включает отсортированные usage snapshot digests и tax-policy evidence, поэтому
+изменение одного налога допускает новую correction при неизменном usage (D56/D63, Q4=b).
+
+Один root блокирует usage series → rating frontiers → original occurrence → ledger obligation/invoice/funds.
+Schedule participant регистрирует child и CAS собственной головы; rating пишет только свои basis, correction,
+booking и frontier. Положительная дельта создаёт отдельную obligation через ledger participant;
+отрицательная использует credit note с явной allocation-release policy и ожидает issued invoice;
+нулевая записывает lineage без ledger effect. Internal command outbox записывается в той же Tx.
+Оригинальная цена, occurrence и выпущенный invoice snapshot не переписываются; allocation и credit-note
+counters ledger обновляет согласно своим инвариантам. Это не PSP refund и не изменение продуктовой квоты
+(D12/D27/D56/D63, INV-09/INV-12; owners schedule/rating/ledger).
+
+Если отрицательная cumulative delta превышает кредитуемый остаток исходного obligation, rating
+распределяет её по исходному и затем child obligations в порядке revision. Для всех затронутых
+obligations требуется issued invoice; до этого correction удерживается. Ledger предварительно
+блокирует весь набор obligations, invoices и источников allocations и записывает credit notes в том
+же root, что и correction frontier. Выпущенные invoice content, lines и total неизменны; ledger-owned
+status и accounting counters могут изменяться (D60/D63, Q5=a, Q6=a; owners rating/ledger).

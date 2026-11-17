@@ -1,7 +1,8 @@
 # Billium — целевая архитектура
 
-Статус: решение PLAN1.P1.6 (2026-10-17). Нормативная основа — `docs/requirements.md` (REQ/INV),
-первичные факты — `plans/2026.10.14-№1-BILLIUM-V1/knowledge/research/DR-0*.md` (DR0N-NN), практики —
+Статус: исходное решение PLAN1.P1.6 (2026-10-17), уточнено D53–D63 (2026-10-24). Реализация отдельных частей P3/P4 описана в модели данных и разделах ниже; будущие потоки не считаются реализованными по одному наличию дизайна. Полнота и границы поставки — [design-coverage.md](design-coverage.md). Нормативная основа — `docs/requirements.md` (REQ/INV),
+первичные факты — `knowledge/research/DR-0*.md` плана `2026.10.14-№1-BILLIUM-V1`
+в [workspace](../planning.md) (DR0N-NN), практики —
 `artifacts/P1-methods/methods.json` (M-NN), решения — `decisions/D9.json`…`D28.json`. Модель данных и инварианты —
 [`data-model.md`](data-model.md); раскладка каталогов и freeze — `knowledge/target-structure.md` плана.
 
@@ -10,14 +11,12 @@ URL, датой и версией в DR-файле; непроверенное �
 
 ## Итог
 
-Billium строится как **собственное PHP-ядро с внутренними модулями** (build) и одной hybrid-областью —
-документы, где рендер и хранение подключаются портами. Ни один server engine аудита не становится
-основой: Lago требует коммерческой edition для ручных/частичных оплат и credit notes и закрыт по PSP
-(DR01-08, DR01-10, DR01-17), Kill Bill сериализует по account и хранит decimal major units (DR01-21,
-DR01-24), OpenMeter требует Kafka + ClickHouse и не даёт reserve (DR01-31, DR01-33). Все три —
-серверы, а канон требует лёгкий embedded-путь без сервера (REQ-PROF-02). Их паттерны взяты как идеи:
-operation/attempt и lookup-Janitor Kill Bill (DR01-20, DR01-23), семантика метрик OpenMeter (DR01-29,
-DR01-30), seller scoping Lago (DR01-11).
+Billium строится как **собственное PHP-ядро с внутренними модулями** и портами для внешних
+драйверов, документов, источников usage и интеграций. Выбор build сохраняет обязательный embedded-путь,
+единый PHP writer и существующие границы ответственности. Lago, Kill Bill и OpenMeter остаются
+архитектурными референсами и условными будущими адаптерами; их конкретные edition, лицензия,
+concurrency и recovery требуют отдельной квалификации при выборе backend. Исследовательское сравнение
+не является свидетельством готовой поддержки или обязательной зависимости (D53, D55, D58).
 
 ## Решения по областям
 
@@ -69,6 +68,63 @@ flowchart LR
 - Все денежные мутации проходят один pipeline: admission → claim идемпотентности → locks в
   глобальном порядке → запись → outbox → commit (M-55, D27).
 
+## Commercial periods: реализация P4.5
+
+P4.9: [module/provider/capability matrix and A–D proofs](optional-commercial-modules.md) separates the
+installation DAG from operation capabilities. Quote is pure without ledger; fixed schedule rating can
+omit usage; ledger booking does not require legal issue/render. Providers discover only enabled module
+migrations; strategy and metric roles resolve exact trusted versions with no implicit fallback
+(D13/D55/D56; owners core/usage/rating/schedule/ledger).
+
+`schedule` разрешает коммерческий календарь через
+`Billium\Schedule\Contracts\IntervalResolver::resolve(ScheduleRevisionTerms $terms, int $ordinal): ResolvedInterval`.
+Ordinal начинается с нуля и всегда считается от исходного `anchorLocal`, а не от предыдущей
+сокращённой границы: Jan31 → Feb28/29 → Mar31; yearly Feb29 → Feb28 → … → Feb29.
+`PeriodPolicy` задаёт IANA zone, month/year, intervalCount, endOfMonth, clamp_preserve_anchor,
+gap shift_forward/reject, fold earlier_offset/later_offset, charge timing и cutoffSeconds.
+Shift-forward сохраняет положение внутри gap (02:30 → 03:30 при часовом gap), fold выбирает
+ранний/поздний UTC instant. Cutoff — start минус явно заданные elapsed seconds; это граница
+приёма новых условий, не срок оплаты. Фиксированные 30 суток и неизвестная proration policy
+отказываются, не подменяют календарный месяц (D56; owner schedule).
+
+`AgreementRevisionCommit::preview` сохраняет quote с точными terms/period digests, [start,end) UTC,
+requested/resolved local boundaries, offsets, policy и tzdb marker. Даже при system tzdb marker
+сохранённые границы/offsets дают воспроизводимое evidence. Quote validity — [issuedAt,validUntil),
+validUntil не позже cutoff. Retry и commit читают эти границы, не считают их по текущей зоне или tzdb.
+`CommercialPeriods::fromQuote` экспортирует frozen `period.commercial.v1`: его согласованный wire
+профиль допускает intervalCount=1, shift_forward и earlier_offset. Другие явные resolver policies
+остаются типизированными внутренними terms и отказываются при таком экспорте; wire enum не расширяется
+молча (D56/D63; owner schedule/contracts).
+
+Commit принимает quoteRef/digest, expected host revision, cancellation generation и commandKey.
+Текущая host authority проверяется через `AgreementRevisionGuard` в root OperationRunner Tx до
+schedule lock; default guard отказывает. Host adapter обязан удерживать сериализацию с amendment/
+cancellation до commit без сети в Tx. Он проверяет exact approved terms, revision, generation и
+tombstone; Billium не читает host tables. Изменённый payload под тем же key — conflict.
+Компонентный head сериализует новые financial terms, не представляет вторую subscription FSM.
+Новая revision действует на будущей границе; timezone/anchor change требует reanchor_explicit.
+Pause не создаёт coverage; resume с preserve продолжает исходную anchor sequence, с reanchor_explicit
+принимает новую явную sequence. Midperiod/backdated change и замена уже committed interval отказываются
+с correction-required; P4.6 отдельно владеет supersession planned occurrences, а posted money меняется
+только linked correction (REQ-CON-33, REQ-NBR-06, INV-11/12, D12/D56; owner schedule).
+
+`AgreementRevisionCommit::coverage` возвращает seller/environment-scoped immutable
+`billium.schedule.coverage/1` с coverageRef, occurrenceRef, periodRef, period/evidence, fundingRevision,
+agreementRevision, priceVersionRef, monetaryTermsDigest и externalCorrelationRef. Identity зависит от
+seller/component/purpose/UTC interval в environment namespace, не от revision. Это versioned query,
+не новый публичный v1 outbox event и не payment/funding confirmation. Grant owner сам выбирает
+grant windows и свои dedupe keys. Годовое покрытие остаётся одним monetary occurrence при двенадцати
+внешних monthly grants; replay, reorder, поздний/неудачный grant или funding reversal не создают и
+не отзывают grants внутри Billium. Host amendment/cancellation — явный запрос финансовой коррекции,
+не неявная переоценка старой coverage. Obligation booking подключает следующий occurrence flow,
+не period resolver (REQ-OWN-02/03, REQ-OUT-01/02/10/11, REQ-ACC-20, D56; owner schedule/host).
+
+`ScheduleServiceProvider` подключается только при schedule в `billium.modules.enabled` и
+`billium.schedule.enabled=true`. Boot регистрирует migration path, без SQL/install/registry writes;
+host явно применяет migration stream и platform install/upgrade. Disabled/uninstalled fresh module
+не создаёт tables, workers, routes или registry rows. Historical receipt/query остаётся immutable;
+политика retention/purge задаётся отдельно (D55; owner schedule/platform).
+
 ## Профили embedded и server
 
 Профили поставки (CD-14) и профили authority исполнения — разные оси (REQ-PROF-06).
@@ -93,14 +149,30 @@ flowchart LR
    переключает старые операции (REQ-PROF-05, INV-02).
 3. Embedded и server — один код и одна схема; различаются составом модулей, не правилами расчёта
    (M-22). Лёгкий профиль не ослабляет инварианты (REQ-PROF-22).
-4. Где модуль execution включён (`remote-billium`, `standalone-billium`), хост или deployment реализует
-   порт `WriterAdmission` (SPI Implement): authority вне БД Billium выдаёт исключительный lease на
-   (`installation_ref`, incarnation), ротирует `writer_checkpoint` на каждый dispatch-пакет и принимает
-   `acquire`, `renew`, `release` с водяным знаком `commit_no` журнала `money_commit_log`: захват lease без
-   предшествующего `release` открывает recovery без отправок и collection до активации оператором, `commit_no`
-   копии ниже `released_commit_no` — quarantine; без адаптера execution не стартует, отказ — quarantine с
-   `billium.installation.quarantined` (INV-02, REQ-FAIL-15, D34, D39). В embedded — адаптер хоста, в server — сервис deployment; учётные данные authority
-   в БД не хранятся. В `embedded-commerz` execution выключен и порт не нужен.
+4. Где включён execution, хост/deployment реализует `WriterAdmission` от authority **вне**
+   копируемой БД и подтверждает остановку/изоляцию старых отправителей. Каждая смена deployment owner session,
+   restore, release/acquire или потеря непрерывного lease открывает recovery. `release` запечатывает
+   session после закрытия admission и drain; он не активирует recovery. Activation — отдельная
+   привилегированная команда с RetirementProof, reconciliation coverage и сертификатом выбранной
+   lineage/epoch. Равенство `max(commit_no)` не доказывает свежесть БД и не разрешает dispatch (D54,
+   заменяет D39 и закрывает перенесённый D42 design gap; runtime proof — P3/P5).
+5. В каждой root financial Tx `financial_session` держится FOR SHARE до commit; seal берёт FOR UPDATE.
+   Raw custody callback/response может продолжаться после seal, но old session не применяет финансовые
+   изменения. Recovery reducers работают с новым допущенным epoch. Уже отправленный запрос PSP
+   локальный fence не отзывает: pending/unknown сохраняет identity и reserve (D54, D57, D60).
+6. Manifest модулей валидирует зависимости и API/schema/event версии. Ledger может учитывать
+   obligation/payment/allocation без documents/render, collection или execution. Disable сохраняет
+   history/recovery, uninstall не выполняет purge; extraction нового пакета требует named consumer (D55).
+7. OwnerSession относится к deployment generation, а не к одному FPM/queue worker. Workers получают
+   краткоживущие host tokens и могут перезапускаться/масштабироваться внутри active session. Во всех
+   денежных профилях `FinancialSessionAdmission` хоста задаёт expected epoch/DB attachment вне backup;
+   execution дополнительно требует WriterAdmission. Contracts-only не требуют этих портов. Неконтролируемый
+   in-place rollback БД под живым deployment без host restore barrier не считается безопасным restore (D62).
+8. Server ledger-only с внешним исполнителем допускается без execution/collection/WriterAdmission;
+   денежные observations аутентифицируются по seller/environment/sourceAuthority. Это delivery=server
+   при external-owner semantics, а не новый wire executionProfile. Optional production Dart SDK при
+   отсутствии named consumer получает явную non-extraction диспозицию; обязательные transport tests
+   PHP/Dart не пропускаются и остальные фазы не блокируются (D61).
 
 ## Стек
 
@@ -119,8 +191,8 @@ flowchart LR
 - Денежный writer — только PostgreSQL ≥ 16: partial unique, `NOT VALID`, `SKIP LOCKED` и
   N-процессные доказательства (REQ-ACC-11, REQ-FAIL-29). SQLite для writer в 1.0 не поддерживается.
 - Внутренние деньги — bigint minor units + currency, exponent из версионированной таблицы ISO 4217
-  (D19, DR04-11). Money-библиотека PHP (MoneyPHP или Brick) выбирается в P2 прогоном fixtures
-  (CL-117, DR04-24); общего money-пакета нет (REQ-OUT-14).
+  (D19, DR04-11). В P2 принят Brick Money (D44); wire и cross-language fixtures остаются источником совместимости.
+  Общего money-пакета нет (REQ-OUT-14).
 
 ## Пакеты
 
@@ -165,10 +237,8 @@ server, Commerz, Tariffler, AiFina или конкретного драйвер�
 
 - `unverified`: concurrency vendor-схем не проверялась прогоном (DR01-39) — не влияет на build, но
   исключает «adopt по аналогии».
-- `unverified`: совместимость PHP-зависимостей с Laravel 13 подтверждена только manifest-ом (DR01-35,
-  DR03-04; CL-116) — composer resolver запускается в P2.
-- `unverified`: паритет MoneyPHP/Brick/`axioma_contracts` не прогонялся (DR04-24) — выбор библиотеки в
-  P2; до него спецификация MoneyWire опирается на ISO 4217 List One (DR04-11).
+- P2 завершил contracts/toolchain этап и выбрал Brick Money (D44); фактические результаты и
+  deviations сохранены в P2. Это не квалификация будущего core или реального PSP.
 - Открыто у провайдеров: ротация credentials (DR-02 DR02-T05), restore refund без ответа у
   CloudPayments (DR02-11), `uuid` при ошибке 33 АТОЛ (DR02-17) — драйверы и execution сохраняют
   provider ID до сети и не трактуют пустой lookup как absent (REQ-FAIL-08).

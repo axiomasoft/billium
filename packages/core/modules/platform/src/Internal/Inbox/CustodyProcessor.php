@@ -8,6 +8,7 @@ use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runner\OperationRunner;
 use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Exceptions\Runner\LockPlanChanged;
 use Billium\Platform\Contracts\Inbox\CustodyHandler;
 use Billium\Platform\Data\Inbox\CustodyDisposition;
@@ -51,6 +52,12 @@ final readonly class CustodyProcessor
         $db = $this->partitions->connection($context);
 
         $partition = $this->partitions->live($db, $e->channel, $e->sourceAuthority, $e->sellerRef, $e->environment, $e->partitionRef);
+        if ($partition === null && ($e->sourceSequence === 1 || $this->retiredNamespace($db, $e) || $this->bootstrapOpen($db, $e))) {
+            // Bootstrap can admit a partition at any sequence, including in a fresh namespace.
+            // Re-read under its admission lock while bootstrap is open or a retired partition exists.
+            $this->partitions->lockNamespace($db, $e->channel, $e->sourceAuthority, $e->sellerRef, $e->environment, $e->partitionRef);
+            $partition = $this->partitions->live($db, $e->channel, $e->sourceAuthority, $e->sellerRef, $e->environment, $e->partitionRef);
+        }
         if ($partition !== null) {
             $partition = $this->partitions->lock($context, $partition);
         } elseif ($e->sourceSequence === 1 && ! $this->bootstrapOpen($db, $e) && ! $this->retiredNamespace($db, $e)) {
@@ -60,6 +67,12 @@ final readonly class CustodyProcessor
                 $live = $this->partitions->live($db, $e->channel, $e->sourceAuthority, $e->sellerRef, $e->environment, $e->partitionRef);
                 $partition = $live === null ? throw new LockPlanChanged('Concurrent partition creation') : $this->partitions->lock($context, $live);
             }
+        }
+        if ($partition !== null) {
+            // An orphan may have committed after this partition's opening root scanned pre-partition custody.
+            // Reattach before replaying an identity so duplicates can hand the recovered tail to a new drain root.
+            $this->partitions->attachParkedGaps($db, $partition);
+            $partition = $this->partitions->find($db, $partition->id, $e->sellerRef, $e->environment) ?? throw new LogicException('Locked partition vanished');
         }
 
         $existing = $this->identity($db, $e);
@@ -113,7 +126,15 @@ final readonly class CustodyProcessor
         $db = $this->partitions->connection($context);
         $planned = $this->partitions->find($db, $partitionId, $caller->sellerRef, $caller->environment)
             ?? throw new ProblemException(ProblemCode::ReferenceUnknown, 'Unknown partition');
+        if (! in_array($planned->sourceAuthority, $caller->sourceAuthorities, true)) {
+            throw new ProblemException(ProblemCode::AuthDenied, 'The partition is outside the authenticated source scope');
+        }
         $partition = $this->partitions->lock($context, $planned);
+        if (! $partition->active()) {
+            return new CustodyResult(CustodyDisposition::Idle);
+        }
+        $this->partitions->attachParkedGaps($db, $partition);
+        $partition = $this->partitions->find($db, $partition->id, $caller->sellerRef, $caller->environment) ?? throw new LogicException('Locked partition vanished');
         if (! $partition->active()) {
             return new CustodyResult(CustodyDisposition::Idle);
         }
@@ -122,7 +143,12 @@ final readonly class CustodyProcessor
             WHERE partition_id = ? AND source_sequence = ? AND status IN ('ready', 'parked_gap')
             SQL, [$partition->id, $partition->accountedSequence + 1]);
 
-        return $record === null ? new CustodyResult(CustodyDisposition::Idle) : $this->apply($context, $db, $partition, $record, $handler);
+        if ($record === null) {
+            return new CustodyResult(CustodyDisposition::Idle);
+        }
+        InboxEnvelope::from($partition->channel, InboxRecords::payload($record))->authorize($caller);
+
+        return $this->apply($context, $db, $partition, $record, $handler);
     }
 
     /** Retries the earliest parked dependency of one operation; an earlier parked revision blocks a later one. */
@@ -136,6 +162,9 @@ final readonly class CustodyProcessor
         $db = $this->partitions->connection($context);
         $planned = $db->selectOne('SELECT * FROM public.billium_inbox_message WHERE id = ? AND seller_ref = ? AND environment = ?', [$inboxId, $caller->sellerRef, $caller->environment])
             ?? throw new ProblemException(ProblemCode::ReferenceUnknown, 'Unknown inbox message');
+        if (! in_array(Rows::string(Rows::field($planned, 'source_authority')), $caller->sourceAuthorities, true)) {
+            throw new ProblemException(ProblemCode::AuthDenied, 'The delivery is outside the authenticated source scope');
+        }
         $partitionId = Rows::field($planned, 'partition_id');
         if ($partitionId === null) {
             return new CustodyResult(CustodyDisposition::Idle, $inboxId, Rows::string(Rows::field($planned, 'status')));
@@ -148,6 +177,7 @@ final readonly class CustodyProcessor
         if ($record === null || Rows::field($record, 'status') !== 'parked_dependency') {
             return new CustodyResult(CustodyDisposition::Idle, $inboxId, $record === null ? null : Rows::string(Rows::field($record, 'status')));
         }
+        InboxEnvelope::from(Rows::string(Rows::field($record, 'channel')), InboxRecords::payload($record))->authorize($caller);
         $earlier = $this->earlierParked($db, $record);
         if ($earlier !== null) {
             return new CustodyResult(CustodyDisposition::ParkedDependency, $inboxId, 'parked_dependency', null, null, $earlier);
@@ -164,6 +194,32 @@ final readonly class CustodyProcessor
         }
 
         return $result;
+    }
+
+    /** @param  list<int>  $excludeInboxIds */
+    public function nextUnblockedDependency(string $channel, Caller $caller, array $excludeInboxIds = []): ?int
+    {
+        if ($caller->sourceAuthorities === []) {
+            return null;
+        }
+        $authorities = implode(',', array_fill(0, count($caller->sourceAuthorities), '?'));
+        $row = $this->partitions->defaultConnection()->selectOne(<<<SQL
+            SELECT m.id FROM public.billium_inbox_message m
+            WHERE m.seller_ref = ? AND m.environment = ? AND m.channel = ?
+              AND m.status = 'parked_dependency' AND m.park_kind = 'operation_revision' AND m.park_ref LIKE 'inbox:%'
+              AND m.partition_id IS NOT NULL
+              AND m.source_authority IN ({$authorities}) AND (m.payload->>'installationRef') = ?
+              AND NOT (m.id = ANY(?::bigint[]))
+              AND NOT EXISTS (
+                SELECT 1 FROM public.billium_inbox_message m2
+                WHERE m2.channel = m.channel AND m2.source_authority = m.source_authority
+                  AND m2.seller_ref = m.seller_ref AND m2.environment = m.environment AND m2.operation_ref = m.operation_ref
+                  AND m2.status = 'parked_dependency' AND m2.operation_revision < m.operation_revision AND m2.id <> m.id)
+            ORDER BY m.operation_revision, m.id LIMIT 1
+            SQL, [$caller->sellerRef, $caller->environment, $channel, ...$caller->sourceAuthorities,
+            $caller->installationRef, '{'.implode(',', $excludeInboxIds).'}']);
+
+        return $row === null ? null : Rows::int(Rows::field($row, 'id'));
     }
 
     private function apply(TransactionContext $context, Connection $db, PartitionRow $partition, mixed $record, CustodyHandler $handler): CustodyResult
@@ -190,6 +246,9 @@ final readonly class CustodyProcessor
     /** Records the handler's durable disposition of one delivery. */
     private function dispose(Connection $db, mixed $record, HandlerOutcome $outcome): CustodyResult
     {
+        if ($outcome->kind === HandlerOutcomeKind::Conflict && $outcome->reference === ProblemCode::AuthDenied->value) {
+            throw new ProblemException(ProblemCode::AuthDenied, 'The delivery is outside the authenticated source scope');
+        }
         $id = Rows::int(Rows::field($record, 'id'));
 
         return match ($outcome->kind) {
@@ -213,7 +272,8 @@ final readonly class CustodyProcessor
     private function parked(Connection $db, int $id, HandlerOutcome $outcome): CustodyResult
     {
         $db->update(<<<'SQL'
-            UPDATE public.billium_inbox_message SET status = 'parked_dependency', park_kind = ?, park_ref = ?, attempts = attempts + 1,
+            UPDATE public.billium_inbox_message SET status = 'parked_dependency', park_kind = ?, park_ref = ?,
+                attempts = CASE WHEN status = 'parked_dependency' THEN attempts ELSE attempts + 1 END,
                 next_attempt_at = now() + make_interval(secs => ?)
             WHERE id = ?
             SQL, [$outcome->dependencyKind, $outcome->reference, $this->retryBackoffSeconds, $id]);
@@ -274,7 +334,8 @@ final readonly class CustodyProcessor
         $partition = Rows::field($existing, 'partition_id');
 
         return new CustodyResult(CustodyDisposition::Duplicate, $id, $status, $result === null ? null : Rows::string($result),
-            in_array($status, ['ready', 'parked_gap'], true) && $partition !== null ? Rows::int($partition) : null);
+            in_array($status, ['ready', 'parked_gap'], true) && $partition !== null ? Rows::int($partition) : null,
+            retryInboxId: $status === 'parked_dependency' && $partition !== null ? ($this->earlierParked($db, $existing) ?? $id) : null);
     }
 
     private function identity(Connection $db, InboxEnvelope $e): mixed

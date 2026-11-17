@@ -1,0 +1,40 @@
+{
+  "id": "usage/contracts/aggregate-unknown-field",
+  "description": "P4 contract/unsupported boundary; algorithm cases freeze expected output and do not claim a runtime calculation.",
+  "spec_refs": [
+    "BC-ENV-33",
+    "BC-ENV-34",
+    "BC-ENV-35",
+    "BC-ENV-36",
+    "BC-ENV-37",
+    "BC-ENV-38",
+    "BC-ENV-39",
+    "BC-ENV-40",
+    "BC-ENV-41",
+    "BC-ENV-42",
+    "BC-ENV-43",
+    "BC-ENV-44",
+    "BC-CNF-16",
+    "D56"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"usage.aggregate.v1\",\"snapshotRef\":\"aggregate-1\",\"sellerRef\":\"seller-1\",\"metricRef\":\"api_calls\",\"metricVersion\":\"api_calls/1\",\"metricDigest\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\",\"unit\":\"call\",\"attribution\":{\"customerRef\":\"original-customer\",\"billingAccountRef\":\"original-account\",\"subjectRef\":\"subject-1\",\"componentRef\":\"component-1\",\"agreementRef\":\"agreement-1\",\"agreementRevision\":1,\"attributionVersion\":\"host_snapshot/1\",\"effectiveAt\":\"2026-10-01T00:00:00Z\"},\"grouping\":[{\"name\":\"region\",\"value\":\"eu\"}],\"window\":{\"start\":\"2026-10-01T00:00:00Z\",\"end\":\"2026-11-01T00:00:00Z\"},\"effectiveRevision\":1,\"sourceFrontier\":[{\"source\":\"tariffler\",\"partition\":\"p1\",\"throughSequence\":3,\"effectiveRevisionDigest\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\"}],\"completeness\":{\"watermark\":\"2026-11-01T00:00:00Z\",\"status\":\"final\",\"policy\":\"source_frontier/1\"},\"sourceDigest\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\",\"model\":{\"id\":\"additive_sum\",\"version\":1},\"quantity\":\"12.000000001\",\"billableStream\":{\"mode\":\"normalized_net_billable\",\"policy\":\"exclusive_commercial_basis/1\",\"commercialBasisRef\":\"commercial-units-1\",\"normalizationRef\":\"net-overage-1\"},\"unexpected\":true,\"digest\":\"sha256:623093876c6ad64e58e375009d170ca967ab3a9320251fbe5c2dd4080825fcc1\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

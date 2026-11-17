@@ -51,6 +51,17 @@ envelopes, `ERR` — ошибки, `EVT` — события и receipts, `CNF` �
 | `billium.feed.selection.v1` | `schema/feed/selection.v1.json` | pinned подписка (D63) |
 | `billium.feed.page.v1` | `schema/feed/page.v1.json` | страница safe feed (D52, D63) |
 | `billium.feed.bootstrap.v1` | `schema/feed/bootstrap.v1.json` | snapshot с retention pin (D60, D63) |
+| `usage.metric.v1` | `schema/usage/metric.v1.json` | immutable MetricVersion (D56) |
+| `usage.fact.v2` | `schema/usage/fact.v2.json` | immutable attribution command (D13, D56) |
+| `usage.receipt.v2` | `schema/usage/receipt.v2.json` | closed acceptance receipt (D56) |
+| `usage.aggregate.v1` | `schema/usage/aggregate.v1.json` | AggregateSnapshot (D56) |
+| `usage.quantity.v1` | `schema/usage/quantity.v1.json` | host-approved QuantitySnapshot (D56) |
+| `rating.price.v1` | `schema/rating/price.v1.json` | immutable PriceVersion (D56) |
+| `period.commercial.v1` | `schema/period/commercial.v1.json` | persisted calendar period (D12, D56) |
+| `rating.basis.v1` | `schema/rating/basis.v1.json` | RatedBasis independent of payment/invoice (D56) |
+| `occurrence.ensure.v2` | `schema/occurrence/ensure.v2.json` | frozen commercial period (D12, D56) |
+| `obligation.prepare.v2` | `schema/obligation/prepare.v2.json` | frozen RatedBasis (D56) |
+| `occurrence.no_charge.v1` | `schema/occurrence/no-charge.v1.json` | explicit no-charge receipt (D56) |
 
 Общие узлы: `schema/common/defs.json` (идентификаторы, время, digest, все перечисления),
 `schema/common/money-wire.json`, `schema/problem/problem.json`. Формат conformance:

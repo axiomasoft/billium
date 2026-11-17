@@ -370,7 +370,9 @@ def payload_schema_errors(modules: list[dict], root: Path) -> list[str]:
 
 
 def frozen_identities(root: Path = ROOT) -> tuple[set[str], set[str]]:
-    types = set(json.loads((root / "spec/identities/snapshots/event-type.json").read_text(encoding="utf-8")))
+    # The identity snapshot includes events from every envelope revision; v1 stays closed.
+    definitions = json.loads((root / "spec/revisions/2026-10/schema/common/defs.json").read_text(encoding="utf-8"))
+    types = set(definitions["$defs"]["eventType"]["enum"])
     envelopes = set(json.loads((root / "spec/identities/snapshots/envelope.json").read_text(encoding="utf-8")))
     return types, envelopes
 

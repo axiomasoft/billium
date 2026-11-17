@@ -13,6 +13,12 @@ use PHPUnit\Framework\Attributes\Group;
 #[Group('pg')]
 final class FeedRecoveryQueriesTest extends PlatformTestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->callers->set(new Caller('seller-a', 'test', self::INSTALLATION, 'actor', ['authority-a', 'authority-b']));
+    }
+
     public function test_recovery_metadata_is_scoped_to_the_caller_channel_authority_and_partition(): void
     {
         $this->owner()->insert(<<<'SQL'
@@ -39,8 +45,43 @@ final class FeedRecoveryQueriesTest extends PlatformTestCase
         }
         self::assertFalse($this->read('authority-b', 'part-1')['recoveryRequired']);
         self::assertFalse($this->read('authority-a', 'part-2')['recoveryRequired']);
-        $this->callers->set(new Caller('seller-other', 'test', self::INSTALLATION, 'actor'));
+        $this->callers->set(new Caller('seller-other', 'test', self::INSTALLATION, 'actor', ['authority-a', 'authority-b']));
         self::assertSame(['recoveryRequired' => false, 'bootstrapStatus' => 'not_started', 'snapshots' => []], $this->read());
+    }
+
+    public function test_recovery_metadata_stays_visible_regardless_of_caller_source_authorities(): void
+    {
+        $this->owner()->insert(<<<'SQL'
+            INSERT INTO billium_feed_partition(channel,source_authority,source_lineage,seller_ref,environment,partition_ref,state)
+            VALUES ('observations','authority-a','L1','seller-a','test','part-1','recovery_required'),
+                   ('observations','authority-b','L1','seller-a','test','part-1','recovery_required'),
+                   ('observations','authority-a','L1','seller-b','test','part-1','recovery_required'),
+                   ('observations','authority-a','L1','seller-a','live','part-1','recovery_required'),
+                   ('events','authority-a','L1','seller-a','test','part-1','recovery_required')
+            SQL);
+        $this->bootstrap('seller-a', 'test');
+        $this->bootstrap('seller-b', 'test');
+        $this->bootstrap('seller-a', 'live');
+
+        foreach ([['authority-a'], ['authority-b'], ['authority-a', 'authority-b'], []] as $authorities) {
+            $this->callers->set(new Caller('seller-a', 'test', self::INSTALLATION, 'actor', $authorities));
+            foreach ([null, 'authority-a', 'authority-b', 'authority-unknown'] as $selector) {
+                $visible = $selector === null ? ['authority-a', 'authority-b'] : ($selector === 'authority-unknown' ? [] : [$selector]);
+                $hasBootstrap = in_array('authority-a', $visible, true);
+                $result = $this->read($selector, 'part-1');
+
+                self::assertSame($visible !== [], $result['recoveryRequired']);
+                self::assertSame($hasBootstrap ? 'loading' : 'not_started', $result['bootstrapStatus']);
+                self::assertCount(count($visible) + ($hasBootstrap ? 1 : 0), $result['snapshots']);
+                foreach ($result['snapshots'] as $snapshot) {
+                    $payload = self::arr($snapshot['payload']);
+                    self::assertContains($payload['source_authority'], $visible);
+                    self::assertSame('seller-a', $payload['seller_ref']);
+                    self::assertSame('test', $payload['environment']);
+                    self::assertSame('observations', $payload['channel']);
+                }
+            }
+        }
     }
 
     public function test_reader_stays_on_the_supplied_repeatable_read_snapshot(): void

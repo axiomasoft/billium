@@ -6,12 +6,16 @@ namespace Billium\Ledger\Tests\Feature;
 
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Tests\Support\ObservationFactory;
 use Billium\Ledger\Data\Allocations\ReallocatePayment;
 use Billium\Ledger\Data\Allocations\ReallocationMode;
 use Billium\Ledger\Data\Obligations\AdjustObligation;
+use Billium\Ledger\Internal\Observation\ObservationHandler;
 use Billium\Ledger\Tests\Queries\QueryTestCase;
 use Billium\Platform\Contracts\Feed\EventFeed;
+use Billium\Platform\Contracts\Feed\FeedPartitions;
 use Billium\Platform\Data\Feed\FeedScope;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -30,6 +34,36 @@ final class AuthorityScopedPaymentsTest extends QueryTestCase
             $this->observe(ObservationFactory::charge('same-payment', 1, 1600 + $index * 1900,
                 fields: ['sourceAuthority' => $authority, 'businessIntentRef' => 'intent-'.$suffix]));
         }
+    }
+
+    public function test_wire_refund_authorization_selects_each_authority_with_the_same_payment_ref(): void
+    {
+        $this->sources();
+        foreach (self::SOURCES as $index => $authority) {
+            foreach ([[], ['amount' => '16.00']] as $amount) {
+                $wire = $this->queries()->dispatch(self::request('refundAuthorization',
+                    ['paymentRef' => 'same-payment', 'sourceAuthority' => $authority, ...$amount]));
+                $advice = self::arr($wire['result']);
+                self::assertSame($index === 0 ? '16.00' : '35.00', self::arr($advice['normalCapacity'])['amount']);
+                self::assertSame($amount['amount'] ?? ($index === 0 ? '16.00' : '35.00'), self::arr($advice['requested'])['amount']);
+                self::assertSame($index === 0 ? '10.00' : ($amount === [] ? '20.00' : '1.00'), self::arr($advice['requiredReallocation'])['amount']);
+                self::assertTrue($advice['allowed']);
+            }
+        }
+        self::problem(ProblemCode::ValidationInvalid, fn () => $this->queries()->dispatch(
+            self::request('refundAuthorization', ['paymentRef' => 'same-payment'])));
+    }
+
+    public function test_wire_refund_authorization_never_falls_back_to_another_authority(): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $this->observe(ObservationFactory::charge('same-payment', 1, 1600));
+
+        self::problem(ProblemCode::ReferenceUnknown, fn () => $this->queries()->dispatch(self::request('refundAuthorization',
+            ['paymentRef' => 'same-payment', 'sourceAuthority' => 'remote-billium'])));
+        $wire = $this->queries()->dispatch(self::request('refundAuthorization', ['paymentRef' => 'same-payment']));
+        self::assertSame('16.00', self::arr(self::arr($wire['result'])['normalCapacity'])['amount']);
     }
 
     public function test_each_authority_reads_its_applied_projection_receipts_and_bootstrap_snapshot(): void
@@ -151,5 +185,70 @@ final class AuthorityScopedPaymentsTest extends QueryTestCase
         self::assertSame(0, $this->rows('billium_observation_park', 'released_at IS NULL'));
         self::assertSame('refund-detail:remote-billium:refund-b#1', $this->value("SELECT receipt_ref FROM billium_allocation_receipt WHERE kind='refund_detail'"));
         self::assertSame('account-a', $this->value("SELECT billing_account_ref FROM billium_observed_payment WHERE operation_ref='refund-b' AND source_authority='remote-billium'"));
+    }
+
+    public function test_only_the_authenticated_source_can_retry_a_parked_remote_charge(): void
+    {
+        $this->debt('o1', 1000);
+        $charge = ObservationFactory::charge('remote-charge', 1, 1000, fields: ['sourceAuthority' => 'remote-billium']);
+        self::assertSame(ProblemCode::ObservationParked->value, $this->tryObserve($charge));
+        $inbox = $this->row('SELECT * FROM billium_inbox_message WHERE external_event_id=?', [self::eventId($charge)]);
+        $parks = $this->table('SELECT * FROM billium_observation_park');
+        self::assertSame('parked_dependency', $inbox['status']);
+        self::assertCount(1, $parks);
+        self::assertNull($parks[0]['released_at']);
+        $this->intent('intent-a', ['o1']);
+        $partition = $this->partition();
+        $feed = $this->application()->make(FeedPartitions::class);
+        $handler = $this->application()->make(ObservationHandler::class);
+
+        foreach ([['embedded-commerz'], []] as $authorities) {
+            $this->callers->set(new Caller('seller-a', 'test', self::INSTALLATION, 'actor-1', $authorities));
+            self::assertSame([], $this->drainer()->retryParked());
+            self::problem(ProblemCode::AuthDenied, fn () => $this->drainer()->root(
+                fn (TransactionContext $context) => $feed->drain($context, self::integer($partition['id']), $handler)));
+            self::problem(ProblemCode::AuthDenied, fn () => $this->drainer()->root(
+                fn (TransactionContext $context) => $feed->retryDependency($context, self::integer($inbox['id']), $handler)));
+            self::assertSame($inbox, $this->row('SELECT * FROM billium_inbox_message WHERE id=?', [$inbox['id']]));
+            self::assertSame($parks, $this->table('SELECT * FROM billium_observation_park'));
+            self::assertSame($partition, $this->partition());
+        }
+        $this->callers->set(new Caller('seller-a', 'test', 'another-installation', 'actor-1', ['remote-billium']));
+        self::assertSame([], $this->drainer()->retryParked());
+        self::assertSame($parks, $this->table('SELECT * FROM billium_observation_park'));
+
+        $this->callers->set(new Caller('seller-a', 'test', self::INSTALLATION, 'actor-1', ['remote-billium']));
+        self::assertSame(['applied'], $this->drainer()->retryParked());
+        self::assertSame('applied', $this->inboxStatus(self::eventId($charge)));
+        self::assertSame(1000, $this->allocated('o1'));
+        self::assertSame(0, $this->rows('billium_observation_park', 'released_at IS NULL'));
+    }
+
+    public function test_bootstrap_park_retries_are_scoped_to_installation_and_source(): void
+    {
+        $this->debt('o1', 1000);
+        $charge = ObservationFactory::charge('remote-bootstrap', 1, 1000, fields: ['sourceAuthority' => 'remote-billium']);
+        $this->bootstrapper()->execute($this->snapshot('remote-bootstrap', 'L1', 1, [$charge], authority: 'remote-billium'));
+        $parks = $this->table('SELECT * FROM billium_observation_park');
+        self::assertCount(1, $parks);
+        self::assertNull($parks[0]['inbox_id']);
+        self::assertNull($parks[0]['released_at']);
+        $this->intent('intent-a', ['o1']);
+
+        foreach ([
+            new Caller('seller-a', 'test', self::INSTALLATION, 'actor-1', ['embedded-commerz']),
+            new Caller('seller-a', 'test', self::INSTALLATION, 'actor-1', []),
+            new Caller('seller-a', 'test', 'another-installation', 'actor-1', ['remote-billium']),
+        ] as $caller) {
+            $this->callers->set($caller);
+            self::assertSame([], $this->drainer()->retryParked());
+            self::assertSame($parks, $this->table('SELECT * FROM billium_observation_park'));
+            self::assertSame(0, $this->allocated('o1'));
+        }
+
+        $this->callers->set(new Caller('seller-a', 'test', self::INSTALLATION, 'actor-1', ['remote-billium']));
+        self::assertSame(['applied'], $this->drainer()->retryParked());
+        self::assertSame(1000, $this->allocated('o1'));
+        self::assertSame(0, $this->rows('billium_observation_park', 'released_at IS NULL'));
     }
 }

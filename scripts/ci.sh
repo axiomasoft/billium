@@ -35,6 +35,8 @@ layer_lint() {
     need_tool python3
     need_path "$SPEC_REV_DIR/schema"
     python3 scripts/spec/lint.py "$SPEC_REV_DIR"
+    python3 -m unittest discover -s scripts/spec/tests -p test_workspace.py
+    python3 -m unittest discover -s scripts/spec/tests -p test_spec_tools.py
     need_path scripts/spec/lint-vectors.py
     python3 -m unittest discover -s scripts/spec/tests -p test_lint_vectors.py
     python3 scripts/spec/lint-vectors.py
