@@ -29,6 +29,6 @@ final class BilliumSchemaMigratorTest extends DatabaseTestCase
         self::assertSame([], $byId['axiomasoft/billium-core:billium-platform']->pending);
         self::assertSame([], $byId['axiomasoft/billium-core:billium-ledger']->pending);
         self::assertCount(16, $byId['axiomasoft/billium-core:billium-platform']->applied);
-        self::assertCount(9, $byId['axiomasoft/billium-core:billium-ledger']->applied);
+        self::assertCount(10, $byId['axiomasoft/billium-core:billium-ledger']->applied);
     }
 }
