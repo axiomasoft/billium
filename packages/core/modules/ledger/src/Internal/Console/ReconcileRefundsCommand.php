@@ -6,9 +6,11 @@ namespace Billium\Ledger\Internal\Console;
 
 use Billium\Ledger\Internal\Observation\RefundReconciler;
 use Illuminate\Console\Command;
+use Packman\Attributes\Internal;
 use Throwable;
 
 /** D48 reconcile job: compares the D41 charge refund basis with refund details after the consistency window. */
+#[Internal]
 final class ReconcileRefundsCommand extends Command
 {
     protected $signature = 'billium:ledger:reconcile-refunds {--limit=100 : Charges to compare} {--after= : Consistency window in seconds (default: config)}';
@@ -19,8 +21,8 @@ final class ReconcileRefundsCommand extends Command
     {
         $limit = $this->option('limit');
         $after = $this->option('after');
-        if (! is_scalar($limit) || ! ctype_digit((string) $limit) || (int) $limit < 1 || (int) $limit > 1000
-            || ($after !== null && (! is_scalar($after) || ! ctype_digit((string) $after)))) {
+        if (! ctype_digit($limit) || (int) $limit < 1 || (int) $limit > 1000
+            || ($after !== null && ! ctype_digit($after))) {
             $this->error('limit must be between 1 and 1000 and after a nonnegative number of seconds');
 
             return self::FAILURE;

@@ -12,8 +12,10 @@ use Billium\Platform\Data\Feed\FeedPosition;
 use Billium\Platform\Data\Feed\FeedScope;
 use JsonException;
 use LogicException;
+use Packman\Attributes\Internal;
 
 /** D63: HMAC key comes from the host app key (or explicit feed signing key), never the copied database. */
+#[Internal]
 final readonly class FeedTokens
 {
     public function __construct(private string $key)

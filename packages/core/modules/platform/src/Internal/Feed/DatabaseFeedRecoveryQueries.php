@@ -5,13 +5,15 @@ declare(strict_types=1);
 namespace Billium\Platform\Internal\Feed;
 
 use Billium\Contracts\Contracts\Codec;
-use Billium\Core\Contracts\CallerContext;
-use Billium\Platform\Contracts\FeedRecoveryQueries;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Platform\Contracts\Feed\FeedRecoveryQueries;
 use Billium\Platform\Internal\Installation\Rows;
 use Illuminate\Database\DatabaseManager;
 use LogicException;
+use Packman\Attributes\Internal;
 
 /** D45/D60: consumers receive scoped metadata; table access stays with platform on the supplied snapshot connection. */
+#[Internal]
 final readonly class DatabaseFeedRecoveryQueries implements FeedRecoveryQueries
 {
     public function __construct(private DatabaseManager $databases, private CallerContext $callers) {}

@@ -17,6 +17,7 @@ use PHPUnit\Framework\Attributes\Group;
  * path. No automatic refund, charge or collection is created.
  */
 #[Group('D60')]
+#[Group('pg')]
 final class ExceptionalExposureTest extends ObservationTestCase
 {
     use OverRefundVector;

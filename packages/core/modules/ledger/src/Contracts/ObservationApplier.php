@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace Billium\Ledger\Contracts;
 
-use Billium\Contracts\Attributes\Api;
-use Billium\Contracts\Attributes\Spi;
-use Billium\Contracts\Attributes\SpiKind;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Ledger\Data\AllocationReceipt;
+use Billium\Ledger\Data\Allocations\AllocationReceipt;
+use Packman\Attributes\Spi;
+use Packman\Attributes\SpiKind;
 
 /**
  * applyPaymentObservation (REQ-CON-13, REQ-OWN-11, D28, D41, D46, D60): one authenticated payment.observation.v1 delivery
@@ -19,8 +18,7 @@ use Billium\Ledger\Data\AllocationReceipt;
  * A transport ACK of custody is not a business receipt (INV-08): a parked, held-for-recovery or quarantined delivery
  * stays in custody, and the refusal is thrown only after that custody committed (D31).
  */
-#[Api]
-#[Spi(SpiKind::Call)]
+#[Spi(kind: SpiKind::Call, since: '1.0')]
 interface ObservationApplier
 {
     /**

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Billium\Contracts\Contracts;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Contracts\Data\Envelope;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Data\Problem;
@@ -14,12 +13,13 @@ use Billium\Contracts\Internal\Jcs;
 use Billium\Contracts\Internal\Json;
 use Billium\Contracts\Internal\SchemaValidator;
 use Billium\Contracts\Internal\Spec;
+use Packman\Attributes\Api;
 use stdClass;
 
 /**
  * Strict decode and canonical encode of the envelopes of the spec revision, plus the digest of D32.
  */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class Codec
 {
     /** @param list<string>|null $supportedSchemas Explicit client capabilities; null uses this generated revision. */

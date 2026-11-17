@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Tests\Inbox;
 
-use Billium\Core\Data\Caller;
-use Billium\Platform\Contracts\FeedRecoveryQueries;
+use Billium\Core\Data\Runtime\Caller;
+use Billium\Platform\Contracts\Feed\FeedRecoveryQueries;
 use Billium\Platform\Tests\PlatformTestCase;
 use LogicException;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class FeedRecoveryQueriesTest extends PlatformTestCase
 {
     public function test_recovery_metadata_is_scoped_to_the_caller_channel_authority_and_partition(): void

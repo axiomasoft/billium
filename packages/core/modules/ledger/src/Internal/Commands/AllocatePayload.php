@@ -9,12 +9,14 @@ use Billium\Contracts\Data\Currency;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Ledger\Data\BillingAccountScope;
+use Billium\Ledger\Data\Runtime\BillingAccountScope;
+use Packman\Attributes\Internal;
 
 /**
  * Shape validation (D31 none policy, before any claim) and the semantic digest of the allocation-family commands.
  * The command key never enters the digest: the business identity replays under any key, a changed payload conflicts.
  */
+#[Internal]
 final class AllocatePayload
 {
     /** @param array<string, mixed> $values */

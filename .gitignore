@@ -18,6 +18,7 @@
 .swissknifeman/terminal-admission/
 .swissknifeman/state/
 .swissknifeman/orch/
+.swissknifeman/orch-artifacts/
 .swissknifeman/instruction-adopt/
 plans/*/.plan-cache/
 plans/*/artifacts/**/*.jsonl

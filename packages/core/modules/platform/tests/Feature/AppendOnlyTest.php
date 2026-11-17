@@ -6,7 +6,7 @@ namespace Billium\Platform\Tests\Feature;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Data\Receipt;
+use Billium\Core\Data\Runner\Receipt;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Platform\Tests\PlatformTestCase;
 use PHPUnit\Framework\Attributes\Group;
@@ -14,6 +14,7 @@ use PHPUnit\Framework\Attributes\Group;
 /** billium_append_only() and the guarded platform tables reject history rewrites even from the schema owner. */
 #[Group('D54')]
 #[Group('D55')]
+#[Group('pg')]
 final class AppendOnlyTest extends PlatformTestCase
 {
     public function test_append_only_tables_reject_update_and_delete(): void

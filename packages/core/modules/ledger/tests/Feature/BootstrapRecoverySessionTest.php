@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Billium\Ledger\Tests\Feature;
 
 use Billium\Contracts\Enums\ProblemCode;
-use Billium\Core\Enums\FinancialMode;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
 use Billium\Core\Tests\Support\ObservationFactory;
 use Billium\Ledger\Tests\Observation\ObservationTestCase;
@@ -18,6 +18,7 @@ use PHPUnit\Framework\Attributes\Group;
  * idempotent, with an empty or a populated held tail.
  */
 #[Group('PF-14')]
+#[Group('pg')]
 final class BootstrapRecoverySessionTest extends ObservationTestCase
 {
     public function test_a_recovery_bootstrap_drains_the_held_tail_and_repeats_idempotently(): void
@@ -28,8 +29,8 @@ final class BootstrapRecoverySessionTest extends ObservationTestCase
         $this->recoverySession();
         $restored = ObservationFactory::charge('op-1', 2, 2500, sequence: 2, fields: ['sourceLineage' => 'L2']);
         $tail = ObservationFactory::charge('op-1', 3, 3000, sequence: 3, fields: ['sourceLineage' => 'L2']);
-        self::assertSame(ProblemCode::RecoveryRequired->value, $this->attempt($restored));
-        self::assertSame(ProblemCode::RecoveryRequired->value, $this->attempt($tail));
+        self::assertSame(ProblemCode::RecoveryRequired->value, $this->tryObserve($restored));
+        self::assertSame(ProblemCode::RecoveryRequired->value, $this->tryObserve($tail));
         $snapshot = $this->snapshot('boot-recovery', 'L2', 2, [$restored]);
 
         $status = $this->bootstrapper()->execute($snapshot, FinancialMode::Recovery);

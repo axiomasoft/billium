@@ -4,20 +4,22 @@ declare(strict_types=1);
 
 namespace Billium\Ledger\Internal\Commands;
 
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Ledger\Data\IssueInvoice;
-use Billium\Ledger\Data\LedgerReceipt;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Ledger\Data\Invoices\IssueInvoice;
+use Billium\Ledger\Data\Runtime\LedgerReceipt;
 use Billium\Ledger\Internal\Repositories\InvoiceRepository;
-use Billium\Platform\Contracts\Outbox;
-use Billium\Platform\Data\OutboxEvent;
+use Billium\Platform\Contracts\Outbox\Outbox;
+use Billium\Platform\Data\Outbox\OutboxEvent;
 use DateTimeImmutable;
 use Illuminate\Support\Str;
 use LogicException;
+use Packman\Attributes\Internal;
 
 /**
  * draft → issued with the derived payment status in the same Tx. The public root passes no legal reference (D49);
  * P6 supplies it through LedgerParticipants::issueInvoice in the same root Tx.
  */
+#[Internal]
 final readonly class IssueInvoiceCommand
 {
     public function __construct(private InvoiceRepository $repository, private Outbox $outbox) {}

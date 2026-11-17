@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace Billium\Core\Internal\Modules;
 
 use InvalidArgumentException;
+use Packman\Attributes\Internal;
 
 /**
  * Strict reader of decoded JSON: unknown, missing or mistyped members fail loudly, so an incomplete or
  * foreign manifest never reaches money admission (COV-301..308).
  */
+#[Internal]
 final class Shape
 {
     /**

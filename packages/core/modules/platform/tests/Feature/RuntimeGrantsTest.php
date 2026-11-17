@@ -4,17 +4,19 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Tests\Feature;
 
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Receipt;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\Receipt;
 use Billium\Core\Tests\TestEnvironment;
-use Billium\Platform\Contracts\Outbox;
-use Billium\Platform\Data\OutboxEvent;
+use Billium\Platform\Contracts\Outbox\Outbox;
+use Billium\Platform\Data\Outbox\OutboxEvent;
 use Billium\Platform\Internal\Installation\RuntimeGrants;
 use Billium\Platform\Tests\PlatformTestCase;
 use DateTimeImmutable;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Testing\PendingCommand;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class RuntimeGrantsTest extends PlatformTestCase
 {
     protected function defineEnvironment($app): void

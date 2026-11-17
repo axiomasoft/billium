@@ -17,6 +17,7 @@ use PHPUnit\Framework\Attributes\Group;
 use RuntimeException;
 
 #[Group('ACC-RST-06')]
+#[Group('pg')]
 final class FeedPruneBootstrapTest extends OutboxTestCase
 {
     public function test_pruned_old_cursor_requires_bootstrap_and_retains_the_complete_tail(): void

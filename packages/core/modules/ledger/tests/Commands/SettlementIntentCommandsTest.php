@@ -6,10 +6,12 @@ namespace Billium\Ledger\Tests\Commands;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Ledger\Data\DeclareSettlementIntent;
+use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
 use PDOException;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class SettlementIntentCommandsTest extends LedgerTestCase
 {
     public function test_ordered_intent_replays_and_different_order_conflicts(): void

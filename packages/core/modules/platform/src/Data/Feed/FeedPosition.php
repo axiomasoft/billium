@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Data\Feed;
 
-use Billium\Contracts\Attributes\Api;
 use InvalidArgumentException;
+use Packman\Attributes\Api;
 
 /** D52: decimal strings preserve xid8 and bigint exactly in PHP/Dart/wire clients. */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class FeedPosition
 {
     public function __construct(public string $txId = '0', public string $id = '0')

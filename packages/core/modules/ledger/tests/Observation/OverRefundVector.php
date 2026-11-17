@@ -6,8 +6,8 @@ namespace Billium\Ledger\Tests\Observation;
 
 use Billium\Contracts\Data\Money;
 use Billium\Core\Tests\Support\ObservationFactory;
-use Billium\Ledger\Data\Allocate;
-use Billium\Ledger\Data\AllocationReceipt;
+use Billium\Ledger\Data\Allocations\Allocate;
+use Billium\Ledger\Data\Allocations\AllocationReceipt;
 
 /**
  * The D57/D60 exceptional-exposure vector (observation-apply 7, Opus F01/F05/F07/F11 under D62): one source charge is

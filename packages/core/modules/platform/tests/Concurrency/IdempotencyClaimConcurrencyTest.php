@@ -12,6 +12,7 @@ use PHPUnit\Framework\Attributes\Group;
 /** INV-05 under real processes: the claim is an atomic first write, never check-then-insert (M-53, D51). */
 #[Group('INV-05')]
 #[Group('REQ-ACC-11')]
+#[Group('pg')]
 final class IdempotencyClaimConcurrencyTest extends PlatformTestCase
 {
     protected function setUp(): void

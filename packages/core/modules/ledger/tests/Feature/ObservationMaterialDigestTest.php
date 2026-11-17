@@ -21,6 +21,7 @@ use stdClass;
  * effect; the same revision with another economic snapshot is quarantined, while the original stays untouched.
  */
 #[Group('D60')]
+#[Group('pg')]
 final class ObservationMaterialDigestTest extends ObservationTestCase
 {
     public function test_the_material_digest_ignores_custody_metadata_and_covers_every_economic_field(): void
@@ -78,10 +79,10 @@ final class ObservationMaterialDigestTest extends ObservationTestCase
         $this->observe($original);
 
         $state = ObservationFactory::with($original, ['eventId' => (string) Str::ulid(), 'sourceSequence' => 2, 'state' => 'pending']);
-        self::assertSame(ProblemCode::ObservationConflict->value, $this->attempt($state));
+        self::assertSame(ProblemCode::ObservationConflict->value, $this->tryObserve($state));
         // The same event identity with another transport digest is preserved apart and refused as well (REQ-FAIL-04).
         $sameEvent = ObservationFactory::with($original, ['capturedTotal' => 700, 'authorizedTotal' => 700, 'requested' => 700]);
-        self::assertSame(ProblemCode::ObservationConflict->value, $this->attempt($sameEvent));
+        self::assertSame(ProblemCode::ObservationConflict->value, $this->tryObserve($sameEvent));
 
         self::assertSame(600, $this->allocated('o1'));
         self::assertSame(1, $this->rows('billium_inbox_conflict'));

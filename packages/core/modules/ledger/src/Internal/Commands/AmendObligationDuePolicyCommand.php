@@ -4,16 +4,18 @@ declare(strict_types=1);
 
 namespace Billium\Ledger\Internal\Commands;
 
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Ledger\Data\AmendObligationDuePolicy;
-use Billium\Ledger\Data\LedgerReceipt;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Ledger\Data\Obligations\AmendObligationDuePolicy;
+use Billium\Ledger\Data\Runtime\LedgerReceipt;
 use Billium\Ledger\Internal\Repositories\LedgerRepository;
-use Billium\Platform\Contracts\Outbox;
-use Billium\Platform\Data\OutboxEvent;
+use Billium\Platform\Contracts\Outbox\Outbox;
+use Billium\Platform\Data\Outbox\OutboxEvent;
 use DateTimeImmutable;
 use Illuminate\Support\Str;
 use LogicException;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final readonly class AmendObligationDuePolicyCommand
 {
     public function __construct(private LedgerRepository $repository, private Outbox $outbox) {}

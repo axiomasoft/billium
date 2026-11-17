@@ -7,9 +7,11 @@ namespace Billium\Ledger\Tests\Schema;
 use Billium\Core\Data\Modules\MigrationIdentity;
 use Billium\Core\Internal\Modules\ModuleCatalog;
 use Billium\Core\Tests\TestEnvironment;
-use Billium\Ledger\Data\DeclareSettlementIntent;
+use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
 use Illuminate\Testing\PendingCommand;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class LedgerMigrationLifecycleTest extends LedgerTestCase
 {
     public function test_rebuilding_ledger_tables_refreshes_retained_functions_and_runtime_grants(): void

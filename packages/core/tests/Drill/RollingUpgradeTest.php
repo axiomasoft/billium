@@ -6,8 +6,8 @@ namespace Billium\Core\Tests\Drill;
 
 use Billium\Contracts\Data\Money;
 use Billium\Core\Tests\TestEnvironment;
-use Billium\Ledger\Data\Allocate;
-use Billium\Ledger\Data\DeclareSettlementIntent;
+use Billium\Ledger\Data\Allocations\Allocate;
+use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +15,7 @@ use PHPUnit\Framework\Attributes\Group;
 
 /** D21/REQ-FAIL-29: real processes and committed PostgreSQL data, simulated application generations. */
 #[Group('ACC-RST-10')]
+#[Group('pg')]
 final class RollingUpgradeTest extends LedgerTestCase
 {
     public function test_expand_mixed_workers_interrupted_backfill_validate_and_code_rollback(): void

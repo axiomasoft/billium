@@ -14,6 +14,7 @@ use PHPUnit\Framework\Attributes\Group;
 use RuntimeException;
 
 #[Group('D60')]
+#[Group('pg')]
 final class RuntimeRoleGrantsTest extends DatabaseTestCase
 {
     protected function setUp(): void

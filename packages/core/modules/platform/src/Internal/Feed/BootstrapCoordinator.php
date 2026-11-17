@@ -6,13 +6,13 @@ namespace Billium\Platform\Internal\Feed;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Caller;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Enums\LockRank;
-use Billium\Core\Exceptions\LockPlanChanged;
-use Billium\Platform\Contracts\BootstrapItemHandler;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Data\Runtime\Caller;
+use Billium\Core\Enums\Runner\LockRank;
+use Billium\Core\Exceptions\Runner\LockPlanChanged;
+use Billium\Platform\Contracts\Inbox\BootstrapItemHandler;
 use Billium\Platform\Data\Inbox\BootstrapItem;
 use Billium\Platform\Data\Inbox\BootstrapPartition;
 use Billium\Platform\Data\Inbox\BootstrapStatus;
@@ -21,6 +21,8 @@ use Billium\Platform\Internal\Installation\Rows;
 use Closure;
 use Illuminate\Database\Connection;
 use LogicException;
+use Packman\Attributes\Internal;
+use stdClass;
 
 /**
  * Staged partition bootstrap (D60, inbox-feed): the complete snapshot is verified and stored first; every item then gets a
@@ -28,6 +30,7 @@ use LogicException;
  * the old partition and activate the new one together with the held tail. A partition is never active-partial and a crash
  * resumes from the item dispositions.
  */
+#[Internal]
 final readonly class BootstrapCoordinator
 {
     private const int SESSION_SEGMENT = 1;
@@ -126,7 +129,7 @@ final readonly class BootstrapCoordinator
             $payload = json_decode(Rows::string(Rows::field($record, 'payload')), false, 64, JSON_THROW_ON_ERROR);
             $item = new BootstrapItem(
                 Rows::string(Rows::field($record, 'operation_ref')), Rows::int(Rows::field($record, 'revision')), Rows::string(Rows::field($record, 'material_digest')),
-                $payload instanceof \stdClass ? $payload : new \stdClass, Rows::int(Rows::field($record, 'id')), $sessionId,
+                $payload instanceof stdClass ? $payload : new stdClass, Rows::int(Rows::field($record, 'id')), $sessionId,
             );
             $namespace = [];
             foreach (['sourceAuthority' => 'source_authority', 'sourceLineage' => 'source_lineage', 'sellerRef' => 'seller_ref',

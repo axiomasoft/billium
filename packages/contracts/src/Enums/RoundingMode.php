@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Billium\Contracts\Enums;
 
-use Billium\Contracts\Attributes\Api;
+use Packman\Attributes\Api;
 
 /**
  * Rounding modes of money.round by name (BC-MW-18).
  */
-#[Api]
+#[Api(since: '1.0')]
 enum RoundingMode: string
 {
     /** Half goes to the even neighbour. */

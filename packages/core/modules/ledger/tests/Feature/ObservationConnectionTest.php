@@ -17,6 +17,7 @@ use PHPUnit\Framework\Attributes\Group;
  * here points at an absent database, so any query against it would fail.
  */
 #[Group('D60')]
+#[Group('pg')]
 final class ObservationConnectionTest extends ObservationTestCase
 {
     public function test_receipts_and_work_selection_use_the_billium_connection_not_the_host_default(): void
@@ -33,7 +34,7 @@ final class ObservationConnectionTest extends ObservationTestCase
         self::assertSame('1000', self::arr($receipt->body['applied'])['captured_minor']);
 
         $late = ObservationFactory::charge('op-2', 1, 500, sequence: 2, fields: ['businessIntentRef' => 'intent-late']);
-        $this->attempt($late);
+        $this->tryObserve($late);
         $this->intent('intent-late', ['o2']);
         self::assertSame(['applied'], $this->drainer()->retryParked());
         self::assertSame(500, $this->allocated('o2'));

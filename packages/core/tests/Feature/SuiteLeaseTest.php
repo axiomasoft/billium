@@ -7,8 +7,10 @@ namespace Billium\Core\Tests\Feature;
 use Billium\Core\Tests\DatabaseTestCase;
 use Billium\Core\Tests\TestEnvironment;
 use PDOException;
+use PHPUnit\Framework\Attributes\Group;
 use Symfony\Component\Process\Process;
 
+#[Group('pg')]
 final class SuiteLeaseTest extends DatabaseTestCase
 {
     public function test_a_second_run_cannot_take_the_database_while_this_run_holds_it(): void

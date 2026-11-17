@@ -4,21 +4,24 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Internal\Console;
 
+use Billium\Core\Configuration\BilliumOptions;
 use Billium\Platform\Internal\CommandOutbox\CommandOutboxRelay;
 use Billium\Platform\Internal\Outbox\OutboxRelay;
 use Illuminate\Console\Command;
+use Packman\Attributes\Internal;
 use Throwable;
 
+#[Internal]
 final class RelayCommand extends Command
 {
     protected $signature = 'billium:outbox:relay {--limit=} {--commands : Relay the separate internal command lane}';
 
     protected $description = 'Claim and relay due outbox deliveries (D60/D63)';
 
-    public function handle(): int
+    public function handle(BilliumOptions $options): int
     {
-        $limit = $this->option('limit') ?? config('billium.outbox.relay_batch', 100);
-        if (! is_scalar($limit) || ! ctype_digit((string) $limit) || (int) $limit < 1 || (int) $limit > 1000) {
+        $limit = $this->option('limit') ?? $options->outbox->relayBatch;
+        if ((! is_int($limit) && ! ctype_digit($limit)) || (int) $limit < 1 || (int) $limit > 1000) {
             $this->error('limit must be between 1 and 1000');
 
             return self::FAILURE;

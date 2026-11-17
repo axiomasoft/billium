@@ -4,16 +4,19 @@ declare(strict_types=1);
 
 namespace Billium\Core\Internal\Runner;
 
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Caller;
-use Billium\Core\Data\OperationSpec;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\OperationSpec;
+use Billium\Core\Data\Runtime\Caller;
 use Closure;
 use Illuminate\Database\Connection;
+use LogicException;
+use Packman\Attributes\Internal;
 
 /**
  * One attempt of one root transaction: its LockSet, its admitted session/modules and the only TransactionContext minted
  * for it. Ending the attempt (commit, rollback or retry) invalidates the context for good.
  */
+#[Internal]
 final class Operation
 {
     public readonly TransactionContext $context;
@@ -25,7 +28,7 @@ final class Operation
     /** @var array<string, int> */
     private array $modules = [];
 
-    /** @var list<Closure> */
+    /** @var list<Closure(): void> */
     private array $afterCommit = [];
 
     private readonly int $pdo;
@@ -43,7 +46,7 @@ final class Operation
             $keys = [];
             foreach ($connection->select($sql, $bindings) as $row) {
                 $key = is_object($row) ? ($row->lock_key ?? null) : null;
-                $keys[] = is_int($key) ? $key : (is_string($key) ? $key : throw new \LogicException('Lock key column is missing'));
+                $keys[] = is_int($key) ? $key : (is_string($key) ? $key : throw new LogicException('Lock key column is missing'));
             }
 
             return $keys;
@@ -65,7 +68,7 @@ final class Operation
         $row = $this->connection->selectOne('SELECT pg_current_xact_id()::text AS root_xid', [], false);
 
         return is_object($row) && is_string($row->root_xid ?? null)
-            ? $row->root_xid : throw new \LogicException('Cannot establish the root transaction identity');
+            ? $row->root_xid : throw new LogicException('Cannot establish the root transaction identity');
     }
 
     public function sessionEpoch(): ?int
@@ -84,6 +87,7 @@ final class Operation
         return $this->locks;
     }
 
+    /** @param Closure(): void $callback */
     public function defer(Closure $callback): void
     {
         $this->afterCommit[] = $callback;
@@ -101,7 +105,7 @@ final class Operation
         $this->modules = $modules;
     }
 
-    /** @return list<Closure> callbacks to run after a successful commit */
+    /** @return list<Closure(): void> callbacks to run after a successful commit */
     public function close(): array
     {
         $this->open = false;

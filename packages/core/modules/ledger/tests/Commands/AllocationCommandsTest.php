@@ -7,12 +7,14 @@ namespace Billium\Ledger\Tests\Commands;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Ledger\Data\Allocate;
-use Billium\Ledger\Data\DeclareSettlementIntent;
-use Billium\Ledger\Data\ReverseAllocation;
+use Billium\Ledger\Data\Allocations\Allocate;
+use Billium\Ledger\Data\Allocations\ReverseAllocation;
+use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
+use PHPUnit\Framework\Attributes\Group;
 
 /** allocate and reverseAllocation through the public root (INV-09, COV-166, COV-289): receipts, refusals, replay, events. */
+#[Group('pg')]
 final class AllocationCommandsTest extends LedgerTestCase
 {
     use AllocationFixtures;

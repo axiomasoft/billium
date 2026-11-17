@@ -6,21 +6,23 @@ namespace Billium\Ledger\Internal\Repositories;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Enums\LockRank;
-use Billium\Core\Exceptions\LockPlanChanged;
-use Billium\Ledger\Data\CreateInvoice;
-use Billium\Ledger\Data\DiscardInvoice;
-use Billium\Ledger\Data\IssueInvoice;
-use Billium\Ledger\Data\LedgerReceipt;
-use Billium\Ledger\Data\MarkUncollectible;
-use Billium\Ledger\Data\UpdateInvoiceMetadata;
-use Billium\Ledger\Data\VoidInvoice;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Enums\Runner\LockRank;
+use Billium\Core\Exceptions\Runner\LockPlanChanged;
+use Billium\Ledger\Data\Invoices\CreateInvoice;
+use Billium\Ledger\Data\Invoices\DiscardInvoice;
+use Billium\Ledger\Data\Invoices\InvoiceLineInput;
+use Billium\Ledger\Data\Invoices\IssueInvoice;
+use Billium\Ledger\Data\Invoices\MarkUncollectible;
+use Billium\Ledger\Data\Invoices\UpdateInvoiceMetadata;
+use Billium\Ledger\Data\Invoices\VoidInvoice;
+use Billium\Ledger\Data\Runtime\LedgerReceipt;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use LogicException;
+use Packman\Attributes\Internal;
 use stdClass;
 
 /**
@@ -28,6 +30,7 @@ use stdClass;
  * guarded routine that alone mutates invoices, lines, obligation attachment and receipts (INV-13, D60). No PHP counter
  * or status write.
  */
+#[Internal]
 final readonly class InvoiceRepository
 {
     public function __construct(private DatabaseManager $databases, private OperationRunner $runner, private LedgerRepository $routines) {}
@@ -55,7 +58,7 @@ final readonly class InvoiceRepository
         $requests[] = new LockRequest(LockRank::Invoice, 'billium_invoice', [$invoice['id']], guardedRoutine: 'billium_lock_invoice');
         $context->lock(...$requests);
         if ($this->invoice($connection, $caller->sellerRef, $caller->environment, $command->invoiceRef) !== $invoice
-            || (! ($command instanceof UpdateInvoiceMetadata || $command instanceof MarkUncollectible) && $this->lineObligations($connection, $invoice['id']) !== $lineObligations)) {
+            || (! $command instanceof UpdateInvoiceMetadata && ! $command instanceof MarkUncollectible && $this->lineObligations($connection, $invoice['id']) !== $lineObligations)) {
             throw new LockPlanChanged('invoice or its lines changed');
         }
         $bindings = [...$prefix, $invoice['currency'], $invoice['id']];
@@ -74,7 +77,7 @@ final readonly class InvoiceRepository
     private function create(TransactionContext $context, Connection $connection, CreateInvoice $command, array $prefix, string $digest): LedgerReceipt
     {
         $caller = $context->caller();
-        $read = fn (): array => $this->obligations($connection, $caller->sellerRef, $caller->environment, array_map(static fn ($line): string => $line->obligationRef, $command->lines));
+        $read = fn (): array => $this->obligations($connection, $caller->sellerRef, $caller->environment, array_map(static fn (InvoiceLineInput $line): string => $line->obligationRef, $command->lines));
         $before = $read();
         $currencies = array_unique(array_column($before, 'currency'));
         if (count($currencies) !== 1) {

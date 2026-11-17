@@ -8,16 +8,20 @@ use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Modules\ModuleRegistry;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Platform\Contracts\CommandOutbox;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Modules\InternalCommandDeclaration;
+use Billium\Platform\Contracts\Outbox\CommandOutbox;
 use Billium\Platform\Data\EventContracts\PreparedInternalCommand;
 use Billium\Platform\Internal\Installation\Rows;
 use Billium\Platform\Internal\Outbox\EventRows;
 use Closure;
 use Illuminate\Database\DatabaseManager;
 use LogicException;
+use Packman\Attributes\Internal;
+use stdClass;
 
+#[Internal]
 final readonly class CommandRecorder implements CommandOutbox
 {
     /** @param Closure(): OperationRunner $runner */
@@ -28,11 +32,11 @@ final readonly class CommandRecorder implements CommandOutbox
         ($this->runner)()->assertCurrent($context, 'platform');
         ($this->runner)()->assertCurrent($context, $command->ownerModuleId);
         $descriptor = $this->modules->descriptor($command->ownerModuleId);
-        if ($descriptor === null || ! array_any($descriptor->internalCommands, static fn ($declaration): bool => $declaration->commandSchema === $command->commandSchema && $declaration->commandType === $command->commandType)) {
+        if ($descriptor === null || ! array_any($descriptor->internalCommands, static fn (InternalCommandDeclaration $declaration): bool => $declaration->commandSchema === $command->commandSchema && $declaration->commandType === $command->commandType)) {
             throw new LogicException('Internal command is not declared by its owner');
         }
         $codec = new Codec;
-        $payload = $codec->canonicalize($command->payload === [] ? new \stdClass : $command->payload);
+        $payload = $codec->canonicalize($command->payload === [] ? new stdClass : $command->payload);
         if (strlen($payload) > 65536) {
             throw new LogicException('Command payload exceeds bound');
         }

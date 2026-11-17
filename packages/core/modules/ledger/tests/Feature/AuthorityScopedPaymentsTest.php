@@ -7,14 +7,16 @@ namespace Billium\Ledger\Tests\Feature;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Core\Tests\Support\ObservationFactory;
-use Billium\Ledger\Data\AdjustObligation;
-use Billium\Ledger\Data\ReallocatePayment;
-use Billium\Ledger\Data\ReallocationMode;
+use Billium\Ledger\Data\Allocations\ReallocatePayment;
+use Billium\Ledger\Data\Allocations\ReallocationMode;
+use Billium\Ledger\Data\Obligations\AdjustObligation;
 use Billium\Ledger\Tests\Queries\QueryTestCase;
-use Billium\Platform\Contracts\EventFeed;
+use Billium\Platform\Contracts\Feed\EventFeed;
 use Billium\Platform\Data\Feed\FeedScope;
+use PHPUnit\Framework\Attributes\Group;
 
 /** Same-ref sources must stay independent through commands, reads, snapshots and dependency retries. */
+#[Group('pg')]
 final class AuthorityScopedPaymentsTest extends QueryTestCase
 {
     private const array SOURCES = ['embedded-commerz', 'remote-billium'];
@@ -135,7 +137,7 @@ final class AuthorityScopedPaymentsTest extends QueryTestCase
         $this->intent('intent-a', ['o1']);
         $this->observe(ObservationFactory::charge('same-payment', 1, 500));
         $refund = ObservationFactory::refund('refund-b', 'same-payment', 1, 100, fields: ['sourceAuthority' => 'remote-billium']);
-        self::assertSame(ProblemCode::ObservationParked->value, $this->attempt($refund));
+        self::assertSame(ProblemCode::ObservationParked->value, $this->tryObserve($refund));
         $attempts = $this->value('SELECT attempts FROM billium_inbox_message WHERE external_event_id=?', [self::eventId($refund)]);
         for ($i = 0; $i < 15; $i++) {
             self::assertSame([], $this->drainer()->retryParked());

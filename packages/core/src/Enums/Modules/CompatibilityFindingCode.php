@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Billium\Core\Enums\Modules;
 
-use Billium\Contracts\Attributes\Api;
+use Packman\Attributes\Api;
 
 /**
  * Doctor finding identities of boot/composition validation (spec/modules.json findingCodes).
  * A finding keeps effect-capable boot closed; liveness may stay green, readiness is false.
  */
-#[Api]
+#[Api(since: '1.0')]
 enum CompatibilityFindingCode: string
 {
     case DuplicateId = 'module.duplicate_id';

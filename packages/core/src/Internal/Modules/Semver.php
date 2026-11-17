@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Billium\Core\Internal\Modules;
 
+use Packman\Attributes\Internal;
+
 /** MAJOR.MINOR.PATCH only: module and core API versions are not package SemVer and carry no pre-release. */
+#[Internal]
 final class Semver
 {
     public static function isValid(string $version): bool

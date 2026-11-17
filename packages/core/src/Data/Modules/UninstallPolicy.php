@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Billium\Core\Data\Modules;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Core\Internal\Modules\Shape;
+use Packman\Attributes\Api;
 
 /**
  * Uninstalling a binary is not a schema purge (D55): with module history a compatible read/recovery bundle is
  * required, and purge stays a separate privileged retention operation. There is no automatic financial purge in 1.0.
  */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class UninstallPolicy
 {
     public const string SCHEMA_PURGE = 'never_automatic';

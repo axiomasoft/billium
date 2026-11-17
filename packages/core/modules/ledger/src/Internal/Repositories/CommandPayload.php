@@ -9,13 +9,16 @@ use Billium\Contracts\Data\Currency;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Ledger\Data\AdjustObligation;
-use Billium\Ledger\Data\AmendObligationDuePolicy;
-use Billium\Ledger\Data\DeclareSettlementIntent;
-use Billium\Ledger\Data\ObligationDuePolicy;
-use Billium\Ledger\Data\RecordCustomerCredit;
-use Billium\Ledger\Data\RecordObligation;
+use Billium\Ledger\Data\Credits\RecordCustomerCredit;
+use Billium\Ledger\Data\Obligations\AdjustObligation;
+use Billium\Ledger\Data\Obligations\AmendObligationDuePolicy;
+use Billium\Ledger\Data\Obligations\ObligationDuePolicy;
+use Billium\Ledger\Data\Obligations\RecordObligation;
+use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
+use LogicException;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class CommandPayload
 {
     /** @return array<string, mixed> */
@@ -40,7 +43,7 @@ final class CommandPayload
         $payload = [];
         foreach ($values as $key => $value) {
             if (! is_string($key)) {
-                throw new \LogicException('Command field must be named');
+                throw new LogicException('Command field must be named');
             }
             $payload[$key] = $value;
         }

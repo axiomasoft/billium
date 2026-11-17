@@ -6,10 +6,10 @@ namespace Billium\Core\Tests\Unit\Runner;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Data\OperationSpec;
-use Billium\Core\Data\StoredOutcome;
-use Billium\Core\Enums\FinancialMode;
+use Billium\Core\Data\Runner\OperationSpec;
+use Billium\Core\Data\Runner\StoredOutcome;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Tests\Feature;
 
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Contracts\FinancialSessionAdmission;
 use Billium\Core\Contracts\Modules\ModuleStateReader;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
 use Billium\Core\Enums\Modules\ModuleLifecycleState;
 use Billium\Core\Internal\Modules\ModuleCatalog;
 use Billium\Core\Internal\Runner\UnboundCallerContext;
@@ -17,6 +17,7 @@ use LogicException;
 use PHPUnit\Framework\Attributes\Group;
 
 #[Group('D55')]
+#[Group('pg')]
 final class InstallationInitTest extends PlatformTestCase
 {
     public function test_explicit_init_creates_installation_state_and_accepting_modules_once(): void

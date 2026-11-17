@@ -11,6 +11,7 @@ use Billium\Platform\Tests\Outbox\OutboxTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
 #[Group('EVT-05')]
+#[Group('pg')]
 final class FeedBootstrapVsPruneTest extends OutboxTestCase
 {
     public function test_snapshot_overlap_with_a_horizon_delayed_tail_preserves_economic_identity(): void

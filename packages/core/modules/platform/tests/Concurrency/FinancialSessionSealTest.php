@@ -6,8 +6,8 @@ namespace Billium\Platform\Tests\Concurrency;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Data\Receipt;
-use Billium\Core\Enums\FinancialMode;
+use Billium\Core\Data\Runner\Receipt;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Tests\Support\Concurrency\ConcurrencyStand;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Platform\Exceptions\TransitionRefused;
@@ -23,6 +23,7 @@ use PHPUnit\Framework\Attributes\Group;
 #[Group('D54')]
 #[Group('D62')]
 #[Group('D60')]
+#[Group('pg')]
 final class FinancialSessionSealTest extends PlatformTestCase
 {
     protected function setUp(): void

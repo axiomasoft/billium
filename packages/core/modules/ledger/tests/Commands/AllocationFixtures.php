@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace Billium\Ledger\Tests\Commands;
 
 use Billium\Contracts\Data\Money;
-use Billium\Core\Data\StoredOutcome;
-use Billium\Ledger\Data\Allocate;
-use Billium\Ledger\Data\CreditNoteLine;
-use Billium\Ledger\Data\CreditNoteMode;
-use Billium\Ledger\Data\IssueCreditNote;
-use Billium\Ledger\Data\ReallocatePayment;
-use Billium\Ledger\Data\ReallocationMode;
-use Billium\Ledger\Data\ReverseAllocation;
+use Billium\Core\Data\Runner\StoredOutcome;
+use Billium\Ledger\Data\Allocations\Allocate;
+use Billium\Ledger\Data\Allocations\ReallocatePayment;
+use Billium\Ledger\Data\Allocations\ReallocationMode;
+use Billium\Ledger\Data\Allocations\ReverseAllocation;
+use Billium\Ledger\Data\Invoices\CreditNoteLine;
+use Billium\Ledger\Data\Invoices\CreditNoteMode;
+use Billium\Ledger\Data\Invoices\IssueCreditNote;
 
 /**
  * Allocation-family helpers over the public Ledger root. Payments are owner fixtures: their applied projection belongs to

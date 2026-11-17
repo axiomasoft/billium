@@ -7,12 +7,14 @@ namespace Billium\Ledger\Tests\Commands;
 use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Ledger\Data\ReallocatePayment;
-use Billium\Ledger\Data\ReallocationMode;
+use Billium\Ledger\Data\Allocations\ReallocatePayment;
+use Billium\Ledger\Data\Allocations\ReallocationMode;
 use Billium\Ledger\Internal\Commands\ReallocatePaymentCommand;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
+use PHPUnit\Framework\Attributes\Group;
 
 /** allocation.reallocate.v1 (D35, INV-09): LIFO reversal with cause = refund, credit_note vs reversal policy, replay. */
+#[Group('pg')]
 final class ReallocatePaymentTest extends LedgerTestCase
 {
     use AllocationFixtures;

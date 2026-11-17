@@ -5,12 +5,17 @@ declare(strict_types=1);
 namespace Billium\Platform\Internal\Outbox;
 
 use Billium\Contracts\Contracts\Codec;
-use Billium\Core\Contracts\TransactionContext;
+use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Platform\Data\Feed\FeedScope;
 use Billium\Platform\Internal\Installation\Rows;
+use DateTimeImmutable;
+use DateTimeZone;
 use Illuminate\Database\Connection;
+use JsonException;
 use LogicException;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class EventRows
 {
     public static function scope(Connection $db, TransactionContext $context): FeedScope
@@ -33,7 +38,7 @@ final class EventRows
             $codec = new Codec;
 
             return $codec->canonicalize(json_decode($stored, false, 512, JSON_THROW_ON_ERROR)) === $scope->key();
-        } catch (\JsonException) {
+        } catch (JsonException) {
             return false;
         }
     }
@@ -58,7 +63,7 @@ final class EventRows
         $body = ['schema' => Rows::string(Rows::field($row, 'schema_version')), 'eventId' => Rows::string(Rows::field($row, 'event_id')),
             'eventType' => Rows::string(Rows::field($row, 'type')), 'sellerRef' => Rows::string(Rows::field($row, 'seller_ref')),
             'aggregateRef' => Rows::string(Rows::field($row, 'aggregate_ref')), 'revision' => Rows::int(Rows::field($row, 'aggregate_revision')),
-            'occurredAt' => new \DateTimeImmutable(Rows::string(Rows::field($row, 'occurred_at')))->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z'),
+            'occurredAt' => new DateTimeImmutable(Rows::string(Rows::field($row, 'occurred_at')))->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z'),
             'digest' => Rows::string(Rows::field($row, 'digest')), 'payload' => json_decode(Rows::string(Rows::field($row, 'payload')), false, 512, JSON_THROW_ON_ERROR)];
         if ($body['schema'] !== 'billium.event.v1') {
             $body['eventContractRevision'] = Rows::string(Rows::field($row, 'contract_revision'));

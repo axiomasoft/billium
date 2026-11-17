@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Billium\Core\Tests\Arch;
 
-use Billium\Contracts\Attributes\Api;
-use Billium\Contracts\Attributes\Spi;
 use Billium\Core\BilliumCoreServiceProvider;
 use Billium\Core\Internal\Modules\ModuleCatalog;
 use Billium\Ledger\Internal\LedgerServiceProvider;
 use Billium\Platform\Internal\PlatformServiceProvider;
 use Illuminate\Support\Facades\DB;
 use Orchestra\Testbench\TestCase;
+use Packman\Attributes\Api;
+use Packman\Attributes\Spi;
 use PhpParser\Node\Name;
 use PhpParser\NodeFinder;
 use PhpParser\NodeTraverser;
@@ -96,10 +96,14 @@ final class ModuleBoundariesTest extends TestCase
         $root = dirname(__DIR__, 2).'/src';
         $categories = array_map(basename(...), glob($root.'/*', GLOB_ONLYDIR) ?: []);
         sort($categories);
-        self::assertSame([], array_diff($categories, ['Contracts', 'Data', 'Enums', 'Events', 'Exceptions', 'Internal']), 'unsupported public category (M-38)');
+        self::assertSame(
+            [],
+            array_diff($categories, ['Configuration', 'Contracts', 'Data', 'Database', 'Diagnostics', 'Enums', 'Errors', 'Events', 'Exceptions', 'Internal', 'Laravel', 'Plugins']),
+            'unsupported public category (M-38)',
+        );
 
         $violations = [];
-        foreach (['Contracts', 'Data', 'Enums', 'Events', 'Exceptions'] as $category) {
+        foreach (['Configuration', 'Contracts', 'Data', 'Database', 'Diagnostics', 'Enums', 'Errors', 'Events', 'Exceptions', 'Laravel', 'Plugins'] as $category) {
             if (! is_dir($root.'/'.$category)) {
                 continue;
             }

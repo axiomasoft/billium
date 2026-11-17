@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Internal\CommandOutbox;
 
-use Billium\Core\Contracts\EventPublisher;
+use Billium\Core\Contracts\Runtime\EventPublisher;
 use Billium\Platform\Data\Feed\RelayReport;
 use Billium\Platform\Internal\Outbox\OutboxRelay;
 use Illuminate\Database\Connection;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final readonly class CommandOutboxRelay
 {
     private OutboxRelay $relay;

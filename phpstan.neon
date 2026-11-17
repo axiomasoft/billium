@@ -1,0 +1,21 @@
+includes:
+    - vendor/axiomasoft/packman-devtools/config/phpstan-base.neon
+    - vendor/larastan/larastan/extension.neon
+    - vendor/phpstan/phpstan-strict-rules/rules.neon
+
+parameters:
+    tmpDir: build/phpstan
+    paths:
+        - packages/contracts/src
+        - packages/core/src
+        - packages/core/modules/platform/src
+        - packages/core/modules/ledger/src
+    ignoreErrors:
+        # JSON Schema keyword bounds (minLength, minimum, ...) are schema numbers, never money.
+        -
+            identifier: billium.floatForbidden
+            path: packages/contracts/src/Internal/SchemaValidator.php
+            count: 1
+
+rules:
+    - Billium\Tooling\PhpStan\NoFloatTypeRule

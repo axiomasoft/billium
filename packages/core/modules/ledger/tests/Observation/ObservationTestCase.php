@@ -7,12 +7,12 @@ namespace Billium\Ledger\Tests\Observation;
 use Billium\Contracts\Data\Currency;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Data\Caller;
+use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Tests\Support\ObservationFactory;
 use Billium\Ledger\Contracts\ObservationApplier;
-use Billium\Ledger\Data\AllocationReceipt;
-use Billium\Ledger\Data\DeclareSettlementIntent;
-use Billium\Ledger\Data\RecordObligation;
+use Billium\Ledger\Data\Allocations\AllocationReceipt;
+use Billium\Ledger\Data\Obligations\RecordObligation;
+use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
 use Billium\Ledger\Internal\Commands\BootstrapPartitionCommand;
 use Billium\Ledger\Internal\Observation\EconomicDigest;
 use Billium\Ledger\Internal\Observation\ObservationHandler;
@@ -48,7 +48,7 @@ abstract class ObservationTestCase extends LedgerTestCase
     }
 
     /** The receipt, or the problem code the applier threw (after commit for parked/recovery/conflict). */
-    protected function attempt(stdClass $envelope): AllocationReceipt|string
+    protected function tryObserve(stdClass $envelope): AllocationReceipt|string
     {
         try {
             return $this->observe($envelope);

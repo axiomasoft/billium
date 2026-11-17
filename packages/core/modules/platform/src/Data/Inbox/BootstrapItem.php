@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Data\Inbox;
 
-use Billium\Contracts\Attributes\Api;
 use InvalidArgumentException;
+use Packman\Attributes\Api;
 use stdClass;
 
 /** One immutable snapshot item of a staged bootstrap: an operation at one revision with its material digest. */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class BootstrapItem
 {
     public function __construct(

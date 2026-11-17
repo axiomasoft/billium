@@ -15,6 +15,7 @@ use PHPUnit\Framework\Attributes\Group;
  * blocked, and after the intent is declared a dependency retry in its own root applies it exactly once.
  */
 #[Group('D60')]
+#[Group('pg')]
 final class MissingIntentPaymentVisibilityTest extends ObservationTestCase
 {
     public function test_an_observed_capture_without_intent_is_visible_parks_allocation_and_applies_after_declare(): void
@@ -22,7 +23,7 @@ final class MissingIntentPaymentVisibilityTest extends ObservationTestCase
         $this->debt('o1', 1000);
         $charge = ObservationFactory::charge('op-1', 1, 1000, sequence: 1, fields: ['businessIntentRef' => 'intent-late']);
 
-        self::assertSame(ProblemCode::ObservationParked->value, $this->attempt($charge));
+        self::assertSame(ProblemCode::ObservationParked->value, $this->tryObserve($charge));
 
         $observed = $this->observedRow();
         self::assertSame('succeeded', $observed['state']);
@@ -66,8 +67,8 @@ final class MissingIntentPaymentVisibilityTest extends ObservationTestCase
         $first = ObservationFactory::charge('op-1', 1, 400, sequence: 1);
         $second = ObservationFactory::charge('op-1', 2, 1000, sequence: 2);
 
-        self::assertSame(ProblemCode::ObservationParked->value, $this->attempt($first));
-        self::assertSame(ProblemCode::ObservationParked->value, $this->attempt($second));
+        self::assertSame(ProblemCode::ObservationParked->value, $this->tryObserve($first));
+        self::assertSame(ProblemCode::ObservationParked->value, $this->tryObserve($second));
         self::assertSame(1, $this->rows('billium_observed_payment_revision'), 'the later revision is not applied out of order');
 
         $this->intent('intent-a', ['o1']);

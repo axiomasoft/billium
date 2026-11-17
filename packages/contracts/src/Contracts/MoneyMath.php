@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace Billium\Contracts\Contracts;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Contracts\Data\Currency;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\RoundingMode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Packman\Attributes\Api;
 
 /**
  * Money arithmetic without floats: integer minor units, big-integer intermediates, int64 results (BC-MW-09, BC-MW-10).
  */
-#[Api]
+#[Api(since: '1.0')]
 interface MoneyMath
 {
     /**

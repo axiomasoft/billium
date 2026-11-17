@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Billium\Core\Data\Modules;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Core\Enums\Modules\ModulePresence;
 use Billium\Core\Internal\Modules\Shape;
+use Packman\Attributes\Api;
 
 /**
  * One supported runtime composition row: which modules are mandatory/optional/forbidden, whether the server
  * package is part of it, and which host ports must be absent (D55, D61).
  */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class CompositionProfile
 {
     /**

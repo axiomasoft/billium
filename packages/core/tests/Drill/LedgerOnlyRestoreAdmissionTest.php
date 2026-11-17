@@ -6,11 +6,11 @@ namespace Billium\Core\Tests\Drill;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Receipt;
-use Billium\Core\Data\StoredOutcome;
-use Billium\Core\Enums\FinancialMode;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\Receipt;
+use Billium\Core\Data\Runner\StoredOutcome;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Platform\Exceptions\TransitionRefused;
@@ -26,6 +26,7 @@ use PHPUnit\Framework\Attributes\Group;
 #[Group('D62')]
 #[Group('D54')]
 #[Group('REQ-ACC-12')]
+#[Group('pg')]
 final class LedgerOnlyRestoreAdmissionTest extends PlatformTestCase
 {
     protected function defineEnvironment($app): void

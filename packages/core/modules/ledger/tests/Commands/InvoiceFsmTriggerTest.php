@@ -8,8 +8,10 @@ use Billium\Contracts\Enums\ProblemCode;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Ledger\Internal\InvoiceStatus;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
+use PHPUnit\Framework\Attributes\Group;
 
 /** The trigger `billium_invoice_freeze` and the PHP table agree on every pair of states (negative proof for both). */
+#[Group('pg')]
 final class InvoiceFsmTriggerTest extends LedgerTestCase
 {
     use InvoiceFixtures;

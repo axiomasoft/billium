@@ -6,8 +6,10 @@ namespace Billium\Ledger\Internal\Repositories;
 
 use Illuminate\Support\Facades\DB;
 use LogicException;
+use Packman\Attributes\Internal;
 
 /** D60: installation fails closed without a separate, unprivileged runtime role. Owner/DBA is outside the backstop. */
+#[Internal]
 final readonly class LedgerPrivileges
 {
     public function __construct(private string $runtimeConnection) {}
@@ -27,8 +29,8 @@ final readonly class LedgerPrivileges
                 has_schema_privilege(?, 'public', 'CREATE') AS can_create
             SQL, array_fill(0, 8, $runtimeRole));
         $data = is_object($row) ? get_object_vars($row) : [];
-        if (($data['present'] ?? false) !== true || ($data['same'] ?? true) || ($data['privileged'] ?? true)
-            || ($data['schema_owner'] ?? true) || ($data['owner_member'] ?? true) || ($data['can_create'] ?? true)) {
+        if (($data['present'] ?? false) !== true || ($data['same'] ?? true) === true || ($data['privileged'] ?? true) === true
+            || ($data['schema_owner'] ?? true) === true || ($data['owner_member'] ?? true) === true || ($data['can_create'] ?? true) === true) {
             throw new LogicException('D60: ledger requires a separate runtime role without schema-owner powers');
         }
     }
@@ -47,8 +49,8 @@ final readonly class LedgerPrivileges
             return is_object($row) && ($row->present ?? false) === true;
         });
         foreach ([...$tables, ...$stagedTables] as $table) {
-            DB::unprepared('REVOKE ALL ON TABLE public.billium_'.$table.' FROM PUBLIC, '.$role);
-            DB::unprepared('GRANT SELECT ON TABLE public.billium_'.$table.' TO '.$role);
+            DB::connection()->getPdo()->exec('REVOKE ALL ON TABLE public.billium_'.$table.' FROM PUBLIC, '.$role);
+            DB::connection()->getPdo()->exec('GRANT SELECT ON TABLE public.billium_'.$table.' TO '.$role);
             // REVOKE cannot remove privileges inherited from other roles. Check table and column capabilities.
             $runtimeRole = $this->role();
             $row = DB::selectOne(<<<'SQL'
@@ -80,7 +82,7 @@ final readonly class LedgerPrivileges
         foreach ($private as $name) {
             $row = DB::selectOne("SELECT p.oid::regprocedure::text AS signature FROM pg_proc p WHERE p.pronamespace='public'::regnamespace AND p.proname=?", [$name]);
             $signature = is_object($row) && is_string($row->signature ?? null) ? $row->signature : throw new LogicException('Missing ledger guard '.$name);
-            DB::unprepared('REVOKE ALL ON FUNCTION '.$signature.' FROM '.$role);
+            DB::connection()->getPdo()->exec('REVOKE ALL ON FUNCTION '.$signature.' FROM '.$role);
         }
         foreach ($names as $name) {
             $runtimeRole = $this->role();
@@ -89,7 +91,7 @@ final readonly class LedgerPrivileges
                 WHERE n.nspname='public' AND p.proname=? AND p.proowner=(SELECT oid FROM pg_roles WHERE rolname=current_user)
                 SQL, [$name]);
             $signature = is_object($row) && is_string($row->signature ?? null) ? $row->signature : throw new LogicException('Missing ledger routine '.$name);
-            DB::unprepared('GRANT EXECUTE ON FUNCTION '.$signature.' TO '.$role);
+            DB::connection()->getPdo()->exec('GRANT EXECUTE ON FUNCTION '.$signature.' TO '.$role);
         }
     }
 

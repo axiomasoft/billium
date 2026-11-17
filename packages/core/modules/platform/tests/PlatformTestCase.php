@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Tests;
 
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Contracts\FinancialSessionAdmission;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\OperationSpec;
-use Billium\Core\Enums\FinancialMode;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
+use Billium\Core\Data\Runner\OperationSpec;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Tests\DatabaseTestCase;
 use Billium\Core\Tests\Support\FixedCallerContext;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
 use Billium\Core\Tests\TestEnvironment;
-use Billium\Platform\Contracts\Installation;
-use Billium\Platform\Data\PlatformReceipt;
+use Billium\Platform\Contracts\Installation\Installation;
+use Billium\Platform\Data\Installation\PlatformReceipt;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Application;

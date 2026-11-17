@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace Billium\Contracts\Attributes;
 
+use Packman\Attributes\Api as PackmanApi;
+
 /**
  * Who stands on which side of a service-provider interface.
+ *
+ * @deprecated Use {@see \Packman\Attributes\SpiKind} instead.
  */
-#[Api]
+#[PackmanApi(since: '1.0')]
 enum SpiKind
 {
     /** Consumers call the interface; the package owns the implementation. */

@@ -6,20 +6,22 @@ namespace Billium\Ledger\Tests\Feature;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Data\Receipt;
-use Billium\Core\Enums\LockRank;
-use Billium\Core\Exceptions\LockOrderViolation;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Data\Runner\Receipt;
+use Billium\Core\Enums\Runner\LockRank;
+use Billium\Core\Exceptions\Runner\LockOrderViolation;
 use Billium\Ledger\Contracts\LedgerParticipants;
-use Billium\Ledger\Data\BillingAccountScope;
-use Billium\Ledger\Data\IssueInvoice;
+use Billium\Ledger\Data\Invoices\IssueInvoice;
+use Billium\Ledger\Data\Runtime\BillingAccountScope;
 use Billium\Ledger\Tests\Commands\InvoiceFixtures;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
 use LogicException;
+use PHPUnit\Framework\Attributes\Group;
 use RuntimeException;
 
 /** D49/D60: the composed issue (P6 supplies the legal reference) is the same guarded routine in the caller's root Tx. */
+#[Group('pg')]
 final class InvoiceParticipantTest extends LedgerTestCase
 {
     use InvoiceFixtures;

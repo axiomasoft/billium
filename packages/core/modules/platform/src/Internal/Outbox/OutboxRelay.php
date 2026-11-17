@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Internal\Outbox;
 
-use Billium\Core\Contracts\EventPublisher;
+use Billium\Core\Contracts\Runtime\EventPublisher;
 use Billium\Platform\Data\Feed\RelayReport;
 use Billium\Platform\Internal\Installation\Rows;
 use Illuminate\Database\Connection;
 use LogicException;
+use Packman\Attributes\Internal;
 use Throwable;
 
 /** D60/D63: SKIP LOCKED claim, transport outside Tx, token-CAS acknowledgement. */
+#[Internal]
 final readonly class OutboxRelay
 {
     public function __construct(

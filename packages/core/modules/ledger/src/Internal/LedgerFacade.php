@@ -4,28 +4,29 @@ declare(strict_types=1);
 
 namespace Billium\Ledger\Internal;
 
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\OperationSpec;
-use Billium\Core\Data\StoredOutcome;
-use Billium\Core\Enums\FinancialMode;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\OperationSpec;
+use Billium\Core\Data\Runner\StoredOutcome;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Ledger\Contracts\Ledger;
-use Billium\Ledger\Data\AdjustObligation;
-use Billium\Ledger\Data\Allocate;
-use Billium\Ledger\Data\AmendObligationDuePolicy;
-use Billium\Ledger\Data\CreateInvoice;
-use Billium\Ledger\Data\DeclareSettlementIntent;
-use Billium\Ledger\Data\DiscardInvoice;
-use Billium\Ledger\Data\IssueCreditNote;
-use Billium\Ledger\Data\IssueInvoice;
-use Billium\Ledger\Data\MarkUncollectible;
-use Billium\Ledger\Data\ReallocatePayment;
-use Billium\Ledger\Data\RecordCustomerCredit;
-use Billium\Ledger\Data\RecordObligation;
-use Billium\Ledger\Data\ReverseAllocation;
-use Billium\Ledger\Data\UpdateInvoiceMetadata;
-use Billium\Ledger\Data\VoidInvoice;
+use Billium\Ledger\Data\Allocations\Allocate;
+use Billium\Ledger\Data\Allocations\ReallocatePayment;
+use Billium\Ledger\Data\Allocations\ReverseAllocation;
+use Billium\Ledger\Data\Credits\RecordCustomerCredit;
+use Billium\Ledger\Data\Invoices\CreateInvoice;
+use Billium\Ledger\Data\Invoices\DiscardInvoice;
+use Billium\Ledger\Data\Invoices\IssueCreditNote;
+use Billium\Ledger\Data\Invoices\IssueInvoice;
+use Billium\Ledger\Data\Invoices\MarkUncollectible;
+use Billium\Ledger\Data\Invoices\UpdateInvoiceMetadata;
+use Billium\Ledger\Data\Invoices\VoidInvoice;
+use Billium\Ledger\Data\Obligations\AdjustObligation;
+use Billium\Ledger\Data\Obligations\AmendObligationDuePolicy;
+use Billium\Ledger\Data\Obligations\RecordObligation;
+use Billium\Ledger\Data\Runtime\LedgerReceipt;
+use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
 use Billium\Ledger\Internal\Commands\AdjustObligationCommand;
 use Billium\Ledger\Internal\Commands\AllocateCommand;
 use Billium\Ledger\Internal\Commands\AmendObligationDuePolicyCommand;
@@ -43,7 +44,9 @@ use Billium\Ledger\Internal\Commands\UpdateInvoiceMetadataCommand;
 use Billium\Ledger\Internal\Commands\VoidInvoiceCommand;
 use Billium\Ledger\Internal\Repositories\CommandPayload;
 use Billium\Ledger\Internal\Repositories\InvoicePayload;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final readonly class LedgerFacade implements Ledger
 {
     public function __construct(
@@ -67,57 +70,57 @@ final readonly class LedgerFacade implements Ledger
 
     public function recordObligation(RecordObligation $command): StoredOutcome
     {
-        return $this->runner->run($this->spec('record_obligation', $command), fn (TransactionContext $context) => $this->obligations->execute($context, $command));
+        return $this->runner->run($this->spec('record_obligation', $command), fn (TransactionContext $context): LedgerReceipt => $this->obligations->execute($context, $command));
     }
 
     public function adjustObligation(AdjustObligation $command): StoredOutcome
     {
-        return $this->runner->run($this->spec('adjust_obligation', $command), fn (TransactionContext $context) => $this->adjustments->execute($context, $command));
+        return $this->runner->run($this->spec('adjust_obligation', $command), fn (TransactionContext $context): LedgerReceipt => $this->adjustments->execute($context, $command));
     }
 
     public function recordCustomerCredit(RecordCustomerCredit $command): StoredOutcome
     {
-        return $this->runner->run($this->spec('record_customer_credit', $command), fn (TransactionContext $context) => $this->credits->execute($context, $command));
+        return $this->runner->run($this->spec('record_customer_credit', $command), fn (TransactionContext $context): LedgerReceipt => $this->credits->execute($context, $command));
     }
 
     public function amendObligationDuePolicy(AmendObligationDuePolicy $command): StoredOutcome
     {
-        return $this->runner->run($this->spec('amend_obligation_due_policy', $command), fn (TransactionContext $context) => $this->duePolicies->execute($context, $command));
+        return $this->runner->run($this->spec('amend_obligation_due_policy', $command), fn (TransactionContext $context): LedgerReceipt => $this->duePolicies->execute($context, $command));
     }
 
     public function declareSettlementIntent(DeclareSettlementIntent $command): StoredOutcome
     {
-        return $this->runner->run($this->spec('declare_settlement_intent', $command), fn (TransactionContext $context) => $this->intents->execute($context, $command));
+        return $this->runner->run($this->spec('declare_settlement_intent', $command), fn (TransactionContext $context): LedgerReceipt => $this->intents->execute($context, $command));
     }
 
     public function createInvoice(CreateInvoice $command): StoredOutcome
     {
-        return $this->runner->run($this->spec('create_invoice', $command), fn (TransactionContext $context) => $this->invoiceDrafts->execute($context, $command));
+        return $this->runner->run($this->spec('create_invoice', $command), fn (TransactionContext $context): LedgerReceipt => $this->invoiceDrafts->execute($context, $command));
     }
 
     public function updateInvoiceMetadata(UpdateInvoiceMetadata $command): StoredOutcome
     {
-        return $this->runner->run($this->spec('update_invoice_metadata', $command), fn (TransactionContext $context) => $this->invoiceMetadata->execute($context, $command));
+        return $this->runner->run($this->spec('update_invoice_metadata', $command), fn (TransactionContext $context): LedgerReceipt => $this->invoiceMetadata->execute($context, $command));
     }
 
     public function issueInvoice(IssueInvoice $command): StoredOutcome
     {
-        return $this->runner->run($this->spec('issue_invoice', $command), fn (TransactionContext $context) => $this->invoiceIssues->execute($context, $command));
+        return $this->runner->run($this->spec('issue_invoice', $command), fn (TransactionContext $context): LedgerReceipt => $this->invoiceIssues->execute($context, $command));
     }
 
     public function discardInvoice(DiscardInvoice $command): StoredOutcome
     {
-        return $this->runner->run($this->spec('discard_invoice', $command), fn (TransactionContext $context) => $this->invoiceDiscards->execute($context, $command));
+        return $this->runner->run($this->spec('discard_invoice', $command), fn (TransactionContext $context): LedgerReceipt => $this->invoiceDiscards->execute($context, $command));
     }
 
     public function voidInvoice(VoidInvoice $command): StoredOutcome
     {
-        return $this->runner->run($this->spec('void_invoice', $command), fn (TransactionContext $context) => $this->invoiceVoids->execute($context, $command));
+        return $this->runner->run($this->spec('void_invoice', $command), fn (TransactionContext $context): LedgerReceipt => $this->invoiceVoids->execute($context, $command));
     }
 
     public function markUncollectible(MarkUncollectible $command): StoredOutcome
     {
-        return $this->runner->run($this->spec('mark_uncollectible', $command), fn (TransactionContext $context) => $this->invoiceUncollectibles->execute($context, $command));
+        return $this->runner->run($this->spec('mark_uncollectible', $command), fn (TransactionContext $context): LedgerReceipt => $this->invoiceUncollectibles->execute($context, $command));
     }
 
     public function allocate(Allocate $command): StoredOutcome
@@ -125,7 +128,7 @@ final readonly class LedgerFacade implements Ledger
         AllocateCommand::validate($command);
         $spec = $this->allocationSpec('allocate', $command->scope->sellerRef, $command->scope->environment, $command->commandKey, AllocateCommand::digest($command));
 
-        return $this->runner->run($spec, fn (TransactionContext $context) => $this->allocations->execute($context, $command));
+        return $this->runner->run($spec, fn (TransactionContext $context): LedgerReceipt => $this->allocations->execute($context, $command));
     }
 
     public function reverseAllocation(ReverseAllocation $command): StoredOutcome
@@ -133,7 +136,7 @@ final readonly class LedgerFacade implements Ledger
         ReverseAllocationCommand::validate($command);
         $spec = $this->allocationSpec('reverse_allocation', $command->scope->sellerRef, $command->scope->environment, $command->commandKey, ReverseAllocationCommand::digest($command));
 
-        return $this->runner->run($spec, fn (TransactionContext $context) => $this->reversals->execute($context, $command));
+        return $this->runner->run($spec, fn (TransactionContext $context): LedgerReceipt => $this->reversals->execute($context, $command));
     }
 
     public function issueCreditNote(IssueCreditNote $command): StoredOutcome
@@ -141,7 +144,7 @@ final readonly class LedgerFacade implements Ledger
         IssueCreditNoteCommand::validate($command);
         $spec = $this->allocationSpec('issue_credit_note', $command->scope->sellerRef, $command->scope->environment, $command->commandKey, IssueCreditNoteCommand::digest($command));
 
-        return $this->runner->run($spec, fn (TransactionContext $context) => $this->creditNotes->execute($context, $command));
+        return $this->runner->run($spec, fn (TransactionContext $context): LedgerReceipt => $this->creditNotes->execute($context, $command));
     }
 
     public function reallocatePayment(ReallocatePayment $command): StoredOutcome
@@ -149,7 +152,7 @@ final readonly class LedgerFacade implements Ledger
         ReallocatePaymentCommand::validate($command);
         $spec = $this->allocationSpec('reallocate_payment', $command->sellerRef, $command->environment, $command->commandKey, ReallocatePaymentCommand::digest($command));
 
-        return $this->runner->run($spec, fn (TransactionContext $context) => $this->reallocations->execute($context, $command));
+        return $this->runner->run($spec, fn (TransactionContext $context): LedgerReceipt => $this->reallocations->execute($context, $command));
     }
 
     private function allocationSpec(string $kind, string $seller, string $environment, string $key, string $digest): OperationSpec

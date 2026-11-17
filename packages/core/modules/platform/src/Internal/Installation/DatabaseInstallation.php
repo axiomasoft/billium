@@ -4,39 +4,42 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Internal\Installation;
 
-use Billium\Core\Contracts\CallerContext;
 use Billium\Core\Contracts\Modules\ModuleRegistry;
 use Billium\Core\Contracts\Modules\ModuleStateReader;
 use Billium\Core\Contracts\Modules\ModuleTransitionEvidence;
 use Billium\Core\Contracts\Modules\ModuleTransitionPlanner;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\LockRequest;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Data\Modules\ModuleBlocker;
 use Billium\Core\Data\Modules\ModuleState;
 use Billium\Core\Data\Modules\ModuleTransitionFacts;
-use Billium\Core\Data\OperationSpec;
-use Billium\Core\Data\StoredOutcome;
-use Billium\Core\Enums\FinancialMode;
-use Billium\Core\Enums\LockRank;
-use Billium\Core\Enums\LockScope;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Data\Runner\OperationSpec;
+use Billium\Core\Data\Runner\StoredOutcome;
 use Billium\Core\Enums\Modules\ModuleLifecycleState;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
-use Billium\Core\Exceptions\LockPlanChanged;
-use Billium\Platform\Contracts\Installation;
-use Billium\Platform\Data\FinancialSessionView;
-use Billium\Platform\Data\ModuleTransitionRequest;
-use Billium\Platform\Data\PlatformReceipt;
+use Billium\Core\Enums\Runner\LockRank;
+use Billium\Core\Enums\Runner\LockScope;
+use Billium\Core\Enums\Runtime\FinancialMode;
+use Billium\Core\Exceptions\Runner\LockPlanChanged;
+use Billium\Platform\Contracts\Installation\Installation;
+use Billium\Platform\Data\Installation\FinancialSessionView;
+use Billium\Platform\Data\Installation\ModuleTransitionRequest;
+use Billium\Platform\Data\Installation\PlatformReceipt;
 use Billium\Platform\Exceptions\TransitionRefused;
 use Closure;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
 use LogicException;
+use Packman\Attributes\Internal;
 
 /**
  * Platform-owned writes of installation_state, financial_session(_event) and module_state/transitions. Transitions run
  * through the root runner, so the claim of their ref, the barrier locks and the history append share one root Tx.
  */
+#[Internal]
 final readonly class DatabaseInstallation implements Installation, ModuleStateReader
 {
     private const array ORDER = ['accepting' => 0, 'draining' => 1, 'recovery_only' => 2, 'retired' => 3];
@@ -219,7 +222,7 @@ final readonly class DatabaseInstallation implements Installation, ModuleStateRe
         $facts = $this->transitionFacts($context, $current, $request, $active);
         $preview = $this->planner->previewTransition($current, $target, $facts);
         if (! $preview->allowed()) {
-            throw new TransitionRefused('blocked', array_map(static fn ($blocker): string => $blocker->code->value, $preview->blockers));
+            throw new TransitionRefused('blocked', array_map(static fn (ModuleBlocker $blocker): string => $blocker->code->value, $preview->blockers));
         }
         $moves = [$request->moduleId => $request->transitionRef];
         foreach ($preview->cascade as $dependent) {
@@ -232,7 +235,7 @@ final readonly class DatabaseInstallation implements Installation, ModuleStateRe
                 $dependentFacts = $this->transitionFacts($context, $states[$dependent], $request, []);
                 $dependentPreview = $this->planner->previewTransition($states[$dependent], $target, $dependentFacts);
                 if (! $dependentPreview->allowed()) {
-                    throw new TransitionRefused('blocked', array_map(static fn ($blocker): string => $blocker->code->value, $dependentPreview->blockers));
+                    throw new TransitionRefused('blocked', array_map(static fn (ModuleBlocker $blocker): string => $blocker->code->value, $dependentPreview->blockers));
                 }
             }
             $moves[$dependent] = "{$request->transitionRef}#{$dependent}";

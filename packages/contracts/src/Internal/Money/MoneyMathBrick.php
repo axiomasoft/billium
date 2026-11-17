@@ -16,10 +16,12 @@ use Brick\Math\RoundingMode as BrickRounding;
 use Brick\Money\AllocationMode;
 use Brick\Money\Currency as BrickCurrency;
 use Brick\Money\Money as BrickMoney;
+use Packman\Attributes\Internal;
 
 /**
  * MoneyMath on brick/money: BigDecimal arithmetic and the library's Hamilton allocation.
  */
+#[Internal]
 final class MoneyMathBrick implements MoneyMath
 {
     public function add(Money $a, Money $b): Money

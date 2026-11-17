@@ -7,9 +7,9 @@ namespace Billium\Platform\Internal\Outbox;
 use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\CallerContext;
-use Billium\Platform\Contracts\EventFeed;
-use Billium\Platform\Contracts\SnapshotSource;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Platform\Contracts\Feed\EventFeed;
+use Billium\Platform\Contracts\Feed\SnapshotSource;
 use Billium\Platform\Data\Feed\FeedBootstrap;
 use Billium\Platform\Data\Feed\FeedCursor;
 use Billium\Platform\Data\Feed\FeedPage;
@@ -18,10 +18,15 @@ use Billium\Platform\Data\Feed\FeedScope;
 use Billium\Platform\Data\Feed\FeedSelection;
 use Billium\Platform\Internal\Installation\Rows;
 use Closure;
+use DateTimeImmutable;
+use DateTimeZone;
 use Illuminate\Database\Connection;
 use Illuminate\Support\Str;
 use LogicException;
+use Packman\Attributes\Internal;
+use Throwable;
 
+#[Internal]
 final readonly class EventFeedReader implements EventFeed
 {
     public const int MAX_OPEN_REQUIRED = 16;
@@ -154,7 +159,7 @@ final readonly class EventFeedReader implements EventFeed
         });
         try {
             return $this->snapshot($selection, $contracts, $replay, $pin, $leaseRef, $snapshotRef);
-        } catch (\Throwable $error) {
+        } catch (Throwable $error) {
             // A failed snapshot must not keep the tail pinned until the lease runs out.
             $this->db->update("UPDATE public.billium_feed_bootstrap_lease SET state = 'expired' WHERE lease_ref = ? AND state = 'active'", [$leaseRef]);
 
@@ -204,7 +209,7 @@ final readonly class EventFeedReader implements EventFeed
                 throw new ProblemException(ProblemCode::RecoveryRequired, 'Bootstrap pin expired during snapshot');
             }
 
-            return new \DateTimeImmutable(Rows::string(Rows::field($row, 'expires_at')))->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z');
+            return new DateTimeImmutable(Rows::string(Rows::field($row, 'expires_at')))->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z');
         });
 
         return new FeedBootstrap($selection, $leaseRef, $snapshotRef, $digest, $snapshots, $cursor, $expires);

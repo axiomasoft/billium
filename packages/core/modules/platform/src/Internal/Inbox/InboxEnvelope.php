@@ -6,13 +6,15 @@ namespace Billium\Platform\Internal\Inbox;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Data\Caller;
+use Billium\Core\Data\Runtime\Caller;
+use Packman\Attributes\Internal;
 use stdClass;
 
 /**
  * The custody-relevant fields of a decoded observation envelope. Nothing here proves authenticity: the owning facade
  * decodes and verifies the transport; custody only refuses what is outside the authenticated caller's scope.
  */
+#[Internal]
 final readonly class InboxEnvelope
 {
     public const int MAX_BYTES = 65536;

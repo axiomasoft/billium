@@ -9,20 +9,22 @@ use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Tests\TestEnvironment;
-use Billium\Ledger\Data\AdjustObligation;
-use Billium\Ledger\Data\Allocate;
-use Billium\Ledger\Data\BillingAccountScope;
-use Billium\Ledger\Data\CreateInvoice;
-use Billium\Ledger\Data\DiscardInvoice;
-use Billium\Ledger\Data\InvoiceLineInput;
-use Billium\Ledger\Data\IssueInvoice;
-use Billium\Ledger\Data\MarkUncollectible;
-use Billium\Ledger\Data\RecordObligation;
-use Billium\Ledger\Data\VoidInvoice;
+use Billium\Ledger\Data\Allocations\Allocate;
+use Billium\Ledger\Data\Invoices\CreateInvoice;
+use Billium\Ledger\Data\Invoices\DiscardInvoice;
+use Billium\Ledger\Data\Invoices\InvoiceLineInput;
+use Billium\Ledger\Data\Invoices\IssueInvoice;
+use Billium\Ledger\Data\Invoices\MarkUncollectible;
+use Billium\Ledger\Data\Invoices\VoidInvoice;
+use Billium\Ledger\Data\Obligations\AdjustObligation;
+use Billium\Ledger\Data\Obligations\RecordObligation;
+use Billium\Ledger\Data\Runtime\BillingAccountScope;
 use Billium\Ledger\Internal\InvoiceStatus;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
 use PDOException;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class InvoiceCommandsTest extends LedgerTestCase
 {
     use InvoiceFixtures;

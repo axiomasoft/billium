@@ -7,6 +7,7 @@ namespace Billium\Ledger\Internal\Observation;
 use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Data\Envelopes\PaymentObservation;
 use Billium\Contracts\Data\Money;
+use Packman\Attributes\Internal;
 use stdClass;
 
 /**
@@ -17,6 +18,7 @@ use stdClass;
  * and evidence/transport refs are custody metadata: another delivery of the same snapshot has the same digest and never
  * a second economic effect; the same revision with another digest is a conflict.
  */
+#[Internal]
 final readonly class EconomicDigest
 {
     public const string VERSION = 'ledger-material/1';

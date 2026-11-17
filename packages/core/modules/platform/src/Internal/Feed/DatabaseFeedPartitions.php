@@ -4,16 +4,18 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Internal\Feed;
 
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Platform\Contracts\BootstrapItemHandler;
-use Billium\Platform\Contracts\CustodyHandler;
-use Billium\Platform\Contracts\FeedPartitions;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Platform\Contracts\Feed\FeedPartitions;
+use Billium\Platform\Contracts\Inbox\BootstrapItemHandler;
+use Billium\Platform\Contracts\Inbox\CustodyHandler;
 use Billium\Platform\Data\Inbox\BootstrapPartition;
 use Billium\Platform\Data\Inbox\BootstrapStatus;
 use Billium\Platform\Data\Inbox\CustodyResult;
 use Billium\Platform\Internal\Inbox\CustodyProcessor;
+use Packman\Attributes\Internal;
 use stdClass;
 
+#[Internal]
 final readonly class DatabaseFeedPartitions implements FeedPartitions
 {
     public function __construct(private CustodyProcessor $custody, private BootstrapCoordinator $bootstrap) {}

@@ -6,13 +6,13 @@ namespace Billium\Platform\Tests\Feature;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Caller;
-use Billium\Core\Data\Receipt;
-use Billium\Core\Data\StoredOutcome;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\Receipt;
+use Billium\Core\Data\Runner\StoredOutcome;
+use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Tests\TestEnvironment;
-use Billium\Platform\Contracts\IdempotencyStore;
+use Billium\Platform\Contracts\Idempotency\IdempotencyStore;
 use Billium\Platform\Tests\PlatformTestCase;
 use Illuminate\Database\DatabaseManager;
 use LogicException;
@@ -20,6 +20,7 @@ use PHPUnit\Framework\Attributes\Group;
 
 #[Group('INV-05')]
 #[Group('D51')]
+#[Group('pg')]
 final class IdempotencyStoreTest extends PlatformTestCase
 {
     private const string LEDGER = "command_kind NOT LIKE 'platform.%'";

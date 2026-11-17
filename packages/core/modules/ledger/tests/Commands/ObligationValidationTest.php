@@ -8,11 +8,13 @@ use Billium\Contracts\Data\Currency;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Ledger\Data\AdjustObligation;
-use Billium\Ledger\Data\BillingAccountScope;
-use Billium\Ledger\Data\RecordObligation;
+use Billium\Ledger\Data\Obligations\AdjustObligation;
+use Billium\Ledger\Data\Obligations\RecordObligation;
+use Billium\Ledger\Data\Runtime\BillingAccountScope;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class ObligationValidationTest extends LedgerTestCase
 {
     public function test_auth_money_and_unknown_reference_errors_leave_no_claim_or_business_receipt(): void

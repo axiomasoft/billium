@@ -1,28 +1,22 @@
-<!-- generated from .ai/guidelines/agent-entrypoint.md by scripts/build-agent-docs.sh -->
+# Repository Agent Instructions
 
-# Billium
+Generated automatically by `bin/packman ai:sync`. Do not edit generated agent specs in place; update `ai/` sources.
 
-- Billium is a PHP billing system; Dart is the contracts client and SDK,
-  never a second money writer.
-- Keep PHP and Dart contracts consistent through the shared spec and
-  fixtures, not shared code.
-- Requirements: `docs/requirements.md`; architecture and data model:
-  `docs/architecture/`; contracts v1: `docs/contracts/`; acceptance:
-  `docs/acceptance-catalog.md`.
-- Stack (PLAN1 D16): PHP 8.4+, Laravel 13, PostgreSQL 16+. No production
-  code before P2; layout follows the PLAN1 target structure.
-- Document implemented behavior and development commands in `README.md` and
-  `docs/`; run the relevant PHP/Dart checks once their tooling exists.
-- Preserve unrelated worktree changes. Keep credentials and machine-specific
-  agent settings out of Git.
-- Skills use the swissknifeman connect channel. Project memory is accessed
-  explicitly through mAInd in scope `project:billium`; code navigation uses
-  Serena with PHP and Dart language servers.
-- Edit this context in `.ai/guidelines/agent-entrypoint.md`, then run
-  `bash scripts/build-agent-docs.sh` to update `AGENTS.md` and `CLAUDE.md`.
+## Rules
+- `.claude/rules/architecture-boundaries.md` / `.gemini/rules/architecture-boundaries.md`
+- `.claude/rules/errors-and-diagnostics.md` / `.gemini/rules/errors-and-diagnostics.md`
+- `.claude/rules/extensions-plugins-modules.md` / `.gemini/rules/extensions-plugins-modules.md`
+- `.claude/rules/options-config.md` / `.gemini/rules/options-config.md`
+- `.claude/rules/panels-and-filament.md` / `.gemini/rules/panels-and-filament.md`
+- `.claude/rules/public-api-semver.md` / `.gemini/rules/public-api-semver.md`
+- `.claude/rules/schema-and-migrations.md` / `.gemini/rules/schema-and-migrations.md`
+- `.claude/rules/service-providers.md` / `.gemini/rules/service-providers.md`
+- `.claude/rules/testing-and-gates.md` / `.gemini/rules/testing-and-gates.md`
 
-<!-- swissknifeman:hub:start -->
-<!-- swissknifeman hub: stub — skills and task-commands are connected natively; index and priority rules are not duplicated here. -->
-<!-- swissknifeman:registry sha=273bdbe54ab3 skills=232 -->
-<!-- Full index: `skiller status` or generate-hub.sh --target <dir> --full-index. -->
-<!-- swissknifeman:hub:end -->
+## Agents
+- `packman-api-auditor` (`.codex/agents/packman-api-auditor.toml`, `.claude/agents/packman-api-auditor.md`)
+- `packman-builder` (`.codex/agents/packman-builder.toml`, `.claude/agents/packman-builder.md`)
+- `packman-orchestrator` (`.codex/agents/packman-orchestrator.toml`, `.claude/agents/packman-orchestrator.md`)
+- `packman-reviewer` (`.codex/agents/packman-reviewer.toml`, `.claude/agents/packman-reviewer.md`)
+- `packman-security-reviewer` (`.codex/agents/packman-security-reviewer.toml`, `.claude/agents/packman-security-reviewer.md`)
+- `packman-test-verifier` (`.codex/agents/packman-test-verifier.toml`, `.claude/agents/packman-test-verifier.md`)

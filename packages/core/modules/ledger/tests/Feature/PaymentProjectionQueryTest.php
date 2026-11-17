@@ -11,7 +11,9 @@ use Billium\Core\Tests\Support\ObservationFactory;
 use Billium\Ledger\Tests\Observation\OverRefundVector;
 use Billium\Ledger\Tests\Queries\QueryTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class PaymentProjectionQueryTest extends QueryTestCase
 {
     use OverRefundVector;
@@ -61,7 +63,7 @@ final class PaymentProjectionQueryTest extends QueryTestCase
 
     public function test_missing_intent_exposes_capture_without_applied_or_spendable_and_query_does_not_drain(): void
     {
-        self::assertSame(ProblemCode::ObservationParked->value, $this->attempt(ObservationFactory::charge('unbound', 1, 1234)));
+        self::assertSame(ProblemCode::ObservationParked->value, $this->tryObserve(ObservationFactory::charge('unbound', 1, 1234)));
         $counts = [$this->rows('billium_allocation_receipt'), $this->rows('billium_allocation'), $this->rows('billium_inbox_message'), $this->rows('billium_observation_park')];
         $status = $this->queries()->paymentStatus('unbound');
         self::assertArrayNotHasKey('applied', $status);
@@ -92,7 +94,7 @@ final class PaymentProjectionQueryTest extends QueryTestCase
         $this->debt('o1', 10000);
         $this->intent('intent-a', ['o1']);
         $this->observe(ObservationFactory::charge('op-1', 1, 1000));
-        $this->attempt(ObservationFactory::charge('op-1', 2, 2000, sequence: 2, fields: ['sourceLineage' => 'L2']));
+        $this->tryObserve(ObservationFactory::charge('op-1', 2, 2000, sequence: 2, fields: ['sourceLineage' => 'L2']));
         self::assertSame('recovery_required', $this->queries()->paymentStatus('op-1')['projectionStatus']);
         self::assertSame('0.00', self::arr($this->queries()->paymentStatus('op-1')['spendable'])['amount']);
         $this->bootstrapper()->execute($this->snapshot('boot', 'L2', 20, [ObservationFactory::charge('op-1', 2, 2000, fields: ['sourceLineage' => 'L2'])]));

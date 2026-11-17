@@ -18,6 +18,7 @@ use PHPUnit\Framework\Attributes\Group;
  * hold, spendable 0 and the typed financial-hold allocation refusal; the ledger issues no PSP command.
  */
 #[Group('D62')]
+#[Group('pg')]
 final class ObservedHoldAllProfilesTest extends ObservationTestCase
 {
     use OverRefundVector;

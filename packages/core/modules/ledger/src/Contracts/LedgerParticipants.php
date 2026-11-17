@@ -4,17 +4,16 @@ declare(strict_types=1);
 
 namespace Billium\Ledger\Contracts;
 
-use Billium\Contracts\Attributes\Api;
-use Billium\Contracts\Attributes\Spi;
-use Billium\Contracts\Attributes\SpiKind;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Receipt;
-use Billium\Ledger\Data\AdjustObligation;
-use Billium\Ledger\Data\CloseSettlementIntentNoEffect;
-use Billium\Ledger\Data\DeclareSettlementIntent;
-use Billium\Ledger\Data\IssueCreditNote;
-use Billium\Ledger\Data\IssueInvoice;
-use Billium\Ledger\Data\RecordObligation;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\Receipt;
+use Billium\Ledger\Data\Invoices\IssueCreditNote;
+use Billium\Ledger\Data\Invoices\IssueInvoice;
+use Billium\Ledger\Data\Obligations\AdjustObligation;
+use Billium\Ledger\Data\Obligations\RecordObligation;
+use Billium\Ledger\Data\Settlements\CloseSettlementIntentNoEffect;
+use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
+use Packman\Attributes\Spi;
+use Packman\Attributes\SpiKind;
 
 /**
  * Typed ledger participants of a root transaction owned by another module (D60, transaction-participants). Each method
@@ -25,8 +24,7 @@ use Billium\Ledger\Data\RecordObligation;
  * gets a positive delta as recordObligation with CorrectionBasis::derive(original basis, correction identity, revision)
  * and a negative delta as issueCreditNote. The original obligation is never overwritten.
  */
-#[Api]
-#[Spi(SpiKind::Call)]
+#[Spi(kind: SpiKind::Call, since: '1.0')]
 interface LedgerParticipants
 {
     /** Also the positive finalized correction path, with a basisRef derived from the original basis and correction identity. */

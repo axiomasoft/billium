@@ -6,17 +6,17 @@ namespace Billium\Ledger\Internal\Participants;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Receipt;
-use Billium\Core\Exceptions\LockPlanChanged;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\Receipt;
+use Billium\Core\Exceptions\Runner\LockPlanChanged;
 use Billium\Ledger\Contracts\LedgerParticipants;
-use Billium\Ledger\Data\AdjustObligation;
-use Billium\Ledger\Data\CloseSettlementIntentNoEffect;
-use Billium\Ledger\Data\DeclareSettlementIntent;
-use Billium\Ledger\Data\IssueCreditNote;
-use Billium\Ledger\Data\IssueInvoice;
-use Billium\Ledger\Data\RecordObligation;
+use Billium\Ledger\Data\Invoices\IssueCreditNote;
+use Billium\Ledger\Data\Invoices\IssueInvoice;
+use Billium\Ledger\Data\Obligations\AdjustObligation;
+use Billium\Ledger\Data\Obligations\RecordObligation;
+use Billium\Ledger\Data\Settlements\CloseSettlementIntentNoEffect;
+use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
 use Billium\Ledger\Internal\Commands\AdjustObligationCommand;
 use Billium\Ledger\Internal\Commands\AllocateLockPlan;
 use Billium\Ledger\Internal\Commands\DeclareSettlementIntentCommand;
@@ -26,7 +26,9 @@ use Billium\Ledger\Internal\Commands\RecordObligationCommand;
 use Billium\Ledger\Internal\Repositories\LedgerRepository;
 use Illuminate\Database\DatabaseManager;
 use LogicException;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final readonly class DatabaseLedgerParticipants implements LedgerParticipants
 {
     public function __construct(

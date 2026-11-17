@@ -6,10 +6,10 @@ namespace Billium\Platform\Internal\Inbox;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Exceptions\LockPlanChanged;
-use Billium\Platform\Contracts\CustodyHandler;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Exceptions\Runner\LockPlanChanged;
+use Billium\Platform\Contracts\Inbox\CustodyHandler;
 use Billium\Platform\Data\Inbox\CustodyDisposition;
 use Billium\Platform\Data\Inbox\CustodyResult;
 use Billium\Platform\Data\Inbox\HandlerOutcome;
@@ -20,6 +20,7 @@ use Billium\Platform\Internal\Installation\Rows;
 use Closure;
 use Illuminate\Database\Connection;
 use LogicException;
+use Packman\Attributes\Internal;
 use stdClass;
 
 /**
@@ -31,6 +32,7 @@ use stdClass;
  * accounting frontier advances over durable dispositions in source order, a dependency-parked one included, so a parked
  * observation never blocks its partition.
  */
+#[Internal]
 final readonly class CustodyProcessor
 {
     /** @param Closure(): OperationRunner $runner */

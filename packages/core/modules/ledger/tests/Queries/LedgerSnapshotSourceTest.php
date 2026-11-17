@@ -6,14 +6,16 @@ namespace Billium\Ledger\Tests\Queries;
 
 use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Enums\ProblemCode;
-use Billium\Core\Data\Caller;
+use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Tests\Support\ObservationFactory;
 use Billium\Ledger\Internal\Snapshot\LedgerSnapshotSource;
-use Billium\Platform\Contracts\EventFeed;
+use Billium\Platform\Contracts\Feed\EventFeed;
 use Billium\Platform\Data\Feed\FeedScope;
 use Illuminate\Support\Str;
 use LogicException;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class LedgerSnapshotSourceTest extends QueryTestCase
 {
     public function test_snapshot_keeps_pending_actual_refund_children_and_discrepancy_evidence(): void
@@ -22,7 +24,7 @@ final class LedgerSnapshotSourceTest extends QueryTestCase
         $this->intent('intent-a', ['o1']);
         $this->observe(ObservationFactory::charge('op-1', 1, 10000));
         $this->observe(ObservationFactory::refund('refund-1', 'op-1', 1, 2000, sequence: 2));
-        $this->attempt(ObservationFactory::charge('unbound', 1, 1234, sequence: 3, fields: ['businessIntentRef' => 'missing']));
+        $this->tryObserve(ObservationFactory::charge('unbound', 1, 1234, sequence: 3, fields: ['businessIntentRef' => 'missing']));
         $this->observe(ObservationFactory::charge('op-1', 2, 10000, 14000, sequence: 4));
         config(['billium.feed.signing_key' => str_repeat('k', 32)]);
         $feed = $this->application()->make(EventFeed::class);

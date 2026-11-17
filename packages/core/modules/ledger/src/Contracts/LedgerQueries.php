@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Billium\Ledger\Contracts;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Contracts\Data\Money;
 use DateTimeImmutable;
+use Packman\Attributes\Api;
 
 /** Authenticated, side-effect-free recovery reads (REQ-CON-14, INV-14, D35, D60). All amounts are MoneyWire. */
-#[Api]
+#[Api(since: '1.0')]
 interface LedgerQueries
 {
     /** @return array<string, mixed> */

@@ -6,19 +6,22 @@ namespace Billium\Platform\Internal\Idempotency;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Data\Caller;
-use Billium\Core\Data\StoredOutcome;
-use Billium\Platform\Contracts\IdempotencyStore;
-use Billium\Platform\Data\IdempotencyClaim;
+use Billium\Core\Data\Runner\StoredOutcome;
+use Billium\Core\Data\Runtime\Caller;
+use Billium\Platform\Contracts\Idempotency\IdempotencyStore;
+use Billium\Platform\Data\Idempotency\IdempotencyClaim;
 use Billium\Platform\Internal\Installation\Rows;
 use Illuminate\Database\Connection;
 use Illuminate\Database\QueryException;
 use LogicException;
+use Packman\Attributes\Internal;
+use stdClass;
 
 /**
  * INSERT … ON CONFLICT DO NOTHING with a bounded wait (D51): a concurrent claim of the same scope blocks on the unique
  * index until the first root Tx commits or rolls back. No check-then-insert (INV-05, M-53).
  */
+#[Internal]
 final readonly class DatabaseIdempotencyStore implements IdempotencyStore
 {
     public function __construct(private Connection $connection, private int $lockTimeoutMs) {}
@@ -64,8 +67,8 @@ final readonly class DatabaseIdempotencyStore implements IdempotencyStore
         }
         // Decode nested objects as objects: associative decoding collapses {} and numeric-key objects into lists.
         $document = json_decode($stored, false, 64, JSON_THROW_ON_ERROR);
-        $result = $document instanceof \stdClass ? get_object_vars($document) : [];
-        if (($result['body'] ?? null) instanceof \stdClass) {
+        $result = $document instanceof stdClass ? get_object_vars($document) : [];
+        if (($result['body'] ?? null) instanceof stdClass) {
             $result['body'] = get_object_vars($result['body']);
         }
 

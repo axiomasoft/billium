@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Billium\Contracts\Internal;
 
 use Billium\Contracts\Data\Currency;
+use Packman\Attributes\Internal;
 
 /**
  * The ISO 4217 currencies of the spec revision with their scale (D19), read from the package resources.
  */
+#[Internal]
 final class CurrencyTable
 {
     /** @var array<string, int<0, max>>|null */

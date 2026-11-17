@@ -6,9 +6,9 @@ namespace Billium\Platform\Tests\Feature;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Receipt;
-use Billium\Core\Enums\FinancialMode;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\Receipt;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Tests\Support\Concurrency\ConcurrencyStand;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
 use Billium\Platform\Tests\Concurrency\Scenarios\RootOperationScenario;
@@ -21,6 +21,7 @@ use PHPUnit\Framework\Attributes\Group;
  * expired or foreign token, or no token refuses before any financial effect.
  */
 #[Group('D62')]
+#[Group('pg')]
 final class WorkerJoinSessionTest extends PlatformTestCase
 {
     protected function setUp(): void

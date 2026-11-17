@@ -4,16 +4,17 @@ declare(strict_types=1);
 
 namespace Billium\Ledger\Internal\Observation;
 
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\OperationSpec;
-use Billium\Core\Data\Receipt;
-use Billium\Core\Enums\FinancialMode;
+use Billium\Core\Configuration\BilliumOptions;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Data\Runner\OperationSpec;
+use Billium\Core\Data\Runner\Receipt;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
-use Billium\Ledger\Data\LedgerReceipt;
-use Billium\Platform\Contracts\CustodyHandler;
-use Billium\Platform\Contracts\FeedPartitions;
+use Billium\Core\Enums\Runtime\FinancialMode;
+use Billium\Ledger\Data\Runtime\LedgerReceipt;
+use Billium\Platform\Contracts\Feed\FeedPartitions;
+use Billium\Platform\Contracts\Inbox\CustodyHandler;
 use Billium\Platform\Data\Inbox\CustodyDisposition;
 use Billium\Platform\Data\Inbox\CustodyResult;
 use Billium\Platform\Data\Inbox\HandlerOutcomeKind;
@@ -22,6 +23,8 @@ use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
 use LogicException;
+use Packman\Attributes\Internal;
+use stdClass;
 
 /**
  * Drives observation work one economic event per NEW root Tx (inbox-feed): the next accounted sequence of a partition,
@@ -29,6 +32,7 @@ use LogicException;
  * intent/account or original charge) now exists. Nothing here loops over a second event inside one root, so no
  * lower-rank lock is ever discovered after funds; a dependency-parked observation never blocks its partition.
  */
+#[Internal]
 final readonly class ParkedDrainer
 {
     public const string CHANNEL = 'payment.observation';
@@ -43,6 +47,7 @@ final readonly class ParkedDrainer
         private ObservationHandler $handler,
         private PaymentProjection $projection,
         private DatabaseManager $databases,
+        private BilliumOptions $options,
     ) {}
 
     /**
@@ -78,7 +83,7 @@ final readonly class ParkedDrainer
      * Raw custody of one authenticated delivery (D60): a RawCustody root takes no financial session barrier and no
      * monetary commit kind, so custody commits even while financial application is sealed. It never invokes a handler.
      */
-    public function custody(\stdClass $envelope, CustodyHandler $handler): CustodyResult
+    public function custody(stdClass $envelope, CustodyHandler $handler): CustodyResult
     {
         $caller = $this->callers->current();
         $spec = new OperationSpec('platform.inbox_custody', $caller->sellerRef, $caller->environment, FinancialMode::RawCustody,
@@ -96,9 +101,7 @@ final readonly class ParkedDrainer
     /** The configured Billium connection (billium.connection), never the host's default database, for work selection. */
     public function connection(): Connection
     {
-        $name = config('billium.connection');
-
-        return $this->databases->connection(is_string($name) ? $name : null);
+        return $this->databases->connection($this->options->connection);
     }
 
     /**
@@ -203,7 +206,7 @@ final readonly class ParkedDrainer
             return 'released';
         }
         $payload = json_decode(is_string($row->payload) ? $row->payload : '', false, 64, JSON_THROW_ON_ERROR);
-        $observation = $payload instanceof \stdClass ? ObservationHandler::decode($payload) : null;
+        $observation = $payload instanceof stdClass ? ObservationHandler::decode($payload) : null;
         if ($observation === null) {
             $this->projection->release($db, $caller, $parkId, null, 'quarantined');
 

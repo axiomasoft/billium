@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Billium\Core\Data\Modules;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Core\Internal\Modules\Shape;
+use Packman\Attributes\Api;
 
 /**
  * The packaged module registry: core API version, host/module ports, compositions and descriptors.
  * A plain container; graph and range validation happens in ModuleRegistry::check so that invalid sets can be reported.
  */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class ModuleManifest
 {
     /**
@@ -63,14 +63,18 @@ final readonly class ModuleManifest
         foreach (Shape::list($data, 'retentionPolicies', $context) as $item) {
             $item = Shape::object($item, ['id', 'purge'], 'retentionPolicy');
             $id = Shape::string($item, 'id', 'retentionPolicy');
-            isset($retention[$id]) && throw Shape::fail('retentionPolicy', "duplicate {$id}");
+            if (isset($retention[$id])) {
+                throw Shape::fail('retentionPolicy', "duplicate {$id}");
+            }
             $retention[$id] = Shape::string($item, 'purge', 'retentionPolicy');
         }
         $ports = [];
         foreach (Shape::list($data, 'ports', $context) as $item) {
             $item = Shape::object($item, ['id', 'providedBy'], 'port');
             $id = Shape::string($item, 'id', 'port');
-            isset($ports[$id]) && throw Shape::fail('port', "duplicate {$id}");
+            if (isset($ports[$id])) {
+                throw Shape::fail('port', "duplicate {$id}");
+            }
             $ports[$id] = Shape::string($item, 'providedBy', 'port');
         }
 

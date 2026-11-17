@@ -9,12 +9,16 @@ use Billium\Core\Data\Modules\CompatibilityFinding;
 use Billium\Core\Data\Modules\CompatibilityInput;
 use Billium\Core\Data\Modules\CompatibilityReport;
 use Billium\Core\Data\Modules\InstalledCheckpoint;
+use Billium\Core\Data\Modules\MigrationIdentity;
 use Billium\Core\Data\Modules\ModuleDescriptor;
 use Billium\Core\Data\Modules\ModuleManifest;
+use Billium\Core\Data\Modules\PublicEventDeclaration;
 use Billium\Core\Enums\Modules\CompatibilityFindingCode as Code;
 use Billium\Core\Enums\Modules\ModulePresence;
+use Packman\Attributes\Internal;
 
 /** Descriptor set + desired config + capabilities + checkpoints → report. Pure: no database, no filesystem after load. */
+#[Internal]
 final readonly class ModuleCatalog implements ModuleRegistry
 {
     public function __construct(private ModuleManifest $manifest) {}
@@ -139,7 +143,7 @@ final readonly class ModuleCatalog implements ModuleRegistry
             }
             foreach ($descriptor->publicEvents as $event) {
                 $previous = $events[$event->key()] ?? null;
-                if ($previous !== null && ($previous['owner'] !== $id || $previous['event'] != $event)) {
+                if ($previous !== null && ($previous['owner'] !== $id || ! self::samePublicEvent($previous['event'], $event))) {
                     $findings[] = new CompatibilityFinding(Code::EventContractConflict, $id, "event contract {$event->key()} is already declared by {$previous['owner']}");
                 } else {
                     $events[$event->key()] = ['owner' => $id, 'event' => $event];
@@ -197,7 +201,7 @@ final readonly class ModuleCatalog implements ModuleRegistry
         $checkpoint = $input->checkpoints[$id] ?? new InstalledCheckpoint($id);
         $missing = array_values(array_filter(
             $descriptor->migrationIdentities,
-            static fn ($migration): bool => ! in_array($migration->id, $checkpoint->appliedMigrations, true),
+            static fn (MigrationIdentity $migration): bool => ! in_array($migration->id, $checkpoint->appliedMigrations, true),
         ));
         if ($checkpoint->schemaVersion < $descriptor->currentSchemaVersion || $missing !== []) {
             $findings[] = new CompatibilityFinding(Code::MigrationUnapplied, $id, "{$id} installed schema {$checkpoint->schemaVersion} is behind {$descriptor->currentSchemaVersion}");
@@ -283,5 +287,17 @@ final readonly class ModuleCatalog implements ModuleRegistry
         }
 
         return $order;
+    }
+
+    private static function samePublicEvent(PublicEventDeclaration $a, PublicEventDeclaration $b): bool
+    {
+        return $a->eventType === $b->eventType
+            && $a->envelopeSchema === $b->envelopeSchema
+            && $a->eventContractRevision === $b->eventContractRevision
+            && $a->payloadSchemaRef === $b->payloadSchemaRef
+            && $a->payloadSchemaDigest === $b->payloadSchemaDigest
+            && $a->bootstrapMode === $b->bootstrapMode
+            && $a->snapshotSourceKey === $b->snapshotSourceKey
+            && $a->retentionPolicyRef === $b->retentionPolicyRef;
     }
 }

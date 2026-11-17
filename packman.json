@@ -1,0 +1,56 @@
+{
+    "schema_version": 1,
+    "name": "axiomasoft/billium-monorepo",
+    "profile": "laravel-package",
+    "php": "^8.4",
+    "phpstan_level": "max",
+    "provider_max_lines": 80,
+    "packages": [
+        {
+            "name": "axiomasoft/billium-contracts",
+            "path": "packages/contracts",
+            "namespace": "Billium\\Contracts\\",
+            "profile": "php-library",
+            "layer": "L1",
+            "type": "domain",
+            "owns": [
+                "Attributes",
+                "Contracts",
+                "Data",
+                "Enums",
+                "Errors",
+                "Exceptions",
+                "Internal"
+            ]
+        },
+        {
+            "name": "axiomasoft/billium-core",
+            "path": "packages/core",
+            "namespace": "Billium\\Core\\",
+            "profile": "laravel-package",
+            "layer": "L2",
+            "type": "domain",
+            "owns": [
+                "Configuration",
+                "Contracts",
+                "Data",
+                "Database",
+                "Diagnostics",
+                "Enums",
+                "Errors",
+                "Events",
+                "Exceptions",
+                "Internal",
+                "Laravel",
+                "Plugins"
+            ]
+        }
+    ],
+    "gates": {
+        "strict_ownership": true,
+        "provider_size_limit": 80,
+        "disallow_internal_cross_imports": true,
+        "require_api_manifest": true,
+        "error_urn_prefix": "urn:packman:problem:"
+    }
+}

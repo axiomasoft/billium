@@ -7,18 +7,18 @@ namespace Billium\Core\Tests\Feature;
 use Billium\Contracts\Data\Currency;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Data\Receipt;
-use Billium\Core\Enums\LockRank;
-use Billium\Core\Exceptions\LockOrderViolation;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Data\Runner\Receipt;
+use Billium\Core\Enums\Runner\LockRank;
+use Billium\Core\Exceptions\Runner\LockOrderViolation;
 use Billium\Ledger\Contracts\LedgerParticipants;
-use Billium\Ledger\Data\AdjustObligation;
-use Billium\Ledger\Data\CorrectionBasis;
-use Billium\Ledger\Data\CreditNoteLine;
-use Billium\Ledger\Data\CreditNoteMode;
-use Billium\Ledger\Data\IssueCreditNote;
-use Billium\Ledger\Data\RecordObligation;
+use Billium\Ledger\Data\Invoices\CreditNoteLine;
+use Billium\Ledger\Data\Invoices\CreditNoteMode;
+use Billium\Ledger\Data\Invoices\IssueCreditNote;
+use Billium\Ledger\Data\Obligations\AdjustObligation;
+use Billium\Ledger\Data\Obligations\CorrectionBasis;
+use Billium\Ledger\Data\Obligations\RecordObligation;
 use Billium\Ledger\Tests\Commands\InvoiceFixtures;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
 use LogicException;
@@ -33,6 +33,7 @@ use RuntimeException;
  */
 #[Group('D63')]
 #[Group('F01')]
+#[Group('pg')]
 final class CorrectionParticipantTest extends LedgerTestCase
 {
     use InvoiceFixtures;

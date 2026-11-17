@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Data\Feed;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Contracts\Contracts\Codec;
 use InvalidArgumentException;
+use Packman\Attributes\Api;
 
-#[Api]
+#[Api(since: '1.0')]
 final readonly class FeedScope
 {
     public function __construct(

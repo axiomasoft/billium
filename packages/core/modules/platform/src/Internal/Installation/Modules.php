@@ -7,8 +7,10 @@ namespace Billium\Platform\Internal\Installation;
 use Billium\Core\Data\Modules\ModuleState;
 use Billium\Core\Enums\Modules\ModuleLifecycleState;
 use Illuminate\Database\Connection;
+use Packman\Attributes\Internal;
 
 /** Plain reads of billium_module_state; locking happens only through the root LockSet. */
+#[Internal]
 final class Modules
 {
     public const string TABLE = 'billium_module_state';

@@ -6,7 +6,7 @@ namespace Billium\Platform\Tests\Feature;
 
 use Billium\Core\Contracts\Modules\ModuleRegistry;
 use Billium\Core\Tests\TestEnvironment;
-use Billium\Platform\Contracts\EventContractRegistrar;
+use Billium\Platform\Contracts\EventContracts\EventContractRegistrar;
 use Billium\Platform\Data\EventContracts\EventContractRegistration;
 use Billium\Platform\Data\EventContracts\EventContractRegistrationPlan;
 use Billium\Platform\Internal\EventContracts\DatabaseEventContractRegistrar;
@@ -15,6 +15,7 @@ use LogicException;
 use PHPUnit\Framework\Attributes\Group;
 
 #[Group('EVT-04')]
+#[Group('pg')]
 final class EventContractRegistryTest extends OutboxTestCase
 {
     public function test_disabled_never_installed_module_has_no_rows_and_used_history_survives_disable(): void

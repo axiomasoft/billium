@@ -5,14 +5,16 @@ declare(strict_types=1);
 namespace Billium\Ledger\Internal\Observation;
 
 use Billium\Contracts\Contracts\Codec;
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
+use Billium\Core\Configuration\BilliumOptions;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Ledger\Internal\Commands\AllocateLockPlan;
 use Billium\Ledger\Internal\Receipts\AllocationReceiptWriter;
 use Billium\Ledger\Internal\Repositories\LedgerRepository;
 use Illuminate\Database\DatabaseManager;
 use LogicException;
+use Packman\Attributes\Internal;
 
 /**
  * D48 reconcile job of the D41 refund basis: after the configured consistency window the ordinary charge basis
@@ -22,6 +24,7 @@ use LogicException;
  * dedupes, a changed mismatch under the same charge revision is a new visible row, later agreement appends resolution.
  * One root Tx per comparison under the Funds lock of that payment; the ledger and any financial hold never change here.
  */
+#[Internal]
 final readonly class RefundReconciler
 {
     public const string BASIS = 'refund-basis/1';
@@ -33,6 +36,7 @@ final readonly class RefundReconciler
         private DatabaseManager $databases,
         private LedgerRepository $routines,
         private AllocationReceiptWriter $writer,
+        private BilliumOptions $options,
     ) {}
 
     /**
@@ -41,8 +45,8 @@ final readonly class RefundReconciler
      */
     public function reconcile(?int $afterSeconds = null, int $limit = 100): array
     {
-        $window = $afterSeconds ?? config('billium.ledger.refund_reconcile_after_seconds', 3600);
-        $window = is_int($window) && $window >= 0 ? $window : 3600;
+        $window = $afterSeconds ?? $this->options->ledger->refundReconcileAfterSeconds;
+        $window = $window >= 0 ? $window : 3600;
         $caller = $this->callers->current();
         $candidates = $this->roots->connection()->select(<<<'SQL'
             SELECT p.id FROM public.billium_payment p

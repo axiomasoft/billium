@@ -6,8 +6,8 @@ namespace Billium\Platform\Tests\Feature;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Caller;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Platform\Data\Inbox\CustodyDisposition;
 use Billium\Platform\Tests\Inbox\InboxTestCase;
@@ -17,6 +17,7 @@ use PHPUnit\Framework\Attributes\Group;
 /** The source namespace is compound: authority, lineage, seller, environment, channel and partition ref (INV-08, INV-14, D60). */
 #[Group('INV-08')]
 #[Group('INV-14')]
+#[Group('pg')]
 final class InboxSourceIsolationTest extends InboxTestCase
 {
     private const string OTHER = 'remote-billium';

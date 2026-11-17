@@ -7,6 +7,9 @@
         "php": "^8.4",
         "ext-pdo_pgsql": "*",
         "axiomasoft/billium-contracts": "^0.1",
+        "axiomasoft/packman": "^0.1",
+        "axiomasoft/packman-plugins": "^0.1",
+        "axiomasoft/packman-schema": "^0.1",
         "laravel/framework": "^13.0"
     },
     "autoload": {
@@ -14,12 +17,32 @@
             "Billium\\Core\\": "src/",
             "Billium\\Platform\\": "modules/platform/src/",
             "Billium\\Ledger\\": "modules/ledger/src/"
-        }
+        },
+        "files": [
+            "src/aliases.php"
+        ]
     },
     "extra": {
         "laravel": {
             "providers": [
                 "Billium\\Core\\BilliumCoreServiceProvider"
+            ]
+        },
+        "packman": {
+            "error-prefix": "billium",
+            "owns": [
+                "Configuration",
+                "Contracts",
+                "Data",
+                "Database",
+                "Diagnostics",
+                "Enums",
+                "Errors",
+                "Events",
+                "Exceptions",
+                "Internal",
+                "Laravel",
+                "Plugins"
             ]
         }
     },

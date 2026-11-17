@@ -9,6 +9,7 @@ use Billium\Contracts\Contracts\MoneyMathFactory;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Packman\Attributes\Internal;
 
 /**
  * pro_rata_open/1 (D46, allocation-policy): distributes an amount A over the open amounts of the settlement targets in
@@ -16,6 +17,7 @@ use Billium\Contracts\Exceptions\ProblemException;
  * on the payment; A < O uses MoneyMath::allocate (largest remainder, ties to the lower index, D44). Parts sum to
  * min(A, O) exactly and never use floats (M-48). A zero part creates no allocation row; that is the caller's choice.
  */
+#[Internal]
 final readonly class ProRataOpenPolicy
 {
     public const string VERSION = 'pro_rata_open/1';

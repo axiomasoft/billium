@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Contracts\FinancialSessionAdmission;
-use Billium\Core\Data\Caller;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
+use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Tests\Support\Concurrency\WorkerApplication;
 use Billium\Core\Tests\Support\FixedCallerContext;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Ledger\Contracts\Ledger;
-use Billium\Ledger\Data\Allocate;
-use Billium\Ledger\Data\BillingAccountScope;
+use Billium\Ledger\Data\Allocations\Allocate;
+use Billium\Ledger\Data\Runtime\BillingAccountScope;
 use Illuminate\Database\DatabaseManager;
 
 require dirname(__DIR__, 5).'/vendor/autoload.php';

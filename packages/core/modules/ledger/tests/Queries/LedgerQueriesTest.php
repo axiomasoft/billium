@@ -7,7 +7,7 @@ namespace Billium\Ledger\Tests\Queries;
 use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
-use Billium\Core\Data\Caller;
+use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Tests\Support\ObservationFactory;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Ledger\Data\Views\LedgerView;
@@ -17,7 +17,9 @@ use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
 use LogicException;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class LedgerQueriesTest extends QueryTestCase
 {
     public function test_refund_capacity_subtracts_confirmed_refunds_and_includes_existing_release_deficit(): void

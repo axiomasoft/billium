@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Billium\Contracts\Data;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Contracts\Internal\CurrencyTable;
+use Packman\Attributes\Api;
 
 /**
  * An ISO 4217 currency and the number of fraction digits of its minor unit.
  */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class Currency
 {
     /**

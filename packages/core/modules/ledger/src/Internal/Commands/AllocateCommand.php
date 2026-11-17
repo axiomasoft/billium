@@ -6,14 +6,15 @@ namespace Billium\Ledger\Internal\Commands;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Exceptions\LockPlanChanged;
-use Billium\Ledger\Data\Allocate;
-use Billium\Ledger\Data\LedgerReceipt;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Exceptions\Runner\LockPlanChanged;
+use Billium\Ledger\Data\Allocations\Allocate;
+use Billium\Ledger\Data\Runtime\LedgerReceipt;
 use Billium\Ledger\Internal\PaymentSource;
 use Billium\Ledger\Internal\Receipts\AllocationReceiptWriter;
 use Illuminate\Database\DatabaseManager;
+use Packman\Attributes\Internal;
 
 /**
  * Explicit allocation of one funds source to one obligation (INV-09, COV-166). PHP authorizes, plans and prelocks
@@ -21,6 +22,7 @@ use Illuminate\Database\DatabaseManager;
  * source budget (captured − refunded − allocated without hold or reallocation, or credit remaining) and the open
  * budget, append the journal row and move every counter. No network call happens here (COV-003).
  */
+#[Internal]
 final readonly class AllocateCommand
 {
     /** Lineage of an explicit allocation; automatic allocation of observations uses pro_rata_open/1 (P3.9). */

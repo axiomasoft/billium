@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Billium\Core\Tests\Support;
 
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Data\Caller;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Data\Runtime\Caller;
 
 /** Test double of the host-authenticated caller; tests switch the caller to prove scope checks. */
 final class FixedCallerContext implements CallerContext

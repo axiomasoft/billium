@@ -4,16 +4,17 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Data\Inbox;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Contracts\Contracts\Codec;
 use InvalidArgumentException;
+use Packman\Attributes\Api;
+use stdClass;
 
 /**
  * A complete source snapshot for one partition at `cursorSequence`, pinned by the source retention lease. The snapshot
  * digest covers the complete source namespace, cursor and every item in (operationRef, revision) order, so an altered snapshot never
  * verifies (D60, inbox-feed).
  */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class BootstrapPartition
 {
     /** @var list<BootstrapItem> */
@@ -56,7 +57,7 @@ final readonly class BootstrapPartition
         $body = (object) [
             'namespace' => (object) $namespace,
             'cursor' => $cursorSequence,
-            'items' => array_map(static fn (BootstrapItem $item): \stdClass => (object) [
+            'items' => array_map(static fn (BootstrapItem $item): stdClass => (object) [
                 'operationRef' => $item->operationRef, 'revision' => $item->revision,
                 'materialDigest' => $item->materialDigest, 'payload' => $item->payload,
             ], $items),

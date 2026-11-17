@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Data\Inbox;
 
-use Billium\Contracts\Attributes\Api;
+use Packman\Attributes\Api;
 
 /** Query view of a staged bootstrap; reading it never mutates and never triggers an effect. */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class BootstrapStatus
 {
     public function __construct(

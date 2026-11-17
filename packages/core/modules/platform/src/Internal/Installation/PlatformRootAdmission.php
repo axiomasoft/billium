@@ -6,30 +6,32 @@ namespace Billium\Platform\Internal\Installation;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\FinancialSessionAdmission;
 use Billium\Core\Contracts\Modules\ModuleAdmissionGate;
 use Billium\Core\Contracts\Modules\ModuleRegistry;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\LockRequest;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
 use Billium\Core\Data\Modules\ModuleState;
-use Billium\Core\Enums\FinancialMode;
-use Billium\Core\Enums\LockRank;
-use Billium\Core\Enums\LockScope;
+use Billium\Core\Data\Runner\LockRequest;
 use Billium\Core\Enums\Modules\ModuleLifecycleState;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
-use Billium\Core\Exceptions\LockPlanChanged;
-use Billium\Core\Exceptions\ModuleAdmissionRefused;
-use Billium\Platform\Contracts\RootAdmission;
+use Billium\Core\Enums\Runner\LockRank;
+use Billium\Core\Enums\Runner\LockScope;
+use Billium\Core\Enums\Runtime\FinancialMode;
+use Billium\Core\Exceptions\Modules\ModuleAdmissionRefused;
+use Billium\Core\Exceptions\Runner\LockPlanChanged;
+use Billium\Platform\Contracts\Installation\RootAdmission;
 use Closure;
 use DateTimeImmutable;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use LogicException;
+use Packman\Attributes\Internal;
 
 /**
  * Session (rank 15) and module (rank 25) barriers of the root runner, plus the diagnostic commit log (D54, D55, D62).
  * Every lock goes through the context's root LockSet and is held to commit.
  */
+#[Internal]
 final readonly class PlatformRootAdmission implements RootAdmission
 {
     /** @param Closure(): FinancialSessionAdmission $tokens resolved per root, so a rebinding host is honoured */

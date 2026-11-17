@@ -6,10 +6,12 @@ namespace Billium\Contracts\Internal;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Packman\Attributes\Internal;
 
 /**
  * Validated allocation ratios: non-negative integers as decimal strings, at least one positive (BC-MW-14).
  */
+#[Internal]
 final class Ratios
 {
     /**

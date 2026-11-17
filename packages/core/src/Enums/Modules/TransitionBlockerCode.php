@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Billium\Core\Enums\Modules;
 
-use Billium\Contracts\Attributes\Api;
+use Packman\Attributes\Api;
 
 /** Reasons a disable/retire/uninstall preview refuses. */
-#[Api]
+#[Api(since: '1.0')]
 enum TransitionBlockerCode: string
 {
     case PendingOperations = 'pending_operations';

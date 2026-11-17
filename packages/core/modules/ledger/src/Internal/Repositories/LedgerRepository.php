@@ -6,23 +6,25 @@ namespace Billium\Ledger\Internal\Repositories;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Enums\LockRank;
-use Billium\Core\Exceptions\LockPlanChanged;
-use Billium\Ledger\Data\AdjustObligation;
-use Billium\Ledger\Data\AmendObligationDuePolicy;
-use Billium\Ledger\Data\DeclareSettlementIntent;
-use Billium\Ledger\Data\LedgerReceipt;
-use Billium\Ledger\Data\RecordCustomerCredit;
-use Billium\Ledger\Data\RecordObligation;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Enums\Runner\LockRank;
+use Billium\Core\Exceptions\Runner\LockPlanChanged;
+use Billium\Ledger\Data\Credits\RecordCustomerCredit;
+use Billium\Ledger\Data\Obligations\AdjustObligation;
+use Billium\Ledger\Data\Obligations\AmendObligationDuePolicy;
+use Billium\Ledger\Data\Obligations\RecordObligation;
+use Billium\Ledger\Data\Runtime\LedgerReceipt;
+use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
 use LogicException;
+use Packman\Attributes\Internal;
 
 /** Query builder reads and typed DB calls; no PHP counter writes (D60). */
+#[Internal]
 final readonly class LedgerRepository
 {
     public function __construct(private DatabaseManager $databases, private OperationRunner $runner) {}

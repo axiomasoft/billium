@@ -8,18 +8,18 @@ use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Modules\ModuleTransitionEvidence;
 use Billium\Core\Contracts\Modules\ModuleTransitionPlanner;
-use Billium\Core\Contracts\TransactionContext;
+use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Data\Modules\ModuleManifest;
 use Billium\Core\Data\Modules\ModuleTransitionFacts;
-use Billium\Core\Data\Receipt;
+use Billium\Core\Data\Runner\Receipt;
 use Billium\Core\Enums\Modules\ModuleLifecycleState;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
-use Billium\Core\Exceptions\ModuleAdmissionRefused;
+use Billium\Core\Exceptions\Modules\ModuleAdmissionRefused;
 use Billium\Core\Internal\Modules\ModuleCatalog;
 use Billium\Core\Internal\Modules\ModuleLifecycle;
 use Billium\Core\Tests\Support\Concurrency\ConcurrencyStand;
 use Billium\Core\Tests\TestEnvironment;
-use Billium\Platform\Data\ModuleTransitionRequest;
+use Billium\Platform\Data\Installation\ModuleTransitionRequest;
 use Billium\Platform\Exceptions\TransitionRefused;
 use Billium\Platform\Internal\Installation\DatabaseInstallation;
 use Billium\Platform\Tests\Concurrency\Scenarios\RetirementEvidenceScenario;
@@ -36,6 +36,7 @@ use PHPUnit\Framework\Attributes\Group;
  */
 #[Group('D55')]
 #[Group('CV-R11')]
+#[Group('pg')]
 final class ModuleAdmissionTransitionTest extends PlatformTestCase
 {
     private CurrentTransitionEvidence $evidence;

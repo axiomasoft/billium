@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Data\EventContracts;
 
-use Billium\Contracts\Attributes\Api;
+use Packman\Attributes\Api;
 
-#[Api]
+#[Api(since: '1.0')]
 final readonly class EventContractConflict
 {
     public const string OWNER_UNKNOWN = 'owner_unknown';

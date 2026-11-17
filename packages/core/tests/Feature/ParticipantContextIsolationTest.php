@@ -4,24 +4,24 @@ declare(strict_types=1);
 
 namespace Billium\Core\Tests\Feature;
 
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Caller;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Data\OperationSpec;
-use Billium\Core\Data\Receipt;
-use Billium\Core\Enums\LockRank;
-use Billium\Core\Exceptions\LockOrderViolation;
-use Billium\Core\Exceptions\LockPlanChanged;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Data\Runner\OperationSpec;
+use Billium\Core\Data\Runner\Receipt;
+use Billium\Core\Data\Runtime\Caller;
+use Billium\Core\Enums\Runner\LockRank;
+use Billium\Core\Exceptions\Runner\LockOrderViolation;
+use Billium\Core\Exceptions\Runner\LockPlanChanged;
 use Billium\Core\Tests\Support\Concurrency\ConcurrencyStand;
 use Billium\Ledger\Contracts\LedgerParticipants;
-use Billium\Ledger\Data\AdjustObligation;
-use Billium\Ledger\Data\CloseSettlementIntentNoEffect;
-use Billium\Ledger\Data\DeclareSettlementIntent;
-use Billium\Ledger\Data\IssueCreditNote;
-use Billium\Ledger\Data\IssueInvoice;
-use Billium\Ledger\Data\RecordObligation;
-use Billium\Platform\Contracts\Outbox;
-use Billium\Platform\Data\OutboxEvent;
+use Billium\Ledger\Data\Invoices\IssueCreditNote;
+use Billium\Ledger\Data\Invoices\IssueInvoice;
+use Billium\Ledger\Data\Obligations\AdjustObligation;
+use Billium\Ledger\Data\Obligations\RecordObligation;
+use Billium\Ledger\Data\Settlements\CloseSettlementIntentNoEffect;
+use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
+use Billium\Platform\Contracts\Outbox\Outbox;
+use Billium\Platform\Data\Outbox\OutboxEvent;
 use Billium\Platform\Tests\Concurrency\Scenarios\RootOperationScenario;
 use Billium\Platform\Tests\PlatformTestCase;
 use DateTimeImmutable;
@@ -41,6 +41,7 @@ use RuntimeException;
  */
 #[Group('D60')]
 #[Group('INV-01')]
+#[Group('pg')]
 final class ParticipantContextIsolationTest extends PlatformTestCase
 {
     protected function defineEnvironment($app): void

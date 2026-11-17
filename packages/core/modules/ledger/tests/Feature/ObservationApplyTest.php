@@ -6,17 +6,19 @@ namespace Billium\Ledger\Tests\Feature;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Core\Tests\Support\ObservationFactory;
-use Billium\Ledger\Data\AllocationReceipt;
+use Billium\Ledger\Data\Allocations\AllocationReceipt;
 use Billium\Ledger\Internal\Observation\EconomicDigest;
 use Billium\Ledger\Internal\Observation\ObservationHandler;
 use Billium\Ledger\Tests\Observation\ObservationTestCase;
 use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\Group;
 
 /**
  * applyPaymentObservation semantics (INV-06, D41, D46, D48, REQ-ACC-10, REQ-FAIL-12/13): cumulative totals are assigned
  * per revision, a compatible older revision moves no money, a changed snapshot of the same revision is a conflict, a
  * source discrepancy holds the payment, and a refund child never adds to the charge refund basis.
  */
+#[Group('pg')]
 final class ObservationApplyTest extends ObservationTestCase
 {
     public function test_pre_upgrade_receipts_keep_their_identity_when_replayed(): void
@@ -59,7 +61,7 @@ final class ObservationApplyTest extends ObservationTestCase
             // The second source's refund arrives before its own charge, while the first charge already exists.
             if ($index === 1) {
                 self::assertSame(ProblemCode::ObservationParked->value,
-                    $this->attempt(ObservationFactory::refund('same-refund', 'same-charge', 1, 200, sequence: 1, fields: $fields)));
+                    $this->tryObserve(ObservationFactory::refund('same-refund', 'same-charge', 1, 200, sequence: 1, fields: $fields)));
             }
             $charge = ObservationFactory::charge('same-charge', 1, 1000, 200, sequence: $index === 0 ? 1 : 2, fields: $fields);
             $first = $this->observe($charge);
@@ -132,7 +134,7 @@ final class ObservationApplyTest extends ObservationTestCase
         $this->observe(ObservationFactory::charge('op-1', 1, 300, sequence: 1));
         $changed = ObservationFactory::charge('op-1', 1, 400, sequence: 2);
 
-        self::assertSame(ProblemCode::ObservationConflict->value, $this->attempt($changed));
+        self::assertSame(ProblemCode::ObservationConflict->value, $this->tryObserve($changed));
         self::assertSame('quarantined', $this->inboxStatus(self::eventId($changed)));
         self::assertSame(300, $this->allocated('o1'));
         self::assertSame(300, self::integer($this->observedRow()['captured_minor']), 'the original revision stays untouched');
@@ -181,7 +183,7 @@ final class ObservationApplyTest extends ObservationTestCase
         $this->intent('intent-a', ['o1']);
         $refund = ObservationFactory::refund('op-r1', 'op-1', 1, 300, sequence: 1);
 
-        self::assertSame(ProblemCode::ObservationParked->value, $this->attempt($refund));
+        self::assertSame(ProblemCode::ObservationParked->value, $this->tryObserve($refund));
         self::assertSame('parked_dependency', $this->inboxStatus(self::eventId($refund)));
         self::assertSame(300, self::integer($this->observedRow('op-r1')['captured_minor']), 'the refund fact is observed');
         self::assertSame(1, $this->rows('billium_observation_park', "dependency_kind = 'original_charge' AND released_at IS NULL"));

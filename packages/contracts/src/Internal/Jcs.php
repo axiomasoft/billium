@@ -6,12 +6,14 @@ namespace Billium\Contracts\Internal;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Packman\Attributes\Internal;
 use stdClass;
 
 /**
  * RFC 8785 canonical JSON for strings, integers, booleans, null, arrays and objects (D32).
  * Floats and integers outside the exact IEEE 754 range are refused (BC-ID-16).
  */
+#[Internal]
 final class Jcs
 {
     private const int MAX_SAFE = 9007199254740991;
@@ -77,14 +79,19 @@ final class Jcs
      */
     private static function object(array $members): string
     {
-        $sortKeys = [];
-        foreach (array_keys($members) as $key) {
-            $sortKeys[(string) $key] = mb_convert_encoding((string) $key, 'UTF-16BE', 'UTF-8');
+        $entries = [];
+        foreach ($members as $key => $value) {
+            $stringKey = is_string($key) ? $key : (string) $key;
+            $entries[] = [
+                'key' => $stringKey,
+                'utf16' => mb_convert_encoding($stringKey, 'UTF-16BE', 'UTF-8'),
+                'value' => $value,
+            ];
         }
-        uasort($sortKeys, strcmp(...));
+        usort($entries, static fn (array $a, array $b): int => strcmp($a['utf16'], $b['utf16']));
         $parts = [];
-        foreach (array_keys($sortKeys) as $key) {
-            $parts[] = self::string((string) $key).':'.self::canonicalize($members[$key]);
+        foreach ($entries as $entry) {
+            $parts[] = self::string($entry['key']).':'.self::canonicalize($entry['value']);
         }
 
         return '{'.implode(',', $parts).'}';

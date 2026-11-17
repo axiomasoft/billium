@@ -15,6 +15,7 @@ use PHPUnit\Framework\Attributes\Group;
  * the delivery exactly once and a redelivery replays its receipt.
  */
 #[Group('D60')]
+#[Group('pg')]
 final class SealedSessionCustodyTest extends ObservationTestCase
 {
     public function test_custody_survives_a_sealed_session_and_a_later_admitted_drain_applies_it_once(): void
@@ -24,7 +25,7 @@ final class SealedSessionCustodyTest extends ObservationTestCase
         $this->installation()->seal('seal-1', 1);
         $charge = ObservationFactory::charge('op-1', 1, 1000, sequence: 1);
 
-        self::assertSame(ProblemCode::RecoveryRequired->value, $this->attempt($charge), 'financial admission refused after custody committed');
+        self::assertSame(ProblemCode::RecoveryRequired->value, $this->tryObserve($charge), 'financial admission refused after custody committed');
 
         self::assertSame('ready', $this->inboxStatus(self::eventId($charge)));
         self::assertSame(1, self::integer($this->partition()['custody_sequence']));

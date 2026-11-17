@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Billium\Contracts\Data;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Packman\Attributes\Api;
 use stdClass;
 
 /**
@@ -14,7 +14,7 @@ use stdClass;
  * of open envelopes included); treat it as read-only. `schema` is the envelope's schema name, for example
  * "payment.execute.v1". The typed members come from the generated subclasses.
  */
-#[Api]
+#[Api(since: '1.0')]
 abstract readonly class Envelope
 {
     public function __construct(public stdClass $raw, public string $schema) {}

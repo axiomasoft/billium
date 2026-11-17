@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Tests\Concurrency;
 
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Enums\FinancialMode;
-use Billium\Core\Enums\LockRank;
-use Billium\Core\Exceptions\LockOrderViolation;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Enums\Runner\LockRank;
+use Billium\Core\Enums\Runtime\FinancialMode;
+use Billium\Core\Exceptions\Runner\LockOrderViolation;
 use Billium\Core\Tests\Support\Concurrency\ConcurrencyStand;
 use Billium\Platform\Tests\Inbox\CustodyScenario;
 use Billium\Platform\Tests\Inbox\InboxTestCase;
@@ -18,6 +18,7 @@ use PHPUnit\Framework\Attributes\Group;
 /** Rank 30 (partition) precedes every domain lock: no handler discovers a second partition after it locked its rows (D27/D60). */
 #[Group('INV-03')]
 #[Group('ACC-CON-16')]
+#[Group('pg')]
 final class InboxDrainLockOrderTest extends InboxTestCase
 {
     public function test_a_handler_that_drains_another_partition_after_locking_its_rows_violates_the_lock_order(): void

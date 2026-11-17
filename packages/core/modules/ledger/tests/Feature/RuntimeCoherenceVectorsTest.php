@@ -17,6 +17,7 @@ use Symfony\Component\Process\Process;
 
 /** D60/M-15: execute the independent examples against guarded runtime writes, then check durable coherence. */
 #[Group('D60')]
+#[Group('pg')]
 final class RuntimeCoherenceVectorsTest extends TestCase
 {
     public function test_worked_examples_and_durable_counters_agree(): void
@@ -129,9 +130,9 @@ final class RuntimeCoherenceVectorsTest extends TestCase
         }
         $messages[] = ['type' => 'stop'];
         $input = implode("\n", array_map(static fn (array $message): string => json_encode($message, JSON_THROW_ON_ERROR), $messages))."\n";
-        // The parent already owns the database; an independent adapter would wait beyond its vector deadline.
+        // The parent already owns the database; an independent adapter would wait up to 1800s for the suite lease.
         $adapter = new Process([PHP_BINARY, $root.'/conformance/adapters/php/bin/adapter.php'], $root,
-            TestEnvironment::suiteLeaseEnvironment(), $input, 10);
+            TestEnvironment::suiteLeaseEnvironment(), $input, 30);
         $adapter->mustRun();
         $lines = explode("\n", trim($adapter->getOutput()));
         self::assertCount(5, $lines);

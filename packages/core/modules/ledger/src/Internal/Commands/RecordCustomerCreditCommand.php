@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Billium\Ledger\Internal\Commands;
 
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Ledger\Data\LedgerReceipt;
-use Billium\Ledger\Data\RecordCustomerCredit;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Ledger\Data\Credits\RecordCustomerCredit;
+use Billium\Ledger\Data\Runtime\LedgerReceipt;
 use Billium\Ledger\Internal\Repositories\LedgerRepository;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final readonly class RecordCustomerCreditCommand
 {
     public function __construct(private LedgerRepository $repository) {}

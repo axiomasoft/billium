@@ -8,7 +8,7 @@ use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Core\Tests\Support\Concurrency\ConcurrencyStand;
 use Billium\Core\Tests\Support\ObservationFactory;
-use Billium\Ledger\Data\AdjustObligation;
+use Billium\Ledger\Data\Obligations\AdjustObligation;
 use Billium\Ledger\Tests\Observation\ObservationScenario;
 use Billium\Ledger\Tests\Observation\ObservationTestCase;
 use PHPUnit\Framework\Attributes\Group;
@@ -20,6 +20,7 @@ use PHPUnit\Framework\Attributes\Group;
  * reallocation_required set; a refused allocation is a stored exceeds_available/exceeds_open/reallocation refusal.
  */
 #[Group('INV-09')]
+#[Group('pg')]
 final class AllocationVsObservationTest extends ObservationTestCase
 {
     public function test_explicit_allocation_and_a_refund_observation_keep_conservation(): void

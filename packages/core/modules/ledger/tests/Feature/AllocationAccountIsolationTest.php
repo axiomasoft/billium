@@ -8,13 +8,15 @@ use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Tests\TestEnvironment;
-use Billium\Ledger\Data\Allocate;
-use Billium\Ledger\Data\DeclareSettlementIntent;
-use Billium\Ledger\Data\RecordCustomerCredit;
-use Billium\Ledger\Data\ReverseAllocation;
+use Billium\Ledger\Data\Allocations\Allocate;
+use Billium\Ledger\Data\Allocations\ReverseAllocation;
+use Billium\Ledger\Data\Credits\RecordCustomerCredit;
+use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
 use PDOException;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class AllocationAccountIsolationTest extends LedgerTestCase
 {
     public function test_cross_account_seller_and_currency_allocations_refuse_atomically(): void

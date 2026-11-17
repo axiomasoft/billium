@@ -18,6 +18,7 @@ use PHPUnit\Framework\Attributes\Group;
  * appends resolution without editing history. The ledger never changes here.
  */
 #[Group('D60')]
+#[Group('pg')]
 final class RefundReconcileBasisTest extends ObservationTestCase
 {
     public function test_a_pre_upgrade_mismatch_is_reused_and_resolved_without_duplicate_history(): void
@@ -94,7 +95,7 @@ final class RefundReconcileBasisTest extends ObservationTestCase
     {
         $this->debt('o1', 1000);
         $this->intent('intent-a', ['o1']);
-        $this->attempt(ObservationFactory::refund('op-r1', 'op-1', 1, 300, sequence: 1));
+        $this->tryObserve(ObservationFactory::refund('op-r1', 'op-1', 1, 300, sequence: 1));
         $this->observe(ObservationFactory::charge('op-1', 1, 1000, 300, sequence: 2));
 
         self::assertSame(['compared' => 0, 'recorded' => 0, 'resolved' => 0], $this->reconciler()->reconcile(3600), 'nothing inside the window');

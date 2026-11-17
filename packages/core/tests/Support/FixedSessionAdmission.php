@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Billium\Core\Tests\Support;
 
-use Billium\Core\Contracts\FinancialSessionAdmission;
-use Billium\Core\Data\FinancialAdmissionToken;
-use Billium\Core\Enums\FinancialMode;
+use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
+use Billium\Core\Data\Runtime\FinancialAdmissionToken;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use DateTimeImmutable;
 
 /**

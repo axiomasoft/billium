@@ -7,17 +7,19 @@ namespace Billium\Ledger\Internal\Snapshot;
 use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\CallerContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Ledger\Data\Views\LedgerView as View;
 use Billium\Ledger\Internal\Observation\ParkedDrainer;
 use Billium\Ledger\Internal\Queries\LedgerReader;
-use Billium\Platform\Contracts\FeedRecoveryQueries;
-use Billium\Platform\Contracts\SnapshotSource;
+use Billium\Platform\Contracts\Feed\FeedRecoveryQueries;
+use Billium\Platform\Contracts\Feed\SnapshotSource;
 use Billium\Platform\Data\Feed\FeedSelection;
 use Illuminate\Database\DatabaseManager;
 use LogicException;
+use Packman\Attributes\Internal;
 
 /** D60/D63: registered ledger snapshot streams share the feed's pinned read-only snapshot and source scope. */
+#[Internal]
 final readonly class LedgerSnapshotSource implements SnapshotSource
 {
     public const array KEYS = ['ledger.obligations', 'ledger.invoices', 'ledger.allocations', 'ledger.payments', 'ledger.discrepancies'];

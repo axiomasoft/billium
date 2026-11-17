@@ -37,6 +37,8 @@ PLAIN = (
     ("Contracts/MoneyMath", "MoneyMath"),
     ("Contracts/MoneyMathFactory", None),
     ("Contracts/SpecRevision", None),
+    ("Errors/BilliumErrorCode", None),
+    ("Errors/BilliumProblemDefinitions", None),
     ("Exceptions/ProblemException", "ProblemException"),
     ("Attributes/Api", None),
     ("Attributes/Spi", None),

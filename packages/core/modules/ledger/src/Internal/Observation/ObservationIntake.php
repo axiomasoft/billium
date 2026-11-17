@@ -8,11 +8,12 @@ use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Data\Envelopes\PaymentObservation;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\CallerContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Ledger\Contracts\ObservationApplier;
-use Billium\Ledger\Data\AllocationReceipt;
-use Billium\Platform\Contracts\CustodyHandler;
+use Billium\Ledger\Data\Allocations\AllocationReceipt;
+use Billium\Platform\Contracts\Inbox\CustodyHandler;
 use Billium\Platform\Data\Inbox\CustodyDisposition;
+use Packman\Attributes\Internal;
 
 /**
  * applyPaymentObservation facade (ObservationApplier). Decode and authentication refuse before any custody; a RawCustody
@@ -21,6 +22,7 @@ use Billium\Platform\Data\Inbox\CustodyDisposition;
  * reflects the durable disposition of THIS delivery: its AllocationReceipt, or — after commit — parked,
  * recovery-required or conflict (D31). Receipts are read on the configured Billium connection.
  */
+#[Internal]
 final readonly class ObservationIntake implements ObservationApplier
 {
     public function __construct(

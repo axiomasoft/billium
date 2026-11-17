@@ -6,14 +6,14 @@ namespace Billium\Ledger\Tests\Feature;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Receipt;
-use Billium\Core\Data\StoredOutcome;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\Receipt;
+use Billium\Core\Data\Runner\StoredOutcome;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Ledger\Contracts\LedgerParticipants;
-use Billium\Ledger\Data\CloseSettlementIntentNoEffect;
-use Billium\Ledger\Data\DeclareSettlementIntent;
-use Billium\Ledger\Data\NoEffectProof;
+use Billium\Ledger\Data\Settlements\CloseSettlementIntentNoEffect;
+use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
+use Billium\Ledger\Data\Settlements\NoEffectProof;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
 use Illuminate\Database\QueryException;
 use LogicException;
@@ -27,6 +27,7 @@ use RuntimeException;
  * revision, a changed proof or an applied intent. Later actual evidence is retained and never reopens the intent.
  */
 #[Group('FA02')]
+#[Group('pg')]
 final class SettlementIntentNoEffectClosureTest extends LedgerTestCase
 {
     private function port(): LedgerParticipants

@@ -6,7 +6,7 @@ namespace Billium\Platform\Tests\Drill;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\TransactionContext;
+use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Platform\Data\Inbox\BootstrapItem;
 use Billium\Platform\Data\Inbox\BootstrapPartition;
@@ -26,6 +26,7 @@ use stdClass;
 #[Group('PF-13')]
 #[Group('PF-14')]
 #[Group('ACC-RST-07')]
+#[Group('pg')]
 final class BootstrapAtomicAdoptionTest extends InboxTestCase
 {
     public function test_a_recovering_partition_adopts_a_verified_bootstrap_only_after_every_item_is_disposed(): void

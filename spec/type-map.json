@@ -240,6 +240,20 @@
   {
     "schema": null,
     "variant": null,
+    "php": "Billium\\Contracts\\Errors\\BilliumErrorCode",
+    "dart": null,
+    "category": "Errors"
+  },
+  {
+    "schema": null,
+    "variant": null,
+    "php": "Billium\\Contracts\\Errors\\BilliumProblemDefinitions",
+    "dart": null,
+    "category": "Errors"
+  },
+  {
+    "schema": null,
+    "variant": null,
     "php": "Billium\\Contracts\\Exceptions\\ProblemException",
     "dart": "ProblemException",
     "category": "Exceptions"

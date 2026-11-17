@@ -7,16 +7,18 @@ namespace Billium\Ledger\Tests\Commands;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Receipt;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\Receipt;
 use Billium\Ledger\Contracts\LedgerParticipants;
-use Billium\Ledger\Data\CreditNoteLine;
-use Billium\Ledger\Data\CreditNoteMode;
-use Billium\Ledger\Data\DiscardInvoice;
-use Billium\Ledger\Data\IssueCreditNote;
+use Billium\Ledger\Data\Invoices\CreditNoteLine;
+use Billium\Ledger\Data\Invoices\CreditNoteMode;
+use Billium\Ledger\Data\Invoices\DiscardInvoice;
+use Billium\Ledger\Data\Invoices\IssueCreditNote;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
+use PHPUnit\Framework\Attributes\Group;
 
 /** issueCreditNote (COV-167, COV-171, COV-173/174): open_only, reverse_allocations with LIFO release, refusals, replay. */
+#[Group('pg')]
 final class CreditNoteCommandsTest extends LedgerTestCase
 {
     use AllocationFixtures;

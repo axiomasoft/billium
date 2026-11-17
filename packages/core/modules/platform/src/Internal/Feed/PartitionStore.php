@@ -4,19 +4,21 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Internal\Feed;
 
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Enums\LockRank;
-use Billium\Core\Exceptions\LockPlanChanged;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Enums\Runner\LockRank;
+use Billium\Core\Exceptions\Runner\LockPlanChanged;
 use Billium\Platform\Internal\Installation\Rows;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use LogicException;
+use Packman\Attributes\Internal;
 
 /**
  * Rank-30 access to feed_partition: the live partition of a source namespace is looked up WITHOUT its lineage (a changed
  * lineage is detected, never a second partition), then locked through the context's LockSet and re-read.
  */
+#[Internal]
 final readonly class PartitionStore
 {
     public function __construct(private DatabaseManager $databases) {}

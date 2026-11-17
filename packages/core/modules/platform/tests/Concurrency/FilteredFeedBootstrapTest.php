@@ -12,6 +12,7 @@ use Billium\Platform\Tests\Outbox\TestSnapshotSource;
 use PHPUnit\Framework\Attributes\Group;
 
 #[Group('EVT-05')]
+#[Group('pg')]
 final class FilteredFeedBootstrapTest extends OutboxTestCase
 {
     public function test_only_selected_snapshot_sources_compose_and_replay_only_below_floor_refuses(): void

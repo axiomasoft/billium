@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Billium\Core\Internal\Runner;
 
-use Billium\Core\Data\Caller;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Enums\LockScope;
-use Billium\Core\Exceptions\LockOrderViolation;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Data\Runtime\Caller;
+use Billium\Core\Enums\Runner\LockScope;
+use Billium\Core\Exceptions\Runner\LockOrderViolation;
 use Closure;
+use Packman\Attributes\Internal;
 
 /**
  * The only application row-lock interface (invariant-model). Rows are locked in the single global order
@@ -16,6 +17,7 @@ use Closure;
  * covering mode (reentrant), new keys inside a rank only ascend, and a held shared lock is never upgraded. Every
  * predicate carries the authenticated scope, so a foreign seller/installation row is never locked.
  */
+#[Internal]
 final class LockSet
 {
     /** @var array<string, array{table: string, column: string, scope: LockScope, keys: array<string, bool>}> group => held keys (key => shared) */
@@ -136,7 +138,8 @@ final class LockSet
         $bindings = [$literal];
         if ($request->scope === LockScope::Seller) {
             $sql .= ' AND seller_ref = ? AND environment = ?';
-            array_push($bindings, $this->caller->sellerRef, $this->caller->environment);
+            $bindings[] = $this->caller->sellerRef;
+            $bindings[] = $this->caller->environment;
         } else {
             $sql .= ' AND installation_ref = ?';
             $bindings[] = $this->caller->installationRef;

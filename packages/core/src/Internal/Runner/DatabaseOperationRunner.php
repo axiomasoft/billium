@@ -6,18 +6,19 @@ namespace Billium\Core\Internal\Runner;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\OperationSpec;
-use Billium\Core\Data\Receipt;
-use Billium\Core\Data\StoredOutcome;
-use Billium\Core\Exceptions\LockPlanChanged;
-use Billium\Platform\Contracts\IdempotencyStore;
-use Billium\Platform\Contracts\RootAdmission;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Data\Runner\OperationSpec;
+use Billium\Core\Data\Runner\Receipt;
+use Billium\Core\Data\Runner\StoredOutcome;
+use Billium\Core\Exceptions\Runner\LockPlanChanged;
+use Billium\Platform\Contracts\Idempotency\IdempotencyStore;
+use Billium\Platform\Contracts\Installation\RootAdmission;
 use Closure;
 use Illuminate\Database\Connection;
 use LogicException;
+use Packman\Attributes\Internal;
 use PDOException;
 use RuntimeException;
 use Throwable;
@@ -26,6 +27,7 @@ use Throwable;
  * The root runner (operation-runner, M-55). Everything that changes money runs inside exactly one call of run() on a
  * connection at transaction level 0; there is no nested runner and no participant may start one.
  */
+#[Internal]
 final class DatabaseOperationRunner implements OperationRunner
 {
     /** SQLSTATEs whose whole database work may be repeated: serialization failure and deadlock (COV-288). */
@@ -184,7 +186,11 @@ final class DatabaseOperationRunner implements OperationRunner
         }
     }
 
-    /** The closure type is a promise PHP does not enforce; the caller checks the result at runtime. */
+    /**
+     * The closure type is a promise PHP does not enforce; the caller checks the result at runtime.
+     *
+     * @param  Closure(TransactionContext): Receipt  $body
+     */
     private static function invoke(Closure $body, TransactionContext $context): mixed
     {
         return $body($context);

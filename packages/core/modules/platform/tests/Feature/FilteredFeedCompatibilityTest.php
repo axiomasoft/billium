@@ -9,14 +9,14 @@ use Billium\Contracts\Data\Envelopes\EventEnvelopeV2;
 use Billium\Contracts\Data\Envelopes\FeedPage as WireFeedPage;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\TransactionContext;
+use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Data\Modules\PublicEventDeclaration;
-use Billium\Core\Data\Receipt;
+use Billium\Core\Data\Runner\Receipt;
 use Billium\Core\Tests\TestEnvironment;
-use Billium\Platform\Contracts\Outbox;
+use Billium\Platform\Contracts\Outbox\Outbox;
 use Billium\Platform\Data\EventContracts\RegisteredPublicEvent;
 use Billium\Platform\Data\Feed\FeedSelection;
-use Billium\Platform\Data\OutboxEvent;
+use Billium\Platform\Data\Outbox\OutboxEvent;
 use Billium\Platform\Internal\Outbox\EventFeedReader;
 use Billium\Platform\Tests\Outbox\OutboxTestCase;
 use Illuminate\Support\Str;
@@ -25,6 +25,7 @@ use PHPUnit\Framework\Attributes\Group;
 #[Group('EVT-01')]
 #[Group('EVT-02')]
 #[Group('EVT-06')]
+#[Group('pg')]
 final class FilteredFeedCompatibilityTest extends OutboxTestCase
 {
     public function test_original_v1_selection_does_not_grow_after_v2_registration(): void

@@ -6,10 +6,10 @@ namespace Billium\Platform\Tests\Inbox;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Enums\FinancialMode;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Tests\TestEnvironment;
-use Billium\Platform\Contracts\CustodyHandler;
+use Billium\Platform\Contracts\Inbox\CustodyHandler;
 use Billium\Platform\Data\Inbox\CustodyDisposition;
 use Billium\Platform\Data\Inbox\CustodyResult;
 use Billium\Platform\Data\Inbox\HandlerOutcome;
@@ -21,6 +21,7 @@ use RuntimeException;
 /** Custody order, parked, recovery and handler dispositions of one source partition (PF-12, PF-05, REQ-FAIL-12/13/23). */
 #[Group('PF-12')]
 #[Group('PF-05')]
+#[Group('pg')]
 final class CustodyProcessorTest extends InboxTestCase
 {
     public function test_first_delivery_opens_the_partition_and_applies_once(): void

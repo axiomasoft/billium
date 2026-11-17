@@ -15,6 +15,7 @@ use PHPUnit\Framework\Attributes\Group;
  */
 #[Group('ACC-CON-16')]
 #[Group('REQ-FAIL-13')]
+#[Group('pg')]
 final class FeedPartitionApplyTest extends InboxTestCase
 {
     public function test_four_workers_apply_sequences_eleven_to_fourteen_in_order(): void

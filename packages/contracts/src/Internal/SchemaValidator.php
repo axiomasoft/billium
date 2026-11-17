@@ -8,6 +8,7 @@ use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use LogicException;
+use Packman\Attributes\Internal;
 use stdClass;
 
 /**
@@ -15,6 +16,7 @@ use stdClass;
  * is a LogicException, never a silent pass). Money nodes and operation totals do not fail the field stage:
  * their violation is deferred so that decode reports it after the other fields (BC-ENV-03, BC-MW-07).
  */
+#[Internal]
 final class SchemaValidator
 {
     private const string MONEY_DOCUMENT = 'common/money-wire.json';
@@ -174,7 +176,7 @@ final class SchemaValidator
      */
     private function items(array $items, array $schema, string $document): bool
     {
-        return array_all($items, fn ($item) => $this->valid($item, $schema, $document, null));
+        return array_all($items, fn ($item): bool => $this->valid($item, $schema, $document, null));
     }
 
     /**
@@ -182,7 +184,7 @@ final class SchemaValidator
      */
     private function required(stdClass $instance, array $names): bool
     {
-        return array_all($names, fn ($name) => ! (! is_string($name) || ! property_exists($instance, $name)));
+        return array_all($names, fn ($name): bool => is_string($name) && property_exists($instance, $name));
     }
 
     /**
@@ -190,7 +192,7 @@ final class SchemaValidator
      */
     private function properties(stdClass $instance, array $properties, string $document): bool
     {
-        return array_all($properties, fn ($schema, $name) => ! (property_exists($instance, (string) $name) && ! $this->valid($instance->{$name}, $this->schema($schema), $document, $instance)));
+        return array_all($properties, fn ($schema, $name): bool => ! property_exists($instance, $name) || $this->valid($instance->{$name}, $this->schema($schema), $document, $instance));
     }
 
     /**
@@ -216,7 +218,7 @@ final class SchemaValidator
      */
     private function all(mixed $instance, array $schemas, string $document, ?stdClass $parent): bool
     {
-        return array_all($schemas, fn ($schema) => $this->valid($instance, $this->schema($schema), $document, $parent));
+        return array_all($schemas, fn ($schema): bool => $this->valid($instance, $this->schema($schema), $document, $parent));
     }
 
     /**
@@ -224,7 +226,7 @@ final class SchemaValidator
      */
     private function any(mixed $instance, array $schemas, string $document, ?stdClass $parent): bool
     {
-        return array_any($schemas, fn ($schema) => $this->branch($instance, $this->schema($schema), $document, $parent));
+        return array_any($schemas, fn ($schema): bool => $this->branch($instance, $this->schema($schema), $document, $parent));
     }
 
     /**

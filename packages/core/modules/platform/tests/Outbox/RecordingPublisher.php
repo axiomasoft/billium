@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Tests\Outbox;
 
-use Billium\Core\Contracts\EventPublisher;
+use Billium\Core\Contracts\Runtime\EventPublisher;
 use Billium\Platform\Tests\PlatformTestCase;
 use LogicException;
 

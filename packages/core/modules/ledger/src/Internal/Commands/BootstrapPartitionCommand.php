@@ -6,13 +6,14 @@ namespace Billium\Ledger\Internal\Commands;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Enums\FinancialMode;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Ledger\Internal\Observation\ObservationHandler;
 use Billium\Ledger\Internal\Observation\ParkedDrainer;
-use Billium\Platform\Contracts\FeedPartitions;
+use Billium\Platform\Contracts\Feed\FeedPartitions;
 use Billium\Platform\Data\Inbox\BootstrapPartition;
 use Billium\Platform\Data\Inbox\BootstrapStatus;
+use Packman\Attributes\Internal;
 
 /**
  * ledger.feed.bootstrap (PF-13, PF-14, ACC-RST-07): staged bootstrap of one observation partition over
@@ -24,6 +25,7 @@ use Billium\Platform\Data\Inbox\BootstrapStatus;
  * Recovery admission throughout. A crash or a repeat resumes: the same bootstrapRef continues the staged session, an
  * adopted session skips straight to adoption (idempotent) and the tail drain.
  */
+#[Internal]
 final readonly class BootstrapPartitionCommand
 {
     public const string KIND = 'ledger.feed.bootstrap';

@@ -9,7 +9,9 @@ use Billium\Ledger\Internal\Repositories\LedgerPrivileges;
 use Illuminate\Config\Repository;
 use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class LedgerBackstopTest extends LedgerTestCase
 {
     public function test_every_ledger_table_denies_runtime_raw_dml_and_all_journals_are_append_only(): void

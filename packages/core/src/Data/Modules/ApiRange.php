@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Billium\Core\Data\Modules;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Core\Internal\Modules\Semver;
 use Billium\Core\Internal\Modules\Shape;
+use Packman\Attributes\Api;
 
 /** Half-open API version range: min inclusive, maxExclusive exclusive. */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class ApiRange
 {
     public function __construct(public string $min, public string $maxExclusive)

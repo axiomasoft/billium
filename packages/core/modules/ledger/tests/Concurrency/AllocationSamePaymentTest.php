@@ -15,6 +15,7 @@ use PHPUnit\Framework\Attributes\Group;
  * obligations of 80.00 (even index → O1, odd → O2) under different keys. After the barrier the database totals hold.
  */
 #[Group('ACC-CON-08')]
+#[Group('pg')]
 final class AllocationSamePaymentTest extends LedgerTestCase
 {
     use AllocationFixtures;

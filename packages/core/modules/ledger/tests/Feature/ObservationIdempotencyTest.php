@@ -18,6 +18,7 @@ use RuntimeException;
  * allocation; a failure after the allocation but before the inbox disposition rolls back the observed fact, projection,
  * allocation, receipt, outbox and custody together, and the retry has exactly one effect.
  */
+#[Group('pg')]
 final class ObservationIdempotencyTest extends ObservationTestCase
 {
     #[Group('PB-14')]

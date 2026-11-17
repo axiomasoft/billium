@@ -9,16 +9,19 @@ use Billium\Contracts\Data\Envelopes\BilliumQuery;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Data\Caller;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Data\Runtime\Caller;
 use Billium\Ledger\Contracts\LedgerQueries;
 use Billium\Ledger\Data\Views\LedgerView as View;
-use Billium\Platform\Contracts\FeedRecoveryQueries;
+use Billium\Platform\Contracts\Feed\FeedRecoveryQueries;
 use Closure;
 use DateTimeImmutable;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Builder;
+use JsonException;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final readonly class DatabaseLedgerQueries implements LedgerQueries
 {
     public function __construct(private ReadSession $reads, private CallerContext $callers, private FeedRecoveryQueries $feedRecovery) {}
@@ -178,7 +181,7 @@ final readonly class DatabaseLedgerQueries implements LedgerQueries
         $json = base64_decode(strtr($token, '-_', '+/'), true);
         try {
             $value = $json === false ? null : json_decode($json, true, 16, JSON_THROW_ON_ERROR);
-        } catch (\JsonException) {
+        } catch (JsonException) {
             throw self::invalid();
         }
         if (! is_array($value) || ($value['binding'] ?? null) !== $binding || ! is_string($value['dueAt'] ?? null)

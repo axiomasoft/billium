@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Data\EventContracts;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Core\Data\Modules\PublicEventDeclaration;
 use Billium\Core\Enums\Modules\BootstrapMode;
 use InvalidArgumentException;
+use Packman\Attributes\Api;
 
 /**
  * One billium_event_contract row as P3.4 stores it: key (contractRevision, envelopeSchema, eventType) plus the
  * owner and the immutable contract. A `historical` row stays readable for replay after its module is disabled.
  */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class EventContractRegistration
 {
     public const string REGISTERED = 'registered';

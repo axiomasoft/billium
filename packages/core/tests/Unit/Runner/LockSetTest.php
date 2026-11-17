@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Billium\Core\Tests\Unit\Runner;
 
-use Billium\Core\Data\Caller;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Enums\LockRank;
-use Billium\Core\Enums\LockScope;
-use Billium\Core\Exceptions\LockOrderViolation;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Data\Runtime\Caller;
+use Billium\Core\Enums\Runner\LockRank;
+use Billium\Core\Enums\Runner\LockScope;
+use Billium\Core\Exceptions\Runner\LockOrderViolation;
 use Billium\Core\Internal\Runner\LockSet;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Group;

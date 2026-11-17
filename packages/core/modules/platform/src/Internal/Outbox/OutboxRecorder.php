@@ -7,17 +7,21 @@ namespace Billium\Platform\Internal\Outbox;
 use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Platform\Contracts\Outbox;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Platform\Contracts\Outbox\Outbox;
 use Billium\Platform\Data\EventContracts\RegisteredPublicEvent;
-use Billium\Platform\Data\OutboxEvent;
+use Billium\Platform\Data\Outbox\OutboxEvent;
 use Billium\Platform\Internal\EventContracts\DatabaseEventContractRegistrar;
 use Billium\Platform\Internal\Installation\Rows;
 use Closure;
+use DateTimeZone;
 use Illuminate\Database\DatabaseManager;
 use LogicException;
+use Packman\Attributes\Internal;
+use stdClass;
 
+#[Internal]
 final readonly class OutboxRecorder implements Outbox
 {
     /** @param Closure(): OperationRunner $runner */
@@ -44,7 +48,7 @@ final readonly class OutboxRecorder implements Outbox
             throw new LogicException('module.event_contract_conflict: foreign registered event');
         }
         ($this->runner)()->assertCurrent($context, $contract->ownerModuleId);
-        $payload = $this->codec->canonicalize($event->payload === [] ? new \stdClass : $event->payload);
+        $payload = $this->codec->canonicalize($event->payload === [] ? new stdClass : $event->payload);
         if (strlen($payload) > OutboxEvent::MAX_PAYLOAD_BYTES) {
             throw new LogicException("Outbox payload of {$event->type} exceeds ".OutboxEvent::MAX_PAYLOAD_BYTES.' bytes');
         }
@@ -52,7 +56,7 @@ final readonly class OutboxRecorder implements Outbox
         $digest = 'sha256:'.hash('sha256', $payload);
         $wire = ['schema' => $event->schemaVersion, 'eventId' => $event->eventId, 'eventType' => $event->type,
             'sellerRef' => $caller->sellerRef, 'aggregateRef' => $event->aggregateRef, 'revision' => $event->aggregateRevision,
-            'occurredAt' => $event->occurredAt->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z'),
+            'occurredAt' => $event->occurredAt->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z'),
             'digest' => $digest, 'payload' => json_decode($payload, false, 512, JSON_THROW_ON_ERROR)];
         if ($event->schemaVersion !== 'billium.event.v1') {
             $wire['eventContractRevision'] = $contract->contractRevision;
@@ -61,7 +65,7 @@ final readonly class OutboxRecorder implements Outbox
         $decoded = $this->codec->decode($this->codec->canonicalize($wire));
         if ($event->schemaVersion === 'billium.event.v2') {
             $effect = $decoded->raw->payload;
-            if (! $effect instanceof \stdClass) {
+            if (! $effect instanceof stdClass) {
                 throw new LogicException('Public effect payload must be an object');
             }
             if (($effect->installationRef ?? null) !== $caller->installationRef || ($effect->environment ?? null) !== $caller->environment

@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace Billium\Core\Data\Modules;
 
-use Billium\Contracts\Attributes\Api;
+use InvalidArgumentException;
+use Packman\Attributes\Api;
 
 /** Everything boot compares with the descriptor set: desired config, port capabilities, installed checkpoints. */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class CompatibilityInput
 {
     /**
@@ -36,12 +37,12 @@ final readonly class CompatibilityInput
         $composition = $config['composition'] ?? null;
         $enabled = $config['enabled'] ?? null;
         if (! is_string($composition) || ! is_array($enabled) || ! array_is_list($enabled)) {
-            throw new \InvalidArgumentException('module.descriptor_invalid: billium.modules needs composition and a list enabled');
+            throw new InvalidArgumentException('module.descriptor_invalid: billium.modules needs composition and a list enabled');
         }
 
         $ids = [];
         foreach ($enabled as $id) {
-            $ids[] = is_string($id) ? $id : throw new \InvalidArgumentException('module.descriptor_invalid: enabled holds module ids');
+            $ids[] = is_string($id) ? $id : throw new InvalidArgumentException('module.descriptor_invalid: enabled holds module ids');
         }
 
         return new self($composition, $ids, $providedPorts, $checkpoints);

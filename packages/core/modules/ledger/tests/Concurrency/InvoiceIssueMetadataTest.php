@@ -16,6 +16,7 @@ use PHPUnit\Framework\Attributes\Group;
  * and an allow-list key passes in either order.
  */
 #[Group('ACC-CON-17')]
+#[Group('pg')]
 final class InvoiceIssueMetadataTest extends LedgerTestCase
 {
     use InvoiceFixtures;

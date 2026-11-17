@@ -7,7 +7,9 @@ namespace Billium\Platform\Internal\Console;
 use Billium\Platform\Internal\Outbox\OutboxPruner;
 use Illuminate\Console\Command;
 use LogicException;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class PruneCommand extends Command
 {
     protected $signature = 'billium:outbox:prune';

@@ -7,9 +7,11 @@ namespace Billium\Ledger\Tests\Commands;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Ledger\Data\RecordCustomerCredit;
+use Billium\Ledger\Data\Credits\RecordCustomerCredit;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class CustomerCreditCommandsTest extends LedgerTestCase
 {
     public function test_monetary_credit_replays_its_source_and_refuses_changed_amount(): void

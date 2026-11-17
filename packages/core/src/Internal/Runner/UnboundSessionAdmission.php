@@ -4,15 +4,17 @@ declare(strict_types=1);
 
 namespace Billium\Core\Internal\Runner;
 
-use Billium\Core\Contracts\FinancialSessionAdmission;
-use Billium\Core\Data\FinancialAdmissionToken;
+use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
+use Billium\Core\Data\Runtime\FinancialAdmissionToken;
 use LogicException;
+use Packman\Attributes\Internal;
 
 /** Default binding: without a host admission service every financial mutation fails closed (D62). */
+#[Internal]
 final class UnboundSessionAdmission implements FinancialSessionAdmission
 {
     public function currentToken(string $installationRef): ?FinancialAdmissionToken
     {
-        throw new LogicException('bind Billium\Core\Contracts\FinancialSessionAdmission');
+        throw new LogicException('bind Billium\Core\Contracts\Runtime\FinancialSessionAdmission');
     }
 }

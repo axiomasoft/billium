@@ -9,10 +9,10 @@ use Billium\Contracts\Data\Envelopes\PaymentObservation;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Caller;
-use Billium\Core\Exceptions\LockPlanChanged;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runtime\Caller;
+use Billium\Core\Exceptions\Runner\LockPlanChanged;
 use Billium\Ledger\Internal\Commands\AllocateLockPlan;
 use Billium\Ledger\Internal\InvoiceStatus;
 use Billium\Ledger\Internal\Policy\ProRataOpenPolicy;
@@ -24,6 +24,7 @@ use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use LogicException;
+use Packman\Attributes\Internal;
 
 /**
  * Economic apply of ONE observed revision inside its root Tx (observation-apply, D41, D46, D57, D60).
@@ -41,6 +42,7 @@ use LogicException;
  *
  * Receipt, journal, counters and outbox commit with the inbox disposition (PF-12). No PSP call happens here.
  */
+#[Internal]
 final readonly class PaymentProjection
 {
     public const string MODE_ASSIGN = 'assign';

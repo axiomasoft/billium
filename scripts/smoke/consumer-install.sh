@@ -14,25 +14,37 @@ export EXECUTE
 
 smoke_php() {
     local dir="$WORK/php"
+    local extra_repos=""
+    if [[ -d "$ROOT/vendor/brick/money" ]]; then
+        local brick_money_version
+        brick_money_version="$(php -r '$d=json_decode(file_get_contents($argv[1]),true); foreach ($d["packages"]??$d as $p) { if (($p["name"]??"")==="brick/money") { echo ltrim((string)$p["version"],"v"); break; } }' "$ROOT/vendor/composer/installed.json")"
+        if [[ -n "$brick_money_version" ]]; then
+            extra_repos=",{\"type\":\"path\",\"url\":\"$ROOT/vendor/brick/money\",\"options\":{\"symlink\":false,\"versions\":{\"brick/money\":\"$brick_money_version\"}}}"
+        fi
+    fi
     mkdir -p "$dir"
     cat >"$dir/composer.json" <<JSON
 {
     "name": "consumer/billium-smoke",
     "require": {"axiomasoft/billium-contracts": "*@dev"},
     "repositories": [
-        {"type": "path", "url": "$ROOT/packages/contracts", "options": {"symlink": false}}
-    ]
+        {"type": "path", "url": "$ROOT/packages/contracts", "options": {"symlink": false}},
+        {"type": "path", "url": "$ROOT/../packman/packages/core", "options": {"symlink": false, "versions": {"axiomasoft/packman": "0.1.x-dev"}}}
+        $extra_repos
+    ],
+    "minimum-stability": "dev",
+    "prefer-stable": true
 }
 JSON
     (
         cd "$dir"
-        composer install --no-dev --no-interaction --no-progress
+        COMPOSER_DISABLE_NETWORK=1 composer install --no-dev --no-interaction --no-progress
         if [[ -L vendor/axiomasoft/billium-contracts ]]; then
             echo "smoke: package installed as symlink" >&2
             exit 1
         fi
-        if [[ -e vendor/laravel/framework ]]; then
-            echo "smoke: laravel/framework in the consumer vendor (REQ-CON-01)" >&2
+        if [[ -e vendor/laravel/framework || -e vendor/illuminate ]]; then
+            echo "smoke: laravel/framework or illuminate in the consumer vendor (REQ-CON-01)" >&2
             exit 1
         fi
         php -r '

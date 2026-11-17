@@ -6,15 +6,18 @@ namespace Billium\Platform\Internal\EventContracts;
 
 use Billium\Core\Contracts\Modules\ModuleRegistry;
 use Billium\Core\Data\Modules\ModuleDescriptor;
+use Billium\Core\Data\Modules\PublicEventDeclaration;
 use Billium\Core\Enums\Modules\BootstrapMode;
-use Billium\Platform\Contracts\EventContractRegistrar;
+use Billium\Platform\Contracts\EventContracts\EventContractRegistrar;
 use Billium\Platform\Data\EventContracts\EventContractConflict;
 use Billium\Platform\Data\EventContracts\EventContractRegistration;
 use Billium\Platform\Data\EventContracts\EventContractRegistrationPlan;
 use Billium\Platform\Internal\Installation\Rows;
 use Illuminate\Database\Connection;
 use LogicException;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final readonly class DatabaseEventContractRegistrar implements EventContractRegistrar
 {
     public function __construct(private Connection $db, private ModuleRegistry $modules) {}
@@ -23,8 +26,8 @@ final readonly class DatabaseEventContractRegistrar implements EventContractRegi
     {
         $known = $this->modules->descriptor($descriptor->moduleId);
         if ($known !== null && ($known->moduleApiVersion !== $descriptor->moduleApiVersion || $known->schemaNamespace !== $descriptor->schemaNamespace
-            || array_any($descriptor->publicEvents, static fn ($declaration): bool => ! array_any($known->publicEvents,
-                static fn ($owned): bool => $owned->key() === $declaration->key() && EventContractRegistration::from($known->moduleId, $owned)->sameContract(EventContractRegistration::from($descriptor->moduleId, $declaration)))))) {
+            || array_any($descriptor->publicEvents, static fn (PublicEventDeclaration $declaration): bool => ! array_any($known->publicEvents,
+                static fn (PublicEventDeclaration $owned): bool => $owned->key() === $declaration->key() && EventContractRegistration::from($known->moduleId, $owned)->sameContract(EventContractRegistration::from($descriptor->moduleId, $declaration)))))) {
             return new EventContractRegistrationPlan([], [], [new EventContractConflict($descriptor->moduleId, $descriptor->moduleId, EventContractConflict::CHANGED_CONTRACT)]);
         }
 
@@ -68,7 +71,7 @@ final readonly class DatabaseEventContractRegistrar implements EventContractRegi
             foreach ([...$plan->toRegister, ...$plan->unchanged, ...$plan->toHistorical] as $row) {
                 $descriptor = $this->modules->descriptor($row->ownerModuleId);
                 $matches = $descriptor !== null && array_any($descriptor->publicEvents,
-                    static fn ($declaration): bool => EventContractRegistration::from($row->ownerModuleId, $declaration)->key() === $row->key()
+                    static fn (PublicEventDeclaration $declaration): bool => EventContractRegistration::from($row->ownerModuleId, $declaration)->key() === $row->key()
                         && EventContractRegistration::from($row->ownerModuleId, $declaration)->sameContract($row));
                 if (! $matches || isset($existing[$row->key()]) && ! $existing[$row->key()]->sameContract($row)) {
                     throw new LogicException('module.event_contract_conflict: stale plan or foreign schema owner');
