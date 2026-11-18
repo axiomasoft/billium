@@ -35,6 +35,9 @@ use stdClass;
 #[Internal]
 final readonly class AggregateStore
 {
+    /** Rows per multi-row INSERT; keeps the widest membership row well below the PostgreSQL bind parameter limit. */
+    public const int INSERT_CHUNK = 1000;
+
     public function __construct(private DatabaseManager $databases, private CallerContext $callers, private BilliumOptions $options) {}
 
     public function database(?string $connectionName = null): Connection
@@ -273,18 +276,28 @@ final readonly class AggregateStore
             'completeness_frontier_digest' => $snapshot->completeness->digest, 'reduction_evidence' => CanonicalJson::encode((object) $reduction),
             'ingest_frontier_seq' => $effective === [] ? 0 : max(array_map(static fn (FactRevision $f): int => $f->ingestSeq, $effective)),
         ]);
+        $members = [];
+        $distinct = [];
         foreach ($effective as $fact) {
-            $db->table('billium_usage_aggregate_member')->insert([
+            $members[] = [
                 'snapshot_id' => $id, 'fact_id' => $fact->factId, 'fact_revision' => $fact->factRevision,
                 'fact_digest' => $fact->factDigest, 'source_ref' => $fact->sourceRef, 'source_sequence' => $fact->sourceSequence,
                 'observed_at_micros' => $fact->observedAtMicros, 'quantity_unscaled' => $fact->quantityUnscaled,
-            ]);
+            ];
             foreach (array_unique($fact->memberIds) as $member) {
-                $db->table('billium_usage_aggregate_distinct_member')->insert([
+                $distinct[] = [
                     'snapshot_id' => $id, 'member_id' => $member, 'identity_key_version' => $policy->identityKeyVersion,
                     'identity_namespace' => $policy->identityNamespace, 'contributing_fact_id' => $fact->factId,
-                ]);
+                ];
             }
+        }
+        // Membership grows with the window; one multi-row statement per chunk replaces a round trip per fact and member.
+        // Every fact row precedes the distinct rows that reference it.
+        foreach (array_chunk($members, self::INSERT_CHUNK) as $chunk) {
+            $db->table('billium_usage_aggregate_member')->insert($chunk);
+        }
+        foreach (array_chunk($distinct, self::INSERT_CHUNK) as $chunk) {
+            $db->table('billium_usage_aggregate_distinct_member')->insert($chunk);
         }
         $changed = $db->table('billium_usage_aggregate_series_head')->where([
             'seller_ref' => $window->sellerRef, 'environment' => $window->environment, 'series_key' => $window->seriesKey(),
