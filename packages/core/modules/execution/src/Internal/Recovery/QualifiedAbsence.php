@@ -24,7 +24,7 @@ final readonly class QualifiedAbsence
     {
         $now = new DateTimeImmutable;
         if ($certificate === null || $this->verifier === null || ! $capability->absenceCertification
-            || ExecutionCodec::encode($certificate->binding) !== ExecutionCodec::encode($operation->binding) || $certificate->providerReference !== $attempt->providerReference
+            || ExecutionCodec::differs($certificate->binding, $operation->binding) || $certificate->providerReference !== $attempt->providerReference
             || $certificate->providerNamespace !== $capability->details->lookupNamespace || $certificate->qualificationEvidenceRef !== $capability->qualificationEvidenceRef
             || $attempt->startedAt === null || $certificate->coverageFrom > $attempt->startedAt || $attempt->requestDeadlineAt === null || $certificate->coverageThrough < $attempt->requestDeadlineAt
             || $certificate->expiresAt <= $now || $certificate->coverageThrough > $now) {

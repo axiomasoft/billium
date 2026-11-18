@@ -54,7 +54,7 @@ final readonly class LateRefundAdjudication
             || $late->operationAmount === null || $late->operationAmount->minor <= 0 || $late->currency !== $review->currency
             || $late->refundedTotal->minor <= $late->capturedTotal->minor || $late->capturedTotal->minor !== $capacity->confirmedCapture->minor
             || $late->refundedTotal->minor - $late->operationAmount->minor !== $capacity->confirmedRefund->minor
-            || ! $capacity->financialHold || ExecutionCodec::encode($frontier) !== ExecutionCodec::encode($late)) {
+            || ! $capacity->financialHold || ExecutionCodec::differs($frontier, $late)) {
             $this->refuse();
         }
         $discrepancy = $db->table('billium_execution_discrepancy')->where($route)->where(['discrepancy_ref' => $input->resultRef,

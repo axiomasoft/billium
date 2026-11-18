@@ -33,6 +33,17 @@ final class ExecutionCodec
         return json_encode(self::value($value), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
 
+    /** Value equality under the storage encoding: key order and object identity do not matter. */
+    public static function same(mixed $left, mixed $right): bool
+    {
+        return self::encode($left) === self::encode($right);
+    }
+
+    public static function differs(mixed $left, mixed $right): bool
+    {
+        return ! self::same($left, $right);
+    }
+
     public static function digest(mixed $value): string
     {
         return 'sha256:'.hash('sha256', self::encode($value));

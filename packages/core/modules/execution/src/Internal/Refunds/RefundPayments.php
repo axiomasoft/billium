@@ -182,7 +182,7 @@ final readonly class RefundPayments implements RefundCommands
         $this->collection->validate($ctx, $plan->collectionGuard, $locks, $plan->operationRef, $plan->semanticDigest);
         $this->store->lock($ctx, $locks);
         $root = $this->store->operation($scope, $original, $ctx);
-        if ($root === null || ExecutionCodec::encode($root->binding) !== ExecutionCodec::encode($plan->binding)) {
+        if ($root === null || ExecutionCodec::differs($root->binding, $plan->binding)) {
             throw new ProblemException(ProblemCode::RecoveryRequired, 'Original payment binding changed');
         }
         $existing = $this->store->claimChildBinding($ctx, $plan, $intent, $wire->reasonCode, $wire->category);

@@ -78,7 +78,7 @@ final readonly class ExecutionReconciliation implements ReconciliationCommands
             if (! $driver instanceof QualifiedInventoryDriver || $capability->digest !== $merchant->capabilityDigest
                 || $capability->driverContractVersion !== $driver->contractVersion() || $capability->driverId !== $merchant->driverId
                 || $capability->merchantAccountRef !== $merchant->merchantAccountRef
-                || ExecutionCodec::encode($capability) !== ExecutionCodec::encode($drivers->capabilities($merchant))) {
+                || ExecutionCodec::differs($capability, $drivers->capabilities($merchant))) {
                 throw new ProblemException(ProblemCode::CapabilityUnsupported, 'The frozen merchant lacks a qualified bounded inventory reader');
             }
             $capability->requireCapability(DriverCapability::InventoryComplete, $scope->environment === 'production');

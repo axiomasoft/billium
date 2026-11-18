@@ -33,7 +33,7 @@ final readonly class AttemptStorage
         $s = $operationRecord->binding->scope;
         $this->tables->assertScope($s, $transactionContext, $operationRecord->binding->executionProfile);
         $row = $this->tables->operation($s, $operationRecord->operationRef, $transactionContext);
-        if (ExecutionCodec::encode($row) !== ExecutionCodec::encode($operationRecord)) {
+        if (ExecutionCodec::differs($row, $operationRecord)) {
             ExecutionTables::refuse('Operation changed before attempt');
         }
         $merchant = $this->merchants->merchantRevision($s, $operationRecord->binding->merchantRevisionRef, $transactionContext);
@@ -76,7 +76,7 @@ final readonly class AttemptStorage
         $this->tables->financial($context);
         $current = $this->tables->admittedOperation($context, $operation->operationRef);
         $this->tables->requireLock($context, $current->rootOperationRef);
-        if ($receiptRef === '' || ExecutionCodec::encode($current) !== ExecutionCodec::encode($operation) || $current->rootOperationRef !== $current->operationRef
+        if ($receiptRef === '' || ExecutionCodec::differs($current, $operation) || $current->rootOperationRef !== $current->operationRef
             || ! in_array($current->kind, [EffectKind::Charge, EffectKind::Authorize], true) || $current->state !== 'admitted') {
             return false;
         }

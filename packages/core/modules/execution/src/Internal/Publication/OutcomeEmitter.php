@@ -95,7 +95,7 @@ final readonly class OutcomeEmitter implements OutcomePublication
         if ($subject === null || $fact === null || $subject->rootOperationRef !== $root->operationRef || $subject->kind !== $fact->snapshot->kind
             || $fact->snapshot->operationRef !== $subject->operationRef || $fact->snapshot->bindingDigest !== ExecutionCodec::bindingDigest($root->binding)
             || $fact->snapshot->merchantAccountRef !== $root->binding->merchantAccountRef || ($fact->snapshot->evidenceRefs[0] ?? null) !== $row->evidence_ref
-            || ExecutionCodec::encode($fact->snapshot) !== ExecutionCodec::encode(ExecutionCodec::map($row->observed))) {
+            || ExecutionCodec::differs($fact->snapshot, ExecutionCodec::map($row->observed))) {
             throw new LogicException('Root discrepancy differs from its original qualified operation fact');
         }
 

@@ -276,7 +276,7 @@ final class DatabaseExecutionStore implements ExecutionStore
         if (! $root) {
             $this->tables->requireLock($ctx, $b->rootOperationRef);
             $parent = $this->operation($scope, $b->rootOperationRef, $ctx);
-            if ($parent === null || ExecutionCodec::encode($parent->binding) !== ExecutionCodec::encode($b)
+            if ($parent === null || ExecutionCodec::differs($parent->binding, $b)
                 || $parent->requested->currency->code !== $a->requested->currency->code) {
                 throw new ProblemException(ProblemCode::RecoveryRequired, 'Reconcile the authenticated original root before its child');
             }
@@ -325,7 +325,7 @@ final class DatabaseExecutionStore implements ExecutionStore
         $existing = $db->table('billium_execution_business_binding')->where('business_identity_digest', ExecutionCodec::businessIdentityDigest($frozenBinding, 'charge'))->where($identity)->first();
         if ($existing === null || $existing->tombstone_reason !== null || ExecutionRows::text($existing->installation_ref) !== $frozenBinding->scope->installationRef
             || ExecutionRows::text($existing->seller_ref) !== $frozenBinding->scope->sellerRef
-            || ExecutionCodec::encode(ExecutionCodec::map(ExecutionRows::text($existing->binding))) !== ExecutionCodec::encode($frozenBinding)) {
+            || ExecutionCodec::differs(ExecutionCodec::map(ExecutionRows::text($existing->binding)), $frozenBinding)) {
             throw new ProblemException(ProblemCode::IdempotencyConflict, 'Business identity conflicts with immutable binding');
         }
 
@@ -345,9 +345,9 @@ final class DatabaseExecutionStore implements ExecutionStore
             || $reasonCode === '' || ($reasonCode !== null && strlen($reasonCode) > 200) || $category === '' || ($category !== null && strlen($category) > 200)
             || ($plan->kind === EffectKind::Capture) !== ($reasonCode === null) || ($plan->kind === EffectKind::Refund) !== ($category !== null)
             || preg_match('/^sha256:[a-f0-9]{64}$/D', $plan->semanticDigest) !== 1 || $plan->amount->minor <= 0
-            || ExecutionCodec::encode($plan->scope) !== ExecutionCodec::encode($scope)
-            || ExecutionCodec::encode($root->binding) !== ExecutionCodec::encode($binding)
-            || ExecutionCodec::encode($root->requested->currency) !== ExecutionCodec::encode($plan->amount->currency)
+            || ExecutionCodec::differs($plan->scope, $scope)
+            || ExecutionCodec::differs($root->binding, $binding)
+            || ExecutionCodec::differs($root->requested->currency, $plan->amount->currency)
             || $plan->canonicalizationVersion !== $binding->canonicalizationVersion) {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'Child identity differs from its immutable original root or requested terms');
         }
@@ -430,7 +430,7 @@ final class DatabaseExecutionStore implements ExecutionStore
         $this->tables->financial($transactionContext);
         $b = $admissionPlan->binding;
         $this->tables->assertScope($admissionPlan->scope, $transactionContext, $b->executionProfile);
-        if (ExecutionCodec::encode($admissionPlan->scope) !== ExecutionCodec::encode($b->scope) || $admissionPlan->amount->minor <= 0 || Currency::of($admissionPlan->amount->currency->code)->scale !== $admissionPlan->amount->currency->scale) {
+        if (ExecutionCodec::differs($admissionPlan->scope, $b->scope) || $admissionPlan->amount->minor <= 0 || Currency::of($admissionPlan->amount->currency->code)->scale !== $admissionPlan->amount->currency->scale) {
             ExecutionTables::refuse('Invalid binding, amount or currency precision');
         }
         $merchant = $this->merchantRevision($b->scope, $b->merchantRevisionRef, $transactionContext);
@@ -445,8 +445,8 @@ final class DatabaseExecutionStore implements ExecutionStore
         if (in_array($admissionPlan->kind, [EffectKind::Charge, EffectKind::Authorize], true)) {
             $existing = $this->operation($b->scope, $admissionPlan->operationRef, $transactionContext);
             if ($existing !== null) {
-                if ($existing->kind !== $admissionPlan->kind || ExecutionCodec::encode($existing->requested) !== ExecutionCodec::encode($admissionPlan->amount)
-                    || ExecutionCodec::encode($existing->binding) !== ExecutionCodec::encode($b) || $admissionPlan->semanticDigest !== $b->semanticDigest
+                if ($existing->kind !== $admissionPlan->kind || ExecutionCodec::differs($existing->requested, $admissionPlan->amount)
+                    || ExecutionCodec::differs($existing->binding, $b) || $admissionPlan->semanticDigest !== $b->semanticDigest
                     || $admissionPlan->canonicalizationVersion !== $b->canonicalizationVersion) {
                     throw new ProblemException(ProblemCode::IdempotencyConflict, 'Business identity conflicts with immutable binding');
                 }
@@ -459,13 +459,13 @@ final class DatabaseExecutionStore implements ExecutionStore
                 ExecutionTables::refuse('New merchant binding is not explicitly enabled/effective');
             }
             $identity = $this->tables->query('business_binding', $b->scope, $transactionContext)->where('operation_ref', $admissionPlan->operationRef)->where('source_context', $b->sourceContext)->where('business_intent_ref', $b->businessIntentRef)->where('intent_owner_namespace', $b->scope->intentOwnerNamespace)->where('semantic_digest', $admissionPlan->semanticDigest)->whereNull('tombstone_reason')->first();
-            if ($identity === null || $admissionPlan->canonicalizationVersion !== $b->canonicalizationVersion || ExecutionCodec::encode(ExecutionCodec::map(ExecutionRows::text($identity->binding))) !== ExecutionCodec::encode($b)) {
+            if ($identity === null || $admissionPlan->canonicalizationVersion !== $b->canonicalizationVersion || ExecutionCodec::differs(ExecutionCodec::map(ExecutionRows::text($identity->binding)), $b)) {
                 ExecutionTables::refuse('Root requires durable business binding');
             }
         } else {
             $root = $this->operation($b->scope, $b->rootOperationRef, $transactionContext) ?? throw new LogicException('Child root missing');
             $this->tables->requireLock($transactionContext, $root->rootOperationRef);
-            if (ExecutionCodec::encode($root->binding) !== ExecutionCodec::encode($b) || ExecutionCodec::encode($root->requested->currency) !== ExecutionCodec::encode($admissionPlan->amount->currency)) {
+            if (ExecutionCodec::differs($root->binding, $b) || ExecutionCodec::differs($root->requested->currency, $admissionPlan->amount->currency)) {
                 ExecutionTables::refuse('Child binding differs from historical root');
             }
         }

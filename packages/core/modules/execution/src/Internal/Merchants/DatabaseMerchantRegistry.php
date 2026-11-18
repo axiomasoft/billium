@@ -165,7 +165,7 @@ final readonly class DatabaseMerchantRegistry implements MerchantActionGate, Mer
     {
         $this->admin($context, $revision->scope);
         $original = $this->lockRevision($context, $revision->scope, $revision->revisionRef, shared: false);
-        if (ExecutionCodec::encode($original) !== ExecutionCodec::encode($revision) || $continuityEvidenceRef === '' || $validUntil <= $validFrom) {
+        if (ExecutionCodec::differs($original, $revision) || $continuityEvidenceRef === '' || $validUntil <= $validFrom) {
             $this->refuse('Credential rotation lacks immutable identity continuity');
         }
         $this->connection($context)->table('billium_execution_merchant_credential_revision')->insert(['installation_ref' => $revision->scope->installationRef, 'seller_ref' => $revision->scope->sellerRef, 'environment' => $revision->scope->environment, 'credential_revision_ref' => $credentialRevisionRef, 'revision_ref' => $revision->revisionRef, 'merchant_account_ref' => $revision->merchantAccountRef, 'credential_ref' => $locator->locator, 'credential_version_ref' => $credentialVersionRef, 'purpose' => $purpose, 'valid_from' => $validFrom->format(ExecutionRows::TIMESTAMP), 'valid_until' => $validUntil->format(ExecutionRows::TIMESTAMP), 'identity_continuity_evidence_ref' => $continuityEvidenceRef, 'predecessor_ref' => $predecessorRef]);

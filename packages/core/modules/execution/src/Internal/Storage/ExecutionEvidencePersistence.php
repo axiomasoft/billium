@@ -134,7 +134,7 @@ trait ExecutionEvidencePersistence
             || $snapshot->operationRef !== $operation->operationRef || $snapshot->kind !== $operation->kind
             || $snapshot->merchantAccountRef !== $operation->binding->merchantAccountRef || $snapshot->currency !== $operation->requested->currency->code
             || ($snapshot->operationAmount === null && (! in_array($snapshot->normalizedStatus, ['pending', 'unknown'], true) || $fact->mode !== ProviderEvidenceMode::CumulativeSnapshot))
-            || ($snapshot->operationAmount !== null && ExecutionCodec::encode($snapshot->operationAmount->currency) !== ExecutionCodec::encode($operation->requested->currency))
+            || ($snapshot->operationAmount !== null && ExecutionCodec::differs($snapshot->operationAmount->currency, $operation->requested->currency))
             || $fact->evidenceRefs === [] || $fact->evidenceRefs !== $snapshot->evidenceRefs) {
             ExecutionTables::refuse('Provider fact differs from original attempt, binding or actual amount');
         }
@@ -247,7 +247,7 @@ trait ExecutionEvidencePersistence
             AttemptState::Pending, AttemptState::Unknown => in_array($status, ['pending', 'unknown'], true),
             default => false,
         };
-        if (! $valid || $stored === null || $stored->operationRef !== $attempt->operationRef || $fact->evidenceRefs === [] || ExecutionCodec::encode($stored) !== ExecutionCodec::encode($fact)) {
+        if (! $valid || $stored === null || $stored->operationRef !== $attempt->operationRef || $fact->evidenceRefs === [] || ExecutionCodec::differs($stored, $fact)) {
             ExecutionTables::refuse('Attempt transition requires original accepted fact');
         }
         $this->advanceAttempt($context, $attempt, $state, $fact->evidenceRefs[0], $lookupDueAt);
@@ -301,12 +301,12 @@ trait ExecutionEvidencePersistence
         $certificate = $proof->certificate;
         $stored = $this->attemptForOperation($scope, $operation->operationRef, $context);
         $now = new DateTimeImmutable;
-        if ($stored === null || ExecutionCodec::encode($attempt) !== ExecutionCodec::encode($stored)
+        if ($stored === null || ExecutionCodec::differs($attempt, $stored)
             || ! in_array($stored->state, [AttemptState::Dispatching, AttemptState::Unknown, AttemptState::Pending], true)
             || $proof->attemptRef !== $stored->attemptRef || $proof->operationRef !== $operation->operationRef
             || $stored->providerReference !== $certificate->providerReference || $stored->startedAt === null || $stored->requestDeadlineAt === null
             || $certificate->coverageFrom > $stored->startedAt || $certificate->coverageThrough < $stored->requestDeadlineAt
-            || $certificate->coverageThrough > $now || $certificate->expiresAt <= $now || ExecutionCodec::encode($certificate->binding) !== ExecutionCodec::encode($operation->binding)) {
+            || $certificate->coverageThrough > $now || $certificate->expiresAt <= $now || ExecutionCodec::differs($certificate->binding, $operation->binding)) {
             ExecutionTables::refuse('Certified absence does not cover this current attempt');
         }
         $merchant = $this->merchantRevision($scope, $operation->binding->merchantRevisionRef, $context);
@@ -314,7 +314,7 @@ trait ExecutionEvidencePersistence
         $work = $this->providerWork($claim->workRef, $context);
         if ($work === null || $work->state !== 'leased' || $work->handlerVersion !== $claim->handlerContractVersion || $work->operationHint !== $operation->operationRef
             || $work->evidence->evidenceRef !== $claim->evidenceRef || $work->evidence->handlerContractVersion !== 'execution.transport.v1'
-            || ExecutionCodec::encode($work->evidence->scope) !== ExecutionCodec::encode($scope)
+            || ExecutionCodec::differs($work->evidence->scope, $scope)
             || $work->evidence->providerId !== $merchant->providerId || $work->evidence->merchantAccountRef !== $merchant->merchantAccountRef
             || $certificate->providerNamespace !== $cap->details->lookupNamespace || $certificate->qualificationEvidenceRef !== $cap->qualificationEvidenceRef) {
             ExecutionTables::refuse('Verified absence is not the original qualified transport claim');
@@ -324,7 +324,7 @@ trait ExecutionEvidencePersistence
             'providerReference' => $attempt->providerReference, 'lookupState' => 'certified_absent', 'providerEvidenceRef' => null,
             'absenceCertificate' => ExecutionCodec::value($certificate)];
         foreach ($expected as $key => $value) {
-            if (! array_key_exists($key, $transport) || ExecutionCodec::encode($transport[$key]) !== ExecutionCodec::encode($value)) {
+            if (! array_key_exists($key, $transport) || ExecutionCodec::differs($transport[$key], $value)) {
                 ExecutionTables::refuse('Absence receipt differs from original certificate');
             }
         }
@@ -357,7 +357,7 @@ trait ExecutionEvidencePersistence
             $expectedCapacity = get_object_vars($capacity);
             $expectedCapacity['version'] = $capacity->version + 1;
             $expectedCapacity[$held] = new Money($capacity->{$held}->minor - $reservation->requested->minor, $reservation->requested->currency);
-            if (ExecutionCodec::encode($expectedCapacity) !== ExecutionCodec::encode($releasedCapacity)) {
+            if (ExecutionCodec::differs($expectedCapacity, $releasedCapacity)) {
                 ExecutionTables::refuse('Certified release differs from original reservation amount');
             }
             $this->settleReservation($context, $reservation->reservationRef, ReservationState::Released, new Money(0, $reservation->requested->currency), $claim->evidenceRef, $releasedCapacity);
@@ -414,7 +414,7 @@ trait ExecutionEvidencePersistence
             ->where('observed->schema', 'billium.execution.certified-no-effect.v1')->where('observed->certificateRef', $cert->certificateRef)
             ->where('material_digest', $operation->economicDigest)->where('observed->attemptRef', $proof->attemptRef);
         if ($record === null || $operation->state !== 'failed' || $proof->operationRef !== $operation->operationRef
-            || ExecutionCodec::encode($current) !== ExecutionCodec::encode($operation) || ! $revision->whereJsonContains('evidence_refs', ExecutionRows::text($record->evidence_ref))->exists()) {
+            || ExecutionCodec::differs($current, $operation) || ! $revision->whereJsonContains('evidence_refs', ExecutionRows::text($record->evidence_ref))->exists()) {
             ExecutionTables::refuse('Publication requires the original persisted certified absence revision');
         }
     }
@@ -427,11 +427,11 @@ trait ExecutionEvidencePersistence
         $current = $this->tables->admittedOperation($context, $op->operationRef);
         $row = $this->tables->callerQuery('operation_revision', $context)->where('operation_ref', $op->operationRef)->where('revision', $op->revision)->first();
         if ($row === null || $change->observed->operationAmount === null || $change->before->operationRef !== $op->operationRef || $change->before->revision + 1 !== $op->revision
-            || ExecutionCodec::encode($current) !== ExecutionCodec::encode($op) || $row->material_digest !== $op->economicDigest
-            || ExecutionCodec::encode(ExecutionCodec::map(ExecutionRows::text($row->observed))) !== ExecutionCodec::encode($change->observed)
-            || ExecutionCodec::encode(ExecutionCodec::map(ExecutionRows::text($row->last_consistent_applied))) !== ExecutionCodec::encode($change->capacity)
+            || ExecutionCodec::differs($current, $op) || $row->material_digest !== $op->economicDigest
+            || ExecutionCodec::differs(ExecutionCodec::map(ExecutionRows::text($row->observed)), $change->observed)
+            || ExecutionCodec::differs(ExecutionCodec::map(ExecutionRows::text($row->last_consistent_applied)), $change->capacity)
             || ExecutionCodec::encode(ExecutionCodec::map(ExecutionRows::text($row->exposure))) !== $this->exposure($change)
-            || ExecutionCodec::encode($this->capacity($context, $op->rootOperationRef)) !== ExecutionCodec::encode($change->capacity)) {
+            || ExecutionCodec::differs($this->capacity($context, $op->rootOperationRef), $change->capacity)) {
             ExecutionTables::refuse('Publication requires the original persisted material revision');
         }
     }
@@ -446,15 +446,15 @@ trait ExecutionEvidencePersistence
         $subject = $this->tables->admittedOperation($transactionContext, $observed->operationRef);
         $accepted = isset($observed->evidenceRefs[0]) ? $this->factForEvidence($transactionContext, $observed->evidenceRefs[0], $subject->operationRef) : null;
         if (($materialChange->discrepancyRef !== null && ! $materialChange->capacity->financialHold)
-            || $accepted === null || ExecutionCodec::encode($accepted->snapshot) !== ExecutionCodec::encode($observed)
+            || $accepted === null || ExecutionCodec::differs($accepted->snapshot, $observed)
             || $subject->rootOperationRef !== $b->rootOperationRef || ($b->operationRef !== $subject->operationRef && $b->operationRef !== $subject->rootOperationRef)
             || $materialChange->capacity->rootOperationRef !== $b->rootOperationRef) {
             ExecutionTables::refuse('Material revision requires accepted original operation evidence');
         }
-        if (ExecutionCodec::encode($this->tables->admittedOperation($transactionContext, $b->operationRef)) !== ExecutionCodec::encode($b)) {
+        if (ExecutionCodec::differs($this->tables->admittedOperation($transactionContext, $b->operationRef), $b)) {
             ExecutionTables::refuse('Material revision differs from historical operation');
         }
-        if ($a->revision !== $b->revision + 1 || ExecutionCodec::encode($a->binding) !== ExecutionCodec::encode($b->binding) || ExecutionCodec::encode($a->requested) !== ExecutionCodec::encode($b->requested) || $a->kind !== $b->kind || $a->operationRef !== $b->operationRef || $a->rootOperationRef !== $b->rootOperationRef) {
+        if ($a->revision !== $b->revision + 1 || ExecutionCodec::differs($a->binding, $b->binding) || ExecutionCodec::differs($a->requested, $b->requested) || $a->kind !== $b->kind || $a->operationRef !== $b->operationRef || $a->rootOperationRef !== $b->rootOperationRef) {
             ExecutionTables::refuse('Material revision mutates immutable identity');
         }
         $updated = $this->tables->callerQuery('operation', $transactionContext)->where('operation_ref', $b->operationRef)->where('revision', $b->revision)->where('economic_digest', $b->economicDigest)->update(['state' => $a->state, 'revision' => $a->revision, 'economic_digest' => $a->economicDigest, 'authorization_ref' => $a->authorizationRef]);
@@ -464,7 +464,7 @@ trait ExecutionEvidencePersistence
         $currentCapacity = $this->capacity($transactionContext, $b->rootOperationRef);
         if ($materialChange->capacity->version !== $currentCapacity->version) {
             $this->capacities->write($transactionContext, $materialChange->capacity, $currentCapacity->version);
-        } elseif (ExecutionCodec::encode($materialChange->capacity) !== ExecutionCodec::encode($currentCapacity)) {
+        } elseif (ExecutionCodec::differs($materialChange->capacity, $currentCapacity)) {
             ExecutionTables::refuse('Material revision differs from unchanged capacity version');
         }
         $this->tables->database($transactionContext)->table('billium_execution_operation_revision')->insert($this->tables->callerScope($transactionContext) + ['operation_ref' => $a->operationRef, 'revision' => $a->revision, 'material_digest' => $a->economicDigest, 'requested_minor' => $a->requested->minor, 'currency' => $a->requested->currency->code, 'observed' => ExecutionCodec::encode($materialChange->observed), 'last_consistent_applied' => ExecutionCodec::encode($materialChange->capacity), 'financial_hold' => ExecutionCodec::encode($materialChange->capacity->financialHold), 'exposure' => $this->exposure($materialChange), 'evidence_refs' => ExecutionCodec::encode($materialChange->observed->evidenceRefs), 'receipt_ref' => $receiptRef, 'occurred_at' => $materialChange->observed->observedAt]);
@@ -479,7 +479,7 @@ trait ExecutionEvidencePersistence
             ExecutionTables::refuse('Discrepancy differs from historical root');
         }
         $accepted = $this->factForEvidence($transactionContext, $materialChange->observed->evidenceRefs[0] ?? '', $prior->operationRef);
-        if (! $materialChange->capacity->financialHold || $materialChange->discrepancyRef !== $ref || $accepted === null || ExecutionCodec::encode($accepted->snapshot) !== ExecutionCodec::encode($materialChange->observed)) {
+        if (! $materialChange->capacity->financialHold || $materialChange->discrepancyRef !== $ref || $accepted === null || ExecutionCodec::differs($accepted->snapshot, $materialChange->observed)) {
             ExecutionTables::refuse('Accepted material discrepancy requires the original qualified fact');
         }
         $this->tables->database($transactionContext)->table('billium_execution_discrepancy')->insertOrIgnore($this->tables->callerScope($transactionContext) + ['discrepancy_ref' => $ref, 'root_operation_ref' => $materialChange->before->rootOperationRef, 'operation_ref' => $materialChange->before->operationRef, 'kind' => 'provider_material_conflict', 'evidence_refs' => ExecutionCodec::encode($materialChange->observed->evidenceRefs), 'observed' => ExecutionCodec::encode($materialChange->observed), 'last_consistent_applied' => ExecutionCodec::encode($materialChange->capacity), 'exposure' => $this->exposure($materialChange)]);
@@ -495,7 +495,7 @@ trait ExecutionEvidencePersistence
         $work = $this->providerWork($claim->workRef, $context);
         $attempt = $this->attemptForOperation($subject->binding->scope, $subject->operationRef, $context);
         if ($work === null || $work->state !== 'leased' || $work->operationHint !== $subject->operationRef || $work->evidence->evidenceRef !== $claim->evidenceRef
-            || ExecutionCodec::encode($work->evidence) !== ExecutionCodec::encode($delivery->evidence) || $conflict->evidenceRefs !== [$claim->evidenceRef]
+            || ExecutionCodec::differs($work->evidence, $delivery->evidence) || $conflict->evidenceRefs !== [$claim->evidenceRef]
             || $conflict->bindingDigest !== ExecutionCodec::bindingDigest($subject->binding) || $conflict->merchantAccountRef !== $subject->binding->merchantAccountRef
             || $attempt === null || $conflict->providerReference !== $attempt->providerReference || $conflict->kind !== $subject->kind) {
             ExecutionTables::refuse('Financial hold requires authenticated work for the original locked operation');

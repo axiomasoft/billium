@@ -168,7 +168,7 @@ final readonly class AuthorizedPayments implements AuthorizationCommands
         $this->collection->validate($ctx, $plan->collectionGuard, $locks, $plan->operationRef, $plan->semanticDigest);
         $this->store->lock($ctx, $locks);
         $root = $this->store->operation($scope, $original, $ctx);
-        if ($root === null || $root->kind !== EffectKind::Authorize || ExecutionCodec::encode($root->binding) !== ExecutionCodec::encode($plan->binding)) {
+        if ($root === null || $root->kind !== EffectKind::Authorize || ExecutionCodec::differs($root->binding, $plan->binding)) {
             throw new ProblemException(ProblemCode::RecoveryRequired, 'Original authorization binding changed');
         }
         $existing = $this->store->claimChildBinding($ctx, $plan, $intent, $reason);

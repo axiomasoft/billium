@@ -32,7 +32,7 @@ final readonly class CapacityStorage
     public function reserveCapacity(TransactionContext $transactionContext, Reservation $reservation, CapacitySnapshot $expected): CapacitySnapshot
     {
         $current = $this->capacity($transactionContext, $reservation->rootOperationRef);
-        if (ExecutionCodec::encode($current) !== ExecutionCodec::encode($expected) || $reservation->state !== ReservationState::Held || $reservation->consumed->minor !== 0 || $reservation->requested->minor <= 0 || ExecutionCodec::encode($reservation->requested->currency) !== ExecutionCodec::encode($current->authorizedLimit->currency) || $reservation->requested->minor > CapacityAmounts::available($current, $reservation->kind)) {
+        if (ExecutionCodec::differs($current, $expected) || $reservation->state !== ReservationState::Held || $reservation->consumed->minor !== 0 || $reservation->requested->minor <= 0 || ExecutionCodec::differs($reservation->requested->currency, $current->authorizedLimit->currency) || $reservation->requested->minor > CapacityAmounts::available($current, $reservation->kind)) {
             ExecutionTables::refuse('Capacity reservation conflict');
         }
         $this->insertHeldReservation($transactionContext, $reservation, $current);

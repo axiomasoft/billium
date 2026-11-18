@@ -49,7 +49,7 @@ final readonly class AdmitRoot
             $attempt = $this->store->insertAttempt($ctx, $operation, $attemptRef, PaymentIdentity::reference($plan->scope, $plan->operationRef, 'provider'));
             $this->store->insertDispatchWork($ctx, $attempt, PaymentIdentity::reference($plan->scope, $plan->operationRef, 'dispatch'), 'execution.dispatch.v1');
         } elseif ($existing->kind !== $plan->kind || $existing->requested->toWire() !== $plan->amount->toWire()
-            || ExecutionCodec::encode($existing->binding) !== ExecutionCodec::encode($plan->binding) || $existing->operationRef !== $plan->operationRef) {
+            || ExecutionCodec::differs($existing->binding, $plan->binding) || $existing->operationRef !== $plan->operationRef) {
             throw new ProblemException(ProblemCode::IdempotencyConflict, 'Payment intent already has different execution terms');
         }
 
