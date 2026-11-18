@@ -12,8 +12,6 @@ use Packman\Attributes\Api;
 #[Api(since: '1.0')]
 final readonly class PreparedFactualCommand
 {
-    public const string OWNER_MODULE_ID = 'execution';
-
     public const string COMMAND_TYPE = 'payment.observation.v1';
 
     public const string COMMAND_SCHEMA = 'billium.command.v1';

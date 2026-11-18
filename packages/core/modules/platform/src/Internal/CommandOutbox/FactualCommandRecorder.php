@@ -28,6 +28,9 @@ use Packman\Attributes\Internal;
 #[Internal]
 final readonly class FactualCommandRecorder implements FactualCommandOutbox
 {
+    /** The only module whose descriptor may declare and record payment observation facts. */
+    private const string OWNER_MODULE_ID = 'execution';
+
     private const string SCHEMA_REF = 'spec/revisions/2026-10/schema/payment/observation.v1.json';
 
     private const string SCHEMA_DIGEST = 'sha256:da5997970adafb92e302896000dedefecf2a6413c5dfb96694a64cee14fae9fd';
@@ -38,7 +41,7 @@ final readonly class FactualCommandRecorder implements FactualCommandOutbox
     public function record(TransactionContext $context, PreparedFactualCommand $command): int
     {
         ($this->runner)()->assertCurrent($context, 'platform');
-        ($this->runner)()->assertCurrent($context, PreparedFactualCommand::OWNER_MODULE_ID);
+        ($this->runner)()->assertCurrent($context, self::OWNER_MODULE_ID);
         if (! in_array($context->spec()->mode, [FinancialMode::Active, FinancialMode::Recovery], true)
             || $context->spec()->operationClass !== ModuleOperationClass::ObservedFactRecording) {
             throw new LogicException('Factual command recording requires an admitted observed-fact root');
@@ -52,7 +55,7 @@ final readonly class FactualCommandRecorder implements FactualCommandOutbox
             || ! in_array($selected->sourceAuthority, ['remote-billium', 'standalone-billium'], true)) {
             throw new ProblemException(ProblemCode::AuthDenied, 'Factual command requires an exact admitted execution namespace and source');
         }
-        $descriptor = $this->modules->descriptor(PreparedFactualCommand::OWNER_MODULE_ID);
+        $descriptor = $this->modules->descriptor(self::OWNER_MODULE_ID);
         if ($descriptor === null || ! array_any($descriptor->internalCommands, static fn (InternalCommandDeclaration $declaration): bool => $declaration->commandSchema === PreparedFactualCommand::COMMAND_SCHEMA
             && $declaration->commandType === PreparedFactualCommand::COMMAND_TYPE
             && $declaration->payloadSchemaRef === self::SCHEMA_REF
@@ -88,7 +91,7 @@ final readonly class FactualCommandRecorder implements FactualCommandOutbox
         }
 
         return new CommandPersistence($this->db)->record($context, new PreparedInternalCommand(
-            $command->commandRef, $command->businessRef, PreparedFactualCommand::OWNER_MODULE_ID,
+            $command->commandRef, $command->businessRef, self::OWNER_MODULE_ID,
             PreparedFactualCommand::COMMAND_TYPE, PreparedFactualCommand::COMMAND_SCHEMA, $body,
             [PreparedFactualCommand::DESTINATION],
         ), QualifiedCommandScope::encode($selected, $observation->sourceLineage, $observation->partitionRef, $command->businessRef,

@@ -2557,12 +2557,6 @@
             "properties": {},
             "constants": [
                 {
-                    "name": "OWNER_MODULE_ID",
-                    "type": "string",
-                    "visibility": "public",
-                    "final": false
-                },
-                {
                     "name": "COMMAND_TYPE",
                     "type": "string",
                     "visibility": "public",
