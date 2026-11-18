@@ -179,6 +179,13 @@ final class ExecutionTables
         return $row === null ? null : ExecutionRecords::attempt($row);
     }
 
+    public function attemptForOperation(ExecutionScope $scope, string $operationRef, ?TransactionContext $context = null): ?AttemptRecord
+    {
+        $row = $this->query('attempt', $scope, $context)->where('operation_ref', $operationRef)->first();
+
+        return $row === null ? null : ExecutionRecords::attempt($row);
+    }
+
     public function admittedOperation(TransactionContext $context, string $operationRef): OperationRecord
     {
         $row = $this->callerQuery('operation', $context)->where('operation_ref', $operationRef)->first() ?? throw new LogicException('Operation absent');

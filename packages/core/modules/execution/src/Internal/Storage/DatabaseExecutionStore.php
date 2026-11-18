@@ -32,14 +32,21 @@ use Billium\Execution\Data\ExecutionLockPlan;
 use Billium\Execution\Data\ExecutionReceipt;
 use Billium\Execution\Data\ExecutionScope;
 use Billium\Execution\Data\FrozenBinding;
+use Billium\Execution\Data\MaterialChange;
+use Billium\Execution\Data\MaterialSnapshot;
 use Billium\Execution\Data\MerchantRevision;
 use Billium\Execution\Data\NamespaceRecord;
 use Billium\Execution\Data\ObservationEmission;
 use Billium\Execution\Data\ObservationPartition;
 use Billium\Execution\Data\OperationRecord;
+use Billium\Execution\Data\ProviderEvidence;
+use Billium\Execution\Data\ProviderFact;
+use Billium\Execution\Data\ProviderWorkClaim;
+use Billium\Execution\Data\ProviderWorkInput;
 use Billium\Execution\Data\ReconciliationRun;
 use Billium\Execution\Data\RecoveryAction;
 use Billium\Execution\Data\Reservation;
+use Billium\Execution\Data\VerifiedAbsence;
 use Billium\Execution\Enums\AttemptState;
 use Billium\Execution\Enums\EffectKind;
 use Billium\Execution\Enums\NamespaceState;
@@ -59,8 +66,6 @@ use Packman\Attributes\Internal;
 #[Internal]
 final class DatabaseExecutionStore implements ExecutionStore
 {
-    use ExecutionEvidencePersistence;
-
     private readonly ExecutionTables $tables;
 
     private readonly MerchantRevisionStorage $merchants;
@@ -75,8 +80,10 @@ final class DatabaseExecutionStore implements ExecutionStore
 
     private readonly RecoveryRecordStorage $recoveryRecords;
 
+    private readonly ProviderFactStorage $facts;
+
     /** @param (Closure():?OriginalIdentityArchive)|null $identityArchive */
-    public function __construct(DatabaseManager $databases, OperationRunner $runner, CallerContext $callers, BilliumOptions $options, private readonly FinancialSessionAdmission $sessionAdmission, private readonly ?AbsenceProofRegistry $absenceProofs = null, private readonly ?Closure $identityArchive = null, private readonly ?VerifiedReduction $verifiedReduction = null)
+    public function __construct(DatabaseManager $databases, OperationRunner $runner, CallerContext $callers, BilliumOptions $options, private readonly FinancialSessionAdmission $sessionAdmission, ?AbsenceProofRegistry $absenceProofs = null, private readonly ?Closure $identityArchive = null, ?VerifiedReduction $verifiedReduction = null)
     {
         $this->tables = new ExecutionTables($databases, $runner, $callers, $options);
         $this->merchants = new MerchantRevisionStorage($this->tables);
@@ -85,6 +92,7 @@ final class DatabaseExecutionStore implements ExecutionStore
         $this->custody = new ProviderCustodyStorage($this->tables);
         $this->attempts = new AttemptStorage($this->tables, $this->merchants, $this->capacities, $sessionAdmission);
         $this->recoveryRecords = new RecoveryRecordStorage($this->tables);
+        $this->facts = new ProviderFactStorage($this->tables, $this->merchants, $this->capacities, $this->custody, $absenceProofs, $verifiedReduction);
     }
 
     public function plan(ExecutionScope $executionScope, string $operationRef, bool $includeChildren = false, ?TransactionContext $context = null): ExecutionLockPlan
@@ -519,47 +527,6 @@ final class DatabaseExecutionStore implements ExecutionStore
         return $ref;
     }
 
-    public function settleReservation(TransactionContext $transactionContext, string $reservationRef, ReservationState $reservationState, Money $consumed, ?string $releaseEvidenceRef, CapacitySnapshot $next): void
-    {
-        $current = $this->capacity($transactionContext, $next->rootOperationRef);
-        $q = $this->tables->callerQuery('reservation', $transactionContext)->where('reservation_ref', $reservationRef);
-        $r = (clone $q)->first() ?? throw new LogicException('Reservation absent');
-        if ($next->version !== $current->version + 1 || ExecutionRows::text($r->root_operation_ref) !== $next->rootOperationRef || ExecutionRows::text($r->state) !== 'held' || $reservationState === ReservationState::Held || $consumed->minor < 0 || $consumed->minor > ExecutionRows::integer($r->requested_minor) || $consumed->currency->code !== ExecutionRows::text($r->currency)) {
-            ExecutionTables::refuse('Reservation settlement conflict');
-        }
-        $heldColumn = match (EffectKind::from(ExecutionRows::text($r->kind))) {
-            EffectKind::Capture => 'heldCapture', EffectKind::Refund => 'heldRefund', EffectKind::VoidAuthorization => 'heldVoid',
-            default => throw new LogicException('Invalid reservation kind'),
-        };
-        foreach (['heldCapture', 'heldRefund', 'heldVoid'] as $column) {
-            $expectedHeld = $current->{$column}->minor - ($column === $heldColumn ? ExecutionRows::integer($r->requested_minor) : 0);
-            if ($expectedHeld < 0 || $next->{$column}->minor !== $expectedHeld) {
-                ExecutionTables::refuse('Settlement must remove the original held reservation exactly once');
-            }
-        }
-        $operationRef = ExecutionRows::text($r->operation_ref);
-        $this->tables->requireOperationLock($transactionContext, $operationRef);
-        $fact = $releaseEvidenceRef === null ? null : $this->factForEvidence($transactionContext, $releaseEvidenceRef, $operationRef);
-        if ($consumed->minor < ExecutionRows::integer($r->requested_minor) && $this->hasGreaterActual($transactionContext, $operationRef, $consumed->minor)) {
-            ExecutionTables::refuse('Reservation release contradicts accepted original operation amount');
-        }
-        $signed = $fact?->snapshot;
-        $valid = $signed !== null && $signed->kind->value === $r->kind && $signed->operationAmount !== null
-            && $signed->operationAmount->minor === $consumed->minor && $signed->operationAmount->currency->code === $r->currency
-            && ($reservationState === ReservationState::Released
-                ? $consumed->minor === 0 && in_array($signed->normalizedStatus, ['declined', 'failed', 'no_effect'], true)
-                : $consumed->minor > 0 && $signed->normalizedStatus === 'succeeded');
-        if (! $valid) {
-            $attempt = $this->attemptForOperation($this->tables->admittedOperation($transactionContext, $operationRef)->binding->scope, $operationRef, $transactionContext);
-            if ($reservationState !== ReservationState::Released || $consumed->minor !== 0 || $releaseEvidenceRef === null || $attempt === null
-                || ! $this->tables->callerQuery('certified_absence', $transactionContext)->where('attempt_ref', $attempt->attemptRef)->where('evidence_ref', $releaseEvidenceRef)->exists()) {
-                ExecutionTables::refuse('Reservation requires accepted original operation amount or verified absence');
-            }
-        }
-        $q->where('state', 'held')->update(['state' => $reservationState->value, 'consumed_minor' => $consumed->minor, 'release_evidence_ref' => $releaseEvidenceRef, 'version' => ExecutionRows::integer($r->version) + 1]);
-        $this->capacities->write($transactionContext, $next, $current->version);
-    }
-
     public function transitionNamespace(TransactionContext $transactionContext, ExecutionScope $executionScope, NamespaceState $namespaceState, int $expectedGeneration, string $authorityEvidenceRef): NamespaceRecord
     {
         $this->tables->financial($transactionContext);
@@ -697,5 +664,130 @@ final class DatabaseExecutionStore implements ExecutionStore
     public function finishAttempt(TransactionContext $transactionContext, string $attemptRef, int $expectedFence, AttemptState $attemptState, string $evidenceRef): bool
     {
         return $this->attempts->finishAttempt($transactionContext, $attemptRef, $expectedFence, $attemptState, $evidenceRef);
+    }
+
+    public function reservation(TransactionContext $context, string $reservationRef): ?Reservation
+    {
+        return $this->capacities->reservation($context, $reservationRef);
+    }
+
+    public function reservationForOperation(TransactionContext $context, string $operationRef): ?Reservation
+    {
+        return $this->capacities->reservationForOperation($context, $operationRef);
+    }
+
+    public function appendEvidence(TransactionContext $transactionContext, ProviderEvidence $providerEvidence): string
+    {
+        return $this->custody->appendEvidence($transactionContext, $providerEvidence);
+    }
+
+    public function providerWork(string $workRef, ?TransactionContext $context = null): ?ProviderWorkInput
+    {
+        return $this->custody->providerWork($workRef, $context);
+    }
+
+    public function enqueueProviderWork(TransactionContext $transactionContext, string $evidenceRef, string $workRef, string $handlerVersion, ?string $operationHint = null): string
+    {
+        return $this->custody->enqueueProviderWork($transactionContext, $evidenceRef, $workRef, $handlerVersion, $operationHint);
+    }
+
+    public function claimProviderWork(TransactionContext $transactionContext, string $workRef, string $leaseOwner, DateTimeImmutable $until): ?ProviderWorkClaim
+    {
+        return $this->custody->claimProviderWork($transactionContext, $workRef, $leaseOwner, $until);
+    }
+
+    public function finishProviderWork(TransactionContext $transactionContext, ProviderWorkClaim $providerWorkClaim, string $state, ?string $resultRef, ?string $errorCode, ?DateTimeImmutable $dueAt): bool
+    {
+        return $this->custody->finishProviderWork($transactionContext, $providerWorkClaim, $state, $resultRef, $errorCode, $dueAt);
+    }
+
+    public function lastObserved(TransactionContext $context, string $operationRef): ?MaterialSnapshot
+    {
+        return $this->facts->lastObserved($context, $operationRef);
+    }
+
+    public function rootOrderingFrontier(TransactionContext $context, string $rootRef, MaterialSnapshot $incoming): ?MaterialSnapshot
+    {
+        return $this->facts->rootOrderingFrontier($context, $rootRef, $incoming);
+    }
+
+    public function latestRootObservation(TransactionContext $context, string $rootRef): ?MaterialSnapshot
+    {
+        return $this->facts->latestRootObservation($context, $rootRef);
+    }
+
+    public function providerOperationId(ExecutionScope $scope, string $attemptRef): ?string
+    {
+        return $this->facts->providerOperationId($scope, $attemptRef);
+    }
+
+    public function operationByProviderId(ExecutionScope $scope, string $providerId, string $merchantAccountRef, string $providerNamespace, string $providerOperationId): ?OperationRecord
+    {
+        return $this->facts->operationByProviderId($scope, $providerId, $merchantAccountRef, $providerNamespace, $providerOperationId);
+    }
+
+    public function bindProviderOperationId(TransactionContext $context, AttemptRecord $attempt, ProviderFact $fact): bool
+    {
+        return $this->facts->bindProviderOperationId($context, $attempt, $fact);
+    }
+
+    public function factByIdentity(TransactionContext $context, string $providerIdentityScope, string $factIdentity): ?ProviderFact
+    {
+        return $this->facts->factByIdentity($context, $providerIdentityScope, $factIdentity);
+    }
+
+    public function factForEvidence(TransactionContext $context, string $evidenceRef, string $operationRef): ?ProviderFact
+    {
+        return $this->facts->factForEvidence($context, $evidenceRef, $operationRef);
+    }
+
+    public function appendFact(TransactionContext $transactionContext, ProviderFact $providerFact): bool
+    {
+        return $this->facts->appendFact($transactionContext, $providerFact);
+    }
+
+    public function applyAttemptFact(TransactionContext $context, AttemptRecord $attempt, ProviderFact $fact, AttemptState $state, ?DateTimeImmutable $lookupDueAt): void
+    {
+        $this->facts->applyAttemptFact($context, $attempt, $fact, $state, $lookupDueAt);
+    }
+
+    public function applyCertifiedAbsence(TransactionContext $context, AttemptRecord $attempt, ProviderWorkClaim $claim, VerifiedAbsence $proof, ?CapacitySnapshot $releasedCapacity): void
+    {
+        $this->facts->applyCertifiedAbsence($context, $attempt, $claim, $proof, $releasedCapacity);
+    }
+
+    public function assertCertifiedDecision(TransactionContext $context, OperationRecord $operation, VerifiedAbsence $proof): void
+    {
+        $this->facts->assertCertifiedDecision($context, $operation, $proof);
+    }
+
+    public function assertMaterialRevision(TransactionContext $context, MaterialChange $change): void
+    {
+        $this->facts->assertMaterialRevision($context, $change);
+    }
+
+    public function appendRevision(TransactionContext $transactionContext, MaterialChange $materialChange, string $receiptRef): void
+    {
+        $this->facts->appendRevision($transactionContext, $materialChange, $receiptRef);
+    }
+
+    public function appendDiscrepancy(TransactionContext $transactionContext, string $ref, MaterialChange $materialChange): void
+    {
+        $this->facts->appendDiscrepancy($transactionContext, $ref, $materialChange);
+    }
+
+    public function recordQuarantineHold(TransactionContext $context, ProviderWorkClaim $claim, MaterialSnapshot $conflict, string $discrepancyRef, string $reason): ?OperationRecord
+    {
+        return $this->facts->recordQuarantineHold($context, $claim, $conflict, $discrepancyRef, $reason);
+    }
+
+    public function settleReservation(TransactionContext $transactionContext, string $reservationRef, ReservationState $reservationState, Money $consumed, ?string $releaseEvidenceRef, CapacitySnapshot $next): void
+    {
+        $this->facts->settleReservation($transactionContext, $reservationRef, $reservationState, $consumed, $releaseEvidenceRef, $next);
+    }
+
+    public function attemptForOperation(ExecutionScope $scope, string $operationRef, ?TransactionContext $context = null): ?AttemptRecord
+    {
+        return $this->tables->attemptForOperation($scope, $operationRef, $context);
     }
 }

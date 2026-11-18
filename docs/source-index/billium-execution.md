@@ -279,13 +279,13 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`CapacityStorage`](../../packages/core/modules/execution/src/Internal/Storage/CapacityStorage.php) | class | *Internal* | Capacity counters, held reservations and the authorization record of an original root; every write is version-checked under the root lock. |
 | [`DatabaseExecutionStore`](../../packages/core/modules/execution/src/Internal/Storage/DatabaseExecutionStore.php) | class | *Internal* |  |
 | [`ExecutionCodec`](../../packages/core/modules/execution/src/Internal/Storage/ExecutionCodec.php) | class | *Internal* | Bounded data-only encoding. |
-| [`ExecutionEvidencePersistence`](../../packages/core/modules/execution/src/Internal/Storage/ExecutionEvidencePersistence.php) | trait | *Internal* |  |
 | [`ExecutionRecords`](../../packages/core/modules/execution/src/Internal/Storage/ExecutionRecords.php) | class | *Internal* | Hydrates execution records from their stored rows; the single place that knows each column layout. |
 | [`ExecutionRows`](../../packages/core/modules/execution/src/Internal/Storage/ExecutionRows.php) | class | *Internal* | Strict coercion of PostgreSQL row values shared by every execution reader and writer. |
 | [`ExecutionTables`](../../packages/core/modules/execution/src/Internal/Storage/ExecutionTables.php) | class | *Internal* | Scope-checked access to the execution tables plus the per-transaction row-lock ledger. |
 | [`MerchantRevisionStorage`](../../packages/core/modules/execution/src/Internal/Storage/MerchantRevisionStorage.php) | class | *Internal* | Merchant revisions and the capability snapshots they bind; written only from administrative roots. |
 | [`ObservationStorage`](../../packages/core/modules/execution/src/Internal/Storage/ObservationStorage.php) | class | *Internal* | Observation partitions, their source sequences and the emissions published from them. |
 | [`ProviderCustodyStorage`](../../packages/core/modules/execution/src/Internal/Storage/ProviderCustodyStorage.php) | class | *Internal* | Raw provider evidence intake and the provider work queue derived from it; usable from raw-custody roots as well as financial ones. |
+| [`ProviderFactStorage`](../../packages/core/modules/execution/src/Internal/Storage/ProviderFactStorage.php) | class | *Internal* | Normalized provider facts and the material revisions, discrepancies, certified absences and holds they drive on an original root. |
 | [`RecoveryRecordStorage`](../../packages/core/modules/execution/src/Internal/Storage/RecoveryRecordStorage.php) | class | *Internal* | Reconciliation runs and repair receipts recorded against an original root. |
 
 ## Laravel
