@@ -82,8 +82,7 @@ final readonly class DatabaseUsage implements Usage
             throw new ProblemException(ProblemCode::AuthDenied, 'caller is not authorized for this usage source');
         }
         // A committed replay needs no mutable host lookup. The runner still authenticates and checks its digest.
-        $name = $this->options->connection;
-        $db = $this->databases->connection(is_string($name) ? $name : null);
+        $db = $this->databases->connection($this->options->connection);
         $exists = $db->table('billium_usage_fact')->where([
             'seller_ref' => $caller->sellerRef, 'environment' => $caller->environment,
             'source' => $fact->source, 'fact_id' => $fact->factId, 'revision' => $fact->revision,

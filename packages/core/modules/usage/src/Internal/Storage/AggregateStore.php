@@ -39,9 +39,7 @@ final readonly class AggregateStore
 
     public function database(?string $connectionName = null): Connection
     {
-        $name = $connectionName ?? $this->options->connection;
-
-        return $this->databases->connection(is_string($name) ? $name : null);
+        return $this->databases->connection($connectionName ?? $this->options->connection);
     }
 
     public function authorize(WindowSelector $window): void

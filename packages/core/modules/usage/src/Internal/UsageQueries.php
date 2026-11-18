@@ -51,8 +51,7 @@ final readonly class UsageQueries
         $sql .= ' ORDER BY f.event_at,f.fact_id,f.revision,f.source LIMIT ?';
         $bindings[] = $limit;
 
-        $name = $this->options->connection;
-        $rows = $this->databases->connection(is_string($name) ? $name : null)->select(query: $sql, bindings: $bindings);
+        $rows = $this->databases->connection($this->options->connection)->select(query: $sql, bindings: $bindings);
 
         return array_values(array_filter($rows, is_object(...)));
     }
