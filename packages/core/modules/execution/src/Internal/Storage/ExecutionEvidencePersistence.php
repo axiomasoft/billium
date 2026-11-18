@@ -98,31 +98,6 @@ trait ExecutionEvidencePersistence
         return $row === null ? null : ExecutionRecords::attempt($row);
     }
 
-    public function reservation(TransactionContext $context, string $reservationRef): ?Reservation
-    {
-        $this->tables->financial($context);
-        $row = $this->tables->callerQuery('reservation', $context)->where('reservation_ref', $reservationRef)
-            ->whereIn('operation_ref', $this->tables->callerQuery('operation', $context)->where('intent_owner_namespace', $this->tables->selectedScope($context)->intentOwnerNamespace)->select('operation_ref'))->first();
-
-        return $row === null ? null : $this->reservationRow($context, $row);
-    }
-
-    public function reservationForOperation(TransactionContext $context, string $operationRef): ?Reservation
-    {
-        $this->tables->financial($context);
-        $this->tables->requireOperationLock($context, $operationRef);
-        $row = $this->tables->callerQuery('reservation', $context)->where('operation_ref', $operationRef)->first();
-
-        return $row === null ? null : $this->reservationRow($context, $row);
-    }
-
-    private function reservationRow(TransactionContext $context, stdClass $row): Reservation
-    {
-        $this->tables->requireOperationLock($context, ExecutionRows::text($row->operation_ref));
-
-        return ExecutionRecords::reservation($row);
-    }
-
     public function lastObserved(TransactionContext $context, string $operationRef): ?MaterialSnapshot
     {
         $this->tables->financial($context);
@@ -662,7 +637,7 @@ trait ExecutionEvidencePersistence
         }
         $currentCapacity = $this->capacity($transactionContext, $b->rootOperationRef);
         if ($materialChange->capacity->version !== $currentCapacity->version) {
-            $this->writeCapacity($transactionContext, $materialChange->capacity, $currentCapacity->version);
+            $this->capacities->write($transactionContext, $materialChange->capacity, $currentCapacity->version);
         } elseif (ExecutionCodec::encode($materialChange->capacity) !== ExecutionCodec::encode($currentCapacity)) {
             ExecutionTables::refuse('Material revision differs from unchanged capacity version');
         }
@@ -722,7 +697,7 @@ trait ExecutionEvidencePersistence
             ->update(['revision' => $revision, 'economic_digest' => $digest]) !== 1) {
             ExecutionTables::refuse('Root changed before recording the financial hold');
         }
-        $this->writeCapacity($context, $held, $current->version);
+        $this->capacities->write($context, $held, $current->version);
         $db->table('billium_execution_operation_revision')->insert($scope + ['operation_ref' => $root->operationRef, 'revision' => $revision,
             'material_digest' => $digest, 'requested_minor' => $root->requested->minor, 'currency' => $root->requested->currency->code,
             'observed' => ExecutionCodec::encode($decision), 'last_consistent_applied' => ExecutionCodec::encode($held), 'financial_hold' => 'true',
@@ -735,5 +710,15 @@ trait ExecutionEvidencePersistence
     {
         return ExecutionCodec::encode(['discrepancyRef' => $change->discrepancyRef, 'financialHold' => $change->capacity->financialHold || $change->discrepancyRef !== null,
             'overCaptured' => $change->overCaptured, 'overRefunded' => $change->overRefunded, 'reason' => $change->reason]);
+    }
+
+    public function reservation(TransactionContext $context, string $reservationRef): ?Reservation
+    {
+        return $this->capacities->reservation($context, $reservationRef);
+    }
+
+    public function reservationForOperation(TransactionContext $context, string $operationRef): ?Reservation
+    {
+        return $this->capacities->reservationForOperation($context, $operationRef);
     }
 }

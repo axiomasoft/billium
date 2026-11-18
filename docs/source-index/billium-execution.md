@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-execution
 
-Path `packages/core/modules/execution/src`, namespace `Billium\Execution\`, layer L2. 167 types.
+Path `packages/core/modules/execution/src`, namespace `Billium\Execution\`, layer L2. 168 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -275,6 +275,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
+| [`CapacityStorage`](../../packages/core/modules/execution/src/Internal/Storage/CapacityStorage.php) | class | *Internal* | Capacity counters, held reservations and the authorization record of an original root; every write is version-checked under the root lock. |
 | [`DatabaseExecutionStore`](../../packages/core/modules/execution/src/Internal/Storage/DatabaseExecutionStore.php) | class | *Internal* |  |
 | [`ExecutionCodec`](../../packages/core/modules/execution/src/Internal/Storage/ExecutionCodec.php) | class | *Internal* | Bounded data-only encoding. |
 | [`ExecutionEvidencePersistence`](../../packages/core/modules/execution/src/Internal/Storage/ExecutionEvidencePersistence.php) | trait | *Internal* |  |
