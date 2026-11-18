@@ -29,7 +29,7 @@ smoke_php() {
     "require": {"axiomasoft/billium-contracts": "*@dev"},
     "repositories": [
         {"type": "path", "url": "$ROOT/packages/contracts", "options": {"symlink": false}},
-        {"type": "path", "url": "$ROOT/../packman/packages/core", "options": {"symlink": false, "versions": {"axiomasoft/packman": "0.1.x-dev"}}}
+        {"type": "path", "url": "$ROOT/../packman/packages/core", "options": {"symlink": false, "versions": {"axiomasoft/packman": "0.1.0"}}}
         $extra_repos
     ],
     "minimum-stability": "dev",

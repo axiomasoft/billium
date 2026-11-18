@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "99e0e886f224f869786a093106cae662",
+    "content-hash": "f5781f7e2df9ae0fc46bb67dd4f4a9a2",
     "packages": [
         {
             "name": "axiomasoft/billium-contracts",
@@ -134,11 +134,11 @@
         },
         {
             "name": "axiomasoft/packman",
-            "version": "0.1.x-dev",
+            "version": "0.1.0",
             "dist": {
                 "type": "path",
                 "url": "../packman/packages/core",
-                "reference": "8d61c9303a474f7c469035a0882fa11ad08b4429"
+                "reference": "d59304489dbd8c1c265dac688c6e03f22bf0bce6"
             },
             "require": {
                 "php": "^8.4",
@@ -216,14 +216,14 @@
         },
         {
             "name": "axiomasoft/packman-plugins",
-            "version": "0.1.x-dev",
+            "version": "0.1.0",
             "dist": {
                 "type": "path",
                 "url": "../packman/packages/plugins",
-                "reference": "1413808d28f1506dff75ff711907db6ac2556142"
+                "reference": "14d0a3b218a5c877f5d9d7795f1b3632fd972f7b"
             },
             "require": {
-                "axiomasoft/packman": "^0.1|^1.0@dev",
+                "axiomasoft/packman": "^0.1",
                 "illuminate/console": "^12.0|^13.0",
                 "illuminate/container": "^12.0|^13.0",
                 "illuminate/contracts": "^12.0|^13.0",
@@ -268,14 +268,14 @@
         },
         {
             "name": "axiomasoft/packman-schema",
-            "version": "0.1.x-dev",
+            "version": "0.1.0",
             "dist": {
                 "type": "path",
                 "url": "../packman/packages/schema",
-                "reference": "6f8e27c2672f9b07951588127ee773225e2ae0e4"
+                "reference": "8f70671de59880cf7721b47bab1cca07552495f2"
             },
             "require": {
-                "axiomasoft/packman": "^0.1|^1.0@dev",
+                "axiomasoft/packman": "^0.1",
                 "illuminate/console": "^12.0|^13.0",
                 "illuminate/contracts": "^12.0|^13.0",
                 "illuminate/database": "^12.0|^13.0",
@@ -6295,15 +6295,14 @@
     "packages-dev": [
         {
             "name": "axiomasoft/packman-devtools",
-            "version": "0.1.x-dev",
+            "version": "0.1.0",
             "dist": {
                 "type": "path",
                 "url": "../packman/packages/devtools",
-                "reference": "06571a6bbeae1a3f9f8db1666fdc9b65ca50d933"
+                "reference": "02a6ce246ef81b858ae6c003c1f6d9dbbe9960b0"
             },
             "require": {
-                "axiomasoft/packman": "^0.1|^1.0@dev",
-                "driftingly/rector-laravel": "^2.0",
+                "axiomasoft/packman": "^0.1",
                 "illuminate/support": "^12.0|^13.0",
                 "nette/neon": "^3.4",
                 "nikic/php-parser": "^5.4",
@@ -6315,6 +6314,9 @@
                 "symfony/finder": "^7.2|^8.0",
                 "symfony/process": "^7.2|^8.0",
                 "symfony/yaml": "^7.2|^8.0"
+            },
+            "suggest": {
+                "driftingly/rector-laravel": "Optional Laravel Rector rule sets (^2.0) alongside PackmanRectorSet."
             },
             "bin": [
                 "bin/packman"
@@ -6350,15 +6352,15 @@
         },
         {
             "name": "axiomasoft/packman-testkit",
-            "version": "0.1.x-dev",
+            "version": "0.1.0",
             "dist": {
                 "type": "path",
                 "url": "../packman/packages/testkit",
-                "reference": "f22e99b8d63dddf0aa58fb148100715c18c118d2"
+                "reference": "451cf33d32ca05859bc955e814c58f562de17f0a"
             },
             "require": {
-                "axiomasoft/packman": "^0.1|^1.0@dev",
-                "axiomasoft/packman-schema": "^0.1|^1.0@dev",
+                "axiomasoft/packman": "^0.1",
+                "axiomasoft/packman-schema": "^0.1",
                 "illuminate/contracts": "^12.0|^13.0",
                 "illuminate/database": "^12.0|^13.0",
                 "illuminate/http": "^12.0|^13.0",
