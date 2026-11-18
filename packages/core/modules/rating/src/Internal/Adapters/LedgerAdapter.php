@@ -11,7 +11,7 @@ use Billium\Ledger\Contracts\CorrectionCreditParticipants;
 use Billium\Ledger\Contracts\CorrectionLocks;
 use Billium\Ledger\Contracts\LedgerParticipants;
 use Billium\Ledger\Contracts\LedgerQueries;
-use Billium\Ledger\Data\Invoices\IssueCreditNote;
+use Billium\Ledger\Data\Invoices\IssueCreditNoteGroup;
 use Billium\Ledger\Data\Obligations\RecordObligation;
 use Billium\Rating\Data\Rating\PreparedRating;
 use LogicException;
@@ -52,15 +52,10 @@ final readonly class LedgerAdapter
         $this->participants()->recordObligation(context: $context, command: $command);
     }
 
-    /** @param non-empty-list<IssueCreditNote> $commands one credit note per invoice; several go through the grouped participant */
-    public function issueCreditNotes(TransactionContext $context, array $commands): void
+    /** Returns the reference of the whole credit, which ledger resolves to every per-invoice part. */
+    public function issueCreditNotes(TransactionContext $context, IssueCreditNoteGroup $group): string
     {
-        if (count($commands) === 1) {
-            $this->participants()->issueCreditNote(context: $context, command: $commands[0]);
-
-            return;
-        }
-        ($this->credits ?? self::absent())->issue(context: $context, commands: $commands);
+        return ($this->credits ?? self::absent())->issue(context: $context, group: $group)->creditNoteRef;
     }
 
     public function obligation(string $obligationRef): LedgerObligation

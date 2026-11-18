@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-ledger
 
-Path `packages/core/modules/ledger/src`, namespace `Billium\Ledger\`, layer L2. 91 types.
+Path `packages/core/modules/ledger/src`, namespace `Billium\Ledger\`, layer L2. 95 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -41,11 +41,14 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
 | [`CreateInvoice`](../../packages/core/modules/ledger/src/Data/Invoices/CreateInvoice.php) | class | **Api** | Creates a draft over unbilled obligations of one account and currency; the draft does not number or freeze anything (D49). |
+| [`CreditNoteGroupReceipt`](../../packages/core/modules/ledger/src/Data/Invoices/CreditNoteGroupReceipt.php) | class | **Api** | `creditNoteRef` names the whole credit: the issued note itself for one invoice, otherwise a group reference that LedgerQueries::receipt('credit-note:'.$creditN… |
 | [`CreditNoteLine`](../../packages/core/modules/ledger/src/Data/Invoices/CreditNoteLine.php) | class | **Api** | One credited obligation of the invoice and the positive amount credited to it. |
 | [`CreditNoteMode`](../../packages/core/modules/ledger/src/Data/Invoices/CreditNoteMode.php) | enum | **Api** | open_only credits at most the open amount; reverse_allocations first releases live allocations of the line (last first, full reversal plus remainder) and never… |
+| [`CreditNotePart`](../../packages/core/modules/ledger/src/Data/Invoices/CreditNotePart.php) | class | **Api** | The lines of one invoice inside a credit that may span several invoices. |
 | [`DiscardInvoice`](../../packages/core/modules/ledger/src/Data/Invoices/DiscardInvoice.php) | class | **Api** | draft → discarded; releases the obligations of the lines. |
 | [`InvoiceLineInput`](../../packages/core/modules/ledger/src/Data/Invoices/InvoiceLineInput.php) | class | **Api** | One draft invoice line over an existing obligation; the line amount is the obligation's due + adjusted amount (INV-12). |
 | [`IssueCreditNote`](../../packages/core/modules/ledger/src/Data/Invoices/IssueCreditNote.php) | class | **Api** | Credits an issued invoice without rewriting it (COV-167, COV-174). |
+| [`IssueCreditNoteGroup`](../../packages/core/modules/ledger/src/Data/Invoices/IssueCreditNoteGroup.php) | class | **Api** | One business credit that may span several invoices. |
 | [`IssueInvoice`](../../packages/core/modules/ledger/src/Data/Invoices/IssueInvoice.php) | class | **Api** | Issue an existing draft; legal numbering is supplied by the composing root through LedgerParticipants (D49). |
 | [`MarkUncollectible`](../../packages/core/modules/ledger/src/Data/Invoices/MarkUncollectible.php) | class | **Api** | issued\|partially_paid → uncollectible; the reason and the operator authorization stay in the immutable receipt (COV-248). |
 | [`UpdateInvoiceMetadata`](../../packages/core/modules/ledger/src/Data/Invoices/UpdateInvoiceMetadata.php) | class | **Api** | Merges allow-list keys (`note`, `external_ref`, `labels`) into the metadata, in any invoice state (INV-13). |
@@ -93,6 +96,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`AmendObligationDuePolicyCommand`](../../packages/core/modules/ledger/src/Internal/Commands/AmendObligationDuePolicyCommand.php) | class | *Internal* |  |
 | [`BootstrapPartitionCommand`](../../packages/core/modules/ledger/src/Internal/Commands/BootstrapPartitionCommand.php) | class | *Internal* | ledger.feed.bootstrap (PF-13, PF-14, ACC-RST-07): staged bootstrap of one observation partition over FeedPartitions with the ledger ObservationHandler. |
 | [`CreateInvoiceCommand`](../../packages/core/modules/ledger/src/Internal/Commands/CreateInvoiceCommand.php) | class | *Internal* | Draft over unbilled obligations; no event, no number (D49). |
+| [`CreditNoteGroupRef`](../../packages/core/modules/ledger/src/Internal/Commands/CreditNoteGroupRef.php) | class | *Internal* | The only place that knows how a multi-invoice credit names its parts and how the group reference lists them. |
 | [`DeclareSettlementIntentCommand`](../../packages/core/modules/ledger/src/Internal/Commands/DeclareSettlementIntentCommand.php) | class | *Internal* |  |
 | [`DiscardInvoiceCommand`](../../packages/core/modules/ledger/src/Internal/Commands/DiscardInvoiceCommand.php) | class | *Internal* | draft → discarded; the obligations are released. |
 | [`IssueCreditNoteCommand`](../../packages/core/modules/ledger/src/Internal/Commands/IssueCreditNoteCommand.php) | class | *Internal* | Credit note on an issued invoice (COV-167, COV-174): open_only reduces open; reverse_allocations first releases live allocations of the line (LIFO, full revers… |

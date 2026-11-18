@@ -10,7 +10,6 @@ use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Configuration\BilliumOptions;
-use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Exceptions\Modules\ModuleAdmissionRefused;
 use Billium\Core\Tests\Support\Concurrency\ConcurrencyStand;
@@ -58,6 +57,7 @@ use Billium\Rating\Internal\Canonical\CanonicalJson;
 use Billium\Rating\Internal\Storage\RatingStore;
 use Billium\Rating\Tests\RatingTestCase;
 use Billium\Rating\Tests\Support\CorrectionScenario;
+use Billium\Rating\Tests\Support\CreditFault;
 use Billium\Rating\Tests\Support\LedgerFault;
 use Billium\Rating\Tests\Support\TestTaxPort;
 use Billium\Usage\Contracts\UsageAttribution;
@@ -782,8 +782,8 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $date = new DateTimeImmutable('2026-10-16Z');
         $this->publishPolicy(port: $port, date: $date);
         $this->application()->instance(TaxSnapshotPort::class, $port);
-        $fault = new LedgerFault(inner: $this->application()->make(LedgerParticipants::class), failure: 'credit_rollback');
-        $this->application()->instance(LedgerParticipants::class, $fault);
+        $this->application()->instance(CorrectionCreditParticipants::class, new CreditFault(
+            inner: $this->application()->make(CorrectionCreditParticipants::class), message: 'test after successful credit-note participant'));
         $correction = $this->application()->make(RatingCorrection::class);
         $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::PartialCancel, amendment: new HostAmendment(amendmentRef: 'cancel', revision: 1, effectiveAt: $date, prorationPolicy: ProrationPolicyId::ElapsedSeconds, kind: 'partial_cancel', timezone: null), reasonCode: 'cancel', releasePolicy: ReleasePolicy::OpenOnly));
         self::assertInstanceOf(PreparedCorrection::class, $prepared);
@@ -850,18 +850,8 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $negative = $correction->prepare($command);
         self::assertInstanceOf(PreparedCorrection::class, $negative);
         self::assertSame('-26000', $negative->computation->deltaGrossMinor);
-        $participant = $this->application()->make(CorrectionCreditParticipants::class);
-        $fault = new readonly class($participant) implements CorrectionCreditParticipants
-        {
-            public function __construct(private CorrectionCreditParticipants $inner) {}
-
-            public function issue(TransactionContext $context, array $commands): void
-            {
-                $this->inner->issue($context, $commands);
-                throw new RuntimeException('multi-credit fault');
-            }
-        };
-        $this->application()->instance(CorrectionCreditParticipants::class, $fault);
+        $this->application()->instance(CorrectionCreditParticipants::class, new CreditFault(
+            inner: $this->application()->make(CorrectionCreditParticipants::class), message: 'multi-credit fault'));
         $failing = $this->application()->make(RatingCorrection::class);
         $before = $this->value("SELECT head_digest FROM billium_rating_source_frontier WHERE frontier_key LIKE 'occurrence:%'");
         try {

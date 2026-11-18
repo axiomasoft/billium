@@ -14,7 +14,8 @@ use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Ledger\Data\Invoices\CreditNoteLine;
 use Billium\Ledger\Data\Invoices\CreditNoteMode;
-use Billium\Ledger\Data\Invoices\IssueCreditNote;
+use Billium\Ledger\Data\Invoices\CreditNotePart;
+use Billium\Ledger\Data\Invoices\IssueCreditNoteGroup;
 use Billium\Rating\Contracts\RatingCorrection;
 use Billium\Rating\Data\Correction\ApplyCorrection;
 use Billium\Rating\Data\Correction\PrepareCorrection;
@@ -149,7 +150,7 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
                     }
                     $creditNoteRef = 'rating:'.$child->correctionRef;
                     $allowed = [$p->originalObligationRef, ...$this->corrections->childObligations($in->occurrenceRef, $context)];
-                    $groups = [];
+                    $groups = $invoices = [];
                     $total = '0';
                     $seen = [];
                     foreach ($p->creditParts as $part) {
@@ -159,24 +160,20 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
                         }
                         $seen[$part->obligationRef] = true;
                         $total = bcadd($total, RatingRows::decimal($part->amountMinor), 0);
+                        $invoices[$part->invoiceRef] = $part->invoiceRef;
                         $groups[$part->invoiceRef][] = new CreditNoteLine(obligationRef: $part->obligationRef,
                             money: MoneyFactory::fromMinor(minor: $part->amountMinor, currency: $in->currency, exponent: $in->currencyExponent));
                     }
                     if ($groups === [] || bccomp($total, bcsub('0', RatingRows::decimal($c->deltaGrossMinor), 0), 0) !== 0) {
                         RatingComputation::refuse('correction_digest_mismatch');
                     }
-                    ksort($groups, SORT_STRING);
-                    $commands = [];
-                    foreach ($groups as $invoice => $lines) {
-                        $ref = count($groups) === 1 ? $creditNoteRef : $creditNoteRef.':'.substr(hash('sha256', $invoice), 0, 16);
-                        $commands[] = new IssueCreditNote(commandKey: $ref, scope: ObligationCommandMapper::scope($in), creditNoteRef: $ref, invoiceRef: $invoice,
-                            mode: CreditNoteMode::from($p->releasePolicy->value), lines: $lines, reason: $p->command->reasonCode);
+                    $parts = [];
+                    foreach ($invoices as $key => $invoice) {
+                        $parts[] = new CreditNotePart(invoiceRef: $invoice, lines: $groups[$key]);
                     }
-                    $this->ledger->issueCreditNotes(context: $context, commands: $commands);
-                    if (count($commands) > 1) {
-                        $suffixes = array_map(static fn (IssueCreditNote $item): string => substr($item->creditNoteRef, -16), $commands);
-                        $creditNoteRef .= ':group:'.implode('.', $suffixes);
-                    }
+                    $creditNoteRef = $this->ledger->issueCreditNotes(context: $context, group: new IssueCreditNoteGroup(
+                        scope: ObligationCommandMapper::scope($in), creditNoteRef: $creditNoteRef,
+                        mode: CreditNoteMode::from($p->releasePolicy->value), parts: $parts, reason: $p->command->reasonCode));
                 }
                 $this->corrections->book(context: $context, id: $rows['correctionId'], obligation: $obligationRef,
                     creditNote: $creditNoteRef, release: $sign < 0 ? $p->releasePolicy->value : null);
