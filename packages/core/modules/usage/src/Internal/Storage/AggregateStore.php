@@ -213,18 +213,7 @@ final readonly class AggregateStore
 
     public function hydrate(Connection $db, stdClass $snapshot): AggregateSnapshot
     {
-        $frontier = [];
-        foreach (AggregationRows::items($snapshot->completeness_frontier) as $raw) {
-            $item = AggregationRows::map($raw);
-            $frontier[] = new SourceCompleteness(
-                sourceRef: AggregationRows::text($item['sourceRef']), evidenceSeq: AggregationRows::integer($item['evidenceSeq']),
-                status: CompletenessStatus::from(AggregationRows::text($item['status'])),
-                rangeStartMicros: AggregationRows::integer($item['rangeStartMicros']), rangeEndMicros: AggregationRows::integer($item['rangeEndMicros']),
-                watermarkMicros: AggregationRows::integer($item['watermarkMicros']),
-                repairOrReplayRef: $item['repairOrReplayRef'] === null ? null : AggregationRows::text($item['repairOrReplayRef']),
-                evidenceDigest: AggregationRows::text($item['evidenceDigest']),
-            );
-        }
+        $frontier = array_map(AggregationRows::completeness(...), AggregationRows::items($snapshot->completeness_frontier));
         $scale = AggregationRows::integer($snapshot->quantity_scale);
 
         return new AggregateSnapshot(
