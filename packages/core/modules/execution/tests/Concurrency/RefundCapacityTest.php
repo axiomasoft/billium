@@ -202,7 +202,7 @@ final class RefundCapacityTest extends ExecutionTestCase
             $commands = $app->make(RefundCommands::class);
             $commands->admit($scope, self::refund('first', 70, 2))->orThrow();
             $worker = $app->make(AttemptWorker::class);
-            self::assertSame('unknown', $worker->dispatch($scope, self::attemptRef('first'), 'sender', new DateTimeImmutable('+1 second'))->body['status']);
+            self::assertSame('unknown', $worker->dispatch($scope, self::attemptRef('first'), 'sender', new DateTimeImmutable('+10 seconds'))->body['status']);
             usleep(1_100_000);
             $clock->now = new DateTimeImmutable;
             $worker->recover($scope, self::attemptRef('first'), 'recovery', new DateTimeImmutable('+1 minute'))->orThrow();

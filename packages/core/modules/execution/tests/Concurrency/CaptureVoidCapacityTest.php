@@ -18,9 +18,11 @@ use Billium\Execution\Tests\Feature\CallbackCustodyTest;
 use Billium\Testkit\Drivers\ProviderRecord;
 use Billium\Testkit\Fixtures\ChildProcess;
 use Billium\Testkit\Fixtures\DurableJournal;
+use Billium\Testkit\Fixtures\FixtureClock;
 use Billium\Testkit\Fixtures\JournalEvent;
 use Billium\Testkit\Fixtures\ProcessBarrier;
 use Billium\Testkit\Fixtures\ProcessIdentity;
+use DateTimeImmutable;
 use Illuminate\Database\DatabaseManager;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
@@ -77,8 +79,9 @@ final class CaptureVoidCapacityTest extends ExecutionTestCase
     {
         $app = $this->application();
         $path = AdmissionIdentityTest::tempPath();
+        $clock = new FixtureClock(new DateTimeImmutable);
         try {
-            Authorization::authorize($app, $path);
+            Authorization::authorize($app, $path, clock: $clock);
             $control = new DurableJournal($path.'.control');
             $barrier = new ProcessBarrier($control);
             $workers = [];
@@ -107,6 +110,7 @@ final class CaptureVoidCapacityTest extends ExecutionTestCase
             self::assertSame($expected, $this->rows('billium_execution_reservation', "state='held' AND requested_minor=?", [$amount]));
             self::assertSame(1, $this->rows('billium_execution_capacity', 'held_capture_minor+held_void_minor=100'));
             foreach ($winners as $ref) {
+                $clock->now = new DateTimeImmutable;
                 Authorization::dispatchAndReduce($app, $ref);
                 Authorization::dispatch($app, $ref);
             }

@@ -175,7 +175,7 @@ WORKER;
         $children = [];
         try {
             foreach (['race-a', 'race-b'] as $ref) {
-                $process = proc_open([PHP_BINARY, '-r', $script, $ref, (string) $key], [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, base_path());
+                $process = proc_open([PHP_BINARY, '-r', $script, $ref, (string) $key], [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, dirname(__DIR__, 6));
                 self::assertIsResource($process);
                 fclose($pipes[0]);
                 $children[] = ['process' => $process, 'out' => $pipes[1], 'err' => $pipes[2]];

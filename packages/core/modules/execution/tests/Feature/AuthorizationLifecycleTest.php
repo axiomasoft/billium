@@ -83,10 +83,10 @@ final class AuthorizationLifecycleTest extends ExecutionTestCase
         return $wire;
     }
 
-    public static function authorize(Application $app, string $path, ?CapabilitySnapshot $cap = null): ReductionResult
+    public static function authorize(Application $app, string $path, ?CapabilitySnapshot $cap = null, ?FixtureClock $clock = null): ReductionResult
     {
         Fixture::seedMerchant($app, $cap);
-        Fixture::host($app, $path, cap: $cap);
+        Fixture::host($app, $path, cap: $cap, clock: $clock);
         $registry = $app->make(ModuleRegistry::class);
         $registrar = new DatabaseEventContractRegistrar($app->make(DatabaseManager::class)->connection('billium_owner'), $registry);
         $descriptor = $registry->descriptor('execution');
