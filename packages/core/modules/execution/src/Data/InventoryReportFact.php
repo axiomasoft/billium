@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Execution\Data;
 
+use Billium\Contracts\Data\Currency;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
@@ -24,6 +25,9 @@ final readonly class InventoryReportFact
         public string $sourceDigest,
         public ?DateTimeImmutable $finalAfter = null,
     ) {
+        if ($amount->currency->scale !== Currency::of($amount->currency->code)->scale) {
+            throw new ProblemException(ProblemCode::MoneyScaleInvalid, 'Statement amount must use the canonical currency scale');
+        }
         foreach ([$factRef, $revision, $rootOperationRef] as $ref) {
             if ($ref !== null && (trim($ref) === '' || strlen($ref) > 200)) {
                 throw new ProblemException(ProblemCode::ValidationInvalid, 'Invalid statement reference');

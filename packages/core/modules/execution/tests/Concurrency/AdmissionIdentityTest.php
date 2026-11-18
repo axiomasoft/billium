@@ -373,6 +373,16 @@ final class AdmissionIdentityTest extends ExecutionTestCase
                 self::assertCount(1, array_unique(array_map(static fn (JournalEvent $entry): string => json_encode($entry->data['receipt'], JSON_THROW_ON_ERROR), $accepted)));
                 self::assertCount(1, array_unique(array_map(static fn (JournalEvent $entry): mixed => $entry->data['id'], $accepted)));
             }
+            if ($race === 'keys') {
+                $operations = array_map(static function (JournalEvent $entry): mixed {
+                    self::assertIsString($entry->data['receipt']);
+                    $body = json_decode($entry->data['receipt'], true, flags: JSON_THROW_ON_ERROR);
+                    self::assertIsArray($body);
+
+                    return $body['operationRef'] ?? null;
+                }, $accepted);
+                self::assertSame(['root-a'], array_values(array_unique($operations)));
+            }
             foreach (['business_binding', 'operation', 'attempt', 'dispatch_work'] as $table) {
                 self::assertSame(in_array($race, ['context', 'namespace', 'environment'], true) ? 2 : 1, $this->rows('billium_execution_'.$table));
             }
