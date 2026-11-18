@@ -59,15 +59,7 @@ identities, type-map), `php` (Pint, PHPStan max with `NoFloatTypeRule`, Rector, 
 (format, analyze, test, `no-double`, install smoke), `conformance` (shared vectors and golden through both
 adapters against the baseline). Details: [development environment](docs/development-environment.md).
 
-## Agent environment
-
-The environment follows AgenTools: swissknifeman plugins use the **connect**
-channel, mAInd provides project-scoped memory and ecosystem links, and Serena
-provides code navigation for PHP and Dart. Claude Code, Codex, Cursor, and Grok
-are enabled in `.swissknife.json`.
-
-See [development environment](docs/development-environment.md) for setup and
-verification commands.
+## Planning and operations
 
 See [planning and design checks](docs/planning.md) for PLAN1, its execution state and validation commands.
 

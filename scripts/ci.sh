@@ -78,7 +78,6 @@ layer_php() {
     php vendor/bin/packman php-api --check
     php vendor/bin/packman error-codes --check
     php vendor/bin/packman config-schema --check
-    php vendor/bin/packman ai:sync --dry-run
     need_path scripts/db/preflight.php
     PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 php scripts/db/preflight.php
     python3 -m unittest discover -s scripts/lint/tests -p test_test_discovery.py
