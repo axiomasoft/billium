@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Billium\Execution\Internal\Storage;
 
 use Billium\Contracts\Contracts\Codec;
-use Billium\Contracts\Data\Currency;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
@@ -37,14 +36,14 @@ trait ExecutionEvidencePersistence
 {
     public function appendEvidence(TransactionContext $transactionContext, ProviderEvidence $providerEvidence): string
     {
-        $this->custody($transactionContext);
-        $this->assertScope($providerEvidence->scope, $transactionContext);
+        $this->tables->custody($transactionContext);
+        $this->tables->assertScope($providerEvidence->scope, $transactionContext);
         $payload = ExecutionCodec::encode($providerEvidence->sanitizedPayload);
         if (strlen($payload) > 65536 || preg_match('/"(?:pan|cvc|cvv|password|secret|accessToken|refreshToken|providerToken)"\s*:/i', $payload) === 1) {
-            $this->refuse('Evidence payload is not sanitized/bounded');
+            ExecutionTables::refuse('Evidence payload is not sanitized/bounded');
         }
-        $db = $this->database($transactionContext);
-        $scope = $this->scope($providerEvidence->scope);
+        $db = $this->tables->database($transactionContext);
+        $scope = ExecutionTables::scope($providerEvidence->scope);
         $fields = ['intent_owner_namespace' => $providerEvidence->scope->intentOwnerNamespace, 'provider_id' => $providerEvidence->providerId,
             'merchant_account_ref' => $providerEvidence->merchantAccountRef, 'provider_event_id' => $providerEvidence->providerEventId,
             'payload_digest' => $providerEvidence->payloadDigest, 'signature_verdict' => $providerEvidence->signatureVerdict,
@@ -94,43 +93,40 @@ trait ExecutionEvidencePersistence
 
     public function attemptForOperation(ExecutionScope $scope, string $operationRef, ?TransactionContext $context = null): ?AttemptRecord
     {
-        $row = $this->query('attempt', $scope, $context)->where('operation_ref', $operationRef)->first();
+        $row = $this->tables->query('attempt', $scope, $context)->where('operation_ref', $operationRef)->first();
 
-        return $row === null ? null : $this->attemptRow($row);
+        return $row === null ? null : ExecutionRecords::attempt($row);
     }
 
     public function reservation(TransactionContext $context, string $reservationRef): ?Reservation
     {
-        $this->financial($context);
-        $row = $this->callerQuery('reservation', $context)->where('reservation_ref', $reservationRef)
-            ->whereIn('operation_ref', $this->callerQuery('operation', $context)->where('intent_owner_namespace', $this->selectedScope($context)->intentOwnerNamespace)->select('operation_ref'))->first();
+        $this->tables->financial($context);
+        $row = $this->tables->callerQuery('reservation', $context)->where('reservation_ref', $reservationRef)
+            ->whereIn('operation_ref', $this->tables->callerQuery('operation', $context)->where('intent_owner_namespace', $this->tables->selectedScope($context)->intentOwnerNamespace)->select('operation_ref'))->first();
 
         return $row === null ? null : $this->reservationRow($context, $row);
     }
 
     public function reservationForOperation(TransactionContext $context, string $operationRef): ?Reservation
     {
-        $this->financial($context);
-        $this->requireOperationLock($context, $operationRef);
-        $row = $this->callerQuery('reservation', $context)->where('operation_ref', $operationRef)->first();
+        $this->tables->financial($context);
+        $this->tables->requireOperationLock($context, $operationRef);
+        $row = $this->tables->callerQuery('reservation', $context)->where('operation_ref', $operationRef)->first();
 
         return $row === null ? null : $this->reservationRow($context, $row);
     }
 
     private function reservationRow(TransactionContext $context, stdClass $row): Reservation
     {
-        $this->requireOperationLock($context, ExecutionRows::text($row->operation_ref));
-        $currency = Currency::of(ExecutionRows::text($row->currency));
+        $this->tables->requireOperationLock($context, ExecutionRows::text($row->operation_ref));
 
-        return new Reservation(ExecutionRows::text($row->reservation_ref), ExecutionRows::text($row->root_operation_ref), ExecutionRows::text($row->operation_ref),
-            EffectKind::from(ExecutionRows::text($row->kind)), new Money(ExecutionRows::integer($row->requested_minor), $currency),
-            ReservationState::from(ExecutionRows::text($row->state)), new Money(ExecutionRows::integer($row->consumed_minor), $currency), ExecutionRows::nullableText($row->release_evidence_ref));
+        return ExecutionRecords::reservation($row);
     }
 
     public function lastObserved(TransactionContext $context, string $operationRef): ?MaterialSnapshot
     {
-        $this->financial($context);
-        $this->requireOperationLock($context, $operationRef);
+        $this->tables->financial($context);
+        $this->tables->requireOperationLock($context, $operationRef);
         // An accepted provider revision can advance ordering without changing money or creating an operation revision.
         $value = $this->orderingFacts($context)->where('operation_ref', $operationRef)->orderByDesc('id')->value('normalized_snapshot');
 
@@ -139,7 +135,7 @@ trait ExecutionEvidencePersistence
 
     private function orderingFacts(TransactionContext $context): Builder
     {
-        return $this->callerQuery('provider_fact', $context)->where('evidence_mode', ProviderEvidenceMode::CumulativeSnapshot->value)
+        return $this->tables->callerQuery('provider_fact', $context)->where('evidence_mode', ProviderEvidenceMode::CumulativeSnapshot->value)
             ->whereColumn('normalized_snapshot->operationRef', 'operation_ref')->whereNotNull('normalized_snapshot->bindingDigest')
             ->whereNotNull('normalized_snapshot->providerReference')->where(static fn (Builder $q): Builder => $q
             ->whereNotNull('normalized_snapshot->operationAmount')->orWhereIn('normalized_snapshot->normalizedStatus', ['pending', 'unknown']));
@@ -147,10 +143,10 @@ trait ExecutionEvidencePersistence
 
     public function rootOrderingFrontier(TransactionContext $context, string $rootRef, MaterialSnapshot $incoming): ?MaterialSnapshot
     {
-        $this->financial($context);
-        $this->requireOperationLock($context, $rootRef);
-        $root = $this->admittedOperation($context, $rootRef);
-        $operations = $this->query('operation', $root->binding->scope, $context)->where('root_operation_ref', $rootRef)->select('operation_ref');
+        $this->tables->financial($context);
+        $this->tables->requireOperationLock($context, $rootRef);
+        $root = $this->tables->admittedOperation($context, $rootRef);
+        $operations = $this->tables->query('operation', $root->binding->scope, $context)->where('root_operation_ref', $rootRef)->select('operation_ref');
         $query = $this->orderingFacts($context)->whereIn('operation_ref', $operations);
         if ($incoming->providerRevision !== null && preg_match('/^(0|[1-9][0-9]*)$/D', $incoming->providerRevision) === 1) {
             // Comparable decimal revisions sort exactly even when they exceed bigint. A late sibling can have a newer journal id.
@@ -165,9 +161,9 @@ trait ExecutionEvidencePersistence
 
     public function latestRootObservation(TransactionContext $context, string $rootRef): ?MaterialSnapshot
     {
-        $this->financial($context);
-        $this->requireOperationLock($context, $rootRef);
-        $value = $this->callerQuery('operation_revision', $context)->where('operation_ref', $rootRef)
+        $this->tables->financial($context);
+        $this->tables->requireOperationLock($context, $rootRef);
+        $value = $this->tables->callerQuery('operation_revision', $context)->where('operation_ref', $rootRef)
             ->whereNotNull('observed->authorizedTotal')->orderByDesc('id')->value('observed');
 
         return $value === null ? null : ExecutionCodec::decode(MaterialSnapshot::class, ExecutionRows::text($value));
@@ -175,8 +171,8 @@ trait ExecutionEvidencePersistence
 
     public function providerWork(string $workRef, ?TransactionContext $context = null): ?ProviderWorkInput
     {
-        $db = $this->database($context);
-        $caller = $context?->caller() ?? $this->callers->current();
+        $db = $this->tables->database($context);
+        $caller = $this->tables->caller($context);
         $base = ['installation_ref' => $caller->installationRef, 'seller_ref' => $caller->sellerRef, 'environment' => $caller->environment];
         $deliveries = $db->table('billium_execution_provider_evidence')->where($base)->whereIn('intent_owner_namespace', $caller->intentOwnerNamespaces);
         if ($context !== null) {
@@ -189,9 +185,7 @@ trait ExecutionEvidencePersistence
         }
         $raw = $deliveries->where('evidence_ref', $row->evidence_ref)->sole();
         $scope = new ExecutionScope($caller->installationRef, $caller->sellerRef, $caller->environment, ExecutionRows::text($raw->intent_owner_namespace));
-        $evidence = new ProviderEvidence(ExecutionRows::text($raw->evidence_ref), $scope, ExecutionRows::text($raw->provider_id), ExecutionRows::text($raw->merchant_account_ref),
-            ExecutionRows::nullableText($raw->provider_event_id), ExecutionRows::text($raw->payload_digest), ExecutionRows::text($raw->signature_verdict), ExecutionRows::text($raw->handler_contract_version),
-            new DateTimeImmutable(ExecutionRows::text($raw->received_at)), ExecutionCodec::map(ExecutionRows::text($raw->sanitized_payload)), ExecutionRows::nullableText($raw->secure_payload_ref));
+        $evidence = ExecutionRecords::evidence($scope, $raw);
         $hint = ExecutionRows::nullableText($row->operation_hint) ?? $this->transportHint($evidence, $context);
 
         return new ProviderWorkInput($evidence, ExecutionRows::text($row->handler_contract_version), ExecutionRows::text($row->state), $hint, ExecutionRows::nullableText($row->result_ref), ExecutionRows::nullableText($row->last_error_code));
@@ -199,7 +193,7 @@ trait ExecutionEvidencePersistence
 
     private function transportHint(ProviderEvidence $evidence, ?TransactionContext $context): ?string
     {
-        $links = $this->query('provider_evidence', $evidence->scope, $context)->where('intent_owner_namespace', $evidence->scope->intentOwnerNamespace)
+        $links = $this->tables->query('provider_evidence', $evidence->scope, $context)->where('intent_owner_namespace', $evidence->scope->intentOwnerNamespace)
             ->where('provider_id', $evidence->providerId)->where('merchant_account_ref', $evidence->merchantAccountRef)
             ->where('handler_contract_version', 'execution.transport.v1')->whereIn('signature_verdict', ['local_transport', 'verified_no_effect'])
             ->where('sanitized_payload->schema', 'billium.execution.transport-observation.v1')
@@ -225,20 +219,20 @@ trait ExecutionEvidencePersistence
     {
         $caller = $context->caller();
         $selected = $context->spec()->financialScope;
-        $owner = $context->spec()->mode->financial() ? $this->selectedScope($context)->intentOwnerNamespace : $selected?->intentOwnerNamespace;
+        $owner = $context->spec()->mode->financial() ? $this->tables->selectedScope($context)->intentOwnerNamespace : $selected?->intentOwnerNamespace;
         if ($owner === null || ! in_array($owner, $caller->intentOwnerNamespaces, true) || $selected?->installationRef !== $caller->installationRef
             || $selected->sellerRef !== $caller->sellerRef || $selected->environment !== $caller->environment) {
             throw new ProblemException(ProblemCode::AuthDenied, 'Provider work requires the authorized custody owner');
         }
-        $evidence = $this->callerQuery('provider_evidence', $context)->where('intent_owner_namespace', $owner);
+        $evidence = $this->tables->callerQuery('provider_evidence', $context)->where('intent_owner_namespace', $owner);
 
-        return $this->callerQuery('provider_work', $context)->whereIn('evidence_ref', $evidence->select('evidence_ref'));
+        return $this->tables->callerQuery('provider_work', $context)->whereIn('evidence_ref', $evidence->select('evidence_ref'));
     }
 
     public function enqueueProviderWork(TransactionContext $transactionContext, string $evidenceRef, string $workRef, string $handlerVersion, ?string $operationHint = null): string
     {
-        $this->custody($transactionContext);
-        $evidence = $this->callerQuery('provider_evidence', $transactionContext)->where('evidence_ref', $evidenceRef)->first() ?? throw new LogicException('Evidence absent');
+        $this->tables->custody($transactionContext);
+        $evidence = $this->tables->callerQuery('provider_evidence', $transactionContext)->where('evidence_ref', $evidenceRef)->first() ?? throw new LogicException('Evidence absent');
         $caller = $transactionContext->caller();
         $namespace = ExecutionRows::text($evidence->intent_owner_namespace);
         if (! in_array($namespace, $caller->intentOwnerNamespaces, true)
@@ -246,13 +240,13 @@ trait ExecutionEvidencePersistence
             throw new ProblemException(ProblemCode::AuthDenied, 'Provider work differs from custody scope');
         }
         $state = $evidence->signature_verdict === 'quarantined_conflict' ? 'quarantined' : 'due';
-        $this->database($transactionContext)->table('billium_execution_provider_work')->insertOrIgnore($this->callerScope($transactionContext) + ['evidence_ref' => $evidenceRef,
+        $this->tables->database($transactionContext)->table('billium_execution_provider_work')->insertOrIgnore($this->tables->callerScope($transactionContext) + ['evidence_ref' => $evidenceRef,
             'work_ref' => $workRef, 'handler_contract_version' => $handlerVersion, 'state' => $state, 'operation_hint' => $operationHint]);
         $stored = $this->scopedWork($transactionContext)->where('work_ref', $workRef)->first();
         $stored ??= $this->scopedWork($transactionContext)->where('evidence_ref', $evidenceRef)->where('handler_contract_version', $handlerVersion)->first();
         if ($stored === null || $stored->evidence_ref !== $evidenceRef || $stored->handler_contract_version !== $handlerVersion
             || ($operationHint !== null && $stored->operation_hint !== null && $stored->operation_hint !== $operationHint)) {
-            $this->refuse('Provider work identity conflict');
+            ExecutionTables::refuse('Provider work identity conflict');
         }
 
         return ExecutionRows::text($stored->work_ref);
@@ -260,7 +254,7 @@ trait ExecutionEvidencePersistence
 
     public function claimProviderWork(TransactionContext $transactionContext, string $workRef, string $leaseOwner, DateTimeImmutable $until): ?ProviderWorkClaim
     {
-        $this->custody($transactionContext);
+        $this->tables->custody($transactionContext);
         $q = $this->scopedWork($transactionContext)->where('work_ref', $workRef);
         $r = (clone $q)->first();
         if ($r === null || $leaseOwner === '' || $until <= new DateTimeImmutable || ! in_array($r->state, ['due', 'leased'], true) || new DateTimeImmutable(ExecutionRows::text($r->due_at)) > new DateTimeImmutable || ($r->state === 'leased' && ExecutionRows::nullableDate($r->lease_expires_at) > new DateTimeImmutable)) {
@@ -281,9 +275,9 @@ trait ExecutionEvidencePersistence
 
     public function finishProviderWork(TransactionContext $transactionContext, ProviderWorkClaim $providerWorkClaim, string $state, ?string $resultRef, ?string $errorCode, ?DateTimeImmutable $dueAt): bool
     {
-        $this->custody($transactionContext);
+        $this->tables->custody($transactionContext);
         if (! in_array($state, ['due', 'processed', 'parked', 'quarantined'], true) || ($state === 'due' && ($dueAt === null || $dueAt <= new DateTimeImmutable))) {
-            $this->refuse('Invalid work completion');
+            ExecutionTables::refuse('Invalid work completion');
         }
 
         return $this->scopedWork($transactionContext)->where('evidence_ref', $providerWorkClaim->evidenceRef)->where('work_ref', $providerWorkClaim->workRef)->where('handler_contract_version', $providerWorkClaim->handlerContractVersion)->where('state', 'leased')->where('lease_owner', $providerWorkClaim->leaseOwner)->where('lease_fence', $providerWorkClaim->leaseFence)->whereRaw('lease_expires_at > clock_timestamp()')->update(['state' => $state, 'lease_owner' => null, 'lease_expires_at' => null, 'result_ref' => $resultRef, 'last_error_code' => $errorCode, 'last_error_at' => $errorCode === null ? null : new DateTimeImmutable, 'due_at' => $dueAt ?? new DateTimeImmutable]) === 1;
@@ -291,14 +285,14 @@ trait ExecutionEvidencePersistence
 
     public function providerOperationId(ExecutionScope $scope, string $attemptRef): ?string
     {
-        $attempt = $this->query('attempt', $scope)->where('attempt_ref', $attemptRef);
+        $attempt = $this->tables->query('attempt', $scope)->where('attempt_ref', $attemptRef);
 
-        return ExecutionRows::nullableText($this->query('provider_identity', $scope)->whereIn('attempt_ref', $attempt->select('attempt_ref'))->value('provider_operation_id'));
+        return ExecutionRows::nullableText($this->tables->query('provider_identity', $scope)->whereIn('attempt_ref', $attempt->select('attempt_ref'))->value('provider_operation_id'));
     }
 
     public function operationByProviderId(ExecutionScope $scope, string $providerId, string $merchantAccountRef, string $providerNamespace, string $providerOperationId): ?OperationRecord
     {
-        $row = $this->query('provider_identity', $scope)->whereRaw('public.billium_execution_provider_identity_key(environment,provider_id,merchant_account_ref,provider_namespace,provider_operation_id) = public.billium_execution_provider_identity_key(?,?,?,?,?)',
+        $row = $this->tables->query('provider_identity', $scope)->whereRaw('public.billium_execution_provider_identity_key(environment,provider_id,merchant_account_ref,provider_namespace,provider_operation_id) = public.billium_execution_provider_identity_key(?,?,?,?,?)',
             [$scope->environment, $providerId, $merchantAccountRef, $providerNamespace, $providerOperationId])
             ->where('provider_id', $providerId)->where('merchant_account_ref', $merchantAccountRef)
             ->where('provider_namespace', $providerNamespace)->where('provider_operation_id', $providerOperationId)->first();
@@ -313,24 +307,24 @@ trait ExecutionEvidencePersistence
         if ($identity === null) {
             return true;
         }
-        $scope = $this->selectedScope($context);
-        $byAttempt = $this->callerQuery('provider_identity', $context)->where('attempt_ref', $attempt->attemptRef);
+        $scope = $this->tables->selectedScope($context);
+        $byAttempt = $this->tables->callerQuery('provider_identity', $context)->where('attempt_ref', $attempt->attemptRef);
         if ((clone $byAttempt)->exists()) {
             unset($identity['evidence_ref']);
 
             return $byAttempt->where($identity)->exists();
         }
 
-        return ! $this->database($context)->table('billium_execution_provider_identity')->whereRaw('public.billium_execution_provider_identity_key(environment,provider_id,merchant_account_ref,provider_namespace,provider_operation_id) = public.billium_execution_provider_identity_key(?,?,?,?,?)',
+        return ! $this->tables->database($context)->table('billium_execution_provider_identity')->whereRaw('public.billium_execution_provider_identity_key(environment,provider_id,merchant_account_ref,provider_namespace,provider_operation_id) = public.billium_execution_provider_identity_key(?,?,?,?,?)',
             [$scope->environment, $identity['provider_id'], $identity['merchant_account_ref'], $identity['provider_namespace'], $identity['provider_operation_id']])->exists();
     }
 
     /** @return array<string,string>|null */
     private function qualifiedFactIdentity(TransactionContext $context, AttemptRecord $attempt, ProviderFact $fact): ?array
     {
-        $this->financial($context);
-        $operation = $this->admittedOperation($context, $fact->operationRef);
-        $this->requireOperationLock($context, $operation->operationRef);
+        $this->tables->financial($context);
+        $operation = $this->tables->admittedOperation($context, $fact->operationRef);
+        $this->tables->requireOperationLock($context, $operation->operationRef);
         $scope = $operation->binding->scope;
         $stored = $this->attemptForOperation($scope, $fact->operationRef, $context);
         $snapshot = $fact->snapshot;
@@ -341,19 +335,19 @@ trait ExecutionEvidencePersistence
             || ($snapshot->operationAmount === null && (! in_array($snapshot->normalizedStatus, ['pending', 'unknown'], true) || $fact->mode !== ProviderEvidenceMode::CumulativeSnapshot))
             || ($snapshot->operationAmount !== null && ExecutionCodec::encode($snapshot->operationAmount->currency) !== ExecutionCodec::encode($operation->requested->currency))
             || $fact->evidenceRefs === [] || $fact->evidenceRefs !== $snapshot->evidenceRefs) {
-            $this->refuse('Provider fact differs from original attempt, binding or actual amount');
+            ExecutionTables::refuse('Provider fact differs from original attempt, binding or actual amount');
         }
         $merchant = $this->merchantRevision($scope, $operation->binding->merchantRevisionRef, $context);
         $refs = array_unique($fact->evidenceRefs);
-        $evidence = $this->query('provider_evidence', $scope, $context)->where('intent_owner_namespace', $scope->intentOwnerNamespace)
+        $evidence = $this->tables->query('provider_evidence', $scope, $context)->where('intent_owner_namespace', $scope->intentOwnerNamespace)
             ->where('merchant_account_ref', $snapshot->merchantAccountRef)->where('provider_id', $merchant->providerId)
             ->whereNotIn('signature_verdict', ['quarantined_conflict', 'verified_no_effect', 'local_transport'])->whereIn('evidence_ref', $refs);
         if ($evidence->count() !== count($refs)) {
-            $this->refuse('Authenticated evidence absent from original financial scope');
+            ExecutionTables::refuse('Authenticated evidence absent from original financial scope');
         }
         $capability = $this->capability($scope, $merchant->capabilitySnapshotRef, $context);
         if ($fact->providerIdentityScope !== ExecutionCodec::providerIdentityScope($merchant, $capability)) {
-            $this->refuse('Provider fact namespace differs from frozen provider, account and environment');
+            ExecutionTables::refuse('Provider fact namespace differs from frozen provider, account and environment');
         }
         if ($snapshot->providerOperationId === null) {
             return null;
@@ -366,44 +360,37 @@ trait ExecutionEvidencePersistence
 
     public function factByIdentity(TransactionContext $context, string $providerIdentityScope, string $factIdentity): ?ProviderFact
     {
-        $this->financial($context);
-        $owned = $this->callerQuery('operation', $context)->where('intent_owner_namespace', $this->selectedScope($context)->intentOwnerNamespace)->select('operation_ref');
-        $row = $this->callerQuery('provider_fact', $context)->where('provider_identity_scope', $providerIdentityScope)->where('fact_identity', $factIdentity)
+        $this->tables->financial($context);
+        $owned = $this->tables->callerQuery('operation', $context)->where('intent_owner_namespace', $this->tables->selectedScope($context)->intentOwnerNamespace)->select('operation_ref');
+        $row = $this->tables->callerQuery('provider_fact', $context)->where('provider_identity_scope', $providerIdentityScope)->where('fact_identity', $factIdentity)
             ->whereNotNull('normalized_snapshot->bindingDigest')->whereNotNull('normalized_snapshot->providerReference')->whereIn('operation_ref', $owned)->first();
 
-        return $row === null ? null : $this->factRow($row);
+        return $row === null ? null : ExecutionRecords::fact($row);
     }
 
     public function factForEvidence(TransactionContext $context, string $evidenceRef, string $operationRef): ?ProviderFact
     {
-        $this->financial($context);
-        $this->requireOperationLock($context, $operationRef);
-        $query = $this->callerQuery('provider_fact', $context)->where('operation_ref', $operationRef)->whereJsonContains('evidence_refs', $evidenceRef)
+        $this->tables->financial($context);
+        $this->tables->requireOperationLock($context, $operationRef);
+        $query = $this->tables->callerQuery('provider_fact', $context)->where('operation_ref', $operationRef)->whereJsonContains('evidence_refs', $evidenceRef)
             ->whereNotNull('normalized_snapshot->bindingDigest')->whereNotNull('normalized_snapshot->operationAmount');
         $rows = (clone $query)->where('evidence_mode', ProviderEvidenceMode::CumulativeSnapshot->value)->limit(2)->get();
         if ($rows->isEmpty()) {
             $rows = $query->limit(2)->get();
         }
 
-        return $rows->count() === 1 ? $this->factRow($rows->sole()) : null;
-    }
-
-    private function factRow(stdClass $r): ProviderFact
-    {
-        return new ProviderFact(ExecutionRows::text($r->fact_ref), ExecutionRows::text($r->operation_ref), ExecutionRows::text($r->provider_identity_scope), ExecutionRows::text($r->fact_identity),
-            ExecutionRows::text($r->material_digest), ProviderEvidenceMode::from(ExecutionRows::text($r->evidence_mode)), ExecutionCodec::decode(MaterialSnapshot::class, ExecutionRows::text($r->normalized_snapshot)),
-            ExecutionRows::list(ExecutionRows::text($r->evidence_refs)));
+        return $rows->count() === 1 ? ExecutionRecords::fact($rows->sole()) : null;
     }
 
     public function appendFact(TransactionContext $transactionContext, ProviderFact $providerFact): bool
     {
-        $this->financial($transactionContext);
-        $operation = $this->admittedOperation($transactionContext, $providerFact->operationRef);
-        $this->requireOperationLock($transactionContext, $operation->operationRef);
+        $this->tables->financial($transactionContext);
+        $operation = $this->tables->admittedOperation($transactionContext, $providerFact->operationRef);
+        $this->tables->requireOperationLock($transactionContext, $operation->operationRef);
         $attempt = $this->attemptForOperation($operation->binding->scope, $operation->operationRef, $transactionContext) ?? throw new LogicException('Original attempt absent');
-        $db = $this->database($transactionContext);
+        $db = $this->tables->database($transactionContext);
         $identity = $this->qualifiedFactIdentity($transactionContext, $attempt, $providerFact);
-        $row = $this->callerScope($transactionContext) + ['fact_ref' => $providerFact->factRef, 'operation_ref' => $providerFact->operationRef,
+        $row = $this->tables->callerScope($transactionContext) + ['fact_ref' => $providerFact->factRef, 'operation_ref' => $providerFact->operationRef,
             'provider_identity_scope' => $providerFact->providerIdentityScope, 'fact_identity' => $providerFact->factIdentity, 'evidence_mode' => $providerFact->mode->value,
             'material_digest' => $providerFact->materialDigest, 'normalized_snapshot' => $providerFact->snapshot, 'evidence_refs' => $providerFact->evidenceRefs];
         $legacy = $this->hasUnqualifiedHistory($transactionContext, $operation, $providerFact);
@@ -415,7 +402,7 @@ trait ExecutionEvidencePersistence
         $winner = $this->factByIdentity($transactionContext, $providerFact->providerIdentityScope, $providerFact->factIdentity);
         if ($legacy || $winner === null || $winner->operationRef !== $operation->operationRef || $winner->materialDigest !== $providerFact->materialDigest
             || $winner->mode !== $providerFact->mode || $winner->snapshot->providerOperationId !== $providerFact->snapshot->providerOperationId) {
-            $db->table('billium_execution_discrepancy')->insertOrIgnore($this->callerScope($transactionContext) + ['discrepancy_ref' => 'fact-conflict:'.hash('sha256', ExecutionCodec::encode($providerFact)),
+            $db->table('billium_execution_discrepancy')->insertOrIgnore($this->tables->callerScope($transactionContext) + ['discrepancy_ref' => 'fact-conflict:'.hash('sha256', ExecutionCodec::encode($providerFact)),
                 'root_operation_ref' => $operation->rootOperationRef, 'operation_ref' => $operation->operationRef, 'kind' => 'provider_fact_identity_conflict',
                 'evidence_refs' => ExecutionCodec::encode($providerFact->evidenceRefs), 'observed' => ExecutionCodec::encode($providerFact->snapshot),
                 'last_consistent_applied' => ExecutionCodec::encode($this->capacity($transactionContext, $operation->rootOperationRef)),
@@ -429,7 +416,7 @@ trait ExecutionEvidencePersistence
     {
         $merchant = $this->merchantRevision($operation->binding->scope, $operation->binding->merchantRevisionRef, $context);
         $namespace = $this->capability($operation->binding->scope, $merchant->capabilitySnapshotRef, $context)->details->lookupNamespace;
-        $history = $this->database($context)->selectOne(<<<'SQL'
+        $history = $this->tables->database($context)->selectOne(<<<'SQL'
             SELECT EXISTS (
                 SELECT 1 FROM billium_execution_provider_fact f
                 JOIN billium_execution_operation o USING (installation_ref,seller_ref,environment,operation_ref)
@@ -460,56 +447,56 @@ trait ExecutionEvidencePersistence
             default => false,
         };
         if (! $valid || $stored === null || $stored->operationRef !== $attempt->operationRef || $fact->evidenceRefs === [] || ExecutionCodec::encode($stored) !== ExecutionCodec::encode($fact)) {
-            $this->refuse('Attempt transition requires original accepted fact');
+            ExecutionTables::refuse('Attempt transition requires original accepted fact');
         }
         $this->advanceAttempt($context, $attempt, $state, $fact->evidenceRefs[0], $lookupDueAt);
     }
 
     private function advanceAttempt(TransactionContext $context, AttemptRecord $attempt, AttemptState $state, string $evidenceRef, ?DateTimeImmutable $lookupDueAt): void
     {
-        $this->requireOperationLock($context, $attempt->operationRef);
-        $q = $this->callerQuery('attempt', $context)->where('id', $attempt->id)->where('attempt_ref', $attempt->attemptRef)->where('operation_ref', $attempt->operationRef);
+        $this->tables->requireOperationLock($context, $attempt->operationRef);
+        $q = $this->tables->callerQuery('attempt', $context)->where('id', $attempt->id)->where('attempt_ref', $attempt->attemptRef)->where('operation_ref', $attempt->operationRef);
         $r = (clone $q)->first() ?? throw new LogicException('Original attempt absent');
-        if (! ($this->held[$context]['billium_execution_attempt:'.$attempt->id] ?? false) || $r->lease_fence !== $attempt->leaseFence
+        if (! $this->tables->holds($context, 'billium_execution_attempt:'.$attempt->id) || $r->lease_fence !== $attempt->leaseFence
             || $r->provider_reference !== $attempt->providerReference || $r->request_digest !== $attempt->immutableRequestDigest) {
-            $this->refuse('Original locked attempt and current fence required');
+            ExecutionTables::refuse('Original locked attempt and current fence required');
         }
         $terminal = in_array($state, [AttemptState::Succeeded, AttemptState::Failed], true);
         if ($terminal !== ($lookupDueAt === null) || ($lookupDueAt !== null && $lookupDueAt <= new DateTimeImmutable)) {
-            $this->refuse('Attempt lookup deadline differs from factual state');
+            ExecutionTables::refuse('Attempt lookup deadline differs from factual state');
         }
         if (in_array($r->state, ['succeeded', 'failed', 'cancelled'], true)) {
             if ($state->value === $r->state) {
                 return;
             }
             if (in_array($r->state, ['cancelled', 'failed'], true) && $state === AttemptState::Succeeded
-                && $this->capacity($context, $this->admittedOperation($context, $attempt->operationRef)->rootOperationRef)->financialHold) {
+                && $this->capacity($context, $this->tables->admittedOperation($context, $attempt->operationRef)->rootOperationRef)->financialHold) {
                 return;
             }
-            $this->refuse('Terminal attempt cannot regress');
+            ExecutionTables::refuse('Terminal attempt cannot regress');
         }
         if ($r->started_at === null || ! in_array($r->state, ['dispatching', 'pending', 'unknown'], true)) {
-            $this->refuse('Factual completion requires original post-dispatch attempt');
+            ExecutionTables::refuse('Factual completion requires original post-dispatch attempt');
         }
-        $work = $this->callerQuery('dispatch_work', $context)->where('attempt_ref', $attempt->attemptRef)->where('operation_ref', $attempt->operationRef)->where('lease_fence', $attempt->leaseFence);
+        $work = $this->tables->callerQuery('dispatch_work', $context)->where('attempt_ref', $attempt->attemptRef)->where('operation_ref', $attempt->operationRef)->where('lease_fence', $attempt->leaseFence);
         $revoke = ['lease_owner' => null, 'lease_expires_at' => null, 'lease_fence' => $attempt->leaseFence + 1];
         $updated = $work->update($revoke + ['state' => $terminal ? 'processed' : 'due', 'due_at' => $lookupDueAt?->format(ExecutionRows::TIMESTAMP)]);
-        $imported = $updated === 0 && $this->callerQuery('original_identity_import', $context)->where('attempt_ref', $attempt->attemptRef)
-            ->where('operation_ref', $attempt->operationRef)->where('intent_owner_namespace', $this->selectedScope($context)->intentOwnerNamespace)->exists()
-            && ! $this->callerQuery('dispatch_work', $context)->where('attempt_ref', $attempt->attemptRef)->exists();
+        $imported = $updated === 0 && $this->tables->callerQuery('original_identity_import', $context)->where('attempt_ref', $attempt->attemptRef)
+            ->where('operation_ref', $attempt->operationRef)->where('intent_owner_namespace', $this->tables->selectedScope($context)->intentOwnerNamespace)->exists()
+            && ! $this->tables->callerQuery('dispatch_work', $context)->where('attempt_ref', $attempt->attemptRef)->exists();
         if (($updated !== 1 && ! $imported)
             || $q->where('lease_fence', $attempt->leaseFence)->update($revoke + ['state' => $state->value, 'finish_evidence_ref' => $evidenceRef, 'dispatch_ticket_ref' => null]) !== 1) {
-            $this->refuse('Dispatch fence changed during factual settlement');
+            ExecutionTables::refuse('Dispatch fence changed during factual settlement');
         }
     }
 
     public function applyCertifiedAbsence(TransactionContext $context, AttemptRecord $attempt, ProviderWorkClaim $claim, VerifiedAbsence $proof, ?CapacitySnapshot $releasedCapacity): void
     {
-        $this->financial($context);
+        $this->tables->financial($context);
         $this->requireIssuedProof($proof);
-        $operation = $this->admittedOperation($context, $attempt->operationRef);
+        $operation = $this->tables->admittedOperation($context, $attempt->operationRef);
         $scope = $operation->binding->scope;
-        $this->requireOperationLock($context, $operation->operationRef);
+        $this->tables->requireOperationLock($context, $operation->operationRef);
         $certificate = $proof->certificate;
         $stored = $this->attemptForOperation($scope, $operation->operationRef, $context);
         $now = new DateTimeImmutable;
@@ -519,7 +506,7 @@ trait ExecutionEvidencePersistence
             || $stored->providerReference !== $certificate->providerReference || $stored->startedAt === null || $stored->requestDeadlineAt === null
             || $certificate->coverageFrom > $stored->startedAt || $certificate->coverageThrough < $stored->requestDeadlineAt
             || $certificate->coverageThrough > $now || $certificate->expiresAt <= $now || ExecutionCodec::encode($certificate->binding) !== ExecutionCodec::encode($operation->binding)) {
-            $this->refuse('Certified absence does not cover this current attempt');
+            ExecutionTables::refuse('Certified absence does not cover this current attempt');
         }
         $merchant = $this->merchantRevision($scope, $operation->binding->merchantRevisionRef, $context);
         $cap = $this->capability($scope, $merchant->capabilitySnapshotRef, $context);
@@ -529,7 +516,7 @@ trait ExecutionEvidencePersistence
             || ExecutionCodec::encode($work->evidence->scope) !== ExecutionCodec::encode($scope)
             || $work->evidence->providerId !== $merchant->providerId || $work->evidence->merchantAccountRef !== $merchant->merchantAccountRef
             || $certificate->providerNamespace !== $cap->details->lookupNamespace || $certificate->qualificationEvidenceRef !== $cap->qualificationEvidenceRef) {
-            $this->refuse('Verified absence is not the original qualified transport claim');
+            ExecutionTables::refuse('Verified absence is not the original qualified transport claim');
         }
         $transport = $work->evidence->sanitizedPayload;
         $expected = ['schema' => 'billium.execution.transport-observation.v1', 'attemptRef' => $attempt->attemptRef, 'operationRef' => $operation->operationRef,
@@ -537,30 +524,30 @@ trait ExecutionEvidencePersistence
             'absenceCertificate' => ExecutionCodec::value($certificate)];
         foreach ($expected as $key => $value) {
             if (! array_key_exists($key, $transport) || ExecutionCodec::encode($transport[$key]) !== ExecutionCodec::encode($value)) {
-                $this->refuse('Absence receipt differs from original certificate');
+                ExecutionTables::refuse('Absence receipt differs from original certificate');
             }
         }
         $fence = $transport['leaseFence'] ?? null;
         if (! is_string($fence) || ! ctype_digit($fence) || (int) $fence > $attempt->leaseFence || ($transport['source'] ?? null) !== 'verified_absence'
             || ($transport['verifiedAbsence'] ?? null) !== true || $work->evidence->signatureVerdict !== 'verified_no_effect') {
-            $this->refuse('Absence receipt lacks original verified lookup');
+            ExecutionTables::refuse('Absence receipt lacks original verified lookup');
         }
-        $lookup = $this->query('provider_evidence', $scope, $context)->where('intent_owner_namespace', $scope->intentOwnerNamespace)
+        $lookup = $this->tables->query('provider_evidence', $scope, $context)->where('intent_owner_namespace', $scope->intentOwnerNamespace)
             ->where('provider_id', $merchant->providerId)->where('merchant_account_ref', $merchant->merchantAccountRef)->where('handler_contract_version', 'execution.transport.v1')
             ->where('signature_verdict', 'local_transport')->whereJsonContains('sanitized_payload', $expected + ['source' => 'lookup', 'leaseFence' => $fence, 'verifiedAbsence' => false]);
         if (! $lookup->exists() || $this->hasGreaterActual($context, $operation->operationRef, 0)) {
-            $this->refuse('Absence lacks complete original lookup or contradicts recorded operation effect');
+            ExecutionTables::refuse('Absence lacks complete original lookup or contradicts recorded operation effect');
         }
         if (! $this->finishProviderWork($context, $claim, 'processed', $certificate->certificateRef, null, null)) {
-            $this->refuse('Verified absence processing lease changed');
+            ExecutionTables::refuse('Verified absence processing lease changed');
         }
-        $this->database($context)->table('billium_execution_certified_absence')->insert($this->callerScope($context) + ['attempt_ref' => $attempt->attemptRef,
+        $this->tables->database($context)->table('billium_execution_certified_absence')->insert($this->tables->callerScope($context) + ['attempt_ref' => $attempt->attemptRef,
             'evidence_ref' => $claim->evidenceRef, 'certificate_ref' => $certificate->certificateRef, 'certificate_digest' => ExecutionCodec::digest($certificate)]);
         $reservation = $this->reservationForOperation($context, $operation->operationRef);
         $capacity = $this->capacity($context, $operation->rootOperationRef);
         if ($reservation !== null) {
             if ($reservation->state !== ReservationState::Held || $releasedCapacity === null) {
-                $this->refuse('Certified release requires the original held reservation');
+                ExecutionTables::refuse('Certified release requires the original held reservation');
             }
             $held = match ($reservation->kind) {
                 EffectKind::Capture => 'heldCapture', EffectKind::VoidAuthorization => 'heldVoid', EffectKind::Refund => 'heldRefund',
@@ -570,12 +557,12 @@ trait ExecutionEvidencePersistence
             $expectedCapacity['version'] = $capacity->version + 1;
             $expectedCapacity[$held] = new Money($capacity->{$held}->minor - $reservation->requested->minor, $reservation->requested->currency);
             if (ExecutionCodec::encode($expectedCapacity) !== ExecutionCodec::encode($releasedCapacity)) {
-                $this->refuse('Certified release differs from original reservation amount');
+                ExecutionTables::refuse('Certified release differs from original reservation amount');
             }
             $this->settleReservation($context, $reservation->reservationRef, ReservationState::Released, new Money(0, $reservation->requested->currency), $claim->evidenceRef, $releasedCapacity);
             $capacity = $releasedCapacity;
         } elseif ($releasedCapacity !== null) {
-            $this->refuse('Certified release has no original reservation');
+            ExecutionTables::refuse('Certified release has no original reservation');
         }
         $this->advanceAttempt($context, $attempt, AttemptState::Failed, $claim->evidenceRef, null);
         $decision = ['schema' => 'billium.execution.certified-no-effect.v1', 'operationRef' => $operation->operationRef, 'attemptRef' => $attempt->attemptRef,
@@ -583,12 +570,12 @@ trait ExecutionEvidencePersistence
             'operationAmount' => new Money(0, $operation->requested->currency)->toWire(), 'aggregateDisposition' => 'no_provider_material'];
         $digest = ExecutionCodec::digest($decision);
         $revision = $operation->revision + 1;
-        $updated = $this->callerQuery('operation', $context)->where('id', $operation->id)->where('revision', $operation->revision)
+        $updated = $this->tables->callerQuery('operation', $context)->where('id', $operation->id)->where('revision', $operation->revision)
             ->update(['state' => 'failed', 'revision' => $revision, 'economic_digest' => $digest]);
         if ($updated !== 1) {
-            $this->refuse('Original operation changed during certified absence');
+            ExecutionTables::refuse('Original operation changed during certified absence');
         }
-        $this->database($context)->table('billium_execution_operation_revision')->insert($this->callerScope($context) + ['operation_ref' => $operation->operationRef,
+        $this->tables->database($context)->table('billium_execution_operation_revision')->insert($this->tables->callerScope($context) + ['operation_ref' => $operation->operationRef,
             'revision' => $revision, 'material_digest' => $digest, 'requested_minor' => $operation->requested->minor, 'currency' => $operation->requested->currency->code,
             'observed' => ExecutionCodec::encode($decision), 'last_consistent_applied' => ExecutionCodec::encode($capacity), 'financial_hold' => ExecutionCodec::encode($capacity->financialHold),
             'exposure' => '{}', 'evidence_refs' => ExecutionCodec::encode([$claim->evidenceRef]), 'receipt_ref' => $claim->workRef, 'occurred_at' => $now]);
@@ -596,7 +583,7 @@ trait ExecutionEvidencePersistence
 
     private function hasGreaterActual(TransactionContext $context, string $operationRef, int $minor): bool
     {
-        return $this->callerQuery('provider_fact', $context)->where('operation_ref', $operationRef)
+        return $this->tables->callerQuery('provider_fact', $context)->where('operation_ref', $operationRef)
             ->where(function (Builder $q) use ($minor): void {
                 $q->whereRaw("(normalized_snapshot#>>'{operationAmount,minor}')::bigint > ?", [$minor])
                     ->orWhere(function (Builder $legacy): void {
@@ -608,43 +595,43 @@ trait ExecutionEvidencePersistence
     private function requireIssuedProof(VerifiedAbsence $proof): void
     {
         if ($this->absenceProofs === null) {
-            $this->refuse('Configured absence verifier unavailable');
+            ExecutionTables::refuse('Configured absence verifier unavailable');
         }
         $this->absenceProofs->assertIssued($proof);
     }
 
     public function assertCertifiedDecision(TransactionContext $context, OperationRecord $operation, VerifiedAbsence $proof): void
     {
-        $this->financial($context);
+        $this->tables->financial($context);
         $this->requireIssuedProof($proof);
-        $this->requireOperationLock($context, $operation->operationRef);
-        $current = $this->admittedOperation($context, $operation->operationRef);
+        $this->tables->requireOperationLock($context, $operation->operationRef);
+        $current = $this->tables->admittedOperation($context, $operation->operationRef);
         $cert = $proof->certificate;
-        $record = $this->callerQuery('certified_absence', $context)->where('certificate_ref', $cert->certificateRef)->where('attempt_ref', $proof->attemptRef)
+        $record = $this->tables->callerQuery('certified_absence', $context)->where('certificate_ref', $cert->certificateRef)->where('attempt_ref', $proof->attemptRef)
             ->where('certificate_digest', ExecutionCodec::digest($cert))->first();
-        $revision = $this->callerQuery('operation_revision', $context)->where('operation_ref', $operation->operationRef)->where('revision', $operation->revision)
+        $revision = $this->tables->callerQuery('operation_revision', $context)->where('operation_ref', $operation->operationRef)->where('revision', $operation->revision)
             ->where('observed->schema', 'billium.execution.certified-no-effect.v1')->where('observed->certificateRef', $cert->certificateRef)
             ->where('material_digest', $operation->economicDigest)->where('observed->attemptRef', $proof->attemptRef);
         if ($record === null || $operation->state !== 'failed' || $proof->operationRef !== $operation->operationRef
             || ExecutionCodec::encode($current) !== ExecutionCodec::encode($operation) || ! $revision->whereJsonContains('evidence_refs', ExecutionRows::text($record->evidence_ref))->exists()) {
-            $this->refuse('Publication requires the original persisted certified absence revision');
+            ExecutionTables::refuse('Publication requires the original persisted certified absence revision');
         }
     }
 
     public function assertMaterialRevision(TransactionContext $context, MaterialChange $change): void
     {
-        $this->financial($context);
+        $this->tables->financial($context);
         $op = $change->after;
-        $this->requireOperationLock($context, $op->operationRef);
-        $current = $this->admittedOperation($context, $op->operationRef);
-        $row = $this->callerQuery('operation_revision', $context)->where('operation_ref', $op->operationRef)->where('revision', $op->revision)->first();
+        $this->tables->requireOperationLock($context, $op->operationRef);
+        $current = $this->tables->admittedOperation($context, $op->operationRef);
+        $row = $this->tables->callerQuery('operation_revision', $context)->where('operation_ref', $op->operationRef)->where('revision', $op->revision)->first();
         if ($row === null || $change->observed->operationAmount === null || $change->before->operationRef !== $op->operationRef || $change->before->revision + 1 !== $op->revision
             || ExecutionCodec::encode($current) !== ExecutionCodec::encode($op) || $row->material_digest !== $op->economicDigest
             || ExecutionCodec::encode(ExecutionCodec::map(ExecutionRows::text($row->observed))) !== ExecutionCodec::encode($change->observed)
             || ExecutionCodec::encode(ExecutionCodec::map(ExecutionRows::text($row->last_consistent_applied))) !== ExecutionCodec::encode($change->capacity)
             || ExecutionCodec::encode(ExecutionCodec::map(ExecutionRows::text($row->exposure))) !== $this->exposure($change)
             || ExecutionCodec::encode($this->capacity($context, $op->rootOperationRef)) !== ExecutionCodec::encode($change->capacity)) {
-            $this->refuse('Publication requires the original persisted material revision');
+            ExecutionTables::refuse('Publication requires the original persisted material revision');
         }
     }
 
@@ -652,78 +639,78 @@ trait ExecutionEvidencePersistence
     {
         $a = $materialChange->after;
         $b = $materialChange->before;
-        $this->financial($transactionContext);
-        $this->requireOperationLock($transactionContext, $b->operationRef);
+        $this->tables->financial($transactionContext);
+        $this->tables->requireOperationLock($transactionContext, $b->operationRef);
         $observed = $materialChange->observed;
-        $subject = $this->admittedOperation($transactionContext, $observed->operationRef);
+        $subject = $this->tables->admittedOperation($transactionContext, $observed->operationRef);
         $accepted = isset($observed->evidenceRefs[0]) ? $this->factForEvidence($transactionContext, $observed->evidenceRefs[0], $subject->operationRef) : null;
         if (($materialChange->discrepancyRef !== null && ! $materialChange->capacity->financialHold)
             || $accepted === null || ExecutionCodec::encode($accepted->snapshot) !== ExecutionCodec::encode($observed)
             || $subject->rootOperationRef !== $b->rootOperationRef || ($b->operationRef !== $subject->operationRef && $b->operationRef !== $subject->rootOperationRef)
             || $materialChange->capacity->rootOperationRef !== $b->rootOperationRef) {
-            $this->refuse('Material revision requires accepted original operation evidence');
+            ExecutionTables::refuse('Material revision requires accepted original operation evidence');
         }
-        if (ExecutionCodec::encode($this->admittedOperation($transactionContext, $b->operationRef)) !== ExecutionCodec::encode($b)) {
-            $this->refuse('Material revision differs from historical operation');
+        if (ExecutionCodec::encode($this->tables->admittedOperation($transactionContext, $b->operationRef)) !== ExecutionCodec::encode($b)) {
+            ExecutionTables::refuse('Material revision differs from historical operation');
         }
         if ($a->revision !== $b->revision + 1 || ExecutionCodec::encode($a->binding) !== ExecutionCodec::encode($b->binding) || ExecutionCodec::encode($a->requested) !== ExecutionCodec::encode($b->requested) || $a->kind !== $b->kind || $a->operationRef !== $b->operationRef || $a->rootOperationRef !== $b->rootOperationRef) {
-            $this->refuse('Material revision mutates immutable identity');
+            ExecutionTables::refuse('Material revision mutates immutable identity');
         }
-        $updated = $this->callerQuery('operation', $transactionContext)->where('operation_ref', $b->operationRef)->where('revision', $b->revision)->where('economic_digest', $b->economicDigest)->update(['state' => $a->state, 'revision' => $a->revision, 'economic_digest' => $a->economicDigest, 'authorization_ref' => $a->authorizationRef]);
+        $updated = $this->tables->callerQuery('operation', $transactionContext)->where('operation_ref', $b->operationRef)->where('revision', $b->revision)->where('economic_digest', $b->economicDigest)->update(['state' => $a->state, 'revision' => $a->revision, 'economic_digest' => $a->economicDigest, 'authorization_ref' => $a->authorizationRef]);
         if ($updated !== 1) {
-            $this->refuse('Material revision conflict');
+            ExecutionTables::refuse('Material revision conflict');
         }
         $currentCapacity = $this->capacity($transactionContext, $b->rootOperationRef);
         if ($materialChange->capacity->version !== $currentCapacity->version) {
             $this->writeCapacity($transactionContext, $materialChange->capacity, $currentCapacity->version);
         } elseif (ExecutionCodec::encode($materialChange->capacity) !== ExecutionCodec::encode($currentCapacity)) {
-            $this->refuse('Material revision differs from unchanged capacity version');
+            ExecutionTables::refuse('Material revision differs from unchanged capacity version');
         }
-        $this->database($transactionContext)->table('billium_execution_operation_revision')->insert($this->callerScope($transactionContext) + ['operation_ref' => $a->operationRef, 'revision' => $a->revision, 'material_digest' => $a->economicDigest, 'requested_minor' => $a->requested->minor, 'currency' => $a->requested->currency->code, 'observed' => ExecutionCodec::encode($materialChange->observed), 'last_consistent_applied' => ExecutionCodec::encode($materialChange->capacity), 'financial_hold' => ExecutionCodec::encode($materialChange->capacity->financialHold), 'exposure' => $this->exposure($materialChange), 'evidence_refs' => ExecutionCodec::encode($materialChange->observed->evidenceRefs), 'receipt_ref' => $receiptRef, 'occurred_at' => $materialChange->observed->observedAt]);
+        $this->tables->database($transactionContext)->table('billium_execution_operation_revision')->insert($this->tables->callerScope($transactionContext) + ['operation_ref' => $a->operationRef, 'revision' => $a->revision, 'material_digest' => $a->economicDigest, 'requested_minor' => $a->requested->minor, 'currency' => $a->requested->currency->code, 'observed' => ExecutionCodec::encode($materialChange->observed), 'last_consistent_applied' => ExecutionCodec::encode($materialChange->capacity), 'financial_hold' => ExecutionCodec::encode($materialChange->capacity->financialHold), 'exposure' => $this->exposure($materialChange), 'evidence_refs' => ExecutionCodec::encode($materialChange->observed->evidenceRefs), 'receipt_ref' => $receiptRef, 'occurred_at' => $materialChange->observed->observedAt]);
     }
 
     public function appendDiscrepancy(TransactionContext $transactionContext, string $ref, MaterialChange $materialChange): void
     {
-        $this->financial($transactionContext);
-        $prior = $this->admittedOperation($transactionContext, $materialChange->before->operationRef);
-        $this->requireLock($transactionContext, $prior->rootOperationRef);
+        $this->tables->financial($transactionContext);
+        $prior = $this->tables->admittedOperation($transactionContext, $materialChange->before->operationRef);
+        $this->tables->requireLock($transactionContext, $prior->rootOperationRef);
         if ($prior->rootOperationRef !== $materialChange->before->rootOperationRef) {
-            $this->refuse('Discrepancy differs from historical root');
+            ExecutionTables::refuse('Discrepancy differs from historical root');
         }
         $accepted = $this->factForEvidence($transactionContext, $materialChange->observed->evidenceRefs[0] ?? '', $prior->operationRef);
         if (! $materialChange->capacity->financialHold || $materialChange->discrepancyRef !== $ref || $accepted === null || ExecutionCodec::encode($accepted->snapshot) !== ExecutionCodec::encode($materialChange->observed)) {
-            $this->refuse('Accepted material discrepancy requires the original qualified fact');
+            ExecutionTables::refuse('Accepted material discrepancy requires the original qualified fact');
         }
-        $this->database($transactionContext)->table('billium_execution_discrepancy')->insertOrIgnore($this->callerScope($transactionContext) + ['discrepancy_ref' => $ref, 'root_operation_ref' => $materialChange->before->rootOperationRef, 'operation_ref' => $materialChange->before->operationRef, 'kind' => 'provider_material_conflict', 'evidence_refs' => ExecutionCodec::encode($materialChange->observed->evidenceRefs), 'observed' => ExecutionCodec::encode($materialChange->observed), 'last_consistent_applied' => ExecutionCodec::encode($materialChange->capacity), 'exposure' => $this->exposure($materialChange)]);
+        $this->tables->database($transactionContext)->table('billium_execution_discrepancy')->insertOrIgnore($this->tables->callerScope($transactionContext) + ['discrepancy_ref' => $ref, 'root_operation_ref' => $materialChange->before->rootOperationRef, 'operation_ref' => $materialChange->before->operationRef, 'kind' => 'provider_material_conflict', 'evidence_refs' => ExecutionCodec::encode($materialChange->observed->evidenceRefs), 'observed' => ExecutionCodec::encode($materialChange->observed), 'last_consistent_applied' => ExecutionCodec::encode($materialChange->capacity), 'exposure' => $this->exposure($materialChange)]);
     }
 
     public function recordQuarantineHold(TransactionContext $context, ProviderWorkClaim $claim, MaterialSnapshot $conflict, string $discrepancyRef, string $reason): ?OperationRecord
     {
-        $this->financial($context);
+        $this->tables->financial($context);
         $delivery = $this->verifiedReduction?->verifiedIn($context, $claim, $conflict) ?? throw new LogicException('Configured provider verification is required');
-        $subject = $this->admittedOperation($context, $conflict->operationRef);
-        $this->requireOperationLock($context, $subject->operationRef);
-        $root = $this->admittedOperation($context, $subject->rootOperationRef);
+        $subject = $this->tables->admittedOperation($context, $conflict->operationRef);
+        $this->tables->requireOperationLock($context, $subject->operationRef);
+        $root = $this->tables->admittedOperation($context, $subject->rootOperationRef);
         $work = $this->providerWork($claim->workRef, $context);
         $attempt = $this->attemptForOperation($subject->binding->scope, $subject->operationRef, $context);
         if ($work === null || $work->state !== 'leased' || $work->operationHint !== $subject->operationRef || $work->evidence->evidenceRef !== $claim->evidenceRef
             || ExecutionCodec::encode($work->evidence) !== ExecutionCodec::encode($delivery->evidence) || $conflict->evidenceRefs !== [$claim->evidenceRef]
             || $conflict->bindingDigest !== ExecutionCodec::bindingDigest($subject->binding) || $conflict->merchantAccountRef !== $subject->binding->merchantAccountRef
             || $attempt === null || $conflict->providerReference !== $attempt->providerReference || $conflict->kind !== $subject->kind) {
-            $this->refuse('Financial hold requires authenticated work for the original locked operation');
+            ExecutionTables::refuse('Financial hold requires authenticated work for the original locked operation');
         }
         $current = $this->capacity($context, $root->operationRef);
         $held = new CapacitySnapshot($root->operationRef, $current->version + 1, $current->authorizedLimit, $current->confirmedCapture, $current->confirmedRefund,
             $current->releasedAuthorization, $current->heldCapture, $current->heldVoid, $current->heldRefund, true);
         $exposure = ExecutionCodec::encode(['discrepancyRef' => $discrepancyRef, 'financialHold' => true, 'reason' => $reason]);
         $evidence = ExecutionCodec::encode($conflict->evidenceRefs);
-        $db = $this->database($context);
-        $scope = $this->callerScope($context);
+        $db = $this->tables->database($context);
+        $scope = $this->tables->callerScope($context);
         $db->table('billium_execution_discrepancy')->insertOrIgnore($scope + ['discrepancy_ref' => $discrepancyRef, 'root_operation_ref' => $root->operationRef,
             'operation_ref' => $subject->operationRef, 'kind' => 'provider_material_conflict', 'evidence_refs' => $evidence, 'observed' => ExecutionCodec::encode($conflict),
             'last_consistent_applied' => ExecutionCodec::encode($current), 'exposure' => $exposure]);
         // Existing discrepancy rows may predate local hold publications. Deduplicate against the actual financial revision.
-        if ($this->callerQuery('operation_revision', $context)->where('operation_ref', $root->operationRef)
+        if ($this->tables->callerQuery('operation_revision', $context)->where('operation_ref', $root->operationRef)
             ->where('observed->discrepancyRef', $discrepancyRef)->where('observed->schema', 'billium.execution.quarantine-hold.v1')->exists()) {
             return null;
         }
@@ -731,9 +718,9 @@ trait ExecutionEvidencePersistence
             'reason' => $reason, 'priorEconomicDigest' => $root->economicDigest];
         $digest = ExecutionCodec::digest($decision);
         $revision = $root->revision + 1;
-        if ($this->callerQuery('operation', $context)->where('id', $root->id)->where('revision', $root->revision)->where('economic_digest', $root->economicDigest)
+        if ($this->tables->callerQuery('operation', $context)->where('id', $root->id)->where('revision', $root->revision)->where('economic_digest', $root->economicDigest)
             ->update(['revision' => $revision, 'economic_digest' => $digest]) !== 1) {
-            $this->refuse('Root changed before recording the financial hold');
+            ExecutionTables::refuse('Root changed before recording the financial hold');
         }
         $this->writeCapacity($context, $held, $current->version);
         $db->table('billium_execution_operation_revision')->insert($scope + ['operation_ref' => $root->operationRef, 'revision' => $revision,
@@ -741,7 +728,7 @@ trait ExecutionEvidencePersistence
             'observed' => ExecutionCodec::encode($decision), 'last_consistent_applied' => ExecutionCodec::encode($held), 'financial_hold' => 'true',
             'exposure' => $exposure, 'evidence_refs' => $evidence, 'receipt_ref' => $claim->workRef, 'occurred_at' => new DateTimeImmutable]);
 
-        return $this->admittedOperation($context, $root->operationRef);
+        return $this->tables->admittedOperation($context, $root->operationRef);
     }
 
     private function exposure(MaterialChange $change): string

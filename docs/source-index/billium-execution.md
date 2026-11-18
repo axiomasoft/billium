@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-execution
 
-Path `packages/core/modules/execution/src`, namespace `Billium\Execution\`, layer L2. 162 types.
+Path `packages/core/modules/execution/src`, namespace `Billium\Execution\`, layer L2. 164 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -278,7 +278,9 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`DatabaseExecutionStore`](../../packages/core/modules/execution/src/Internal/Storage/DatabaseExecutionStore.php) | class | *Internal* |  |
 | [`ExecutionCodec`](../../packages/core/modules/execution/src/Internal/Storage/ExecutionCodec.php) | class | *Internal* | Bounded data-only encoding. |
 | [`ExecutionEvidencePersistence`](../../packages/core/modules/execution/src/Internal/Storage/ExecutionEvidencePersistence.php) | trait | *Internal* |  |
+| [`ExecutionRecords`](../../packages/core/modules/execution/src/Internal/Storage/ExecutionRecords.php) | class | *Internal* | Hydrates execution records from their stored rows; the single place that knows each column layout. |
 | [`ExecutionRows`](../../packages/core/modules/execution/src/Internal/Storage/ExecutionRows.php) | class | *Internal* | Strict coercion of PostgreSQL row values shared by every execution reader and writer. |
+| [`ExecutionTables`](../../packages/core/modules/execution/src/Internal/Storage/ExecutionTables.php) | class | *Internal* | Scope-checked access to the execution tables plus the per-transaction row-lock ledger. |
 
 ## Laravel
 
