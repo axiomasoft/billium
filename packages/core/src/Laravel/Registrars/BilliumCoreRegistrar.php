@@ -74,7 +74,6 @@ use Packman\Plugins\Laravel\ExtensionRegistrar;
 use Packman\Plugins\Laravel\PluginsServiceProvider;
 use Packman\Schema\Laravel\SchemaExtensions;
 use Packman\Schema\Laravel\SchemaServiceProvider;
-use ReflectionProperty;
 use Throwable;
 
 /**
@@ -349,13 +348,13 @@ final class BilliumCoreRegistrar implements PackageRegistrar
         if (! $app->bound($legacy)) {
             return false;
         }
-        if ($app instanceof Container) {
-            $aliases = new ReflectionProperty(Container::class, 'aliases')->getValue($app);
-            if (is_array($aliases) && ($aliases[$legacy] ?? null) === $canonical) {
-                return false;
-            }
-        }
 
-        return true;
+        // A legacy name that merely aliases the canonical contract is not a host binding of its own.
+        return ! $app instanceof Container || ! self::aliases($app, $legacy, $canonical);
+    }
+
+    private static function aliases(Container $container, string $alias, string $abstract): bool
+    {
+        return $container->isAlias($alias) && $container->getAlias($alias) === $abstract;
     }
 }
