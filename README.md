@@ -22,6 +22,8 @@ The [P4 evidence guide](docs/architecture/p4-acceptance.md) and
 concurrency and unsupported combinations to executable tests. Implementation evidence and pending
 independent phase acceptance are recorded separately (D59/D64; owner PLAN1.P4.10).
 
+- [Codebase map](docs/architecture/CODEBASE-MAP.md): where each responsibility lives, dependency rules, checks;
+  [source index](docs/source-index/README.md) of every PHP type
 - [Requirements and traceability](docs/requirements.md)
 - [Target architecture](docs/architecture/target-architecture.md) and
   [data model](docs/architecture/data-model.md)
