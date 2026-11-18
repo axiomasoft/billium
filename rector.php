@@ -26,6 +26,8 @@ return static function (RectorConfig $rectorConfig): void {
         __DIR__.'/packages/core/modules/usage/src',
         __DIR__.'/packages/core/modules/rating/src',
         __DIR__.'/packages/core/modules/schedule/src',
+        __DIR__.'/packages/core/modules/execution/src',
+        __DIR__.'/packages/testkit/src',
     ]);
     $rectorConfig->importNames(importDocBlockNames: false);
     $rectorConfig->removeUnusedImports();

@@ -10,6 +10,8 @@ use Billium\Testkit\Fixtures\JournalEvent;
 use Billium\Testkit\Fixtures\ProcessBarrier;
 use Billium\Testkit\Fixtures\ProcessIdentity;
 use Billium\Testkit\Tests\HarnessFactory;
+use Packman\Testkit\Data\Database\TestDatabaseIdentity;
+use Packman\Testkit\Support\Database\TestDatabaseGuard;
 
 $path = $argv[1];
 $mode = $argv[2];
@@ -17,10 +19,14 @@ $journal = new DurableJournal($path);
 $barrier = new ProcessBarrier($journal);
 if ($mode === 'append' || $mode === 'refund') {
     $database = getenv('DB_DATABASE');
-    if (! is_string($database) || ! str_ends_with($database, '_test') || getenv('DB_HOST') !== 'postgres') {
+    $host = getenv('DB_HOST');
+    $port = getenv('DB_PORT');
+    $ownerUser = getenv('DB_OWNER_USERNAME');
+    if (! is_string($database) || ! is_string($host) || $host === '' || ! is_string($port) || $port === '' || ! is_string($ownerUser)) {
         throw new RuntimeException('Child test database guard refused');
     }
-    $pdo = new PDO('pgsql:host=postgres;port=5432;dbname='.$database, (string) getenv('DB_OWNER_USERNAME'), (string) getenv('DB_OWNER_PASSWORD'));
+    TestDatabaseGuard::assertSafe(new TestDatabaseIdentity('pgsql', $host, (int) $port, $database, $ownerUser));
+    $pdo = new PDO('pgsql:host='.$host.';port='.(int) $port.';dbname='.$database, $ownerUser, (string) getenv('DB_OWNER_PASSWORD'));
     $backend = HarnessFactory::integerQuery($pdo, 'SELECT pg_backend_pid()');
     $journal->append(new JournalEvent('child.backend', ['backend' => $backend], ProcessIdentity::current()));
     $barrier->arrive('ready');

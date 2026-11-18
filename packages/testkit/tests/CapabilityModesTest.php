@@ -17,6 +17,7 @@ use Billium\Testkit\Fixtures\ProcessBarrier;
 use Billium\Testkit\Oracles\IndependentFinancialOracle;
 use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
@@ -141,6 +142,7 @@ final class CapabilityModesTest extends TestCase
         self::assertSame([], $driver->journal->records());
     }
 
+    #[Group('pg')]
     public function test_twenty_real_refund_processes_share_durable_capacity_and_independent_oracle(): void
     {
         $cap = SimulatedCapabilities::snapshot('account-a');

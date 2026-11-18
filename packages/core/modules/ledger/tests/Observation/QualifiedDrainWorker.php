@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Ledger\Tests\Observation;
 
+use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Contracts\Runtime\FinancialAuthorityEvidence;
 use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
@@ -21,7 +22,7 @@ use Billium\Core\Tests\Support\Concurrency\Scenario;
 use Billium\Core\Tests\Support\FixedCallerContext;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
 use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
-use Billium\Execution\Internal\ExecutionServiceProvider;
+use Billium\Execution\Laravel\ExecutionServiceProvider;
 use Billium\Ledger\Internal\Observation\ParkedDrainer;
 use Billium\Platform\Internal\CommandOutbox\CommandOutboxRelay;
 use Closure;
@@ -88,6 +89,7 @@ final readonly class QualifiedDrainWorker implements Scenario
             throw new LogicException('Invalid origin journal entry');
         }
         $app['config']->set('billium.modules.enabled', ['platform', 'ledger', 'execution']);
+        $app->forgetInstance(BilliumOptions::class);
         $app->register(ExecutionServiceProvider::class);
         $callers = new class($caller) implements ScopedCallerContext
         {

@@ -21,8 +21,10 @@ use Billium\Testkit\Fixtures\DurableJournal;
 use Billium\Testkit\Fixtures\FixtureClock;
 use Billium\Testkit\Tests\HarnessFactory;
 use DateTimeImmutable;
+use PHPUnit\Framework\Attributes\Group;
 use RuntimeException;
 
+#[Group('pg')]
 final class DurableProviderEvidenceTest extends ExecutionTestCase
 {
     private string $directory;

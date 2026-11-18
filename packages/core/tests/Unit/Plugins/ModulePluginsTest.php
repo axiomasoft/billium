@@ -6,6 +6,7 @@ namespace Billium\Core\Tests\Unit\Plugins;
 
 use Billium\Core\BilliumCoreServiceProvider;
 use Billium\Core\Internal\Modules\ModuleCatalog;
+use Billium\Core\Plugins\ExecutionPlugin;
 use Billium\Core\Plugins\LedgerPlugin;
 use Billium\Core\Plugins\PlatformPlugin;
 use Billium\Core\Plugins\RatingPlugin;
@@ -18,6 +19,7 @@ use Billium\Rating\Contracts\RatingQuoter;
 use Illuminate\Config\Repository;
 use Illuminate\Container\Container;
 use Illuminate\Database\DatabaseServiceProvider;
+use Illuminate\Encryption\EncryptionServiceProvider;
 use Illuminate\Foundation\Application;
 use Orchestra\Testbench\TestCase;
 use Packman\Plugins\Contracts\Contributions\Capabilities;
@@ -35,6 +37,7 @@ final class ModulePluginsTest extends TestCase
             builtIn: [
                 PlatformPlugin::class,
                 LedgerPlugin::class,
+                ExecutionPlugin::class,
                 UsagePlugin::class,
                 SchedulePlugin::class,
                 RatingPlugin::class,
@@ -44,6 +47,7 @@ final class ModulePluginsTest extends TestCase
         $ids = array_map(static fn ($d): string => $d->id, $registry->describe());
         self::assertContains('axiomasoft.billium.platform', $ids);
         self::assertContains('axiomasoft.billium.ledger', $ids);
+        self::assertContains('axiomasoft.billium.execution', $ids);
         self::assertContains('axiomasoft.billium.usage', $ids);
         self::assertContains('axiomasoft.billium.schedule', $ids);
         self::assertContains('axiomasoft.billium.rating', $ids);
@@ -67,6 +71,7 @@ final class ModulePluginsTest extends TestCase
         $subsets = [
             ['platform'],
             ['platform', 'ledger'],
+            ['platform', 'ledger', 'execution'],
             ['platform', 'usage'],
             ['platform', 'rating'],
             ['platform', 'ledger', 'rating'],
@@ -80,12 +85,19 @@ final class ModulePluginsTest extends TestCase
                 $app = new Application(dirname(__DIR__, 4));
                 Container::setInstance($app);
                 $app->instance('config', new Repository([
+                    'app' => [
+                        'key' => 'base64:'.base64_encode(str_repeat('k', 32)),
+                        'cipher' => 'AES-256-CBC',
+                    ],
                     'database' => [
                         'default' => 'sqlite',
                         'connections' => ['sqlite' => ['driver' => 'sqlite', 'database' => ':memory:']],
                     ],
                     'billium' => [
-                        'modules' => ['enabled' => $enabled],
+                        'modules' => [
+                            'composition' => in_array('execution', $enabled, true) ? 'standalone-billium' : 'embedded-commerz',
+                            'enabled' => $enabled,
+                        ],
                         'feed' => ['signing_key' => str_repeat('k', 32)],
                         'usage' => ['enabled' => in_array('usage', $enabled, true)],
                         'rating' => ['enabled' => in_array('rating', $enabled, true)],
@@ -93,6 +105,7 @@ final class ModulePluginsTest extends TestCase
                     ],
                 ]));
                 $app->register(DatabaseServiceProvider::class);
+                $app->register(EncryptionServiceProvider::class);
                 $app->register(BilliumCoreServiceProvider::class);
                 $app->boot();
 

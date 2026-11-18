@@ -88,6 +88,7 @@ abstract class CompositionTestCase extends TestCase
             'usage' => 'axiomasoft/billium-core:billium-usage',
             'schedule' => 'axiomasoft/billium-core:billium-schedule',
             'rating' => 'axiomasoft/billium-core:billium-rating',
+            'execution' => 'axiomasoft/billium-core:billium-execution',
         ];
         $enabled = $this->application()->make(Repository::class)->get('billium.modules.enabled', $this->modules());
         /** @var list<string> $ids */

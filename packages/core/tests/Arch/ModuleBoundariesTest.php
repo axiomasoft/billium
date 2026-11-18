@@ -38,7 +38,7 @@ final class ModuleBoundariesTest extends TestCase
         self::assertSame(100, config('billium.feed.drain_batch'));
         self::assertTrue(config('billium.runtime_role.preflight'));
         $paths = array_map(realpath(...), $this->app['migrator']->paths());
-        foreach (['platform', 'ledger', 'usage', 'rating', 'schedule'] as $module) {
+        foreach (['platform', 'ledger', 'usage', 'rating', 'schedule', 'execution'] as $module) {
             self::assertNotContains(realpath(dirname(__DIR__, 2).'/database/migrations/'.$module), $paths);
         }
 
@@ -48,7 +48,7 @@ final class ModuleBoundariesTest extends TestCase
 
         $withModules = $sets->forScope(SchemaScope::Central, includeModules: true);
         self::assertSame(SchemaLifecycle::Module, $sets->get('axiomasoft/billium-core:billium-ledger')->lifecycle);
-        self::assertCount(5, $withModules);
+        self::assertCount(6, $withModules);
     }
 
     public function test_modules_keep_internal_dependencies_and_database_access_private(): void
@@ -233,7 +233,7 @@ final class ModuleBoundariesTest extends TestCase
             [$type, $value] = $token;
             if (in_array($type, [T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED], true)) {
                 $name = ltrim($value, '\\');
-                if (preg_match('/^Billium\\\\(Platform|Ledger|Usage|Rating|Schedule|Core)\\\\Internal(?:\\\\|$)/', $name, $dependency) === 1
+                if (preg_match('/^Billium\\\\(Platform|Ledger|Usage|Rating|Schedule|Execution|Core)\\\\Internal(?:\\\\|$)/', $name, $dependency) === 1
                     && strtolower($dependency[1]) !== $module) {
                     $violations[] = $path.': foreign Internal dependency '.$name.' (D55/INV-01)';
                 }

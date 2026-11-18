@@ -7664,6 +7664,16 @@
                     "return": "string",
                     "doc": []
                 },
+                "providedCapabilities": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [],
+                    "return": "array",
+                    "doc": []
+                },
                 "register": {
                     "visibility": "public",
                     "static": false,

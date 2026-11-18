@@ -17,7 +17,7 @@ use Billium\Usage\Contracts\SourceCompletenessIntake;
 use Billium\Usage\Contracts\Usage;
 use Billium\Usage\Contracts\UsageAttribution;
 use Billium\Usage\Data\Commands\RecordSourceCompleteness;
-use Billium\Usage\Internal\UsageServiceProvider;
+use Billium\Usage\Laravel\UsageServiceProvider;
 use Illuminate\Foundation\Application;
 use RuntimeException;
 use stdClass;

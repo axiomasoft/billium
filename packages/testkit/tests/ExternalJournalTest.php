@@ -12,6 +12,7 @@ use Billium\Testkit\Fixtures\ProcessBarrier;
 use Billium\Testkit\Fixtures\ProcessIdentity;
 use Billium\Testkit\Fixtures\ReceiverReceipt;
 use Billium\Testkit\Oracles\IndependentFinancialOracle;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
@@ -78,6 +79,7 @@ final class ExternalJournalTest extends TestCase
         $oracle->observe('root', 'auth', ['authorized' => 101, 'captured' => 0, 'refunded' => 0, 'voided' => 0]);
     }
 
+    #[Group('pg')]
     public function test_twenty_real_processes_append_without_lost_updates_and_keep_distinct_ids(): void
     {
         $journal = new DurableJournal($this->directory.'/process.log');

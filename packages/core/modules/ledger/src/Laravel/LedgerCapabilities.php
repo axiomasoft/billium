@@ -10,6 +10,9 @@ use Billium\Ledger\Contracts\Ledger;
 use Billium\Ledger\Contracts\LedgerParticipants;
 use Billium\Ledger\Contracts\LedgerQueries;
 use Billium\Ledger\Contracts\ObservationApplier;
+use Billium\Ledger\Contracts\ObservationCheckpointQueries;
+use Billium\Ledger\Contracts\QualifiedObservationApplier;
+use Billium\Ledger\Contracts\SettlementIntentLocks;
 use Billium\Ledger\Internal\LedgerFacade;
 use Billium\Ledger\Internal\Observation\ObservationHandler;
 use Billium\Ledger\Internal\Observation\ObservationIntake;
@@ -17,6 +20,8 @@ use Billium\Ledger\Internal\Participants\DatabaseCorrectionCreditParticipants;
 use Billium\Ledger\Internal\Participants\DatabaseCorrectionLocks;
 use Billium\Ledger\Internal\Participants\DatabaseLedgerParticipants;
 use Billium\Ledger\Internal\Queries\DatabaseLedgerQueries;
+use Billium\Ledger\Internal\Queries\DatabaseObservationCheckpointQueries;
+use Billium\Ledger\Internal\Queries\DatabaseSettlementIntentLocks;
 use Billium\Ledger\Internal\Snapshot\AllocationsSnapshotSource;
 use Billium\Ledger\Internal\Snapshot\DiscrepanciesSnapshotSource;
 use Billium\Ledger\Internal\Snapshot\InvoicesSnapshotSource;
@@ -44,6 +49,9 @@ final class LedgerCapabilities
             LedgerParticipants::class => DatabaseLedgerParticipants::class,
             LedgerQueries::class => DatabaseLedgerQueries::class,
             ObservationApplier::class => ObservationIntake::class,
+            ObservationCheckpointQueries::class => DatabaseObservationCheckpointQueries::class,
+            QualifiedObservationApplier::class => ObservationIntake::class,
+            SettlementIntentLocks::class => DatabaseSettlementIntentLocks::class,
         ];
     }
 

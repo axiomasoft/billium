@@ -59,8 +59,10 @@ use DateTimeImmutable;
 use Illuminate\Database\DatabaseManager;
 use LogicException;
 use PDO;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\TestWith;
 
+#[Group('pg')]
 final class ProviderProcessingPersistenceTest extends ExecutionTestCase
 {
     private ExecutionStore $store;

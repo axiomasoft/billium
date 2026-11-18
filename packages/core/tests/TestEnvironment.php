@@ -81,7 +81,7 @@ final class TestEnvironment
             $owner = $app->make(DatabaseManager::class)->connection('billium_owner');
             self::assertRebuildOwner($owner);
             if ($owner->scalar(<<<'SQL'
-                SELECT EXISTS (SELECT FROM public.migrations) OR EXISTS (
+                SELECT (to_regclass('public.migrations') IS NOT NULL AND EXISTS (SELECT FROM public.migrations)) OR EXISTS (
                     SELECT FROM pg_tables WHERE schemaname='public' AND tablename <> 'migrations')
                 SQL) !== false) {
                 throw new RuntimeException('Fresh rebuild requires an empty migration repository after the table wipe');
@@ -162,6 +162,11 @@ final class TestEnvironment
             database: $database,
             username: self::required($owner ? 'DB_OWNER_USERNAME' : 'DB_USERNAME'),
         );
+    }
+
+    public static function hasProfileDatabase(): bool
+    {
+        return self::$profileDatabase !== null;
     }
 
     public static function databaseName(): string

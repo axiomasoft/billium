@@ -7,7 +7,7 @@ namespace Billium\Core;
 use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Internal\Runtime\ExecutionCompositionGuard;
 use Billium\Core\Laravel\Registrars\BilliumCoreRegistrar;
-use Billium\Execution\Internal\ExecutionServiceProvider;
+use Billium\Execution\Laravel\ExecutionServiceProvider;
 use Billium\Ledger\Laravel\LedgerServiceProvider;
 use Billium\Platform\Laravel\PlatformServiceProvider;
 use Billium\Rating\Laravel\RatingServiceProvider;
@@ -20,9 +20,6 @@ use Packman\Attributes\Api;
 use Packman\Foundation\Concerns\RegistersPackageRegistrars;
 use Packman\Foundation\Contracts\PackageRegistrar;
 
-/**
- * Slim Laravel service provider bootstrapping Billium Core, Platform, and Ledger registrars.
- */
 #[Api(since: '1.0')]
 final class BilliumCoreServiceProvider extends ServiceProvider
 {
@@ -32,9 +29,7 @@ final class BilliumCoreServiceProvider extends ServiceProvider
     }
 
     /** @var list<class-string<PackageRegistrar>> */
-    protected const array REGISTRARS = [
-        BilliumCoreRegistrar::class,
-    ];
+    protected const array REGISTRARS = [BilliumCoreRegistrar::class];
 
     /** @var array<string, class-string<ServiceProvider>> */
     private const array OPTIONAL_MODULES = [
@@ -52,7 +47,6 @@ final class BilliumCoreServiceProvider extends ServiceProvider
         $this->registerRegistrars();
         $this->app->register(PlatformServiceProvider::class);
 
-        // Preserve host options; otherwise defer freezing the default singleton until host configuration finishes.
         if ($options === null) {
             $raw = $this->app->bound(Repository::class) ? $this->app->make(Repository::class)->get('billium', []) : [];
             $options = BilliumOptions::fromArray(is_array($raw) ? $raw : ['__invalid_root' => $raw], 'billium');

@@ -10,6 +10,7 @@ use Billium\Ledger\Contracts\Ledger;
 use Billium\Ledger\Contracts\LedgerParticipants;
 use Billium\Ledger\Contracts\LedgerQueries;
 use Billium\Ledger\Contracts\ObservationApplier;
+use Billium\Ledger\Contracts\ObservationCheckpointQueries;
 use Billium\Ledger\Contracts\QualifiedObservationApplier;
 use Billium\Ledger\Contracts\SettlementIntentLocks;
 use Billium\Ledger\Laravel\LedgerCapabilities;
@@ -103,6 +104,7 @@ final class LedgerPlugin implements ExtensionPlugin, WithCapabilities, WithSchem
             LedgerParticipants::class => Cardinality::OptionalSingle->value,
             LedgerQueries::class => Cardinality::OptionalSingle->value,
             ObservationApplier::class => Cardinality::OptionalSingle->value,
+            ObservationCheckpointQueries::class => Cardinality::OptionalSingle->value,
             QualifiedObservationApplier::class => Cardinality::OptionalSingle->value,
             SettlementIntentLocks::class => Cardinality::OptionalSingle->value,
         ];

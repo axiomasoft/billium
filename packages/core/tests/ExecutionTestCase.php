@@ -10,7 +10,7 @@ use Billium\Core\Data\Runtime\FinancialScope;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Tests\Support\SimulatedExecutionReadiness;
-use Billium\Execution\Internal\ExecutionServiceProvider;
+use Billium\Execution\Laravel\ExecutionServiceProvider;
 use Billium\Platform\Tests\PlatformTestCase;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Foundation\Application;

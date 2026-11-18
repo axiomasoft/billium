@@ -11,10 +11,12 @@ use Billium\Core\Contracts\Modules\ModuleStateReader;
 use Billium\Core\Contracts\Modules\ModuleTransitionEvidence;
 use Billium\Core\Contracts\Modules\ModuleTransitionPlanner;
 use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runtime\AuthenticatedObservationContext;
 use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Contracts\Runtime\EventPublisher;
 use Billium\Core\Contracts\Runtime\FinancialAuthorityEvidence;
 use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
+use Billium\Core\Contracts\Runtime\InternalCommandReceiver;
 use Billium\Core\Database\BilliumSchemaSetProvider;
 use Billium\Core\Diagnostics\BilliumCompatibilityDoctorCheck;
 use Billium\Core\Errors\BilliumCoreProblemDefinitions;
@@ -22,19 +24,25 @@ use Billium\Core\Internal\Modules\ModuleCatalog;
 use Billium\Core\Internal\Modules\ModuleLifecycle;
 use Billium\Core\Internal\Runner\DatabaseOperationRunner;
 use Billium\Core\Internal\Runner\UnboundCallerContext;
+use Billium\Core\Internal\Runner\UnboundFinancialAuthorityEvidence;
 use Billium\Core\Internal\Runner\UnboundSessionAdmission;
+use Billium\Core\Internal\Runtime\TransportObservationContext;
 use Billium\Platform\Contracts\EventContracts\EventContractRegistrar;
 use Billium\Platform\Contracts\Feed\EventFeed;
 use Billium\Platform\Contracts\Feed\FeedPartitions;
 use Billium\Platform\Contracts\Feed\FeedRecoveryQueries;
 use Billium\Platform\Contracts\Feed\SnapshotSource;
+use Billium\Platform\Contracts\Idempotency\IdempotencyReceiptQueries;
 use Billium\Platform\Contracts\Idempotency\IdempotencyStore;
+use Billium\Platform\Contracts\Inbox\AuthenticatedObservationBootstrap;
 use Billium\Platform\Contracts\Inbox\BootstrapItemHandler;
 use Billium\Platform\Contracts\Inbox\CustodyHandler;
 use Billium\Platform\Contracts\Installation\Installation;
 use Billium\Platform\Contracts\Installation\RootAdmission;
 use Billium\Platform\Contracts\Outbox\CommandOutbox;
+use Billium\Platform\Contracts\Outbox\FactualCommandOutbox;
 use Billium\Platform\Contracts\Outbox\Outbox;
+use Billium\Platform\Contracts\Outbox\OutboxDeliveryQueries;
 use Billium\Platform\Laravel\PlatformCapabilities;
 use Override;
 use Packman\Attributes\Api;
@@ -155,9 +163,11 @@ final class PlatformPlugin implements ExtensionPlugin, WithCapabilities, WithCon
     {
         return [
             OperationRunner::class => Cardinality::OptionalSingle->value,
+            AuthenticatedObservationContext::class => Cardinality::OptionalSingle->value,
             CallerContext::class => Cardinality::OptionalSingle->value,
             FinancialSessionAdmission::class => Cardinality::OptionalSingle->value,
             FinancialAuthorityEvidence::class => Cardinality::OptionalSingle->value,
+            InternalCommandReceiver::class => Cardinality::OptionalSingle->value,
             EventPublisher::class => Cardinality::OptionalSingle->value,
             ModuleRegistry::class => Cardinality::OptionalSingle->value,
             ModuleAdmissionGate::class => Cardinality::OptionalSingle->value,
@@ -166,8 +176,12 @@ final class PlatformPlugin implements ExtensionPlugin, WithCapabilities, WithCon
             ModuleTransitionEvidence::class => Cardinality::OptionalSingle->value,
             Installation::class => Cardinality::OptionalSingle->value,
             IdempotencyStore::class => Cardinality::OptionalSingle->value,
+            IdempotencyReceiptQueries::class => Cardinality::OptionalSingle->value,
+            AuthenticatedObservationBootstrap::class => Cardinality::OptionalSingle->value,
             Outbox::class => Cardinality::OptionalSingle->value,
             CommandOutbox::class => Cardinality::OptionalSingle->value,
+            FactualCommandOutbox::class => Cardinality::OptionalSingle->value,
+            OutboxDeliveryQueries::class => Cardinality::OptionalSingle->value,
             EventFeed::class => Cardinality::OptionalSingle->value,
             FeedPartitions::class => Cardinality::OptionalSingle->value,
             FeedRecoveryQueries::class => Cardinality::OptionalSingle->value,
@@ -182,8 +196,10 @@ final class PlatformPlugin implements ExtensionPlugin, WithCapabilities, WithCon
     {
         return [
             OperationRunner::class => DatabaseOperationRunner::class,
+            AuthenticatedObservationContext::class => TransportObservationContext::class,
             CallerContext::class => UnboundCallerContext::class,
             FinancialSessionAdmission::class => UnboundSessionAdmission::class,
+            FinancialAuthorityEvidence::class => UnboundFinancialAuthorityEvidence::class,
             ModuleRegistry::class => ModuleCatalog::class,
             ModuleAdmissionGate::class => ModuleLifecycle::class,
             ModuleTransitionPlanner::class => ModuleLifecycle::class,

@@ -36,7 +36,9 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
 use LogicException;
 use PDO;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class BusinessContextIdentityTest extends ExecutionTestCase
 {
     private DatabaseExecutionStore $store;

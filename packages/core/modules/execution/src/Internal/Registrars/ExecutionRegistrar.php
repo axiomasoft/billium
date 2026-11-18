@@ -13,7 +13,6 @@ use Billium\Core\Contracts\Runner\OperationRunner;
 use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Contracts\Runtime\FinancialAuthorityEvidence;
 use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
-use Billium\Core\Plugins\ExecutionPlugin;
 use Billium\Execution\Contracts\AdapterQualification;
 use Billium\Execution\Contracts\AttemptWorker;
 use Billium\Execution\Contracts\AuthorizationCommands;
@@ -86,22 +85,19 @@ use Billium\Execution\Internal\Storage\DatabaseExecutionStore;
 use Billium\Platform\Contracts\Installation\Installation;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\DatabaseManager;
+use Override;
 use Packman\Attributes\Internal;
 use Packman\Foundation\Contracts\PackageRegistrar;
-use Packman\Plugins\Laravel\ExtensionRegistrar;
-use Packman\Schema\Laravel\SchemaExtensions;
 
 #[Internal]
 final class ExecutionRegistrar implements PackageRegistrar
 {
+    #[Override]
     public function register(Application $app): void
     {
-        ExtensionRegistrar::builtIn(ExecutionPlugin::class);
-        $app->singletonIf(ExecutionPlugin::class);
         $app->singleton(VerifiedReduction::class, static fn (Application $app): VerifiedReduction => new VerifiedReduction(
             static fn (): VerifyDelivery => $app->make(VerifyDelivery::class),
         ));
-        SchemaExtensions::register($app, ExecutionPlugin::class, 'axiomasoft.billium.execution');
         $app->singleton(AbsenceProofRegistry::class, static fn (Application $app): AbsenceProofRegistry => new AbsenceProofRegistry(
             $app->make(TransportBoundary::class),
             static fn (): ?ProviderAbsenceVerifier => $app->bound(ProviderAbsenceVerifier::class) ? $app->make(ProviderAbsenceVerifier::class) : null,
@@ -222,5 +218,6 @@ final class ExecutionRegistrar implements PackageRegistrar
         ));
     }
 
+    #[Override]
     public function boot(Application $app): void {}
 }

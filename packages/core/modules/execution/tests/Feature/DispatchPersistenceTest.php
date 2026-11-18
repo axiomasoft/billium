@@ -30,7 +30,9 @@ use Billium\Execution\Internal\Storage\ExecutionCodec;
 use Closure;
 use DateTimeImmutable;
 use LogicException;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class DispatchPersistenceTest extends ExecutionTestCase
 {
     private ExecutionStore $store;

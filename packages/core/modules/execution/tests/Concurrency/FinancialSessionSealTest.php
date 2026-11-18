@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Billium\Execution\Tests\Concurrency;
 
 use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Data\Runtime\FinancialScope;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
@@ -58,6 +59,7 @@ final class FinancialSessionSealTest extends ExecutionTestCase
         $this->authority->issueTransition('sealing', 'execution-closing', [1]);
         $this->installation()->beginSealing('execution-closing', 1);
         config(['billium.financial_session.seal_lock_timeout_ms' => 150]);
+        $this->application()->forgetInstance(BilliumOptions::class);
         $this->application()->forgetInstance(DatabaseInstallation::class);
         $holder = TestEnvironment::pdo();
         $holder->beginTransaction();

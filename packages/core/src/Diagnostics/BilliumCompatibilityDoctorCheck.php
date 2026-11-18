@@ -18,6 +18,7 @@ use Packman\Config\Exceptions\InvalidConfiguration;
 use Packman\Doctor\Contracts\DoctorCheck;
 use Packman\Doctor\Data\DoctorContext;
 use Packman\Doctor\Data\DoctorFinding;
+use PDO;
 use Throwable;
 
 /**
@@ -70,7 +71,7 @@ final readonly class BilliumCompatibilityDoctorCheck implements DoctorCheck
 
         $findings = [];
         $ports = $this->portsResolver !== null ? ($this->portsResolver)() : [];
-        $checkpoints = $this->resolveCheckpoints($options, $findings);
+        $checkpoints = $this->resolveCheckpoints($options, $context, $findings);
 
         if ($checkpoints !== null) {
             $report = $this->registry->check(new CompatibilityInput(
@@ -169,13 +170,17 @@ final readonly class BilliumCompatibilityDoctorCheck implements DoctorCheck
      * @param  list<DoctorFinding>  $findings
      * @return array<string, InstalledCheckpoint>|null
      */
-    private function resolveCheckpoints(BilliumOptions $options, array &$findings): ?array
+    private function resolveCheckpoints(BilliumOptions $options, DoctorContext $context, array &$findings): ?array
     {
         if ($this->checkpointsResolver !== null) {
             return ($this->checkpointsResolver)();
         }
 
         if ($this->databases === null) {
+            if (! $context->production) {
+                return $this->defaultSpecCheckpoints();
+            }
+
             $findings[] = DoctorFinding::error(
                 code: 'billium.database.unavailable',
                 message: 'Database manager is unavailable for inspecting installed migration checkpoints.',
@@ -186,6 +191,12 @@ final readonly class BilliumCompatibilityDoctorCheck implements DoctorCheck
         }
 
         $connectionName = $options->connection ?? $this->databases->getDefaultConnection();
+        $openConnections = $this->databases->getConnections();
+        $alreadyOpen = isset($openConnections[$connectionName]) && $openConnections[$connectionName]->getRawPdo() instanceof PDO;
+
+        if (! $context->production && $options->connection === null && ! $alreadyOpen) {
+            return $this->defaultSpecCheckpoints();
+        }
 
         try {
             $connection = $this->databases->connection($connectionName);
@@ -240,6 +251,25 @@ final readonly class BilliumCompatibilityDoctorCheck implements DoctorCheck
                 moduleId: $descriptor->moduleId,
                 schemaVersion: $version,
                 appliedMigrations: $applied,
+            );
+        }
+
+        return $checkpoints;
+    }
+
+    /** @return array<string, InstalledCheckpoint> */
+    private function defaultSpecCheckpoints(): array
+    {
+        $checkpoints = [];
+
+        foreach ($this->registry->manifest()->modules as $descriptor) {
+            $checkpoints[$descriptor->moduleId] = new InstalledCheckpoint(
+                moduleId: $descriptor->moduleId,
+                schemaVersion: $descriptor->currentSchemaVersion,
+                appliedMigrations: array_map(
+                    static fn (MigrationIdentity $migration): string => $migration->id,
+                    $descriptor->migrationIdentities,
+                ),
             );
         }
 

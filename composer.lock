@@ -12,7 +12,7 @@
             "dist": {
                 "type": "path",
                 "url": "packages/contracts",
-                "reference": "f189122b71e5c333099bd5c5013f98bc8501272a"
+                "reference": "40e73e2b154d9405cc488fa428e532de5d22bb1f"
             },
             "require": {
                 "axiomasoft/packman": "^0.1",
@@ -27,6 +27,9 @@
                     "spec_rev": "2026-10"
                 },
                 "packman": {
+                    "schema-version": 1,
+                    "package-type": "domain",
+                    "stability": "dev",
                     "error-prefix": "billium",
                     "owns": [
                         "Attributes",
@@ -59,7 +62,7 @@
             "dist": {
                 "type": "path",
                 "url": "packages/core",
-                "reference": "c533408b3388e733bc93fbc36ca8374b30ed09fe"
+                "reference": "f064e7df6d41a71051cf735795107f5d92a6ee3c"
             },
             "require": {
                 "axiomasoft/billium-contracts": "^0.1",
@@ -70,6 +73,14 @@
                 "laravel/framework": "^13.0",
                 "php": "^8.4"
             },
+            "suggest": {
+                "axiomasoft/billium-execution": "Optional Billium payment execution and reconciliation module.",
+                "axiomasoft/billium-ledger": "Required Billium financial ledger module runtime.",
+                "axiomasoft/billium-platform": "Required Billium financial platform module runtime.",
+                "axiomasoft/billium-rating": "Optional Billium pricing and rating module.",
+                "axiomasoft/billium-schedule": "Optional Billium billing schedule module.",
+                "axiomasoft/billium-usage": "Optional Billium usage admission and aggregation module."
+            },
             "type": "library",
             "extra": {
                 "laravel": {
@@ -78,6 +89,9 @@
                     ]
                 },
                 "packman": {
+                    "schema-version": 1,
+                    "package-type": "domain",
+                    "stability": "dev",
                     "error-prefix": "billium",
                     "owns": [
                         "Configuration",
@@ -11287,5 +11301,5 @@
         "php": "^8.4"
     },
     "platform-dev": {},
-    "plugin-api-version": "2.9.0"
+    "plugin-api-version": "2.6.0"
 }

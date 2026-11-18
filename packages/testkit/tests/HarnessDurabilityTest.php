@@ -16,7 +16,10 @@ use Billium\Testkit\Fixtures\ProcessBarrier;
 use Billium\Testkit\Fixtures\ProcessIdentity;
 use Billium\Testkit\Fixtures\ReceiverReceipt;
 use DateTimeImmutable;
+use Packman\Testkit\Data\Database\TestDatabaseIdentity;
+use Packman\Testkit\Support\Database\TestDatabaseGuard;
 use PDO;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
@@ -72,13 +75,16 @@ final class HarnessDurabilityTest extends TestCase
         return $value;
     }
 
+    #[Group('pg')]
     public function test_provider_receiver_and_authority_journals_survive_real_pg_dump_restore(): void
     {
         $db = $this->env('DB_DATABASE');
-        if (! str_ends_with($db, '_test') || $this->env('PACKMAN_TEST_DESTRUCTIVE_OPT_IN') !== '1' || $this->env('DB_HOST') !== 'postgres') {
-            throw new RuntimeException('Isolated harness test database guard refused');
-        }
-        $dsn = 'pgsql:host='.$this->env('DB_HOST').';port='.$this->env('DB_PORT').';dbname='.$db;
+        $host = $this->env('DB_HOST');
+        $port = (int) $this->env('DB_PORT');
+        TestDatabaseGuard::assertDestructiveSafe(
+            new TestDatabaseIdentity('pgsql', $host, $port, $db, $this->env('DB_OWNER_USERNAME')),
+        );
+        $dsn = 'pgsql:host='.$host.';port='.$port.';dbname='.$db;
         $pdo = new PDO($dsn, $this->env('DB_OWNER_USERNAME'), $this->env('DB_OWNER_PASSWORD'), [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
         $other = new PDO($dsn, $this->env('DB_OWNER_USERNAME'), $this->env('DB_OWNER_PASSWORD'));
         self::assertNotSame(HarnessFactory::integerQuery($pdo, 'SELECT pg_backend_pid()'), HarnessFactory::integerQuery($other, 'SELECT pg_backend_pid()'));

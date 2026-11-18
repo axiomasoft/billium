@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Testkit\Restore;
 
+use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Data\Envelopes\CapturePayment;
 use Billium\Contracts\Data\Envelopes\ExecutePayment;
 use Billium\Contracts\Data\Envelopes\RequestRefund;
@@ -16,9 +17,7 @@ use Billium\Execution\Data\AttemptRecord;
 use Billium\Execution\Data\ExecutionScope;
 use Billium\Execution\Data\MerchantRevision;
 use Billium\Execution\Data\OperationRecord;
-use Billium\Execution\Internal\Admission\CommandInputReplay;
-use Billium\Execution\Internal\Identity\PaymentIdentity;
-use Billium\Execution\Internal\Storage\ExecutionCodec;
+use Billium\Execution\Data\OriginDecision;
 use Billium\Testkit\Drivers\ProviderRecord;
 use Billium\Testkit\Fixtures\DurableJournal;
 use Billium\Testkit\Fixtures\JournalEvent;
@@ -44,7 +43,7 @@ final class SignedOriginalArchive implements OriginalIdentityArchive
     public function recordDispatch(ProviderRecord $record, OperationRecord $op, AttemptRecord $attempt, MerchantRevision $merchant, string $lineage): void
     {
         $req = $record->request;
-        if (ExecutionCodec::encode($op->binding) !== ExecutionCodec::encode($req->binding) || $op->requested->toWire() !== $req->amount->toWire() || $attempt->immutableRequestDigest !== $req->permit->immutableRequestDigest
+        if (serialize($op->binding) !== serialize($req->binding) || $op->requested->toWire() !== $req->amount->toWire() || $attempt->immutableRequestDigest !== $req->permit->immutableRequestDigest
             || $attempt->startedAt === null || $attempt->ownerSessionRef === null || $attempt->requestDeadlineAt === null) {
             throw new LogicException('Fixture dispatch manifest disagrees with the accepted provider request');
         }
@@ -121,21 +120,21 @@ final class SignedOriginalArchive implements OriginalIdentityArchive
             $terms = get_object_vars($command->raw);
             unset($terms['commandKey'], $terms['requestedAt'], $terms['digest']);
             $semantic = $command instanceof CapturePayment
-                ? PaymentIdentity::digest(['schema' => 'billium.execution.authorization-child.v1', 'rootBinding' => $b->semanticDigest, 'scope' => get_object_vars($scope), 'command' => $terms])
-                : PaymentIdentity::digest(['schema' => 'billium.execution.refund-semantics.v1', 'scope' => get_object_vars($scope), 'originalBinding' => $b->semanticDigest, 'terms' => $terms]);
+                ? self::canonicalDigest(['schema' => 'billium.execution.authorization-child.v1', 'rootBinding' => $b->semanticDigest, 'scope' => get_object_vars($scope), 'command' => $terms])
+                : self::canonicalDigest(['schema' => 'billium.execution.refund-semantics.v1', 'scope' => get_object_vars($scope), 'originalBinding' => $b->semanticDigest, 'terms' => $terms]);
         } else {
             if ($command->merchantAccountRef !== $account || $command->bindingRevision !== $b->merchantRevisionRef || $command->source->intentRef !== $b->businessIntentRef) {
                 return null;
             }
-            $semantic = PaymentIdentity::semantic($scope, $command, $m->merchant, $b->origin);
+            $semantic = self::rootSemanticDigest($scope, $command, $m->merchant, $b->origin);
         }
         if ($semantic !== $op->economicDigest) {
             return null;
         }
 
         return $this->cache[$key] = new ArchivedExecutionIdentity($b, $op->kind, $op->requested, $command->source->intentRef, $op->operationRef,
-            $semantic, $command->commandKey, PaymentIdentity::commandKey($scope, $op->kind->value, $b->sourceContext, $command->commandKey),
-            CommandInputReplay::digest($command), $a->attemptRef, $reference, $m->merchant->providerId, $m->merchant->digest, $m->namespace,
+            $semantic, $command->commandKey, self::commandKeyDigest($scope, $op->kind->value, $b->sourceContext, $command->commandKey),
+            self::commandInputDigest($command), $a->attemptRef, $reference, $m->merchant->providerId, $m->merchant->digest, $m->namespace,
             $m->merchant->credentialVersionRef, $a->immutableRequestDigest, $m->permit->leaseFence, $a->ownerSessionRef, $m->permit->sessionEpoch,
             $m->lineage, $m->permit->ticketRef, $m->permit->collectionDispatchPermitRef, $op->createdAt, $a->startedAt, $a->requestDeadlineAt, $md, $sd, $command instanceof RequestRefund ? $command->reasonCode : null,
             $command instanceof RequestRefund ? $command->category : null, $m->providerOperationId);
@@ -144,5 +143,61 @@ final class SignedOriginalArchive implements OriginalIdentityArchive
     public function cached(ExecutionScope $scope, string $account, string $reference, FinancialAdmissionToken $token, int $epoch): ?ArchivedExecutionIdentity
     {
         return $this->cache[hash('sha256', serialize([$scope, $account, $reference, $token, $epoch]))] ?? null;
+    }
+
+    /** @param array<string, mixed> $fields */
+    private static function canonicalDigest(array $fields): string
+    {
+        return 'sha256:'.hash('sha256', (new Codec)->canonicalize($fields));
+    }
+
+    private static function commandKeyDigest(ExecutionScope $scope, string $kind, string $sourceContext, string $key): string
+    {
+        return self::canonicalDigest([
+            'schema' => 'billium.execution.command-key.v1',
+            'installationRef' => $scope->installationRef,
+            'sellerRef' => $scope->sellerRef,
+            'environment' => $scope->environment,
+            'intentOwnerNamespace' => $scope->intentOwnerNamespace,
+            'operationKind' => $kind,
+            'sourceContext' => $sourceContext,
+            'commandKey' => $key,
+        ]);
+    }
+
+    private static function rootSemanticDigest(ExecutionScope $scope, ExecutePayment $command, MerchantRevision $merchant, OriginDecision $origin): string
+    {
+        return self::canonicalDigest([
+            'schema' => 'billium.execution.root-semantics.v1',
+            'scope' => get_object_vars($scope),
+            'operationRef' => $command->operationRef,
+            'schemaId' => ExecutePayment::SCHEMA,
+            'logicalKind' => $command->operationKind,
+            'source' => $command->source,
+            'executionProfile' => $command->executionProfile,
+            'routingEpoch' => (string) $command->routingEpoch,
+            'money' => $command->money->toWire(),
+            'merchantRevisionRef' => $merchant->revisionRef,
+            'merchantRevisionDigest' => $merchant->digest,
+            'merchantAccountRef' => $merchant->merchantAccountRef,
+            'credentialVersionRef' => $merchant->credentialVersionRef,
+            'driverId' => $merchant->driverId,
+            'driverContractVersion' => $merchant->driverContractVersion,
+            'capabilityDigest' => $merchant->capabilityDigest,
+            'returnContextRef' => $command->returnContextRef,
+            'collectionAuthorizationRef' => $origin->authorizationRef,
+            'commercialBasisDigest' => $origin->basisDigest,
+            'policyVersion' => $origin->policyVersion,
+            'periodRef' => $origin->periodRef,
+        ]);
+    }
+
+    private static function commandInputDigest(ExecutePayment|CapturePayment|RequestRefund $command): string
+    {
+        $input = get_object_vars($command->raw);
+        unset($input['requestedAt'], $input['commandKey']);
+        $input['money'] = $command->money->toWire();
+
+        return (new Codec)->digest($input);
     }
 }

@@ -28,7 +28,9 @@ use Billium\Execution\Internal\Merchants\DatabaseMerchantRegistry;
 use Billium\Execution\Internal\Storage\DatabaseExecutionStore;
 use DateTimeImmutable;
 use Illuminate\Database\DatabaseManager;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class MerchantRevisionTest extends ExecutionTestCase
 {
     protected function seedRoot(): DatabaseExecutionStore

@@ -224,7 +224,7 @@ final class PackmanIntegrationTest extends PackageTestCase
         self::assertSame(SchemaLifecycle::Platform, $platform->lifecycle);
         self::assertSame(['pgsql'], $platform->drivers);
 
-        foreach (['billium-ledger', 'billium-usage', 'billium-schedule', 'billium-rating'] as $moduleSet) {
+        foreach (['billium-ledger', 'billium-usage', 'billium-schedule', 'billium-rating', 'billium-execution'] as $moduleSet) {
             $set = $sets->get('axiomasoft/billium-core:'.$moduleSet);
             self::assertSame(SchemaScope::Central, $set->scope);
             self::assertSame(SchemaLifecycle::Module, $set->lifecycle);

@@ -43,8 +43,10 @@ use Billium\Platform\Data\Installation\PlatformReceipt;
 use DateTimeImmutable;
 use LogicException;
 use PDO;
+use PHPUnit\Framework\Attributes\Group;
 use RuntimeException;
 
+#[Group('pg')]
 class ExecutionSchemaTest extends ExecutionTestCase
 {
     public static function scopeFixture(): ExecutionScope
