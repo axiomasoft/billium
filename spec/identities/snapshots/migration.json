@@ -81,5 +81,6 @@
   "2026_11_18_010009_validate_original_execution_binding",
   "2026_11_18_030001_refuse_missing_billium_refund_basis_totals",
   "2026_11_18_030002_keep_cancelled_billium_obligation_on_credit_note",
-  "2026_11_18_040001_index_billium_outbox_event_scope_cursor"
+  "2026_11_18_040001_index_billium_outbox_event_scope_cursor",
+  "2026_11_18_040002_index_billium_open_outbox_deliveries"
 ]
