@@ -243,7 +243,7 @@ final class WriterAdmissionProtocolTest extends ExecutionTestCase
             return self::receipt();
         });
         self::assertInstanceOf(TransactionContext::class, $stale);
-        foreach ([$stale, $this->createMock(TransactionContext::class)] as $ctx) {
+        foreach ([$stale, self::createStub(TransactionContext::class)] as $ctx) {
             try {
                 $guard->validate($ctx, $ticket, $operation, $attempt);
                 self::fail('Foreign or stale context accepted');

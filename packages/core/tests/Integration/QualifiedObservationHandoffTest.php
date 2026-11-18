@@ -96,7 +96,7 @@ final class QualifiedObservationHandoffTest extends ExecutionTestCase
         $certificate = new ActivationCertificate(...array_replace(get_object_vars($certificate), ['coverage' => $coverage]));
         $signed = new VerifiedSessionAuthorization(...array_replace(get_object_vars($good), ['activationCertificate' => $certificate]));
         $this->signedSession = $signed;
-        $host = $this->createMock(FinancialAuthorityEvidence::class);
+        $host = self::createStub(FinancialAuthorityEvidence::class);
         $host->method('process')->willReturnCallback($this->authority->process(...));
         $host->method('transition')->willReturnCallback(fn ($installation, $ref): ?VerifiedSessionAuthorization => $ref === 'activate' ? $signed : $this->authority->transition($installation, $ref));
         $this->application()->instance(FinancialAuthorityEvidence::class, $host);
@@ -214,7 +214,7 @@ final class QualifiedObservationHandoffTest extends ExecutionTestCase
         $scope = $this->selection($owner);
         $digest = VerifiedObservationBootstrap::digest($origin, $scope, $root, $account);
         $proof = 'sha256:'.hash_hmac('sha256', $digest, 'independent-snapshot-origin');
-        $auth = $this->createMock(ObservationBootstrapAuthenticator::class);
+        $auth = self::createStub(ObservationBootstrapAuthenticator::class);
         $auth->method('authenticate')->willReturnCallback(function ($snapshot) use ($scope, $root, $account, $digest, $proof): VerifiedObservationBootstrap {
             foreach ($this->application()->make(DatabaseManager::class)->getConnections() as $connection) {
                 self::assertSame(0, $connection->transactionLevel());
@@ -289,7 +289,7 @@ final class QualifiedObservationHandoffTest extends ExecutionTestCase
 
     private function receiverFor(SourceAuthorityGrant $signed): PaymentObservationCommandReceiver
     {
-        $host = $this->createMock(IncomingCommandAuthenticator::class);
+        $host = self::createStub(IncomingCommandAuthenticator::class);
         $host->method('authenticate')->willReturnCallback(function () use ($signed): SourceAuthorityGrant {
             foreach ($this->application()->make(DatabaseManager::class)->getConnections() as $connection) {
                 self::assertSame(0, $connection->transactionLevel());
@@ -338,7 +338,7 @@ final class QualifiedObservationHandoffTest extends ExecutionTestCase
             $this->refused(ProblemCode::AuthDenied, fn () => $receiver->receive(PreparedFactualCommand::DESTINATION, $altered));
         }
         $this->refused(ProblemCode::AuthDenied, fn () => $this->receiverFor($this->signed($fact, ttl: '-1 second'))->receive(PreparedFactualCommand::DESTINATION, $msg));
-        $absent = $this->createMock(IncomingCommandAuthenticator::class);
+        $absent = self::createStub(IncomingCommandAuthenticator::class);
         $absent->method('authenticate')->willThrowException(new ProblemException(ProblemCode::AuthDenied, 'Qualified credential has no independently attested original'));
         $this->refused(ProblemCode::AuthDenied, fn () => $this->receiver($absent)->receive(PreparedFactualCommand::DESTINATION, $msg));
         $this->callers->set(new Caller('seller-a', 'test', self::INSTALLATION, 'operator', ['remote-billium'], ['source-a', 'source-b']));

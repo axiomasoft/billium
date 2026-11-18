@@ -158,7 +158,7 @@ final class RecoveryFactualCommandTest extends ExecutionTestCase
             return self::receipt();
         });
         self::assertInstanceOf(TransactionContext::class, $stale);
-        foreach ([$stale, $this->createMock(TransactionContext::class)] as $ctx) {
+        foreach ([$stale, self::createStub(TransactionContext::class)] as $ctx) {
             try {
                 $this->outbox()->record($ctx, $this->command());
                 self::fail('Invalid context accepted');
@@ -176,7 +176,7 @@ final class RecoveryFactualCommandTest extends ExecutionTestCase
         } catch (LogicException $exception) {
             self::assertNotSame('', $exception->getMessage());
         }
-        $registry = $this->createMock(ModuleRegistry::class);
+        $registry = self::createStub(ModuleRegistry::class);
         $registry->method('descriptor')->willReturn(null);
         $outbox = new FactualCommandRecorder($this->application()->make(DatabaseManager::class), $registry, fn () => $this->runner());
         try {
@@ -230,7 +230,7 @@ final class RecoveryFactualCommandTest extends ExecutionTestCase
         $declaration = $descriptor->internalCommands[0];
         foreach (['commandType' => 'payment.execute.v1', 'commandSchema' => 'billium.command.v2', 'payloadSchemaRef' => 'foreign.json', 'payloadSchemaDigest' => 'sha256:'.str_repeat('f', 64)] as $field => $value) {
             $wrong = new InternalCommandDeclaration(...array_replace(get_object_vars($declaration), [$field => $value]));
-            $registry = $this->createMock(ModuleRegistry::class);
+            $registry = self::createStub(ModuleRegistry::class);
             $registry->method('descriptor')->willReturn(new ModuleDescriptor(...array_replace(get_object_vars($descriptor), ['internalCommands' => [$wrong]])));
             $outbox = new FactualCommandRecorder($this->application()->make(DatabaseManager::class), $registry, fn () => $this->runner());
             try {
