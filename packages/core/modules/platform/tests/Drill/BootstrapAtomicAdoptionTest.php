@@ -26,6 +26,7 @@ use Billium\Platform\Internal\Feed\PartitionStore;
 use Billium\Platform\Tests\Inbox\InboxTestCase;
 use Billium\Platform\Tests\Inbox\JournalHandler;
 use Illuminate\Container\Container;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Database\PostgresConnection;
@@ -480,6 +481,27 @@ final class BootstrapAtomicAdoptionTest extends InboxTestCase
         self::assertSame('23514', self::sqlState($owner, "UPDATE billium_feed_bootstrap_session SET status='verified' WHERE id={$loading}"));
         self::assertSame('loading', $this->value('SELECT status FROM billium_feed_bootstrap_session WHERE id=?', [$loading]));
         self::assertSame(0, $this->rows('billium_feed_bootstrap_item', 'session_id='.$loading));
+    }
+
+    public function test_each_item_application_reads_the_staged_items_once(): void
+    {
+        $session = $this->stage($this->snapshot(cursor: 20));
+        $reads = 0;
+        $this->application()->make(Dispatcher::class)->listen(QueryExecuted::class, static function (QueryExecuted $query) use (&$reads): void {
+            if (str_starts_with(ltrim($query->sql), 'SELECT') && str_contains($query->sql, 'billium_feed_bootstrap_item')) {
+                $reads++;
+            }
+        });
+        $handler = new JournalHandler;
+        $remaining = [];
+        for ($apply = 0; $apply < 4; $apply++) {
+            $remaining[] = $this->applyNext($session, $handler);
+        }
+
+        self::assertSame([2, 1, 0, 0], $remaining);
+        self::assertSame(3, $reads, 'one staged-item read per item; a ready session reads none');
+        self::assertSame(['op-1#1', 'op-2#1', 'op-3#1'], $this->journal('snapshot'));
+        self::assertSame('ready', $this->bootstrapState($session)->status);
     }
 
     private function snapshot(int $cursor, string $ref = 'bs-1'): BootstrapPartition
