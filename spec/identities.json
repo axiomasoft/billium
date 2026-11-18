@@ -4937,6 +4937,13 @@
       "source": "packages/core/database/migrations/platform/2026_11_18_040003_index_billium_staged_bootstrap_items.php"
     },
     {
+      "kind": "migration",
+      "id": "2026_11_18_040004_index_billium_usage_reproducibility_snapshot",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/usage/2026_11_18_040004_index_billium_usage_reproducibility_snapshot.php"
+    },
+    {
       "kind": "doctor-finding",
       "id": "module.composition_forbidden",
       "status": "new",

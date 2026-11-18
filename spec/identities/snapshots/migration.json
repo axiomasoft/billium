@@ -83,5 +83,6 @@
   "2026_11_18_030002_keep_cancelled_billium_obligation_on_credit_note",
   "2026_11_18_040001_index_billium_outbox_event_scope_cursor",
   "2026_11_18_040002_index_billium_open_outbox_deliveries",
-  "2026_11_18_040003_index_billium_staged_bootstrap_items"
+  "2026_11_18_040003_index_billium_staged_bootstrap_items",
+  "2026_11_18_040004_index_billium_usage_reproducibility_snapshot"
 ]
