@@ -22,11 +22,9 @@ use Illuminate\Support\ServiceProvider;
 use Orchestra\Testbench\TestCase;
 use Packman\Schema\Contracts\Migration\SchemaMigrator;
 
-/** Fresh database per composition, committed roots and distinct migration/runtime roles (D50/D55). */
+/** Fresh schema per composition in the leased test database, with committed roots and distinct roles (D50/D55). */
 abstract class CompositionTestCase extends TestCase
 {
-    private string $database;
-
     /** @return list<string> */
     protected function modules(): array
     {
@@ -38,9 +36,6 @@ abstract class CompositionTestCase extends TestCase
     {
         TestEnvironment::configure($app);
         $config = $app->make(Repository::class);
-        foreach (['pgsql', 'billium_owner'] as $connection) {
-            $config->set("database.connections.{$connection}.database", $this->database);
-        }
         $config->set('billium.modules.enabled', $this->modules());
         foreach (['usage', 'rating', 'schedule'] as $module) {
             $config->set("billium.{$module}.enabled", in_array($module, $this->modules(), true));
@@ -53,8 +48,7 @@ abstract class CompositionTestCase extends TestCase
     {
         TestEnvironment::preflight();
         TestEnvironment::acquireSuiteLease();
-        $this->database = 'billium_p49_'.bin2hex(random_bytes(6)).'_test';
-        TestEnvironment::pdo(owner: true)->exec('CREATE DATABASE "'.$this->database.'"');
+        self::resetSchema();
         parent::setUp();
         SimulatedFinancialAuthorityEvidence::reset();
         $this->owner()->unprepared('REVOKE CREATE ON SCHEMA public FROM PUBLIC');
@@ -137,7 +131,17 @@ abstract class CompositionTestCase extends TestCase
             }
             parent::tearDown();
         } finally {
-            TestEnvironment::pdo(owner: true)->exec('DROP DATABASE IF EXISTS "'.$this->database.'" WITH (FORCE)');
+            self::resetSchema();
         }
+    }
+
+    private static function resetSchema(): void
+    {
+        TestEnvironment::assertDestructiveResetAllowed();
+        TestEnvironment::pdo(owner: true)->exec(<<<'SQL'
+            DROP SCHEMA public CASCADE;
+            CREATE SCHEMA public AUTHORIZATION pg_database_owner;
+            GRANT USAGE ON SCHEMA public TO PUBLIC;
+            SQL);
     }
 }

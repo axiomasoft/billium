@@ -8,6 +8,7 @@ use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Tests\Integration\CompositionTestCase;
 use Billium\Core\Tests\Support\FixedCallerContext;
+use Billium\Core\Tests\TestEnvironment;
 use Billium\Usage\Contracts\Usage;
 use Billium\Usage\Contracts\UsageAttribution;
 use Billium\Usage\Tests\Support\UsageFixtures;
@@ -23,6 +24,7 @@ final class P4ModuleCompositionTest extends CompositionTestCase
 
     public function test_usage_alone_boots_migrates_and_accepts_facts_without_commercial_or_ledger_tables(): void
     {
+        self::assertSame(TestEnvironment::databaseName(), $this->owner()->scalar('SELECT current_database()'));
         $this->application()->instance(CallerContext::class, new FixedCallerContext(new Caller(sellerRef: 'seller-a', environment: 'test',
             installationRef: 'inst-test', actorRef: 'test-host', sourceAuthorities: ['tariffler'])));
         $this->application()->instance(UsageAttribution::class, new UsageFixtures);

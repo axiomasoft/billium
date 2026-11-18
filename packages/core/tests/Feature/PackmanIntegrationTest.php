@@ -30,6 +30,7 @@ use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Ledger\Contracts\Ledger;
 use Billium\Ledger\Internal\Observation\ObservationHandler;
 use Billium\Ledger\Internal\Snapshot\LedgerSnapshotSource;
+use Billium\Ledger\Laravel\LedgerServiceProvider;
 use Billium\Platform\Contracts\Feed\EventFeed;
 use Billium\Platform\Contracts\Feed\SnapshotSource;
 use Billium\Platform\Contracts\Inbox\BootstrapItemHandler;
@@ -38,6 +39,11 @@ use Billium\Platform\Contracts\Installation\Installation;
 use Billium\Platform\Data\Feed\FeedSelection;
 use Billium\Platform\Exceptions\TransitionRefused;
 use Billium\Platform\Internal\Outbox\EventFeedReader;
+use Billium\Platform\Laravel\PlatformServiceProvider;
+use Billium\Rating\Contracts\RatingQuoter;
+use Billium\Rating\Laravel\RatingServiceProvider;
+use Billium\Schedule\Laravel\ScheduleServiceProvider;
+use Billium\Usage\Laravel\UsageServiceProvider;
 use Closure;
 use Illuminate\Config\Repository;
 use Illuminate\Container\Container;
@@ -61,6 +67,7 @@ use Packman\Testkit\Data\Database\TestDatabaseIdentity;
 use Packman\Testkit\Exceptions\Database\UnsafeTestDatabaseException;
 use Packman\Testkit\PackageTestCase;
 use Packman\Testkit\Support\Database\TestDatabaseGuard;
+use PHPUnit\Framework\Attributes\DataProvider;
 use ReflectionProperty;
 
 final class PackmanIntegrationTest extends PackageTestCase
@@ -112,6 +119,43 @@ final class PackmanIntegrationTest extends PackageTestCase
 
         self::assertSame($first, $second);
         self::assertSame(3, $second->runner->maxAttempts);
+    }
+
+    #[DataProvider('hostOptionsBindings')]
+    public function test_host_prebound_options_control_module_registration(string $binding): void
+    {
+        $containerBackup = Container::getInstance();
+        try {
+            $app = new Application(dirname(__DIR__, 4));
+            $app->instance('config', new Repository);
+            $options = BilliumOptions::fromArray([
+                'modules' => ['enabled' => ['platform', 'rating']],
+                'rating' => ['enabled' => true],
+            ], 'billium');
+            if ($binding === 'instance') {
+                $app->instance(BilliumOptions::class, $options);
+            } else {
+                $app->singleton(BilliumOptions::class, static fn (): BilliumOptions => $options);
+            }
+
+            $app->register(BilliumCoreServiceProvider::class);
+
+            self::assertSame($options, $app->make(BilliumOptions::class));
+            self::assertNotEmpty($app->getProviders(PlatformServiceProvider::class));
+            self::assertNotEmpty($app->getProviders(RatingServiceProvider::class));
+            foreach ([LedgerServiceProvider::class, UsageServiceProvider::class, ScheduleServiceProvider::class] as $provider) {
+                self::assertSame([], $app->getProviders($provider));
+            }
+            self::assertFalse($app->bound(Ledger::class));
+            self::assertInstanceOf(RatingQuoter::class, $app->make(RatingQuoter::class));
+        } finally {
+            Container::setInstance($containerBackup);
+        }
+    }
+
+    public static function hostOptionsBindings(): array
+    {
+        return ['instance' => ['instance'], 'singleton' => ['singleton']];
     }
 
     public function test_doctor_check_queries_real_db_checkpoints_and_rejects_short_keys_or_bad_connections(): void
@@ -317,6 +361,75 @@ final class PackmanIntegrationTest extends PackageTestCase
         } finally {
             Container::setInstance($containerBackup);
         }
+    }
+
+    #[DataProvider('hostSnapshotBindings')]
+    public function test_host_snapshot_key_overrides_default_plugin_slot(string $binding, bool $beforeRegistration): void
+    {
+        $containerBackup = Container::getInstance();
+        try {
+            $app = new Application(dirname(__DIR__, 4));
+            $app->instance('config', new Repository([
+                'database' => [
+                    'default' => 'sqlite',
+                    'connections' => ['sqlite' => ['driver' => 'sqlite', 'database' => ':memory:']],
+                ],
+                'billium' => ['feed' => ['signing_key' => str_repeat('k', 32)]],
+            ]));
+            $app->register(DatabaseServiceProvider::class);
+            if (! $beforeRegistration) {
+                $app->register(BilliumCoreServiceProvider::class);
+            }
+
+            $override = new class implements SnapshotSource
+            {
+                public function key(): string
+                {
+                    return 'ledger.obligations';
+                }
+
+                public function snapshot(FeedSelection $selection, string $connection): array
+                {
+                    return [];
+                }
+            };
+            $key = 'billium.snapshot.ledger.obligations';
+            if ($binding === 'instance') {
+                $app->instance($key, $override);
+            } elseif ($binding === 'binding') {
+                $app->bind($key, static fn (): SnapshotSource => $override);
+            } else {
+                $app->instance($override::class, $override);
+                $app->alias($override::class, 'host.snapshot.obligations');
+                $app->alias('host.snapshot.obligations', $key);
+            }
+            if ($beforeRegistration) {
+                $app->register(BilliumCoreServiceProvider::class);
+            }
+
+            self::assertSame($override, $app->make($key));
+            $reader = $app->make(EventFeed::class);
+            self::assertInstanceOf(EventFeedReader::class, $reader);
+            /** @var callable(): iterable<SnapshotSource> $resolver */
+            $resolver = new ReflectionProperty(EventFeedReader::class, 'sources')->getValue($reader);
+            $sources = iterator_to_array($resolver(), false);
+            self::assertSame(LedgerSnapshotSource::KEYS, array_map(static fn (SnapshotSource $source): string => $source->key(), $sources));
+            self::assertSame($override, $sources[0]);
+        } finally {
+            Container::setInstance($containerBackup);
+        }
+    }
+
+    public static function hostSnapshotBindings(): array
+    {
+        return [
+            'prebound instance' => ['instance', true],
+            'prebound binding' => ['binding', true],
+            'prebound alias chain' => ['alias', true],
+            'late instance' => ['instance', false],
+            'late binding' => ['binding', false],
+            'late alias chain' => ['alias', false],
+        ];
     }
 
     public function test_host_tagged_snapshot_source_overrides_default_plugin_slot(): void

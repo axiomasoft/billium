@@ -59,7 +59,9 @@ final class LedgerRuntimeRegistrar implements PackageRegistrar
             'ledger.discrepancies' => DiscrepanciesSnapshotSource::class,
         ] as $key => $class) {
             $app->bind($class);
-            $app->alias($class, 'billium.snapshot.'.$key);
+            if (! $app->bound('billium.snapshot.'.$key)) {
+                $app->alias($class, 'billium.snapshot.'.$key);
+            }
             $app->tag($class, 'billium.snapshot_sources');
         }
 

@@ -48,12 +48,15 @@ final class BilliumCoreServiceProvider extends ServiceProvider
     #[Override]
     public function register(): void
     {
+        $options = $this->app->bound(BilliumOptions::class) ? $this->app->make(BilliumOptions::class) : null;
         $this->registerRegistrars();
         $this->app->register(PlatformServiceProvider::class);
 
-        // Read raw config here without freezing BilliumOptions singleton before host/Testbench defineEnvironment finishes.
-        $raw = $this->app->bound(Repository::class) ? $this->app->make(Repository::class)->get('billium', []) : [];
-        $options = BilliumOptions::fromArray(is_array($raw) ? $raw : ['__invalid_root' => $raw], 'billium');
+        // Preserve host options; otherwise defer freezing the default singleton until host configuration finishes.
+        if ($options === null) {
+            $raw = $this->app->bound(Repository::class) ? $this->app->make(Repository::class)->get('billium', []) : [];
+            $options = BilliumOptions::fromArray(is_array($raw) ? $raw : ['__invalid_root' => $raw], 'billium');
+        }
 
         foreach (self::OPTIONAL_MODULES as $module => $providerClass) {
             if (! in_array($module, $options->modules->enabled, true)) {

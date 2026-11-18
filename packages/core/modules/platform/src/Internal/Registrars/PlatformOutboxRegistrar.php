@@ -176,8 +176,8 @@ final class PlatformOutboxRegistrar implements PackageRegistrar
                 continue;
             }
             $overrideKey = 'billium.snapshot.'.$contribution->key;
-            $isAlias = is_array($aliases) && isset($aliases[$overrideKey]);
-            if ($app->bound($overrideKey) && ! $isAlias) {
+            $isDefaultAlias = is_array($aliases) && ($aliases[$overrideKey] ?? null) === $contribution->implementation;
+            if ($app->bound($overrideKey) && ! $isDefaultAlias) {
                 $explicitKeyOverrides[$contribution->key] = true;
                 $source = $app->make($overrideKey);
                 if (! $source instanceof SnapshotSource) {
