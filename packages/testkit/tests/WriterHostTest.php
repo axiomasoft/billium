@@ -65,28 +65,32 @@ final class WriterHostTest extends TestCase
         try {
             $this->host->invoke($ticket, $request, $send);
             self::fail('Consumed ticket accepted');
-        } catch (RuntimeException) {
+        } catch (RuntimeException $error) {
+            self::assertSame('Simulated ticket already consumed', $error->getMessage());
         }
         $revoked = $this->host->ticket($claims);
         $this->host->revoke($revoked);
         try {
             $this->host->invoke($revoked, HarnessFactory::request($cap, ticket: $revoked), $send);
             self::fail('Revoked ticket accepted');
-        } catch (RuntimeException) {
+        } catch (RuntimeException $error) {
+            self::assertSame('Revoked simulated ticket', $error->getMessage());
         }
         $expired = $this->host->ticket($claims);
         $this->clock->advance(31);
         try {
             $this->host->invoke($expired, HarnessFactory::request($cap, ticket: $expired), $send);
             self::fail('Expired ticket accepted');
-        } catch (RuntimeException) {
+        } catch (RuntimeException $error) {
+            self::assertSame('Unissued, changed or expired simulated ticket', $error->getMessage());
         }
         $live = $this->host->ticket($claims);
         $this->host->retire($claims, 'simulated-drained-workers-and-egress-revoked');
         try {
             $this->host->invoke($live, HarnessFactory::request($cap, ticket: $live), $send);
             self::fail('Retired owner accepted');
-        } catch (RuntimeException) {
+        } catch (RuntimeException $error) {
+            self::assertSame('Retired simulated session', $error->getMessage());
         }
         self::assertSame(1, $sends);
         $restarted = new DeterministicWriterHost(new DurableJournal($this->path), $this->clock, static fn (): int => 0);
@@ -113,7 +117,8 @@ final class WriterHostTest extends TestCase
                 throw new RuntimeException('Should not send');
             });
             self::fail('Changed amount accepted');
-        } catch (RuntimeException) {
+        } catch (RuntimeException $error) {
+            self::assertSame('Simulated egress request differs from issued claims', $error->getMessage());
             self::assertSame(0, $sends);
         }
     }

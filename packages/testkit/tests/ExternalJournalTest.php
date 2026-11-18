@@ -73,7 +73,8 @@ final class ExternalJournalTest extends TestCase
         try {
             $oracle->capacities('root', 60, 0, 41);
             self::fail('Overcapacity accepted');
-        } catch (RuntimeException) {
+        } catch (RuntimeException $error) {
+            self::assertSame('Oracle capacity exceeded', $error->getMessage());
             self::assertSame(100, $oracle->totals('root')['authorized']);
         }
         $this->expectException(RuntimeException::class);
