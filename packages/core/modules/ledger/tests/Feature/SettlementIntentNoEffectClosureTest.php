@@ -9,8 +9,12 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Data\Runner\Receipt;
 use Billium\Core\Data\Runner\StoredOutcome;
+use Billium\Core\Data\Runtime\Caller;
+use Billium\Core\Tests\Support\ObservationFactory;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Ledger\Contracts\LedgerParticipants;
+use Billium\Ledger\Contracts\LedgerQueries;
+use Billium\Ledger\Contracts\ObservationApplier;
 use Billium\Ledger\Data\Settlements\CloseSettlementIntentNoEffect;
 use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
 use Billium\Ledger\Data\Settlements\NoEffectProof;
@@ -175,25 +179,26 @@ final class SettlementIntentNoEffectClosureTest extends LedgerTestCase
         $this->declared();
         self::assertTrue($this->close('k-close')->accepted);
         $intent = self::integer($this->value('SELECT id FROM billium_settlement_intent'));
-        $owner = $this->owner();
-        // Raw custody of a late provider fact stays possible: the observed journal is independent of the intent.
-        $observed = self::integer($this->value(<<<'SQL'
-            INSERT INTO billium_observed_payment(installation_ref,seller_ref,environment,source_authority,source_lineage,operation_ref,kind,revision,material_digest,state,currency,requested_minor,authorized_minor,captured_minor,refunded_minor,voided_minor,provider_account_ref,evidence_ref)
-            VALUES('inst-test','seller-a','test','authority-a','lineage-a','late-op','charge',1,?,'succeeded','RUB',100,100,100,0,0,'provider','evidence:late') RETURNING id
-            SQL, [self::digest('c')]));
-        $owner->insert(<<<'SQL'
-            INSERT INTO billium_observed_payment_revision(installation_ref,seller_ref,environment,observed_payment_id,revision,material_digest,state,requested_minor,authorized_minor,captured_minor,refunded_minor,voided_minor,currency,evidence_ref)
-            VALUES('inst-test','seller-a','test',?,1,?,'succeeded',100,100,100,0,0,'RUB','evidence:late')
-            SQL, [$observed, self::digest('c')]);
-        $owner->insert(<<<'SQL'
-            INSERT INTO billium_ledger_discrepancy(installation_ref,seller_ref,environment,fingerprint,comparison_basis_digest,observed_payment_id,observed_revision,expected_minor,actual_minor,hold,reason)
-            VALUES('inst-test','seller-a','test','late-after-closure',?,?,1,0,100,true,'actual_after_no_effect_closure')
-            SQL, [self::digest('d'), $observed]);
+
+        // Late provider evidence arrives through the real runtime observation seam under billium_runtime.
+        $this->callers->set(new Caller('seller-a', 'test', self::INSTALLATION, 'actor-1', ['embedded-commerz']));
+        $held = $this->application()->make(ObservationApplier::class)->apply(
+            ObservationFactory::json(ObservationFactory::charge('late-op', 1, 100)),
+        );
+        self::assertSame('hold', $held->mode());
+        self::assertSame('closed_intent_effect', self::arr($held->body['discrepancy'])['reason']);
+
+        $status = $this->application()->make(LedgerQueries::class)->paymentStatus('late-op');
+        self::assertSame('held_discrepancy', $status['projectionStatus']);
+        self::assertTrue(self::arr($status['financialHold'])['active']);
+        self::assertSame(['amount' => '0.00', 'currency' => 'RUB'], $status['spendable']);
+
         // The applied projection cannot attach the fact to the closed intent; the closure and targets stay as they are.
+        $owner = $this->owner();
         try {
             $owner->insert(<<<'SQL'
                 INSERT INTO billium_payment(installation_ref,seller_ref,environment,billing_account_ref,currency,payment_ref,source_authority,source_lineage,operation_ref,kind,captured_minor,settlement_intent_id)
-                VALUES('inst-test','seller-a','test','account-a','RUB','late-payment','authority-a','lineage-a','late-op','charge',100,?)
+                VALUES('inst-test','seller-a','test','account-a','RUB','late-payment','authority-a','lineage-a','late-op-direct','charge',100,?)
                 SQL, [$intent]);
             self::fail('closed intent cannot receive an applied payment');
         } catch (QueryException $e) {
@@ -201,10 +206,11 @@ final class SettlementIntentNoEffectClosureTest extends LedgerTestCase
             self::assertStringContainsString('billium.reference.unknown', $e->getMessage());
         }
         self::assertSame(1, $this->rows('billium_observed_payment_revision'));
-        self::assertSame(1, $this->rows('billium_ledger_discrepancy', 'hold'));
+        self::assertSame(1, $this->rows('billium_ledger_discrepancy', "hold AND reason = 'closed_intent_effect'"));
         self::assertSame('closed_no_effect', $this->value('SELECT status FROM billium_settlement_intent'));
         self::assertSame(1, $this->rows('billium_settlement_intent_closure'));
         self::assertSame(0, $this->rows('billium_allocation'));
+        self::assertNull($this->value('SELECT settlement_intent_id FROM billium_payment WHERE payment_ref = ?', ['late-op']));
         self::assertSame('55000', self::sqlState(TestEnvironment::pdo(owner: true), 'DELETE FROM billium_observed_payment'));
     }
 }

@@ -35,11 +35,11 @@ layer_lint() {
     need_tool python3
     need_path "$SPEC_REV_DIR/schema"
     python3 scripts/spec/lint.py "$SPEC_REV_DIR"
-    python3 -m unittest discover -s scripts/spec/tests -p test_workspace.py
-    python3 -m unittest discover -s scripts/spec/tests -p test_spec_tools.py
     need_path scripts/spec/lint-vectors.py
-    python3 -m unittest discover -s scripts/spec/tests -p test_lint_vectors.py
+    need_path scripts/spec/check-module-compatibility.py
+    python3 -m unittest discover -s scripts/spec/tests -p 'test_*.py'
     python3 scripts/spec/lint-vectors.py
+    python3 scripts/spec/check-module-compatibility.py --check
     python3 -m unittest discover -s scripts/lint/tests -p 'test_migrations.py'
     python3 scripts/lint/migrations.py
     python3 -m unittest discover -s scripts/lint/tests -p 'test_acceptance_groups.py'

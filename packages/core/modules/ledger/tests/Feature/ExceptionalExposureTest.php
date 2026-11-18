@@ -6,8 +6,12 @@ namespace Billium\Ledger\Tests\Feature;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\Receipt;
 use Billium\Core\Tests\Support\ObservationFactory;
+use Billium\Ledger\Contracts\LedgerParticipants;
 use Billium\Ledger\Contracts\LedgerQueries;
+use Billium\Ledger\Data\Settlements\CloseSettlementIntentNoEffect;
+use Billium\Ledger\Data\Settlements\NoEffectProof;
 use Billium\Ledger\Internal\Observation\EconomicDigest;
 use Billium\Ledger\Internal\Observation\ObservationHandler;
 use Billium\Ledger\Tests\Observation\ObservationTestCase;
@@ -561,7 +565,22 @@ final class ExceptionalExposureTest extends ObservationTestCase
         $this->debt('o1', 1000);
         $this->intent('intent-a', ['o1']);
         $intent = self::integer($this->value("SELECT id FROM billium_settlement_intent WHERE business_intent_ref = 'intent-a'"));
-        $this->owner()->update("UPDATE billium_settlement_intent SET status = 'closed_no_effect', revision = revision + 1 WHERE id = ?", [$intent]);
+        $closed = $this->runner()->run($this->spec(key: 'k-close'), function (TransactionContext $context): Receipt {
+            return $this->application()->make(LedgerParticipants::class)->closeSettlementIntentNoEffect(
+                $context,
+                new CloseSettlementIntentNoEffect(
+                    $this->account(),
+                    'intent-a',
+                    1,
+                    'step-1',
+                    'closure-a',
+                    'RUB',
+                    'cancelled',
+                    new NoEffectProof($context->rootRef(), 'intent-a', 1, 'step-1', 'not_dispatched', 'evidence:no-dispatch', false, 'none'),
+                ),
+            );
+        });
+        self::assertTrue($closed->accepted);
 
         $held = $this->observe(ObservationFactory::charge('op-1', 1, 1000));
 

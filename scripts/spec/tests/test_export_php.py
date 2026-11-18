@@ -54,7 +54,7 @@ class ExportPhpTest(unittest.TestCase):
         self.assertIn("resources/currencies.php", files)
         self.assertIn("src/Enums/ProblemCode.php", files)
         envelopes = [name for name in files if name.startswith("src/Data/Envelopes/")]
-        self.assertEqual(len(envelopes), 35)
+        self.assertEqual(len(envelopes), 41)
         self.assertIn("src/Data/Envelopes/MetricVersion.php", envelopes)
         self.assertIn("src/Data/Envelopes/RatedBasis.php", envelopes)
         registry = json.loads(files["resources/spec/envelopes.json"])

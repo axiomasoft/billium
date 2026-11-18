@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from export_common import DEFAULT_REVISION, ROOT, ExportError, Revision
+from export_common import DEFAULT_REVISION, ExportError, Revision
 
 
 class EventCatalogTest(unittest.TestCase):
@@ -17,10 +17,9 @@ class EventCatalogTest(unittest.TestCase):
         self.assertIn("billium.feed.page.v1", names)
 
     def test_changed_payload_digest_or_type_set_refuses_export(self):
-        (ROOT / ".phpunit.cache").mkdir(exist_ok=True)
         for member, value in [("payloadSchemaDigest", "sha256:" + "0" * 64),
                               ("eventType", "payment.other.v1")]:
-            with self.subTest(member=member), tempfile.TemporaryDirectory(dir=ROOT / ".phpunit.cache") as temporary:
+            with self.subTest(member=member), tempfile.TemporaryDirectory(prefix="billium-event-catalogs-") as temporary:
                 revision = Path(temporary) / DEFAULT_REVISION.name
                 shutil.copytree(DEFAULT_REVISION, revision)
                 path = revision / "event-catalogs/events-2026-10-v2.json"
