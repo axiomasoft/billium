@@ -13,6 +13,7 @@ use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Data\Runtime\FinancialScope;
 use Billium\Core\Enums\Runtime\FinancialMode;
+use Billium\Execution\Data\AttemptRecord;
 use Billium\Execution\Data\ExecutionScope;
 use Billium\Execution\Data\OperationRecord;
 use Illuminate\Database\Connection;
@@ -169,6 +170,13 @@ final class ExecutionTables
         $row = $this->query('operation', $scope, $context)->where('operation_ref', $operationRef)->first();
 
         return $row === null ? null : ExecutionRecords::operation($row);
+    }
+
+    public function attempt(ExecutionScope $scope, string $attemptRef, ?TransactionContext $context = null): ?AttemptRecord
+    {
+        $row = $this->query('attempt', $scope, $context)->where('attempt_ref', $attemptRef)->first();
+
+        return $row === null ? null : ExecutionRecords::attempt($row);
     }
 
     public function admittedOperation(TransactionContext $context, string $operationRef): OperationRecord

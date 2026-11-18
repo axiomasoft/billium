@@ -64,6 +64,8 @@ final class DatabaseExecutionStore implements ExecutionStore
 
     private readonly ExecutionTables $tables;
 
+    private readonly ProviderCustodyStorage $custody;
+
     private readonly CapacityStorage $capacities;
 
     private readonly RecoveryRecordStorage $recoveryRecords;
@@ -76,6 +78,7 @@ final class DatabaseExecutionStore implements ExecutionStore
     public function __construct(DatabaseManager $databases, OperationRunner $runner, CallerContext $callers, BilliumOptions $options, private readonly FinancialSessionAdmission $sessionAdmission, private readonly ?AbsenceProofRegistry $absenceProofs = null, private readonly ?Closure $identityArchive = null, private readonly ?VerifiedReduction $verifiedReduction = null)
     {
         $this->tables = new ExecutionTables($databases, $runner, $callers, $options);
+        $this->custody = new ProviderCustodyStorage($this->tables);
         $this->capacities = new CapacityStorage($this->tables);
         $this->recoveryRecords = new RecoveryRecordStorage($this->tables);
         $this->observations = new ObservationStorage($this->tables);
@@ -481,9 +484,7 @@ final class DatabaseExecutionStore implements ExecutionStore
 
     public function attempt(ExecutionScope $executionScope, string $attemptRef, ?TransactionContext $context = null): ?AttemptRecord
     {
-        $r = $this->tables->query('attempt', $executionScope, $context)->where('attempt_ref', $attemptRef)->first();
-
-        return $r === null ? null : ExecutionRecords::attempt($r);
+        return $this->tables->attempt($executionScope, $attemptRef, $context);
     }
 
     public function insertAttempt(TransactionContext $transactionContext, OperationRecord $operationRecord, string $attemptRef, string $providerReference): AttemptRecord
