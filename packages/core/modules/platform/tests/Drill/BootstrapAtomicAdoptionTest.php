@@ -504,20 +504,43 @@ final class BootstrapAtomicAdoptionTest extends InboxTestCase
         self::assertSame('ready', $this->bootstrapState($session)->status);
     }
 
-    private function snapshot(int $cursor, string $ref = 'bs-1'): BootstrapPartition
+    public function test_the_next_staged_item_comes_from_its_session_staged_index_in_manifest_order(): void
+    {
+        $this->stage($this->snapshot(cursor: 10, ref: 'bs-0', count: 1500, partition: 'part-0'));
+        $session = $this->stage($this->snapshot(cursor: 20));
+        $this->owner()->statement('ANALYZE billium_feed_bootstrap_item');
+        $statement = null;
+        $this->application()->make(Dispatcher::class)->listen(QueryExecuted::class, static function (QueryExecuted $query) use (&$statement): void {
+            if (str_contains($query->sql, "state = 'staged' ORDER BY id")) {
+                $statement = $query;
+            }
+        });
+
+        self::assertSame(2, $this->applyNext($session, new JournalHandler));
+
+        self::assertInstanceOf(QueryExecuted::class, $statement);
+        $explain = $this->owner()->selectOne('EXPLAIN (FORMAT JSON) '.$statement->sql, $statement->bindings);
+        self::assertInstanceOf(stdClass::class, $explain);
+        $plan = $explain->{'QUERY PLAN'};
+        self::assertIsString($plan);
+        self::assertStringContainsString('"Index Name": "billium_feed_bootstrap_item_staged"', $plan);
+        self::assertStringNotContainsString('"Node Type": "Sort"', $plan, 'staged items must come out of the index in manifest order: '.$plan);
+    }
+
+    private function snapshot(int $cursor, string $ref = 'bs-1', int $count = 3, string $partition = 'part-1'): BootstrapPartition
     {
         $items = [];
-        foreach (['op-1', 'op-2', 'op-3'] as $operation) {
+        foreach (array_map(static fn (int $n): string => 'op-'.$n, range(1, $count)) as $operation) {
             $items[] = new BootstrapItem($operation, 1, 'sha256:'.hash('sha256', $operation), (object) [
                 'installationRef' => self::INSTALLATION, 'sourceAuthority' => self::AUTHORITY, 'sourceLineage' => 'L2',
-                'sellerRef' => 'seller-a', 'environment' => 'test', 'partitionRef' => 'part-1',
+                'sellerRef' => 'seller-a', 'environment' => 'test', 'partitionRef' => $partition,
                 'operationRef' => $operation, 'operationRevision' => 1, 'capturedTotal' => '10.00',
             ]);
         }
 
-        return new BootstrapPartition($ref, 'payment.observation', self::AUTHORITY, 'L2', 'seller-a', 'test', 'part-1', $cursor,
+        return new BootstrapPartition($ref, 'payment.observation', self::AUTHORITY, 'L2', 'seller-a', 'test', $partition, $cursor,
             BootstrapPartition::digestOf($cursor, $items, ['channel' => 'payment.observation', 'sourceAuthority' => self::AUTHORITY,
-                'sourceLineage' => 'L2', 'sellerRef' => 'seller-a', 'environment' => 'test', 'partitionRef' => 'part-1']), 'lease-1', count($items), $items);
+                'sourceLineage' => 'L2', 'sellerRef' => 'seller-a', 'environment' => 'test', 'partitionRef' => $partition]), 'lease-1', count($items), $items);
     }
 
     private function stage(BootstrapPartition $snapshot): int

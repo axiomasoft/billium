@@ -4930,6 +4930,13 @@
       "source": "packages/core/database/migrations/platform/2026_11_18_040002_index_billium_open_outbox_deliveries.php"
     },
     {
+      "kind": "migration",
+      "id": "2026_11_18_040003_index_billium_staged_bootstrap_items",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/platform/2026_11_18_040003_index_billium_staged_bootstrap_items.php"
+    },
+    {
       "kind": "doctor-finding",
       "id": "module.composition_forbidden",
       "status": "new",
