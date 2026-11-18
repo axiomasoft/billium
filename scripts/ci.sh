@@ -44,6 +44,7 @@ layer_lint() {
     python3 scripts/lint/migrations.py
     python3 -m unittest discover -s scripts/lint/tests -p 'test_acceptance_groups.py'
     python3 scripts/lint/acceptance-groups.py --phase P3
+    python3 scripts/lint/acceptance-groups.py --phase P5
     python3 -m unittest discover -s scripts/lint/tests -p 'test_product_identities.py'
 }
 

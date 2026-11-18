@@ -24,6 +24,7 @@ use Billium\Execution\Internal\Storage\ExecutionCodec;
 use Billium\Ledger\Contracts\ObservationCheckpointQueries;
 use Billium\Platform\Contracts\Idempotency\IdempotencyReceiptQueries;
 use Illuminate\Database\Connection;
+use Illuminate\Database\Query\Builder;
 use LogicException;
 use Packman\Attributes\Internal;
 use stdClass;
@@ -111,14 +112,15 @@ final readonly class DatabaseExecutionQueries implements ExecutionQueries
                 $amount('held_capture_minor'), $amount('held_void_minor'), $amount('held_refund_minor'), $capacity->financial_hold === true);
             $attempt = $this->store->attemptForOperation($scope, $operationRef);
             $revision = ExecutionReads::table($db, 'operation_revision', $scope)->where('operation_ref', $operationRef)
-                ->where('revision', $operation->revision)->first(['observed', 'receipt_ref']);
+                ->where('revision', $operation->revision)->first(['observed', 'receipt_ref', 'exposure->discrepancyRef as discrepancy_ref']);
             $observed = $revision === null ? [] : ExecutionCodec::map(ExecutionCodec::text($revision->observed));
             $absence = ($observed['schema'] ?? null) === 'billium.execution.certified-no-effect.v1' && $attempt !== null
                 ? self::certificate($db, $operation, $attempt) : null;
 
             return new ExecutionView($operation, $snapshot, self::wireStatus($operation, $attempt),
                 array_key_exists('normalizedStatus', $observed) || $absence !== null, $absence,
-                $revision === null ? [] : self::observations($db, $operation, ExecutionCodec::text($revision->receipt_ref), $observed));
+                $revision === null ? [] : self::observations($db, $operation, ExecutionCodec::text($revision->receipt_ref), $observed,
+                    is_string($revision->discrepancy_ref) ? $revision->discrepancy_ref : null));
         });
     }
 
@@ -126,7 +128,7 @@ final readonly class DatabaseExecutionQueries implements ExecutionQueries
      * @param  array<string, mixed>  $observed
      * @return array<string, PaymentObservation>
      */
-    private static function observations(Connection $db, OperationRecord $operation, string $revisionReceipt, array $observed): array
+    private static function observations(Connection $db, OperationRecord $operation, string $revisionReceipt, array $observed, ?string $discrepancyRef): array
     {
         $scope = $operation->binding->scope;
         $observations = [];
@@ -134,10 +136,14 @@ final readonly class DatabaseExecutionQueries implements ExecutionQueries
         $refs = [[$operation->operationRef, $operation->revision]];
         $materialDigest = $observed['materialDigest'] ?? null;
         if ($operation->operationRef !== $operation->rootOperationRef && is_string($materialDigest)) {
-            // A child's ledger projection is the root observation produced by the same factual reduction.
+            // Held late children share the work receipt and discrepancy with the root even when it retains its earlier snapshot.
             $rootRevision = ExecutionReads::table($db, 'operation_revision', $scope)->where('operation_ref', $operation->rootOperationRef)
-                ->where('receipt_ref', $revisionReceipt)->where('observed->operationRef', $operation->operationRef)
-                ->where('observed->materialDigest', $materialDigest)->orderByDesc('revision')->value('revision');
+                ->where('receipt_ref', $revisionReceipt)->where(function (Builder $match) use ($operation, $materialDigest, $discrepancyRef): void {
+                    $match->where(['observed->operationRef' => $operation->operationRef, 'observed->materialDigest' => $materialDigest]);
+                    if ($discrepancyRef !== null) {
+                        $match->orWhere('exposure->discrepancyRef', $discrepancyRef);
+                    }
+                })->orderByDesc('revision')->value('revision');
             if ($rootRevision !== null) {
                 array_unshift($refs, [$operation->rootOperationRef, self::integer($rootRevision)]);
             }

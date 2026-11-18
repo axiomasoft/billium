@@ -28,7 +28,9 @@ use Billium\Ledger\Data\Runtime\BillingAccountScope;
 use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
 use Billium\Platform\Contracts\Outbox\FactualCommandOutbox;
 use Billium\Platform\Data\EventContracts\PreparedFactualCommand;
+use Illuminate\Foundation\Application;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\TestWith;
 use RuntimeException;
 
 #[Group('pg')]
@@ -214,5 +216,101 @@ final class ConflictHoldHandoffTest extends ExecutionTestCase
         } finally {
             UnknownResultTest::clean($path);
         }
+    }
+
+    #[TestWith([true])]
+    #[TestWith([false])]
+    public function test_contradictory_terminal_child_revisions_hold_the_root_in_both_delivery_orders(bool $olderFirst): void
+    {
+        $app = $this->application();
+        $path = Fixture::tempPath();
+        try {
+            $this->declareIntent($app);
+            $initial = AuthorizationLifecycleTest::authorize($app, $path);
+            Delivery::attest($app, $path, $initial->observationCommandRefs[0]);
+            self::assertSame(1, Delivery::relay($app, $path)->delivered);
+            $commands = $app->make(AuthorizationCommands::class);
+            $commands->admit(Fixture::scope(), AuthorizationLifecycleTest::child('cap-base', 60))->orThrow();
+            $base = AuthorizationLifecycleTest::dispatchAndReduce($app, 'cap-base');
+            Delivery::attest($app, $path, $base->observationCommandRefs[0]);
+            self::assertSame(1, Delivery::relay($app, $path)->delivered);
+            $commands->admit(Fixture::scope(), AuthorizationLifecycleTest::child('cap-flip', 20))->orThrow();
+            AuthorizationLifecycleTest::dispatch($app, 'cap-flip');
+            $child = AuthorizationLifecycleTest::evidence($app, 'cap-flip');
+            $captured = Money::parse('0.60', 'RUB')->toWire();
+            $positive = CallbackCustodyTest::signed($child, ['revision' => '19', 'captured' => $captured, 'operationAmount' => Money::parse('0.30', 'RUB')->toWire()]);
+            $decline = CallbackCustodyTest::signed($child, ['revision' => '20', 'captured' => $captured, 'status' => 'declined', 'operationAmount' => Money::parse('0.00', 'RUB')->toWire()]);
+            $seen = AuthorizationLifecycleTest::receive($app, 'cap-flip', $olderFirst ? $positive : $decline);
+            if ($olderFirst) {
+                self::assertSame(ReductionDisposition::HeldDiscrepancy, $seen->disposition);
+                Delivery::attest($app, $path, $seen->observationCommandRefs[0]);
+                self::assertSame(1, Delivery::relay($app, $path)->delivered);
+            } else {
+                self::assertSame(ReductionDisposition::Applied, $seen->disposition);
+                self::assertSame(1, $this->rows('billium_execution_reservation', "operation_ref='cap-flip' AND state='released'"));
+            }
+
+            $conflict = AuthorizationLifecycleTest::receive($app, 'cap-flip', $olderFirst ? $decline : $positive);
+            self::assertSame(ReductionDisposition::Quarantined, $conflict->disposition);
+            self::assertCount(1, $conflict->observationCommandRefs);
+            self::assertSame(1, $this->rows('billium_execution_discrepancy', "operation_ref='cap-flip' AND exposure->>'reason'='terminal_status_conflict'"));
+            self::assertSame(1, $this->rows('billium_execution_capacity', 'financial_hold AND confirmed_capture_minor=60'));
+            Delivery::attest($app, $path, $conflict->observationCommandRefs[0]);
+            self::assertSame(1, Delivery::relay($app, $path)->delivered);
+            self::assertSame(1, $this->rows('billium_payment', "operation_ref='root-a' AND financial_hold AND captured_minor=60"));
+            self::assertSame('0.00', self::arr($app->make(LedgerQueries::class)->paymentStatus('root-a', 'remote-billium')['spendable'])['amount']);
+        } finally {
+            UnknownResultTest::clean($path);
+            if (is_file($path.'.origins')) {
+                unlink($path.'.origins');
+            }
+        }
+    }
+
+    #[TestWith(['pending', true])]
+    #[TestWith(['pending', false])]
+    #[TestWith(['unknown', true])]
+    #[TestWith(['unknown', false])]
+    public function test_later_nonterminal_root_status_conflicts_with_success_even_at_equal_totals(string $status, bool $olderFirst): void
+    {
+        $app = $this->application();
+        $path = Fixture::tempPath();
+        try {
+            $this->declareIntent($app);
+            $first = CallbackCustodyTest::dispatched($app, $path);
+            $positive = CallbackCustodyTest::signed($first, ['revision' => '19']);
+            $provisional = CallbackCustodyTest::signed($first, ['revision' => '20', 'status' => $status, 'operationAmount' => null]);
+            $seen = AuthorizationLifecycleTest::receive($app, 'root-a', $olderFirst ? $positive : $provisional);
+            self::assertSame(ReductionDisposition::Applied, $seen->disposition);
+            foreach ($seen->observationCommandRefs as $command) {
+                Delivery::attest($app, $path, $command);
+                self::assertSame(1, Delivery::relay($app, $path)->delivered);
+            }
+            $conflict = AuthorizationLifecycleTest::receive($app, 'root-a', $olderFirst ? $provisional : $positive);
+            self::assertSame(ReductionDisposition::Quarantined, $conflict->disposition);
+            self::assertCount(1, $conflict->observationCommandRefs);
+            $expectedCapture = $olderFirst ? 100 : 0;
+            self::assertSame(1, $this->rows('billium_execution_discrepancy', "operation_ref='root-a' AND exposure->>'reason'='terminal_status_conflict'"));
+            self::assertSame(1, $this->rows('billium_execution_capacity', 'financial_hold AND confirmed_capture_minor=?', [$expectedCapture]));
+            Delivery::attest($app, $path, $conflict->observationCommandRefs[0]);
+            self::assertSame(1, Delivery::relay($app, $path)->delivered);
+            self::assertSame('0.00', self::arr($app->make(LedgerQueries::class)->paymentStatus('root-a', 'remote-billium')['spendable'])['amount']);
+        } finally {
+            UnknownResultTest::clean($path);
+            if (is_file($path.'.origins')) {
+                unlink($path.'.origins');
+            }
+        }
+    }
+
+    private function declareIntent(Application $app): void
+    {
+        $ledger = $app->make(LedgerParticipants::class);
+        $account = new BillingAccountScope('seller-a', 'test', 'billing-a');
+        $spec = $this->spec(financialScope: new FinancialScope(self::INSTALLATION, 'seller-a', 'test', 'source-a', 'remote-billium'));
+        $this->runner()->run($spec, static fn (TransactionContext $ctx) => $ledger->recordObligation($ctx, new RecordObligation('debt', $account,
+            'debt', 'basis', 'buyer', 'component', Money::parse('0.10', 'RUB'), 'sha256:'.str_repeat('a', 64))))->orThrow();
+        $this->runner()->run($spec, static fn (TransactionContext $ctx) => $ledger->declareSettlementIntent($ctx,
+            new DeclareSettlementIntent('intent-command', $account, 'intent-a', 'RUB', ['debt'])))->orThrow();
     }
 }

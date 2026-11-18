@@ -62,24 +62,38 @@ final class MaterialRules
         return null;
     }
 
-    /** Classify cumulative observations without considering transport arrival time or receipt identity. */
-    public static function order(MaterialSnapshot $next, ?MaterialSnapshot $prior, ?MaterialSnapshot $frontier): ?string
+    /** Classify revisions of the same operation independently of transport delivery order. */
+    public static function operationOrder(MaterialSnapshot $next, ?MaterialSnapshot $prior): ?string
     {
-        if ($prior !== null) {
-            $order = self::compareRevision($next->providerRevision, $prior->providerRevision);
-            if ($order === 0 && self::digest($next) !== self::digest($prior)) {
-                return 'provider_revision_conflict';
+        if ($prior === null) {
+            return null;
+        }
+        $order = self::compareRevision($next->providerRevision, $prior->providerRevision);
+        if ($order === -1) {
+            if (! self::lessOrEqual($next, $prior)) {
+                return 'older_revision_increases_totals';
             }
-            if ($order === -1) {
-                return self::lessOrEqual($next, $prior) ? 'stale' : 'older_revision_increases_totals';
-            }
-            if (self::digest($next) === self::digest($prior)) {
-                return 'duplicate';
-            }
-            if ((self::state($prior) === 'succeeded' && self::state($next) !== 'succeeded') || (self::state($prior) === 'failed' && in_array(self::state($next), ['pending', 'unknown'], true))) {
+            if (self::terminalRegression($next, $prior) || (self::state($next) === 'failed' && self::state($prior) === 'succeeded')) {
                 return 'terminal_status_conflict';
             }
+
+            return 'stale';
         }
+        if (self::digest($next) === self::digest($prior)) {
+            return 'duplicate';
+        }
+        if ($order === 0) {
+            return 'provider_revision_conflict';
+        }
+        if (self::terminalRegression($prior, $next)) {
+            return 'terminal_status_conflict';
+        }
+
+        return null;
+    }
+
+    public static function cumulativeOrder(MaterialSnapshot $next, ?MaterialSnapshot $frontier): ?string
+    {
         if ($frontier === null) {
             return null;
         }
@@ -95,6 +109,15 @@ final class MaterialRules
         }
 
         return null;
+    }
+
+    private static function terminalRegression(MaterialSnapshot $older, MaterialSnapshot $newer): bool
+    {
+        $before = self::state($older);
+        $after = self::state($newer);
+
+        return ($before === 'succeeded' && $after !== 'succeeded')
+            || ($before === 'failed' && in_array($after, ['pending', 'unknown'], true));
     }
 
     private static function compareRevision(?string $next, ?string $prior): ?int

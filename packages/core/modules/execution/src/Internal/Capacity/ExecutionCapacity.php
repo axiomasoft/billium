@@ -84,7 +84,7 @@ final readonly class ExecutionCapacity implements CapacityParticipants
         $operation = $this->store->operation($selection, $reservation->operationRef, $transactionContext) ?? throw new LogicException('Missing original child');
         $root = $this->store->operation($selection, $reservation->rootOperationRef, $transactionContext) ?? throw new LogicException('Missing original root');
         $frontier = $this->store->latestRootObservation($transactionContext, $reservation->rootOperationRef);
-        $order = MaterialRules::order($materialSnapshot, null, $frontier);
+        $order = MaterialRules::cumulativeOrder($materialSnapshot, $frontier);
         if ($order !== null && $order !== 'stale') {
             throw new ProblemException(ProblemCode::RecoveryRequired, 'Inconsistent provider cumulative frontier');
         }

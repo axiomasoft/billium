@@ -7,12 +7,14 @@ namespace Billium\Execution\Tests\Feature;
 use Billium\Contracts\Data\Currency;
 use Billium\Contracts\Data\Envelopes\PaymentObservation;
 use Billium\Contracts\Data\Money;
+use Billium\Contracts\Enums\ProblemCode;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Data\Runtime\FinancialScope;
 use Billium\Core\Tests\ExecutionTestCase;
 use Billium\Execution\Contracts\AuthorizationCommands;
 use Billium\Execution\Contracts\CallbackCustody;
 use Billium\Execution\Contracts\EvidenceReducer;
+use Billium\Execution\Contracts\ExecutionQueries;
 use Billium\Execution\Contracts\RefundCommands;
 use Billium\Execution\Data\ProviderEvidence;
 use Billium\Execution\Data\ReductionResult;
@@ -21,8 +23,11 @@ use Billium\Execution\Tests\Concurrency\AdmissionIdentityTest as Fixture;
 use Billium\Execution\Tests\Concurrency\OutcomeDeliveryTest as Delivery;
 use Billium\Execution\Tests\Concurrency\RefundCapacityTest;
 use Billium\Execution\Tests\Drill\UnknownResultTest;
+use Billium\Ledger\Contracts\Ledger;
 use Billium\Ledger\Contracts\LedgerParticipants;
 use Billium\Ledger\Contracts\LedgerQueries;
+use Billium\Ledger\Data\Allocations\Allocate;
+use Billium\Ledger\Data\Obligations\AdjustObligation;
 use Billium\Ledger\Data\Obligations\RecordObligation;
 use Billium\Ledger\Data\Runtime\BillingAccountScope;
 use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
@@ -52,10 +57,7 @@ final class LateChildHoldHandoffTest extends ExecutionTestCase
         $path = Fixture::tempPath();
         try {
             $account = new BillingAccountScope('seller-a', 'test', 'billing-a');
-            $ledger = $app->make(LedgerParticipants::class);
-            $spec = $this->spec(financialScope: new FinancialScope(self::INSTALLATION, 'seller-a', 'test', 'source-a', 'remote-billium'));
-            $this->runner()->run($spec, static fn (TransactionContext $ctx) => $ledger->recordObligation($ctx, new RecordObligation('debt', $account, 'debt', 'basis', 'buyer', 'component', Money::parse('0.10', 'RUB'), 'sha256:'.str_repeat('a', 64))))->orThrow();
-            $this->runner()->run($spec, static fn (TransactionContext $ctx) => $ledger->declareSettlementIntent($ctx, new DeclareSettlementIntent('intent-command', $account, 'intent-a', 'RUB', ['debt'])))->orThrow();
+            $this->declareIntent($app, $account);
             $refund = $kind === 'refund';
             $void = $kind === 'void_authorization';
             $ref = 'late-child';
@@ -149,7 +151,20 @@ final class LateChildHoldHandoffTest extends ExecutionTestCase
             }
             self::assertCount($refund ? 2 : 1, $result->observationCommandRefs);
             self::assertCount($refund ? 0 : 1, $result->publicEventIds);
+            $execution = $app->make(ExecutionQueries::class);
+            $before = $execution->status($scope, $ref)->delivery;
+            self::assertSame($result->observationCommandRefs, $before->observationCommandRefs);
+            self::assertFalse($before->projectionApplied);
+            if ($refund) {
+                $detail = $result->observationCommandRefs[1];
+                Delivery::attest($app, $path, $detail);
+                AuthorizationLifecycleTest::refuses(ProblemCode::ObservationParked, static fn () => Delivery::duplicateDelivery($app, $detail));
+                self::assertFalse($execution->status($scope, $ref)->delivery->projectionApplied);
+            }
             $messages = $this->deliver($app, $path, $result);
+            $after = $execution->status($scope, $ref)->delivery;
+            self::assertSame($result->observationCommandRefs, $after->observationCommandRefs);
+            self::assertTrue($after->projectionApplied);
             $root = $messages[0];
             self::assertSame('root-a', $root->operationRef);
             self::assertSame($prior->state, $root->state);
@@ -188,6 +203,83 @@ final class LateChildHoldHandoffTest extends ExecutionTestCase
                 unlink($path.'.origins');
             }
         }
+    }
+
+    #[TestWith(['declined'])]
+    #[TestWith(['succeeded'])]
+    #[TestWith(['pending'])]
+    #[TestWith(['unknown'])]
+    public function test_journal_only_sibling_revision_never_discards_a_late_child_effect(string $siblingStatus): void
+    {
+        $app = $this->application();
+        $scope = Fixture::scope();
+        $path = Fixture::tempPath();
+        $account = new BillingAccountScope('seller-a', 'test', 'billing-a');
+        $provisional = in_array($siblingStatus, ['pending', 'unknown'], true);
+        try {
+            $this->declareIntent($app, $account);
+            $this->deliver($app, $path, AuthorizationLifecycleTest::authorize($app, $path));
+            $children = $app->make(AuthorizationCommands::class);
+            if (! $provisional) {
+                $children->admit($scope, AuthorizationLifecycleTest::child('cap-base', 60))->orThrow();
+                $this->deliver($app, $path, AuthorizationLifecycleTest::dispatchAndReduce($app, 'cap-base'));
+            }
+            $base = $siblingStatus === 'succeeded' ? 'cap-base' : 'other-child';
+            if ($base === 'other-child') {
+                $children->admit($scope, AuthorizationLifecycleTest::child($base, 10))->orThrow();
+                AuthorizationLifecycleTest::dispatch($app, $base);
+            }
+            $children->admit($scope, AuthorizationLifecycleTest::child('late-child', 20))->orThrow();
+            AuthorizationLifecycleTest::dispatch($app, 'late-child');
+            $sibling = CallbackCustodyTest::signed(AuthorizationLifecycleTest::evidence($app, $base), [
+                'revision' => '20', 'status' => $siblingStatus, 'captured' => self::wire($provisional ? 20 : 60),
+                'operationAmount' => $provisional ? null : self::wire($base === 'cap-base' ? 60 : 0),
+            ]);
+            $journalOnly = AuthorizationLifecycleTest::receive($app, $base, $sibling);
+            self::assertSame($base === 'cap-base' ? ReductionDisposition::Duplicate : ReductionDisposition::Applied, $journalOnly->disposition);
+            self::assertSame([], $journalOnly->observationCommandRefs);
+            self::assertSame(1, $this->rows('billium_execution_provider_fact', "operation_ref=? AND normalized_snapshot->>'providerRevision'='20'", [$base]));
+            self::assertSame(0, $this->rows('billium_execution_operation_revision', "operation_ref='root-a' AND observed->>'providerRevision'='20'"));
+
+            $older = CallbackCustodyTest::signed(AuthorizationLifecycleTest::evidence($app, 'late-child'), [
+                'revision' => '19', 'captured' => self::wire($provisional ? 20 : 60),
+                'operationAmount' => self::wire($provisional ? 20 : 30),
+            ]);
+            $late = AuthorizationLifecycleTest::receive($app, 'late-child', $older);
+            self::assertCount(1, $late->observationCommandRefs);
+            self::assertCount(1, $late->publicEventIds);
+            $this->deliver($app, $path, $late);
+            if ($provisional) {
+                self::assertSame(ReductionDisposition::Applied, $late->disposition);
+                self::assertSame(1, $this->rows('billium_execution_capacity', 'NOT financial_hold AND confirmed_capture_minor=20 AND held_capture_minor=10'));
+                self::assertSame(1, $this->rows('billium_execution_reservation', "operation_ref='late-child' AND state='consumed' AND consumed_minor=20"));
+                self::assertSame(1, $this->rows('billium_execution_reservation', "operation_ref='other-child' AND state='held'"));
+                self::assertSame(1, $this->rows('billium_payment', "operation_ref='root-a' AND captured_minor=20 AND NOT financial_hold"));
+            } else {
+                self::assertSame(ReductionDisposition::HeldDiscrepancy, $late->disposition);
+                self::assertSame(1, $this->rows('billium_execution_discrepancy', "operation_ref='late-child' AND exposure->>'reason'='operation_amount_exceeds_request'"));
+                self::assertSame(1, $this->rows('billium_execution_capacity', 'financial_hold AND confirmed_capture_minor=60 AND held_capture_minor=20'));
+                self::assertSame(1, $this->rows('billium_payment', "operation_ref='root-a' AND captured_minor=60 AND financial_hold"));
+                $ledger = $app->make(Ledger::class);
+                $ledger->adjustObligation(new AdjustObligation('adjust', $account, 'late-usage', 'debt', Money::parse('0.60', 'RUB'), 'additional-usage'))->orThrow();
+                $allocation = $ledger->allocate(new Allocate('after', $account, 'after', 'debt', Money::parse('0.10', 'RUB'), paymentRef: 'root-a'));
+                self::assertSame(ProblemCode::AllocationReallocationRequired, $allocation->problem);
+            }
+            self::assertSame(ReductionDisposition::Duplicate, AuthorizationLifecycleTest::receive($app, 'late-child', $older)->disposition);
+        } finally {
+            UnknownResultTest::clean($path);
+            if (is_file($path.'.origins')) {
+                unlink($path.'.origins');
+            }
+        }
+    }
+
+    private function declareIntent(Application $app, BillingAccountScope $account): void
+    {
+        $ledger = $app->make(LedgerParticipants::class);
+        $spec = $this->spec(financialScope: new FinancialScope(self::INSTALLATION, 'seller-a', 'test', 'source-a', 'remote-billium'));
+        $this->runner()->run($spec, static fn (TransactionContext $ctx) => $ledger->recordObligation($ctx, new RecordObligation('debt', $account, 'debt', 'basis', 'buyer', 'component', Money::parse('0.10', 'RUB'), 'sha256:'.str_repeat('a', 64))))->orThrow();
+        $this->runner()->run($spec, static fn (TransactionContext $ctx) => $ledger->declareSettlementIntent($ctx, new DeclareSettlementIntent('intent-command', $account, 'intent-a', 'RUB', ['debt'])))->orThrow();
     }
 
     /** @return list<PaymentObservation> */

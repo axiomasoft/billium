@@ -53,15 +53,18 @@ final readonly class ReduceMaterial
             }
         }
         $orderingFrontier = $this->store->rootOrderingFrontier($ctx, $root->operationRef, $s);
-        $order = MaterialRules::order($s, $prior, $frontier);
-        $journalOrder = MaterialRules::order($s, null, $orderingFrontier);
+        $operationOrder = MaterialRules::operationOrder($s, $prior);
+        $rootOrder = MaterialRules::cumulativeOrder($s, $frontier);
+        $order = $operationOrder ?? $rootOrder;
+        $journalOrder = MaterialRules::cumulativeOrder($s, $orderingFrontier);
         if ($journalOrder !== null && in_array($order, [null, 'duplicate', 'stale'], true)) {
             $order = $journalOrder;
         }
-        // A late child's separate effect can settle once only when an already applied root snapshot covers its totals.
-        $olderRoot = $order === 'stale' && $op->operationRef !== $root->operationRef && MaterialRules::order($s, $prior, null) === null
-            && MaterialRules::order($s, null, $frontier) === 'stale';
-        if ($olderRoot) {
+        // A newer sibling fact orders cumulative evidence but cannot settle this child's reservation.
+        $lateChild = $order === 'stale' && $operationOrder === null && $op->operationRef !== $root->operationRef
+            && in_array(MaterialRules::state($s), ['succeeded', 'failed'], true);
+        $olderRoot = $lateChild && $rootOrder === 'stale';
+        if ($lateChild) {
             $order = null;
         }
         if ($invalid !== null || ($order !== null && ! in_array($order, ['duplicate', 'stale'], true))) {
@@ -88,6 +91,10 @@ final readonly class ReduceMaterial
             return $this->conflict($ctx, $op, $claim, $s, 'provider_revision_conflict');
         }
         if ($order === 'stale') {
+            if ($existing === null && $s->operationAmount !== null && $s->operationAmount->minor > $op->requested->minor) {
+                return $this->conflict($ctx, $op, $claim, $s, 'operation_amount_exceeds_request');
+            }
+
             return new ReductionResult(ReductionDisposition::Stale, $op->operationRef, $op->revision, [$claim->evidenceRef], [], [], null);
         }
         if ($stable && MaterialRules::state($s) === 'succeeded') {
