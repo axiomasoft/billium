@@ -112,13 +112,24 @@ abstract class DatabaseTestCase extends TestCase
                 has_rows boolean;
                 non_empty_tables text[] := ARRAY[]::text[];
             BEGIN
-                FOR r IN SELECT tablename FROM pg_tables
-                    WHERE schemaname = 'public'
-                      AND starts_with(tablename, 'billium_')
-                      AND tablename <> 'billium_event_contract'
-                    ORDER BY tablename
+                -- An empty table still needs RESTART IDENTITY when a rolled-back insert advanced its identity.
+                FOR r IN SELECT t.tablename, EXISTS (
+                        SELECT 1 FROM pg_depend d
+                        JOIN pg_class s ON s.oid = d.objid AND s.relkind = 'S'
+                        JOIN pg_sequences q ON q.schemaname = 'public' AND q.sequencename = s.relname
+                        WHERE d.classid = 'pg_class'::regclass AND d.refobjid = format('public.%I', t.tablename)::regclass
+                          AND d.deptype IN ('a', 'i') AND q.last_value IS NOT NULL
+                    ) AS advanced
+                    FROM pg_tables t
+                    WHERE t.schemaname = 'public'
+                      AND starts_with(t.tablename, 'billium_')
+                      AND t.tablename <> 'billium_event_contract'
+                    ORDER BY t.tablename
                 LOOP
-                    EXECUTE format('SELECT EXISTS (SELECT 1 FROM public.%I LIMIT 1)', r.tablename) INTO has_rows;
+                    has_rows := r.advanced;
+                    IF NOT has_rows THEN
+                        EXECUTE format('SELECT EXISTS (SELECT 1 FROM public.%I LIMIT 1)', r.tablename) INTO has_rows;
+                    END IF;
                     IF has_rows THEN
                         non_empty_tables := array_append(non_empty_tables, format('public.%I', r.tablename));
                     END IF;
