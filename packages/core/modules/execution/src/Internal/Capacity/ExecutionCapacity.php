@@ -17,6 +17,7 @@ use Billium\Execution\Data\MaterialSnapshot;
 use Billium\Execution\Data\Reservation;
 use Billium\Execution\Enums\EffectKind;
 use Billium\Execution\Enums\ReservationState;
+use Billium\Execution\Internal\Reducer\MaterialBounds;
 use Billium\Execution\Internal\Reducer\MaterialRules;
 use Billium\Execution\Internal\Storage\ExecutionCodec;
 use LogicException;
@@ -25,7 +26,7 @@ use Packman\Attributes\Internal;
 #[Internal]
 final readonly class ExecutionCapacity implements CapacityParticipants
 {
-    public function __construct(private ExecutionStore $store) {}
+    public function __construct(private ExecutionStore $store, private MaterialBounds $bounds) {}
 
     public function current(TransactionContext $transactionContext, string $rootRef): CapacitySnapshot
     {
@@ -82,16 +83,16 @@ final readonly class ExecutionCapacity implements CapacityParticipants
         $selection = new ExecutionScope($caller->installationRef, $caller->sellerRef, $caller->environment, $scope->intentOwnerNamespace ?? throw new LogicException('Missing capacity owner'));
         $operation = $this->store->operation($selection, $reservation->operationRef, $transactionContext) ?? throw new LogicException('Missing original child');
         $root = $this->store->operation($selection, $reservation->rootOperationRef, $transactionContext) ?? throw new LogicException('Missing original root');
-        [$reason] = MaterialRules::bounds($materialSnapshot, $operation, $root, $current, $reservation);
-        if ($reason !== null || MaterialRules::invalid($materialSnapshot, $operation) !== null) {
-            throw new ProblemException(ProblemCode::RecoveryRequired, 'Settlement would exceed verified original capacity');
-        }
-        $next = self::withoutHold($current, $reservation);
         $frontier = $this->store->latestRootObservation($transactionContext, $reservation->rootOperationRef);
         $order = MaterialRules::order($materialSnapshot, null, $frontier);
         if ($order !== null && $order !== 'stale') {
             throw new ProblemException(ProblemCode::RecoveryRequired, 'Inconsistent provider cumulative frontier');
         }
+        [$reason] = $this->bounds->evaluate($transactionContext, $materialSnapshot, $operation, $root, $current, $reservation, $order === 'stale');
+        if ($reason !== null || MaterialRules::invalid($materialSnapshot, $operation) !== null) {
+            throw new ProblemException(ProblemCode::RecoveryRequired, 'Settlement would exceed verified original capacity');
+        }
+        $next = self::withoutHold($current, $reservation);
         if ($order !== 'stale') {
             $next = new CapacitySnapshot($next->rootOperationRef, $next->version, $materialSnapshot->authorizedTotal, $materialSnapshot->capturedTotal,
                 $materialSnapshot->refundedTotal, $materialSnapshot->voidedTotal, $next->heldCapture, $next->heldVoid, $next->heldRefund, false);

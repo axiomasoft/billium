@@ -4,14 +4,9 @@ declare(strict_types=1);
 
 namespace Billium\Execution\Internal\Reducer;
 
-use Billium\Contracts\Data\Money;
-use Billium\Execution\Data\CapacitySnapshot;
 use Billium\Execution\Data\MaterialSnapshot;
 use Billium\Execution\Data\OperationRecord;
-use Billium\Execution\Data\Reservation;
 use Billium\Execution\Enums\EffectKind;
-use Billium\Execution\Enums\ReservationState;
-use Billium\Execution\Internal\Capacity\CapacityAmounts;
 use Billium\Execution\Internal\Identity\PaymentIdentity;
 use Packman\Attributes\Internal;
 
@@ -123,44 +118,5 @@ final class MaterialRules
     {
         return $older->authorizedTotal->minor <= $newer->authorizedTotal->minor && $older->capturedTotal->minor <= $newer->capturedTotal->minor
             && $older->refundedTotal->minor <= $newer->refundedTotal->minor && $older->voidedTotal->minor <= $newer->voidedTotal->minor;
-    }
-
-    /** @return array{?string,Money,Money} */
-    public static function bounds(MaterialSnapshot $snapshot, OperationRecord $op, OperationRecord $root, CapacitySnapshot $capacity, ?Reservation $reservation, bool $olderRoot = false): array
-    {
-        $limit = min($root->requested->minor, $snapshot->authorizedTotal->minor);
-        $capture = new Money(max(0, $snapshot->capturedTotal->minor - CapacityAmounts::remaining($limit, $snapshot->voidedTotal->minor)), $root->requested->currency);
-        $refund = new Money(max(0, $snapshot->refundedTotal->minor - $snapshot->capturedTotal->minor), $root->requested->currency);
-        $positive = self::state($snapshot) === 'succeeded';
-        $heldCapture = $capacity->heldCapture->minor;
-        $heldVoid = $capacity->heldVoid->minor;
-        $heldRefund = $capacity->heldRefund->minor;
-        if ($reservation?->state === ReservationState::Held && in_array(self::state($snapshot), ['succeeded', 'failed'], true)) {
-            $ownRemaining = $reservation->requested->minor - $reservation->consumed->minor;
-            match ($reservation->kind) {
-                EffectKind::Capture => $heldCapture -= $ownRemaining,
-                EffectKind::VoidAuthorization => $heldVoid -= $ownRemaining,
-                EffectKind::Refund => $heldRefund -= $ownRemaining,
-                default => null,
-            };
-        }
-        $observedCapture = $olderRoot ? $capacity->confirmedCapture->minor : $snapshot->capturedTotal->minor;
-        $observedRefund = $olderRoot ? $capacity->confirmedRefund->minor : $snapshot->refundedTotal->minor;
-        $observedVoid = $olderRoot ? $capacity->releasedAuthorization->minor : $snapshot->voidedTotal->minor;
-        $observedLimit = $olderRoot ? $capacity->authorizedLimit->minor : $limit;
-        $reason = match (true) {
-            $refund->minor > 0 => 'over_refund', $capture->minor > 0 => 'over_capture',
-            $positive && (in_array($op->state, ['failed', 'cancelled'], true) || $reservation?->state === ReservationState::Released) => 'late_positive_after_no_effect',
-            $snapshot->authorizedTotal->minor > $root->requested->minor => 'authorization_exceeds_request',
-            $snapshot->voidedTotal->minor > $snapshot->authorizedTotal->minor => 'excess_release',
-            $snapshot->operationAmount !== null && $snapshot->operationAmount->minor > $op->requested->minor => 'operation_amount_exceeds_request',
-            $op->rootOperationRef !== $op->operationRef && $reservation === null => 'missing_original_reservation',
-            $heldRefund > CapacityAmounts::remaining($observedCapture, $observedRefund) => 'refund_reservation_overlap',
-            $heldCapture > CapacityAmounts::remaining($observedLimit, $observedCapture, $observedVoid)
-                || $heldVoid > CapacityAmounts::remaining($observedLimit, $observedCapture, $observedVoid, $heldCapture) => 'authorization_reservation_overlap',
-            $capacity->financialHold => 'unresolved_financial_hold', default => null,
-        };
-
-        return [$reason, $capture, $refund];
     }
 }

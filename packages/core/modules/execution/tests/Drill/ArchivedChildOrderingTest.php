@@ -22,6 +22,7 @@ use Billium\Core\Tests\Support\FixedSessionAdmission;
 use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Execution\Contracts\AuthorizationCommands;
+use Billium\Execution\Contracts\CapacityParticipants;
 use Billium\Execution\Contracts\ExecutionStore;
 use Billium\Execution\Contracts\OriginalIdentityArchive;
 use Billium\Execution\Contracts\OriginalIdentityRecovery;
@@ -58,6 +59,7 @@ use DateTimeImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Application;
 use LogicException;
+use PDO;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\TestWith;
 
@@ -79,11 +81,7 @@ final class ArchivedChildOrderingTest extends ExecutionTestCase
         $source = TestEnvironment::databaseName();
         $backup = null;
         try {
-            $ledger = $app->make(LedgerParticipants::class);
-            $spec = $this->spec(financialScope: $selected);
-            $account = new BillingAccountScope('seller-a', 'test', 'billing-a');
-            $this->runner()->run($spec, static fn (TransactionContext $ctx) => $ledger->recordObligation($ctx, new RecordObligation('debt', $account, 'debt', 'basis', 'buyer', 'component', new Money(100, Currency::of('RUB')), 'sha256:'.str_repeat('d', 64))))->orThrow();
-            $this->runner()->run($spec, static fn (TransactionContext $ctx) => $ledger->declareSettlementIntent($ctx, new DeclareSettlementIntent('declare', $account, 'intent-a', 'RUB', ['debt'])))->orThrow();
+            $this->seedLedger($app, $selected);
             $refund = $kind === 'refund';
             $ref = 'archived-'.$kind;
             if ($refund) {
@@ -126,24 +124,10 @@ final class ArchivedChildOrderingTest extends ExecutionTestCase
                 SELECT installation_ref,seller_ref,environment,'another-reservation',root_operation_ref,operation_ref,kind,requested_minor,currency,'held' FROM billium_execution_reservation";
             self::assertSame('23514', self::sqlState(TestEnvironment::pdo(), $duplicate));
 
-            $receiver = $backup->restore();
-            self::selectDatabase($receiver);
-            $receiverDb = TestEnvironment::pdo();
-            $receiverApp = Restore::receiverApplication();
-            self::selectDatabase($backup->restore());
-            $clone = Restore::cloneApplication($app);
+            [$clone, $receiver, $receiverDb, $token] = $this->restorePair($app, $backup, $selected, $original->binding, $path, $key);
             $db = $clone->make(DatabaseManager::class)->connection();
-            $authority = $clone->make(SimulatedFinancialAuthorityEvidence::class);
-            $authority->issueTransition('open', 'archive-open', ['owner-2', 2, 2, 2, 'original-workers-retired']);
-            $clone->make(Installation::class)->openSession('archive-open', 'owner-2', 2, 2, 2, 'original-workers-retired');
-            $token = FixedSessionAdmission::token(self::INSTALLATION, 'owner-2', 2, 2, 2, [FinancialMode::Recovery]);
-            $clone->make(FinancialSessionAdmission::class)->set($token);
-            $authority->issueProcess($token, [$selected]);
-            $clone->instance(OriginalIdentityArchive::class, new SignedOriginalArchive($path, $key, $authority));
-            Restore::relay($db, $receiver, $path, 1);
             self::assertSame(1, self::pdoValue($receiverDb, "SELECT count(*) FROM billium_inbox_message WHERE status='applied'"));
             self::assertSame($refund ? 100 : 0, self::pdoValue($receiverDb, "SELECT captured_minor FROM billium_payment WHERE operation_ref='root-a'"));
-            $this->adoptNewPartition($clone, $receiverApp, $original->binding, $selected, $token, $backup->sha256, $key);
             $recover = fn () => $clone->make(OriginalIdentityRecovery::class)->recover($scope, 'remote-billium', 'account-a', $attempt->providerReference);
             $rootReport = Lifecycle::evidence($clone, 'root-a');
             $childReport = Lifecycle::evidence($clone, $ref);
@@ -234,6 +218,239 @@ final class ArchivedChildOrderingTest extends ExecutionTestCase
                 unlink($file);
             }
         }
+    }
+
+    #[TestWith([false, 'parent-first'])]
+    #[TestWith([true, 'parent-first'])]
+    #[TestWith([false, 'interleaved'])]
+    #[TestWith([true, 'ordinary'])]
+    #[TestWith([false, 'ordinary-overlap'])]
+    #[TestWith([false, 'over-refund'])]
+    #[TestWith([false, 'contradictory-children'])]
+    public function test_recovers_two_separately_unresolved_archived_refunds(bool $reverse, string $scenario): void
+    {
+        $app = $this->application();
+        $scope = Fixture::scope();
+        $selected = new FinancialScope(self::INSTALLATION, 'seller-a', 'test', 'source-a', 'remote-billium');
+        $path = Fixture::tempPath();
+        $source = TestEnvironment::databaseName();
+        $backup = null;
+        try {
+            $this->seedLedger($app, $selected);
+            RefundCapacityTest::captured($app, $path);
+            $ordinary = in_array($scenario, ['ordinary', 'ordinary-overlap'], true) ? 20 : 0;
+            if ($ordinary > 0) {
+                $app->make(RefundCommands::class)->admit($scope, RefundCapacityTest::refund('ordinary', $ordinary, 24))->orThrow();
+            }
+            Inventory::enableInventory($app, $path);
+            $key = getenv('BILLIUM_SIMULATED_AUTHORITY_KEY') ?: throw new LogicException('Missing independent archive key');
+            $archive = new SignedOriginalArchive($path, $key, $this->authority);
+            $backup = new PostgresSnapshot(TestEnvironment::pdo(owner: true), $source, $path.'.dump');
+            $refs = ['original-a', 'original-b'];
+            $store = $app->make(ExecutionStore::class);
+            $merchant = $store->merchantRevision($scope, 'merchant-a');
+            $oldToken = $this->tokens->currentToken(self::INSTALLATION);
+            self::assertNotNull($oldToken);
+            $references = [];
+            foreach ($refs as $index => $ref) {
+                $wire = RefundCapacityTest::refund($ref, 40, 25 + $index);
+                $archive->recordSource($wire);
+                $app->make(RefundCommands::class)->admit($scope, $wire)->orThrow();
+                Lifecycle::dispatch($app, $ref);
+                $record = array_find(new DurableJournal($path)->records(), static fn (object $row): bool => $row instanceof ProviderRecord && $row->request->permit->operationRef === $ref);
+                $operation = $store->operation($scope, $ref);
+                $attempt = $store->attempt($scope, RefundCapacityTest::attemptRef($ref));
+                self::assertInstanceOf(ProviderRecord::class, $record);
+                self::assertNotNull($operation);
+                self::assertNotNull($attempt);
+                $references[$ref] = $attempt->providerReference;
+                $archive->recordDispatch($record, $operation, $attempt, $merchant, AuthorityClaims::sourceLineage($oldToken, 1));
+                self::assertSame(ReductionDisposition::Applied, Lifecycle::receive($app, $ref, Lifecycle::evidence($app, $ref))->disposition);
+            }
+            // The active source has exactly twenty left, shared with any ordinary outstanding request.
+            Lifecycle::refuses(ProblemCode::RefundCapacityExceeded, fn () => $app->make(RefundCommands::class)
+                ->admit($scope, RefundCapacityTest::refund('one-too-many', 21 - $ordinary, 27))->orThrow());
+            if ($ordinary === 0) {
+                $app->make(RefundCommands::class)->admit($scope, RefundCapacityTest::refund('remaining-twenty', 20, 28))->orThrow();
+            }
+            $root = $store->operation($scope, 'root-a');
+            self::assertNotNull($root);
+            [$clone, $receiver, $receiverDb, $token] = $this->restorePair($app, $backup, $selected, $root->binding, $path, $key);
+            $db = $clone->make(DatabaseManager::class)->connection();
+            $report = Lifecycle::evidence($clone, 'root-a');
+            if ($scenario === 'contradictory-children') {
+                // Two distinct authenticated actuals of forty cannot both fit a cumulative refund of forty.
+                $report = CallbackCustodyTest::signed($report, ['refunded' => ['amount' => '0.40', 'currency' => 'RUB']]);
+            }
+            if (! in_array($scenario, ['interleaved', 'ordinary-overlap'], true)) {
+                self::assertSame(ReductionDisposition::Applied, Lifecycle::receive($clone, 'root-a', $report)->disposition);
+            }
+            $drivers = $clone->make(PaymentDrivers::class);
+            $unknown = self::createStub(PaymentDriver::class);
+            $unknown->method('contractVersion')->willReturn($merchant->driverContractVersion);
+            $unknown->method('lookup')->willReturn(new ProviderLookupResult(ProviderLookupState::Ambiguous, null, null, null, 'unknown', null));
+            $unavailable = self::createStub(PaymentDrivers::class);
+            $unavailable->method('capabilities')->willReturn($drivers->capabilities($merchant));
+            $unavailable->method('resolve')->willReturn($unknown);
+            $recover = fn (string $ref) => $clone->make(OriginalIdentityRecovery::class)->recover($scope, 'remote-billium', 'account-a', $references[$ref]);
+            foreach ($refs as $i => $ref) {
+                $clone->instance(PaymentDrivers::class, $unavailable);
+                Lifecycle::refuses(ProblemCode::RecoveryRequired, fn () => $recover($ref));
+                $clone->instance(PaymentDrivers::class, $drivers);
+                if ($scenario === 'interleaved' && $i === 0) {
+                    self::assertSame(ReductionDisposition::Applied, Lifecycle::receive($clone, 'root-a', $report)->disposition);
+                }
+            }
+            $capacity = $db->table('billium_execution_capacity');
+            $reservations = $db->table('billium_execution_reservation');
+            self::assertSame(80 + $ordinary, $capacity->value('held_refund_minor'));
+            self::assertSame(2, $db->table('billium_execution_original_identity_import')->whereIn('operation_ref', $refs)->count());
+            self::assertSame(0, $db->table('billium_execution_provider_fact')->whereIn('operation_ref', $refs)->count());
+            self::assertSame(0, $db->table('billium_execution_dispatch_work')->whereIn('operation_ref', $refs)->count());
+            self::assertSame(3, UnknownResultTest::events($path, 'provider.call'));
+            if ($scenario === 'ordinary-overlap') {
+                $report = CallbackCustodyTest::signed($report, ['revision' => '4', 'refunded' => ['amount' => '0.81', 'currency' => 'RUB']]);
+                $result = Lifecycle::receive($clone, 'root-a', $report);
+                self::assertSame(ReductionDisposition::HeldDiscrepancy, $result->disposition);
+                self::assertSame('refund_reservation_overlap', $db->table('billium_execution_discrepancy')->where('discrepancy_ref', $result->discrepancyRef)->value('exposure->reason'));
+                self::assertTrue($capacity->value('financial_hold'));
+                self::assertSame(100, $capacity->value('held_refund_minor'));
+                self::assertSame(0, $capacity->value('confirmed_refund_minor'));
+                self::assertSame(3, (clone $reservations)->where('state', 'held')->count());
+
+                return;
+            }
+            if ($scenario === 'ordinary') {
+                // Observe the real participant called at the production boundary for both recovered facts.
+                $participant = $clone->make(CapacityParticipants::class);
+                $observed = $this->createMock(CapacityParticipants::class);
+                $observed->method('current')->willReturnCallback($participant->current(...));
+                $observed->expects(self::exactly(2))->method('settle')->willReturnCallback($participant->settle(...));
+                $observed->expects(self::never())->method('reserve');
+                $clone->instance(CapacityParticipants::class, $observed);
+            }
+            foreach ($reverse ? array_reverse($refs) : $refs as $i => $ref) {
+                $fact = Lifecycle::evidence($clone, $ref);
+                if (in_array($scenario, ['over-refund', 'contradictory-children'], true)) {
+                    $amount = $scenario === 'over-refund' ? '1.20' : '0.40';
+                    $fact = CallbackCustodyTest::signed($fact, ['revision' => '4', 'refunded' => ['amount' => $amount, 'currency' => 'RUB']]);
+                    $result = Lifecycle::receive($clone, $ref, $fact);
+                } else {
+                    $result = $recover($ref);
+                }
+                if ($scenario === 'over-refund' || ($scenario === 'contradictory-children' && $i === 1)) {
+                    self::assertSame(ReductionDisposition::HeldDiscrepancy, $result->disposition);
+                    self::assertTrue($capacity->value('financial_hold'));
+                    self::assertSame($scenario === 'over-refund' ? 80 : 40, $capacity->value('held_refund_minor'));
+                    $conflict = $db->table('billium_execution_discrepancy')->where('discrepancy_ref', $result->discrepancyRef);
+                    self::assertSame($scenario === 'over-refund' ? 'over_refund' : 'known_child_effects_exceed_cumulative', $conflict->value('exposure->reason'));
+                    self::assertSame($scenario === 'over-refund' ? '20' : '0', $conflict->value('exposure->overRefunded->minor'));
+                    self::assertSame($scenario === 'over-refund' ? 80 : 40, $capacity->value('confirmed_refund_minor'));
+                    self::assertSame('held', (clone $reservations)->where('operation_ref', $ref)->value('state'));
+                    self::assertSame(3, UnknownResultTest::events($path, 'provider.call'));
+
+                    return;
+                }
+                self::assertSame(ReductionDisposition::Applied, $result->disposition);
+                if ($scenario !== 'contradictory-children') {
+                    self::assertSame(ReductionDisposition::Duplicate, $recover($ref)->disposition);
+                }
+                $reservation = (clone $reservations)->where('operation_ref', $ref)->sole();
+                self::assertSame(['consumed', 40, $fact->evidenceRef], [$reservation->state, $reservation->consumed_minor, $reservation->release_evidence_ref]);
+                self::assertSame(($i === 0 ? 40 : 0) + $ordinary, $capacity->value('held_refund_minor'));
+                self::assertSame($scenario === 'contradictory-children' ? 40 : 80, $capacity->value('confirmed_refund_minor'));
+                self::assertFalse($capacity->value('financial_hold'));
+            }
+            if ($ordinary > 0) {
+                self::assertSame('held', (clone $reservations)->where('operation_ref', 'ordinary')->value('state'));
+            }
+            self::assertSame(3, UnknownResultTest::events($path, 'provider.call'));
+            self::assertSame(0, $db->table('billium_execution_dispatch_work')->whereIn('operation_ref', $refs)->count());
+            self::assertSame(100, $capacity->value('confirmed_capture_minor'));
+            $emissions = $db->table('billium_execution_observation_emission')->where('source_lineage', AuthorityClaims::sourceLineage($token, 2))->orderBy('id')->get();
+            self::assertSame(2, $emissions->whereIn('operation_ref', $refs)->count());
+            foreach ($emissions as $emission) {
+                Restore::relay($db, $receiver, $path, 1);
+            }
+            self::assertSame(100, self::pdoValue($receiverDb, "SELECT captured_minor FROM billium_payment WHERE operation_ref='root-a'"));
+            self::assertSame(80, self::pdoValue($receiverDb, "SELECT refunded_minor FROM billium_payment WHERE operation_ref='root-a'"));
+            self::assertSame(100, self::pdoValue($receiverDb, "SELECT allocated_minor FROM billium_payment WHERE operation_ref='root-a'"));
+            $details = self::pdoValue($receiverDb, "SELECT count(*) FROM billium_allocation_receipt WHERE kind='refund_detail'");
+            self::assertSame(2, $details);
+            fwrite(STDOUT, json_encode(['archiveRecovery' => $scenario, 'terminalOrder' => $reverse ? array_reverse($refs) : $refs,
+                'confirmedRefund' => $capacity->value('confirmed_refund_minor'), 'heldRefund' => $capacity->value('held_refund_minor'),
+                'financialHold' => $capacity->value('financial_hold'), 'receiverRefundDetails' => $details,
+                'providerCalls' => UnknownResultTest::events($path, 'provider.call')], JSON_THROW_ON_ERROR).PHP_EOL);
+        } finally {
+            self::selectDatabase($source);
+            $backup?->close();
+            foreach (glob($path.'*') ?: [] as $file) {
+                unlink($file);
+            }
+        }
+    }
+
+    public function test_distinct_active_child_actuals_must_fit_the_provider_cumulative_without_any_archive(): void
+    {
+        $app = $this->application();
+        $scope = Fixture::scope();
+        $path = Fixture::tempPath();
+        try {
+            RefundCapacityTest::captured($app, $path);
+            Inventory::enableInventory($app, $path);
+            foreach (['ordinary-a', 'ordinary-b'] as $i => $ref) {
+                $app->make(RefundCommands::class)->admit($scope, RefundCapacityTest::refund($ref, 40, $i + 51))->orThrow();
+                Lifecycle::dispatch($app, $ref);
+                $fact = Lifecycle::evidence($app, $ref);
+                if ($i === 1) {
+                    $fact = CallbackCustodyTest::signed($fact, ['revision' => '4', 'refunded' => ['amount' => '0.40', 'currency' => 'RUB']]);
+                }
+                $result = Lifecycle::receive($app, $ref, $fact);
+                self::assertSame($i === 0 ? ReductionDisposition::Applied : ReductionDisposition::HeldDiscrepancy, $result->disposition);
+            }
+            $db = $app->make(DatabaseManager::class)->connection();
+            self::assertSame(0, $db->table('billium_execution_original_identity_import')->count());
+            $capacity = $db->table('billium_execution_capacity')->sole();
+            self::assertSame([40, 40, true], [$capacity->confirmed_refund_minor, $capacity->held_refund_minor, $capacity->financial_hold]);
+            self::assertSame('known_child_effects_exceed_cumulative', $db->table('billium_execution_discrepancy')->value('exposure->reason'));
+            self::assertSame(3, UnknownResultTest::events($path, 'provider.call'));
+        } finally {
+            foreach (glob($path.'*') ?: [] as $file) {
+                unlink($file);
+            }
+        }
+    }
+
+    private function seedLedger(Application $app, FinancialScope $selected): void
+    {
+        $ledger = $app->make(LedgerParticipants::class);
+        $spec = $this->spec(financialScope: $selected);
+        $account = new BillingAccountScope('seller-a', 'test', 'billing-a');
+        $this->runner()->run($spec, static fn (TransactionContext $ctx) => $ledger->recordObligation($ctx, new RecordObligation('debt', $account, 'debt', 'basis', 'buyer', 'component', new Money(100, Currency::of('RUB')), 'sha256:'.str_repeat('d', 64))))->orThrow();
+        $this->runner()->run($spec, static fn (TransactionContext $ctx) => $ledger->declareSettlementIntent($ctx, new DeclareSettlementIntent('declare', $account, 'intent-a', 'RUB', ['debt'])))->orThrow();
+    }
+
+    /** @return array{Application,string,PDO,FinancialAdmissionToken} */
+    private function restorePair(Application $app, PostgresSnapshot $backup, FinancialScope $selected, FrozenBinding $binding, string $path, string $key): array
+    {
+        $receiver = $backup->restore();
+        self::selectDatabase($receiver);
+        $receiverDb = TestEnvironment::pdo();
+        $receiverApp = Restore::receiverApplication();
+        self::selectDatabase($backup->restore());
+        $clone = Restore::cloneApplication($app);
+        $db = $clone->make(DatabaseManager::class)->connection();
+        $authority = $clone->make(SimulatedFinancialAuthorityEvidence::class);
+        $authority->issueTransition('open', 'archive-open', ['owner-2', 2, 2, 2, 'original-workers-retired']);
+        $clone->make(Installation::class)->openSession('archive-open', 'owner-2', 2, 2, 2, 'original-workers-retired');
+        $token = FixedSessionAdmission::token(self::INSTALLATION, 'owner-2', 2, 2, 2, [FinancialMode::Recovery]);
+        $clone->make(FinancialSessionAdmission::class)->set($token);
+        $authority->issueProcess($token, [$selected]);
+        $clone->instance(OriginalIdentityArchive::class, new SignedOriginalArchive($path, $key, $authority));
+        Restore::relay($db, $receiver, $path, 1);
+        $this->adoptNewPartition($clone, $receiverApp, $binding, $selected, $token, $backup->sha256, $key);
+
+        return [$clone, $receiver, $receiverDb, $token];
     }
 
     private function adoptNewPartition(Application $producer, Application $receiver, FrozenBinding $binding, FinancialScope $selection,

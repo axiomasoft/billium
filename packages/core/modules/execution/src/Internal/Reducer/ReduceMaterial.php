@@ -32,7 +32,7 @@ use Packman\Attributes\Internal;
 #[Internal]
 final readonly class ReduceMaterial
 {
-    public function __construct(private ExecutionStore $store, private CapacityParticipants $capacity, private OutcomePublication $publication, private OutcomeEmitter $conflicts) {}
+    public function __construct(private ExecutionStore $store, private CapacityParticipants $capacity, private OutcomePublication $publication, private OutcomeEmitter $conflicts, private MaterialBounds $bounds) {}
 
     public function apply(TransactionContext $ctx, VerifiedDelivery $delivery, ProviderWorkClaim $claim): ReductionResult
     {
@@ -115,7 +115,7 @@ final readonly class ReduceMaterial
             return new ReductionResult(ReductionDisposition::Applied, $op->operationRef, $op->revision, [$claim->evidenceRef], [], [], null);
         }
         $reservation = $this->store->reservationForOperation($ctx, $op->operationRef);
-        [$reason, $overCapture, $overRefund] = MaterialRules::bounds($s, $op, $root, $current, $reservation, $olderRoot);
+        [$reason, $overCapture, $overRefund] = $this->bounds->evaluate($ctx, $s, $op, $root, $current, $reservation, $olderRoot);
         $state = MaterialRules::state($s);
         if ($state === 'succeeded' && $s->operationAmount->minor < $op->requested->minor) {
             $partial = match ($op->kind) {
