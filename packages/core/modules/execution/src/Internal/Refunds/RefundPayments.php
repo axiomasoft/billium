@@ -11,13 +11,10 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runner\OperationRunner;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Contracts\Runtime\CallerContext;
-use Billium\Core\Data\Runner\LockRequest;
 use Billium\Core\Data\Runner\OperationSpec;
 use Billium\Core\Data\Runner\StoredOutcome;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
-use Billium\Core\Enums\Runner\LockRank;
 use Billium\Core\Enums\Runtime\FinancialMode;
-use Billium\Core\Exceptions\Runner\LockPlanChanged;
 use Billium\Execution\Contracts\CapacityParticipants;
 use Billium\Execution\Contracts\ExecutionStore;
 use Billium\Execution\Contracts\MerchantActionGate;
@@ -32,7 +29,7 @@ use Billium\Execution\Data\ResolvedCredentials;
 use Billium\Execution\Enums\DriverCapability;
 use Billium\Execution\Enums\EffectKind;
 use Billium\Execution\Enums\ExecutionPhase;
-use Billium\Execution\Enums\NamespaceState;
+use Billium\Execution\Internal\Admission\ChildAdmission;
 use Billium\Execution\Internal\Admission\CollectionChecks;
 use Billium\Execution\Internal\Admission\CommandInputReplay;
 use Billium\Execution\Internal\Admission\ExecutionReadinessGuard;
@@ -62,6 +59,7 @@ final readonly class RefundPayments implements RefundCommands
         private TransportBoundary $boundary,
         private ExecutionReadinessGuard $readiness,
         private CommandInputReplay $inputReplay,
+        private ChildAdmission $children,
     ) {}
 
     public function admit(ExecutionScope $scope, RequestRefund $command): StoredOutcome
@@ -74,12 +72,8 @@ final readonly class RefundPayments implements RefundCommands
         }
         $intent = $wire->source->intentRef;
         $source = $wire->source->context;
-        foreach ([$source, $intent, $wire->operationRef, $wire->originalOperationRef, $wire->reasonCode, $wire->category,
-            $scope->installationRef, $scope->sellerRef, $scope->environment, $scope->intentOwnerNamespace] as $field) {
-            if (str_contains($field, "\0")) {
-                throw new ProblemException(ProblemCode::ValidationInvalid, 'Refund identity contains a null byte');
-            }
-        }
+        PaymentIdentity::assertText('Refund identity contains a null byte', $source, $intent, $wire->operationRef, $wire->originalOperationRef,
+            $wire->reasonCode, $wire->category, $scope->installationRef, $scope->sellerRef, $scope->environment, $scope->intentOwnerNamespace);
         if ([$wire->installationRef, $wire->sellerRef, $wire->environment] !== [$scope->installationRef, $scope->sellerRef, $scope->environment]) {
             throw new ProblemException(ProblemCode::AuthDenied, 'Refund address differs from the selected scope');
         }
@@ -96,10 +90,8 @@ final readonly class RefundPayments implements RefundCommands
             || $root->operationRef === $wire->operationRef || $root->requested->currency->code !== $wire->money->currency->code || $root->requested->currency->scale !== $wire->money->currency->scale) {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'Refund requires a distinct child of an original payment in its currency');
         }
-        $terms = get_object_vars($wire->raw);
-        unset($terms['commandKey'], $terms['requestedAt'], $terms['digest']);
         $semantic = PaymentIdentity::digest(['schema' => 'billium.execution.refund-semantics.v1', 'scope' => get_object_vars($scope),
-            'originalBinding' => $binding->semanticDigest, 'terms' => $terms]);
+            'originalBinding' => $binding->semanticDigest, 'terms' => PaymentIdentity::terms($wire->raw)]);
         $key = PaymentIdentity::commandKey($scope, EffectKind::Refund->value, $source, $wire->commandKey);
         $retained = $this->store->childByIdentity($scope, EffectKind::Refund, $source, $intent) ?? $this->store->operation($scope, $wire->operationRef);
         try {
@@ -135,11 +127,7 @@ final readonly class RefundPayments implements RefundCommands
             if ($error->problem === ProblemCode::IdempotencyConflict) {
                 $authorized = $retained !== null && get_object_vars($retained->binding->scope) === get_object_vars($scope)
                     && $retained->binding->executionProfile === $selected->sourceAuthority ? $retained->operationRef : null;
-                $conflict = new AdmissionConflict($scope, RequestRefund::SCHEMA, $key, $semantic, $authorized);
-                $this->runner->run(new OperationSpec('execution.admission_conflict', $scope->sellerRef, $scope->environment, FinancialMode::RawCustody,
-                    ModuleOperationClass::CallbackCustody, ['execution', 'platform'], financialScope: $selected),
-                    fn (TransactionContext $ctx): ExecutionReceipt => new ExecutionReceipt($this->store->recordAdmissionConflict($ctx, $conflict), $wire->commandKey,
-                        $wire->operationRef, $semantic, 'conflict_recorded', false, []))->orThrow();
+                $this->children->recordConflict($selected, new AdmissionConflict($scope, RequestRefund::SCHEMA, $key, $semantic, $authorized), $wire->commandKey, $wire->operationRef);
             }
             throw $error;
         }
@@ -158,35 +146,19 @@ final readonly class RefundPayments implements RefundCommands
         $scope = $plan->scope;
         $original = $plan->binding->rootOperationRef;
         if ($capability !== null && $credentials !== null) {
-            $namespace = $this->store->lockNamespace($ctx, $scope);
-            if ($namespace->state !== NamespaceState::Open || $namespace->completenessReceiptRef === null || $namespace->canonicalizationVersion !== $plan->canonicalizationVersion) {
-                throw new ProblemException($namespace->state === NamespaceState::Closed ? ProblemCode::KeyExpired : ProblemCode::RecoveryRequired, 'Refund identity history is closed or incomplete');
-            }
+            $this->children->assertNamespaceOpen($ctx, $plan, 'Refund identity history is closed or incomplete');
             try {
                 $this->merchantGate->lock($ctx, $scope, $plan->binding->merchantRevisionRef, 'refund', $credentials);
             } catch (ProblemException $error) {
                 $this->historicalAccessFailure($error);
             }
         }
-        $locks = $this->store->plan($scope, $original, true, $ctx);
-        // Every monetary writer locks the original payment's observation partitions before its root and children.
-        // Establish that common prefix before discovering siblings added by other waiting admissions.
-        $partition = array_find($locks->locks, static fn (LockRequest $lock): bool => $lock->rank === LockRank::FeedPartition);
-        if ($partition === null) {
-            throw new ProblemException(ProblemCode::RecoveryRequired, 'Original payment has no retained observation partition');
-        }
-        if ($ctx->lock($partition) !== $partition->keys) {
-            throw new LockPlanChanged('Refund observation partition changed during admission');
-        }
-        $locks = $this->store->plan($scope, $original, true, $ctx);
-        $this->collection->validate($ctx, $plan->collectionGuard, $locks, $plan->operationRef, $plan->semanticDigest);
-        $this->store->lock($ctx, $locks);
+        $this->children->lockOriginal($ctx, $plan, 'payment');
         $root = $this->store->operation($scope, $original, $ctx);
         if ($root === null || ExecutionCodec::differs($root->binding, $plan->binding)) {
             throw new ProblemException(ProblemCode::RecoveryRequired, 'Original payment binding changed');
         }
         $existing = $this->store->claimChildBinding($ctx, $plan, $intent, $wire->reasonCode, $wire->category);
-        $attemptRef = PaymentIdentity::reference($scope, $plan->operationRef, 'attempt');
         if ($existing === null) {
             if ($capability === null || $credentials === null) {
                 throw new ProblemException(ProblemCode::IdempotencyConflict, 'Refund replay differs from the retained intent');
@@ -201,13 +173,9 @@ final readonly class RefundPayments implements RefundCommands
             if ($current->confirmedRefund->minor > 0 || $current->heldRefund->minor > 0) {
                 $capability->requireCapability(DriverCapability::MultipleRefund, $scope->environment === 'production');
             }
-            $child = $this->store->insertOperation($ctx, $plan);
-            $this->capacity->reserve($ctx, $original, $child->operationRef, EffectKind::Refund, $plan->amount, PaymentIdentity::reference($scope, $child->operationRef, 'reservation'));
-            $attempt = $this->store->insertAttempt($ctx, $child, $attemptRef, PaymentIdentity::reference($scope, $child->operationRef, 'provider'));
-            $this->store->insertDispatchWork($ctx, $attempt, PaymentIdentity::reference($scope, $child->operationRef, 'dispatch'), 'execution.dispatch.v1');
+            $this->children->insertChild($ctx, $plan);
         }
 
-        return new ExecutionReceipt(PaymentIdentity::reference($scope, $plan->operationRef, 'admission'), $plan->commandKey, $plan->operationRef,
-            $plan->semanticDigest, 'admitted', false, [$attemptRef]);
+        return ChildAdmission::receipt($plan);
     }
 }

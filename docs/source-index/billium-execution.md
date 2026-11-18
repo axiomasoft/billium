@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-execution
 
-Path `packages/core/modules/execution/src`, namespace `Billium\Execution\`, layer L2. 172 types.
+Path `packages/core/modules/execution/src`, namespace `Billium\Execution\`, layer L2. 173 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -128,6 +128,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
 | [`AdmitRoot`](../../packages/core/modules/execution/src/Internal/Admission/AdmitRoot.php) | class | *Internal* |  |
+| [`ChildAdmission`](../../packages/core/modules/execution/src/Internal/Admission/ChildAdmission.php) | class | *Internal* | Steps shared by every admission of a child operation (capture, provider void, refund) and the conflict audit shared with root admission, so their lock order an… |
 | [`CollectionChecks`](../../packages/core/modules/execution/src/Internal/Admission/CollectionChecks.php) | class | *Internal* |  |
 | [`CommandInputReplay`](../../packages/core/modules/execution/src/Internal/Admission/CommandInputReplay.php) | class | *Internal* |  |
 | [`ExecutionReadinessGuard`](../../packages/core/modules/execution/src/Internal/Admission/ExecutionReadinessGuard.php) | class | *Internal* |  |

@@ -12,13 +12,10 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runner\OperationRunner;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Contracts\Runtime\CallerContext;
-use Billium\Core\Data\Runner\LockRequest;
 use Billium\Core\Data\Runner\OperationSpec;
 use Billium\Core\Data\Runner\StoredOutcome;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
-use Billium\Core\Enums\Runner\LockRank;
 use Billium\Core\Enums\Runtime\FinancialMode;
-use Billium\Core\Exceptions\Runner\LockPlanChanged;
 use Billium\Execution\Contracts\AuthorizationCommands;
 use Billium\Execution\Contracts\CapacityParticipants;
 use Billium\Execution\Contracts\ExecutionStore;
@@ -31,7 +28,7 @@ use Billium\Execution\Data\ExecutionReceipt;
 use Billium\Execution\Data\ExecutionScope;
 use Billium\Execution\Enums\EffectKind;
 use Billium\Execution\Enums\ExecutionPhase;
-use Billium\Execution\Enums\NamespaceState;
+use Billium\Execution\Internal\Admission\ChildAdmission;
 use Billium\Execution\Internal\Admission\CollectionChecks;
 use Billium\Execution\Internal\Admission\CommandInputReplay;
 use Billium\Execution\Internal\Admission\ExecutionReadinessGuard;
@@ -60,6 +57,7 @@ final readonly class AuthorizedPayments implements AuthorizationCommands
         private TransportBoundary $boundary,
         private ExecutionReadinessGuard $readiness,
         private CommandInputReplay $inputReplay,
+        private ChildAdmission $children,
     ) {}
 
     public function admit(ExecutionScope $scope, CapturePayment|VoidAuthorization $command): StoredOutcome
@@ -74,12 +72,8 @@ final readonly class AuthorizedPayments implements AuthorizationCommands
         $source = $wire->source->context;
         $intent = $wire->source->intentRef;
         $reason = $wire instanceof VoidAuthorization ? $wire->reasonCode : null;
-        foreach ([$source, $intent, $wire->operationRef, $wire->originalOperationRef, $reason ?? '', $scope->installationRef,
-            $scope->environment, $scope->sellerRef, $scope->intentOwnerNamespace] as $field) {
-            if (str_contains($field, "\0")) {
-                throw new ProblemException(ProblemCode::ValidationInvalid, 'Authorization identity contains a null byte');
-            }
-        }
+        PaymentIdentity::assertText('Authorization identity contains a null byte', $source, $intent, $wire->operationRef, $wire->originalOperationRef,
+            $reason ?? '', $scope->installationRef, $scope->environment, $scope->sellerRef, $scope->intentOwnerNamespace);
         if ($wire->installationRef !== $scope->installationRef || $wire->sellerRef !== $scope->sellerRef || $wire->environment !== $scope->environment) {
             throw new ProblemException(ProblemCode::AuthDenied, 'Child payment address differs from the authenticated scope');
         }
@@ -102,10 +96,8 @@ final readonly class AuthorizedPayments implements AuthorizationCommands
 
         $kind = $wire instanceof CapturePayment ? EffectKind::Capture : EffectKind::VoidAuthorization;
         $key = PaymentIdentity::commandKey($scope, $kind->value, $source, $wire->commandKey);
-        $terms = get_object_vars($wire->raw);
-        unset($terms['commandKey'], $terms['requestedAt'], $terms['digest']);
         $semantic = PaymentIdentity::digest(['schema' => 'billium.execution.authorization-child.v1', 'rootBinding' => $binding->semanticDigest,
-            'scope' => get_object_vars($scope), 'command' => $terms]);
+            'scope' => get_object_vars($scope), 'command' => PaymentIdentity::terms($wire->raw)]);
         try {
             $inputDigest = CommandInputReplay::digest($wire);
             $cached = $this->inputReplay->find($selected, $wire::SCHEMA, $key, $inputDigest);
@@ -130,10 +122,7 @@ final readonly class AuthorizedPayments implements AuthorizationCommands
 
             return $this->runner->run($spec, function (TransactionContext $ctx) use ($plan, $intent, $reason, $capability, $credentials): ExecutionReceipt {
                 if ($capability !== null) {
-                    $namespace = $this->store->lockNamespace($ctx, $plan->scope);
-                    if ($namespace->state !== NamespaceState::Open || $namespace->completenessReceiptRef === null || $namespace->canonicalizationVersion !== $plan->canonicalizationVersion) {
-                        throw new ProblemException($namespace->state === NamespaceState::Closed ? ProblemCode::KeyExpired : ProblemCode::RecoveryRequired, 'Child identity history is incomplete or closed');
-                    }
+                    $this->children->assertNamespaceOpen($ctx, $plan, 'Child identity history is incomplete or closed');
                     $this->merchantGate->lock($ctx, $plan->scope, $plan->binding->merchantRevisionRef, $plan->kind->value, $credentials);
                 }
 
@@ -141,11 +130,7 @@ final readonly class AuthorizedPayments implements AuthorizationCommands
             });
         } catch (ProblemException $error) {
             if ($error->problem === ProblemCode::IdempotencyConflict) {
-                $conflict = new AdmissionConflict($scope, $wire::SCHEMA, $key, $semantic, $root->operationRef);
-                $this->runner->run(new OperationSpec('execution.admission_conflict', $scope->sellerRef, $scope->environment, FinancialMode::RawCustody,
-                    ModuleOperationClass::CallbackCustody, ['execution', 'platform'], financialScope: $selected),
-                    fn (TransactionContext $ctx): ExecutionReceipt => new ExecutionReceipt($this->store->recordAdmissionConflict($ctx, $conflict), $wire->commandKey,
-                        $wire->operationRef, $semantic, 'conflict_recorded', false, []))->orThrow();
+                $this->children->recordConflict($selected, new AdmissionConflict($scope, $wire::SCHEMA, $key, $semantic, $root->operationRef), $wire->commandKey, $wire->operationRef);
             }
             throw $error;
         }
@@ -155,37 +140,21 @@ final readonly class AuthorizedPayments implements AuthorizationCommands
     {
         $scope = $plan->scope;
         $original = $plan->binding->rootOperationRef;
-        $locks = $this->store->plan($scope, $original, true, $ctx);
-        // Serialize admissions at the original partition before planning the mutable set of sibling operations.
-        $partition = array_find($locks->locks, static fn (LockRequest $lock): bool => $lock->rank === LockRank::FeedPartition);
-        if ($partition === null) {
-            throw new ProblemException(ProblemCode::RecoveryRequired, 'Original authorization has no retained observation partition');
-        }
-        if ($ctx->lock($partition) !== $partition->keys) {
-            throw new LockPlanChanged('Authorization observation partition changed during admission');
-        }
-        $locks = $this->store->plan($scope, $original, true, $ctx);
-        $this->collection->validate($ctx, $plan->collectionGuard, $locks, $plan->operationRef, $plan->semanticDigest);
-        $this->store->lock($ctx, $locks);
+        $this->children->lockOriginal($ctx, $plan, 'authorization');
         $root = $this->store->operation($scope, $original, $ctx);
         if ($root === null || $root->kind !== EffectKind::Authorize || ExecutionCodec::differs($root->binding, $plan->binding)) {
             throw new ProblemException(ProblemCode::RecoveryRequired, 'Original authorization binding changed');
         }
         $existing = $this->store->claimChildBinding($ctx, $plan, $intent, $reason);
-        $attemptRef = PaymentIdentity::reference($scope, $plan->operationRef, 'attempt');
         if ($existing === null) {
             if ($capability === null) {
                 throw new ProblemException(ProblemCode::IdempotencyConflict, 'Child replay has no matching retained identity');
             }
             AuthorizationPolicy::assertOpen($this->store->authorization($ctx, $original), new DateTimeImmutable);
             AuthorizationPolicy::assertAmount($plan->kind, $plan->amount, $capability, $this->capacity->current($ctx, $original));
-            $child = $this->store->insertOperation($ctx, $plan);
-            $this->capacity->reserve($ctx, $original, $plan->operationRef, $plan->kind, $plan->amount, PaymentIdentity::reference($scope, $plan->operationRef, 'reservation'));
-            $attempt = $this->store->insertAttempt($ctx, $child, $attemptRef, PaymentIdentity::reference($scope, $plan->operationRef, 'provider'));
-            $this->store->insertDispatchWork($ctx, $attempt, PaymentIdentity::reference($scope, $plan->operationRef, 'dispatch'), 'execution.dispatch.v1');
+            $this->children->insertChild($ctx, $plan);
         }
 
-        return new ExecutionReceipt(PaymentIdentity::reference($scope, $plan->operationRef, 'admission'), $plan->commandKey,
-            $plan->operationRef, $plan->semanticDigest, 'admitted', false, [$attemptRef]);
+        return ChildAdmission::receipt($plan);
     }
 }
