@@ -92,6 +92,7 @@ vendor/bin/phpstan analyse --memory-limit=1G         # types (level max, NoFloat
 vendor/bin/rector process --dry-run                  # refactoring rules
 vendor/bin/pest <package>/tests --exclude-group=pg   # unit/feature tests of one package
 PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 vendor/bin/pest <package>/tests --group=pg   # PostgreSQL tests
+composer test:pg                                      # whole PostgreSQL suite: parallel workers, one database each
 bash scripts/ci.sh --affected origin/main...HEAD     # which gate layers a change needs
 bash scripts/ci.sh --layer derived                   # one gate layer
 ```

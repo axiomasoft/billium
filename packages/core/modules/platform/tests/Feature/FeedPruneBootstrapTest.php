@@ -18,6 +18,8 @@ use RuntimeException;
 
 #[Group('ACC-RST-06')]
 #[Group('pg')]
+// Feed reads stop at the cluster-wide snapshot xmin, which transactions in other databases hold back.
+#[Group('pg-serial')]
 final class FeedPruneBootstrapTest extends OutboxTestCase
 {
     #[Group('PB-23')]

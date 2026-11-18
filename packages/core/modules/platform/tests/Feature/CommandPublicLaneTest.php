@@ -26,6 +26,8 @@ use PHPUnit\Framework\Attributes\TestWith;
 
 #[Group('EVT-03')]
 #[Group('pg')]
+// Feed reads stop at the cluster-wide snapshot xmin, which transactions in other databases hold back.
+#[Group('pg-serial')]
 final class CommandPublicLaneTest extends OutboxTestCase
 {
     public function test_command_and_fact_share_root_tx_but_only_the_fact_enters_the_public_feed(): void

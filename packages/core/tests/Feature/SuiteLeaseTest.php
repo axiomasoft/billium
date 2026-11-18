@@ -33,6 +33,7 @@ final class SuiteLeaseTest extends DatabaseTestCase
 
         $held = TestEnvironment::pdo(owner: true)->query(
             'SELECT count(*) FROM pg_locks WHERE locktype = \'advisory\' AND granted AND objsubid = 2'
+            .' AND database = (SELECT oid FROM pg_database WHERE datname = current_database())'
             .' AND classid = '.TestEnvironment::LEASE_CLASS.' AND objid = '.TestEnvironment::LEASE_OBJECT,
         );
         self::assertNotFalse($held);

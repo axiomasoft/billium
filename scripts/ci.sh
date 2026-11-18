@@ -85,7 +85,9 @@ layer_php() {
     python3 -m unittest discover -s scripts/lint/tests -p test_test_discovery.py
     python3 scripts/lint/test-discovery.py
     vendor/bin/pest --exclude-group=pg
-    PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 vendor/bin/pest --group=pg
+    # One database per worker; pg-serial tests depend on the cluster-wide transaction horizon and run alone.
+    PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 PACKMAN_TEST_DB_PER_PROCESS=1 vendor/bin/pest --group=pg --exclude-group=pg-serial --parallel
+    PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 vendor/bin/pest --group=pg-serial
     need_path scripts/smoke/consumer-install.sh
     bash scripts/smoke/consumer-install.sh php
 }

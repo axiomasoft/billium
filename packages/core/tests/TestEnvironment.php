@@ -15,6 +15,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Events\MigrationsStarted;
 use Illuminate\Foundation\Application;
 use Packman\Testkit\Data\Database\TestDatabaseIdentity;
+use Packman\Testkit\Support\Database\DatabaseLaneEnvironment;
 use Packman\Testkit\Support\Database\TestDatabaseGuard;
 use PDO;
 use PDOException;
@@ -212,13 +213,7 @@ final class TestEnvironment
             self::$suiteLease = $owner;
             self::$suiteLeaseToken = null;
             // Match the shared stand's role bootstrap before running the selected module migrations.
-            $runtime = '"'.str_replace('"', '""', self::required('DB_USERNAME')).'"';
-            $owner->exec('REVOKE CREATE ON SCHEMA public FROM PUBLIC');
-            $owner->exec('REVOKE TEMPORARY ON DATABASE "'.$name.'" FROM PUBLIC');
-            $owner->exec('GRANT CONNECT ON DATABASE "'.$name.'" TO '.$runtime);
-            $owner->exec('GRANT USAGE ON SCHEMA public TO '.$runtime);
-            $owner->exec('ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO '.$runtime);
-            $owner->exec('ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC');
+            self::bootstrapRuntimeAccess($owner, $name);
             self::assertRuntimeSafe(self::pdo());
         } catch (Throwable $error) {
             $close();
@@ -226,6 +221,53 @@ final class TestEnvironment
         }
 
         return $close;
+    }
+
+    /**
+     * D50 under `pest --parallel` with PACKMAN_TEST_DB_PER_PROCESS=1: committed-data isolation TRUNCATEs every
+     * table, so workers cannot share one database. Each worker switches DB_DATABASE to its own `<base>_<token>_test`
+     * database, created on first use with the shared stand's role bootstrap and then reused across runs. The
+     * switch happens in the environment so child processes and restore drills join their worker's database.
+     */
+    public static function isolateParallelWorker(): void
+    {
+        // Without a runner token the lane would be keyed by PID, which child processes cannot reproduce.
+        if (! DatabaseLaneEnvironment::perProcessEnabled() || (getenv('TEST_TOKEN') === false && getenv('PARA_TEST_TOKEN') === false)) {
+            return;
+        }
+        $base = self::required('DB_DATABASE');
+        $workerDatabase = DatabaseLaneEnvironment::isolatedDatabaseName($base);
+        if ($workerDatabase === $base) {
+            return;
+        }
+        TestDatabaseGuard::assertDestructiveSafe(self::identity(owner: true));
+        $admin = self::pdo(owner: true);
+        $exists = $admin->prepare('SELECT 1 FROM pg_database WHERE datname = ?');
+        $exists->execute([$workerDatabase]);
+        if ($exists->fetchColumn() !== 1) {
+            $admin->exec('CREATE DATABASE '.self::identifier($workerDatabase).' TEMPLATE template0');
+        }
+        $_ENV['DB_DATABASE'] = $_SERVER['DB_DATABASE'] = $workerDatabase;
+        putenv('DB_DATABASE='.$workerDatabase);
+        TestDatabaseGuard::assertDestructiveSafe(self::identity(owner: true));
+        self::bootstrapRuntimeAccess(self::pdo(owner: true), $workerDatabase);
+    }
+
+    /** The compose stand's init script, applied to a database this suite creates itself. Idempotent. */
+    private static function bootstrapRuntimeAccess(PDO $owner, string $database): void
+    {
+        $runtime = self::identifier(self::required('DB_USERNAME'));
+        $owner->exec('REVOKE CREATE ON SCHEMA public FROM PUBLIC');
+        $owner->exec('REVOKE TEMPORARY ON DATABASE '.self::identifier($database).' FROM PUBLIC');
+        $owner->exec('GRANT CONNECT ON DATABASE '.self::identifier($database).' TO '.$runtime);
+        $owner->exec('GRANT USAGE ON SCHEMA public TO '.$runtime);
+        $owner->exec('ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO '.$runtime);
+        $owner->exec('ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC');
+    }
+
+    private static function identifier(string $name): string
+    {
+        return '"'.str_replace('"', '""', $name).'"';
     }
 
     /** @return array<string, mixed> */
