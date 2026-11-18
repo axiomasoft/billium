@@ -13,6 +13,8 @@ use stdClass;
 
 /** A feed page costs the events of its own scope, not the outbox history of every other seller. */
 #[Group('pg')]
+// Feed reads and prune stop at the cluster-wide snapshot xmin, which transactions in other databases hold back.
+#[Group('pg-serial')]
 final class FeedScopeReadPlanTest extends OutboxTestCase
 {
     public function test_a_scope_read_walks_its_own_seller_in_cursor_order(): void

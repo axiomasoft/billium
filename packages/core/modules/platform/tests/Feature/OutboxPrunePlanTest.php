@@ -11,6 +11,8 @@ use stdClass;
 
 /** A prune batch proves open deliveries from the open ones alone, not from the whole delivered history. */
 #[Group('pg')]
+// Feed reads and prune stop at the cluster-wide snapshot xmin, which transactions in other databases hold back.
+#[Group('pg-serial')]
 final class OutboxPrunePlanTest extends OutboxTestCase
 {
     public function test_prune_proves_open_deliveries_from_the_open_ones_and_waits_for_the_oldest(): void
