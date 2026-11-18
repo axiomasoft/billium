@@ -19,7 +19,7 @@ final readonly class UsageQueries
 
     /**
      * Returns effective revisions only. A correction accepted between pages requires a fresh scan to include it;
-     * this admission query does not promise a final aggregate snapshot (P4.3 owns that protocol).
+     * this admission query does not promise a final aggregate snapshot (the aggregation snapshot protocol owns that).
      *
      * @param  array{event_at:string,fact_id:string,revision:int,source:string}|null  $after
      * @return list<object>

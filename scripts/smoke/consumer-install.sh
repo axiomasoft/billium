@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Consumer install smoke (P2.8, PB-15 support): install each contracts package into an empty project
+# Consumer install smoke (PB-15 support): install each contracts package into an empty project
 # the way a consumer would, by copy and without dev dependencies, and use its public API.
 # Run inside the toolchain image:
 #   docker compose run --rm toolchain bash scripts/smoke/consumer-install.sh [php|dart]

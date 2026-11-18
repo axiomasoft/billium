@@ -13,7 +13,7 @@ use Packman\Attributes\Spi;
 use Packman\Attributes\SpiKind;
 
 /**
- * Root pipeline of every money mutation (M-55, operation-runner). Requires transaction level 0. Order inside one READ
+ * Root pipeline of every money mutation (operation-runner). Requires transaction level 0. Order inside one READ
  * COMMITTED root Tx: authenticate caller scope → idempotency claim (first write, D51) → financial session FOR SHARE and
  * host process token (D54/D62) → module admission FOR SHARE (rank 25, D55) → SAVEPOINT body → complete claim → money
  * commit log → commit. A stored business refusal rolls back to the savepoint and commits only its receipt; a

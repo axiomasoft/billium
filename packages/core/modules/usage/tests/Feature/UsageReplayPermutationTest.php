@@ -42,7 +42,7 @@ final class UsageReplayPermutationTest extends AggregationTestCase
         $base = (int) bcdiv((string) $this->window()->startMicros, '1000000', 0);
         foreach ($permutations as $permutation) {
             // The source port models retained, immutable revisions arriving in arbitrary order.
-            // P4.2's separate admission protocol retries absent predecessors before exposing them.
+            // The separate ingestion admission protocol retries absent predecessors before exposing them.
             $source->revisions = [];
             $arrival = array_map(static fn (array $e): array => [...$e, 'src' => 'tariffler', 't' => $base + $e['t']], $permutation);
             foreach (V::revisions($arrival) as $revision) {

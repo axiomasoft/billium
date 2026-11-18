@@ -38,13 +38,13 @@ final class TestEnvironment
 
     private const string SUITE_LEASE_ENV = 'BILLIUM_TEST_SUITE_LEASE';
 
-    // These two forward-only P5 routines are created with a new identity when ledger tables are rebuilt.
+    // These two forward-only execution routines are created with a new identity when ledger tables are rebuilt.
     private const string LEDGER_REBUILD_ROUTINES = <<<'SQL'
         public.billium_claim_observation_owner(text,text,text,text,text,text,text,text,jsonb),
         public.billium_prove_observation_revision(text,text,text,text,text,text,text,text,jsonb,text)
         SQL;
 
-    // Only P5 routines whose migrations use plain CREATE FUNCTION. All replaceable routines retain their OIDs.
+    // Only execution routines whose migrations use plain CREATE FUNCTION. All replaceable routines retain their OIDs.
     private const string FRESH_REBUILD_ROUTINES = <<<'SQL'
         public.billium_qualified_retirement_guard(),
         public.billium_idempotency_scope_immutable(),
@@ -125,7 +125,7 @@ final class TestEnvironment
             }
         }
         // End the host-specific grant probe before restoring the shared fixture. Laravel switches its default
-        // connection to the migration owner while the P4 migrations choose their grant recipient.
+        // connection to the migration owner while the commercial module migrations choose their grant recipient.
         $app->make(Repository::class)->set('billium.connection', 'pgsql');
         $exit = $app->make(Kernel::class)->call('migrate', [
             '--database' => 'billium_owner', '--force' => true, '--realpath' => true, '--path' => $paths,

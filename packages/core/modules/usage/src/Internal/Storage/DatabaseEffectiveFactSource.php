@@ -167,7 +167,7 @@ final readonly class DatabaseEffectiveFactSource implements EffectiveFactSource
 
     private static function micros(string $value, bool $exact = true): int
     {
-        // P4.2 retains nanoseconds. Aggregation never silently truncates a non-microsecond sample.
+        // Ingestion retains nanoseconds. Aggregation never silently truncates a non-microsecond sample.
         if ($exact && strlen($value) > 26 && trim(substr($value, 26), '0') !== '') {
             throw UsageProblems::error('time_precision_unsupported');
         }

@@ -25,7 +25,7 @@ use RuntimeException;
 use Throwable;
 
 /**
- * The root runner (operation-runner, M-55). Everything that changes money runs inside exactly one call of run() on a
+ * The root runner (operation-runner). Everything that changes money runs inside exactly one call of run() on a
  * connection at transaction level 0; there is no nested runner and no participant may start one.
  */
 #[Internal]

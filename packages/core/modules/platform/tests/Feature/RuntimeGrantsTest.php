@@ -34,7 +34,7 @@ final class RuntimeGrantsTest extends PlatformTestCase
         self::assertNotSame($runtimeRole, self::pdoValue(TestEnvironment::pdo(owner: true), 'SELECT current_user'));
 
         // The suite lease isolates this throwaway test database; rebuild so old grants cannot hide an omission.
-        // Retain the historical PostgreSQL functions and give the forward-only P5 additions a fresh installation.
+        // Retain the historical PostgreSQL functions and give the forward-only execution additions a fresh installation.
         TestEnvironment::prepareFreshRebuild($this->application());
         $this->beforeApplicationDestroyed(fn () => TestEnvironment::restoreSuiteMigrations($this->application()));
         $wipe = $this->artisan('db:wipe', ['--database' => 'billium_owner', '--force' => true]);

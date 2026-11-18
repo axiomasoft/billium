@@ -33,6 +33,6 @@ interface LedgerQueries
     /** @return array<string, mixed> D60 eligibility candidates; never collection authorization. */
     public function dueObligations(string $billingAccountRef, DateTimeImmutable $asOf, int $limit = 100, ?string $cursor = null): array;
 
-    /** @return array<string, mixed> Validated billium.query.v1 dispatch. readRender belongs to documents (P6). */
+    /** @return array<string, mixed> Validated billium.query.v1 dispatch. readRender belongs to the documents module. */
     public function dispatch(string $json): array;
 }

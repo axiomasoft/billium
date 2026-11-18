@@ -20,7 +20,7 @@ use stdClass;
 
 /**
  * INSERT … ON CONFLICT DO NOTHING with a bounded wait (D51): a concurrent claim of the same scope blocks on the unique
- * index until the first root Tx commits or rolls back. No check-then-insert (INV-05, M-53).
+ * index until the first root Tx commits or rolls back. No check-then-insert (INV-05).
  */
 #[Internal]
 final readonly class DatabaseIdempotencyStore implements FinancialIdempotencyStore

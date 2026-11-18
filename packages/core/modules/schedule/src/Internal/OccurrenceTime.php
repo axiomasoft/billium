@@ -8,7 +8,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Packman\Attributes\Internal;
 
-/** P4.6 identity and persistence retain every microsecond (D12/D56; owner schedule). */
+/** Occurrence identity and persistence retain every microsecond (D12/D56; owner schedule). */
 #[Internal]
 final class OccurrenceTime
 {

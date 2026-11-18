@@ -12,8 +12,8 @@ use Packman\Attributes\SpiKind;
 
 /**
  * Operation-class admission by lifecycle state. The verdict is pure; it is race-safe only when the ModuleState was
- * read inside the same root Tx, after the idempotency claim and the installation lock (P3.3 owns that persistence
- * and the transition mutator). A cached Boolean or a state read outside the Tx proves nothing.
+ * read inside the same root Tx, after the idempotency claim and the installation lock (the platform installation owns that
+ * persistence and the transition mutator). A cached Boolean or a state read outside the Tx proves nothing.
  */
 #[Spi(kind: SpiKind::Call, since: '1.0')]
 interface ModuleAdmissionGate

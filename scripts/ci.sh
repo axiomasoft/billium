@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Billium CI gate (M-33): the single carrier of the gate composition.
+# Billium CI gate: the single carrier of the gate composition.
 # Run inside the toolchain image:
 #   docker compose run --rm toolchain bash scripts/ci.sh [--layer X | --list | --affected RANGE]
 # A layer without a subject is red; a missing tool is red, never a skip.

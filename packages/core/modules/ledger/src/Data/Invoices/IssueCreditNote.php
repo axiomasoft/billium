@@ -9,7 +9,7 @@ use Packman\Attributes\Api;
 
 /**
  * Credits an issued invoice without rewriting it (COV-167, COV-174). `creditNoteRef` is the business identity; the
- * legal reference stays null until P6 numbering supplies it through the participant in the same root Tx.
+ * legal reference stays null until legal document numbering supplies it through the participant in the same root Tx.
  */
 #[Api(since: '1.0')]
 final readonly class IssueCreditNote
