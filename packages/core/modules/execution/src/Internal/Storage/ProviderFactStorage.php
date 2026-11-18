@@ -276,7 +276,7 @@ final readonly class ProviderFactStorage
         }
         $work = $this->tables->callerQuery('dispatch_work', $context)->where('attempt_ref', $attempt->attemptRef)->where('operation_ref', $attempt->operationRef)->where('lease_fence', $attempt->leaseFence);
         $revoke = ['lease_owner' => null, 'lease_expires_at' => null, 'lease_fence' => $attempt->leaseFence + 1];
-        $updated = $work->update($revoke + ['state' => $terminal ? 'processed' : 'due', 'due_at' => $lookupDueAt?->format(ExecutionRows::TIMESTAMP)]);
+        $updated = $work->update($revoke + ['state' => $terminal ? 'processed' : 'due', 'due_at' => ExecutionRows::nullableStamp($lookupDueAt)]);
         $imported = $updated === 0 && $this->tables->callerQuery('original_identity_import', $context)->where('attempt_ref', $attempt->attemptRef)
             ->where('operation_ref', $attempt->operationRef)->where('intent_owner_namespace', $this->tables->selectedScope($context)->intentOwnerNamespace)->exists()
             && ! $this->tables->callerQuery('dispatch_work', $context)->where('attempt_ref', $attempt->attemptRef)->exists();

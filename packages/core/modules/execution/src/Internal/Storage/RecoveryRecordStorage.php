@@ -61,6 +61,6 @@ final readonly class RecoveryRecordStorage
     /** @return array<string,mixed> */
     private function runRow(ReconciliationRun $r): array
     {
-        return ['run_ref' => $r->runRef, 'merchant_account_ref' => $r->merchantAccountRef, 'recovery_horizon' => $r->recoveryHorizon->format(ExecutionRows::TIMESTAMP), 'inventory_cursor' => $r->inventoryCursor, 'completeness_watermark' => $r->completenessWatermark, 'inventory_digest' => $r->inventoryDigest, 'manifest_digest' => $r->manifestDigest, 'state' => $r->state, 'unresolved' => ExecutionCodec::encode($r->unresolved), 'started_at' => $r->startedAt->format(ExecutionRows::TIMESTAMP), 'completed_at' => $r->completedAt?->format(ExecutionRows::TIMESTAMP)];
+        return ['run_ref' => $r->runRef, 'merchant_account_ref' => $r->merchantAccountRef, 'recovery_horizon' => ExecutionRows::stamp($r->recoveryHorizon), 'inventory_cursor' => $r->inventoryCursor, 'completeness_watermark' => $r->completenessWatermark, 'inventory_digest' => $r->inventoryDigest, 'manifest_digest' => $r->manifestDigest, 'state' => $r->state, 'unresolved' => ExecutionCodec::encode($r->unresolved), 'started_at' => ExecutionRows::stamp($r->startedAt), 'completed_at' => ExecutionRows::nullableStamp($r->completedAt)];
     }
 }

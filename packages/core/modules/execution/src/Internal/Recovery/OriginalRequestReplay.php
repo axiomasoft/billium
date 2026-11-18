@@ -221,8 +221,8 @@ final readonly class OriginalRequestReplay
                 'installation_ref' => $scope->installationRef, 'seller_ref' => $scope->sellerRef, 'environment' => $scope->environment,
                 'intent_owner_namespace' => $scope->intentOwnerNamespace, 'approval_ref' => $approval->approvalRef, 'attempt_ref' => $claim->attemptRef,
                 'operation_ref' => $op->operationRef, 'writer_ticket_ref' => $ticket->ticketRef, 'original_request_digest' => $approval->requestDigest,
-                'original_started_at' => $claim->startedAt->format(ExecutionRows::TIMESTAMP), 'window_ends_at' => $window->format(ExecutionRows::TIMESTAMP),
-                'deadline' => $deadline->format(ExecutionRows::TIMESTAMP), 'lease_fence' => $claim->leaseFence]);
+                'original_started_at' => ExecutionRows::stamp($claim->startedAt), 'window_ends_at' => ExecutionRows::stamp($window),
+                'deadline' => ExecutionRows::stamp($deadline), 'lease_fence' => $claim->leaseFence]);
             if ($inserted !== 1) {
                 throw self::refused('Replay authorization already committed');
             }

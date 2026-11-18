@@ -259,7 +259,7 @@ final class DatabaseExecutionStore implements ExecutionStore
         $db = $this->tables->database($ctx);
         $root = $a->operationRef === $b->rootOperationRef;
         $shared = ExecutionTables::scope($scope) + ['intent_owner_namespace' => $scope->intentOwnerNamespace, 'source_context' => $b->sourceContext,
-            'binding' => ExecutionCodec::encode($b), 'operation_ref' => $a->operationRef, 'created_at' => $a->createdAt->format(ExecutionRows::TIMESTAMP)];
+            'binding' => ExecutionCodec::encode($b), 'operation_ref' => $a->operationRef, 'created_at' => ExecutionRows::stamp($a->createdAt)];
         $identity = $shared + ['business_intent_ref' => $a->businessIntentRef, 'operation_kind' => $root ? 'charge' : $a->kind->value,
             'semantic_digest' => $a->semanticDigest, 'canonicalization_version' => $b->canonicalizationVersion];
         $terms = ['root_operation_ref' => $b->rootOperationRef, 'requested_minor' => $a->requested->minor,
@@ -289,7 +289,7 @@ final class DatabaseExecutionStore implements ExecutionStore
         $db->table('billium_execution_attempt')->insert(ExecutionTables::scope($scope) + ['attempt_ref' => $a->attemptRef, 'operation_ref' => $a->operationRef,
             'provider_reference' => $a->providerReference, 'provider_id' => $a->providerId, 'merchant_account_ref' => $b->merchantAccountRef,
             'state' => 'unknown', 'lease_fence' => $a->originalFence + 1, 'session_epoch' => $a->originalEpoch, 'owner_session_ref' => $a->originalOwner,
-            'request_digest' => $a->requestDigest, 'started_at' => $a->startedAt->format(ExecutionRows::TIMESTAMP), 'request_deadline_at' => $a->deadline->format(ExecutionRows::TIMESTAMP),
+            'request_digest' => $a->requestDigest, 'started_at' => ExecutionRows::stamp($a->startedAt), 'request_deadline_at' => ExecutionRows::stamp($a->deadline),
             'dispatch_ticket_ref' => $a->firstTicketRef, 'collection_dispatch_permit_ref' => $a->collectionPermitRef]);
     }
 

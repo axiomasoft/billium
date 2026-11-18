@@ -63,6 +63,11 @@ final class ExecutionRows
         return $time->format(self::TIMESTAMP);
     }
 
+    public static function nullableStamp(?DateTimeInterface $time): ?string
+    {
+        return $time === null ? null : self::stamp($time);
+    }
+
     /** @param list<string> $items */
     public static function textArray(array $items): string
     {

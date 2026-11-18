@@ -38,7 +38,7 @@ final readonly class ProviderCustodyStorage
             'merchant_account_ref' => $providerEvidence->merchantAccountRef, 'provider_event_id' => $providerEvidence->providerEventId,
             'payload_digest' => $providerEvidence->payloadDigest, 'signature_verdict' => $providerEvidence->signatureVerdict,
             'handler_contract_version' => $providerEvidence->handlerContractVersion, 'secure_payload_ref' => $providerEvidence->securePayloadRef];
-        $delivery = $scope + $fields + ['received_at' => $providerEvidence->receivedAt->format(ExecutionRows::TIMESTAMP), 'sanitized_payload' => $payload, 'evidence_ref' => $providerEvidence->evidenceRef];
+        $delivery = $scope + $fields + ['received_at' => ExecutionRows::stamp($providerEvidence->receivedAt), 'sanitized_payload' => $payload, 'evidence_ref' => $providerEvidence->evidenceRef];
         $rows = $db->table('billium_execution_provider_evidence')->where($scope);
         $conflict = false;
         if ($providerEvidence->providerEventId !== null && $providerEvidence->signatureVerdict !== 'unverified') {
@@ -125,9 +125,9 @@ final readonly class ProviderCustodyStorage
         $fence = ExecutionRows::integer($r->lease_fence) + 1;
         $count = ExecutionRows::integer($r->attempt_count) + 1;
         $updated = $q->where('lease_fence', ExecutionRows::integer($r->lease_fence))->where('state', ExecutionRows::text($r->state))
-            ->whereRaw('due_at <= clock_timestamp()')->whereRaw('?::timestamptz > clock_timestamp()', [$until->format(ExecutionRows::TIMESTAMP)])
+            ->whereRaw('due_at <= clock_timestamp()')->whereRaw('?::timestamptz > clock_timestamp()', [ExecutionRows::stamp($until)])
             ->where(static fn (Builder $eligible): Builder => $eligible->where('state', 'due')->orWhere(static fn (Builder $expired): Builder => $expired->where('state', 'leased')->whereRaw('lease_expires_at <= clock_timestamp()')))
-            ->update(['state' => 'leased', 'lease_owner' => $leaseOwner, 'lease_fence' => $fence, 'lease_expires_at' => $until->format(ExecutionRows::TIMESTAMP), 'attempt_count' => $count]);
+            ->update(['state' => 'leased', 'lease_owner' => $leaseOwner, 'lease_fence' => $fence, 'lease_expires_at' => ExecutionRows::stamp($until), 'attempt_count' => $count]);
         if ($updated !== 1) {
             return null;
         }

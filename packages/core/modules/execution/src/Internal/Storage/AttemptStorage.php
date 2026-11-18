@@ -57,7 +57,7 @@ final readonly class AttemptStorage
         $q = $this->tables->callerQuery('attempt', $transactionContext)->where('attempt_ref', $attemptRef);
         $r = (clone $q)->first() ?? throw new LogicException('Attempt absent');
         $this->tables->requireOperationLock($transactionContext, ExecutionRows::text($r->operation_ref));
-        $until = $leaseUntil->format(ExecutionRows::TIMESTAMP);
+        $until = ExecutionRows::stamp($leaseUntil);
         $fence = ExecutionRows::integer($r->lease_fence) + 1;
         $work = $this->tables->callerQuery('dispatch_work', $transactionContext)->where('attempt_ref', $attemptRef)->where('operation_ref', $r->operation_ref)
             ->where('lease_fence', $fence - 1)->whereRaw('?::timestamptz > clock_timestamp()', [$until])
@@ -120,7 +120,7 @@ final readonly class AttemptStorage
         if ($state === WorkState::Processed && ! $this->hasQueuedEvidence($context, $attempt)) {
             throw new ProblemException(ProblemCode::RecoveryRequired, 'Dispatch completion requires original durable provider evidence work');
         }
-        if ($work->update(['state' => $state->value, 'due_at' => $dueAt?->format(ExecutionRows::TIMESTAMP), 'lease_owner' => null,
+        if ($work->update(['state' => $state->value, 'due_at' => ExecutionRows::nullableStamp($dueAt), 'lease_owner' => null,
             'lease_expires_at' => null, 'last_error_code' => $errorCode, 'last_error_at' => $errorCode === null ? null : new DateTimeImmutable]) !== 1) {
             return false;
         }
@@ -149,7 +149,7 @@ final readonly class AttemptStorage
             throw new LogicException('Cached admitted owner identity is absent');
         }
 
-        $deadline = $dispatchDecision->requestDeadlineAt->format(ExecutionRows::TIMESTAMP);
+        $deadline = ExecutionRows::stamp($dispatchDecision->requestDeadlineAt);
 
         return $this->tables->callerQuery('attempt', $transactionContext)->where('attempt_ref', $dispatchDecision->attemptRef)->where('operation_ref', $dispatchDecision->operationRef)
             ->where('state', 'admitted')->where('request_digest', $dispatchDecision->immutableRequestDigest)->where('lease_fence', $dispatchDecision->leaseFence)
