@@ -76,7 +76,11 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
             throw new ProblemException(ProblemCode::AuthDenied, 'billium.rating.scope_denied');
         }
         $semantic = CanonicalJson::digest($p);
-        $modules = ['platform', 'rating', 'schedule', 'ledger'];
+        $modules = ['platform', 'rating', 'schedule'];
+        // Only a non-zero delta books debt or credit; a zero correction must not depend on an optional ledger.
+        if (bccomp(RatingRows::decimal($c->deltaGrossMinor), '0', 0) !== 0) {
+            $modules[] = 'ledger';
+        }
         if (array_any($in->aggregates, static fn (FrozenAggregate $aggregate): bool => ! FixedOccurrenceInput::matches($aggregate))) {
             $modules[] = 'usage';
         }

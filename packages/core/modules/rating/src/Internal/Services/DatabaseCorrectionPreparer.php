@@ -204,7 +204,10 @@ final readonly class DatabaseCorrectionPreparer
         if (bccomp(RatingRows::decimal($computation->deltaGrossMinor), '0', 0) < 0 && $command->releasePolicy === null) {
             RatingComputation::refuse('release_policy_required');
         }
-        $obligation = $booking->obligation_ref === null ? null : $this->ledger->obligation($booking->obligation_ref);
+        // A zero correction books nothing, so it needs the original obligation's invoice only when ledger can still answer.
+        $zero = bccomp(RatingRows::decimal($computation->deltaGrossMinor), '0', 0) === 0;
+        $obligation = $booking->obligation_ref === null || ($zero && ! $this->ledger->available())
+            ? null : $this->ledger->obligation($booking->obligation_ref);
         $invoiceRef = $obligation?->billedInvoiceRef;
         $creditParts = [];
         if (bccomp(RatingRows::decimal($computation->deltaGrossMinor), '0', 0) < 0) {

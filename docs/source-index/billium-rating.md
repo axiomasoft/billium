@@ -104,7 +104,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`LedgerAdapter`](../../packages/core/modules/rating/src/Internal/Adapters/LedgerAdapter.php) | class | *Internal* | Rating's only route to the optional ledger capability; every call fails closed when ledger is not installed. |
+| [`LedgerAdapter`](../../packages/core/modules/rating/src/Internal/Adapters/LedgerAdapter.php) | class | *Internal* | Rating's only route to the optional ledger capability; every call refuses with a ledger module error when it is not installed. |
 | [`LedgerObligation`](../../packages/core/modules/rating/src/Internal/Adapters/LedgerObligation.php) | class | *Internal* | The part of a ledger obligation view that bounds how much a negative correction may credit. |
 | [`ObligationCommandMapper`](../../packages/core/modules/rating/src/Internal/Adapters/ObligationCommandMapper.php) | class | *Internal* | Q1=a: ledger owns gross debt; immutable rating lines own net/tax and source provenance. |
 | [`OutboxAdapter`](../../packages/core/modules/rating/src/Internal/Adapters/OutboxAdapter.php) | class | *Internal* | Rating's route to the platform command outbox. |

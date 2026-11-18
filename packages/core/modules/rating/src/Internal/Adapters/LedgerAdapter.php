@@ -6,6 +6,7 @@ namespace Billium\Rating\Internal\Adapters;
 
 use Billium\Contracts\Data\Money;
 use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Exceptions\Modules\ModuleAdmissionRefused;
 use Billium\Ledger\Contracts\CorrectionCreditParticipants;
 use Billium\Ledger\Contracts\CorrectionLocks;
 use Billium\Ledger\Contracts\LedgerParticipants;
@@ -16,13 +17,18 @@ use Billium\Rating\Data\Rating\PreparedRating;
 use LogicException;
 use Packman\Attributes\Internal;
 
-/** Rating's only route to the optional ledger capability; every call fails closed when ledger is not installed. */
+/** Rating's only route to the optional ledger capability; every call refuses with a ledger module error when it is not installed. */
 #[Internal]
 final readonly class LedgerAdapter
 {
     public function __construct(private ObligationCommandMapper $mapper, private ?LedgerParticipants $ledger = null,
         private ?CorrectionLocks $locks = null, private ?CorrectionCreditParticipants $credits = null,
         private ?LedgerQueries $queries = null) {}
+
+    public function available(): bool
+    {
+        return $this->ledger !== null && $this->queries !== null;
+    }
 
     public function record(TransactionContext $context, PreparedRating $prepared): string
     {
@@ -80,6 +86,6 @@ final readonly class LedgerAdapter
 
     private static function absent(): never
     {
-        throw new LogicException('Ledger capability absent');
+        throw new ModuleAdmissionRefused(moduleId: 'ledger', reason: 'module_not_installed');
     }
 }
