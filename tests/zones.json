@@ -31,6 +31,11 @@
       "layers": ["dart", "conformance"]
     },
     {
+      "id": "source-index",
+      "paths": ["packages/*/src/**", "packages/core/modules/*/src/**", "packman.json", "scripts/docs/**", "docs/source-index/**"],
+      "layers": ["derived"]
+    },
+    {
       "id": "toolchain",
       "paths": ["docker/**", "compose.yaml", "scripts/ci.sh", ".github/**"],
       "layers": ["lint", "derived", "php", "dart", "conformance"]

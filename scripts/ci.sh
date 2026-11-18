@@ -59,6 +59,8 @@ layer_derived() {
         found=1
     done
     ((found == 1)) || fail "derived: no generator found under scripts/spec/"
+    need_path scripts/docs/source-index.py
+    python3 scripts/docs/source-index.py --check
 }
 
 layer_php() {
