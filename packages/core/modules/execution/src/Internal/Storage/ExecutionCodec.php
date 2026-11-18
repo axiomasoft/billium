@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Billium\Execution\Internal\Storage;
 
 use BackedEnum;
-use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Data\Envelope;
 use Billium\Execution\Data\AuthorizationRecord;
 use Billium\Execution\Data\CapabilitySnapshot;
@@ -16,6 +15,7 @@ use Billium\Execution\Data\MerchantRevision;
 use Billium\Execution\Data\OriginDecision;
 use Billium\Execution\Enums\EffectKind;
 use Billium\Execution\Internal\Authority\AuthorityClaims;
+use Billium\Execution\Internal\Identity\PaymentIdentity;
 use DateTimeImmutable;
 use DateTimeInterface;
 use JsonException;
@@ -51,21 +51,21 @@ final class ExecutionCodec
 
     public static function businessIdentityDigest(FrozenBinding $binding, string $logicalKind): string
     {
-        return 'sha256:'.hash('sha256', (new Codec)->canonicalize([
+        return PaymentIdentity::digest([
             'schema' => 'billium.execution.business-identity.v1',
             'intentOwnerNamespace' => $binding->scope->intentOwnerNamespace,
             'environment' => $binding->scope->environment,
             'sourceContext' => $binding->sourceContext,
             'businessIntentRef' => $binding->businessIntentRef,
             'operationKind' => $logicalKind,
-        ]));
+        ]);
     }
 
     public static function providerIdentityScope(MerchantRevision $merchant, CapabilitySnapshot $capability): string
     {
-        return 'sha256:'.hash('sha256', (new Codec)->canonicalize(['schema' => 'billium.execution.provider-scope.v1',
+        return PaymentIdentity::digest(['schema' => 'billium.execution.provider-scope.v1',
             'provider' => $merchant->providerId, 'environment' => $merchant->scope->environment, 'account' => $merchant->merchantAccountRef,
-            'namespace' => $capability->details->lookupNamespace]));
+            'namespace' => $capability->details->lookupNamespace]);
     }
 
     public static function bindingDigest(FrozenBinding $binding): string

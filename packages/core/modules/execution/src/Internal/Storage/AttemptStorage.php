@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Billium\Execution\Internal\Storage;
 
-use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runner\TransactionContext;
@@ -16,6 +15,7 @@ use Billium\Execution\Enums\AttemptState;
 use Billium\Execution\Enums\EffectKind;
 use Billium\Execution\Enums\WorkState;
 use Billium\Execution\Internal\Authority\AuthorityClaims;
+use Billium\Execution\Internal\Identity\PaymentIdentity;
 use DateTimeImmutable;
 use LogicException;
 use Packman\Attributes\Internal;
@@ -92,7 +92,7 @@ final readonly class AttemptStorage
         $revision = $current->revision + 1;
         $material = ['schema' => 'billium.execution.cancel-before-dispatch.v1', 'operationRef' => $current->operationRef, 'attemptRef' => $attemptRef,
             'originalBindingDigest' => AuthorityClaims::bindingDigest($current->binding), 'receiptRef' => $receiptRef];
-        $digest = 'sha256:'.hash('sha256', (new Codec)->canonicalize($material));
+        $digest = PaymentIdentity::digest($material);
         $this->tables->callerQuery('operation', $context)->where('id', $current->id)->update(['state' => 'cancelled', 'revision' => $revision, 'economic_digest' => $digest]);
         $capacity = $this->capacities->capacity($context, $current->rootOperationRef);
         $this->tables->database($context)->table('billium_execution_operation_revision')->insert($this->tables->callerScope($context) + [
