@@ -6,6 +6,7 @@ namespace Billium\Rating\Tests\Feature;
 
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Exceptions\Modules\ModuleAdmissionRefused;
+use Billium\Core\Tests\Support\UsesFreshProfileDatabase;
 use Billium\Rating\Contracts\PriceVersionStore;
 use Billium\Rating\Enums\BookingOutcome;
 use Billium\Rating\Tests\RatingTestCase;
@@ -16,6 +17,8 @@ use PHPUnit\Framework\Attributes\Group;
 #[Group('pg')]
 final class RatingPipelineNoInvoiceTest extends RatingTestCase
 {
+    use UsesFreshProfileDatabase;
+
     /** @return list<array{string}> */
     public static function lostEvidence(): array
     {

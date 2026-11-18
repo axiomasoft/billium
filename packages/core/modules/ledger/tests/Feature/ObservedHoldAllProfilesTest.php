@@ -6,6 +6,7 @@ namespace Billium\Ledger\Tests\Feature;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Core\Contracts\Modules\ModuleRegistry;
+use Billium\Core\Tests\Support\UsesFreshProfileDatabase;
 use Billium\Ledger\Tests\Observation\ObservationTestCase;
 use Billium\Ledger\Tests\Observation\OverRefundVector;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -22,6 +23,7 @@ use PHPUnit\Framework\Attributes\Group;
 final class ObservedHoldAllProfilesTest extends ObservationTestCase
 {
     use OverRefundVector;
+    use UsesFreshProfileDatabase;
 
     /** @return array<string, array{0: string}> */
     public static function profiles(): array

@@ -6,6 +6,7 @@ namespace Billium\Core\Tests;
 
 use Billium\Core\Internal\Modules\ModuleCatalog;
 use Billium\Core\Tests\Arch\MigrationTables;
+use Closure;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Contracts\Events\Dispatcher;
@@ -16,6 +17,7 @@ use Illuminate\Foundation\Application;
 use PDO;
 use PDOException;
 use RuntimeException;
+use Throwable;
 
 final class TestEnvironment
 {
@@ -27,6 +29,8 @@ final class TestEnvironment
     private static ?PDO $suiteLease = null;
 
     private static ?string $suiteLeaseToken = null;
+
+    private static ?string $profileDatabase = null;
 
     private static bool $preflightVerified = false;
 
@@ -141,12 +145,61 @@ final class TestEnvironment
 
     public static function databaseName(): string
     {
-        $database = self::required('DB_DATABASE');
+        $database = self::$profileDatabase ?? self::required('DB_DATABASE');
         if (! str_ends_with($database, '_test')) {
             throw new RuntimeException('D50: DB_DATABASE must end in _test');
         }
 
         return $database;
+    }
+
+    /** Creates an empty owner/runtime database for a proof that requires physically absent module tables. */
+    public static function openProfileDatabase(): Closure
+    {
+        if (self::$profileDatabase !== null) {
+            throw new RuntimeException('A profile test database is already open');
+        }
+        self::preflight();
+        self::acquireSuiteLease();
+        $admin = self::pdo(owner: true);
+        $sourceLease = self::$suiteLease;
+        $sourceToken = self::$suiteLeaseToken;
+        $name = 'billium_profile_'.bin2hex(random_bytes(8)).'_test';
+        $admin->exec('CREATE DATABASE "'.$name.'" TEMPLATE template0');
+        $close = static function () use ($name, $admin, $sourceLease, $sourceToken): void {
+            if (self::$profileDatabase !== $name) {
+                return;
+            }
+            self::$suiteLease = $sourceLease;
+            self::$suiteLeaseToken = $sourceToken;
+            self::$profileDatabase = null;
+            $admin->exec('DROP DATABASE "'.$name.'" WITH (FORCE)');
+        };
+        try {
+            self::$profileDatabase = $name;
+            $owner = self::pdo(owner: true);
+            $lock = $owner->prepare('SELECT pg_try_advisory_lock(?, ?)');
+            $lock->execute([self::LEASE_CLASS, self::LEASE_OBJECT]);
+            if ($lock->fetchColumn() !== true) {
+                throw new RuntimeException('Fresh profile database already has a suite lease');
+            }
+            self::$suiteLease = $owner;
+            self::$suiteLeaseToken = null;
+            // Match the shared stand's role bootstrap before running the selected module migrations.
+            $runtime = '"'.str_replace('"', '""', self::required('DB_USERNAME')).'"';
+            $owner->exec('REVOKE CREATE ON SCHEMA public FROM PUBLIC');
+            $owner->exec('REVOKE TEMPORARY ON DATABASE "'.$name.'" FROM PUBLIC');
+            $owner->exec('GRANT CONNECT ON DATABASE "'.$name.'" TO '.$runtime);
+            $owner->exec('GRANT USAGE ON SCHEMA public TO '.$runtime);
+            $owner->exec('ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO '.$runtime);
+            $owner->exec('ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC');
+            self::assertRuntimeSafe(self::pdo());
+        } catch (Throwable $error) {
+            $close();
+            throw $error;
+        }
+
+        return $close;
     }
 
     /** @return array<string, mixed> */
@@ -264,9 +317,11 @@ final class TestEnvironment
         }
         $pid = $statement->fetchColumn();
 
-        return [self::SUITE_LEASE_ENV => json_encode([
+        $claim = [self::SUITE_LEASE_ENV => json_encode([
             'database' => self::databaseName(), 'pid' => $pid, 'token' => self::$suiteLeaseToken,
         ], JSON_THROW_ON_ERROR)];
+
+        return self::$profileDatabase === null ? $claim : ['DB_DATABASE' => self::$profileDatabase, ...$claim];
     }
 
     private static function assertInheritedSuiteLease(string $claim): void

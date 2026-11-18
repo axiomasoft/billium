@@ -9,11 +9,13 @@ use Billium\Contracts\Data\Envelopes\EventEnvelopeV2;
 use Billium\Contracts\Data\Envelopes\FeedPage as WireFeedPage;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Core\Contracts\Modules\ModuleRegistry;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Data\Modules\PublicEventDeclaration;
 use Billium\Core\Data\Runner\Receipt;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Platform\Contracts\Outbox\Outbox;
+use Billium\Platform\Data\EventContracts\EventContractRegistration;
 use Billium\Platform\Data\EventContracts\RegisteredPublicEvent;
 use Billium\Platform\Data\Feed\FeedSelection;
 use Billium\Platform\Data\Outbox\OutboxEvent;
@@ -120,8 +122,7 @@ final class FilteredFeedCompatibilityTest extends OutboxTestCase
     public function test_v2_fact_is_negotiated_and_same_revision_with_changed_payload_conflicts(): void
     {
         $old = $this->selection(PublicEventDeclaration::STRICT_V1_TYPES);
-        $contract = $this->registerExecution();
-        $this->owner()->insert("INSERT INTO billium_module_state(installation_ref,module_id,state,config_revision,schema_version,generation,last_transition_ref) VALUES ('inst-test','execution','accepting',1,0,1,'fixture:execution')");
+        $contract = $this->registerExecutionWriter();
         $payload = self::effectPayload();
         $event = new RegisteredPublicEvent($contract, new OutboxEvent((string) Str::ulid(), 'payment.effect.outcome.v1', 'billium.event.v2', 'capture:1', 1, new \DateTimeImmutable('2026-10-28T10:00:00Z'), $payload));
         $body = function (TransactionContext $context) use ($event): Receipt {
@@ -150,8 +151,7 @@ final class FilteredFeedCompatibilityTest extends OutboxTestCase
 
     public function test_registered_event_is_wire_valid_before_content_or_deliveries_commit(): void
     {
-        $contract = $this->registerExecution();
-        $this->owner()->insert("INSERT INTO billium_module_state(installation_ref,module_id,state,config_revision,schema_version,generation,last_transition_ref) VALUES ('inst-test','execution','accepting',1,0,1,'fixture:execution')");
+        $contract = $this->registerExecutionWriter();
         $payload = self::effectPayload();
         $at = new \DateTimeImmutable('2026-10-28T10:00:00Z');
         $invalid = new RegisteredPublicEvent($contract, new OutboxEvent('evt-1', 'payment.effect.outcome.v1', 'billium.event.v2', 'capture:1', 1, $at, $payload));
@@ -188,5 +188,22 @@ final class FilteredFeedCompatibilityTest extends OutboxTestCase
         self::assertInstanceOf(WireFeedPage::class, $decoded);
         self::assertSame($pageJson, $codec->encode($decoded));
         self::assertSame(1, $this->rows('billium_outbox_delivery'));
+    }
+
+    private function registerExecutionWriter(): EventContractRegistration
+    {
+        $contract = $this->registerExecution();
+        $execution = $this->application()->make(ModuleRegistry::class)->descriptor('execution') ?? self::fail('execution descriptor missing');
+        $this->owner()->table('billium_module_state')->insert([
+            'installation_ref' => self::INSTALLATION,
+            'module_id' => $execution->moduleId,
+            'state' => 'accepting',
+            'config_revision' => 1,
+            'schema_version' => $execution->currentSchemaVersion,
+            'generation' => 1,
+            'last_transition_ref' => 'fixture:execution',
+        ]);
+
+        return $contract;
     }
 }
