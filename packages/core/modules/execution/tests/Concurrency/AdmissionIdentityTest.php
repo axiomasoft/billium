@@ -374,12 +374,15 @@ final class AdmissionIdentityTest extends ExecutionTestCase
                 self::assertCount(1, array_unique(array_map(static fn (JournalEvent $entry): mixed => $entry->data['id'], $accepted)));
             }
             if ($race === 'keys') {
-                $operations = array_map(static function (JournalEvent $entry): mixed {
+                $operations = array_map(static function (JournalEvent $entry): string {
                     self::assertIsString($entry->data['receipt']);
                     $body = json_decode($entry->data['receipt'], true, flags: JSON_THROW_ON_ERROR);
                     self::assertIsArray($body);
 
-                    return $body['operationRef'] ?? null;
+                    $operation = $body['operationRef'] ?? null;
+                    self::assertIsString($operation);
+
+                    return $operation;
                 }, $accepted);
                 self::assertSame(['root-a'], array_values(array_unique($operations)));
             }
