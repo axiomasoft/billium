@@ -15,7 +15,6 @@ use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Ledger\Data\Invoices\CreditNoteLine;
 use Billium\Ledger\Data\Invoices\CreditNoteMode;
 use Billium\Ledger\Data\Invoices\IssueCreditNote;
-use Billium\Ledger\Data\Obligations\CorrectionBasis;
 use Billium\Rating\Contracts\RatingCorrection;
 use Billium\Rating\Data\Correction\ApplyCorrection;
 use Billium\Rating\Data\Correction\PrepareCorrection;
@@ -30,6 +29,7 @@ use Billium\Rating\Enums\TaxSnapshotKind;
 use Billium\Rating\Internal\Adapters\LedgerAdapter;
 use Billium\Rating\Internal\Adapters\ObligationCommandMapper;
 use Billium\Rating\Internal\Adapters\OutboxAdapter;
+use Billium\Rating\Internal\Adapters\RatedCorrectionBasis;
 use Billium\Rating\Internal\Adapters\ScheduleOccurrenceAdapter;
 use Billium\Rating\Internal\Adapters\UsageAggregateAdapter;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
@@ -123,8 +123,8 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
                     RatingComputation::refuse('correction_digest_mismatch');
                 }
                 $this->occurrences->lock(context: $context, ref: $in->occurrenceRef);
-                $basis = CorrectionBasis::derive(originalBasisRef: 'rating:'.$c->predecessorBasisRef,
-                    correctionRef: $in->occurrenceRef, revision: $c->correctionRevision);
+                $basis = RatedCorrectionBasis::derive(predecessorBasisRef: $c->predecessorBasisRef,
+                    occurrenceRef: $in->occurrenceRef, correctionRevision: $c->correctionRevision);
                 $child = $this->occurrences->registerCorrectionChild(context: $context, command: new RegisterCorrectionChild(
                     sellerRef: $in->sellerRef, environment: $in->environment, parentOccurrenceRef: $in->occurrenceRef,
                     originalPeriodStart: Micros::instant($in->periodStartMicros), originalPeriodEnd: Micros::instant($in->periodEndMicros),

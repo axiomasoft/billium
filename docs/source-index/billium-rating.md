@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-rating
 
-Path `packages/core/modules/rating/src`, namespace `Billium\Rating\`, layer L2. 116 types.
+Path `packages/core/modules/rating/src`, namespace `Billium\Rating\`, layer L2. 117 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -108,6 +108,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`LedgerObligation`](../../packages/core/modules/rating/src/Internal/Adapters/LedgerObligation.php) | class | *Internal* | The part of a ledger obligation view that bounds how much a negative correction may credit. |
 | [`ObligationCommandMapper`](../../packages/core/modules/rating/src/Internal/Adapters/ObligationCommandMapper.php) | class | *Internal* | Q1=a: ledger owns gross debt; immutable rating lines own net/tax and source provenance. |
 | [`OutboxAdapter`](../../packages/core/modules/rating/src/Internal/Adapters/OutboxAdapter.php) | class | *Internal* | Rating's route to the platform command outbox. |
+| [`RatedCorrectionBasis`](../../packages/core/modules/rating/src/Internal/Adapters/RatedCorrectionBasis.php) | class | *Internal* | Rating books a correction as a linked ledger obligation, so the schedule child must bind that same basis: ledger's correction derivation over the rated predece… |
 | [`ScheduleOccurrenceAdapter`](../../packages/core/modules/rating/src/Internal/Adapters/ScheduleOccurrenceAdapter.php) | class | *Internal* |  |
 | [`UsageAggregateAdapter`](../../packages/core/modules/rating/src/Internal/Adapters/UsageAggregateAdapter.php) | class | *Internal* | Rating's only route to the optional usage capability; every member is absent when usage is not installed. |
 

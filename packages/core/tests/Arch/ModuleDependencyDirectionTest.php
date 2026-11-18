@@ -69,7 +69,9 @@ final class ModuleDependencyDirectionTest extends TestCase
         $root = dirname(__DIR__, 2).'/modules/rating/src/';
         $violations = [];
         foreach (self::references($root) as $path => $names) {
-            if (str_starts_with($path, 'Internal/Adapters/') || str_starts_with($path, 'Internal/Registrars/')) {
+            // Registrars and capability maps only name foreign contracts to wire rating's implementations into them.
+            if (str_starts_with($path, 'Internal/Adapters/') || str_starts_with($path, 'Internal/Registrars/')
+                || $path === 'Laravel/RatingCapabilities.php') {
                 continue;
             }
             foreach ($names as $name) {

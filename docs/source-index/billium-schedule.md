@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-schedule
 
-Path `packages/core/modules/schedule/src`, namespace `Billium\Schedule\`, layer L2. 53 types.
+Path `packages/core/modules/schedule/src`, namespace `Billium\Schedule\`, layer L2. 55 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -13,6 +13,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`AgreementRevisionGuard`](../../packages/core/modules/schedule/src/Contracts/AgreementRevisionGuard.php) | interface | **Spi** | Host authority (REQ-NBR-06, D56; owner host). |
 | [`Clock`](../../packages/core/modules/schedule/src/Contracts/Clock.php) | interface | **Api** |  |
 | [`CommercialPeriods`](../../packages/core/modules/schedule/src/Contracts/CommercialPeriods.php) | interface | **Api** |  |
+| [`CorrectionBasisPolicy`](../../packages/core/modules/schedule/src/Contracts/CorrectionBasisPolicy.php) | interface | **Spi** | Decides which obligation basis a correction child may bind. |
 | [`CorrectionParticipants`](../../packages/core/modules/schedule/src/Contracts/CorrectionParticipants.php) | interface | **Spi** |  |
 | [`IntervalResolver`](../../packages/core/modules/schedule/src/Contracts/IntervalResolver.php) | interface | **Api** |  |
 | [`OccurrenceLocks`](../../packages/core/modules/schedule/src/Contracts/OccurrenceLocks.php) | interface | **Spi** | Outer roots acquire the complete rank-50 set before settlement/obligation locks (D27/FA03). |
@@ -106,6 +107,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
+| [`CanonicalCorrectionBasis`](../../packages/core/modules/schedule/src/Internal/Participants/CanonicalCorrectionBasis.php) | class | *Internal* | Schedule's own binding when no booking module installs a policy: the basis is derived from the parent and revision. |
 | [`DatabaseCorrectionParticipants`](../../packages/core/modules/schedule/src/Internal/Participants/DatabaseCorrectionParticipants.php) | class | *Internal* |  |
 | [`DatabaseOccurrenceParticipants`](../../packages/core/modules/schedule/src/Internal/Participants/DatabaseOccurrenceParticipants.php) | class | *Internal* |  |
 
