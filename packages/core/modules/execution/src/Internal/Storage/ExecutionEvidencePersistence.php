@@ -49,7 +49,7 @@ trait ExecutionEvidencePersistence
             'merchant_account_ref' => $providerEvidence->merchantAccountRef, 'provider_event_id' => $providerEvidence->providerEventId,
             'payload_digest' => $providerEvidence->payloadDigest, 'signature_verdict' => $providerEvidence->signatureVerdict,
             'handler_contract_version' => $providerEvidence->handlerContractVersion, 'secure_payload_ref' => $providerEvidence->securePayloadRef];
-        $delivery = $scope + $fields + ['received_at' => $providerEvidence->receivedAt->format('Y-m-d H:i:s.uP'), 'sanitized_payload' => $payload, 'evidence_ref' => $providerEvidence->evidenceRef];
+        $delivery = $scope + $fields + ['received_at' => $providerEvidence->receivedAt->format(ExecutionRows::TIMESTAMP), 'sanitized_payload' => $payload, 'evidence_ref' => $providerEvidence->evidenceRef];
         $rows = $db->table('billium_execution_provider_evidence')->where($scope);
         $conflict = false;
         if ($providerEvidence->providerEventId !== null && $providerEvidence->signatureVerdict !== 'unverified') {
@@ -89,7 +89,7 @@ trait ExecutionEvidencePersistence
             }
         }
 
-        return ExecutionCodec::encode(json_decode(self::text($row->sanitized_payload), true, 64, JSON_THROW_ON_ERROR)) === $payload;
+        return ExecutionCodec::encode(json_decode(ExecutionRows::text($row->sanitized_payload), true, 64, JSON_THROW_ON_ERROR)) === $payload;
     }
 
     public function attemptForOperation(ExecutionScope $scope, string $operationRef, ?TransactionContext $context = null): ?AttemptRecord
@@ -119,12 +119,12 @@ trait ExecutionEvidencePersistence
 
     private function reservationRow(TransactionContext $context, stdClass $row): Reservation
     {
-        $this->requireOperationLock($context, self::text($row->operation_ref));
-        $currency = Currency::of(self::text($row->currency));
+        $this->requireOperationLock($context, ExecutionRows::text($row->operation_ref));
+        $currency = Currency::of(ExecutionRows::text($row->currency));
 
-        return new Reservation(self::text($row->reservation_ref), self::text($row->root_operation_ref), self::text($row->operation_ref),
-            EffectKind::from(self::text($row->kind)), new Money(self::integer($row->requested_minor), $currency),
-            ReservationState::from(self::text($row->state)), new Money(self::integer($row->consumed_minor), $currency), self::nullableText($row->release_evidence_ref));
+        return new Reservation(ExecutionRows::text($row->reservation_ref), ExecutionRows::text($row->root_operation_ref), ExecutionRows::text($row->operation_ref),
+            EffectKind::from(ExecutionRows::text($row->kind)), new Money(ExecutionRows::integer($row->requested_minor), $currency),
+            ReservationState::from(ExecutionRows::text($row->state)), new Money(ExecutionRows::integer($row->consumed_minor), $currency), ExecutionRows::nullableText($row->release_evidence_ref));
     }
 
     public function lastObserved(TransactionContext $context, string $operationRef): ?MaterialSnapshot
@@ -134,7 +134,7 @@ trait ExecutionEvidencePersistence
         // An accepted provider revision can advance ordering without changing money or creating an operation revision.
         $value = $this->orderingFacts($context)->where('operation_ref', $operationRef)->orderByDesc('id')->value('normalized_snapshot');
 
-        return $value === null ? null : ExecutionCodec::decode(MaterialSnapshot::class, self::text($value));
+        return $value === null ? null : ExecutionCodec::decode(MaterialSnapshot::class, ExecutionRows::text($value));
     }
 
     private function orderingFacts(TransactionContext $context): Builder
@@ -160,7 +160,7 @@ trait ExecutionEvidencePersistence
         }
         $value = $query->orderByDesc('id')->value('normalized_snapshot');
 
-        return $value === null ? null : ExecutionCodec::decode(MaterialSnapshot::class, self::text($value));
+        return $value === null ? null : ExecutionCodec::decode(MaterialSnapshot::class, ExecutionRows::text($value));
     }
 
     public function latestRootObservation(TransactionContext $context, string $rootRef): ?MaterialSnapshot
@@ -170,7 +170,7 @@ trait ExecutionEvidencePersistence
         $value = $this->callerQuery('operation_revision', $context)->where('operation_ref', $rootRef)
             ->whereNotNull('observed->authorizedTotal')->orderByDesc('id')->value('observed');
 
-        return $value === null ? null : ExecutionCodec::decode(MaterialSnapshot::class, self::text($value));
+        return $value === null ? null : ExecutionCodec::decode(MaterialSnapshot::class, ExecutionRows::text($value));
     }
 
     public function providerWork(string $workRef, ?TransactionContext $context = null): ?ProviderWorkInput
@@ -188,13 +188,13 @@ trait ExecutionEvidencePersistence
             return null;
         }
         $raw = $deliveries->where('evidence_ref', $row->evidence_ref)->sole();
-        $scope = new ExecutionScope($caller->installationRef, $caller->sellerRef, $caller->environment, self::text($raw->intent_owner_namespace));
-        $evidence = new ProviderEvidence(self::text($raw->evidence_ref), $scope, self::text($raw->provider_id), self::text($raw->merchant_account_ref),
-            self::nullableText($raw->provider_event_id), self::text($raw->payload_digest), self::text($raw->signature_verdict), self::text($raw->handler_contract_version),
-            new DateTimeImmutable(self::text($raw->received_at)), ExecutionCodec::map(self::text($raw->sanitized_payload)), self::nullableText($raw->secure_payload_ref));
-        $hint = self::nullableText($row->operation_hint) ?? $this->transportHint($evidence, $context);
+        $scope = new ExecutionScope($caller->installationRef, $caller->sellerRef, $caller->environment, ExecutionRows::text($raw->intent_owner_namespace));
+        $evidence = new ProviderEvidence(ExecutionRows::text($raw->evidence_ref), $scope, ExecutionRows::text($raw->provider_id), ExecutionRows::text($raw->merchant_account_ref),
+            ExecutionRows::nullableText($raw->provider_event_id), ExecutionRows::text($raw->payload_digest), ExecutionRows::text($raw->signature_verdict), ExecutionRows::text($raw->handler_contract_version),
+            new DateTimeImmutable(ExecutionRows::text($raw->received_at)), ExecutionCodec::map(ExecutionRows::text($raw->sanitized_payload)), ExecutionRows::nullableText($raw->secure_payload_ref));
+        $hint = ExecutionRows::nullableText($row->operation_hint) ?? $this->transportHint($evidence, $context);
 
-        return new ProviderWorkInput($evidence, self::text($row->handler_contract_version), self::text($row->state), $hint, self::nullableText($row->result_ref), self::nullableText($row->last_error_code));
+        return new ProviderWorkInput($evidence, ExecutionRows::text($row->handler_contract_version), ExecutionRows::text($row->state), $hint, ExecutionRows::nullableText($row->result_ref), ExecutionRows::nullableText($row->last_error_code));
     }
 
     private function transportHint(ProviderEvidence $evidence, ?TransactionContext $context): ?string
@@ -208,7 +208,7 @@ trait ExecutionEvidencePersistence
             })->get();
         $hint = null;
         foreach ($links as $link) {
-            $data = ExecutionCodec::map(self::text($link->sanitized_payload));
+            $data = ExecutionCodec::map(ExecutionRows::text($link->sanitized_payload));
             $ref = $data['attemptRef'] ?? null;
             $attempt = is_string($ref) ? $this->attempt($evidence->scope, $ref, $context) : null;
             if ($attempt === null || ($data['providerReference'] ?? null) !== $attempt->providerReference || ($data['operationRef'] ?? null) !== $attempt->operationRef
@@ -240,7 +240,7 @@ trait ExecutionEvidencePersistence
         $this->custody($transactionContext);
         $evidence = $this->callerQuery('provider_evidence', $transactionContext)->where('evidence_ref', $evidenceRef)->first() ?? throw new LogicException('Evidence absent');
         $caller = $transactionContext->caller();
-        $namespace = self::text($evidence->intent_owner_namespace);
+        $namespace = ExecutionRows::text($evidence->intent_owner_namespace);
         if (! in_array($namespace, $caller->intentOwnerNamespaces, true)
             || ($transactionContext->spec()->financialScope !== null && $transactionContext->spec()->financialScope->intentOwnerNamespace !== $namespace)) {
             throw new ProblemException(ProblemCode::AuthDenied, 'Provider work differs from custody scope');
@@ -255,7 +255,7 @@ trait ExecutionEvidencePersistence
             $this->refuse('Provider work identity conflict');
         }
 
-        return self::text($stored->work_ref);
+        return ExecutionRows::text($stored->work_ref);
     }
 
     public function claimProviderWork(TransactionContext $transactionContext, string $workRef, string $leaseOwner, DateTimeImmutable $until): ?ProviderWorkClaim
@@ -263,20 +263,20 @@ trait ExecutionEvidencePersistence
         $this->custody($transactionContext);
         $q = $this->scopedWork($transactionContext)->where('work_ref', $workRef);
         $r = (clone $q)->first();
-        if ($r === null || $leaseOwner === '' || $until <= new DateTimeImmutable || ! in_array($r->state, ['due', 'leased'], true) || new DateTimeImmutable(self::text($r->due_at)) > new DateTimeImmutable || ($r->state === 'leased' && self::date($r->lease_expires_at) > new DateTimeImmutable)) {
+        if ($r === null || $leaseOwner === '' || $until <= new DateTimeImmutable || ! in_array($r->state, ['due', 'leased'], true) || new DateTimeImmutable(ExecutionRows::text($r->due_at)) > new DateTimeImmutable || ($r->state === 'leased' && ExecutionRows::nullableDate($r->lease_expires_at) > new DateTimeImmutable)) {
             return null;
         }
-        $fence = self::integer($r->lease_fence) + 1;
-        $count = self::integer($r->attempt_count) + 1;
-        $updated = $q->where('lease_fence', self::integer($r->lease_fence))->where('state', self::text($r->state))
-            ->whereRaw('due_at <= clock_timestamp()')->whereRaw('?::timestamptz > clock_timestamp()', [$until->format('Y-m-d H:i:s.uP')])
+        $fence = ExecutionRows::integer($r->lease_fence) + 1;
+        $count = ExecutionRows::integer($r->attempt_count) + 1;
+        $updated = $q->where('lease_fence', ExecutionRows::integer($r->lease_fence))->where('state', ExecutionRows::text($r->state))
+            ->whereRaw('due_at <= clock_timestamp()')->whereRaw('?::timestamptz > clock_timestamp()', [$until->format(ExecutionRows::TIMESTAMP)])
             ->where(static fn (Builder $eligible): Builder => $eligible->where('state', 'due')->orWhere(static fn (Builder $expired): Builder => $expired->where('state', 'leased')->whereRaw('lease_expires_at <= clock_timestamp()')))
-            ->update(['state' => 'leased', 'lease_owner' => $leaseOwner, 'lease_fence' => $fence, 'lease_expires_at' => $until->format('Y-m-d H:i:s.uP'), 'attempt_count' => $count]);
+            ->update(['state' => 'leased', 'lease_owner' => $leaseOwner, 'lease_fence' => $fence, 'lease_expires_at' => $until->format(ExecutionRows::TIMESTAMP), 'attempt_count' => $count]);
         if ($updated !== 1) {
             return null;
         }
 
-        return new ProviderWorkClaim($workRef, self::text($r->evidence_ref), self::text($r->handler_contract_version), $count, $fence, $leaseOwner, $until);
+        return new ProviderWorkClaim($workRef, ExecutionRows::text($r->evidence_ref), ExecutionRows::text($r->handler_contract_version), $count, $fence, $leaseOwner, $until);
     }
 
     public function finishProviderWork(TransactionContext $transactionContext, ProviderWorkClaim $providerWorkClaim, string $state, ?string $resultRef, ?string $errorCode, ?DateTimeImmutable $dueAt): bool
@@ -293,7 +293,7 @@ trait ExecutionEvidencePersistence
     {
         $attempt = $this->query('attempt', $scope)->where('attempt_ref', $attemptRef);
 
-        return self::nullableText($this->query('provider_identity', $scope)->whereIn('attempt_ref', $attempt->select('attempt_ref'))->value('provider_operation_id'));
+        return ExecutionRows::nullableText($this->query('provider_identity', $scope)->whereIn('attempt_ref', $attempt->select('attempt_ref'))->value('provider_operation_id'));
     }
 
     public function operationByProviderId(ExecutionScope $scope, string $providerId, string $merchantAccountRef, string $providerNamespace, string $providerOperationId): ?OperationRecord
@@ -302,7 +302,7 @@ trait ExecutionEvidencePersistence
             [$scope->environment, $providerId, $merchantAccountRef, $providerNamespace, $providerOperationId])
             ->where('provider_id', $providerId)->where('merchant_account_ref', $merchantAccountRef)
             ->where('provider_namespace', $providerNamespace)->where('provider_operation_id', $providerOperationId)->first();
-        $attempt = $row === null ? null : $this->attempt($scope, self::text($row->attempt_ref));
+        $attempt = $row === null ? null : $this->attempt($scope, ExecutionRows::text($row->attempt_ref));
 
         return $attempt === null ? null : $this->operation($scope, $attempt->operationRef);
     }
@@ -390,9 +390,9 @@ trait ExecutionEvidencePersistence
 
     private function factRow(stdClass $r): ProviderFact
     {
-        return new ProviderFact(self::text($r->fact_ref), self::text($r->operation_ref), self::text($r->provider_identity_scope), self::text($r->fact_identity),
-            self::text($r->material_digest), ProviderEvidenceMode::from(self::text($r->evidence_mode)), ExecutionCodec::decode(MaterialSnapshot::class, self::text($r->normalized_snapshot)),
-            self::listJson(self::text($r->evidence_refs)));
+        return new ProviderFact(ExecutionRows::text($r->fact_ref), ExecutionRows::text($r->operation_ref), ExecutionRows::text($r->provider_identity_scope), ExecutionRows::text($r->fact_identity),
+            ExecutionRows::text($r->material_digest), ProviderEvidenceMode::from(ExecutionRows::text($r->evidence_mode)), ExecutionCodec::decode(MaterialSnapshot::class, ExecutionRows::text($r->normalized_snapshot)),
+            ExecutionRows::list(ExecutionRows::text($r->evidence_refs)));
     }
 
     public function appendFact(TransactionContext $transactionContext, ProviderFact $providerFact): bool
@@ -493,7 +493,7 @@ trait ExecutionEvidencePersistence
         }
         $work = $this->callerQuery('dispatch_work', $context)->where('attempt_ref', $attempt->attemptRef)->where('operation_ref', $attempt->operationRef)->where('lease_fence', $attempt->leaseFence);
         $revoke = ['lease_owner' => null, 'lease_expires_at' => null, 'lease_fence' => $attempt->leaseFence + 1];
-        $updated = $work->update($revoke + ['state' => $terminal ? 'processed' : 'due', 'due_at' => $lookupDueAt?->format('Y-m-d H:i:s.uP')]);
+        $updated = $work->update($revoke + ['state' => $terminal ? 'processed' : 'due', 'due_at' => $lookupDueAt?->format(ExecutionRows::TIMESTAMP)]);
         $imported = $updated === 0 && $this->callerQuery('original_identity_import', $context)->where('attempt_ref', $attempt->attemptRef)
             ->where('operation_ref', $attempt->operationRef)->where('intent_owner_namespace', $this->selectedScope($context)->intentOwnerNamespace)->exists()
             && ! $this->callerQuery('dispatch_work', $context)->where('attempt_ref', $attempt->attemptRef)->exists();
@@ -626,7 +626,7 @@ trait ExecutionEvidencePersistence
             ->where('observed->schema', 'billium.execution.certified-no-effect.v1')->where('observed->certificateRef', $cert->certificateRef)
             ->where('material_digest', $operation->economicDigest)->where('observed->attemptRef', $proof->attemptRef);
         if ($record === null || $operation->state !== 'failed' || $proof->operationRef !== $operation->operationRef
-            || ExecutionCodec::encode($current) !== ExecutionCodec::encode($operation) || ! $revision->whereJsonContains('evidence_refs', self::text($record->evidence_ref))->exists()) {
+            || ExecutionCodec::encode($current) !== ExecutionCodec::encode($operation) || ! $revision->whereJsonContains('evidence_refs', ExecutionRows::text($record->evidence_ref))->exists()) {
             $this->refuse('Publication requires the original persisted certified absence revision');
         }
     }
@@ -640,9 +640,9 @@ trait ExecutionEvidencePersistence
         $row = $this->callerQuery('operation_revision', $context)->where('operation_ref', $op->operationRef)->where('revision', $op->revision)->first();
         if ($row === null || $change->observed->operationAmount === null || $change->before->operationRef !== $op->operationRef || $change->before->revision + 1 !== $op->revision
             || ExecutionCodec::encode($current) !== ExecutionCodec::encode($op) || $row->material_digest !== $op->economicDigest
-            || ExecutionCodec::encode(ExecutionCodec::map(self::text($row->observed))) !== ExecutionCodec::encode($change->observed)
-            || ExecutionCodec::encode(ExecutionCodec::map(self::text($row->last_consistent_applied))) !== ExecutionCodec::encode($change->capacity)
-            || ExecutionCodec::encode(ExecutionCodec::map(self::text($row->exposure))) !== $this->exposure($change)
+            || ExecutionCodec::encode(ExecutionCodec::map(ExecutionRows::text($row->observed))) !== ExecutionCodec::encode($change->observed)
+            || ExecutionCodec::encode(ExecutionCodec::map(ExecutionRows::text($row->last_consistent_applied))) !== ExecutionCodec::encode($change->capacity)
+            || ExecutionCodec::encode(ExecutionCodec::map(ExecutionRows::text($row->exposure))) !== $this->exposure($change)
             || ExecutionCodec::encode($this->capacity($context, $op->rootOperationRef)) !== ExecutionCodec::encode($change->capacity)) {
             $this->refuse('Publication requires the original persisted material revision');
         }

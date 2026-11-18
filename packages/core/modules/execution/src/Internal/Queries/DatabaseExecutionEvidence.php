@@ -15,10 +15,10 @@ use Billium\Execution\Data\MaterialSnapshot;
 use Billium\Execution\Data\OperationRecord;
 use Billium\Execution\Enums\ProviderEvidenceMode;
 use Billium\Execution\Internal\Storage\ExecutionCodec;
+use Billium\Execution\Internal\Storage\ExecutionRows;
 use DateTimeImmutable;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Builder;
-use LogicException;
 use Packman\Attributes\Internal;
 
 #[Internal]
@@ -46,7 +46,7 @@ final readonly class DatabaseExecutionEvidence implements ExecutionEvidenceQueri
                 $stored = self::facts($db, $operation, $attempt)->orderByDesc('created_at')->orderByDesc('id')->value('normalized_snapshot');
             }
 
-            return $stored === null ? null : ExecutionCodec::decode(MaterialSnapshot::class, ExecutionCodec::text($stored));
+            return $stored === null ? null : ExecutionCodec::decode(MaterialSnapshot::class, ExecutionRows::text($stored));
         });
     }
 
@@ -64,7 +64,7 @@ final readonly class DatabaseExecutionEvidence implements ExecutionEvidenceQueri
             if ($work === null || ($work->operation_hint !== null && $work->operation_hint !== $operationRef)) {
                 return null;
             }
-            $evidenceRef = ExecutionCodec::text($work->evidence_ref);
+            $evidenceRef = ExecutionRows::text($work->evidence_ref);
             $merchant = $this->store->merchantRevision($scope, $operation->binding->merchantRevisionRef);
             $evidence = ExecutionReads::table($db, 'provider_evidence', $scope)->where('evidence_ref', $evidenceRef)
                 ->where('intent_owner_namespace', $scope->intentOwnerNamespace)->where('provider_id', $merchant->providerId)
@@ -76,12 +76,12 @@ final readonly class DatabaseExecutionEvidence implements ExecutionEvidenceQueri
             }
 
             return new ExecutionProviderWorkStatus($scope, $sourceAuthority, $operationRef, $workRef, $evidenceRef, $merchant->providerId,
-                $operation->binding->merchantAccountRef, self::nullableText($evidence->provider_event_id), ExecutionCodec::text($evidence->payload_digest),
-                ExecutionCodec::text($evidence->signature_verdict), new DateTimeImmutable(ExecutionCodec::text($evidence->received_at)),
-                ExecutionCodec::text($evidence->handler_contract_version), ExecutionCodec::text($work->handler_contract_version), ExecutionCodec::text($work->state),
-                self::integer($work->attempt_count), self::integer($work->lease_fence), self::date($work->lease_expires_at),
-                new DateTimeImmutable(ExecutionCodec::text($work->due_at)), self::nullableText($work->last_error_code), self::date($work->last_error_at),
-                self::nullableText($work->result_ref));
+                $operation->binding->merchantAccountRef, ExecutionRows::nullableText($evidence->provider_event_id), ExecutionRows::text($evidence->payload_digest),
+                ExecutionRows::text($evidence->signature_verdict), new DateTimeImmutable(ExecutionRows::text($evidence->received_at)),
+                ExecutionRows::text($evidence->handler_contract_version), ExecutionRows::text($work->handler_contract_version), ExecutionRows::text($work->state),
+                ExecutionRows::integer($work->attempt_count), ExecutionRows::integer($work->lease_fence), ExecutionRows::nullableDate($work->lease_expires_at),
+                new DateTimeImmutable(ExecutionRows::text($work->due_at)), ExecutionRows::nullableText($work->last_error_code), ExecutionRows::nullableDate($work->last_error_at),
+                ExecutionRows::nullableText($work->result_ref));
         });
     }
 
@@ -108,20 +108,5 @@ final readonly class DatabaseExecutionEvidence implements ExecutionEvidenceQueri
             ->where('sanitized_payload->providerReference', $attempt->providerReference)
             ->where(static fn (Builder $q): Builder => $q->where('evidence_ref', $evidenceRef)
                 ->orWhere('sanitized_payload->retainedProviderEvidenceRef', $evidenceRef))->exists();
-    }
-
-    private static function integer(mixed $value): int
-    {
-        return is_int($value) ? $value : throw new LogicException('Expected a PostgreSQL bigint');
-    }
-
-    private static function nullableText(mixed $value): ?string
-    {
-        return $value === null ? null : ExecutionCodec::text($value);
-    }
-
-    private static function date(mixed $value): ?DateTimeImmutable
-    {
-        return $value === null ? null : new DateTimeImmutable(ExecutionCodec::text($value));
     }
 }

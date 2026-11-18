@@ -21,6 +21,7 @@ use Billium\Execution\Enums\AttemptState;
 use Billium\Execution\Enums\EffectKind;
 use Billium\Execution\Internal\Capacity\CapacityAmounts;
 use Billium\Execution\Internal\Storage\ExecutionCodec;
+use Billium\Execution\Internal\Storage\ExecutionRows;
 use Billium\Ledger\Contracts\ObservationCheckpointQueries;
 use Billium\Platform\Contracts\Idempotency\IdempotencyReceiptQueries;
 use Illuminate\Database\Connection;
@@ -106,8 +107,8 @@ final readonly class DatabaseExecutionQueries implements ExecutionQueries
             $operation = $this->reads->operation($scope, $operationRef);
             $capacity = ExecutionReads::table($db, 'capacity', $scope)->where('root_operation_ref', $operation->rootOperationRef)->first()
                 ?? throw new LogicException('Stored execution operation has no capacity row');
-            $amount = static fn (string $field): Money => new Money(self::integer($capacity->{$field}), $operation->requested->currency);
-            $snapshot = new CapacitySnapshot($operation->rootOperationRef, self::integer($capacity->version), $amount('authorized_limit_minor'),
+            $amount = static fn (string $field): Money => new Money(ExecutionRows::integer($capacity->{$field}), $operation->requested->currency);
+            $snapshot = new CapacitySnapshot($operation->rootOperationRef, ExecutionRows::integer($capacity->version), $amount('authorized_limit_minor'),
                 $amount('confirmed_capture_minor'), $amount('confirmed_refund_minor'), $amount('released_authorization_minor'),
                 $amount('held_capture_minor'), $amount('held_void_minor'), $amount('held_refund_minor'), $capacity->financial_hold === true);
             $attempt = $this->store->attemptForOperation($scope, $operationRef);
@@ -145,7 +146,7 @@ final readonly class DatabaseExecutionQueries implements ExecutionQueries
                     }
                 })->orderByDesc('revision')->value('revision');
             if ($rootRevision !== null) {
-                array_unshift($refs, [$operation->rootOperationRef, self::integer($rootRevision)]);
+                array_unshift($refs, [$operation->rootOperationRef, ExecutionRows::integer($rootRevision)]);
             }
         }
         foreach ($refs as [$ref, $number]) {
@@ -248,10 +249,5 @@ final readonly class DatabaseExecutionQueries implements ExecutionQueries
         }
 
         return ['delivery' => $delivery, 'recovery' => ['status' => $recovery, 'reasonCodes' => array_values(array_unique($reasons))]];
-    }
-
-    private static function integer(mixed $value): int
-    {
-        return is_int($value) ? $value : throw new LogicException('Expected a PostgreSQL bigint');
     }
 }

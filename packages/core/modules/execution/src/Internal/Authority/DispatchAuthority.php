@@ -29,6 +29,7 @@ use Billium\Execution\Data\ProviderLookupResult;
 use Billium\Execution\Data\ReplayAuthorization;
 use Billium\Execution\Enums\AttemptState;
 use Billium\Execution\Enums\EffectKind;
+use Billium\Execution\Internal\Storage\ExecutionRows;
 use Billium\Platform\Contracts\Installation\Installation;
 use Closure;
 use DateTimeImmutable;
@@ -225,7 +226,7 @@ final class DispatchAuthority
                 ->where(['installation_ref' => $s->installationRef, 'seller_ref' => $s->sellerRef, 'environment' => $s->environment,
                     'intent_owner_namespace' => $s->intentOwnerNamespace, 'approval_ref' => $approval->approvalRef,
                     'writer_ticket_ref' => $ticket->ticketRef, 'original_request_digest' => $approval->requestDigest, 'attempt_ref' => $r->attemptRef,
-                    'operation_ref' => $r->operationRef, 'lease_fence' => $r->leaseFence, 'deadline' => $p->requestDeadlineAt->format('Y-m-d H:i:s.uP')])
+                    'operation_ref' => $r->operationRef, 'lease_fence' => $r->leaseFence, 'deadline' => $p->requestDeadlineAt->format(ExecutionRows::TIMESTAMP)])
                 ->whereRaw('deadline > clock_timestamp()')->exists();
             if (! $marker || ! $this->uncertainOriginal($attempt, $operation) || $approval->writerTicketRef !== $ticket->ticketRef
                 || $approval->expiresAt <= new DateTimeImmutable) {

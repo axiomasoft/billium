@@ -13,8 +13,8 @@ use Billium\Execution\Data\RecoveryAction;
 use Billium\Execution\Enums\EffectKind;
 use Billium\Execution\Enums\ReservationState;
 use Billium\Execution\Internal\Disputes\ComparisonBasis;
-use Billium\Execution\Internal\Reconciliation\ReconciliationJournal;
 use Billium\Execution\Internal\Storage\ExecutionCodec;
+use Billium\Execution\Internal\Storage\ExecutionRows;
 use Illuminate\Database\Connection;
 use Packman\Attributes\Internal;
 use stdClass;
@@ -62,7 +62,7 @@ final readonly class LateRefundAdjudication
             ->where('exposure->overRefunded->minor', $late->refundedTotal->minor - $late->capturedTotal->minor)->exists();
         $original = $this->store->operation($action->scope, $root, $ctx);
         if (! $discrepancy || $original?->state !== 'held' || ExecutionCodec::digest(ComparisonBasis::locked($db, $original, $capacity)) !== $review->basis_digest
-            || ExecutionCodec::digest(ExecutionCodec::map(ReconciliationJournal::string($review->expected))) !== $review->basis_digest) {
+            || ExecutionCodec::digest(ExecutionCodec::map(ExecutionRows::text($review->expected))) !== $review->basis_digest) {
             $this->refuse();
         }
         $released = $this->store->reservationForOperation($ctx, $op);

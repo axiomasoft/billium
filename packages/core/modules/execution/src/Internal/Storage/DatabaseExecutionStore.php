@@ -88,32 +88,32 @@ final class DatabaseExecutionStore implements ExecutionStore
         $locks = [];
         $parts = $this->query('observation_partition', $executionScope, $context)->where('root_operation_ref', $root)->orderBy('id')->pluck('id')->all();
         if ($parts !== []) {
-            $locks[] = new LockRequest(LockRank::FeedPartition, 'billium_execution_observation_partition', array_values(array_map(self::integer(...), $parts)));
+            $locks[] = new LockRequest(LockRank::FeedPartition, 'billium_execution_observation_partition', array_values(array_map(ExecutionRows::integer(...), $parts)));
         }
         $row = $this->query('operation', $executionScope, $context)->where('operation_ref', $root)->first();
         if ($row !== null) {
-            $locks[] = new LockRequest(LockRank::RootCharge, 'billium_execution_operation', [self::integer($row->id)]);
+            $locks[] = new LockRequest(LockRank::RootCharge, 'billium_execution_operation', [ExecutionRows::integer($row->id)]);
         }
 
         $children = $this->query('operation', $executionScope, $context)->where('root_operation_ref', $root)->where('operation_ref', '<>', $root);
-        $ids = array_values(array_map(self::integer(...), $children->orderBy('id')->pluck('id')->all()));
+        $ids = array_values(array_map(ExecutionRows::integer(...), $children->orderBy('id')->pluck('id')->all()));
         if ($ids !== []) {
             $locks[] = new LockRequest(LockRank::ChildEffect, 'billium_execution_operation', $ids);
         }
 
         $capacity = $this->query('capacity', $executionScope, $context)->where('root_operation_ref', $root)->first();
         if ($capacity !== null) {
-            $locks[] = new LockRequest(LockRank::Capacity, 'billium_execution_capacity', [self::integer($capacity->id)]);
+            $locks[] = new LockRequest(LockRank::Capacity, 'billium_execution_capacity', [ExecutionRows::integer($capacity->id)]);
         }
         foreach ([1 => 'reservation', 2 => 'authorization'] as $segment => $table) {
             $rows = $this->query($table, $executionScope, $context)->where('root_operation_ref', $root)->orderBy('id')->pluck('id')->all();
             if ($rows !== []) {
-                $locks[] = new LockRequest(LockRank::Capacity, 'billium_execution_'.$table, array_values(array_map(self::integer(...), $rows)), segment: $segment);
+                $locks[] = new LockRequest(LockRank::Capacity, 'billium_execution_'.$table, array_values(array_map(ExecutionRows::integer(...), $rows)), segment: $segment);
             }
         }
         $attemptIds = $this->query('attempt', $executionScope, $context)->whereIn('operation_ref', $this->query('operation', $executionScope, $context)->where('root_operation_ref', $root)->pluck('operation_ref')->all())->orderBy('id')->pluck('id')->all();
         if ($attemptIds !== []) {
-            $locks[] = new LockRequest(LockRank::Attempt, 'billium_execution_attempt', array_values(array_map(self::integer(...), $attemptIds)));
+            $locks[] = new LockRequest(LockRank::Attempt, 'billium_execution_attempt', array_values(array_map(ExecutionRows::integer(...), $attemptIds)));
         }
 
         return new ExecutionLockPlan($executionScope, $root, $locks, ['execution', 'platform'], ExecutionCodec::digest([$executionScope, $root, $locks]));
@@ -159,7 +159,7 @@ final class DatabaseExecutionStore implements ExecutionStore
             return new NamespaceRecord($executionScope, NamespaceState::RecoveryRequired, 'execution.intent.v1', null, null, 0);
         }
 
-        return new NamespaceRecord($executionScope, NamespaceState::from(self::text($row->state)), self::text($row->canonicalization_version), self::date($row->history_from), self::nullableText($row->completeness_receipt_ref), self::integer($row->generation));
+        return new NamespaceRecord($executionScope, NamespaceState::from(ExecutionRows::text($row->state)), ExecutionRows::text($row->canonicalization_version), ExecutionRows::nullableDate($row->history_from), ExecutionRows::nullableText($row->completeness_receipt_ref), ExecutionRows::integer($row->generation));
     }
 
     public function lockNamespace(TransactionContext $context, ExecutionScope $scope): NamespaceRecord
@@ -169,7 +169,7 @@ final class DatabaseExecutionStore implements ExecutionStore
         if ($id === null) {
             throw new ProblemException(ProblemCode::RecoveryRequired, 'Business namespace lacks durable history');
         }
-        $request = new LockRequest(LockRank::IntentNamespace, 'billium_execution_namespace', [self::integer($id)], shared: true);
+        $request = new LockRequest(LockRank::IntentNamespace, 'billium_execution_namespace', [ExecutionRows::integer($id)], shared: true);
         if ($context->lock($request) !== $request->keys) {
             throw new LockPlanChanged('Business namespace changed during admission');
         }
@@ -260,7 +260,7 @@ final class DatabaseExecutionStore implements ExecutionStore
         $db = $this->database($ctx);
         $root = $a->operationRef === $b->rootOperationRef;
         $shared = $this->scope($scope) + ['intent_owner_namespace' => $scope->intentOwnerNamespace, 'source_context' => $b->sourceContext,
-            'binding' => ExecutionCodec::encode($b), 'operation_ref' => $a->operationRef, 'created_at' => $a->createdAt->format('Y-m-d H:i:s.uP')];
+            'binding' => ExecutionCodec::encode($b), 'operation_ref' => $a->operationRef, 'created_at' => $a->createdAt->format(ExecutionRows::TIMESTAMP)];
         $identity = $shared + ['business_intent_ref' => $a->businessIntentRef, 'operation_kind' => $root ? 'charge' : $a->kind->value,
             'semantic_digest' => $a->semanticDigest, 'canonicalization_version' => $b->canonicalizationVersion];
         $terms = ['root_operation_ref' => $b->rootOperationRef, 'requested_minor' => $a->requested->minor,
@@ -290,7 +290,7 @@ final class DatabaseExecutionStore implements ExecutionStore
         $db->table('billium_execution_attempt')->insert($this->scope($scope) + ['attempt_ref' => $a->attemptRef, 'operation_ref' => $a->operationRef,
             'provider_reference' => $a->providerReference, 'provider_id' => $a->providerId, 'merchant_account_ref' => $b->merchantAccountRef,
             'state' => 'unknown', 'lease_fence' => $a->originalFence + 1, 'session_epoch' => $a->originalEpoch, 'owner_session_ref' => $a->originalOwner,
-            'request_digest' => $a->requestDigest, 'started_at' => $a->startedAt->format('Y-m-d H:i:s.uP'), 'request_deadline_at' => $a->deadline->format('Y-m-d H:i:s.uP'),
+            'request_digest' => $a->requestDigest, 'started_at' => $a->startedAt->format(ExecutionRows::TIMESTAMP), 'request_deadline_at' => $a->deadline->format(ExecutionRows::TIMESTAMP),
             'dispatch_ticket_ref' => $a->firstTicketRef, 'collection_dispatch_permit_ref' => $a->collectionPermitRef]);
     }
 
@@ -316,13 +316,13 @@ final class DatabaseExecutionStore implements ExecutionStore
             return null;
         }
         $existing = $db->table('billium_execution_business_binding')->where('business_identity_digest', ExecutionCodec::businessIdentityDigest($frozenBinding, 'charge'))->where($identity)->first();
-        if ($existing === null || $existing->tombstone_reason !== null || self::text($existing->installation_ref) !== $frozenBinding->scope->installationRef
-            || self::text($existing->seller_ref) !== $frozenBinding->scope->sellerRef
-            || ExecutionCodec::encode(ExecutionCodec::map(self::text($existing->binding))) !== ExecutionCodec::encode($frozenBinding)) {
+        if ($existing === null || $existing->tombstone_reason !== null || ExecutionRows::text($existing->installation_ref) !== $frozenBinding->scope->installationRef
+            || ExecutionRows::text($existing->seller_ref) !== $frozenBinding->scope->sellerRef
+            || ExecutionCodec::encode(ExecutionCodec::map(ExecutionRows::text($existing->binding))) !== ExecutionCodec::encode($frozenBinding)) {
             throw new ProblemException(ProblemCode::IdempotencyConflict, 'Business identity conflicts with immutable binding');
         }
 
-        return $this->operation($frozenBinding->scope, self::text($existing->operation_ref), $transactionContext) ?? throw new LogicException('Existing business binding has no operation');
+        return $this->operation($frozenBinding->scope, ExecutionRows::text($existing->operation_ref), $transactionContext) ?? throw new LogicException('Existing business binding has no operation');
     }
 
     public function claimChildBinding(TransactionContext $context, AdmissionPlan $plan, string $businessIntentRef, ?string $reasonCode = null, ?string $category = null): ?OperationRecord
@@ -395,7 +395,7 @@ final class DatabaseExecutionStore implements ExecutionStore
             ])->where('source_context', $sourceContext)->where('business_intent_ref', $businessIntentRef)->where('operation_kind', $kind->value)
             ->whereIn('binding->executionProfile', $source === null ? $caller->sourceAuthorities : [$source])->first();
 
-        return $row === null ? null : $this->operation($scope, self::text($row->operation_ref), $context);
+        return $row === null ? null : $this->operation($scope, ExecutionRows::text($row->operation_ref), $context);
     }
 
     /** @param array<string,int|string|null> $fields */
@@ -405,16 +405,16 @@ final class DatabaseExecutionStore implements ExecutionStore
         foreach ($fields as $column => $value) {
             $stored = $actual[$column] ?? null;
             if ($column === 'binding') {
-                $stored = ExecutionCodec::encode(ExecutionCodec::map(self::text($stored)));
+                $stored = ExecutionCodec::encode(ExecutionCodec::map(ExecutionRows::text($stored)));
             } elseif ($column === 'requested_minor' || $column === 'currency_exponent') {
-                $stored = self::integer($stored);
+                $stored = ExecutionRows::integer($stored);
             }
             if ($stored !== $value) {
                 throw new ProblemException(ProblemCode::IdempotencyConflict, 'Child business identity conflicts with retained original terms');
             }
         }
 
-        return $this->operation($plan->scope, self::text($actual['operation_ref'] ?? null), $context)
+        return $this->operation($plan->scope, ExecutionRows::text($actual['operation_ref'] ?? null), $context)
             ?? throw new LogicException('A committed child identity must retain its original operation');
     }
 
@@ -452,7 +452,7 @@ final class DatabaseExecutionStore implements ExecutionStore
                 $this->refuse('New merchant binding is not explicitly enabled/effective');
             }
             $identity = $this->query('business_binding', $b->scope, $transactionContext)->where('operation_ref', $admissionPlan->operationRef)->where('source_context', $b->sourceContext)->where('business_intent_ref', $b->businessIntentRef)->where('intent_owner_namespace', $b->scope->intentOwnerNamespace)->where('semantic_digest', $admissionPlan->semanticDigest)->whereNull('tombstone_reason')->first();
-            if ($identity === null || $admissionPlan->canonicalizationVersion !== $b->canonicalizationVersion || ExecutionCodec::encode(ExecutionCodec::map(self::text($identity->binding))) !== ExecutionCodec::encode($b)) {
+            if ($identity === null || $admissionPlan->canonicalizationVersion !== $b->canonicalizationVersion || ExecutionCodec::encode(ExecutionCodec::map(ExecutionRows::text($identity->binding))) !== ExecutionCodec::encode($b)) {
                 $this->refuse('Root requires durable business binding');
             }
         } else {
@@ -506,7 +506,7 @@ final class DatabaseExecutionStore implements ExecutionStore
     {
         $this->financial($transactionContext);
         $attempt = $this->callerQuery('attempt', $transactionContext)->where('attempt_ref', $attemptRecord->attemptRef)->where('operation_ref', $attemptRecord->operationRef)->first() ?? throw new LogicException('Attempt absent');
-        $this->admittedOperation($transactionContext, self::text($attempt->operation_ref));
+        $this->admittedOperation($transactionContext, ExecutionRows::text($attempt->operation_ref));
         $this->database($transactionContext)->table('billium_execution_dispatch_work')->insert($this->callerScope($transactionContext) + ['work_ref' => $workRef, 'operation_ref' => $attemptRecord->operationRef, 'attempt_ref' => $attemptRecord->attemptRef, 'handler_version' => $handlerVersion]);
     }
 
@@ -515,9 +515,9 @@ final class DatabaseExecutionStore implements ExecutionStore
         $this->financial($transactionContext);
         $q = $this->callerQuery('attempt', $transactionContext)->where('attempt_ref', $attemptRef);
         $r = (clone $q)->first() ?? throw new LogicException('Attempt absent');
-        $this->requireOperationLock($transactionContext, self::text($r->operation_ref));
-        $until = $leaseUntil->format('Y-m-d H:i:s.uP');
-        $fence = self::integer($r->lease_fence) + 1;
+        $this->requireOperationLock($transactionContext, ExecutionRows::text($r->operation_ref));
+        $until = $leaseUntil->format(ExecutionRows::TIMESTAMP);
+        $fence = ExecutionRows::integer($r->lease_fence) + 1;
         $work = $this->callerQuery('dispatch_work', $transactionContext)->where('attempt_ref', $attemptRef)->where('operation_ref', $r->operation_ref)
             ->where('lease_fence', $fence - 1)->whereRaw('?::timestamptz > clock_timestamp()', [$until])
             ->whereRaw("((state = 'due' AND due_at <= clock_timestamp()) OR (state = 'leased' AND lease_expires_at <= clock_timestamp()))");
@@ -603,8 +603,8 @@ final class DatabaseExecutionStore implements ExecutionStore
         }
         $q = $this->callerQuery('attempt', $context)->where('attempt_ref', $attemptRef);
         $attempt = (clone $q)->first() ?? throw new LogicException('Attempt absent');
-        $this->requireOperationLock($context, self::text($attempt->operation_ref));
-        if (self::integer($attempt->lease_fence) !== $expectedFence || $attempt->lease_owner === null) {
+        $this->requireOperationLock($context, ExecutionRows::text($attempt->operation_ref));
+        if (ExecutionRows::integer($attempt->lease_fence) !== $expectedFence || $attempt->lease_owner === null) {
             return false;
         }
         $work = $this->callerQuery('dispatch_work', $context)->where('operation_ref', $attempt->operation_ref)->where('attempt_ref', $attemptRef)
@@ -615,7 +615,7 @@ final class DatabaseExecutionStore implements ExecutionStore
         if ($state === WorkState::Processed && ! $this->hasQueuedEvidence($context, $attempt)) {
             throw new ProblemException(ProblemCode::RecoveryRequired, 'Dispatch completion requires original durable provider evidence work');
         }
-        if ($work->update(['state' => $state->value, 'due_at' => $dueAt?->format('Y-m-d H:i:s.uP'), 'lease_owner' => null,
+        if ($work->update(['state' => $state->value, 'due_at' => $dueAt?->format(ExecutionRows::TIMESTAMP), 'lease_owner' => null,
             'lease_expires_at' => null, 'last_error_code' => $errorCode, 'last_error_at' => $errorCode === null ? null : new DateTimeImmutable]) !== 1) {
             return false;
         }
@@ -633,7 +633,7 @@ final class DatabaseExecutionStore implements ExecutionStore
         if ($record === null) {
             return false;
         }
-        $data = $this->transportData($record, $attempt, self::integer($attempt->lease_fence));
+        $data = $this->transportData($record, $attempt, ExecutionRows::integer($attempt->lease_fence));
         if ($data === null) {
             return false;
         }
@@ -658,7 +658,7 @@ final class DatabaseExecutionStore implements ExecutionStore
         if ($record->handler_contract_version !== 'execution.transport.v1' || ! in_array($record->signature_verdict, ['local_transport', 'verified_no_effect'], true)) {
             return null;
         }
-        $data = ExecutionCodec::map(self::text($record->sanitized_payload));
+        $data = ExecutionCodec::map(ExecutionRows::text($record->sanitized_payload));
         if (($data['schema'] ?? null) !== 'billium.execution.transport-observation.v1' || ($data['operationRef'] ?? null) !== $attempt->operation_ref
             || ($data['attemptRef'] ?? null) !== $attempt->attempt_ref || ($data['providerReference'] ?? null) !== $attempt->provider_reference
             || ($data['leaseFence'] ?? null) !== (string) $fence) {
@@ -688,7 +688,7 @@ final class DatabaseExecutionStore implements ExecutionStore
             throw new LogicException('Cached admitted owner identity is absent');
         }
 
-        $deadline = $dispatchDecision->requestDeadlineAt->format('Y-m-d H:i:s.uP');
+        $deadline = $dispatchDecision->requestDeadlineAt->format(ExecutionRows::TIMESTAMP);
 
         return $this->callerQuery('attempt', $transactionContext)->where('attempt_ref', $dispatchDecision->attemptRef)->where('operation_ref', $dispatchDecision->operationRef)
             ->where('state', 'admitted')->where('request_digest', $dispatchDecision->immutableRequestDigest)->where('lease_fence', $dispatchDecision->leaseFence)
@@ -735,23 +735,23 @@ final class DatabaseExecutionStore implements ExecutionStore
         $current = $this->capacity($transactionContext, $next->rootOperationRef);
         $q = $this->callerQuery('reservation', $transactionContext)->where('reservation_ref', $reservationRef);
         $r = (clone $q)->first() ?? throw new LogicException('Reservation absent');
-        if ($next->version !== $current->version + 1 || self::text($r->root_operation_ref) !== $next->rootOperationRef || self::text($r->state) !== 'held' || $reservationState === ReservationState::Held || $consumed->minor < 0 || $consumed->minor > self::integer($r->requested_minor) || $consumed->currency->code !== self::text($r->currency)) {
+        if ($next->version !== $current->version + 1 || ExecutionRows::text($r->root_operation_ref) !== $next->rootOperationRef || ExecutionRows::text($r->state) !== 'held' || $reservationState === ReservationState::Held || $consumed->minor < 0 || $consumed->minor > ExecutionRows::integer($r->requested_minor) || $consumed->currency->code !== ExecutionRows::text($r->currency)) {
             $this->refuse('Reservation settlement conflict');
         }
-        $heldColumn = match (EffectKind::from(self::text($r->kind))) {
+        $heldColumn = match (EffectKind::from(ExecutionRows::text($r->kind))) {
             EffectKind::Capture => 'heldCapture', EffectKind::Refund => 'heldRefund', EffectKind::VoidAuthorization => 'heldVoid',
             default => throw new LogicException('Invalid reservation kind'),
         };
         foreach (['heldCapture', 'heldRefund', 'heldVoid'] as $column) {
-            $expectedHeld = $current->{$column}->minor - ($column === $heldColumn ? self::integer($r->requested_minor) : 0);
+            $expectedHeld = $current->{$column}->minor - ($column === $heldColumn ? ExecutionRows::integer($r->requested_minor) : 0);
             if ($expectedHeld < 0 || $next->{$column}->minor !== $expectedHeld) {
                 $this->refuse('Settlement must remove the original held reservation exactly once');
             }
         }
-        $operationRef = self::text($r->operation_ref);
+        $operationRef = ExecutionRows::text($r->operation_ref);
         $this->requireOperationLock($transactionContext, $operationRef);
         $fact = $releaseEvidenceRef === null ? null : $this->factForEvidence($transactionContext, $releaseEvidenceRef, $operationRef);
-        if ($consumed->minor < self::integer($r->requested_minor) && $this->hasGreaterActual($transactionContext, $operationRef, $consumed->minor)) {
+        if ($consumed->minor < ExecutionRows::integer($r->requested_minor) && $this->hasGreaterActual($transactionContext, $operationRef, $consumed->minor)) {
             $this->refuse('Reservation release contradicts accepted original operation amount');
         }
         $signed = $fact?->snapshot;
@@ -767,7 +767,7 @@ final class DatabaseExecutionStore implements ExecutionStore
                 $this->refuse('Reservation requires accepted original operation amount or verified absence');
             }
         }
-        $q->where('state', 'held')->update(['state' => $reservationState->value, 'consumed_minor' => $consumed->minor, 'release_evidence_ref' => $releaseEvidenceRef, 'version' => self::integer($r->version) + 1]);
+        $q->where('state', 'held')->update(['state' => $reservationState->value, 'consumed_minor' => $consumed->minor, 'release_evidence_ref' => $releaseEvidenceRef, 'version' => ExecutionRows::integer($r->version) + 1]);
         $this->writeCapacity($transactionContext, $next, $current->version);
     }
 
@@ -801,7 +801,7 @@ final class DatabaseExecutionStore implements ExecutionStore
         $this->database($transactionContext)->table('billium_execution_observation_partition')->insertOrIgnore($this->scope($executionScope) + ['source_authority' => $sourceAuthority, 'source_lineage' => $lineage, 'root_operation_ref' => $rootRef, 'partition_ref' => $part]);
         $r = $this->query('observation_partition', $executionScope, $transactionContext)->where('source_authority', $sourceAuthority)->where('source_lineage', $lineage)->where('root_operation_ref', $rootRef)->first() ?? throw new LogicException('Partition absent');
 
-        return new ObservationPartition(self::integer($r->id), $executionScope, $sourceAuthority, $lineage, $rootRef, self::text($r->partition_ref), self::integer($r->last_sequence));
+        return new ObservationPartition(ExecutionRows::integer($r->id), $executionScope, $sourceAuthority, $lineage, $rootRef, ExecutionRows::text($r->partition_ref), ExecutionRows::integer($r->last_sequence));
     }
 
     public function nextObservationSequence(TransactionContext $transactionContext, int $partitionId): int
@@ -812,10 +812,10 @@ final class DatabaseExecutionStore implements ExecutionStore
         }
         $q = $this->callerQuery('observation_partition', $transactionContext)->where('id', $partitionId)->where('source_authority', $this->selectedScope($transactionContext)->sourceAuthority);
         $partition = (clone $q)->first() ?? throw new LogicException('Partition absent');
-        $this->requireLock($transactionContext, self::text($partition->root_operation_ref));
+        $this->requireLock($transactionContext, ExecutionRows::text($partition->root_operation_ref));
         $q->increment('last_sequence');
 
-        return self::integer($q->value('last_sequence'));
+        return ExecutionRows::integer($q->value('last_sequence'));
     }
 
     public function appendEmission(TransactionContext $transactionContext, ObservationEmission $observationEmission): void
@@ -837,7 +837,7 @@ final class DatabaseExecutionStore implements ExecutionStore
         $this->financial($transactionContext);
         $q = $this->callerQuery('observation_emission', $transactionContext)->where('command_ref', $commandRef);
         $row = (clone $q)->first() ?? throw new LogicException('Emission absent');
-        $this->requireLock($transactionContext, self::text($row->root_operation_ref));
+        $this->requireLock($transactionContext, ExecutionRows::text($row->root_operation_ref));
         if ($commandRowId <= 0 || $q->whereNull('command_row_id')->update(['command_row_id' => $commandRowId]) !== 1) {
             throw new LogicException('Emission command row already bound or invalid');
         }
@@ -847,7 +847,7 @@ final class DatabaseExecutionStore implements ExecutionStore
     {
         $r = $this->query('merchant_revision', $executionScope, $context)->where('revision_ref', $revisionRef)->first() ?? throw new LogicException('Historical merchant revision unavailable');
 
-        return new MerchantRevision(self::text($r->revision_ref), $executionScope, self::text($r->merchant_account_ref), self::text($r->provider_id), self::text($r->driver_id), self::text($r->driver_contract_version), self::text($r->capability_snapshot_ref), self::text($r->capability_digest), new SecretRef(self::text($r->credential_ref)), self::text($r->credential_version_ref), self::listJson(self::text($r->currency_codes)), self::text($r->digest), new DateTimeImmutable(self::text($r->created_at)), new MerchantRevisionPolicy(new DateTimeImmutable(self::text($r->valid_from)), self::date($r->valid_until), self::nullableText($r->predecessor_ref), self::text($r->api_profile_version), self::text($r->webhook_route_ref), self::text($r->continuity_evidence_ref), self::text($r->settlement_account_ref), self::text($r->mandate_namespace_ref)));
+        return new MerchantRevision(ExecutionRows::text($r->revision_ref), $executionScope, ExecutionRows::text($r->merchant_account_ref), ExecutionRows::text($r->provider_id), ExecutionRows::text($r->driver_id), ExecutionRows::text($r->driver_contract_version), ExecutionRows::text($r->capability_snapshot_ref), ExecutionRows::text($r->capability_digest), new SecretRef(ExecutionRows::text($r->credential_ref)), ExecutionRows::text($r->credential_version_ref), ExecutionRows::list(ExecutionRows::text($r->currency_codes)), ExecutionRows::text($r->digest), new DateTimeImmutable(ExecutionRows::text($r->created_at)), new MerchantRevisionPolicy(new DateTimeImmutable(ExecutionRows::text($r->valid_from)), ExecutionRows::nullableDate($r->valid_until), ExecutionRows::nullableText($r->predecessor_ref), ExecutionRows::text($r->api_profile_version), ExecutionRows::text($r->webhook_route_ref), ExecutionRows::text($r->continuity_evidence_ref), ExecutionRows::text($r->settlement_account_ref), ExecutionRows::text($r->mandate_namespace_ref)));
     }
 
     public function appendMerchantRevision(TransactionContext $transactionContext, MerchantRevision $merchantRevision, CapabilitySnapshot $capabilitySnapshot): void
@@ -883,7 +883,7 @@ final class DatabaseExecutionStore implements ExecutionStore
         if ($predecessor !== null) {
             $this->merchantRevision($m->scope, $predecessor, $context);
         }
-        $inserted = $this->database($context)->table('billium_execution_capability_snapshot')->insertOrIgnore($this->scope($m->scope) + ['snapshot_ref' => $c->snapshotRef, 'merchant_account_ref' => $c->merchantAccountRef, 'driver_id' => $c->driverId, 'driver_contract_version' => $c->driverContractVersion, 'capability_version' => $c->capabilityVersion, 'evidence_mode' => $c->evidenceMode->value, 'body' => ExecutionCodec::encode($c), 'digest' => $c->digest, 'qualification_mode' => $c->qualificationMode->value, 'qualification_evidence_ref' => $c->qualificationEvidenceRef, 'created_at' => $m->createdAt, 'supported_effects' => $this->pgArray(array_map(static fn (EffectKind $e): string => $e->value, $c->supportedEffects)), 'currencies' => $this->pgArray($c->currencies), 'capture_mode' => $c->details->captureMode->value, 'partial_refund' => $c->partialRefund, 'multiple_refund' => $c->details->multipleRefund, 'lookup_by_provider_id' => $c->details->lookupByProviderId, 'lookup_by_reference' => $c->lookupByReference, 'inventory_complete' => $c->inventoryComplete, 'absence_certification' => $c->absenceCertification, 'idempotency_retention_seconds' => $c->details->idempotencyRetentionSeconds, 'lookup_retention_seconds' => $c->details->lookupRetentionSeconds]);
+        $inserted = $this->database($context)->table('billium_execution_capability_snapshot')->insertOrIgnore($this->scope($m->scope) + ['snapshot_ref' => $c->snapshotRef, 'merchant_account_ref' => $c->merchantAccountRef, 'driver_id' => $c->driverId, 'driver_contract_version' => $c->driverContractVersion, 'capability_version' => $c->capabilityVersion, 'evidence_mode' => $c->evidenceMode->value, 'body' => ExecutionCodec::encode($c), 'digest' => $c->digest, 'qualification_mode' => $c->qualificationMode->value, 'qualification_evidence_ref' => $c->qualificationEvidenceRef, 'created_at' => $m->createdAt, 'supported_effects' => ExecutionRows::textArray(array_map(static fn (EffectKind $e): string => $e->value, $c->supportedEffects)), 'currencies' => ExecutionRows::textArray($c->currencies), 'capture_mode' => $c->details->captureMode->value, 'partial_refund' => $c->partialRefund, 'multiple_refund' => $c->details->multipleRefund, 'lookup_by_provider_id' => $c->details->lookupByProviderId, 'lookup_by_reference' => $c->lookupByReference, 'inventory_complete' => $c->inventoryComplete, 'absence_certification' => $c->absenceCertification, 'idempotency_retention_seconds' => $c->details->idempotencyRetentionSeconds, 'lookup_retention_seconds' => $c->details->lookupRetentionSeconds]);
         if ($inserted === 0 && ExecutionCodec::encode($this->capability($m->scope, $c->snapshotRef, $context)) !== ExecutionCodec::encode($c)) {
             $this->refuse('Merchant rotation cannot change the original capability snapshot');
         }
@@ -903,9 +903,9 @@ final class DatabaseExecutionStore implements ExecutionStore
         if ($r === null) {
             return null;
         }
-        $currency = Currency::of(self::text($r->currency));
+        $currency = Currency::of(ExecutionRows::text($r->currency));
 
-        return new AuthorizationRecord(self::text($r->authorization_ref), $rootOperationRef, new Money(self::integer($r->authorized_minor), $currency), new Money(self::integer($r->released_minor), $currency), self::date($r->provider_expires_at), self::nullableText($r->expiry_evidence_ref), self::text($r->state), self::integer($r->revision), self::nullableText($r->release_evidence_ref));
+        return new AuthorizationRecord(ExecutionRows::text($r->authorization_ref), $rootOperationRef, new Money(ExecutionRows::integer($r->authorized_minor), $currency), new Money(ExecutionRows::integer($r->released_minor), $currency), ExecutionRows::nullableDate($r->provider_expires_at), ExecutionRows::nullableText($r->expiry_evidence_ref), ExecutionRows::text($r->state), ExecutionRows::integer($r->revision), ExecutionRows::nullableText($r->release_evidence_ref));
     }
 
     public function applyAuthorization(TransactionContext $transactionContext, AuthorizationRecord $authorizationRecord, int $expectedRevision): void
@@ -914,7 +914,7 @@ final class DatabaseExecutionStore implements ExecutionStore
         if ($authorizationRecord->revision !== $expectedRevision + 1 || ($current === null ? $expectedRevision !== 0 : $current->revision !== $expectedRevision)) {
             $this->refuse('Authorization revision conflict');
         }
-        $row = ['authorization_ref' => $authorizationRecord->authorizationRef, 'root_operation_ref' => $authorizationRecord->rootOperationRef, 'authorized_minor' => $authorizationRecord->authorized->minor, 'released_minor' => $authorizationRecord->released->minor, 'currency' => $authorizationRecord->authorized->currency->code, 'provider_expires_at' => $authorizationRecord->providerExpiresAt?->format('Y-m-d H:i:s.uP'), 'expiry_evidence_ref' => $authorizationRecord->expiryEvidenceRef, 'release_evidence_ref' => $authorizationRecord->releaseEvidenceRef, 'state' => $authorizationRecord->state, 'revision' => $authorizationRecord->revision];
+        $row = ['authorization_ref' => $authorizationRecord->authorizationRef, 'root_operation_ref' => $authorizationRecord->rootOperationRef, 'authorized_minor' => $authorizationRecord->authorized->minor, 'released_minor' => $authorizationRecord->released->minor, 'currency' => $authorizationRecord->authorized->currency->code, 'provider_expires_at' => $authorizationRecord->providerExpiresAt?->format(ExecutionRows::TIMESTAMP), 'expiry_evidence_ref' => $authorizationRecord->expiryEvidenceRef, 'release_evidence_ref' => $authorizationRecord->releaseEvidenceRef, 'state' => $authorizationRecord->state, 'revision' => $authorizationRecord->revision];
         if ($current === null) {
             $this->database($transactionContext)->table('billium_execution_authorization')->insert($this->callerScope($transactionContext) + $row);
         } else {
@@ -975,7 +975,7 @@ final class DatabaseExecutionStore implements ExecutionStore
             }
         } else {
             $id = (clone $q)->value('id');
-            if ($id === null || $transactionContext->lock(new LockRequest(LockRank::IntentNamespace, 'billium_execution_namespace', [self::integer($id)])) !== [self::integer($id)]
+            if ($id === null || $transactionContext->lock(new LockRequest(LockRank::IntentNamespace, 'billium_execution_namespace', [ExecutionRows::integer($id)])) !== [ExecutionRows::integer($id)]
                 || $q->where('generation', $expectedGeneration)->update(['state' => $namespaceState->value, 'completeness_receipt_ref' => $authorityEvidenceRef, 'generation' => $expectedGeneration + 1]) !== 1) {
                 $this->refuse('Namespace generation conflict');
             }
@@ -990,8 +990,8 @@ final class DatabaseExecutionStore implements ExecutionStore
         $evidence = $this->callerQuery('provider_evidence', $transactionContext)->where('evidence_ref', $evidenceRef)->first() ?? throw new LogicException('Attempt finish evidence absent');
         $q = $this->callerQuery('attempt', $transactionContext)->where('attempt_ref', $attemptRef);
         $row = (clone $q)->first() ?? throw new LogicException('Attempt absent');
-        $this->requireOperationLock($transactionContext, self::text($row->operation_ref));
-        if (self::integer($row->lease_fence) !== $expectedFence) {
+        $this->requireOperationLock($transactionContext, ExecutionRows::text($row->operation_ref));
+        if (ExecutionRows::integer($row->lease_fence) !== $expectedFence) {
             return false;
         }
         if ($row->merchant_account_ref !== $evidence->merchant_account_ref || $row->provider_id !== $evidence->provider_id
@@ -1008,7 +1008,7 @@ final class DatabaseExecutionStore implements ExecutionStore
     {
         $r = $this->query('capability_snapshot', $scope, $context)->where('snapshot_ref', $ref)->first() ?? throw new LogicException('Capability snapshot absent');
 
-        return ExecutionCodec::decode(CapabilitySnapshot::class, self::text($r->body));
+        return ExecutionCodec::decode(CapabilitySnapshot::class, ExecutionRows::text($r->body));
     }
 
     private function database(?TransactionContext $context = null): Connection
@@ -1128,19 +1128,19 @@ final class DatabaseExecutionStore implements ExecutionStore
 
     private function operationRow(stdClass $r): OperationRecord
     {
-        return new OperationRecord(self::integer($r->id), self::text($r->operation_ref), self::text($r->root_operation_ref), EffectKind::from(self::text($r->kind)), ExecutionCodec::decode(FrozenBinding::class, self::text($r->binding)), new Money(self::integer($r->requested_minor), Currency::of(self::text($r->currency))), self::integer($r->revision), self::text($r->state), self::text($r->economic_digest), self::nullableText($r->authorization_ref), new DateTimeImmutable(self::text($r->created_at)));
+        return new OperationRecord(ExecutionRows::integer($r->id), ExecutionRows::text($r->operation_ref), ExecutionRows::text($r->root_operation_ref), EffectKind::from(ExecutionRows::text($r->kind)), ExecutionCodec::decode(FrozenBinding::class, ExecutionRows::text($r->binding)), new Money(ExecutionRows::integer($r->requested_minor), Currency::of(ExecutionRows::text($r->currency))), ExecutionRows::integer($r->revision), ExecutionRows::text($r->state), ExecutionRows::text($r->economic_digest), ExecutionRows::nullableText($r->authorization_ref), new DateTimeImmutable(ExecutionRows::text($r->created_at)));
     }
 
     private function attemptRow(stdClass $r): AttemptRecord
     {
-        return new AttemptRecord(self::integer($r->id), self::text($r->attempt_ref), self::text($r->operation_ref), self::text($r->provider_reference), AttemptState::from(self::text($r->state)), self::integer($r->lease_fence), self::nullableText($r->lease_owner), self::date($r->lease_expires_at), $r->session_epoch === null ? null : self::integer($r->session_epoch), self::nullableText($r->owner_session_ref), self::nullableText($r->dispatch_ticket_ref), self::text($r->request_digest), self::date($r->started_at), self::date($r->request_deadline_at), self::nullableText($r->collection_dispatch_permit_ref));
+        return new AttemptRecord(ExecutionRows::integer($r->id), ExecutionRows::text($r->attempt_ref), ExecutionRows::text($r->operation_ref), ExecutionRows::text($r->provider_reference), AttemptState::from(ExecutionRows::text($r->state)), ExecutionRows::integer($r->lease_fence), ExecutionRows::nullableText($r->lease_owner), ExecutionRows::nullableDate($r->lease_expires_at), $r->session_epoch === null ? null : ExecutionRows::integer($r->session_epoch), ExecutionRows::nullableText($r->owner_session_ref), ExecutionRows::nullableText($r->dispatch_ticket_ref), ExecutionRows::text($r->request_digest), ExecutionRows::nullableDate($r->started_at), ExecutionRows::nullableDate($r->request_deadline_at), ExecutionRows::nullableText($r->collection_dispatch_permit_ref));
     }
 
     private function capacityRow(stdClass $r): CapacitySnapshot
     {
-        $currency = Currency::of(self::text($r->currency));
+        $currency = Currency::of(ExecutionRows::text($r->currency));
 
-        return new CapacitySnapshot(self::text($r->root_operation_ref), self::integer($r->version), new Money(self::integer($r->authorized_limit_minor), $currency), new Money(self::integer($r->confirmed_capture_minor), $currency), new Money(self::integer($r->confirmed_refund_minor), $currency), new Money(self::integer($r->released_authorization_minor), $currency), new Money(self::integer($r->held_capture_minor), $currency), new Money(self::integer($r->held_void_minor), $currency), new Money(self::integer($r->held_refund_minor), $currency), (bool) $r->financial_hold);
+        return new CapacitySnapshot(ExecutionRows::text($r->root_operation_ref), ExecutionRows::integer($r->version), new Money(ExecutionRows::integer($r->authorized_limit_minor), $currency), new Money(ExecutionRows::integer($r->confirmed_capture_minor), $currency), new Money(ExecutionRows::integer($r->confirmed_refund_minor), $currency), new Money(ExecutionRows::integer($r->released_authorization_minor), $currency), new Money(ExecutionRows::integer($r->held_capture_minor), $currency), new Money(ExecutionRows::integer($r->held_void_minor), $currency), new Money(ExecutionRows::integer($r->held_refund_minor), $currency), (bool) $r->financial_hold);
     }
 
     private function writeCapacity(TransactionContext $context, CapacitySnapshot $next, int $expectedVersion): void
@@ -1160,44 +1160,7 @@ final class DatabaseExecutionStore implements ExecutionStore
     /** @return array<string,mixed> */
     private function runRow(ReconciliationRun $r): array
     {
-        return ['run_ref' => $r->runRef, 'merchant_account_ref' => $r->merchantAccountRef, 'recovery_horizon' => $r->recoveryHorizon->format('Y-m-d H:i:s.uP'), 'inventory_cursor' => $r->inventoryCursor, 'completeness_watermark' => $r->completenessWatermark, 'inventory_digest' => $r->inventoryDigest, 'manifest_digest' => $r->manifestDigest, 'state' => $r->state, 'unresolved' => ExecutionCodec::encode($r->unresolved), 'started_at' => $r->startedAt->format('Y-m-d H:i:s.uP'), 'completed_at' => $r->completedAt?->format('Y-m-d H:i:s.uP')];
-    }
-
-    /** @param list<string> $items */
-    private function pgArray(array $items): string
-    {
-        return '{'.implode(',', array_map(static fn (string $s): string => '"'.str_replace(['\\', '"'], ['\\\\', '\\"'], $s).'"', $items)).'}';
-    }
-
-    /** @return list<mixed> */
-    private static function listJson(string $json): array
-    {
-        $v = json_decode($json, true, 64, JSON_THROW_ON_ERROR);
-        if (! is_array($v) || ! array_is_list($v)) {
-            throw new LogicException('Stored list required');
-        }
-
-        return $v;
-    }
-
-    private static function text(mixed $v): string
-    {
-        return ExecutionCodec::text($v);
-    }
-
-    private static function nullableText(mixed $v): ?string
-    {
-        return $v === null ? null : self::text($v);
-    }
-
-    private static function integer(mixed $v): int
-    {
-        return is_int($v) ? $v : (is_string($v) && preg_match('/^-?[0-9]+$/D', $v) === 1 ? (int) $v : throw new LogicException('Invalid stored integer'));
-    }
-
-    private static function date(mixed $v): ?DateTimeImmutable
-    {
-        return $v === null ? null : new DateTimeImmutable(self::text($v));
+        return ['run_ref' => $r->runRef, 'merchant_account_ref' => $r->merchantAccountRef, 'recovery_horizon' => $r->recoveryHorizon->format(ExecutionRows::TIMESTAMP), 'inventory_cursor' => $r->inventoryCursor, 'completeness_watermark' => $r->completenessWatermark, 'inventory_digest' => $r->inventoryDigest, 'manifest_digest' => $r->manifestDigest, 'state' => $r->state, 'unresolved' => ExecutionCodec::encode($r->unresolved), 'started_at' => $r->startedAt->format(ExecutionRows::TIMESTAMP), 'completed_at' => $r->completedAt?->format(ExecutionRows::TIMESTAMP)];
     }
 
     private function refuse(string $reason): never
