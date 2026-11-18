@@ -133,13 +133,13 @@ final readonly class DatabaseCorrectionPreparer
                 metricRef: $aggregate->metricRef, metricVersion: $aggregate->metricVersion, groupKey: RatingRows::map($window['group'] ?? null),
                 startMicros: $aggregate->windowStartMicros, endMicros: $aggregate->windowEndMicros);
             $status = $this->usage->windowStatus($selector);
-            if (($status['lagFacts'] ?? 0) > 0) {
+            if ($status['lagFacts'] > 0) {
                 $held = $this->latePolicyHold($selector);
                 if ($held !== null) {
                     return $held;
                 }
             }
-            if (($status['state'] ?? null) !== 'final' || ($status['progress'] ?? null) !== 'aggregated' || ! is_string($status['finalSnapshotRef'] ?? null)) {
+            if ($status['state'] !== 'final' || $status['progress'] !== 'aggregated' || $status['finalSnapshotRef'] === null) {
                 return new RatingHold(reason: HoldReason::IncompleteSource, repairOrReplayRefs: [], detail: 'billium.rating.source_incomplete');
             }
             $snapshot = RatingRows::map(json_decode(CanonicalJson::encode($this->usage->snapshot($status['finalSnapshotRef'])), true, 128, JSON_THROW_ON_ERROR));

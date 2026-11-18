@@ -37,7 +37,7 @@ final readonly class SourceFinalityContract
         $this->requiredSources = $requiredSources;
     }
 
-    /** @return array<string, mixed> */
+    /** @return array{contractRef: string, version: int, requiredSources: list<string>, lateGraceMicros: int, postFinalPolicy: string, reopenAllowed: bool} */
     public function payload(): array
     {
         return [

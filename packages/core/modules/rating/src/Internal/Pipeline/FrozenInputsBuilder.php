@@ -134,9 +134,9 @@ final readonly class FrozenInputsBuilder
                 if (($aggregate['reproducibility'] ?? null) !== 'reproducible') {
                     return new RatingHold(reason: HoldReason::AggregateNotReproducible, repairOrReplayRefs: [$component['snapshotRef']], detail: 'retained aggregate unavailable');
                 }
-                if (($status['state'] ?? null) !== 'final' || ($status['progress'] ?? null) !== 'aggregated'
-                    || ($status['finalSnapshotRef'] ?? null) !== $component['snapshotRef']) {
-                    return new RatingHold(reason: HoldReason::IncompleteSource, repairOrReplayRefs: RatingRows::texts($status['repairOrReplayRefs'] ?? []), detail: 'source window is not final');
+                if ($status['state'] !== 'final' || $status['progress'] !== 'aggregated'
+                    || $status['finalSnapshotRef'] !== $component['snapshotRef']) {
+                    return new RatingHold(reason: HoldReason::IncompleteSource, repairOrReplayRefs: $status['repairOrReplayRefs'], detail: 'source window is not final');
                 }
                 $group = $window->groupKey;
                 if ($window->sellerRef !== $caller->sellerRef || $window->environment !== $caller->environment
