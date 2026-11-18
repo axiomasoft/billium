@@ -40,7 +40,6 @@ use Billium\Execution\Internal\Merchants\ContinuityMerchantCredentials;
 use Billium\Execution\Internal\Storage\ExecutionCodec;
 use Billium\Platform\Contracts\Idempotency\IdempotencyReceiptQueries;
 use Packman\Attributes\Internal;
-use RuntimeException;
 
 #[Internal]
 final readonly class RefundPayments implements RefundCommands
@@ -106,13 +105,7 @@ final readonly class RefundPayments implements RefundCommands
                 $this->readiness->assertReady($binding, EffectKind::Refund, $wire->money);
                 $merchant = $this->merchants->historical($scope, $root->operationRef);
                 [, $capability] = $this->adapters->select($merchant, EffectKind::Refund, $wire->money->currency->code);
-                try {
-                    $credentials = $this->credentials->resolve($merchant, 'refund');
-                } catch (ProblemException $error) {
-                    $this->historicalAccessFailure($error);
-                } catch (RuntimeException) {
-                    throw new ProblemException(ProblemCode::RecoveryRequired, 'Historical refund access could not be verified for the original account');
-                }
+                $credentials = ChildAdmission::historicalCredentials('refund', fn (): ResolvedCredentials => $this->credentials->resolve($merchant, 'refund'));
                 $guard = $this->collection->plan($binding->collectionAuthorizationRef, ExecutionPhase::Admission, $scope);
             }
             $modules = $this->collection->modules($guard);
@@ -133,14 +126,6 @@ final readonly class RefundPayments implements RefundCommands
         }
     }
 
-    private function historicalAccessFailure(ProblemException $error): never
-    {
-        if (in_array($error->problem, [ProblemCode::ValidationInvalid, ProblemCode::LookupUnavailable], true)) {
-            throw new ProblemException(ProblemCode::RecoveryRequired, 'Historical refund credentials or permission are unavailable for the original account');
-        }
-        throw $error;
-    }
-
     private function apply(TransactionContext $ctx, AdmissionPlan $plan, string $intent, RequestRefund $wire, ?CapabilitySnapshot $capability, ?ResolvedCredentials $credentials): ExecutionReceipt
     {
         $scope = $plan->scope;
@@ -150,7 +135,7 @@ final readonly class RefundPayments implements RefundCommands
             try {
                 $this->merchantGate->lock($ctx, $scope, $plan->binding->merchantRevisionRef, 'refund', $credentials);
             } catch (ProblemException $error) {
-                $this->historicalAccessFailure($error);
+                ChildAdmission::historicalAccessFailure($error, 'refund');
             }
         }
         $this->children->lockOriginal($ctx, $plan, 'payment');

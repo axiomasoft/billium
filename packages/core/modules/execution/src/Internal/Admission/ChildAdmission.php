@@ -20,9 +20,12 @@ use Billium\Execution\Contracts\ExecutionStore;
 use Billium\Execution\Data\AdmissionConflict;
 use Billium\Execution\Data\AdmissionPlan;
 use Billium\Execution\Data\ExecutionReceipt;
+use Billium\Execution\Data\ResolvedCredentials;
 use Billium\Execution\Enums\NamespaceState;
 use Billium\Execution\Internal\Identity\PaymentIdentity;
+use Closure;
 use Packman\Attributes\Internal;
+use RuntimeException;
 
 /**
  * Steps shared by every admission of a child operation (capture, provider void, refund) and the
@@ -32,6 +35,31 @@ use Packman\Attributes\Internal;
 final readonly class ChildAdmission
 {
     public function __construct(private OperationRunner $runner, private ExecutionStore $store, private CollectionChecks $collection, private CapacityParticipants $capacity) {}
+
+    /**
+     * A child acts on the original account, so missing or revoked historical credentials or permission
+     * call for recovery rather than reading as a caller input error or an unclassified failure.
+     *
+     * @param  Closure(): ResolvedCredentials  $resolve
+     */
+    public static function historicalCredentials(string $action, Closure $resolve): ResolvedCredentials
+    {
+        try {
+            return $resolve();
+        } catch (ProblemException $error) {
+            self::historicalAccessFailure($error, $action);
+        } catch (RuntimeException) {
+            throw new ProblemException(ProblemCode::RecoveryRequired, 'Historical '.$action.' access could not be verified for the original account');
+        }
+    }
+
+    public static function historicalAccessFailure(ProblemException $error, string $action): never
+    {
+        if (in_array($error->problem, [ProblemCode::ValidationInvalid, ProblemCode::LookupUnavailable], true)) {
+            throw new ProblemException(ProblemCode::RecoveryRequired, 'Historical '.$action.' credentials or permission are unavailable for the original account');
+        }
+        throw $error;
+    }
 
     /** Durably audits an idempotency conflict under raw custody; the caller rethrows the conflict afterwards. */
     public function recordConflict(FinancialScope $selected, AdmissionConflict $conflict, string $commandKey, string $operationRef): void

@@ -26,6 +26,7 @@ use Billium\Execution\Data\AdmissionPlan;
 use Billium\Execution\Data\CapabilitySnapshot;
 use Billium\Execution\Data\ExecutionReceipt;
 use Billium\Execution\Data\ExecutionScope;
+use Billium\Execution\Data\ResolvedCredentials;
 use Billium\Execution\Enums\EffectKind;
 use Billium\Execution\Enums\ExecutionPhase;
 use Billium\Execution\Internal\Admission\ChildAdmission;
@@ -95,6 +96,7 @@ final readonly class AuthorizedPayments implements AuthorizationCommands
         }
 
         $kind = $wire instanceof CapturePayment ? EffectKind::Capture : EffectKind::VoidAuthorization;
+        $action = $wire instanceof CapturePayment ? 'capture' : 'void';
         $key = PaymentIdentity::commandKey($scope, $kind->value, $source, $wire->commandKey);
         $semantic = PaymentIdentity::digest(['schema' => 'billium.execution.authorization-child.v1', 'rootBinding' => $binding->semanticDigest,
             'scope' => get_object_vars($scope), 'command' => PaymentIdentity::terms($wire->raw)]);
@@ -110,7 +112,7 @@ final readonly class AuthorizedPayments implements AuthorizationCommands
                 $this->readiness->assertReady($binding, $kind, $wire->money);
                 $merchant = $this->merchants->historical($scope, $root->operationRef);
                 [, $capability] = $this->adapters->select($merchant, $kind, $wire->money->currency->code);
-                $credentials = $this->credentials->resolve($merchant, $kind->value);
+                $credentials = ChildAdmission::historicalCredentials($action, fn (): ResolvedCredentials => $this->credentials->resolve($merchant, $kind->value));
                 $guard = $this->collection->plan($binding->collectionAuthorizationRef, ExecutionPhase::Admission, $scope);
             }
             $modules = $this->collection->modules($guard);
@@ -120,10 +122,14 @@ final readonly class AuthorizedPayments implements AuthorizationCommands
                 $replay ? ModuleOperationClass::ReceiptReplay : ($guard->operationClass ?? ModuleOperationClass::FrozenIntentCompletion),
                 $modules, $key, $semantic, 'execution.admission', $selected, $inputDigest, originalExecutionBindingRef: $binding->rootOperationRef);
 
-            return $this->runner->run($spec, function (TransactionContext $ctx) use ($plan, $intent, $reason, $capability, $credentials): ExecutionReceipt {
+            return $this->runner->run($spec, function (TransactionContext $ctx) use ($plan, $intent, $reason, $capability, $credentials, $action): ExecutionReceipt {
                 if ($capability !== null) {
                     $this->children->assertNamespaceOpen($ctx, $plan, 'Child identity history is incomplete or closed');
-                    $this->merchantGate->lock($ctx, $plan->scope, $plan->binding->merchantRevisionRef, $plan->kind->value, $credentials);
+                    try {
+                        $this->merchantGate->lock($ctx, $plan->scope, $plan->binding->merchantRevisionRef, $plan->kind->value, $credentials);
+                    } catch (ProblemException $error) {
+                        ChildAdmission::historicalAccessFailure($error, $action);
+                    }
                 }
 
                 return $this->apply($ctx, $plan, $intent, $reason, $capability);
