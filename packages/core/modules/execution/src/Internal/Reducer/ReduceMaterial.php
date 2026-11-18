@@ -144,10 +144,15 @@ final readonly class ReduceMaterial
         $ref = $reason === null ? null : self::discrepancy($s, $reason);
         $after = self::next($op, $s, $reason === null ? $state : 'held', $economic);
         $changes = [];
-        if ($op->operationRef !== $root->operationRef && ! $olderRoot && ($frontier === null || $s->authorizedTotal->minor !== $frontier->authorizedTotal->minor || $s->capturedTotal->minor !== $frontier->capturedTotal->minor
-            || $s->refundedTotal->minor !== $frontier->refundedTotal->minor || $s->voidedTotal->minor !== $frontier->voidedTotal->minor || $reason !== null)) {
-            $rootState = $reason === null ? $root->state : 'held';
-            $changes[] = new MaterialChange($root, self::next($root, $s, $rootState, $economic), $s, $capacity, $ref, [], [], $overCapture, $overRefund, $reason);
+        if ($op->operationRef !== $root->operationRef && ($reason !== null || (! $olderRoot && ($frontier === null
+            || $s->authorizedTotal->minor !== $frontier->authorizedTotal->minor || $s->capturedTotal->minor !== $frontier->capturedTotal->minor
+            || $s->refundedTotal->minor !== $frontier->refundedTotal->minor || $s->voidedTotal->minor !== $frontier->voidedTotal->minor)))) {
+            // A held late child changes the root's spendability while its newer authenticated cumulative remains authoritative.
+            $rootObserved = $olderRoot ? ($frontier ?? throw new LogicException('Late child requires an applied root frontier')) : $s;
+            $rootEconomic = $olderRoot ? PaymentIdentity::digest(['material' => MaterialRules::digest($rootObserved),
+                'priorEconomicDigest' => $root->economicDigest, 'discrepancyRef' => $ref]) : $economic;
+            $rootState = $olderRoot || $reason === null ? $root->state : 'held';
+            $changes[] = new MaterialChange($root, self::next($root, $rootObserved, $rootState, $rootEconomic), $rootObserved, $capacity, $ref, [], [], $overCapture, $overRefund, $reason);
         }
         $change = new MaterialChange($op, $after, $s, $capacity, $ref, [], [], $overCapture, $overRefund, $reason);
         if ($op->operationRef === $root->operationRef || ! $sameEffect || $reason !== null) {

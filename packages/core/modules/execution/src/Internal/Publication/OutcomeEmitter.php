@@ -30,6 +30,7 @@ use Billium\Platform\Data\EventContracts\RegisteredPublicEvent;
 use Billium\Platform\Data\Outbox\OutboxEvent;
 use DateTimeImmutable;
 use DateTimeZone;
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Str;
 use LogicException;
 use Packman\Attributes\Internal;
@@ -38,7 +39,7 @@ use Packman\Attributes\Internal;
 final readonly class OutcomeEmitter implements OutcomePublication
 {
     public function __construct(private ExecutionStore $store, private FinancialSessionAdmission $admission, private PaymentObservationSink $commands,
-        private Outbox $outbox, private ModuleRegistry $modules) {}
+        private Outbox $outbox, private ModuleRegistry $modules, private DatabaseManager $databases) {}
 
     public function emit(TransactionContext $ctx, MaterialChange $change): PublicationReceipt
     {
@@ -68,12 +69,37 @@ final readonly class OutcomeEmitter implements OutcomePublication
             $body['providerOperationId'] = $s->providerOperationId;
         }
         if ($change->discrepancyRef !== null) {
+            $cause = $refund ? $evidence : $this->rootDiscrepancyEvidence($ctx, $change);
             $body['discrepancy'] = ['discrepancyRef' => $change->discrepancyRef, 'kind' => $change->reason, 'revision' => $op->revision,
                 'acceptedTotals' => ['authorizedTotal' => $change->capacity->authorizedLimit->toWire(), 'capturedTotal' => $change->capacity->confirmedCapture->toWire(),
-                    'refundedTotal' => $change->capacity->confirmedRefund->toWire()], 'verifiedExternalFacts' => [['evidenceRef' => $evidence]]];
+                    'refundedTotal' => $change->capacity->confirmedRefund->toWire()], 'verifiedExternalFacts' => [['evidenceRef' => $cause]]];
         }
 
         return $this->observation($ctx, $op, $body);
+    }
+
+    private function rootDiscrepancyEvidence(TransactionContext $ctx, MaterialChange $change): string
+    {
+        $root = $change->after;
+        $scope = $root->binding->scope;
+        // The root's cumulative evidence and the child fact that put it on hold may be different.
+        $row = $this->databases->connection($ctx->connectionName())->table('billium_execution_discrepancy')
+            ->where(['installation_ref' => $scope->installationRef, 'seller_ref' => $scope->sellerRef, 'environment' => $scope->environment,
+                'root_operation_ref' => $root->operationRef, 'discrepancy_ref' => $change->discrepancyRef, 'kind' => 'provider_material_conflict'])
+            ->where('exposure->reason', $change->reason)->first(['operation_ref', 'observed', 'evidence_refs->0 as evidence_ref']);
+        if ($row === null || ! is_string($row->operation_ref) || ! is_string($row->evidence_ref) || ! is_string($row->observed)) {
+            throw new LogicException('Held root requires its persisted material discrepancy');
+        }
+        $subject = $this->store->operation($scope, $row->operation_ref, $ctx);
+        $fact = $this->store->factForEvidence($ctx, $row->evidence_ref, $row->operation_ref);
+        if ($subject === null || $fact === null || $subject->rootOperationRef !== $root->operationRef || $subject->kind !== $fact->snapshot->kind
+            || $fact->snapshot->operationRef !== $subject->operationRef || $fact->snapshot->bindingDigest !== ExecutionCodec::bindingDigest($root->binding)
+            || $fact->snapshot->merchantAccountRef !== $root->binding->merchantAccountRef || ($fact->snapshot->evidenceRefs[0] ?? null) !== $row->evidence_ref
+            || ExecutionCodec::encode($fact->snapshot) !== ExecutionCodec::encode(ExecutionCodec::map($row->observed))) {
+            throw new LogicException('Root discrepancy differs from its original qualified operation fact');
+        }
+
+        return $row->evidence_ref;
     }
 
     public function emitQuarantineHold(TransactionContext $ctx, ProviderWorkClaim $claim, MaterialSnapshot $conflict, string $ref, string $reason): PublicationReceipt
