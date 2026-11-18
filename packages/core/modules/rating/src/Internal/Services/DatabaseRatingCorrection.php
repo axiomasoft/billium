@@ -12,29 +12,24 @@ use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Data\Runner\OperationSpec;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Core\Enums\Runtime\FinancialMode;
-use Billium\Ledger\Contracts\CorrectionCreditParticipants;
-use Billium\Ledger\Contracts\CorrectionLocks;
-use Billium\Ledger\Contracts\LedgerParticipants;
 use Billium\Ledger\Data\Invoices\CreditNoteLine;
 use Billium\Ledger\Data\Invoices\CreditNoteMode;
 use Billium\Ledger\Data\Invoices\IssueCreditNote;
 use Billium\Ledger\Data\Obligations\CorrectionBasis;
-use Billium\Ledger\Data\Obligations\RecordObligation;
-use Billium\Ledger\Data\Runtime\BillingAccountScope;
-use Billium\Platform\Contracts\Outbox\CommandOutbox;
-use Billium\Platform\Data\EventContracts\PreparedInternalCommand;
 use Billium\Rating\Contracts\RatingCorrection;
 use Billium\Rating\Data\Correction\ApplyCorrection;
 use Billium\Rating\Data\Correction\PrepareCorrection;
 use Billium\Rating\Data\Correction\PreparedCorrection;
 use Billium\Rating\Data\Correction\RatingCorrectionReceipt;
 use Billium\Rating\Data\Rating\FrozenAggregate;
-use Billium\Rating\Data\Rating\FrozenPrice;
 use Billium\Rating\Data\Rating\FrozenTax;
 use Billium\Rating\Data\Rating\RatingHold;
 use Billium\Rating\Data\Tax\TaxSnapshot;
 use Billium\Rating\Enums\CorrectionKind;
 use Billium\Rating\Enums\TaxSnapshotKind;
+use Billium\Rating\Internal\Adapters\LedgerAdapter;
+use Billium\Rating\Internal\Adapters\ObligationCommandMapper;
+use Billium\Rating\Internal\Adapters\OutboxAdapter;
 use Billium\Rating\Internal\Adapters\ScheduleOccurrenceAdapter;
 use Billium\Rating\Internal\Adapters\UsageAggregateAdapter;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
@@ -52,10 +47,8 @@ use Billium\Rating\Internal\Storage\RatingRows;
 use Billium\Rating\Internal\Storage\RatingStore;
 use Billium\Rating\Internal\Storage\TaxPolicyFrontier;
 use Billium\Rating\Internal\Time\Micros;
-use Billium\Schedule\Contracts\CorrectionParticipants;
 use Billium\Schedule\Data\Commands\RegisterCorrectionChild;
 use Billium\Schedule\Enums\OccurrenceState;
-use LogicException;
 use Packman\Attributes\Internal;
 
 #[Internal]
@@ -65,11 +58,8 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
         private CallerContext $callers, private RatingStore $store, private CorrectionStore $corrections,
         private CorrectionCalculator $calculator, private TaxPolicyFrontier $policyFrontier,
         private UsageAggregateAdapter $usage, private ScheduleOccurrenceAdapter $occurrences,
-        private CorrectionParticipants $schedule,
-        private CommandOutbox $outbox, private RatingComputation $rating, private ProrationCalculator $proration,
-        private AmendmentSupport $amendmentSupport,
-        private ?LedgerParticipants $ledger = null, private ?CorrectionLocks $ledgerLocks = null,
-        private ?CorrectionCreditParticipants $creditParticipants = null) {}
+        private LedgerAdapter $ledger, private ObligationCommandMapper $obligations, private OutboxAdapter $outbox,
+        private RatingComputation $rating, private ProrationCalculator $proration, private AmendmentSupport $amendmentSupport) {}
 
     public function prepare(PrepareCorrection $command): PreparedCorrection|RatingHold
     {
@@ -131,7 +121,7 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
                 $this->occurrences->lock(context: $context, ref: $in->occurrenceRef);
                 $basis = CorrectionBasis::derive(originalBasisRef: 'rating:'.$c->predecessorBasisRef,
                     correctionRef: $in->occurrenceRef, revision: $c->correctionRevision);
-                $child = $this->schedule->registerCorrectionChild(context: $context, command: new RegisterCorrectionChild(
+                $child = $this->occurrences->registerCorrectionChild(context: $context, command: new RegisterCorrectionChild(
                     sellerRef: $in->sellerRef, environment: $in->environment, parentOccurrenceRef: $in->occurrenceRef,
                     originalPeriodStart: Micros::instant($in->periodStartMicros), originalPeriodEnd: Micros::instant($in->periodEndMicros),
                     correctionRevision: $c->correctionRevision, predecessorRevision: $c->correctionRevision === 1 ? null : $c->correctionRevision - 1,
@@ -143,21 +133,12 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
                 $branch = $sign > 0 ? 'obligation' : ($sign < 0 ? 'credit_note' : 'none');
                 $rows = $this->corrections->insert(context: $context, prepared: $p, childRef: $child->correctionRef, branch: $branch);
                 $obligationRef = $creditNoteRef = null;
-                $scope = new BillingAccountScope(sellerRef: $in->sellerRef, environment: $in->environment, billingAccountRef: $in->billingAccountRef);
                 if ($sign > 0) {
-                    if ($p->originalObligationRef !== null) {
-                        ($this->ledgerLocks ?? throw new LogicException('Ledger capability absent'))->acquireParent(context: $context, obligationRef: $p->originalObligationRef, accountRef: $in->billingAccountRef);
-                    }
-                    $attribution = RatingRows::map(json_decode($in->attribution, true, 32, JSON_THROW_ON_ERROR));
-                    $obligationRef = 'rating:'.$child->correctionRef;
-                    $price = $in->prices[0];
-                    ($this->ledger ?? throw new LogicException('Ledger capability absent'))->recordObligation(context: $context, command: new RecordObligation(commandKey: 'rating:'.$child->correctionRef,
-                        scope: $scope, obligationRef: $obligationRef, basisRef: $basis,
-                        customerRef: RatingRows::text($attribution['customerRef'] ?? null), componentRef: $price->componentRef,
-                        money: MoneyFactory::fromMinor(minor: $c->deltaGrossMinor, currency: $in->currency, exponent: $in->currencyExponent),
-                        termsDigest: count($in->prices) === 1 ? $price->termsDigest : CanonicalJson::digest(array_map(static fn (FrozenPrice $item): array => [$item->componentRef, $item->termsDigest], $in->prices)),
-                        priceVersionRef: count($in->prices) === 1 ? $price->priceRef.'@'.$price->priceVersion : 'rating:'.$c->correctedBasis->basisRef,
-                        taxSnapshotRef: $p->taxPolicy->selectedRate->snapshotRef));
+                    $command = $this->obligations->mapCorrection(in: $in, correctionRef: $child->correctionRef, basisRef: $basis,
+                        deltaGrossMinor: $c->deltaGrossMinor, correctedBasisRef: $c->correctedBasis->basisRef,
+                        taxSnapshotRef: $p->taxPolicy->selectedRate->snapshotRef);
+                    $obligationRef = $command->obligationRef;
+                    $this->ledger->recordCorrection(context: $context, command: $command, parentObligationRef: $p->originalObligationRef);
                 } elseif ($sign < 0) {
                     if ($p->releasePolicy === null) {
                         RatingComputation::refuse('release_policy_required');
@@ -184,13 +165,11 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
                     $commands = [];
                     foreach ($groups as $invoice => $lines) {
                         $ref = count($groups) === 1 ? $creditNoteRef : $creditNoteRef.':'.substr(hash('sha256', $invoice), 0, 16);
-                        $commands[] = new IssueCreditNote(commandKey: $ref, scope: $scope, creditNoteRef: $ref, invoiceRef: $invoice,
+                        $commands[] = new IssueCreditNote(commandKey: $ref, scope: ObligationCommandMapper::scope($in), creditNoteRef: $ref, invoiceRef: $invoice,
                             mode: CreditNoteMode::from($p->releasePolicy->value), lines: $lines, reason: $p->command->reasonCode);
                     }
-                    if (count($commands) === 1) {
-                        ($this->ledger ?? throw new LogicException('Ledger capability absent'))->issueCreditNote(context: $context, command: $commands[0]);
-                    } else {
-                        ($this->creditParticipants ?? throw new LogicException('Ledger capability absent'))->issue(context: $context, commands: $commands);
+                    $this->ledger->issueCreditNotes(context: $context, commands: $commands);
+                    if (count($commands) > 1) {
                         $suffixes = array_map(static fn (IssueCreditNote $item): string => substr($item->creditNoteRef, -16), $commands);
                         $creditNoteRef .= ':group:'.implode('.', $suffixes);
                     }
@@ -201,9 +180,7 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
                 $receipt = new RatingCorrectionReceipt(correctionRef: $child->correctionRef, correctionRevision: $c->correctionRevision,
                     outcome: $branch, deltaGrossMinor: $c->deltaGrossMinor, obligationRef: $obligationRef, creditNoteRef: $creditNoteRef,
                     currency: $in->currency, legalRequirementPending: $branch !== 'none');
-                $this->outbox->record(context: $context, command: new PreparedInternalCommand(commandRef: 'rating:'.$child->correctionRef,
-                    businessRef: $child->correctionRef, ownerModuleId: 'rating', commandType: 'rating.correction.applied.v1',
-                    commandSchema: 'billium.command.v1', payload: $receipt->body(), destinations: ['rating']));
+                $this->outbox->correctionApplied(context: $context, receipt: $receipt);
 
                 return $receipt;
             })->orThrow();

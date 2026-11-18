@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-rating
 
-Path `packages/core/modules/rating/src`, namespace `Billium\Rating\`, layer L2. 114 types.
+Path `packages/core/modules/rating/src`, namespace `Billium\Rating\`, layer L2. 116 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -104,9 +104,12 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`LedgerAdapter`](../../packages/core/modules/rating/src/Internal/Adapters/LedgerAdapter.php) | class | *Internal* |  |
+| [`LedgerAdapter`](../../packages/core/modules/rating/src/Internal/Adapters/LedgerAdapter.php) | class | *Internal* | Rating's only route to the optional ledger capability; every call fails closed when ledger is not installed. |
+| [`LedgerObligation`](../../packages/core/modules/rating/src/Internal/Adapters/LedgerObligation.php) | class | *Internal* | The part of a ledger obligation view that bounds how much a negative correction may credit. |
+| [`ObligationCommandMapper`](../../packages/core/modules/rating/src/Internal/Adapters/ObligationCommandMapper.php) | class | *Internal* | Q1=a: ledger owns gross debt; immutable rating lines own net/tax and source provenance. |
+| [`OutboxAdapter`](../../packages/core/modules/rating/src/Internal/Adapters/OutboxAdapter.php) | class | *Internal* | Rating's route to the platform command outbox. |
 | [`ScheduleOccurrenceAdapter`](../../packages/core/modules/rating/src/Internal/Adapters/ScheduleOccurrenceAdapter.php) | class | *Internal* |  |
-| [`UsageAggregateAdapter`](../../packages/core/modules/rating/src/Internal/Adapters/UsageAggregateAdapter.php) | class | *Internal* |  |
+| [`UsageAggregateAdapter`](../../packages/core/modules/rating/src/Internal/Adapters/UsageAggregateAdapter.php) | class | *Internal* | Rating's only route to the optional usage capability; every member is absent when usage is not installed. |
 
 ## Internal/Canonical
 
@@ -135,12 +138,6 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
 | [`RatingProblems`](../../packages/core/modules/rating/src/Internal/Errors/RatingProblems.php) | class | *Internal* |  |
-
-## Internal/Ledger
-
-| Type | Kind | Visibility | Summary |
-|---|---|---|---|
-| [`ObligationCommandMapper`](../../packages/core/modules/rating/src/Internal/Ledger/ObligationCommandMapper.php) | class | *Internal* | Q1=a: ledger owns gross debt; immutable rating lines own net/tax and source provenance. |
 
 ## Internal/Math
 

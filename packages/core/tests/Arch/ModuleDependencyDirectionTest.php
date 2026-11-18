@@ -62,6 +62,45 @@ final class ModuleDependencyDirectionTest extends TestCase
         self::assertSame(array_fill_keys(array_keys($graph), 'done'), array_intersect_key($state, $graph));
     }
 
+    public function test_rating_reaches_optional_modules_only_through_its_adapters(): void
+    {
+        // Ledger, usage and schedule are optional capabilities of rating; keeping their services behind one adapter each
+        // keeps capability-absent handling and foreign payload shapes in one place.
+        $root = dirname(__DIR__, 2).'/modules/rating/src/';
+        $violations = [];
+        foreach (self::references($root) as $path => $names) {
+            if (str_starts_with($path, 'Internal/Adapters/') || str_starts_with($path, 'Internal/Registrars/')) {
+                continue;
+            }
+            foreach ($names as $name) {
+                if (preg_match('~^Billium\\\\(?:Ledger|Usage|Schedule|Platform)\\\\Contracts\\\\~', $name) === 1) {
+                    $violations[] = $path.' calls '.$name.' outside Internal/Adapters';
+                }
+            }
+        }
+        self::assertSame([], $violations);
+    }
+
+    public function test_module_public_surface_names_no_other_module_except_platform(): void
+    {
+        // Public types are what a sibling compiles against; naming a third module there would leak a transitive dependency.
+        $violations = [];
+        foreach (array_keys(self::modules()) as $module) {
+            foreach (self::references(dirname(__DIR__, 2).'/modules/'.$module.'/src/') as $path => $names) {
+                if (preg_match('~^(?:Contracts|Data|Enums|Events|Exceptions)/~', $path) !== 1) {
+                    continue;
+                }
+                foreach ($names as $name) {
+                    if (preg_match('~^Billium\\\\([A-Za-z]+)\\\\~', $name, $match) === 1
+                        && ! in_array(strtolower($match[1]), ['contracts', 'core', 'platform', $module], true)) {
+                        $violations[] = $module.'/'.$path.' exposes '.$name;
+                    }
+                }
+            }
+        }
+        self::assertSame([], $violations);
+    }
+
     public function test_used_packages_resolve_aliases_and_fully_qualified_names(): void
     {
         $directory = sys_get_temp_dir().'/billium-dependency-direction-'.bin2hex(random_bytes(6));
@@ -100,6 +139,24 @@ final class ModuleDependencyDirectionTest extends TestCase
         self::assertNotEmpty($modules);
 
         return $modules;
+    }
+
+    /** @return array<string, list<string>> path relative to the source root => fully qualified Billium names it references */
+    private static function references(string $root): array
+    {
+        $parser = (new ParserFactory)->createForNewestSupportedVersion();
+        $references = [];
+        foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS)) as $file) {
+            if (! $file instanceof SplFileInfo || $file->getExtension() !== 'php') {
+                continue;
+            }
+            $tree = new NodeTraverser(new NameResolver)->traverse($parser->parse((string) file_get_contents($file->getPathname())) ?? []);
+            $names = array_map(static fn (Name $name): string => $name->toString(), (new NodeFinder)->findInstanceOf($tree, Name::class));
+            $references[substr($file->getPathname(), strlen($root))] = array_values(array_unique(array_filter($names,
+                static fn (string $name): bool => str_starts_with($name, 'Billium\\'))));
+        }
+
+        return $references;
     }
 
     /** @return array<string, string> package => first file naming it */

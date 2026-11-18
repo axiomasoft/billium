@@ -19,13 +19,13 @@ use Billium\Rating\Data\Rating\RatingHold;
 use Billium\Rating\Data\Tax\TaxResolutionRequest;
 use Billium\Rating\Enums\HoldReason;
 use Billium\Rating\Internal\Adapters\ScheduleOccurrenceAdapter;
+use Billium\Rating\Internal\Adapters\UsageAggregateAdapter;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
 use Billium\Rating\Internal\Proration\QuantitySnapshotScope;
 use Billium\Rating\Internal\Storage\RatingRows;
 use Billium\Rating\Internal\Storage\RatingStore;
 use Billium\Rating\Internal\Time\Micros;
 use Billium\Schedule\Enums\OccurrenceState;
-use Billium\Usage\Contracts\AggregationQueries;
 use Billium\Usage\Data\WindowSelector;
 use LogicException;
 use Packman\Attributes\Internal;
@@ -36,7 +36,7 @@ final readonly class FrozenInputsBuilder
 {
     public function __construct(private CallerContext $callers, private ScheduleOccurrenceAdapter $schedule,
         private PriceVersionStore $prices, private TaxSnapshotPort $tax,
-        private RatingStore $store, private ?AggregationQueries $usage = null) {}
+        private RatingStore $store, private UsageAggregateAdapter $usage) {}
 
     public function build(PrepareRating $command): FrozenRatingInputs|RatingHold
     {
@@ -102,7 +102,7 @@ final readonly class FrozenInputsBuilder
             $quantitySnapshot = isset($component['quantitySnapshot'])
                 ? self::quantitySnapshot($component['quantitySnapshot']) : null;
             $fixed = $component['snapshotRef'] === 'fixed';
-            $approved = $quantitySnapshot !== null && ($fixed || $component['snapshotRef'] === ($quantitySnapshot['snapshotRef'] ?? null) || $this->usage === null);
+            $approved = $quantitySnapshot !== null && ($fixed || $component['snapshotRef'] === ($quantitySnapshot['snapshotRef'] ?? null) || ! $this->usage->available());
             if ($fixed || $approved) {
                 if ($component['componentRef'] !== $occurrence->componentRef) {
                     RatingComputation::refuse('fixed_input_scope_mismatch');
@@ -118,11 +118,11 @@ final readonly class FrozenInputsBuilder
                         sourceDigest: $command->sourceDigest, occurrenceDigest: $command->occurrenceInputsDigest,
                         start: $start, end: $end, group: $group, price: $price);
             } else {
-                if ($this->usage === null) {
+                if (! $this->usage->available()) {
                     return new RatingHold(reason: HoldReason::IncompleteSource, repairOrReplayRefs: [$component['snapshotRef']], detail: 'usage capability absent');
                 }
                 try {
-                    $aggregate = RatingRows::map(json_decode(CanonicalJson::encode($this->usage->snapshot($component['snapshotRef'])), true, 128, JSON_THROW_ON_ERROR));
+                    $aggregate = $this->usage->snapshot($component['snapshotRef']);
                     $w = RatingRows::map($aggregate['window'] ?? null);
                     $window = new WindowSelector(sellerRef: RatingRows::text($w['sellerRef'] ?? null), environment: RatingRows::text($w['environment'] ?? null),
                         metricRef: RatingRows::text($w['metricRef'] ?? null), metricVersion: RatingRows::text($w['metricVersion'] ?? null), groupKey: RatingRows::map($w['group'] ?? null),
