@@ -17,6 +17,8 @@ Paths are relative to `src/`. Public types carry `#[Api]`, host extension points
 
 - `src/Contracts`, `src/Data`, `src/Enums` — public surface; other modules may import only these.
 - `src/Internal` — implementation; never imported from another module (enforced by `packages/core/tests/Arch/ModuleBoundariesTest.php`).
+- `src/Internal/Adapters` — the only place that calls ledger, usage, schedule or platform services; one adapter per neighbour
+  handles its absence and translates its payloads (enforced by `packages/core/tests/Arch/ModuleDependencyDirectionTest.php`).
 - `src/Laravel` — service provider and capability declaration; core composes it through `Billium\Core\Plugins`.
 - Migrations: `packages/core/database/migrations/rating/` (raw SQL in PHP migrations, forward-only).
 - Tests: `tests/` (Feature, Support, Unit).

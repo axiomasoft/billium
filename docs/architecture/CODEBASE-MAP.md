@@ -45,7 +45,8 @@ Inside a module, `Contracts`, `Data`, `Enums` and `Exceptions` are the public su
 `#[Spi]` for host extension points); `Internal` is never imported by another module; `Laravel` holds the service
 provider and capability declaration. Each table has exactly one owning module and modules never read or write a
 neighbour's tables. These rules are tests, not conventions:
-`packages/core/tests/Arch/ModuleBoundariesTest.php`, `TableOwnershipTest.php`,
+`packages/core/tests/Arch/ModuleBoundariesTest.php`, `TableOwnershipTest.php`, `ModuleDependencyDirectionTest.php`
+(imports match `composer.json`, no cycles, rating calls neighbours only through `Internal/Adapters`),
 `packages/core/tests/Architecture/P4DependencyBoundaryTest.php`.
 
 ## Where to look
