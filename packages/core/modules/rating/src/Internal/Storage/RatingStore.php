@@ -174,13 +174,18 @@ final readonly class RatingStore
             'net_minor' => $draft->netMinor, 'tax_minor' => $draft->taxMinor, 'gross_minor' => $draft->grossMinor,
             'charge_kind' => $draft->chargeKind->value, 'no_charge_reason' => $draft->noChargeReason,
             'inputs_digest' => $draft->inputsDigest, 'rated_digest' => $draft->ratedDigest]);
+        // Every line has the same columns, so the basis stores them in one statement, in line order.
+        $rows = [];
         foreach ($draft->lines as $line) {
             $row = ['basis_id' => $id, 'line_snapshot' => CanonicalJson::encode($line)];
             foreach (get_object_vars($line) as $key => $value) {
                 $column = strtolower((string) preg_replace('/(?<!^)[A-Z]/', '_$0', $key));
                 $row[$key === 'intermediatesJson' ? 'intermediates' : $column] = $value;
             }
-            $db->table('billium_rating_rated_line')->insert($row);
+            $rows[] = $row;
+        }
+        if ($rows !== []) {
+            $db->table('billium_rating_rated_line')->insert($rows);
         }
 
         return $id;
