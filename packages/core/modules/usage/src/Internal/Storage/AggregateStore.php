@@ -202,6 +202,13 @@ final readonly class AggregateStore
         return $members;
     }
 
+    public function hasMember(Connection $db, stdClass $snapshot, string $factId, int $factRevision): bool
+    {
+        return $db->table('billium_usage_aggregate_member')->where([
+            'snapshot_id' => $snapshot->id, 'fact_id' => $factId, 'fact_revision' => $factRevision,
+        ])->exists();
+    }
+
     public function window(stdClass $snapshot): WindowSelector
     {
         return new WindowSelector(

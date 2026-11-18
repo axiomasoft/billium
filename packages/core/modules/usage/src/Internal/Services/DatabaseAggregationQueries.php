@@ -131,8 +131,7 @@ final readonly class DatabaseAggregationQueries implements AggregationQueries
                 $classification = LateClass::InGrace;
             }
         } else {
-            $members = $this->store->membership(db: $db, snapshot: $snapshot);
-            if (! array_any($members, static fn (array $m): bool => $m['factId'] === $factId && $m['factRevision'] === $factRevision)) {
+            if (! $this->store->hasMember(db: $db, snapshot: $snapshot, factId: $factId, factRevision: $factRevision)) {
                 $classification = LateClass::PostFinal;
             }
         }
