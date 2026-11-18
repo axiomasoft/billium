@@ -100,7 +100,7 @@ final readonly class DatabaseLedgerQueries implements LedgerQueries
         if ($billingAccountRef === '' || $limit < 1 || $limit > 9007199254740991) {
             throw self::invalid();
         }
-        $time = View::timestamp($asOf->format(DATE_RFC3339_EXTENDED));
+        $time = View::timestamp($asOf->format('Y-m-d\TH:i:s.uP'));
         $feedRecovery = $this->feedRecovery;
 
         return $this->reads->run(static function (Connection $db, Caller $caller) use ($billingAccountRef, $time, $limit, $cursor, $feedRecovery): array {

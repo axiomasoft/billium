@@ -141,6 +141,24 @@ final class ObligationDuePolicyTest extends LedgerTestCase
         }
     }
 
+    public function test_due_query_keeps_the_microsecond_precision_of_as_of(): void
+    {
+        $due = new DateTimeImmutable('2026-10-28T10:00:00.000500Z');
+        $this->ledger()->recordObligation(new RecordObligation('key-precise', $this->account(), 'precise', 'basis-precise', 'customer', 'component',
+            Money::parse('1.00', 'RUB'), self::digest(), duePolicy: new ObligationDuePolicy($due, 'host/1', 'host-policy', self::digest())))->orThrow();
+        $q = $this->application()->make(LedgerQueries::class);
+
+        $page = $q->dueObligations('account-a', new DateTimeImmutable('2026-10-28T10:00:00.000900Z'));
+        self::assertSame(['precise'], array_column(self::arr($page['obligations']), 'obligationRef'), 'asOf after due_at must include it');
+        self::assertSame('2026-10-28T10:00:00.000900Z', $page['asOf']);
+        self::assertSame([], $q->dueObligations('account-a', new DateTimeImmutable('2026-10-28T10:00:00.000400Z'))['obligations']);
+        $wire = $q->dispatch(json_encode(['schema' => 'billium.query.v1', 'installationRef' => self::INSTALLATION, 'sellerRef' => 'seller-a', 'environment' => 'test',
+            'query' => 'dueObligations', 'selector' => ['billingAccountRef' => 'account-a'], 'asOf' => '2026-10-28T10:00:00.0009Z', 'limit' => 2], JSON_THROW_ON_ERROR));
+        $result = $wire['result'];
+        self::assertIsArray($result);
+        self::assertSame(['precise'], array_column(self::arr($result['obligations']), 'obligationRef'));
+    }
+
     /** @return array<string, mixed> */
     private function queriesReceipt(string $ref): array
     {
