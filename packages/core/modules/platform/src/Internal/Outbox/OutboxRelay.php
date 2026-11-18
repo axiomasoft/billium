@@ -71,11 +71,14 @@ final readonly class OutboxRelay
         [$content, $delivery, $key] = $this->tables();
 
         return $this->db->transaction(function () use ($limit, $content, $delivery, $key): array {
+            // A claim never moves available_at, so every in-flight row is already available. Bounding both branches by
+            // the stable statement clock lets the due index stop at the first future backoff instead of filtering the
+            // whole backlog on every poll; the volatile clock_timestamp() cannot be an index condition.
             $rows = $this->db->select(<<<SQL
                 SELECT e.*,d.id AS delivery_id,d.destination_ref,d.consecutive_failures,d.status AS delivery_status FROM public.{$delivery} d
                 JOIN public.{$content} e ON e.{$key} = d.event_id
-                WHERE (d.status = 'pending' AND d.available_at <= clock_timestamp())
-                   OR (d.status = 'in_flight' AND d.claim_until <= clock_timestamp())
+                WHERE d.status IN ('pending','in_flight') AND d.available_at <= statement_timestamp()
+                  AND (d.status = 'pending' OR d.claim_until <= statement_timestamp())
                 ORDER BY d.available_at,d.id LIMIT {$limit} FOR UPDATE OF d SKIP LOCKED
                 SQL);
             $claims = [];
