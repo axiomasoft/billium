@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Build spec/identities.json and spec/identities/snapshots/<kind>.json from a spec revision (M-27, M-28).
+"""Build spec/identities.json and spec/identities/snapshots/<kind>.json from a spec revision.
 
 The registry is the frozen-identity ledger: every envelope, envelope field, problem code, event type,
 operation status, invoice status and the spec revision itself; config keys, migration identities and doctor
 findings are also tracked. Migration/config identities come from their product files, doctor
-findings from spec/modules.json (P3.13). Entries are appended with status "new";
+findings from spec/modules.json. Entries are appended with status "new";
 an entry that disappears from the sources must be kept with status "retired" by hand, otherwise
 the check fails. Snapshots are sorted id lists of the live (not retired) entries per kind.
 
@@ -29,7 +29,7 @@ MODULES = ROOT / "spec/modules.json"
 
 
 def product_identities(root: Path) -> dict[tuple[str, str], str]:
-    """Read real migration basenames and flattened PHP config, never drill migrations (M-28)."""
+    """Read real migration basenames and flattened PHP config, never drill migrations."""
     found: dict[tuple[str, str], str] = {}
     for path in sorted((root / 'packages/core/database/migrations').rglob('*.php')):
         key = ('migration', path.stem)

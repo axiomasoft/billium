@@ -2,7 +2,7 @@
 
 Reads one spec revision and produces the language-neutral data both exporters render:
 the currency table, the problem-code registry, the schema bundle the codecs validate against
-and the envelope descriptors behind the generated envelope classes (P2.5, P2.6).
+and the envelope descriptors behind the generated envelope classes.
 """
 from __future__ import annotations
 

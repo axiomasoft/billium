@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export the data of a spec revision into the Dart package billium_contracts (P2.6).
+"""Export the data of a spec revision into the Dart package billium_contracts.
 
 Writes lib/src/generated/*.g.dart: the currency table, the problem-code enum, the schema bundle with the envelope
 registry and the envelope classes. Generated files carry `// dart format off`; they are checked here, not by dart format.

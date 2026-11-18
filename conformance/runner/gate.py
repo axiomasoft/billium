@@ -1,4 +1,4 @@
-"""Run-level gates: baseline (M-11), lockstep (M-12) and the golden check by the JCS oracle (M-15)."""
+"""Run-level gates: baseline, lockstep and the golden check by the JCS oracle."""
 from __future__ import annotations
 
 import hashlib
