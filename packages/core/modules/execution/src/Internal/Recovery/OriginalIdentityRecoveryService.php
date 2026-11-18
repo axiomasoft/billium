@@ -33,6 +33,7 @@ use Billium\Execution\Internal\Authority\AuthorityClaims;
 use Billium\Execution\Internal\Dispatch\TransportBoundary;
 use Billium\Execution\Internal\Identity\PaymentIdentity;
 use Billium\Execution\Internal\Merchants\ContinuityMerchantCredentials;
+use Billium\Execution\Internal\Reducer\MaterialRules;
 use Billium\Execution\Internal\Storage\ExecutionCodec;
 use Billium\Platform\Contracts\Installation\Installation;
 use Closure;
@@ -108,7 +109,8 @@ final readonly class OriginalIdentityRecoveryService implements OriginalIdentity
         if ($retainedId !== null && $identity->providerOperationId !== null && $retainedId !== $identity->providerOperationId) {
             throw self::refused('The archived assigned provider ID conflicts with the original attempt');
         }
-        $assigned = $capability->details->lookupByProviderId ? ($retainedId ?? $identity->providerOperationId) : null;
+        $expectedId = $retainedId ?? $identity->providerOperationId;
+        $assigned = $capability->details->lookupByProviderId ? $expectedId : null;
         if (($assigned === null && ! $capability->lookupByReference) || ($identity->kind === EffectKind::Refund && ! $capability->details->refundLookup)) {
             throw self::refused('Original-account provider lookup unavailable');
         }
@@ -116,17 +118,21 @@ final readonly class OriginalIdentityRecoveryService implements OriginalIdentity
         $result = $driver->lookup(new LookupRequest($binding, $identity->operationRef, $identity->providerReference, $assigned, $credentials));
         $ref = 'transport:'.bin2hex(random_bytes(20));
         $evidence = $result->evidence;
-        if ($assigned !== null && $evidence !== null) {
+        if ($evidence !== null) {
             try {
                 $material = $driver->normalize($evidence, $capability);
             } catch (Exception) {
                 $material = null;
             }
-            if ($material === null || $material->providerOperationId !== $assigned || $material->providerReference !== $identity->providerReference
-                || $material->operationRef !== $identity->operationRef || $material->bindingDigest !== AuthorityClaims::bindingDigest($binding)
-                || $material->merchantAccountRef !== $binding->merchantAccountRef || $result->snapshot?->materialDigest !== $material->materialDigest
-                || $result->snapshot->providerOperationId !== $assigned || $result->snapshot->providerReference !== $identity->providerReference
-                || $result->snapshot->bindingDigest !== $material->bindingDigest) {
+            $reported = $result->snapshot;
+            if ($material === null || ($expectedId !== null && $material->providerOperationId !== $expectedId)
+                || $material->providerReference !== $identity->providerReference || $material->operationRef !== $identity->operationRef
+                || $material->kind !== $identity->kind || $material->bindingDigest !== AuthorityClaims::bindingDigest($binding)
+                || $material->merchantAccountRef !== $binding->merchantAccountRef || $material->evidenceRefs !== [$evidence->evidenceRef]
+                || $reported === null || $reported->materialDigest !== $material->materialDigest || MaterialRules::digest($reported) !== MaterialRules::digest($material)
+                || $reported->providerRevision !== $material->providerRevision || $reported->stableEffectId !== $material->stableEffectId
+                || $reported->providerOperationId !== $material->providerOperationId || $reported->providerReference !== $material->providerReference
+                || $reported->bindingDigest !== $material->bindingDigest) {
                 // Retain the full foreign delivery as unverified local transport evidence, ineligible for monetary reduction.
                 $body = ['reason' => 'archived_provider_id_mismatch', 'received' => ExecutionCodec::value($evidence)];
                 $raw = new ProviderEvidence('review:'.$ref, $scope, $merchant->providerId, $merchant->merchantAccountRef, null,
@@ -136,12 +142,13 @@ final readonly class OriginalIdentityRecoveryService implements OriginalIdentity
                 throw self::refused('Provider lookup material differs from its authenticated archived assignment');
             }
         }
-        $receipt = $this->journal->retain($operation, $attempt, $merchant, $result, 'lookup', false, $ref)->orThrow();
+        $work = null;
+        $receipt = $this->journal->retain($operation, $attempt, $merchant, $result, 'lookup', false, $ref, $work)->orThrow();
         $refs = $receipt->body['evidenceRefs'] ?? null;
-        if ($evidence === null || ! is_array($refs) || ($refs[1] ?? null) !== $evidence->evidenceRef) {
+        if ($evidence === null || $work === null || ! is_array($refs) || ($refs[1] ?? null) !== $evidence->evidenceRef) {
             throw self::refused('Original provider lookup has no scoped authenticated evidence to reduce');
         }
-        $work = 'provider-work:'.substr(PaymentIdentity::digest(['scope' => get_object_vars($scope), 'handler' => $evidence->handlerContractVersion, 'evidenceRef' => $evidence->evidenceRef]), 7);
+        $this->journal->resumeImportedLookup($identity, $ref, $evidence, $work);
 
         return $this->reducer->reduce($work);
     }

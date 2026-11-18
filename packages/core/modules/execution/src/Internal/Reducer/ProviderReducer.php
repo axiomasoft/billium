@@ -26,14 +26,12 @@ use Billium\Execution\Data\ProviderWorkClaim;
 use Billium\Execution\Data\ProviderWorkInput;
 use Billium\Execution\Data\ReductionResult;
 use Billium\Execution\Data\VerifiedAbsence;
-use Billium\Execution\Enums\EffectKind;
 use Billium\Execution\Enums\ReductionDisposition;
 use Billium\Execution\Enums\ReservationState;
 use Billium\Execution\Internal\Authority\AbsenceProofRegistry;
 use Billium\Execution\Internal\Authority\AuthorityClaims;
 use Billium\Execution\Internal\Capacity\ExecutionCapacity;
 use Billium\Execution\Internal\Custody\VerifiedDelivery;
-use Billium\Execution\Internal\Custody\VerifyDelivery;
 use Billium\Execution\Internal\Identity\PaymentIdentity;
 use Billium\Execution\Internal\Publication\OutcomeEmitter;
 use Billium\Execution\Internal\Storage\ExecutionCodec;
@@ -43,20 +41,14 @@ use Exception;
 use LogicException;
 use Packman\Attributes\Internal;
 use Throwable;
-use WeakMap;
 
 #[Internal]
 final class ProviderReducer implements EvidenceReducer
 {
-    /** @var WeakMap<TransactionContext,array{ProviderWorkClaim,VerifiedDelivery}> */
-    private WeakMap $prepared;
-
     public function __construct(private readonly ExecutionStore $store, private readonly OperationRunner $runner, private readonly CallerContext $callers,
-        private readonly FinancialSessionAdmission $admission, private readonly Installation $installation, private readonly VerifyDelivery $verification,
-        private readonly MerchantRegistry $merchants, private readonly ReduceMaterial $material, private readonly OutcomeEmitter $publication, private readonly AbsenceProofRegistry $absence)
-    {
-        $this->prepared = new WeakMap;
-    }
+        private readonly FinancialSessionAdmission $admission, private readonly Installation $installation,
+        private readonly MerchantRegistry $merchants, private readonly ReduceMaterial $material, private readonly OutcomeEmitter $publication, private readonly AbsenceProofRegistry $absence,
+        private readonly VerifiedReduction $verified) {}
 
     public function reduce(string $workRef): ReductionResult
     {
@@ -95,7 +87,7 @@ final class ProviderReducer implements EvidenceReducer
             if ($evidence->handlerContractVersion === 'execution.transport.v1') {
                 $certificate = $this->certified($input, $op);
             } else {
-                $delivery = $this->verification->verify($scope, $op->binding->merchantRevisionRef, $hint, $evidence, false);
+                $delivery = $this->verified->authenticate($op, $evidence);
             }
         } catch (Exception) {
             return $this->rawFinish($scope, $claim, $hint, 'quarantined', 'provider_verification_failed');
@@ -147,20 +139,14 @@ final class ProviderReducer implements EvidenceReducer
             }
             $this->store->lock($ctx, $current);
             if ($delivery !== null) {
-                $this->prepared[$ctx] = [$claim, $delivery];
-                try {
-                    $result = $this->reduceIn($ctx, $claim, $delivery->snapshot);
-                } finally {
-                    unset($this->prepared[$ctx]);
-                }
+                $result = $this->verified->run($ctx, $claim, $delivery, fn (): ReductionResult => $this->reduceIn($ctx, $claim, $delivery->snapshot));
             } elseif ($certificate !== null) {
                 $attempt = $this->store->attemptForOperation($scope, $op->operationRef, $ctx) ?? throw new LogicException('Original attempt is absent');
                 $reservation = $this->store->reservationForOperation($ctx, $op->operationRef);
                 $released = $reservation?->state === ReservationState::Held ? ExecutionCapacity::withoutHold($this->store->capacity($ctx, $op->rootOperationRef), $reservation) : null;
                 $this->store->applyCertifiedAbsence($ctx, $attempt, $claim, $certificate, $released);
                 $failed = $this->store->operation($scope, $op->operationRef, $ctx) ?? throw new LogicException('Certified operation is absent');
-                $events = in_array($op->kind, [EffectKind::Capture, EffectKind::VoidAuthorization], true)
-                    ? $this->publication->emitCertifiedNoEffect($ctx, $failed, $certificate)->eventIds : [];
+                $events = $this->publication->emitCertifiedNoEffect($ctx, $failed, $certificate)->eventIds;
                 $result = new ReductionResult(ReductionDisposition::Applied, $op->operationRef, $failed->revision, [$claim->evidenceRef], [], $events, null);
             } else {
                 throw new LogicException('Provider work has no qualified decision');
@@ -180,12 +166,8 @@ final class ProviderReducer implements EvidenceReducer
     public function reduceIn(TransactionContext $ctx, ProviderWorkClaim $claim, MaterialSnapshot $snapshot): ReductionResult
     {
         $this->runner->assertCurrent($ctx, 'execution');
-        $prepared = $this->prepared[$ctx] ?? null;
-        if ($prepared === null || $prepared[0] !== $claim || $prepared[1]->snapshot !== $snapshot) {
-            throw new ProblemException(ProblemCode::AuthDenied, 'Reduction requires independently authenticated work in this invocation');
-        }
 
-        return $this->material->apply($ctx, $prepared[1], $claim);
+        return $this->material->apply($ctx, $this->verified->verifiedIn($ctx, $claim, $snapshot), $claim);
     }
 
     private function rawFinish(ExecutionScope $scope, ProviderWorkClaim $claim, ?string $op, string $state, string $reason): ReductionResult

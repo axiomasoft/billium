@@ -10,6 +10,7 @@ void main() {
     for (final directory in [
       'event/v2',
       'event/repair',
+      'event/certified-no-effect',
       'payment/effects',
       'feed',
     ])
@@ -89,6 +90,62 @@ void main() {
       ),
     );
   });
+  test(
+    'exposes typed certified no-effect events to capable direct clients',
+    () {
+      const direct = Codec(supportedSchemas: ['billium.event.v4']);
+      const legacy = Codec(
+        supportedSchemas: [
+          'billium.event.v1',
+          'billium.event.v2',
+          'billium.event.v3',
+        ],
+      );
+      final vector = jsonDecode(
+        File('${root.path}/event/certified-no-effect/valid.json')
+            .readAsStringSync(),
+      ) as Map;
+      final json = vector['script'][0]['args']['json_text'] as String;
+      final event = direct.decode(json) as ExecutionCertifiedNoEffectEvent;
+      expect(event.eventType, 'payment.certified_no_effect.v1');
+      expect(event.eventContractRevision, 'events-2026-11-v4');
+      expect(event.installationRef, 'installation-a');
+      expect(event.environment, 'test');
+      expect(event.aggregateRef, event.payload['operationRef']);
+      expect(event.revision, event.payload['revision']);
+      expect(event.digest, vector['expect'][0]['ok']['digest']);
+      expect(direct.encode(event), json);
+      expect(
+        () => legacy.decode(json),
+        throwsA(
+          isA<ProblemException>().having(
+            (e) => e.problem,
+            'code',
+            ProblemCode.schemaUnsupported,
+          ),
+        ),
+      );
+
+      final pageVector = jsonDecode(
+        File('${root.path}/feed/v1-page-valid.json').readAsStringSync(),
+      ) as Map;
+      final page = jsonDecode(
+        pageVector['script'][0]['args']['json_text'] as String,
+      ) as Map<String, Object?>;
+      page['events'] = [event.raw];
+      page['digest'] = direct.digest(page);
+      expect(
+        () => codec.decode(direct.canonicalize(page)),
+        throwsA(
+          isA<ProblemException>().having(
+            (e) => e.problem,
+            'code',
+            ProblemCode.validationInvalid,
+          ),
+        ),
+      );
+    },
+  );
   test('checks negotiated event capabilities throughout a feed page', () {
     const old = Codec(
       supportedSchemas: ['billium.feed.page.v1', 'billium.event.v1'],

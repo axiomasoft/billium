@@ -1071,14 +1071,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "execution",
-      "currentSchemaVersion": 32,
+      "currentSchemaVersion": 33,
       "supportedSchemaReadRange": {
-        "min": 32,
-        "max": 32
+        "min": 33,
+        "max": 33
       },
       "supportedSchemaWriteRange": {
-        "min": 32,
-        "max": 32
+        "min": 33,
+        "max": 33
       },
       "requiresModules": [
         {
@@ -1109,7 +1109,8 @@
         "payment.outcome.v1",
         "payment.effect.outcome.v1",
         "billium.event.v2",
-        "billium.event.v3"
+        "billium.event.v3",
+        "billium.event.v4"
       ],
       "consumes": [
         "payment.admission.v1",
@@ -1319,6 +1320,11 @@
           "id": "2026_11_18_000032_retain_original_identity_import",
           "version": 32,
           "checksum": "sha256:df72bd736d97429bed0cef6c9441f4363dbd54a6be588ddefd981d1bb48983d7"
+        },
+        {
+          "id": "2026_11_18_000033_guard_archived_child_reservations",
+          "version": 33,
+          "checksum": "sha256:670ffe4e1de4871b4516c5d9a5544ed8610f582cbae03fae4c89b10acd8943a8"
         }
       ],
       "disablePolicy": {
@@ -1372,6 +1378,15 @@
           "bootstrapMode": "replay_only",
           "retentionPolicyRef": "financial-permanent",
           "eventContractRevision": "events-2026-11-v3"
+        },
+        {
+          "eventType": "payment.certified_no_effect.v1",
+          "envelopeSchema": "billium.event.v4",
+          "payloadSchemaRef": "spec/revisions/2026-10/schema/execution/certified-no-effect-event.v1.json#/properties/payload",
+          "payloadSchemaDigest": "sha256:40452e3af958080b58d6d8ef925384ce57d99864de387c8ada2c194df696127c",
+          "bootstrapMode": "replay_only",
+          "retentionPolicyRef": "financial-permanent",
+          "eventContractRevision": "events-2026-11-v4"
         }
       ],
       "internalCommands": [

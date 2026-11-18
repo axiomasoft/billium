@@ -64,7 +64,8 @@ final class ProviderFactIdentityTest extends ExecutionTestCase
             self::assertSame(1, $this->rows('billium_execution_discrepancy', "exposure->>'reason'='older_revision_increases_totals'"));
             $regression = $reduce(['revision' => '11', 'captured' => ['amount' => '0.80', 'currency' => 'RUB'], 'operationAmount' => ['amount' => '0.80', 'currency' => 'RUB']]);
             self::assertSame(ReductionDisposition::Quarantined, $regression->disposition);
-            self::assertSame(3, $this->rows('billium_execution_observation_emission'));
+            self::assertSame(5, $this->rows('billium_execution_observation_emission'));
+            self::assertSame(2, $this->rows('billium_execution_observation_emission', "source_sequence IN (4,5) AND payload#>>'{refundedTotal,amount}'='1.40' AND payload#>>'{discrepancy,acceptedTotals,refundedTotal,amount}'='0.70'"));
             self::assertSame(1, UnknownResultTest::events($journal, 'provider.call'));
         } finally {
             UnknownResultTest::clean($journal);
@@ -98,7 +99,8 @@ final class ProviderFactIdentityTest extends ExecutionTestCase
             $intake->receive(Fixture::scope(), 'merchant-a', 'root-a', $same)->orThrow();
             self::assertSame(ReductionDisposition::Quarantined, $reducer->reduce(CallbackCustodyTest::work($same))->disposition);
             self::assertSame(1, $this->rows('billium_execution_discrepancy', "exposure->>'reason'='provider_revision_conflict'"));
-            self::assertSame(3, $this->rows('billium_execution_observation_emission'));
+            self::assertSame(4, $this->rows('billium_execution_observation_emission'));
+            self::assertSame(1, $this->rows('billium_execution_observation_emission', "source_sequence=4 AND payload#>>'{capturedTotal,amount}'='1.50' AND payload#>>'{discrepancy,kind}'='provider_revision_conflict'"));
         } finally {
             UnknownResultTest::clean($journal);
         }
@@ -119,16 +121,26 @@ final class ProviderFactIdentityTest extends ExecutionTestCase
                 'provider_evidence' => ['evidence_ref' => "'plan-evidence-'||n", 'provider_event_id' => "'plan-event-'||n"],
                 'provider_identity' => ['attempt_ref' => "'plan-attempt-'||n", 'evidence_ref' => "'plan-evidence-'||n", 'provider_operation_id' => "'plan-provider-'||n"],
             ];
-            foreach ($fixture as $name => $expressions) {
-                $table = 'billium_execution_'.$name;
-                $source = $db->table($table)->orderBy('id')->first();
-                self::assertNotNull($source);
-                $columns = array_keys(get_object_vars($source));
-                $columns = array_values(array_diff($columns, ['id']));
-                $values = array_map(static fn (string $col): string => $expressions[$col] ?? 'source.'.$col, $columns);
-                $db->statement('INSERT INTO '.$table.' ('.implode(',', $columns).') SELECT '.implode(',', $values).' FROM (SELECT * FROM '.$table.' ORDER BY id LIMIT 1) source CROSS JOIN generate_series(1,2048) n');
-                $db->statement('ANALYZE '.$table);
-            }
+            $db->transaction(function () use ($db, $fixture): void {
+                $db->statement(<<<'SQL'
+                    INSERT INTO billium_execution_child_identity
+                        (installation_ref,seller_ref,environment,intent_owner_namespace,source_context,business_intent_ref,operation_kind,
+                         operation_ref,root_operation_ref,semantic_digest,canonicalization_version,binding,requested_minor,currency,currency_exponent,receipt_ref)
+                    SELECT installation_ref,seller_ref,environment,intent_owner_namespace,source_context,'plan-business-'||n,'capture',
+                        'plan-op-'||n,root_operation_ref,economic_digest,binding->>'canonicalizationVersion',binding,requested_minor,currency,currency_exponent,'plan-receipt-'||n
+                    FROM billium_execution_operation CROSS JOIN generate_series(1,2048) n WHERE operation_ref='root-a'
+                    SQL);
+                foreach ($fixture as $name => $expressions) {
+                    $table = 'billium_execution_'.$name;
+                    $source = $db->table($table)->orderBy('id')->first();
+                    self::assertNotNull($source);
+                    $columns = array_keys(get_object_vars($source));
+                    $columns = array_values(array_diff($columns, ['id']));
+                    $values = array_map(static fn (string $col): string => $expressions[$col] ?? 'source.'.$col, $columns);
+                    $db->statement('INSERT INTO '.$table.' ('.implode(',', $columns).') SELECT '.implode(',', $values).' FROM (SELECT * FROM '.$table.' ORDER BY id LIMIT 1) source CROSS JOIN generate_series(1,2048) n');
+                    $db->statement('ANALYZE '.$table);
+                }
+            });
             $scope = Fixture::scope();
             $raw = $event->sanitizedPayload['material'];
             self::assertIsArray($raw);

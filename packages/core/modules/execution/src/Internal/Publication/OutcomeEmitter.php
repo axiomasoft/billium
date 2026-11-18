@@ -14,13 +14,16 @@ use Billium\Execution\Contracts\ExecutionStore;
 use Billium\Execution\Contracts\OutcomePublication;
 use Billium\Execution\Contracts\PaymentObservationSink;
 use Billium\Execution\Data\MaterialChange;
+use Billium\Execution\Data\MaterialSnapshot;
 use Billium\Execution\Data\ObservationEmission;
 use Billium\Execution\Data\OperationRecord;
+use Billium\Execution\Data\ProviderWorkClaim;
 use Billium\Execution\Data\PublicationReceipt;
 use Billium\Execution\Data\VerifiedAbsence;
 use Billium\Execution\Enums\EffectKind;
 use Billium\Execution\Internal\Authority\AuthorityClaims;
 use Billium\Execution\Internal\Identity\PaymentIdentity;
+use Billium\Execution\Internal\Storage\ExecutionCodec;
 use Billium\Platform\Contracts\Outbox\Outbox;
 use Billium\Platform\Data\EventContracts\EventContractRegistration;
 use Billium\Platform\Data\EventContracts\RegisteredPublicEvent;
@@ -41,7 +44,6 @@ final readonly class OutcomeEmitter implements OutcomePublication
     {
         $op = $change->after;
         $s = $change->observed;
-        $scope = $op->binding->scope;
         $this->store->assertMaterialRevision($ctx, $change);
         if ($change->observations !== [] || $change->publicFacts !== []) {
             throw new LogicException('Publication requires the committed-in-root operation change');
@@ -53,21 +55,12 @@ final readonly class OutcomeEmitter implements OutcomePublication
 
             return new PublicationReceipt([], [], [$event], []);
         }
-        $token = $this->admission->currentToken($scope->installationRef) ?? throw new LogicException('Current source process admission is required');
-        $lineage = AuthorityClaims::sourceLineage($token, $ctx->sessionEpoch());
-        $part = $this->store->ensureObservationPartition($ctx, $scope, $op->binding->executionProfile, $lineage, $op->rootOperationRef);
-        $sequence = $this->store->nextObservationSequence($ctx, $part->id);
-        $event = (string) Str::ulid();
-        $now = new DateTimeImmutable;
         $refund = $op->kind === EffectKind::Refund;
         $detailAmount = $refund ? ($s->operationAmount ?? throw new LogicException('Refund detail has no authenticated amount')) : null;
-        $body = ['schema' => PaymentObservation::SCHEMA, 'eventId' => $event, 'sourceAuthority' => $part->sourceAuthority, 'sourceLineage' => $lineage,
-            'partitionRef' => $part->partitionRef, 'sourceSequence' => $sequence, 'installationRef' => $scope->installationRef, 'environment' => $scope->environment,
-            'sellerRef' => $scope->sellerRef, 'operationRef' => $op->operationRef, 'operationKind' => $refund ? 'refund' : 'charge',
-            'businessIntentRef' => $op->binding->businessIntentRef, 'operationRevision' => $op->revision, 'state' => self::status($op, $s->normalizedStatus),
-            'currency' => $s->currency, 'requested' => $op->requested->toWire(), 'authorizedTotal' => ($detailAmount ?? $s->authorizedTotal)->toWire(),
+        $body = ['operationKind' => $refund ? 'refund' : 'charge', 'state' => self::status($op, $s->normalizedStatus),
+            'currency' => $s->currency, 'authorizedTotal' => ($detailAmount ?? $s->authorizedTotal)->toWire(),
             'capturedTotal' => ($detailAmount ?? $s->capturedTotal)->toWire(), 'refundedTotal' => ($refund ? new Money(0, $op->requested->currency) : $s->refundedTotal)->toWire(),
-            'providerAccountRef' => $op->binding->merchantAccountRef, 'evidenceRef' => $evidence, 'observedAt' => self::time($s->observedAt), 'recordedAt' => self::time($now)];
+            'evidenceRef' => $evidence, 'observedAt' => self::time($s->observedAt)];
         if ($refund) {
             $body['originalPaymentRef'] = $op->rootOperationRef;
         }
@@ -79,6 +72,50 @@ final readonly class OutcomeEmitter implements OutcomePublication
                 'acceptedTotals' => ['authorizedTotal' => $change->capacity->authorizedLimit->toWire(), 'capturedTotal' => $change->capacity->confirmedCapture->toWire(),
                     'refundedTotal' => $change->capacity->confirmedRefund->toWire()], 'verifiedExternalFacts' => [['evidenceRef' => $evidence]]];
         }
+
+        return $this->observation($ctx, $op, $body);
+    }
+
+    public function emitQuarantineHold(TransactionContext $ctx, ProviderWorkClaim $claim, MaterialSnapshot $conflict, string $ref, string $reason): PublicationReceipt
+    {
+        $root = $this->store->recordQuarantineHold($ctx, $claim, $conflict, $ref, $reason);
+        if ($root === null) {
+            return new PublicationReceipt([], [], [], []);
+        }
+        $accepted = $this->store->latestRootObservation($ctx, $root->operationRef);
+        $capacity = $this->store->capacity($ctx, $root->operationRef);
+        $totals = ['authorizedTotal' => $capacity->authorizedLimit->toWire(), 'capturedTotal' => $capacity->confirmedCapture->toWire(),
+            'refundedTotal' => $capacity->confirmedRefund->toWire()];
+        // The disputed observation is custody evidence only. No amount or terminal status in it becomes a provider fact.
+        $body = ['operationKind' => 'charge', 'state' => self::status($root, $accepted->normalizedStatus ?? 'unknown'), 'currency' => $root->requested->currency->code,
+            'authorizedTotal' => $accepted?->authorizedTotal->toWire() ?? $totals['authorizedTotal'],
+            'capturedTotal' => $accepted?->capturedTotal->toWire() ?? $totals['capturedTotal'],
+            'refundedTotal' => $accepted?->refundedTotal->toWire() ?? $totals['refundedTotal'],
+            'evidenceRef' => $accepted->evidenceRefs[0] ?? $ref, 'observedAt' => self::time($accepted->observedAt ?? new DateTimeImmutable),
+            'discrepancy' => ['discrepancyRef' => $ref, 'kind' => $reason, 'revision' => $root->revision, 'acceptedTotals' => $totals,
+                'verifiedExternalFacts' => [['evidenceRef' => $claim->evidenceRef, 'operationRef' => $conflict->operationRef, 'disposition' => 'quarantined',
+                    'totalsBasis' => $accepted === null ? 'local_confirmed_capacity' : 'last_accepted_provider_snapshot']]]];
+        if ($accepted?->operationRef === $root->operationRef && $accepted->providerOperationId !== null) {
+            $body['providerOperationId'] = $accepted->providerOperationId;
+        }
+
+        return $this->observation($ctx, $root, $body);
+    }
+
+    /** @param array<string,mixed> $body */
+    private function observation(TransactionContext $ctx, OperationRecord $op, array $body): PublicationReceipt
+    {
+        $scope = $op->binding->scope;
+        $token = $this->admission->currentToken($scope->installationRef) ?? throw new LogicException('Current source process admission is required');
+        $lineage = AuthorityClaims::sourceLineage($token, $ctx->sessionEpoch());
+        $part = $this->store->ensureObservationPartition($ctx, $scope, $op->binding->executionProfile, $lineage, $op->rootOperationRef);
+        $sequence = $this->store->nextObservationSequence($ctx, $part->id);
+        $event = (string) Str::ulid();
+        $body += ['schema' => PaymentObservation::SCHEMA, 'eventId' => $event, 'sourceAuthority' => $part->sourceAuthority, 'sourceLineage' => $lineage,
+            'partitionRef' => $part->partitionRef, 'sourceSequence' => $sequence, 'installationRef' => $scope->installationRef, 'environment' => $scope->environment,
+            'sellerRef' => $scope->sellerRef, 'operationRef' => $op->operationRef, 'businessIntentRef' => $op->binding->businessIntentRef,
+            'operationRevision' => $op->revision, 'requested' => $op->requested->toWire(), 'providerAccountRef' => $op->binding->merchantAccountRef,
+            'recordedAt' => self::time(new DateTimeImmutable)];
         $codec = new Codec;
         $body['contentDigest'] = $codec->digest($body, 'contentDigest');
         $observation = $codec->decode($codec->canonicalize($body));
@@ -97,11 +134,19 @@ final readonly class OutcomeEmitter implements OutcomePublication
     public function emitCertifiedNoEffect(TransactionContext $ctx, OperationRecord $failed, VerifiedAbsence $proof): PublicationReceipt
     {
         $this->store->assertCertifiedDecision($ctx, $failed, $proof);
-        if (! in_array($failed->kind, [EffectKind::Capture, EffectKind::VoidAuthorization], true)) {
-            throw new LogicException('No certified effect outcome contract for this operation kind');
+        $certificate = $proof->certificate;
+        if (in_array($failed->kind, [EffectKind::Capture, EffectKind::VoidAuthorization], true)) {
+            $event = $this->effect($ctx, $failed, new Money(0, $failed->requested->currency), 'failed-terminal', $certificate->certificateRef,
+                $certificate->coverageThrough);
+        } else {
+            $event = $this->publicEvent($ctx, $failed, 'payment.certified_no_effect.v1', $certificate->coverageThrough, [
+                'operationRef' => $failed->operationRef, 'rootOperationRef' => $failed->rootOperationRef, 'operationKind' => $failed->kind->value,
+                'revision' => $failed->revision, 'status' => 'failed-terminal', 'requested' => $failed->requested->toWire(),
+                'bindingRevision' => $failed->binding->merchantRevisionRef, 'merchantAccountRef' => $failed->binding->merchantAccountRef,
+                'providerReference' => $certificate->providerReference, 'certificateRef' => $certificate->certificateRef,
+                'certificateDigest' => ExecutionCodec::digest($certificate), 'coverageThrough' => self::time($certificate->coverageThrough),
+            ]);
         }
-        $event = $this->effect($ctx, $failed, new Money(0, $failed->requested->currency), 'failed-terminal', $proof->certificate->certificateRef,
-            $proof->certificate->coverageThrough);
 
         return new PublicationReceipt([], [], [$event], []);
     }
@@ -117,6 +162,13 @@ final readonly class OutcomeEmitter implements OutcomePublication
         $codec = new Codec;
         $body['digest'] = $codec->digest($body);
         $codec->decode($codec->canonicalize($body));
+
+        return $this->publicEvent($ctx, $op, $type, $at, $body);
+    }
+
+    /** @param array<string,mixed> $body */
+    private function publicEvent(TransactionContext $ctx, OperationRecord $op, string $type, DateTimeImmutable $at, array $body): string
+    {
         foreach ($this->modules->descriptor('execution')->publicEvents ?? [] as $declaration) {
             if ($declaration->eventType === $type) {
                 $event = (string) Str::ulid();

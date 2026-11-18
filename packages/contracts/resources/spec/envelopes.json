@@ -255,6 +255,16 @@
       }
     ]
   },
+  "billium.event.v4": {
+    "schemaId": "urn:billium:spec:2026-10:execution/certified-no-effect-event.v1.json",
+    "variants": [
+      {
+        "class": "ExecutionCertifiedNoEffectEvent",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
   "billium.feed.selection.v1": {
     "schemaId": "urn:billium:spec:2026-10:feed/selection.v1.json",
     "variants": [

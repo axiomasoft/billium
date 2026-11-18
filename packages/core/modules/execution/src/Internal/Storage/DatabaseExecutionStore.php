@@ -60,6 +60,7 @@ use Billium\Execution\Internal\Authority\AbsenceProofRegistry;
 use Billium\Execution\Internal\Authority\AuthorityClaims;
 use Billium\Execution\Internal\Capacity\CapacityAmounts;
 use Billium\Execution\Internal\Identity\PaymentIdentity;
+use Billium\Execution\Internal\Reducer\VerifiedReduction;
 use Closure;
 use DateTimeImmutable;
 use Illuminate\Database\Connection;
@@ -77,7 +78,7 @@ final class DatabaseExecutionStore implements ExecutionStore
     private WeakMap $held;
 
     /** @param (Closure():?OriginalIdentityArchive)|null $identityArchive */
-    public function __construct(private readonly DatabaseManager $databases, private readonly OperationRunner $runner, private readonly CallerContext $callers, private readonly BilliumOptions $options, private readonly FinancialSessionAdmission $sessionAdmission, private readonly ?AbsenceProofRegistry $absenceProofs = null, private readonly ?Closure $identityArchive = null)
+    public function __construct(private readonly DatabaseManager $databases, private readonly OperationRunner $runner, private readonly CallerContext $callers, private readonly BilliumOptions $options, private readonly FinancialSessionAdmission $sessionAdmission, private readonly ?AbsenceProofRegistry $absenceProofs = null, private readonly ?Closure $identityArchive = null, private readonly ?VerifiedReduction $verifiedReduction = null)
     {
         $this->held = new WeakMap;
     }
@@ -247,6 +248,13 @@ final class DatabaseExecutionStore implements ExecutionStore
             'source_journal_digest' => $identity->sourceJournalDigest, 'identity_digest' => $digest, 'original_lineage' => $identity->originalLineage,
             'original_fence' => $identity->originalFence, 'adopted_epoch' => $ctx->sessionEpoch(),
         ]);
+        if ($identity->operationRef !== $binding->rootOperationRef) {
+            // The attempt and archive now establish the original send-closed child for the SQL reservation guard.
+            // A newer root total does not settle it. Only the original authenticated child fact can do that.
+            $reservation = new Reservation(PaymentIdentity::reference($scope, $identity->operationRef, 'reservation'), $binding->rootOperationRef,
+                $identity->operationRef, $identity->kind, $identity->requested, ReservationState::Held, new Money(0, $identity->requested->currency), null);
+            $this->insertHeldReservation($ctx, $reservation, $this->capacity($ctx, $binding->rootOperationRef));
+        }
 
         return $receipt;
     }
@@ -284,13 +292,6 @@ final class DatabaseExecutionStore implements ExecutionStore
         ]);
         if ($root) {
             $db->table('billium_execution_capacity')->insert($this->scope($scope) + ['root_operation_ref' => $b->rootOperationRef, 'currency' => $a->requested->currency->code]);
-        } else {
-            $capacity = $this->capacity($ctx, $b->rootOperationRef);
-            if ($a->requested->minor > CapacityAmounts::available($capacity, $a->kind)) {
-                throw new ProblemException(ProblemCode::RecoveryRequired, 'Original child reservation exceeds restored capacity');
-            }
-            $this->reserveCapacity($ctx, new Reservation(PaymentIdentity::reference($scope, $a->operationRef, 'reservation'), $b->rootOperationRef,
-                $a->operationRef, $a->kind, $a->requested, ReservationState::Held, new Money(0, $a->requested->currency), null), $capacity);
         }
         $db->table('billium_execution_attempt')->insert($this->scope($scope) + ['attempt_ref' => $a->attemptRef, 'operation_ref' => $a->operationRef,
             'provider_reference' => $a->providerReference, 'provider_id' => $a->providerId, 'merchant_account_ref' => $b->merchantAccountRef,
@@ -714,16 +715,25 @@ final class DatabaseExecutionStore implements ExecutionStore
     public function reserveCapacity(TransactionContext $transactionContext, Reservation $reservation, CapacitySnapshot $expected): CapacitySnapshot
     {
         $current = $this->capacity($transactionContext, $reservation->rootOperationRef);
-        if (ExecutionCodec::encode($current) !== ExecutionCodec::encode($expected) || $reservation->state !== ReservationState::Held || $reservation->consumed->minor !== 0 || $reservation->requested->minor <= 0 || ExecutionCodec::encode($reservation->requested->currency) !== ExecutionCodec::encode($current->authorizedLimit->currency) || $current->financialHold) {
+        if (ExecutionCodec::encode($current) !== ExecutionCodec::encode($expected) || $reservation->state !== ReservationState::Held || $reservation->consumed->minor !== 0 || $reservation->requested->minor <= 0 || ExecutionCodec::encode($reservation->requested->currency) !== ExecutionCodec::encode($current->authorizedLimit->currency) || $reservation->requested->minor > CapacityAmounts::available($current, $reservation->kind)) {
             $this->refuse('Capacity reservation conflict');
         }
+        $this->insertHeldReservation($transactionContext, $reservation, $current);
+
+        return $this->capacity($transactionContext, $reservation->rootOperationRef);
+    }
+
+    private function insertHeldReservation(TransactionContext $transactionContext, Reservation $reservation, CapacitySnapshot $expected): void
+    {
         $this->database($transactionContext)->table('billium_execution_reservation')->insert($this->callerScope($transactionContext) + ['reservation_ref' => $reservation->reservationRef, 'root_operation_ref' => $reservation->rootOperationRef, 'operation_ref' => $reservation->operationRef, 'kind' => $reservation->kind->value, 'requested_minor' => $reservation->requested->minor, 'currency' => $reservation->requested->currency->code, 'state' => 'held']);
         $column = match ($reservation->kind) {
             EffectKind::Capture => 'held_capture_minor',EffectKind::VoidAuthorization => 'held_void_minor',EffectKind::Refund => 'held_refund_minor',default => throw new LogicException('Invalid reservation kind')
         };
-        $this->callerQuery('capacity', $transactionContext)->where('root_operation_ref', $reservation->rootOperationRef)->where('version', $expected->version)->incrementEach([$column => $reservation->requested->minor, 'version' => 1]);
-
-        return $this->capacity($transactionContext, $reservation->rootOperationRef);
+        $updated = $this->callerQuery('capacity', $transactionContext)->where('root_operation_ref', $reservation->rootOperationRef)
+            ->where('version', $expected->version)->incrementEach([$column => $reservation->requested->minor, 'version' => 1]);
+        if ($updated !== 1) {
+            $this->refuse('Held reservation capacity changed');
+        }
     }
 
     public function settleReservation(TransactionContext $transactionContext, string $reservationRef, ReservationState $reservationState, Money $consumed, ?string $releaseEvidenceRef, CapacitySnapshot $next): void
@@ -864,11 +874,33 @@ final class DatabaseExecutionStore implements ExecutionStore
         $this->financial($context);
         $this->requireOperationLock($context, $operationRef);
         // An accepted provider revision can advance ordering without changing money or creating an operation revision.
-        $value = $this->callerQuery('provider_fact', $context)->where('operation_ref', $operationRef)
-            ->where('evidence_mode', ProviderEvidenceMode::CumulativeSnapshot->value)
-            ->where('normalized_snapshot->operationRef', $operationRef)->whereNotNull('normalized_snapshot->bindingDigest')
-            ->whereNotNull('normalized_snapshot->providerReference')->whereNotNull('normalized_snapshot->operationAmount')
-            ->orderByDesc('id')->value('normalized_snapshot');
+        $value = $this->orderingFacts($context)->where('operation_ref', $operationRef)->orderByDesc('id')->value('normalized_snapshot');
+
+        return $value === null ? null : ExecutionCodec::decode(MaterialSnapshot::class, self::text($value));
+    }
+
+    private function orderingFacts(TransactionContext $context): Builder
+    {
+        return $this->callerQuery('provider_fact', $context)->where('evidence_mode', ProviderEvidenceMode::CumulativeSnapshot->value)
+            ->whereColumn('normalized_snapshot->operationRef', 'operation_ref')->whereNotNull('normalized_snapshot->bindingDigest')
+            ->whereNotNull('normalized_snapshot->providerReference')->where(static fn (Builder $q): Builder => $q
+            ->whereNotNull('normalized_snapshot->operationAmount')->orWhereIn('normalized_snapshot->normalizedStatus', ['pending', 'unknown']));
+    }
+
+    public function rootOrderingFrontier(TransactionContext $context, string $rootRef, MaterialSnapshot $incoming): ?MaterialSnapshot
+    {
+        $this->financial($context);
+        $this->requireOperationLock($context, $rootRef);
+        $root = $this->admittedOperation($context, $rootRef);
+        $operations = $this->query('operation', $root->binding->scope, $context)->where('root_operation_ref', $rootRef)->select('operation_ref');
+        $query = $this->orderingFacts($context)->whereIn('operation_ref', $operations);
+        if ($incoming->providerRevision !== null && preg_match('/^(0|[1-9][0-9]*)$/D', $incoming->providerRevision) === 1) {
+            // Comparable decimal revisions sort exactly even when they exceed bigint. A late sibling can have a newer journal id.
+            $revision = "(normalized_snapshot->>'providerRevision')";
+            $numeric = 'CASE WHEN '.$revision." ~ '^(0|[1-9][0-9]*)$' THEN ".$revision.' END';
+            $query->orderByRaw('length('.$numeric.') DESC NULLS LAST')->orderByRaw($numeric.' COLLATE "C" DESC NULLS LAST');
+        }
+        $value = $query->orderByDesc('id')->value('normalized_snapshot');
 
         return $value === null ? null : ExecutionCodec::decode(MaterialSnapshot::class, self::text($value));
     }
@@ -1129,8 +1161,7 @@ final class DatabaseExecutionStore implements ExecutionStore
                 'root_operation_ref' => $operation->rootOperationRef, 'operation_ref' => $operation->operationRef, 'kind' => 'provider_fact_identity_conflict',
                 'evidence_refs' => ExecutionCodec::encode($providerFact->evidenceRefs), 'observed' => ExecutionCodec::encode($providerFact->snapshot),
                 'last_consistent_applied' => ExecutionCodec::encode($this->capacity($transactionContext, $operation->rootOperationRef)),
-                'exposure' => ExecutionCodec::encode(['financialHold' => true, 'factRef' => $providerFact->factRef])]);
-            $this->callerQuery('capacity', $transactionContext)->where('root_operation_ref', $operation->rootOperationRef)->update(['financial_hold' => true]);
+                'exposure' => ExecutionCodec::encode(['disposition' => 'quarantined_identity', 'factRef' => $providerFact->factRef])]);
         }
 
         return false;
@@ -1368,7 +1399,8 @@ final class DatabaseExecutionStore implements ExecutionStore
         $observed = $materialChange->observed;
         $subject = $this->admittedOperation($transactionContext, $observed->operationRef);
         $accepted = isset($observed->evidenceRefs[0]) ? $this->factForEvidence($transactionContext, $observed->evidenceRefs[0], $subject->operationRef) : null;
-        if ($accepted === null || ExecutionCodec::encode($accepted->snapshot) !== ExecutionCodec::encode($observed)
+        if (($materialChange->discrepancyRef !== null && ! $materialChange->capacity->financialHold)
+            || $accepted === null || ExecutionCodec::encode($accepted->snapshot) !== ExecutionCodec::encode($observed)
             || $subject->rootOperationRef !== $b->rootOperationRef || ($b->operationRef !== $subject->operationRef && $b->operationRef !== $subject->rootOperationRef)
             || $materialChange->capacity->rootOperationRef !== $b->rootOperationRef) {
             $this->refuse('Material revision requires accepted original operation evidence');
@@ -1400,8 +1432,58 @@ final class DatabaseExecutionStore implements ExecutionStore
         if ($prior->rootOperationRef !== $materialChange->before->rootOperationRef) {
             $this->refuse('Discrepancy differs from historical root');
         }
+        $accepted = $this->factForEvidence($transactionContext, $materialChange->observed->evidenceRefs[0] ?? '', $prior->operationRef);
+        if (! $materialChange->capacity->financialHold || $materialChange->discrepancyRef !== $ref || $accepted === null || ExecutionCodec::encode($accepted->snapshot) !== ExecutionCodec::encode($materialChange->observed)) {
+            $this->refuse('Accepted material discrepancy requires the original qualified fact');
+        }
         $this->database($transactionContext)->table('billium_execution_discrepancy')->insertOrIgnore($this->callerScope($transactionContext) + ['discrepancy_ref' => $ref, 'root_operation_ref' => $materialChange->before->rootOperationRef, 'operation_ref' => $materialChange->before->operationRef, 'kind' => 'provider_material_conflict', 'evidence_refs' => ExecutionCodec::encode($materialChange->observed->evidenceRefs), 'observed' => ExecutionCodec::encode($materialChange->observed), 'last_consistent_applied' => ExecutionCodec::encode($materialChange->capacity), 'exposure' => $this->exposure($materialChange)]);
-        $this->callerQuery('capacity', $transactionContext)->where('root_operation_ref', $materialChange->before->rootOperationRef)->update(['financial_hold' => true]);
+    }
+
+    public function recordQuarantineHold(TransactionContext $context, ProviderWorkClaim $claim, MaterialSnapshot $conflict, string $discrepancyRef, string $reason): ?OperationRecord
+    {
+        $this->financial($context);
+        $delivery = $this->verifiedReduction?->verifiedIn($context, $claim, $conflict) ?? throw new LogicException('Configured provider verification is required');
+        $subject = $this->admittedOperation($context, $conflict->operationRef);
+        $this->requireOperationLock($context, $subject->operationRef);
+        $root = $this->admittedOperation($context, $subject->rootOperationRef);
+        $work = $this->providerWork($claim->workRef, $context);
+        $attempt = $this->attemptForOperation($subject->binding->scope, $subject->operationRef, $context);
+        if ($work === null || $work->state !== 'leased' || $work->operationHint !== $subject->operationRef || $work->evidence->evidenceRef !== $claim->evidenceRef
+            || ExecutionCodec::encode($work->evidence) !== ExecutionCodec::encode($delivery->evidence) || $conflict->evidenceRefs !== [$claim->evidenceRef]
+            || $conflict->bindingDigest !== ExecutionCodec::bindingDigest($subject->binding) || $conflict->merchantAccountRef !== $subject->binding->merchantAccountRef
+            || $attempt === null || $conflict->providerReference !== $attempt->providerReference || $conflict->kind !== $subject->kind) {
+            $this->refuse('Financial hold requires authenticated work for the original locked operation');
+        }
+        $current = $this->capacity($context, $root->operationRef);
+        $held = new CapacitySnapshot($root->operationRef, $current->version + 1, $current->authorizedLimit, $current->confirmedCapture, $current->confirmedRefund,
+            $current->releasedAuthorization, $current->heldCapture, $current->heldVoid, $current->heldRefund, true);
+        $exposure = ExecutionCodec::encode(['discrepancyRef' => $discrepancyRef, 'financialHold' => true, 'reason' => $reason]);
+        $evidence = ExecutionCodec::encode($conflict->evidenceRefs);
+        $db = $this->database($context);
+        $scope = $this->callerScope($context);
+        $db->table('billium_execution_discrepancy')->insertOrIgnore($scope + ['discrepancy_ref' => $discrepancyRef, 'root_operation_ref' => $root->operationRef,
+            'operation_ref' => $subject->operationRef, 'kind' => 'provider_material_conflict', 'evidence_refs' => $evidence, 'observed' => ExecutionCodec::encode($conflict),
+            'last_consistent_applied' => ExecutionCodec::encode($current), 'exposure' => $exposure]);
+        // Existing discrepancy rows may predate local hold publications. Deduplicate against the actual financial revision.
+        if ($this->callerQuery('operation_revision', $context)->where('operation_ref', $root->operationRef)
+            ->where('observed->discrepancyRef', $discrepancyRef)->where('observed->schema', 'billium.execution.quarantine-hold.v1')->exists()) {
+            return null;
+        }
+        $decision = ['schema' => 'billium.execution.quarantine-hold.v1', 'discrepancyRef' => $discrepancyRef, 'operationRef' => $subject->operationRef,
+            'reason' => $reason, 'priorEconomicDigest' => $root->economicDigest];
+        $digest = ExecutionCodec::digest($decision);
+        $revision = $root->revision + 1;
+        if ($this->callerQuery('operation', $context)->where('id', $root->id)->where('revision', $root->revision)->where('economic_digest', $root->economicDigest)
+            ->update(['revision' => $revision, 'economic_digest' => $digest]) !== 1) {
+            $this->refuse('Root changed before recording the financial hold');
+        }
+        $this->writeCapacity($context, $held, $current->version);
+        $db->table('billium_execution_operation_revision')->insert($scope + ['operation_ref' => $root->operationRef, 'revision' => $revision,
+            'material_digest' => $digest, 'requested_minor' => $root->requested->minor, 'currency' => $root->requested->currency->code,
+            'observed' => ExecutionCodec::encode($decision), 'last_consistent_applied' => ExecutionCodec::encode($held), 'financial_hold' => 'true',
+            'exposure' => $exposure, 'evidence_refs' => $evidence, 'receipt_ref' => $claim->workRef, 'occurred_at' => new DateTimeImmutable]);
+
+        return $this->admittedOperation($context, $root->operationRef);
     }
 
     private function exposure(MaterialChange $change): string

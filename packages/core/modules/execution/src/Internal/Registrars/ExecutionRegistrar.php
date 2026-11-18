@@ -79,6 +79,7 @@ use Billium\Execution\Internal\Recovery\OriginalIdentityRecoveryService;
 use Billium\Execution\Internal\Recovery\OriginalRequestReplay;
 use Billium\Execution\Internal\Recovery\QualifiedAbsence;
 use Billium\Execution\Internal\Reducer\ProviderReducer;
+use Billium\Execution\Internal\Reducer\VerifiedReduction;
 use Billium\Execution\Internal\Refunds\RefundPayments;
 use Billium\Execution\Internal\Repair\ExecutionRepairs;
 use Billium\Execution\Internal\Storage\DatabaseExecutionStore;
@@ -97,6 +98,9 @@ final class ExecutionRegistrar implements PackageRegistrar
     {
         ExtensionRegistrar::builtIn(ExecutionPlugin::class);
         $app->singletonIf(ExecutionPlugin::class);
+        $app->singleton(VerifiedReduction::class, static fn (Application $app): VerifiedReduction => new VerifiedReduction(
+            static fn (): VerifyDelivery => $app->make(VerifyDelivery::class),
+        ));
         SchemaExtensions::register($app, ExecutionPlugin::class, 'axiomasoft.billium.execution');
         $app->singleton(AbsenceProofRegistry::class, static fn (Application $app): AbsenceProofRegistry => new AbsenceProofRegistry(
             $app->make(TransportBoundary::class),
@@ -110,6 +114,7 @@ final class ExecutionRegistrar implements PackageRegistrar
             $app->make(FinancialSessionAdmission::class),
             $app->make(AbsenceProofRegistry::class),
             static fn (): ?OriginalIdentityArchive => $app->bound(OriginalIdentityArchive::class) ? $app->make(OriginalIdentityArchive::class) : null,
+            $app->make(VerifiedReduction::class),
         ));
         $app->alias(DatabaseExecutionStore::class, ExecutionStore::class);
         $app->singleton(DatabaseMerchantRegistry::class);

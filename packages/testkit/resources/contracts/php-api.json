@@ -2778,7 +2778,7 @@
                     "parameters": [
                         {
                             "name": "command",
-                            "type": "Billium\\Contracts\\Data\\Envelopes\\ExecutePayment|Billium\\Contracts\\Data\\Envelopes\\RequestRefund",
+                            "type": "Billium\\Contracts\\Data\\Envelopes\\ExecutePayment|Billium\\Contracts\\Data\\Envelopes\\CapturePayment|Billium\\Contracts\\Data\\Envelopes\\RequestRefund",
                             "by_reference": false,
                             "variadic": false,
                             "optional": false,

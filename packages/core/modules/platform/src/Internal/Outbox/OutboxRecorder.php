@@ -69,7 +69,11 @@ final readonly class OutboxRecorder implements Outbox
         if ($event->schemaVersion !== 'billium.event.v1') {
             $wire['eventContractRevision'] = $contract->contractRevision;
         }
-        if ($event->schemaVersion === 'billium.event.v3') {
+        if ($event->schemaVersion === 'billium.event.v4') {
+            $wire['installationRef'] = $caller->installationRef;
+            $wire['environment'] = $caller->environment;
+        }
+        if (in_array($event->schemaVersion, ['billium.event.v3', 'billium.event.v4'], true)) {
             $digest = $this->codec->digest($wire);
             $wire['digest'] = $digest;
         }

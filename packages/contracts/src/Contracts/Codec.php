@@ -77,6 +77,12 @@ final readonly class Codec
             throw new ProblemException(ProblemCode::ValidationInvalid, 'repair envelope aggregateRef differs from its payload');
         }
 
+        $noEffect = $value->schema === 'billium.event.v4' ? $value->payload : null;
+        if ($noEffect instanceof stdClass
+            && ($value->aggregateRef !== $noEffect->operationRef || $value->revision !== $noEffect->revision)) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'certified no-effect envelope identity differs from its payload');
+        }
+
         $variant = $entry['variants'][0];
         foreach ($entry['variants'] as $candidate) {
             if (! isset($candidate['requires']) || property_exists($value, $candidate['requires'])) {

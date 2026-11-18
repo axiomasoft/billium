@@ -148,6 +148,9 @@ final readonly class ExecutionRepairs implements RepairCommands
         if ($action->actionKind === 'resolve_discrepancy' && $review->code === 'material_conflict') {
             return new LateRefundAdjudication($this->store)->links($ctx, $db, $route, $action, $review, $facts);
         }
+        if ($action->actionKind === 'approve_linked_correction') {
+            return new LinkedCorrectionApproval($this->store)->links($ctx, $db, $route, $action, $review, $facts);
+        }
         $observed = ExecutionCodec::map(ReconciliationJournal::string($review->observed));
         $valid = match ($action->actionKind) {
             'attach_trusted_evidence' => $facts !== [],
@@ -157,8 +160,6 @@ final readonly class ExecutionRepairs implements RepairCommands
             'record_verified_absence' => $review->code === 'manual_required' && count($links) === 1 && $facts === []
                 && $absenceAttempt !== null && ($observed['attemptRef'] ?? null) === $absenceAttempt,
             'close_namespace' => true,
-            'approve_linked_correction' => count($facts) === 1 && $facts[0]->operationRef !== $root
-                && $facts[0]->snapshot->normalizedStatus === 'succeeded' && isset($observed['minor']) && $observed['minor'] === $facts[0]->snapshot->operationAmount?->minor,
             'resolve_discrepancy' => $review->code === 'balance_mismatch' && ($observed['minor'] ?? null) === $this->store->capacity($ctx, $root)->confirmedRefund->minor,
             default => false,
         };

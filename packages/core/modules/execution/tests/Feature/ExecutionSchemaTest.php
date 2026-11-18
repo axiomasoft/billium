@@ -16,6 +16,7 @@ use Billium\Execution\Data\AdmissionPlan;
 use Billium\Execution\Data\CapabilityDetails;
 use Billium\Execution\Data\CapabilitySnapshot;
 use Billium\Execution\Data\CapacitySnapshot;
+use Billium\Execution\Data\ExecutionReceipt;
 use Billium\Execution\Data\ExecutionScope;
 use Billium\Execution\Data\FrozenBinding;
 use Billium\Execution\Data\MaterialChange;
@@ -38,7 +39,11 @@ use Billium\Execution\Enums\ReservationState;
 use Billium\Execution\Internal\Merchants\DatabaseMerchantRegistry;
 use Billium\Execution\Internal\Storage\DatabaseExecutionStore;
 use Billium\Execution\Internal\Storage\ExecutionCodec;
+use Billium\Platform\Data\Installation\PlatformReceipt;
 use DateTimeImmutable;
+use LogicException;
+use PDO;
+use RuntimeException;
 
 class ExecutionSchemaTest extends ExecutionTestCase
 {
@@ -63,13 +68,13 @@ class ExecutionSchemaTest extends ExecutionTestCase
     {
         $store = $this->application()->make(DatabaseExecutionStore::class);
         $registry = $this->application()->make(DatabaseMerchantRegistry::class);
-        $this->runner()->run($this->spec(kind: 'execution.schema_admin', mode: FinancialMode::Administrative, class: ModuleOperationClass::HistoricalRead, modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store, $registry) {
+        $this->runner()->run($this->spec(kind: 'execution.schema_admin', mode: FinancialMode::Administrative, class: ModuleOperationClass::HistoricalRead, modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store, $registry): PlatformReceipt {
             $store->appendMerchantRevision($ctx, self::merchantFixture(), self::capabilityFixture());
             $registry->appendLifecycle($ctx, self::scopeFixture(), 'merchant-a', 'enable-a', 'enable_new', 'new', new DateTimeImmutable('2026-01-01T00:00:00Z'), null, 'test enable', 'authority-enable-a');
 
             return self::receipt();
         });
-        $this->runner()->run($this->spec(kind: 'execution.schema_admit', modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store) {
+        $this->runner()->run($this->spec(kind: 'execution.schema_admit', modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store): PlatformReceipt {
             $store->transitionNamespace($ctx, self::scopeFixture(), NamespaceState::Open, 0, 'attested-complete-history');
             $b = new FrozenBinding(self::scopeFixture(), 'remote-billium', 'intent-a', 'root-a', 'merchant-a', 'account-a', 'driver-a', 'driver.v1', 'sha256:'.str_repeat('a', 64), 'sha256:'.str_repeat('c', 64), 'execution.intent.v1', null, 'commerz');
             self::assertNull($store->insertBinding($ctx, $b));
@@ -85,10 +90,10 @@ class ExecutionSchemaTest extends ExecutionTestCase
     public function test_execution_ddl_is_registered_and_historical_migrations_remain_separate(): void
     {
         $store = $this->seedRoot();
-        $this->runner()->run($this->spec(kind: 'execution.schema_attempt', modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store) {
+        $this->runner()->run($this->spec(kind: 'execution.schema_attempt', modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store): PlatformReceipt {
             $plan = $store->plan(self::scopeFixture(), 'root-a');
             $store->lock($ctx, $plan);
-            $root = $store->operation(self::scopeFixture(), 'root-a') ?? throw new \LogicException('missing root');
+            $root = $store->operation(self::scopeFixture(), 'root-a') ?? throw new LogicException('missing root');
             $attempt = $store->insertAttempt($ctx, $root, 'attempt-a', 'provider-ref-a');
             $store->insertDispatchWork($ctx, $attempt, 'dispatch-a', 'handler-v1');
 
@@ -102,9 +107,9 @@ class ExecutionSchemaTest extends ExecutionTestCase
     public function test_store_uses_current_root_and_one_attempt_with_sql_scope_and_immutability_guards(): void
     {
         $store = $this->seedRoot();
-        $this->runner()->run($this->spec(kind: 'execution.schema_test', modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store) {
+        $this->runner()->run($this->spec(kind: 'execution.schema_test', modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store): PlatformReceipt {
             $store->lock($ctx, $store->plan(self::scopeFixture(), 'root-a'));
-            $op = $store->operation(self::scopeFixture(), 'root-a') ?? throw new \LogicException('Missing root');
+            $op = $store->operation(self::scopeFixture(), 'root-a') ?? throw new LogicException('Missing root');
             $attempt = $store->insertAttempt($ctx, $op, 'attempt-a', 'provider-ref-a');
             $store->insertDispatchWork($ctx, $attempt, 'dispatch-a', 'handler.v1');
             self::assertSame(0, $attempt->leaseFence);
@@ -148,7 +153,7 @@ class ExecutionSchemaTest extends ExecutionTestCase
         $pdo->exec('SET enable_seqscan=off');
         $statement = $pdo->query("EXPLAIN SELECT id FROM billium_execution_provider_work WHERE installation_ref='inst-test' AND seller_ref='seller-a' AND environment='test' AND state='due' AND due_at<=now() ORDER BY due_at,id LIMIT 100");
         self::assertNotFalse($statement);
-        $plan = array_map(self::text(...), $statement->fetchAll(\PDO::FETCH_COLUMN));
+        $plan = array_map(self::text(...), $statement->fetchAll(PDO::FETCH_COLUMN));
         self::assertStringContainsString('billium_execution_provider_work_lookup', implode("\n", $plan));
         $plans = [
             ["SELECT id FROM billium_execution_operation WHERE installation_ref='inst-test' AND seller_ref='seller-a' AND environment='test' AND operation_ref='root-a' AND currency='RUB' AND requested_minor>0", 'billium_execution_operation'],
@@ -158,7 +163,7 @@ class ExecutionSchemaTest extends ExecutionTestCase
         foreach ($plans as [$sql,$index]) {
             $statement = $pdo->query('EXPLAIN '.$sql);
             self::assertNotFalse($statement);
-            $text = implode("\n", array_map(self::text(...), $statement->fetchAll(\PDO::FETCH_COLUMN)));
+            $text = implode("\n", array_map(self::text(...), $statement->fetchAll(PDO::FETCH_COLUMN)));
             self::assertStringContainsString('Index', $text);
             self::assertStringContainsString($index, $text);
         }
@@ -169,10 +174,10 @@ class ExecutionSchemaTest extends ExecutionTestCase
     {
         $store = $this->seedRoot();
         $this->owner()->update("UPDATE billium_execution_capacity SET authorized_limit_minor=1000 WHERE root_operation_ref='root-a'");
-        $this->runner()->run($this->spec(kind: 'execution.capacity_test', modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store) {
+        $this->runner()->run($this->spec(kind: 'execution.capacity_test', modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store): PlatformReceipt {
             $store->lockNamespace($ctx, self::scopeFixture());
             $store->lock($ctx, $store->plan(self::scopeFixture(), 'root-a', true));
-            $root = $store->operation(self::scopeFixture(), 'root-a') ?? throw new \LogicException('Root missing');
+            $root = $store->operation(self::scopeFixture(), 'root-a') ?? throw new LogicException('Root missing');
             foreach (['capture-a' => 400, 'capture-b' => 700] as $ref => $minor) {
                 $childPlan = new AdmissionPlan(self::scopeFixture(), $root->binding, $ref, EffectKind::Capture, new Money($minor, Currency::of('RUB')), 'key-'.$ref, 'sha256:'.str_repeat('d', 64), 'execution.intent.v1', ['execution', 'platform'], [], null);
                 $store->claimChildBinding($ctx, $childPlan, 'fixture-'.$ref);
@@ -198,7 +203,7 @@ class ExecutionSchemaTest extends ExecutionTestCase
     public function test_raw_custody_retains_versions_and_work_finish_is_fenced(): void
     {
         $store = $this->application()->make(DatabaseExecutionStore::class);
-        $this->runner()->run($this->spec(kind: 'execution.raw_test', mode: FinancialMode::RawCustody, class: ModuleOperationClass::CallbackCustody, modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store) {
+        $this->runner()->run($this->spec(kind: 'execution.raw_test', mode: FinancialMode::RawCustody, class: ModuleOperationClass::CallbackCustody, modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store): PlatformReceipt {
             foreach (['evidence-a', 'evidence-b'] as $ref) {
                 $store->appendEvidence($ctx, new ProviderEvidence($ref, self::scopeFixture(), 'provider-a', 'account-a', 'same-provider-event', 'sha256:'.hash('sha256', $ref), 'verified', 'handler.v1', new DateTimeImmutable, ['schema' => 'sanitized.v1', 'state' => $ref], 'custody://journal/'.$ref));
             }
@@ -206,7 +211,7 @@ class ExecutionSchemaTest extends ExecutionTestCase
 
             return self::receipt();
         });
-        $this->runner()->run($this->spec(kind: 'execution.work_test', mode: FinancialMode::RawCustody, class: ModuleOperationClass::CallbackCustody, modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store) {
+        $this->runner()->run($this->spec(kind: 'execution.work_test', mode: FinancialMode::RawCustody, class: ModuleOperationClass::CallbackCustody, modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store): PlatformReceipt {
             $claim = $store->claimProviderWork($ctx, 'work-a', 'worker-a', new DateTimeImmutable('+5 minutes'));
             self::assertNotNull($claim);
             self::assertSame(1, $claim->leaseFence);
@@ -228,9 +233,9 @@ class ExecutionSchemaTest extends ExecutionTestCase
         $store = $this->seedRoot();
         foreach ([new Money(100, Currency::of('EUR')), new Money(100, new Currency('RUB', 0))] as $money) {
             try {
-                $this->runner()->run($this->spec(kind: 'execution.unsupported_probe', modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store, $money) {
+                $this->runner()->run($this->spec(kind: 'execution.unsupported_probe', modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store, $money): void {
                     $store->lock($ctx, $store->plan(self::scopeFixture(), 'root-a'));
-                    $root = $store->operation(self::scopeFixture(), 'root-a') ?? throw new \LogicException('Root missing');
+                    $root = $store->operation(self::scopeFixture(), 'root-a') ?? throw new LogicException('Root missing');
                     $store->insertOperation($ctx, new AdmissionPlan(self::scopeFixture(), $root->binding, 'unsupported-child', EffectKind::Capture, $money, 'unsupported-command', 'sha256:'.str_repeat('e', 64), 'execution.intent.v1', ['execution', 'platform'], [], null));
                     self::fail('Unsupported child reached successful admission');
                 });
@@ -248,7 +253,7 @@ class ExecutionSchemaTest extends ExecutionTestCase
     {
         $store = $this->seedRoot();
         $action = new RecoveryAction('repair-action', self::scopeFixture(), 'record_correction', ['evidence-verified'], 'permission-a', 'audited correction', 'sha256:'.str_repeat('f', 64), 'root-a');
-        $this->runner()->run($this->spec(kind: 'execution.repair_probe', modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store, $action) {
+        $this->runner()->run($this->spec(kind: 'execution.repair_probe', modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store, $action): ExecutionReceipt {
             $store->lock($ctx, $store->plan(self::scopeFixture(), 'root-a'));
             $receipt = $store->appendRepairReceipt($ctx, $action, 'before-digest', 'after-digest', ['correction-a']);
             self::assertSame('root-a', $receipt->operationRef);
@@ -259,12 +264,12 @@ class ExecutionSchemaTest extends ExecutionTestCase
         self::assertSame('root-a', $this->value("SELECT root_operation_ref FROM billium_execution_repair_receipt WHERE repair_ref='repair-action'"));
         self::assertSame('permission-a', $this->value("SELECT authorization_ref FROM billium_execution_repair_receipt WHERE repair_ref='repair-action'"));
         try {
-            $this->runner()->run($this->spec(kind: 'execution.repair_without_lock', modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store, $action) {
+            $this->runner()->run($this->spec(kind: 'execution.repair_without_lock', modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store, $action): void {
                 $store->recordRecoveryAction($ctx, $action);
                 self::fail('Repair accepted without current rootlock');
             });
             self::fail('Unlocked repair returned success');
-        } catch (\LogicException $exception) {
+        } catch (LogicException $exception) {
             self::assertStringContainsString('lock required', $exception->getMessage());
         }
         self::assertSame(1, $this->rows('billium_execution_repair_receipt'));
@@ -275,7 +280,7 @@ class ExecutionSchemaTest extends ExecutionTestCase
         $store = $this->seedRoot();
         $write = function (TransactionContext $ctx) use ($store): void {
             $store->lock($ctx, $store->plan(self::scopeFixture(), 'root-a', context: $ctx));
-            $before = $store->operation(self::scopeFixture(), 'root-a', $ctx) ?? throw new \LogicException('Root missing');
+            $before = $store->operation(self::scopeFixture(), 'root-a', $ctx) ?? throw new LogicException('Root missing');
             $store->insertAttempt($ctx, $before, 'material-attempt-a', 'material-reference-a');
             $currency = Currency::of('RUB');
             $zero = new Money(0, $currency);
@@ -291,19 +296,19 @@ class ExecutionSchemaTest extends ExecutionTestCase
             $store->appendRevision($ctx, new MaterialChange($before, $after, $snapshot, $capacity, null, [], []), 'material-receipt-a');
         };
         try {
-            $this->runner()->run($this->spec(kind: 'execution.material_rollback', modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($write) {
+            $this->runner()->run($this->spec(kind: 'execution.material_rollback', modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($write): void {
                 $write($ctx);
-                throw new \RuntimeException('fault-after-material-write');
+                throw new RuntimeException('fault-after-material-write');
             });
             self::fail('Fault did not roll back root');
-        } catch (\RuntimeException $error) {
+        } catch (RuntimeException $error) {
             self::assertSame('fault-after-material-write', $error->getMessage());
         }
         self::assertSame(0, $this->rows('billium_execution_operation_revision'));
         self::assertSame(0, $this->rows('billium_execution_provider_evidence'));
         self::assertSame(0, $this->rows('billium_execution_attempt'));
         self::assertSame(0, self::integer($this->value("SELECT version FROM billium_execution_capacity WHERE root_operation_ref='root-a'")));
-        $this->runner()->run($this->spec(kind: 'execution.material_commit', modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($write) {
+        $this->runner()->run($this->spec(kind: 'execution.material_commit', modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($write): PlatformReceipt {
             $write($ctx);
 
             return self::receipt();
@@ -317,9 +322,9 @@ class ExecutionSchemaTest extends ExecutionTestCase
     public function test_same_fact_reference_with_changed_material_retains_conflict_without_overwrite(): void
     {
         $store = $this->seedRoot();
-        $this->runner()->run($this->spec(kind: 'execution.fact_conflict', modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store) {
+        $this->runner()->run($this->spec(kind: 'execution.fact_conflict', modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store): PlatformReceipt {
             $store->lock($ctx, $store->plan(self::scopeFixture(), 'root-a', context: $ctx));
-            $operation = $store->operation(self::scopeFixture(), 'root-a', $ctx) ?? throw new \LogicException('Root missing');
+            $operation = $store->operation(self::scopeFixture(), 'root-a', $ctx) ?? throw new LogicException('Root missing');
             $store->insertAttempt($ctx, $operation, 'fact-attempt-a', 'fact-reference-a');
             $currency = Currency::of('RUB');
             $zero = new Money(0, $currency);
@@ -334,7 +339,8 @@ class ExecutionSchemaTest extends ExecutionTestCase
                 $fact = new ProviderFact('reused-fact-ref', 'root-a', ExecutionCodec::providerIdentityScope(self::merchantFixture(), self::capabilityFixture()), 'same-effect', $digest, ProviderEvidenceMode::StableEffectId, $snapshot, ['retained-evidence-'.$minor]);
                 self::assertSame($minor === 100, $store->appendFact($ctx, $fact));
             }
-            self::assertTrue($store->capacity($ctx, 'root-a')->financialHold);
+            self::assertFalse($store->capacity($ctx, 'root-a')->financialHold);
+            self::assertSame(0, $store->capacity($ctx, 'root-a')->version);
 
             return self::receipt();
         });
@@ -350,13 +356,13 @@ class ExecutionSchemaTest extends ExecutionTestCase
     {
         $store = $this->application()->make(DatabaseExecutionStore::class);
         $registry = $this->application()->make(DatabaseMerchantRegistry::class);
-        $this->runner()->run($this->spec(kind: 'execution.tx_a_admin', mode: FinancialMode::Administrative, class: ModuleOperationClass::HistoricalRead, modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store, $registry) {
+        $this->runner()->run($this->spec(kind: 'execution.tx_a_admin', mode: FinancialMode::Administrative, class: ModuleOperationClass::HistoricalRead, modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store, $registry): PlatformReceipt {
             $store->appendMerchantRevision($ctx, self::merchantFixture(), self::capabilityFixture());
             $registry->appendLifecycle($ctx, self::scopeFixture(), 'merchant-a', 'enable-same-tx', 'enable_new', 'new', new DateTimeImmutable('2026-01-01'), null, 'same TxA fixture', 'host-enable-proof');
 
             return self::receipt();
         });
-        $this->runner()->run($this->spec(kind: 'execution.tx_a_operation_attempt', modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store) {
+        $this->runner()->run($this->spec(kind: 'execution.tx_a_operation_attempt', modules: ['execution', 'platform']), function (TransactionContext $ctx) use ($store): PlatformReceipt {
             $scope = self::scopeFixture();
             $store->transitionNamespace($ctx, $scope, NamespaceState::Open, 0, 'attested-history');
             $binding = new FrozenBinding($scope, 'remote-billium', 'intent-same-tx', 'root-same-tx', 'merchant-a', 'account-a', 'driver-a', 'driver.v1', 'sha256:'.str_repeat('a', 64), 'sha256:'.str_repeat('c', 64), 'execution.intent.v1', null, 'commerz');

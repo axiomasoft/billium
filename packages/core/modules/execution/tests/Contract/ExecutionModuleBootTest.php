@@ -50,7 +50,7 @@ final class ExecutionModuleBootTest extends TestCase
     public function test_store_mutations_require_the_current_transaction_context(): void
     {
         $store = new ReflectionClass(ExecutionStore::class);
-        self::assertCount(58, $store->getMethods());
+        self::assertCount(60, $store->getMethods());
         $reads = ['plan', 'namespace', 'operation', 'merchantRevision', 'attempt', 'providerWork', 'attemptForOperation', 'providerOperationId', 'operationByProviderId', 'childByIdentity'];
         foreach ($store->getMethods() as $method) {
             if (! in_array($method->name, $reads, true)) {

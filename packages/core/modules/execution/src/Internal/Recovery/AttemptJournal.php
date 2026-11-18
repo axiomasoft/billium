@@ -12,6 +12,7 @@ use Billium\Core\Data\Runtime\FinancialScope;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Execution\Contracts\ExecutionStore;
+use Billium\Execution\Data\ArchivedExecutionIdentity;
 use Billium\Execution\Data\AttemptRecord;
 use Billium\Execution\Data\ExecutionReceipt;
 use Billium\Execution\Data\MerchantRevision;
@@ -21,15 +22,17 @@ use Billium\Execution\Data\ProviderLookupResult;
 use Billium\Execution\Internal\Identity\PaymentIdentity;
 use Billium\Execution\Internal\Storage\ExecutionCodec;
 use DateTimeImmutable;
+use Illuminate\Database\DatabaseManager;
+use LogicException;
 use Packman\Attributes\Internal;
 
 #[Internal]
 final readonly class AttemptJournal
 {
-    public function __construct(private OperationRunner $runner, private ExecutionStore $store) {}
+    public function __construct(private OperationRunner $runner, private ExecutionStore $store, private DatabaseManager $databases) {}
 
     public function retain(OperationRecord $operation, AttemptRecord $attempt, MerchantRevision $merchant, ProviderLookupResult $result,
-        string $source, bool $verifiedAbsence, string $receiptRef): StoredOutcome
+        string $source, bool $verifiedAbsence, string $receiptRef, ?string &$retainedWorkRef = null): StoredOutcome
     {
         $scope = $operation->binding->scope;
         $captured = $result->evidence;
@@ -59,7 +62,8 @@ final readonly class AttemptJournal
             ModuleOperationClass::CallbackCustody, ['execution', 'platform'], financialScope: new FinancialScope(
                 $scope->installationRef, $scope->sellerRef, $scope->environment, $scope->intentOwnerNamespace));
 
-        return $this->runner->run($spec, function (TransactionContext $ctx) use ($operation, $attempt, $record, $captured, $foreignDelivery, $verifiedAbsence): ExecutionReceipt {
+        return $this->runner->run($spec, function (TransactionContext $ctx) use ($operation, $attempt, $record, $captured, $foreignDelivery, $verifiedAbsence, &$retainedWorkRef): ExecutionReceipt {
+            $retainedWorkRef = null;
             $refs = [];
             $observation = $record;
             if ($captured !== null && ! $foreignDelivery) {
@@ -67,6 +71,7 @@ final readonly class AttemptJournal
                 $work = 'provider-work:'.substr(PaymentIdentity::digest(['scope' => get_object_vars($captured->scope),
                     'handler' => $captured->handlerContractVersion, 'evidenceRef' => $ref]), 7);
                 $actualWork = $this->store->enqueueProviderWork($ctx, $ref, $work, $captured->handlerContractVersion, $operation->operationRef);
+                $retainedWorkRef = $actualWork;
                 $fields = $record->sanitizedPayload;
                 $fields['retainedProviderEvidenceRef'] = $ref;
                 $fields['retainedProviderWorkRef'] = $actualWork;
@@ -83,5 +88,41 @@ final readonly class AttemptJournal
             return new ExecutionReceipt($record->evidenceRef, $attempt->attemptRef, $operation->operationRef,
                 $operation->binding->semanticDigest, 'evidence_retained', false, $refs);
         });
+    }
+
+    public function resumeImportedLookup(ArchivedExecutionIdentity $identity, string $transport, ProviderEvidence $evidence, string $work): void
+    {
+        $prior = $this->store->providerWork($work);
+        if ($prior?->state !== 'quarantined' || $prior->errorCode !== 'unmatched_signed_operation') {
+            return;
+        }
+        $scope = $identity->binding->scope;
+        $spec = new OperationSpec('execution.review_archived_lookup', $scope->sellerRef, $scope->environment, FinancialMode::Recovery,
+            ModuleOperationClass::UnknownResolution, ['execution', 'platform'], financialScope: new FinancialScope(
+                $scope->installationRef, $scope->sellerRef, $scope->environment, $scope->intentOwnerNamespace, $identity->binding->executionProfile));
+        $this->runner->run($spec, function (TransactionContext $ctx) use ($identity, $transport, $evidence, $work, $scope): ExecutionReceipt {
+            // The current owner rechecks the imported archive under the root lock before retrying this exact prior delivery.
+            $receipt = $this->store->importOriginalIdentity($ctx, $identity, true);
+            $this->runner->assertCurrent($ctx, 'execution');
+            $db = $this->databases->connection($ctx->connectionName());
+            $route = ['installation_ref' => $scope->installationRef, 'seller_ref' => $scope->sellerRef, 'environment' => $scope->environment];
+            $lookup = $db->table('billium_execution_provider_evidence')->where($route)->where('intent_owner_namespace', $scope->intentOwnerNamespace)
+                ->where('provider_id', $identity->providerId)->where('merchant_account_ref', $identity->binding->merchantAccountRef)
+                ->where('evidence_ref', $transport)->where('handler_contract_version', 'execution.transport.v1')->where('signature_verdict', 'local_transport')
+                ->whereIn('sanitized_payload->lookupState', ['found', 'pending'])->whereJsonContains('sanitized_payload', [
+                    'source' => 'lookup', 'operationRef' => $identity->operationRef, 'attemptRef' => $identity->attemptRef,
+                    'providerReference' => $identity->providerReference, 'providerEvidenceRef' => $evidence->evidenceRef,
+                    'retainedProviderEvidenceRef' => $evidence->evidenceRef, 'retainedProviderWorkRef' => $work,
+                ]);
+            if (! $lookup->exists()) {
+                throw new LogicException('Original lookup did not retain this exact processing identity');
+            }
+            $db->table('billium_execution_provider_work')->where($route)->where('work_ref', $work)->where('evidence_ref', $evidence->evidenceRef)
+                ->where('operation_hint', $identity->operationRef)->where('handler_contract_version', $evidence->handlerContractVersion)
+                ->where('state', 'quarantined')->where('last_error_code', 'unmatched_signed_operation')
+                ->update(['state' => 'due', 'due_at' => new DateTimeImmutable]);
+
+            return $receipt;
+        })->orThrow();
     }
 }

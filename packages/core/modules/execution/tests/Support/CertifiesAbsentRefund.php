@@ -22,6 +22,7 @@ use Billium\Execution\Enums\ReductionDisposition;
 use Billium\Execution\Tests\Concurrency\AdmissionIdentityTest as Fixture;
 use Billium\Execution\Tests\Concurrency\RefundCapacityTest as Refunds;
 use Billium\Execution\Tests\Drill\UnknownResultTest;
+use Billium\Execution\Tests\Feature\CertifiedNoEffectHandoffTest;
 use Billium\Testkit\Drivers\ResponseMode;
 use Billium\Testkit\Drivers\SimulatedAbsenceVerifier;
 use Billium\Testkit\Drivers\SimulatedCapabilities;
@@ -35,6 +36,7 @@ trait CertifiesAbsentRefund
     private function certifyAbsentAndAdoptNewSession(string $path): void
     {
         $app = $this->application();
+        CertifiedNoEffectHandoffTest::register($app);
         $scope = Fixture::scope();
         $cap = SimulatedCapabilities::snapshot();
         $clock = new FixtureClock(new DateTimeImmutable);

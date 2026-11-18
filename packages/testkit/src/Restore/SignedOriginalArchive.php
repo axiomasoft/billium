@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Testkit\Restore;
 
+use Billium\Contracts\Data\Envelopes\CapturePayment;
 use Billium\Contracts\Data\Envelopes\ExecutePayment;
 use Billium\Contracts\Data\Envelopes\RequestRefund;
 use Billium\Core\Contracts\Runtime\FinancialAuthorityEvidence;
@@ -35,7 +36,7 @@ final class SignedOriginalArchive implements OriginalIdentityArchive
 
     public function __construct(private readonly string $path, private readonly string $key, private readonly FinancialAuthorityEvidence $authority) {}
 
-    public function recordSource(ExecutePayment|RequestRefund $command): void
+    public function recordSource(ExecutePayment|CapturePayment|RequestRefund $command): void
     {
         $this->record('source', $command->operationRef, $command);
     }
@@ -108,18 +109,20 @@ final class SignedOriginalArchive implements OriginalIdentityArchive
             return null;
         }
         [$command, $sd] = $source;
-        if ((! $command instanceof ExecutePayment && ! $command instanceof RequestRefund) || $command->money->toWire() !== $op->requested->toWire()
+        if ((! $command instanceof ExecutePayment && ! $command instanceof CapturePayment && ! $command instanceof RequestRefund) || $command->money->toWire() !== $op->requested->toWire()
             || ! is_string($command->source->intentRef ?? null) || $command->source->context !== $b->sourceContext || $b->origin === null || $command->operationRef !== $op->operationRef) {
             return null;
         }
-        if ($command instanceof RequestRefund) {
-            if ($command->originalOperationRef !== $b->rootOperationRef || $op->kind->value !== 'refund') {
+        if ($command instanceof CapturePayment || $command instanceof RequestRefund) {
+            $kind = $command instanceof CapturePayment ? 'capture' : 'refund';
+            if ($command->originalOperationRef !== $b->rootOperationRef || $op->kind->value !== $kind) {
                 return null;
             }
             $terms = get_object_vars($command->raw);
             unset($terms['commandKey'], $terms['requestedAt'], $terms['digest']);
-            $semantic = PaymentIdentity::digest(['schema' => 'billium.execution.refund-semantics.v1', 'scope' => get_object_vars($scope),
-                'originalBinding' => $b->semanticDigest, 'terms' => $terms]);
+            $semantic = $command instanceof CapturePayment
+                ? PaymentIdentity::digest(['schema' => 'billium.execution.authorization-child.v1', 'rootBinding' => $b->semanticDigest, 'scope' => get_object_vars($scope), 'command' => $terms])
+                : PaymentIdentity::digest(['schema' => 'billium.execution.refund-semantics.v1', 'scope' => get_object_vars($scope), 'originalBinding' => $b->semanticDigest, 'terms' => $terms]);
         } else {
             if ($command->merchantAccountRef !== $account || $command->bindingRevision !== $b->merchantRevisionRef || $command->source->intentRef !== $b->businessIntentRef) {
                 return null;

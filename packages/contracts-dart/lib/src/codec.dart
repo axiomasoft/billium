@@ -97,6 +97,15 @@ final class Codec {
         'repair envelope aggregateRef differs from its payload',
       );
     }
+    final noEffect = schema == 'billium.event.v4' ? raw['payload'] : null;
+    if (noEffect is Map &&
+        (raw['aggregateRef'] != noEffect['operationRef'] ||
+            raw['revision'] != noEffect['revision'])) {
+      throw const ProblemException(
+        ProblemCode.validationInvalid,
+        'certified no-effect envelope identity differs from its payload',
+      );
+    }
     final variant = entry.variants.firstWhere(
       (candidate) =>
           candidate.requires == null || raw.containsKey(candidate.requires),

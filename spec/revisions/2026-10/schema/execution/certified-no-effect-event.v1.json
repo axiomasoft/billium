@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-10:execution/certified-no-effect-event.v1.json",
+  "title": "Execution certified no-effect event",
+  "type": "object",
+  "required": [
+    "schema",
+    "eventId",
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "eventType",
+    "aggregateRef",
+    "revision",
+    "occurredAt",
+    "payload",
+    "digest",
+    "eventContractRevision"
+  ],
+  "properties": {
+    "schema": {
+      "const": "billium.event.v4"
+    },
+    "eventId": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ulid"
+    },
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "eventType": {
+      "const": "payment.certified_no_effect.v1"
+    },
+    "aggregateRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "occurredAt": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/timestamp"
+    },
+    "payload": {
+      "type": "object",
+      "required": [
+        "operationRef",
+        "rootOperationRef",
+        "operationKind",
+        "revision",
+        "status",
+        "requested",
+        "bindingRevision",
+        "merchantAccountRef",
+        "providerReference",
+        "certificateRef",
+        "certificateDigest",
+        "coverageThrough"
+      ],
+      "properties": {
+        "operationRef": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+        },
+        "rootOperationRef": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+        },
+        "operationKind": {
+          "$ref": "urn:billium:spec:2026-10:query/execution-status.v1.json#/properties/operationKind"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "status": {
+          "const": "failed-terminal"
+        },
+        "requested": {
+          "$ref": "urn:billium:spec:2026-10:common/money-wire.json#/$defs/positive"
+        },
+        "bindingRevision": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+        },
+        "merchantAccountRef": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+        },
+        "providerReference": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+        },
+        "certificateRef": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+        },
+        "certificateDigest": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest",
+          "description": "Digest of the independently authenticated absence certificate."
+        },
+        "coverageThrough": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/timestamp",
+          "description": "End of the certified coverage of the original request window."
+        }
+      },
+      "additionalProperties": false
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    },
+    "eventContractRevision": {
+      "const": "events-2026-11-v4"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The execution owner committed a terminal decision after authenticating a certificate covering the original request window. The requested amount identifies the frozen request. Cumulative provider and ledger amounts are outside this event contract."
+}

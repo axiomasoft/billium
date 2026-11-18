@@ -72,6 +72,7 @@
   "2026_11_18_000030_validate_reconciliation_review_shapes",
   "2026_11_18_000031_confirm_reconciliation_review_shapes",
   "2026_11_18_000032_retain_original_identity_import",
+  "2026_11_18_000033_guard_archived_child_reservations",
   "2026_11_18_010004_retain_command_financial_scope",
   "2026_11_18_010005_validate_command_financial_scope",
   "2026_11_18_010006_retain_command_input_digest",

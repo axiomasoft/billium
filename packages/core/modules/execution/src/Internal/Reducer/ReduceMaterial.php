@@ -23,6 +23,7 @@ use Billium\Execution\Enums\ReductionDisposition;
 use Billium\Execution\Enums\ReservationState;
 use Billium\Execution\Internal\Custody\VerifiedDelivery;
 use Billium\Execution\Internal\Identity\PaymentIdentity;
+use Billium\Execution\Internal\Publication\OutcomeEmitter;
 use Billium\Execution\Internal\Storage\ExecutionCodec;
 use DateTimeImmutable;
 use LogicException;
@@ -31,7 +32,7 @@ use Packman\Attributes\Internal;
 #[Internal]
 final readonly class ReduceMaterial
 {
-    public function __construct(private ExecutionStore $store, private CapacityParticipants $capacity, private OutcomePublication $publication) {}
+    public function __construct(private ExecutionStore $store, private CapacityParticipants $capacity, private OutcomePublication $publication, private OutcomeEmitter $conflicts) {}
 
     public function apply(TransactionContext $ctx, VerifiedDelivery $delivery, ProviderWorkClaim $claim): ReductionResult
     {
@@ -51,33 +52,40 @@ final readonly class ReduceMaterial
                 $invalid ??= 'authorization_expiry_conflict';
             }
         }
+        $orderingFrontier = $this->store->rootOrderingFrontier($ctx, $root->operationRef, $s);
         $order = MaterialRules::order($s, $prior, $frontier);
-        $olderRoot = $order === 'stale' && $op->operationRef !== $root->operationRef && MaterialRules::order($s, $prior, null) === null;
+        $journalOrder = MaterialRules::order($s, null, $orderingFrontier);
+        if ($journalOrder !== null && in_array($order, [null, 'duplicate', 'stale'], true)) {
+            $order = $journalOrder;
+        }
+        // A late child's separate effect can settle once only when an already applied root snapshot covers its totals.
+        $olderRoot = $order === 'stale' && $op->operationRef !== $root->operationRef && MaterialRules::order($s, $prior, null) === null
+            && MaterialRules::order($s, null, $frontier) === 'stale';
         if ($olderRoot) {
             $order = null;
         }
         if ($invalid !== null || ($order !== null && ! in_array($order, ['duplicate', 'stale'], true))) {
-            return $this->conflict($ctx, $op, $current, $s, $invalid ?? $order);
+            return $this->conflict($ctx, $op, $claim, $s, $invalid ?? $order);
         }
         $namespace = ExecutionCodec::providerIdentityScope($delivery->merchant, $delivery->capability);
         $economic = MaterialRules::digest($s);
         $stable = $delivery->capability->evidenceMode === ProviderEvidenceMode::StableEffectId;
         if ($stable && MaterialRules::state($s) === 'succeeded' && $s->stableEffectId === null) {
-            return $this->conflict($ctx, $op, $current, $s, 'missing_stable_effect_identity');
+            return $this->conflict($ctx, $op, $claim, $s, 'missing_stable_effect_identity');
         }
         if ($stable && $prior !== null && MaterialRules::state($prior) === 'succeeded' && MaterialRules::state($s) === 'succeeded'
             && $prior->stableEffectId !== $s->stableEffectId) {
-            return $this->conflict($ctx, $op, $current, $s, 'provider_effect_identity_changed');
+            return $this->conflict($ctx, $op, $claim, $s, 'provider_effect_identity_changed');
         }
         $id = PaymentIdentity::digest(['operation' => $op->operationRef, 'revision' => $s->providerRevision,
             'unversionedDigest' => $s->providerRevision === null ? $economic : null]);
         $fact = self::fact($namespace, $id, $economic, ProviderEvidenceMode::CumulativeSnapshot, $s);
         if ($s->providerOperationId !== null && ! $this->store->bindProviderOperationId($ctx, $attempt, $fact)) {
-            return $this->conflict($ctx, $op, $current, $s, 'provider_operation_id_conflict');
+            return $this->conflict($ctx, $op, $claim, $s, 'provider_operation_id_conflict');
         }
         $existing = $this->store->factByIdentity($ctx, $namespace, $id);
         if ($existing !== null && $existing->materialDigest !== $economic) {
-            return $this->conflict($ctx, $op, $current, $s, 'provider_revision_conflict');
+            return $this->conflict($ctx, $op, $claim, $s, 'provider_revision_conflict');
         }
         if ($order === 'stale') {
             return new ReductionResult(ReductionDisposition::Stale, $op->operationRef, $op->revision, [$claim->evidenceRef], [], [], null);
@@ -89,11 +97,11 @@ final readonly class ReduceMaterial
             $effect = $this->store->factByIdentity($ctx, $namespace, $effectId);
             if (($effect !== null && $effect->materialDigest !== $effectDigest) || ($effect === null && ! $this->store->appendFact($ctx,
                 self::fact($namespace, $effectId, $effectDigest, ProviderEvidenceMode::StableEffectId, $s)))) {
-                return $this->conflict($ctx, $op, $current, $s, 'provider_effect_identity_conflict');
+                return $this->conflict($ctx, $op, $claim, $s, 'provider_effect_identity_conflict');
             }
         }
         if ($existing === null && ! $this->store->appendFact($ctx, $fact)) {
-            return $this->conflict($ctx, $op, $current, $s, 'provider_fact_identity_conflict');
+            return $this->conflict($ctx, $op, $claim, $s, 'provider_fact_identity_conflict');
         }
         if ($order === 'duplicate' || $existing !== null) {
             return new ReductionResult(ReductionDisposition::Duplicate, $op->operationRef, $op->revision, [$claim->evidenceRef], [], [], null);
@@ -180,18 +188,21 @@ final readonly class ReduceMaterial
         return new ProviderFact($ref, $snapshot->operationRef, $namespace, $identity, $digest, $mode, $snapshot, $snapshot->evidenceRefs);
     }
 
-    private function conflict(TransactionContext $ctx, OperationRecord $op, CapacitySnapshot $capacity, MaterialSnapshot $s, string $reason): ReductionResult
+    private function conflict(TransactionContext $ctx, OperationRecord $op, ProviderWorkClaim $claim, MaterialSnapshot $s, string $reason): ReductionResult
     {
         $ref = self::discrepancy($s, $reason);
-        $this->store->appendDiscrepancy($ctx, $ref, new MaterialChange($op, $op, $s, $capacity, $ref, [], [], null, null, $reason));
+        $published = $this->conflicts->emitQuarantineHold($ctx, $claim, $s, $ref, $reason);
+        $current = $this->store->operation($op->binding->scope, $op->operationRef, $ctx) ?? throw new LogicException('Original operation disappeared');
 
-        return new ReductionResult(ReductionDisposition::Quarantined, $op->operationRef, $op->revision, $s->evidenceRefs, [], [], $ref);
+        return new ReductionResult(ReductionDisposition::Quarantined, $op->operationRef, $current->revision, $s->evidenceRefs, $published->commandRefs, [], $ref);
     }
 
     private static function discrepancy(MaterialSnapshot $s, string $reason): string
     {
         return 'discrepancy:'.substr(PaymentIdentity::digest(['reason' => $reason, 'operation' => $s->operationRef,
-            'revision' => $s->providerRevision, 'material' => MaterialRules::digest($s)]), 7);
+            'revision' => $s->providerRevision, 'material' => MaterialRules::digest($s),
+            ...($reason === 'provider_effect_identity_changed' || $reason === 'provider_effect_identity_conflict' ? ['effectId' => $s->stableEffectId] : []),
+            ...($reason === 'provider_operation_id_conflict' ? ['providerOperationId' => $s->providerOperationId] : [])]), 7);
     }
 
     private static function next(OperationRecord $op, MaterialSnapshot $s, string $state, string $economic): OperationRecord

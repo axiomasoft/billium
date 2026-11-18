@@ -24,6 +24,7 @@ use Billium\Execution\Enums\ProviderLookupState;
 use Billium\Execution\Enums\ReductionDisposition;
 use Billium\Execution\Tests\Concurrency\AdmissionIdentityTest as Fixture;
 use Billium\Execution\Tests\Feature\CallbackCustodyTest as Inputs;
+use Billium\Execution\Tests\Feature\CertifiedNoEffectHandoffTest;
 use Billium\Testkit\Drivers\DeterministicPaymentDriver;
 use Billium\Testkit\Drivers\ResponseMode;
 use Billium\Testkit\Drivers\SimulatedAbsenceVerifier;
@@ -38,6 +39,7 @@ use DateTimeImmutable;
 use Illuminate\Database\DatabaseManager;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\TestWith;
 use RuntimeException;
 
 #[Group('pg')]
@@ -129,9 +131,12 @@ final class ProviderWorkRestartTest extends ExecutionTestCase
         }
     }
 
-    public function test_certified_absence_reverified_outside_transaction_closes_attempt_without_synthesizing_provider_totals(): void
+    #[TestWith(['payment.execute.v1', 'charge'])]
+    #[TestWith(['payment.authorize.v1', 'authorize'])]
+    public function test_certified_absence_reverified_outside_transaction_closes_attempt_without_synthesizing_provider_totals(string $schema, string $kind): void
     {
         $app = $this->application();
+        CertifiedNoEffectHandoffTest::register($app);
         $clock = new FixtureClock(new DateTimeImmutable);
         $cap = SimulatedCapabilities::snapshot();
         $path = Fixture::tempPath();
@@ -140,7 +145,7 @@ final class ProviderWorkRestartTest extends ExecutionTestCase
             $host = Fixture::host($app, $path, cap: $cap, mode: ResponseMode::Unavailable, clock: $clock);
             $scope = Fixture::scope();
             $attemptRef = UnknownResultTest::attemptRef();
-            $app->make(RootPaymentCommands::class)->admit($scope, Fixture::wire())->orThrow();
+            $app->make(RootPaymentCommands::class)->admit($scope, Fixture::wire(['schema' => $schema]))->orThrow();
             $app->make(AttemptWorker::class)->dispatch($scope, $attemptRef, 'original', new DateTimeImmutable('+1 second'))->orThrow();
             $ticket = array_find(new DurableJournal($path.'.host')->records(), static fn (object $entry): bool => $entry instanceof DispatchTicket);
             self::assertInstanceOf(DispatchTicket::class, $ticket);
@@ -172,6 +177,8 @@ final class ProviderWorkRestartTest extends ExecutionTestCase
             $result = $app->make(EvidenceReducer::class)->reduce($work);
             self::assertSame(ReductionDisposition::Applied, $result->disposition);
             self::assertSame([], $result->observationCommandRefs);
+            self::assertCount(1, $result->publicEventIds);
+            self::assertSame(1, $this->rows('billium_outbox_event', "event_id=? AND type='payment.certified_no_effect.v1' AND payload->>'operationKind'=? AND payload->>'certificateRef'=? AND payload->'capturedTotal' IS NULL", [$result->publicEventIds[0], $kind, $certificate->certificateRef]));
             self::assertSame(1, $this->rows('billium_execution_certified_absence'));
             self::assertSame(1, $this->rows('billium_execution_operation', "state='failed' AND revision=1"));
             self::assertSame(1, $this->rows('billium_execution_provider_work', "state='processed' AND result_ref=?", [$certificate->certificateRef]));

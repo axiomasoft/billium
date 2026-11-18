@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Billium\Execution\Tests\Feature;
 
 use Billium\Contracts\Data\Money;
+use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Contracts\Runner\TransactionContext;
@@ -242,7 +243,17 @@ final class ProviderProcessingPersistenceTest extends ExecutionTestCase
             $op = $this->store->operation($scope, 'child', $ctx) ?? throw new LogicException;
             $after = new OperationRecord($op->id, $op->operationRef, $op->rootOperationRef, $op->kind, $op->binding, $op->requested,
                 1, 'held', 'held-overcapture', $op->authorizationRef, $op->createdAt);
-            $cap = $this->store->capacity($ctx, 'root');
+            $priorCapacity = $this->store->capacity($ctx, 'root');
+            $unheld = new MaterialChange($op, $after, $accepted->snapshot, $priorCapacity, 'unheld-discrepancy', [], [], null, null, 'over_capture');
+            try {
+                $this->store->appendDiscrepancy($ctx, 'unheld-discrepancy', $unheld);
+                self::fail('A source discrepancy requires held capacity');
+            } catch (ProblemException $error) {
+                self::assertSame(ProblemCode::ValidationInvalid, $error->problem);
+            }
+            self::assertEquals($priorCapacity, $this->store->capacity($ctx, 'root'));
+            $cap = new CapacitySnapshot('root', $priorCapacity->version + 1, $priorCapacity->authorizedLimit, $priorCapacity->confirmedCapture,
+                $priorCapacity->confirmedRefund, $priorCapacity->releasedAuthorization, $priorCapacity->heldCapture, $priorCapacity->heldVoid, $priorCapacity->heldRefund, true);
             $change = new MaterialChange($op, $after, $accepted->snapshot, $cap, 'overcapture', [], [], Money::parse('0.20', 'RUB'), null, 'over_capture');
             $this->store->appendDiscrepancy($ctx, 'overcapture', $change);
             $root = $this->store->operation($scope, 'root', $ctx) ?? throw new LogicException;
@@ -536,7 +547,8 @@ final class ProviderProcessingPersistenceTest extends ExecutionTestCase
                 'evidence_refs' => ExecutionCodec::encode(['historical-evidence'])]);
             $same = new ProviderFact('new-ref', 'child', $fact->providerIdentityScope, 'new-identity', 'economic', ProviderEvidenceMode::StableEffectId, $snapshot, $fact->evidenceRefs);
             self::assertFalse($this->store->appendFact($ctx, $same));
-            self::assertTrue($this->store->capacity($ctx, 'root')->financialHold);
+            self::assertFalse($this->store->capacity($ctx, 'root')->financialHold);
+            self::assertSame(0, $this->rows('billium_execution_operation_revision'));
             self::assertNull($this->store->factForEvidence($ctx, 'known-stable', 'child'));
         });
         self::assertSame(1, $this->rows('billium_execution_provider_fact'));

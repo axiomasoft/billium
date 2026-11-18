@@ -127,6 +127,9 @@ interface ExecutionStore
 
     public function lastObserved(TransactionContext $context, string $operationRef): ?MaterialSnapshot;
 
+    /** Latest independently qualified ordering fact, including nonmonetary pending and unchanged cumulative sibling observations. */
+    public function rootOrderingFrontier(TransactionContext $context, string $rootRef, MaterialSnapshot $incoming): ?MaterialSnapshot;
+
     public function latestRootObservation(TransactionContext $context, string $rootRef): ?MaterialSnapshot;
 
     public function providerOperationId(ExecutionScope $scope, string $attemptRef): ?string;
@@ -163,6 +166,9 @@ interface ExecutionStore
 
     /** immutable exposure fact; explicit hold */
     public function appendDiscrepancy(TransactionContext $transactionContext, string $ref, MaterialChange $materialChange): void;
+
+    /** Record a local financial hold against current authenticated work without accepting contradictory provider material. */
+    public function recordQuarantineHold(TransactionContext $context, ProviderWorkClaim $claim, MaterialSnapshot $conflict, string $discrepancyRef, string $reason): ?OperationRecord;
 
     /** insert/find before RootCharge100; no root FK */
     public function ensureObservationPartition(TransactionContext $transactionContext, ExecutionScope $executionScope, string $sourceAuthority, string $lineage, string $rootRef): ObservationPartition;

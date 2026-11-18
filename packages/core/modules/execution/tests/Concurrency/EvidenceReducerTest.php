@@ -183,7 +183,8 @@ final class EvidenceReducerTest extends ExecutionTestCase
             self::assertSame(1, $this->rows('billium_execution_discrepancy', "exposure->>'reason'='provider_effect_identity_changed'"));
             self::assertSame(1, $this->rows('billium_execution_provider_evidence', 'evidence_ref=?', [$fork->evidenceRef]));
             self::assertSame(4, $this->rows('billium_execution_provider_fact', "evidence_mode='stable_effect_id'"));
-            self::assertSame(5, $this->rows('billium_execution_observation_emission'));
+            self::assertSame(6, $this->rows('billium_execution_observation_emission'));
+            self::assertSame(1, $this->rows('billium_execution_observation_emission', "source_sequence=6 AND operation_ref='root-a' AND payload#>>'{discrepancy,kind}'='provider_effect_identity_changed' AND payload#>>'{capturedTotal,amount}'='0.80'"));
             self::assertSame(1, $this->rows('billium_execution_capacity', 'financial_hold AND confirmed_capture_minor=80 AND confirmed_refund_minor=50'));
             $changed = Inputs::signed($current, ['revision' => '20', 'operationAmount' => ['amount' => '0.70', 'currency' => 'RUB']]);
             $app->make(CallbackCustody::class)->receive($scope, 'merchant-a', 'capture-a', $changed)->orThrow();

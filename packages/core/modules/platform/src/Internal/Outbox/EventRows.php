@@ -14,6 +14,7 @@ use Illuminate\Database\Connection;
 use JsonException;
 use LogicException;
 use Packman\Attributes\Internal;
+use stdClass;
 
 #[Internal]
 final class EventRows
@@ -67,6 +68,17 @@ final class EventRows
             'digest' => Rows::string(Rows::field($row, 'digest')), 'payload' => json_decode(Rows::string(Rows::field($row, 'payload')), false, 512, JSON_THROW_ON_ERROR)];
         if ($body['schema'] !== 'billium.event.v1') {
             $body['eventContractRevision'] = Rows::string(Rows::field($row, 'contract_revision'));
+        }
+
+        if ($body['schema'] === 'billium.event.v4') {
+            $scope = json_decode(Rows::string(Rows::field($row, 'source_scope')), false, 512, JSON_THROW_ON_ERROR);
+            if (! $scope instanceof stdClass || ! is_string($scope->installationRef ?? null) || $scope->installationRef === ''
+                || ! is_string($scope->environment ?? null) || $scope->environment === ''
+                || $scope->environment !== Rows::string(Rows::field($row, 'environment')) || ($scope->sellerRef ?? null) !== $body['sellerRef']) {
+                throw new LogicException('Public event scope differs from its authenticated source');
+            }
+            $body['installationRef'] = $scope->installationRef;
+            $body['environment'] = $scope->environment;
         }
 
         return $body;

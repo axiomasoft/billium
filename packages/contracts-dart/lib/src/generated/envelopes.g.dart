@@ -33,6 +33,7 @@ const Map<String, Envelope Function(Map<String, Object?>)> envelopeBuilders = {
   'EventCatalog': EventCatalog.fromRaw,
   'EventEnvelopeV2': EventEnvelopeV2.fromRaw,
   'ExecutionRepairEvent': ExecutionRepairEvent.fromRaw,
+  'ExecutionCertifiedNoEffectEvent': ExecutionCertifiedNoEffectEvent.fromRaw,
   'FeedSelection': FeedSelection.fromRaw,
   'FeedPage': FeedPage.fromRaw,
   'FeedBootstrap': FeedBootstrap.fromRaw,
@@ -1213,6 +1214,54 @@ final class ExecutionRepairEvent extends Envelope {
   final String occurredAt;
   final String digest;
   final Map<String, Object?> payload;
+  final String eventContractRevision;
+}
+
+/// `billium.event.v4`.
+final class ExecutionCertifiedNoEffectEvent extends Envelope {
+  static const String schemaName = 'billium.event.v4';
+
+  ExecutionCertifiedNoEffectEvent({
+    required super.raw,
+    required this.eventId,
+    required this.installationRef,
+    required this.environment,
+    required this.sellerRef,
+    required this.eventType,
+    required this.aggregateRef,
+    required this.revision,
+    required this.occurredAt,
+    required this.payload,
+    required this.digest,
+    required this.eventContractRevision,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory ExecutionCertifiedNoEffectEvent.fromRaw(Map<String, Object?> raw) => ExecutionCertifiedNoEffectEvent(
+        raw: raw,
+        eventId: requireString(raw, 'eventId'),
+        installationRef: requireString(raw, 'installationRef'),
+        environment: requireString(raw, 'environment'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        eventType: requireString(raw, 'eventType'),
+        aggregateRef: requireString(raw, 'aggregateRef'),
+        revision: requireInt(raw, 'revision'),
+        occurredAt: requireString(raw, 'occurredAt'),
+        payload: requireObject(raw, 'payload'),
+        digest: requireString(raw, 'digest'),
+        eventContractRevision: requireString(raw, 'eventContractRevision'),
+      );
+
+  final String eventId;
+  final String installationRef;
+  final String environment;
+  final String sellerRef;
+  final String eventType;
+  final String aggregateRef;
+  final int revision;
+  final String occurredAt;
+  final Map<String, Object?> payload;
+  final String digest;
   final String eventContractRevision;
 }
 

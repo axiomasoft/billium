@@ -32,7 +32,7 @@ The catalogue defines 49 P5 IDs. The phase register also tracks 147 adopted cove
 | PB-05 | `UnknownResultTest` loses the local reply after admission and recovers the original. `OutcomeProjectionBoundaryTest` reads the command key and business receipt cold. |
 | PB-06 | `UnknownResultTest` retains unknown across accepted timeout, expired key TTL and ambiguous lookup, and sends no replacement. |
 | PB-07 | `ProviderFactIdentityTest` and `CallbackCustodyTest` replay indistinguishable signed evidence while one material revision remains. |
-| PB-08 | `ProviderFactIdentityTest` retains conflicting signed material while preserving the original accepted revision and economics. |
+| PB-08 | `ConflictHoldHandoffTest` and `ProviderFactIdentityTest` retain conflicting authenticated material and the original accepted provider economics. A distinct local hold revision and qualified command commit atomically; the real ledger receiver then blocks allocation without a second financial application. |
 | PB-09 | `HistoricalMerchantRefundTest` repeats by transport and business keys with one reservation and one provider refund. `LateRefundSuccessTest` checks retained amount, cumulative and separate child detail after restart. |
 | PB-10 | `OutcomeDeliveryTest` loses the acknowledgement after ledger application. A cold relay retries the immutable command, with a single application and no additional provider calls. |
 | PB-11 | `ExecutionRestoreTest` detects the actual restored inbox/outbox gap against independent provider and receiver journals. The original immutable command replays once, and a lost post-backup root is recovered under its original reference. |
@@ -47,12 +47,12 @@ The catalogue defines 49 P5 IDs. The phase register also tracks 147 adopted cove
 | PB-24 | `LateRefundSuccessTest` preserves actual and exceptional exposure after local replacement with no automatic economic replacement. `EvidenceReducerTest` and `ProviderFactIdentityTest` preserve the last admissible projection. |
 | PF-01 | `AdmissionIdentityTest` races commercial identity and `NamespaceRetentionTest` verifies atomic binding, capacity, attempt, receipt and work rollback. |
 | PF-02 | `ProviderWorkRestartTest` and `StaleWorkerTest` retain durable signed evidence before acknowledgement and across a stale sender finish. |
-| PF-03 | `UnknownResultTest` and `ProviderWorkRestartTest` need independently verified retirement and exact complete window before recording certified absence. |
+| PF-03 | `UnknownResultTest`, `ProviderWorkRestartTest` and `CertifiedNoEffectHandoffTest` require independently verified retirement and the complete original request window. Certificate-only terminal publication carries the proof reference and requested terms, while normal provider aggregate observations remain absent. |
 | PF-04 | `QualifiedOriginalReplayTest` verifies the independently archived original request, exact body and account, current qualification and live authority within the provider window. Unqualified or stale inputs refuse before send. |
 | PF-05 | `CallbackCustodyTest` proves merchant-scoped event identity, bounded rejection and retained custody before acknowledgement. |
 | PF-06 | `ProviderFactIdentityTest` keeps terminal provider revisions and the associated signed amount separate from local capacity and projection. |
 | PF-07 | `NamespaceRetentionTest` and `BusinessContextIdentityTest` preserve original business identity outside general receipt retention. |
-| PF-08 | `ExecutionRestoreTest` recovers post-backup provider effects through independently authenticated original dispatch/source archives. Missing or substituted identity leaves recovery held, with zero new sends. |
+| PF-08 | `ExecutionRestoreTest` and `ArchivedChildOrderingTest` recover post-backup provider effects through independently authenticated original dispatch/source archives. Parent-first and child-first capture/refund recovery preserve one actual effect, including prior cumulative totals and an orphan inventory work item. Missing or substituted identity leaves recovery held, with zero new sends. |
 | PF-09 | `NamespaceRetentionTest` proves closed-namespace protection. `ExecutionRestoreTest` imports the authenticated original root/child identity and key once, including original-ID-only lookup; general P9 import remains in its own phase. |
 | PF-11 | `LateRefundSuccessTest` and `ProviderFactIdentityTest` preserve excess fact amount and original provenance when local capacity or projection rejects ordinary consumption. |
 
@@ -72,7 +72,7 @@ The catalogue defines 49 P5 IDs. The phase register also tracks 147 adopted cove
 | RT-10 | `FinancialSessionSealTest` and `LedgerOnlyRestoreAdmissionTest` check committed mutation, stale or absent session authority, seal and permitted raw custody. |
 | RT-11 | `DeploymentOwnerSessionTest`, `ActivationCertificateTest` and `ExecutionRestoreTest` check independent owner admission, adoption, physical clone refusal and guarded recovery with durable external journals. |
 | RT-12 | `AllocationSamePaymentTest`, `CrossSellerAllocationTest`, `AllocationBackstopTest` and `AllocationVsObservationTest` check capacity and scope through public and SQL entry points. |
-| RT-13 | `EvidenceReducerTest` rolls back material state, work and factual outbox together. `QualifiedObservationHandoffTest` verifies ledger application and replay independently of transport acknowledgement. |
+| RT-13 | `EvidenceReducerTest` rolls back material state, work and factual outbox together. `ConflictHoldHandoffTest` verifies local risk holds reach the qualified ledger receiver atomically. `CertifiedNoEffectHandoffTest` verifies certificate-only terminal outcomes with public outbox delivery and rollback, without fabricated provider aggregate observations. `QualifiedObservationHandoffTest` verifies ledger application and replay independently of transport acknowledgement. |
 | RT-14 | `NamespaceRetentionTest`, `FilteredFeedBootstrapTest` and qualified inventory fail explicitly on missing history, absent overlap or incomplete evidence. |
 
 ## Evidence layers and checkpoints

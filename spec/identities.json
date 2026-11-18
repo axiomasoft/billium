@@ -38,6 +38,13 @@
     },
     {
       "kind": "envelope",
+      "id": "billium.event.v4",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/execution/certified-no-effect-event.v1.json"
+    },
+    {
+      "kind": "envelope",
       "id": "billium.feed.bootstrap.v1",
       "status": "new",
       "since": "2026-10",
@@ -567,6 +574,90 @@
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/execution/repair-event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v4#/properties/aggregateRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/execution/certified-no-effect-event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v4#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/execution/certified-no-effect-event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v4#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/execution/certified-no-effect-event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v4#/properties/eventContractRevision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/execution/certified-no-effect-event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v4#/properties/eventId",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/execution/certified-no-effect-event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v4#/properties/eventType",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/execution/certified-no-effect-event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v4#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/execution/certified-no-effect-event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v4#/properties/occurredAt",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/execution/certified-no-effect-event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v4#/properties/payload",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/execution/certified-no-effect-event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v4#/properties/revision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/execution/certified-no-effect-event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v4#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/execution/certified-no-effect-event.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.event.v4#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/execution/certified-no-effect-event.v1.json"
     },
     {
       "kind": "envelope-field",
@@ -3930,6 +4021,13 @@
     },
     {
       "kind": "event-type",
+      "id": "payment.certified_no_effect.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/execution/certified-no-effect-event.v1.json"
+    },
+    {
+      "kind": "event-type",
       "id": "payment.effect.outcome.v1",
       "status": "new",
       "since": "2026-10",
@@ -4753,6 +4851,13 @@
       "status": "new",
       "since": "2026-10",
       "source": "packages/core/database/migrations/execution/2026_11_18_000032_retain_original_identity_import.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_000033_guard_archived_child_reservations",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_18_000033_guard_archived_child_reservations.php"
     },
     {
       "kind": "migration",

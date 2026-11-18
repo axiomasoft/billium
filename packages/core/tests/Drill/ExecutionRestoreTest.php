@@ -53,6 +53,7 @@ use Billium\Execution\Data\ArchivedExecutionIdentity;
 use Billium\Execution\Data\DispatchRequest;
 use Billium\Execution\Data\DispatchTicket;
 use Billium\Execution\Data\DriverRequest;
+use Billium\Execution\Data\ExecutionScope;
 use Billium\Execution\Data\LookupRequest;
 use Billium\Execution\Data\MaterialSnapshot;
 use Billium\Execution\Data\OriginDecision;
@@ -62,6 +63,7 @@ use Billium\Execution\Enums\NamespaceState;
 use Billium\Execution\Enums\ReductionDisposition;
 use Billium\Execution\Internal\Authority\AuthorityClaims;
 use Billium\Execution\Internal\ExecutionServiceProvider;
+use Billium\Execution\Internal\Identity\PaymentIdentity;
 use Billium\Execution\Internal\Merchants\ContinuityMerchantCredentials;
 use Billium\Execution\Tests\CollectionAdmissionGuardTest;
 use Billium\Execution\Tests\Concurrency\AdmissionIdentityTest as Fixture;
@@ -151,7 +153,7 @@ final class ExecutionRestoreTest extends ExecutionTestCase
     }
 
     /** Boot a restored attachment without issuing any old process token or opening a writer session. */
-    private static function cloneApplication(Application $original): Application
+    public static function cloneApplication(Application $original): Application
     {
         $app = WorkerApplication::create();
         $app->register(ExecutionServiceProvider::class);
@@ -169,7 +171,7 @@ final class ExecutionRestoreTest extends ExecutionTestCase
         return $app;
     }
 
-    public static function receiver(string $journal, string $binding): void
+    public static function receiverApplication(): Application
     {
         $app = Fixture::workerApp(802);
         $callers = new class($app->make(CallerContext::class)->current()) implements ScopedCallerContext
@@ -194,6 +196,13 @@ final class ExecutionRestoreTest extends ExecutionTestCase
         };
         $app->instance(CallerContext::class, $callers);
         $app->instance(ScopedCallerContext::class, $callers);
+
+        return $app;
+    }
+
+    public static function receiver(string $journal, string $binding): void
+    {
+        $app = self::receiverApplication();
         $channel = new SignedCommandChannel(new DurableJournal($journal.'.commands'), self::key());
         $app->instance(IncomingCommandAuthenticator::class, $channel);
         [$route, $message] = $channel->packet($binding);
@@ -204,13 +213,22 @@ final class ExecutionRestoreTest extends ExecutionTestCase
             'allocation' => $db->table('billium_allocation')->count(), 'inbox' => $db->table('billium_inbox_message')->where('status', 'applied')->count()], ProcessIdentity::current()));
     }
 
-    private function relay(Connection $db, string $receiver, string $path): void
+    public static function relay(Connection $db, string $receiver, string $path, int $limit = 100): void
     {
-        $channel = new SignedCommandChannel(new DurableJournal($path.'.commands'), self::key(), static function (string $digest) use ($receiver, $path): void {
+        $failure = null;
+        $channel = new SignedCommandChannel(new DurableJournal($path.'.commands'), self::key(), static function (string $digest) use ($receiver, $path, &$failure): void {
             $child = new ChildProcess([PHP_BINARY, '-r', 'require "vendor/autoload.php"; Billium\\Core\\Tests\\Drill\\ExecutionRestoreTest::receiver($argv[1], $argv[2]);', $path, $digest], array_replace(getenv(), ['DB_DATABASE' => $receiver]));
-            self::assertSame(0, $child->wait());
+            try {
+                self::assertSame(0, $child->wait());
+            } catch (RuntimeException $exception) {
+                $failure = $exception;
+                throw $exception;
+            }
         });
-        $result = new CommandOutboxRelay($db, $channel, budget: 1)->relay();
+        $result = new CommandOutboxRelay($db, $channel, budget: 1)->relay($limit);
+        if ($failure !== null) {
+            throw $failure;
+        }
         if ($result->failed > 0) {
             self::fail('Downstream relay failed '.json_encode($db->table('billium_outbox_command_delivery')->get()->all()));
         }
@@ -243,6 +261,7 @@ final class ExecutionRestoreTest extends ExecutionTestCase
         return $counts;
     }
 
+    #[Group('ACC-RST-08')]
     public function test_postbackup_provider_effect_and_downstream_replay_survive_a_real_postgres_restore(): void
     {
         $app = $this->application();
@@ -267,7 +286,7 @@ final class ExecutionRestoreTest extends ExecutionTestCase
             $from = new DateTimeImmutable('-5 minutes');
             $backup = new PostgresSnapshot(TestEnvironment::pdo(owner: true), $source, $path.'.dump');
             $receiver = $backup->restore();
-            $this->relay($db, $receiver, $path);
+            self::relay($db, $receiver, $path);
             $archive = new SignedOriginalArchive($path, self::key(), $this->authority);
             $oldWire = Fixture::wire();
             self::assertInstanceOf(ExecutePayment::class, $oldWire);
@@ -296,6 +315,11 @@ final class ExecutionRestoreTest extends ExecutionTestCase
             $phase['after_backup'] = $this->counts($db, $path);
             $ticket = array_find(new DurableJournal($path.'.host')->records(), static fn ($r): bool => $r instanceof DispatchTicket && $r->claims->attemptRef === $attempt->attemptRef);
             self::assertInstanceOf(DispatchTicket::class, $ticket);
+            $key = PaymentIdentity::commandKey($scope, 'charge', 'checkout', $oldWire->commandKey);
+            $receiptQuery = static fn (Connection $connection) => $connection->table('billium_idempotency_receipt')
+                ->where('command_kind', ExecutePayment::SCHEMA)->where('command_key', $key);
+            self::assertSame(1, $receiptQuery($db)->count());
+            self::assertSame(1, $db->table('billium_execution_business_binding')->where('operation_ref', 'root-a')->count());
             $cloneName = $backup->restore();
             $_ENV['DB_DATABASE'] = $_SERVER['DB_DATABASE'] = $cloneName;
             putenv('DB_DATABASE='.$cloneName);
@@ -348,6 +372,22 @@ final class ExecutionRestoreTest extends ExecutionTestCase
             $this->denied(fn () => $recovery->recover($scope, 'remote-billium', 'account-b', $attempt->providerReference));
             $this->denied(fn () => $recovery->recover($scope, 'remote-billium', 'account-a', 'missing-original-reference'));
             self::assertSame('recovery_required', $clone->make(ExecutionStore::class)->namespace($scope)->state->value);
+            self::assertSame(0, $receiptQuery($replica)->count());
+            self::assertSame(0, $replica->table('billium_execution_business_binding')->where('operation_ref', 'root-a')->count());
+            $repeatAccepted = fn () => $clone->make(RootPaymentCommands::class)->admit($scope, $oldWire)->orThrow();
+            AuthorizationLifecycleTest::refuses(ProblemCode::RecoveryRequired, $repeatAccepted);
+            $clone->make(OperationRunner::class)->run(new OperationSpec('execution.close_original_namespace', 'seller-a', 'test', FinancialMode::Recovery,
+                ModuleOperationClass::UnknownResolution, ['execution', 'platform'], financialScope: self::select()), static function (TransactionContext $ctx) use ($clone, $scope): PlatformReceipt {
+                    $store = $clone->make(ExecutionStore::class);
+                    $store->transitionNamespace($ctx, $scope, NamespaceState::Closed, $store->namespace($scope, $ctx)->generation, 'await-original-source');
+
+                    return new PlatformReceipt('execution.namespace', []);
+                })->orThrow();
+            AuthorizationLifecycleTest::refuses(ProblemCode::KeyExpired, $repeatAccepted);
+            self::assertSame(0, $receiptQuery($replica)->count());
+            self::assertSame(0, $replica->table('billium_execution_attempt')->where('operation_ref', 'root-a')->count());
+            self::assertSame(0, $replica->table('billium_execution_dispatch_work')->where('operation_ref', 'root-a')->count());
+            self::assertSame(2, UnknownResultTest::events($path, 'provider.call'));
             rename($path.'.source', $path.'.offline');
             $this->denied(fn () => $recovery->recover($scope, 'remote-billium', 'account-a', $attempt->providerReference));
             rename($path.'.offline', $path.'.source');
@@ -358,6 +398,9 @@ final class ExecutionRestoreTest extends ExecutionTestCase
             $applied = $recovery->recover($scope, 'remote-billium', 'account-a', $attempt->providerReference);
             self::assertSame(ReductionDisposition::Applied, $applied->disposition);
             self::assertSame(ReductionDisposition::Duplicate, $recovery->recover($scope, 'remote-billium', 'account-a', $attempt->providerReference)->disposition);
+            self::assertSame(NamespaceState::Closed, $clone->make(ExecutionStore::class)->namespace($scope)->state);
+            self::assertTrue($repeatAccepted()->replayed);
+            self::assertSame(1, $receiptQuery($replica)->count());
             $phase['after_import'] = $this->counts($replica, $path);
             self::assertSame(1, $phase['after_import']['original_identity_import']);
             self::assertSame(1, $phase['after_import']['dispatch_work']);
@@ -367,7 +410,7 @@ final class ExecutionRestoreTest extends ExecutionTestCase
             self::assertEquals($original->binding, $imported?->binding);
             self::assertEquals($original->requested, $imported?->requested);
             self::assertSame($attempt->immutableRequestDigest, $clone->make(ExecutionStore::class)->attempt($scope, $attempt->attemptRef)?->immutableRequestDigest);
-            $this->relay($replica, $receiver, $path);
+            self::relay($replica, $receiver, $path);
             $received = new DurableJournal($path.'.receiver')->records();
             self::assertCount(3, $received);
             self::assertSame($received[0]->data['binding'], $received[1]->data['binding']);
@@ -478,10 +521,11 @@ final class ExecutionRestoreTest extends ExecutionTestCase
             $wrong = self::createStub(PaymentDriver::class);
             $wrong->method('contractVersion')->willReturn($driver->contractVersion());
             $wrong->method('normalize')->willReturnCallback($driver->normalize(...));
-            $wrong->method('lookup')->willReturnCallback(static function (LookupRequest $request) use ($driver): ProviderLookupResult {
+            $field = 'providerOperationId';
+            $wrong->method('lookup')->willReturnCallback(static function (LookupRequest $request) use ($driver, &$field): ProviderLookupResult {
                 $real = $driver->lookup($request);
                 self::assertNotNull($real->snapshot);
-                $foreign = new MaterialSnapshot(...array_replace(get_object_vars($real->snapshot), ['providerOperationId' => 'unrelated-assignment']));
+                $foreign = new MaterialSnapshot(...array_replace(get_object_vars($real->snapshot), [$field => 'unrelated-assignment']));
 
                 return new ProviderLookupResult($real->state, $real->evidence, $foreign, null, null, null);
             });
@@ -489,10 +533,17 @@ final class ExecutionRestoreTest extends ExecutionTestCase
             $foreign->method('resolve')->willReturn($wrong);
             $foreign->method('capabilities')->willReturn($drivers->capabilities($merchant));
             $clone->instance(PaymentDrivers::class, $foreign);
-            $this->denied($recover);
+            $otherScope = new ExecutionScope($scope->installationRef, $scope->sellerRef, $scope->environment, 'another-owner');
+            AuthorizationLifecycleTest::refuses(ProblemCode::AuthDenied, fn () => $port->recover($otherScope, 'remote-billium', 'account-a', $attempt->providerReference));
+            foreach (['providerOperationId', 'providerReference', 'operationRef'] as $field) {
+                AuthorizationLifecycleTest::refuses(ProblemCode::RecoveryRequired, $recover);
+            }
             $db = $clone->make(DatabaseManager::class)->connection();
-            self::assertSame(1, $db->table('billium_execution_provider_evidence')->where('signature_verdict', 'unverified')->where('evidence_ref', 'like', 'review:%')->count());
+            self::assertSame(3, $db->table('billium_execution_provider_evidence')->where('signature_verdict', 'unverified')->where('evidence_ref', 'like', 'review:%')->count());
             self::assertSame(0, $db->table('billium_execution_capacity')->value('confirmed_refund_minor'));
+            self::assertSame(35, $db->table('billium_execution_capacity')->value('held_refund_minor'));
+            self::assertSame('held', $db->table('billium_execution_reservation')->where('operation_ref', 'lost-refund')->value('state'));
+            self::assertSame(0, $db->table('billium_execution_provider_fact')->where('operation_ref', 'lost-refund')->count());
             $clone->instance(PaymentDrivers::class, $drivers);
             self::assertSame(ReductionDisposition::Applied, $recover()->disposition);
             self::assertSame(ReductionDisposition::Duplicate, $recover()->disposition);

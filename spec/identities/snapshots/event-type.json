@@ -6,6 +6,7 @@
   "invoice.issued.v1",
   "obligation.adjusted.v1",
   "obligation.created.v1",
+  "payment.certified_no_effect.v1",
   "payment.effect.outcome.v1",
   "payment.outcome.v1"
 ]

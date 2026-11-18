@@ -30,6 +30,7 @@ use Billium\Execution\Data\ExecutionScope;
 use Billium\Execution\Data\FrozenBinding;
 use Billium\Execution\Enums\EffectKind;
 use Billium\Execution\Enums\ExecutionPhase;
+use Billium\Execution\Enums\NamespaceState;
 use Billium\Execution\Internal\Dispatch\TransportBoundary;
 use Billium\Execution\Internal\Identity\PaymentIdentity;
 use Closure;
@@ -96,12 +97,24 @@ final readonly class RootPayments implements RootPaymentCommands
     private function admitValidated(ExecutionScope $scope, ExecutePayment|AuthorizePayment $wire, FinancialScope $selected): StoredOutcome
     {
         $inputDigest = CommandInputReplay::digest($wire);
-        $cached = $this->inputReplay->find($selected, $wire::SCHEMA, PaymentIdentity::commandKey($scope, 'charge', $this->sourceContext($wire), $wire->commandKey), $inputDigest);
+        $key = PaymentIdentity::commandKey($scope, 'charge', $this->sourceContext($wire), $wire->commandKey);
+        $cached = $this->inputReplay->find($selected, $wire::SCHEMA, $key, $inputDigest);
         if ($cached !== null) {
             return $cached;
         }
         $intent = is_string($wire->source->intentRef ?? null) ? $wire->source->intentRef : throw new ProblemException(ProblemCode::ValidationInvalid, 'Missing validated business intent');
         $existing = $this->store->operation($scope, $wire->operationRef);
+        if ($existing === null && $this->store->namespace($scope)->state === NamespaceState::Closed) {
+            // A recovery import can commit between the initial key read and observing namespace closure.
+            $cached = $this->inputReplay->find($selected, $wire::SCHEMA, $key, $inputDigest);
+            if ($cached !== null) {
+                return $cached;
+            }
+            $existing = $this->store->operation($scope, $wire->operationRef);
+            if ($existing === null) {
+                throw new ProblemException(ProblemCode::KeyExpired, 'The closed business namespace has no retained original identity');
+            }
+        }
         $origin = $existing === null ? ($this->origins)()->resolve($scope, $wire->operationRef, $intent)
             : ($existing->binding->origin ?? throw new ProblemException(ProblemCode::RecoveryRequired, 'Stored original has no verified commercial basis'));
         if (get_object_vars($origin->scope) !== get_object_vars($scope) || $origin->operationRef !== $wire->operationRef || $origin->businessIntentRef !== $wire->source->intentRef

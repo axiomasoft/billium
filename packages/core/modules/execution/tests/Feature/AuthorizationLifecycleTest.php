@@ -417,7 +417,9 @@ final class AuthorizationLifecycleTest extends ExecutionTestCase
             self::assertSame(ReductionDisposition::Quarantined, $result->disposition);
             self::assertNotNull($result->discrepancyRef);
             self::assertSame(1, $this->rows('billium_execution_capacity', 'financial_hold AND held_capture_minor=80 AND confirmed_capture_minor=0'));
-            self::assertSame(1, $this->rows('billium_execution_observation_emission'));
+            self::assertSame(2, $this->rows('billium_execution_observation_emission'));
+            self::assertSame(1, $this->rows('billium_execution_observation_emission', "source_sequence=2 AND operation_ref='root-a' AND payload#>>'{capturedTotal,amount}'='0.00' AND payload#>>'{discrepancy,kind}'='unverified_actual_amount'"));
+            self::assertSame(0, $this->rows('billium_execution_provider_fact', "operation_ref='uncertain' AND normalized_snapshot->>'normalizedStatus'='succeeded'"));
             self::assertSame(1, $this->rows('billium_execution_provider_evidence', 'evidence_ref=?', [$missing->evidenceRef]));
             self::assertSame(2, UnknownResultTest::events($path, 'provider.call'));
         } finally {
