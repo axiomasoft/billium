@@ -65,6 +65,8 @@ final class DatabaseExecutionStore implements ExecutionStore
 {
     private readonly ExecutionTables $tables;
 
+    private readonly OperationRevisionLog $revisions;
+
     private readonly NamespaceStorage $namespaces;
 
     private readonly MerchantRevisionStorage $merchants;
@@ -87,15 +89,16 @@ final class DatabaseExecutionStore implements ExecutionStore
     public function __construct(DatabaseManager $databases, OperationRunner $runner, CallerContext $callers, BilliumOptions $options, private readonly FinancialSessionAdmission $sessionAdmission, ?AbsenceProofRegistry $absenceProofs = null, private readonly ?Closure $identityArchive = null, ?VerifiedReduction $verifiedReduction = null)
     {
         $this->tables = new ExecutionTables($databases, $runner, $callers, $options);
+        $this->revisions = new OperationRevisionLog($this->tables);
         $this->namespaces = new NamespaceStorage($this->tables);
         $this->merchants = new MerchantRevisionStorage($this->tables);
         $this->capacities = new CapacityStorage($this->tables);
         $this->observations = new ObservationStorage($this->tables);
         $this->custody = new ProviderCustodyStorage($this->tables);
-        $this->attempts = new AttemptStorage($this->tables, $this->merchants, $this->capacities, $sessionAdmission);
+        $this->attempts = new AttemptStorage($this->tables, $this->merchants, $this->capacities, $sessionAdmission, $this->revisions);
         $this->recoveryRecords = new RecoveryRecordStorage($this->tables);
         $this->admissions = new AdmissionStorage($this->tables, $this->merchants, $this->namespaces);
-        $this->facts = new ProviderFactStorage($this->tables, $this->merchants, $this->capacities, $this->custody, $absenceProofs, $verifiedReduction);
+        $this->facts = new ProviderFactStorage($this->tables, $this->merchants, $this->capacities, $this->custody, $absenceProofs, $verifiedReduction, $this->revisions);
     }
 
     public function plan(ExecutionScope $executionScope, string $operationRef, bool $includeChildren = false, ?TransactionContext $context = null): ExecutionLockPlan

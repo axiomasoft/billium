@@ -25,7 +25,7 @@ use stdClass;
 #[Internal]
 final readonly class AttemptStorage
 {
-    public function __construct(private ExecutionTables $tables, private MerchantRevisionStorage $merchants, private CapacityStorage $capacities, private FinancialSessionAdmission $sessionAdmission) {}
+    public function __construct(private ExecutionTables $tables, private MerchantRevisionStorage $merchants, private CapacityStorage $capacities, private FinancialSessionAdmission $sessionAdmission, private OperationRevisionLog $revisions) {}
 
     public function insertAttempt(TransactionContext $transactionContext, OperationRecord $operationRecord, string $attemptRef, string $providerReference): AttemptRecord
     {
@@ -95,13 +95,7 @@ final readonly class AttemptStorage
         $digest = PaymentIdentity::digest($material);
         $this->tables->callerQuery('operation', $context)->where('id', $current->id)->update(['state' => 'cancelled', 'revision' => $revision, 'economic_digest' => $digest]);
         $capacity = $this->capacities->capacity($context, $current->rootOperationRef);
-        $this->tables->database($context)->table('billium_execution_operation_revision')->insert($this->tables->callerScope($context) + [
-            'operation_ref' => $current->operationRef, 'revision' => $revision, 'material_digest' => $digest,
-            'requested_minor' => $current->requested->minor, 'currency' => $current->requested->currency->code,
-            'observed' => ExecutionCodec::encode($material), 'last_consistent_applied' => ExecutionCodec::encode($capacity),
-            'financial_hold' => ExecutionCodec::encode($capacity->financialHold),
-            'exposure' => '{}', 'evidence_refs' => ExecutionCodec::encode([$receiptRef]), 'receipt_ref' => $receiptRef, 'occurred_at' => new DateTimeImmutable,
-        ]);
+        $this->revisions->append($context, $current, $revision, $digest, $material, $capacity, '{}', [$receiptRef], $receiptRef, new DateTimeImmutable);
 
         return true;
     }

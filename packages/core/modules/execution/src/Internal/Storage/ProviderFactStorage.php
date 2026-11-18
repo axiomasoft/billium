@@ -31,7 +31,7 @@ use stdClass;
 #[Internal]
 final readonly class ProviderFactStorage
 {
-    public function __construct(private ExecutionTables $tables, private MerchantRevisionStorage $merchants, private CapacityStorage $capacities, private ProviderCustodyStorage $custody, private ?AbsenceProofRegistry $absenceProofs, private ?VerifiedReduction $verifiedReduction) {}
+    public function __construct(private ExecutionTables $tables, private MerchantRevisionStorage $merchants, private CapacityStorage $capacities, private ProviderCustodyStorage $custody, private ?AbsenceProofRegistry $absenceProofs, private ?VerifiedReduction $verifiedReduction, private OperationRevisionLog $revisions) {}
 
     public function lastObserved(TransactionContext $context, string $operationRef): ?MaterialSnapshot
     {
@@ -371,10 +371,7 @@ final readonly class ProviderFactStorage
         if ($updated !== 1) {
             ExecutionTables::refuse('Original operation changed during certified absence');
         }
-        $this->tables->database($context)->table('billium_execution_operation_revision')->insert($this->tables->callerScope($context) + ['operation_ref' => $operation->operationRef,
-            'revision' => $revision, 'material_digest' => $digest, 'requested_minor' => $operation->requested->minor, 'currency' => $operation->requested->currency->code,
-            'observed' => ExecutionCodec::encode($decision), 'last_consistent_applied' => ExecutionCodec::encode($capacity), 'financial_hold' => ExecutionCodec::encode($capacity->financialHold),
-            'exposure' => '{}', 'evidence_refs' => ExecutionCodec::encode([$claim->evidenceRef]), 'receipt_ref' => $claim->workRef, 'occurred_at' => $now]);
+        $this->revisions->append($context, $operation, $revision, $digest, $decision, $capacity, '{}', [$claim->evidenceRef], $claim->workRef, $now);
     }
 
     private function hasGreaterActual(TransactionContext $context, string $operationRef, int $minor): bool
@@ -462,7 +459,8 @@ final readonly class ProviderFactStorage
         } elseif (ExecutionCodec::differs($materialChange->capacity, $currentCapacity)) {
             ExecutionTables::refuse('Material revision differs from unchanged capacity version');
         }
-        $this->tables->database($transactionContext)->table('billium_execution_operation_revision')->insert($this->tables->callerScope($transactionContext) + ['operation_ref' => $a->operationRef, 'revision' => $a->revision, 'material_digest' => $a->economicDigest, 'requested_minor' => $a->requested->minor, 'currency' => $a->requested->currency->code, 'observed' => ExecutionCodec::encode($materialChange->observed), 'last_consistent_applied' => ExecutionCodec::encode($materialChange->capacity), 'financial_hold' => ExecutionCodec::encode($materialChange->capacity->financialHold), 'exposure' => $this->exposure($materialChange), 'evidence_refs' => ExecutionCodec::encode($materialChange->observed->evidenceRefs), 'receipt_ref' => $receiptRef, 'occurred_at' => $materialChange->observed->observedAt]);
+        $this->revisions->append($transactionContext, $a, $a->revision, $a->economicDigest, $materialChange->observed, $materialChange->capacity,
+            $this->exposure($materialChange), $materialChange->observed->evidenceRefs, $receiptRef, $materialChange->observed->observedAt);
     }
 
     public function appendDiscrepancy(TransactionContext $transactionContext, string $ref, MaterialChange $materialChange): void
@@ -519,10 +517,7 @@ final readonly class ProviderFactStorage
             ExecutionTables::refuse('Root changed before recording the financial hold');
         }
         $this->capacities->write($context, $held, $current->version);
-        $db->table('billium_execution_operation_revision')->insert($scope + ['operation_ref' => $root->operationRef, 'revision' => $revision,
-            'material_digest' => $digest, 'requested_minor' => $root->requested->minor, 'currency' => $root->requested->currency->code,
-            'observed' => ExecutionCodec::encode($decision), 'last_consistent_applied' => ExecutionCodec::encode($held), 'financial_hold' => 'true',
-            'exposure' => $exposure, 'evidence_refs' => $evidence, 'receipt_ref' => $claim->workRef, 'occurred_at' => new DateTimeImmutable]);
+        $this->revisions->append($context, $root, $revision, $digest, $decision, $held, $exposure, $conflict->evidenceRefs, $claim->workRef, new DateTimeImmutable);
 
         return $this->tables->admittedOperation($context, $root->operationRef);
     }
