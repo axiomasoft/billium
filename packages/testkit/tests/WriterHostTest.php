@@ -44,6 +44,7 @@ final class WriterHostTest extends TestCase
         $ticket = new DispatchTicket('forged', $claims, 'simulated-writer-host.v1', $this->clock->now, $this->clock->now->modify('+30 seconds'), 'forged', 'forged', 'forged');
         $this->host->openSession($claims);
         $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Unissued, changed or expired simulated ticket');
         $this->host->verify($ticket, $claims);
     }
 
@@ -90,6 +91,7 @@ final class WriterHostTest extends TestCase
         self::assertSame(1, $sends);
         $restarted = new DeterministicWriterHost(new DurableJournal($this->path), $this->clock, static fn (): int => 0);
         $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Retired simulated session');
         $restarted->openSession($claims);
         $restarted->ticket($claims);
     }

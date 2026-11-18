@@ -48,6 +48,7 @@ final class ExternalJournalTest extends TestCase
         self::assertCount(1, array_filter($journal->records(), static fn (object $r): bool => $r instanceof ReceiverReceipt));
         self::assertCount(2, array_filter($journal->records(), static fn (object $r): bool => $r instanceof JournalEvent));
         $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Receiver immutable revision conflict');
         $restored->deliver(new ReceiverReceipt('event-b', 'root-a', 1, 'conflict', 200, 20, ProcessIdentity::current()));
     }
 
@@ -76,6 +77,7 @@ final class ExternalJournalTest extends TestCase
             self::assertSame(100, $oracle->totals('root')['authorized']);
         }
         $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Conflicting oracle fact');
         $oracle->observe('root', 'auth', ['authorized' => 101, 'captured' => 0, 'refunded' => 0, 'voided' => 0]);
     }
 
@@ -111,6 +113,7 @@ final class ExternalJournalTest extends TestCase
         $journal = new DurableJournal($this->directory.'/corrupt.log');
         file_put_contents($journal->path, "partial-write\n");
         $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Corrupt external journal');
         $journal->records();
     }
 }
