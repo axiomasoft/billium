@@ -44,6 +44,19 @@ final class CustodyProcessorTest extends InboxTestCase
         self::assertSame([1, 1, 'active', 'L1', 1], [$partition['custody_sequence'], $partition['accounted_sequence'], $partition['state'], $partition['source_lineage'], $partition['generation']]);
     }
 
+    public function test_a_digest_with_a_trailing_newline_is_refused_before_custody(): void
+    {
+        $envelope = $this->envelope(1);
+        $envelope->contentDigest = self::text($envelope->contentDigest)."\n";
+        try {
+            $this->custody($envelope, new JournalHandler);
+            self::fail('A malformed contentDigest must be refused as invalid input');
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::ValidationInvalid, $error->problem);
+        }
+        self::assertSame(0, $this->rows('billium_inbox_message'));
+    }
+
     public function test_a_duplicate_returns_the_same_result_ref_without_a_second_effect(): void
     {
         $handler = new JournalHandler;

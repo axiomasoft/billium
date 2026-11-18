@@ -31,7 +31,7 @@ final readonly class CloseSettlementIntentNoEffect
         if ($settlementIntentRef === '' || $stepAuthorizationRef === '' || $closureRef === '' || $cause === '') {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'intent, step authorization, closure and cause are required');
         }
-        if ($expectedRevision < 1 || preg_match('/^[A-Z]{3}$/', $currency) !== 1) {
+        if ($expectedRevision < 1 || preg_match('/^[A-Z]{3}$/D', $currency) !== 1) {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'expected revision and ISO currency are required');
         }
     }
