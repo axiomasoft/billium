@@ -16,8 +16,10 @@ use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
 use Billium\Core\Data\Runner\StoredOutcome;
 use Billium\Core\Data\Runtime\Caller;
+use Billium\Core\Data\Runtime\FinancialScope;
 use Billium\Core\Tests\Support\FixedCallerContext;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Ledger\Contracts\Ledger;
 use Billium\Ledger\Contracts\LedgerQueries;
@@ -316,11 +318,23 @@ final class LedgerAdapter
             $registrar->register($registrar->plan($descriptor, true));
         }
         $ref = $this->callers->current()->installationRef;
+        // Each reset starts a separate fixture history, including the simulated host's signed journal.
+        SimulatedFinancialAuthorityEvidence::reset();
+        $app->forgetInstance(SimulatedFinancialAuthorityEvidence::class);
+        $authority = SimulatedFinancialAuthorityEvidence::install($app);
         $installation = $app->make(Installation::class);
         $installation->init($ref);
+        $authority->issueTransition('open', 'open-1', ['owner-1', 1, 1, 1, 'evidence:conformance-open']);
         $installation->openSession('open-1', 'owner-1', 1, 1, 1, 'evidence:conformance-open');
+        $authority->issueTransition('activate', 'activate-1', [1, 'certificate:conformance', 'admission:conformance', 'evidence:conformance-activate']);
         $installation->activateSession('activate-1', 1, 'certificate:conformance', 'admission:conformance', 'evidence:conformance-activate');
-        $app->instance(FinancialSessionAdmission::class, new FixedSessionAdmission(FixedSessionAdmission::token($ref)));
+        $token = FixedSessionAdmission::token($ref);
+        // The ledger vectors use two independently admitted sellers; changing the caller never issues a grant.
+        $authority->issueProcess($token, [
+            new FinancialScope($ref, 'seller-a', 'test', null),
+            new FinancialScope($ref, 'seller-b', 'test', null),
+        ]);
+        $app->instance(FinancialSessionAdmission::class, new FixedSessionAdmission($token));
     }
 
     /** @return array<string, mixed> */

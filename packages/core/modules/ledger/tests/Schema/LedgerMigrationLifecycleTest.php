@@ -36,6 +36,7 @@ final class LedgerMigrationLifecycleTest extends LedgerTestCase
         $migrations = array_map(static fn (MigrationIdentity $migration): string => $migration->id, $ledger->migrationIdentities);
         for ($pass = 0; $pass < 2; $pass++) {
             $owner->getPdo()->exec('DROP TABLE '.implode(', ', $tables).' CASCADE');
+            TestEnvironment::prepareLedgerRebuild($owner);
             $owner->table('migrations')->whereIn('migration', $migrations)->delete();
             $command = $this->artisan('migrate', ['--database' => 'billium_owner', '--force' => true]);
             self::assertInstanceOf(PendingCommand::class, $command);

@@ -33,11 +33,12 @@ final class RuntimeGrantsTest extends PlatformTestCase
         self::assertNotSame($runtimeRole, self::pdoValue(TestEnvironment::pdo(owner: true), 'SELECT current_user'));
 
         // The suite lease isolates this throwaway test database; rebuild so old grants cannot hide an omission.
-        // Laravel's migrate:fresh drops tables, but retains standalone PostgreSQL trigger functions: every migration
-        // creates its functions with CREATE OR REPLACE, so the retained ones must not break the rebuild.
+        // Retain the historical PostgreSQL functions and give the forward-only P5 additions a fresh installation.
+        TestEnvironment::prepareFreshRebuild($this->application());
+        $this->beforeApplicationDestroyed(fn () => TestEnvironment::restoreSuiteMigrations($this->application()));
         $migration = $this->artisan('migrate:fresh', ['--database' => 'billium_owner', '--force' => true]);
         self::assertInstanceOf(PendingCommand::class, $migration);
-        $migration->assertExitCode(0);
+        self::assertSame(0, $migration->run());
         self::assertSame('pgsql', config('database.default'));
         self::assertSame($runtimeRole, RuntimeGrants::role());
         TestEnvironment::assertRuntimeSafe($runtime);

@@ -4,7 +4,14 @@ declare(strict_types=1);
 
 namespace Billium\Core\Tests;
 
+use Billium\Core\Internal\Modules\ModuleCatalog;
 use Billium\Core\Tests\Arch\MigrationTables;
+use Illuminate\Contracts\Config\Repository;
+use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Database\Connection;
+use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Events\MigrationsStarted;
 use Illuminate\Foundation\Application;
 use PDO;
 use PDOException;
@@ -24,6 +31,105 @@ final class TestEnvironment
     private static bool $preflightVerified = false;
 
     private const string SUITE_LEASE_ENV = 'BILLIUM_TEST_SUITE_LEASE';
+
+    // These two forward-only P5 routines are created with a new identity when ledger tables are rebuilt.
+    private const string LEDGER_REBUILD_ROUTINES = <<<'SQL'
+        public.billium_claim_observation_owner(text,text,text,text,text,text,text,text,jsonb),
+        public.billium_prove_observation_revision(text,text,text,text,text,text,text,text,jsonb,text)
+        SQL;
+
+    // Only P5 routines whose migrations use plain CREATE FUNCTION. All replaceable routines retain their OIDs.
+    private const string FRESH_REBUILD_ROUTINES = <<<'SQL'
+        public.billium_qualified_retirement_guard(),
+        public.billium_idempotency_scope_immutable(),
+        public.billium_idempotency_input_digest_immutable(),
+        public.billium_receipt_original_execution_binding_immutable(),
+        public.billium_execution_immutable(),
+        public.billium_execution_reservation_guard(),
+        public.billium_execution_merchant_policy_guard(),
+        public.billium_execution_operation_binding_guard(),
+        public.billium_execution_credential_identity_guard(),
+        public.billium_execution_attempt_identity_guard(),
+        public.billium_execution_capability_identity_guard(),
+        public.billium_execution_emission_root_guard(),
+        public.billium_execution_emission_complete_guard(),
+        public.billium_execution_reservation_proof_guard(),
+        public.billium_execution_root_identity_guard(),
+        public.billium_execution_business_identity_digest(text,text,text,text,text),
+        public.billium_execution_provider_identity_key(text,text,text,text,text),
+        public.billium_execution_accept_provider_fact(jsonb,jsonb),
+        public.billium_execution_reservation_actual_guard(),
+        public.billium_execution_child_operation_guard(),
+        public.billium_execution_authorization_release_guard()
+        SQL;
+
+    public static function prepareFreshRebuild(Application $app): void
+    {
+        // migrate:fresh drops every table but keeps standalone PostgreSQL functions. Wait for the actual wipe.
+        $pending = true;
+        $app->make(Dispatcher::class)->listen(MigrationsStarted::class, static function () use ($app, &$pending): void {
+            if (! $pending) {
+                return;
+            }
+            $pending = false;
+            $owner = $app->make(DatabaseManager::class)->connection('billium_owner');
+            self::assertRebuildOwner($owner);
+            if ($owner->scalar(<<<'SQL'
+                SELECT EXISTS (SELECT FROM public.migrations) OR EXISTS (
+                    SELECT FROM pg_tables WHERE schemaname='public' AND tablename <> 'migrations')
+                SQL) !== false) {
+                throw new RuntimeException('Fresh rebuild requires an empty migration repository after the table wipe');
+            }
+            $owner->unprepared('DROP FUNCTION IF EXISTS '.self::LEDGER_REBUILD_ROUTINES.', '.self::FRESH_REBUILD_ROUTINES.' RESTRICT');
+        });
+    }
+
+    public static function prepareLedgerRebuild(Connection $owner): void
+    {
+        self::assertRebuildOwner($owner);
+        if ($owner->scalar(<<<'SQL'
+            SELECT to_regclass('public.billium_observation_owner_binding') IS NOT NULL
+                OR to_regclass('public.billium_observed_revision_owner_proof') IS NOT NULL
+            SQL) !== false) {
+            throw new RuntimeException('Ledger rebuild requires the owner and revision proof tables to have been dropped');
+        }
+        $owner->unprepared('DROP FUNCTION IF EXISTS '.self::LEDGER_REBUILD_ROUTINES.' RESTRICT');
+    }
+
+    private static function assertRebuildOwner(Connection $owner): void
+    {
+        self::acquireSuiteLease();
+        if ($owner->scalar('SELECT current_database() = ? AND current_user = ?', [
+            self::databaseName(), self::required('DB_OWNER_USERNAME'),
+        ]) !== true) {
+            throw new RuntimeException('Fixture rebuild requires the owner of the leased test database');
+        }
+    }
+
+    public static function restoreSuiteMigrations(Application $app): void
+    {
+        $owner = $app->make(DatabaseManager::class)->connection('billium_owner');
+        self::assertRebuildOwner($owner);
+        $paths = [];
+        $expected = [];
+        foreach (ModuleCatalog::packaged()->manifest()->modules as $module) {
+            foreach ($module->migrationIdentities as $migration) {
+                $paths[] = dirname(__DIR__).'/database/migrations/'.$module->moduleId.'/'.$migration->id.'.php';
+                $expected[] = $migration->id;
+            }
+        }
+        // End the host-specific grant probe before restoring the shared fixture. Laravel switches its default
+        // connection to the migration owner while the P4 migrations choose their grant recipient.
+        $app->make(Repository::class)->set('billium.connection', 'pgsql');
+        $exit = $app->make(Kernel::class)->call('migrate', [
+            '--database' => 'billium_owner', '--force' => true, '--realpath' => true, '--path' => $paths,
+        ]);
+        sort($expected, SORT_STRING);
+        if ($exit !== 0 || $owner->table('migrations')->orderBy('migration')->pluck('migration')->all() !== $expected) {
+            throw new RuntimeException('Fixture rebuild did not restore the complete registered migration set');
+        }
+        self::assertRuntimeSafe($app->make(DatabaseManager::class)->connection('pgsql')->getPdo());
+    }
 
     public static function configure(Application $app): void
     {

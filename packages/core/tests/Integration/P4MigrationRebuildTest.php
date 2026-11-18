@@ -17,6 +17,8 @@ final class P4MigrationRebuildTest extends RatingTestCase
         $before = $this->functions();
         self::assertCount(6, $before);
         $root = dirname(__DIR__, 4);
+        TestEnvironment::prepareFreshRebuild($this->application());
+        $this->beforeApplicationDestroyed(fn () => TestEnvironment::restoreSuiteMigrations($this->application()));
         $fresh = $this->artisan('migrate:fresh', [
             '--database' => 'billium_owner', '--force' => true, '--realpath' => true,
             '--path' => [$root.'/packages/core/database/migrations/platform', $root.'/packages/core/database/migrations/ledger'],

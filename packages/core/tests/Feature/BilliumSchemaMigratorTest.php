@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Billium\Core\Tests\Feature;
 
+use Billium\Core\Contracts\Modules\ModuleRegistry;
+use Billium\Core\Data\Modules\MigrationIdentity;
 use Billium\Core\Tests\DatabaseTestCase;
 use Packman\Schema\Contracts\Migration\SchemaMigrator;
 use Packman\Schema\Enums\SchemaScope;
@@ -17,18 +19,28 @@ final class BilliumSchemaMigratorTest extends DatabaseTestCase
 
     public function test_packman_schema_migrator_tracks_billium_platform_and_ledger_sets(): void
     {
+        self::assertNotNull($this->app);
         $statuses = $this->app->make(SchemaMigrator::class)->status(SchemaScope::Central, 'billium_owner');
         $byId = [];
         foreach ($statuses as $status) {
             $byId[$status->set->id()] = $status;
         }
 
-        self::assertArrayHasKey('axiomasoft/billium-core:billium-platform', $byId);
-        self::assertArrayHasKey('axiomasoft/billium-core:billium-ledger', $byId);
+        $modules = $this->app->make(ModuleRegistry::class);
+        foreach (['platform', 'ledger'] as $module) {
+            $setId = 'axiomasoft/billium-core:billium-'.$module;
+            self::assertArrayHasKey($setId, $byId);
+            $descriptor = $modules->descriptor($module);
+            self::assertNotNull($descriptor);
 
-        self::assertSame([], $byId['axiomasoft/billium-core:billium-platform']->pending);
-        self::assertSame([], $byId['axiomasoft/billium-core:billium-ledger']->pending);
-        self::assertCount(16, $byId['axiomasoft/billium-core:billium-platform']->applied);
-        self::assertCount(10, $byId['axiomasoft/billium-core:billium-ledger']->applied);
+            $expected = array_map(static fn (MigrationIdentity $identity): string => $identity->id, $descriptor->migrationIdentities);
+            $applied = $byId[$setId]->applied;
+            sort($expected, SORT_STRING);
+            sort($applied, SORT_STRING);
+            self::assertNotEmpty($expected, $setId);
+            self::assertSame($expected, $applied, $setId);
+            self::assertSame([], $byId[$setId]->pending, $setId);
+            self::assertSame([], $byId[$setId]->unknown, $setId);
+        }
     }
 }

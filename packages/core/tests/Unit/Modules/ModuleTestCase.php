@@ -6,6 +6,7 @@ namespace Billium\Core\Tests\Unit\Modules;
 
 use Billium\Core\Data\Modules\CompatibilityInput;
 use Billium\Core\Data\Modules\InstalledCheckpoint;
+use Billium\Core\Data\Modules\MigrationIdentity;
 use Billium\Core\Data\Modules\ModuleManifest;
 use Billium\Core\Data\Modules\ModuleState;
 use Billium\Core\Enums\Modules\ModuleLifecycleState;
@@ -19,7 +20,17 @@ abstract class ModuleTestCase extends TestCase
     /** Host ports the default embedded-commerz composition needs. */
     protected const array LEDGER_PORTS = ['AuthContext', 'SellerContext', 'AuthorizationVerdict', 'FinancialSessionAdmission', 'FinancialAuthorityEvidence'];
 
-    protected const array EXECUTION_PORTS = ['PaymentDrivers', 'WriterAdmission', 'PaymentObservationSink', 'DispatchEgress', 'MerchantCredentials', 'ProviderAbsenceVerifier', 'ExecutionOriginResolver', 'AdapterQualification'];
+    protected const array EXECUTION_PORTS = [
+        'PaymentDrivers',
+        'WriterAdmission',
+        'PaymentObservationSink',
+        'DispatchEgress',
+        'MerchantCredentials',
+        'ProviderAbsenceVerifier',
+        'ExecutionOriginResolver',
+        'AdapterQualification',
+        'ExecutionReadiness',
+    ];
 
     /** @return array<string, mixed> */
     protected static function document(): array
@@ -86,7 +97,7 @@ abstract class ModuleTestCase extends TestCase
                 $checkpoints[$module] = new InstalledCheckpoint(
                     $module,
                     $descriptor->currentSchemaVersion,
-                    array_map(static fn ($migration): string => $migration->id, $descriptor->migrationIdentities),
+                    array_map(static fn (MigrationIdentity $migration): string => $migration->id, $descriptor->migrationIdentities),
                 );
             }
         }

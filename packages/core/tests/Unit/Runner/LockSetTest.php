@@ -23,7 +23,7 @@ final class LockSetTest extends TestCase
     public function test_rank_values_follow_the_single_global_order(): void
     {
         $values = array_map(static fn (LockRank $rank): int => $rank->value, LockRank::cases());
-        self::assertSame([10, 15, 20, 25, 30, 35, 40, 44, 45, 50, 60, 65, 70, 80, 90, 100, 110, 115, 120, 130], $values);
+        self::assertSame([10, 15, 20, 25, 27, 28, 30, 35, 40, 44, 45, 50, 60, 65, 70, 80, 90, 100, 110, 115, 120, 130], $values);
         $sorted = $values;
         sort($sorted);
         self::assertSame($sorted, $values, 'cases are declared in lock order');
