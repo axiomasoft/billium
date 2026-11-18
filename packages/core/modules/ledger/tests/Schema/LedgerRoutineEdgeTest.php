@@ -23,6 +23,18 @@ final class LedgerRoutineEdgeTest extends LedgerTestCase
         self::assertSame(0, $this->rows('billium_discrepancy_event', "kind='resolved'"));
     }
 
+    public function test_a_credit_note_keeps_a_cancelled_obligation_cancelled(): void
+    {
+        $o = $this->obligation();
+        $invoice = $this->invoice($o);
+        $this->owner()->update("UPDATE billium_obligation SET status='cancelled',revision=revision+1");
+        $this->creditNote($invoice, $o, 1000, 'open_only');
+        self::assertSame(1000, self::integer($this->value('SELECT credited_minor FROM billium_obligation')));
+        self::assertSame(0, self::integer($this->value('SELECT open_minor FROM billium_obligation')));
+        self::assertSame('cancelled', $this->value('SELECT status FROM billium_obligation'));
+        self::assertSame('paid', $this->value('SELECT status FROM billium_invoice'));
+    }
+
     private function observedCharge(): int
     {
         return self::integer($this->value(<<<'SQL'
@@ -44,6 +56,13 @@ final class LedgerRoutineEdgeTest extends LedgerTestCase
     private function reconcile(int $payment, ?int $chargeRefunded, ?int $detailRefunded): array
     {
         return $this->routine('reconcile_refund_basis', ['inst-test', 'seller-a', 'test', $payment, 1, self::digest('c'), 1, $chargeRefunded, $detailRefunded, 'evidence']);
+    }
+
+    /** @return array<string,mixed> */
+    private function creditNote(int $invoice, int $obligation, int $amount, string $mode): array
+    {
+        return $this->routine('issue_credit_note', [...$this->scopeArguments(), $invoice, 'cn-a', $mode,
+            json_encode([['obligation_id' => $obligation, 'amount_minor' => $amount]], JSON_THROW_ON_ERROR), 'reason', null, self::digest('d')]);
     }
 
     /** @param callable(): array<string,mixed> $call */

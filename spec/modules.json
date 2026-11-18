@@ -437,14 +437,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "ledger",
-      "currentSchemaVersion": 13,
+      "currentSchemaVersion": 14,
       "supportedSchemaReadRange": {
-        "min": 13,
-        "max": 13
+        "min": 14,
+        "max": 14
       },
       "supportedSchemaWriteRange": {
-        "min": 13,
-        "max": 13
+        "min": 14,
+        "max": 14
       },
       "requiresModules": [
         {
@@ -561,6 +561,11 @@
           "id": "2026_11_18_030001_refuse_missing_billium_refund_basis_totals",
           "version": 13,
           "checksum": "sha256:24263cf2a79eba6eba933436d251ad035b2f07e078dc00122b5851a97da5bb1f"
+        },
+        {
+          "id": "2026_11_18_030002_keep_cancelled_billium_obligation_on_credit_note",
+          "version": 14,
+          "checksum": "sha256:81920eea0a4c3a77958d9a2bb49d4a0128ca86fbafd90014144231ed65b2f7d1"
         }
       ],
       "disablePolicy": {

@@ -79,5 +79,6 @@
   "2026_11_18_010007_validate_command_input_digest",
   "2026_11_18_010008_retain_original_execution_binding",
   "2026_11_18_010009_validate_original_execution_binding",
-  "2026_11_18_030001_refuse_missing_billium_refund_basis_totals"
+  "2026_11_18_030001_refuse_missing_billium_refund_basis_totals",
+  "2026_11_18_030002_keep_cancelled_billium_obligation_on_credit_note"
 ]
