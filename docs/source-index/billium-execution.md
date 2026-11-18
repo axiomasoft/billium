@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-execution
 
-Path `packages/core/modules/execution/src`, namespace `Billium\Execution\`, layer L2. 166 types.
+Path `packages/core/modules/execution/src`, namespace `Billium\Execution\`, layer L2. 167 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -283,6 +283,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`ExecutionTables`](../../packages/core/modules/execution/src/Internal/Storage/ExecutionTables.php) | class | *Internal* | Scope-checked access to the execution tables plus the per-transaction row-lock ledger. |
 | [`MerchantRevisionStorage`](../../packages/core/modules/execution/src/Internal/Storage/MerchantRevisionStorage.php) | class | *Internal* | Merchant revisions and the capability snapshots they bind; written only from administrative roots. |
 | [`ObservationStorage`](../../packages/core/modules/execution/src/Internal/Storage/ObservationStorage.php) | class | *Internal* | Observation partitions, their source sequences and the emissions published from them. |
+| [`RecoveryRecordStorage`](../../packages/core/modules/execution/src/Internal/Storage/RecoveryRecordStorage.php) | class | *Internal* | Reconciliation runs and repair receipts recorded against an original root. |
 
 ## Laravel
 
