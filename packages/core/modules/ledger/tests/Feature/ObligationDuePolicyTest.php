@@ -159,6 +159,24 @@ final class ObligationDuePolicyTest extends LedgerTestCase
         self::assertSame(['precise'], array_column(self::arr($result['obligations']), 'obligationRef'));
     }
 
+    public function test_the_same_due_instant_in_another_offset_replays_the_creation_and_the_amendment(): void
+    {
+        $utc = new DateTimeImmutable('2026-10-28T10:00:00Z');
+        $local = new DateTimeImmutable('2026-10-28T13:00:00+03:00');
+        $make = fn (string $key, DateTimeImmutable $due): RecordObligation => new RecordObligation($key, $this->account(), 'offset', 'offset-basis',
+            'customer', 'component', Money::parse('1.00', 'RUB'), self::digest(), duePolicy: new ObligationDuePolicy($due, 'host/1', 'policy', self::digest(), $due));
+        $created = $this->ledger()->recordObligation($make('offset-utc', $utc))->orThrow();
+        $replay = $this->ledger()->recordObligation($make('offset-local', $local))->orThrow();
+        self::assertSame($created->body, $replay->body);
+
+        $amend = fn (DateTimeImmutable $due): AmendObligationDuePolicy => new AmendObligationDuePolicy('offset-amend', $this->account(), 'offset',
+            new ObligationDuePolicy($due->modify('+1 day'), 'host/2', 'amended', self::digest('b')));
+        $amended = $this->ledger()->amendObligationDuePolicy($amend($utc))->orThrow();
+        self::assertSame($amended->body, $this->ledger()->amendObligationDuePolicy($amend($local))->orThrow()->body);
+        self::assertSame(1, $this->rows('billium_allocation_receipt', "kind='obligation'"));
+        self::assertSame(1, $this->rows('billium_allocation_receipt', "kind='obligation_due_policy'"));
+    }
+
     /** @return array<string, mixed> */
     private function queriesReceipt(string $ref): array
     {

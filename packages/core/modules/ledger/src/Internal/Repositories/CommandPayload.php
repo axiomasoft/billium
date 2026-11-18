@@ -15,6 +15,8 @@ use Billium\Ledger\Data\Obligations\AmendObligationDuePolicy;
 use Billium\Ledger\Data\Obligations\ObligationDuePolicy;
 use Billium\Ledger\Data\Obligations\RecordObligation;
 use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
+use DateTimeImmutable;
+use DateTimeZone;
 use LogicException;
 use Packman\Attributes\Internal;
 
@@ -33,10 +35,10 @@ final class CommandPayload
         if (isset($values['duePolicy']) && $values['duePolicy'] instanceof ObligationDuePolicy) {
             $policy = $values['duePolicy'];
             $values['duePolicy'] = [
-                'dueAt' => $policy->dueAt?->format('Y-m-d\TH:i:s.uP'),
+                'dueAt' => self::instant($policy->dueAt),
                 'version' => $policy->duePolicyVersion, 'source' => $policy->sourcePolicyRef,
                 'digest' => $policy->sourcePolicySnapshotDigest,
-                'eligibleAt' => $policy->collectionEligibleAt?->format('Y-m-d\TH:i:s.uP'),
+                'eligibleAt' => self::instant($policy->collectionEligibleAt),
             ];
         }
 
@@ -49,6 +51,12 @@ final class CommandPayload
         }
 
         return $payload;
+    }
+
+    /** The digest names the instant, not the offset it was written in: the same due time replays from any timezone. */
+    private static function instant(?DateTimeImmutable $time): ?string
+    {
+        return $time?->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.uP');
     }
 
     public static function digest(RecordObligation|AdjustObligation|AmendObligationDuePolicy|RecordCustomerCredit|DeclareSettlementIntent $command): string
