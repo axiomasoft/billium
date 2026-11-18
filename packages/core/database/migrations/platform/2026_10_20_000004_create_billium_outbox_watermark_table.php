@@ -10,7 +10,7 @@ return new class extends PackmanMigration
 {
     public function up(): void
     {
-        // D52: conservative replay floor per scope, not a proof that deleted rows formed a prefix; prune advances it.
+        // D52: conservative replay floor per scope, not a proof that deleted rows formed a prefix; prune is P3.4.
         DB::unprepared(<<<'SQL'
             CREATE TABLE public.billium_outbox_watermark (
                 id bigint PRIMARY KEY CHECK (id >= 1),
