@@ -23,9 +23,10 @@ use Billium\Rating\Internal\Canonical\CanonicalJson;
 use Billium\Rating\Internal\Proration\QuantitySnapshotScope;
 use Billium\Rating\Internal\Storage\RatingRows;
 use Billium\Rating\Internal\Storage\RatingStore;
+use Billium\Rating\Internal\Time\Micros;
+use Billium\Schedule\Enums\OccurrenceState;
 use Billium\Usage\Contracts\AggregationQueries;
 use Billium\Usage\Data\WindowSelector;
-use DateTimeImmutable;
 use LogicException;
 use Packman\Attributes\Internal;
 use Throwable;
@@ -43,13 +44,13 @@ final readonly class FrozenInputsBuilder
             throw new LogicException('Rating preparation must run outside the root transaction');
         }
         $occurrence = $this->schedule->occurrence($command->occurrenceRef);
-        if (! in_array($occurrence['state'], ['planned', 'rated'], true) || $occurrence['inputs_digest'] !== $command->occurrenceInputsDigest
+        if (! in_array($occurrence->state, [OccurrenceState::Planned, OccurrenceState::Rated], true) || $occurrence->inputsDigest !== $command->occurrenceInputsDigest
             || $command->components === [] || count($command->components) > 100) {
             RatingComputation::refuse('occurrence_not_bookable');
         }
         $caller = $this->callers->current();
-        if ($occurrence['state'] === 'rated') {
-            $existing = $this->store->basis(RatingRows::text($occurrence['rated_basis_ref'] ?? null));
+        if ($occurrence->state === OccurrenceState::Rated) {
+            $existing = $this->store->basis(RatingRows::text($occurrence->ratedBasisRef));
             if ($existing === null) {
                 return new RatingHold(reason: HoldReason::UnknownPolicy, repairOrReplayRefs: [$command->occurrenceRef], detail: 'rated occurrence has no retained basis');
             }
@@ -86,8 +87,8 @@ final readonly class FrozenInputsBuilder
 
             return $retained;
         }
-        $start = ScheduleOccurrenceAdapter::micros(RatingRows::text($occurrence['period_start']));
-        $end = ScheduleOccurrenceAdapter::micros(RatingRows::text($occurrence['period_end']));
+        $start = Micros::of($occurrence->periodStart);
+        $end = Micros::of($occurrence->periodEnd);
         $components = $command->components;
         usort($components, static fn (array $a, array $b): int => strcmp($a['componentRef'], $b['componentRef']));
         $aggregates = $prices = $taxes = [];
@@ -103,7 +104,7 @@ final readonly class FrozenInputsBuilder
             $fixed = $component['snapshotRef'] === 'fixed';
             $approved = $quantitySnapshot !== null && ($fixed || $component['snapshotRef'] === ($quantitySnapshot['snapshotRef'] ?? null) || $this->usage === null);
             if ($fixed || $approved) {
-                if ($component['componentRef'] !== $occurrence['component_ref']) {
+                if ($component['componentRef'] !== $occurrence->componentRef) {
                     RatingComputation::refuse('fixed_input_scope_mismatch');
                 }
                 $group = RatingRows::map(json_decode($command->attribution, true, 32, JSON_THROW_ON_ERROR));
@@ -161,7 +162,7 @@ final readonly class FrozenInputsBuilder
             try {
                 $tax = $this->tax->resolve(new TaxResolutionRequest(sellerRef: $caller->sellerRef, environment: $caller->environment,
                     billingAccountRef: $command->billingAccountRef, jurisdictionHint: $command->jurisdictionHint,
-                    componentRef: $component['componentRef'], currency: $currency, taxPoint: new DateTimeImmutable(RatingRows::text($occurrence['period_end'])),
+                    componentRef: $component['componentRef'], currency: $currency, taxPoint: $occurrence->periodEnd,
                     inputDigest: $taxInputDigest));
                 if ($tax->inputDigest !== $taxInputDigest) {
                     RatingComputation::refuse('tax_input_mismatch');

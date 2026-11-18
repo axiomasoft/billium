@@ -51,9 +51,10 @@ use Billium\Rating\Internal\Storage\CorrectionStore;
 use Billium\Rating\Internal\Storage\RatingRows;
 use Billium\Rating\Internal\Storage\RatingStore;
 use Billium\Rating\Internal\Storage\TaxPolicyFrontier;
+use Billium\Rating\Internal\Time\Micros;
 use Billium\Schedule\Contracts\CorrectionParticipants;
 use Billium\Schedule\Data\Commands\RegisterCorrectionChild;
-use DateTimeImmutable;
+use Billium\Schedule\Enums\OccurrenceState;
 use LogicException;
 use Packman\Attributes\Internal;
 
@@ -132,7 +133,7 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
                     correctionRef: $in->occurrenceRef, revision: $c->correctionRevision);
                 $child = $this->schedule->registerCorrectionChild(context: $context, command: new RegisterCorrectionChild(
                     sellerRef: $in->sellerRef, environment: $in->environment, parentOccurrenceRef: $in->occurrenceRef,
-                    originalPeriodStart: self::instant($in->periodStartMicros), originalPeriodEnd: self::instant($in->periodEndMicros),
+                    originalPeriodStart: Micros::instant($in->periodStartMicros), originalPeriodEnd: Micros::instant($in->periodEndMicros),
                     correctionRevision: $c->correctionRevision, predecessorRevision: $c->correctionRevision === 1 ? null : $c->correctionRevision - 1,
                     predecessorRatedBasisRef: $c->predecessorBasisRef, sourceFrontierDigest: $c->sourceFrontierDigest,
                     expectedHeadRevision: $p->expectedScheduleHeadRevision, expectedHeadFrontierDigest: $p->expectedScheduleHeadFrontierDigest,
@@ -231,7 +232,7 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
         $originalDraft = $this->store->draft($original);
         $occurrence = $this->occurrences->occurrence($in->occurrenceRef);
         if ($booking === null
-            || ! ($occurrence['state'] === 'obligated' && $booking->outcome === 'booked' && is_string($booking->obligation_ref)) && ! ($occurrence['state'] === 'rated' && $booking->outcome === 'no_charge' && $booking->obligation_ref === null && $originalDraft->chargeKind->value === 'no_charge' && $originalDraft->grossMinor === '0')
+            || ! ($occurrence->state === OccurrenceState::Obligated && $booking->outcome === 'booked' && is_string($booking->obligation_ref)) && ! ($occurrence->state === OccurrenceState::Rated && $booking->outcome === 'no_charge' && $booking->obligation_ref === null && $originalDraft->chargeKind->value === 'no_charge' && $originalDraft->grossMinor === '0')
             || $booking->obligation_ref !== $p->originalObligationRef || $p->command->sellerRef !== $in->sellerRef
             || $p->command->environment !== $in->environment || $p->command->parentOccurrenceRef !== $in->occurrenceRef
             || $p->releasePolicy !== $p->command->releasePolicy
@@ -271,8 +272,8 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
                 $this->amendmentSupport->assertSupported(kind: $amendment->kind, price: $price->snapshot,
                     quantitySnapshot: $old->aggregates[$i]->quantitySnapshot);
             }
-            $fraction = $this->proration->fraction(policy: $amendment->prorationPolicy, start: self::instant($in->periodStartMicros),
-                end: self::instant($in->periodEndMicros), effectiveAt: $amendment->effectiveAt, timezone: $amendment->timezone);
+            $fraction = $this->proration->fraction(policy: $amendment->prorationPolicy, start: Micros::instant($in->periodStartMicros),
+                end: Micros::instant($in->periodEndMicros), effectiveAt: $amendment->effectiveAt, timezone: $amendment->timezone);
             $expectedProration = [...$fraction, 'amendmentRef' => $amendment->amendmentRef, 'revision' => $amendment->revision,
                 'effectiveAt' => $amendment->effectiveAt->format('Y-m-d\TH:i:s.uP'), 'policy' => $amendment->prorationPolicy->value,
                 'timezone' => $amendment->timezone];
@@ -318,15 +319,5 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
             || CanonicalJson::encode($in->correctionEvidence) !== CanonicalJson::encode(['request' => $request, 'policy' => $policy])) {
             RatingComputation::refuse('tax_policy_stale');
         }
-    }
-
-    private static function instant(int $micros): DateTimeImmutable
-    {
-        $seconds = intdiv($micros, 1000000);
-        $fraction = str_pad((string) ($micros % 1000000), 6, '0', STR_PAD_LEFT);
-
-        $instant = DateTimeImmutable::createFromFormat('U.u', $seconds.'.'.$fraction);
-
-        return $instant !== false ? $instant : throw new LogicException('Invalid commercial period instant');
     }
 }

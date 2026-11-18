@@ -38,10 +38,10 @@ use Billium\Rating\Internal\Storage\RatingRows;
 use Billium\Rating\Internal\Storage\RatingStore;
 use Billium\Rating\Internal\Storage\TaxPolicyFrontier;
 use Billium\Schedule\Contracts\ScheduleQueries;
+use Billium\Schedule\Enums\OccurrenceState;
 use Billium\Usage\Contracts\AggregationQueries;
 use Billium\Usage\Data\WindowSelector;
 use Billium\Usage\Enums\LatePolicy;
-use DateTimeImmutable;
 use LogicException;
 use Packman\Attributes\Internal;
 use Throwable;
@@ -64,13 +64,13 @@ final readonly class DatabaseCorrectionPreparer
             throw new ProblemException(ProblemCode::AuthDenied, 'billium.rating.scope_denied');
         }
         $occurrence = $this->schedule->occurrence($command->parentOccurrenceRef);
-        if ($occurrence === null || ! in_array($occurrence['state'] ?? null, ['obligated', 'rated'], true) || $command->reasonCode === '') {
+        if ($occurrence === null || ! in_array($occurrence->state, [OccurrenceState::Obligated, OccurrenceState::Rated], true) || $command->reasonCode === '') {
             RatingComputation::refuse('correction_not_applicable');
         }
-        $original = $this->store->basis(RatingRows::text($occurrence['rated_basis_ref'] ?? null));
+        $original = $this->store->basis(RatingRows::text($occurrence->ratedBasisRef));
         $booking = $original === null ? null : $this->store->booking(RatingRows::integer($original->id));
         if ($original === null || $booking === null
-            || ! ($occurrence['state'] === 'obligated' && $booking->outcome === 'booked' && is_string($booking->obligation_ref)) && ! ($occurrence['state'] === 'rated' && $booking->outcome === 'no_charge' && $booking->obligation_ref === null && $original->charge_kind === 'no_charge' && RatingRows::decimal($original->gross_minor) === '0')) {
+            || ! ($occurrence->state === OccurrenceState::Obligated && $booking->outcome === 'booked' && is_string($booking->obligation_ref)) && ! ($occurrence->state === OccurrenceState::Rated && $booking->outcome === 'no_charge' && $booking->obligation_ref === null && $original->charge_kind === 'no_charge' && RatingRows::decimal($original->gross_minor) === '0')) {
             RatingComputation::refuse('correction_not_applicable');
         }
         $head = $this->store->frontier($command->parentOccurrenceRef);
@@ -94,10 +94,8 @@ final readonly class DatabaseCorrectionPreparer
                 $this->amendmentSupport->assertSupported(kind: $amendment->kind, price: $price->snapshot,
                     quantitySnapshot: $retained->aggregates[$i]->quantitySnapshot);
             }
-            $periodStart = new DateTimeImmutable(RatingRows::text($occurrence['period_start']));
-            $periodEnd = new DateTimeImmutable(RatingRows::text($occurrence['period_end']));
-            $ratio = $this->proration->fraction(policy: $amendment->prorationPolicy, start: $periodStart,
-                end: $periodEnd, effectiveAt: $amendment->effectiveAt, timezone: $amendment->timezone);
+            $ratio = $this->proration->fraction(policy: $amendment->prorationPolicy, start: $occurrence->periodStart,
+                end: $occurrence->periodEnd, effectiveAt: $amendment->effectiveAt, timezone: $amendment->timezone);
             $fraction = [...$ratio, 'amendmentRef' => $amendment->amendmentRef, 'revision' => $amendment->revision,
                 'effectiveAt' => $amendment->effectiveAt->format('Y-m-d\TH:i:s.uP'), 'policy' => $amendment->prorationPolicy->value,
                 'timezone' => $amendment->timezone];

@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-schedule
 
-Path `packages/core/modules/schedule/src`, namespace `Billium\Schedule\`, layer L2. 52 types.
+Path `packages/core/modules/schedule/src`, namespace `Billium\Schedule\`, layer L2. 53 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -40,6 +40,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`CorrectionReceipt`](../../packages/core/modules/schedule/src/Data/CorrectionReceipt.php) | class | **Api** |  |
 | [`DueBatch`](../../packages/core/modules/schedule/src/Data/DueBatch.php) | class | **Api** |  |
 | [`OccurrenceReceipt`](../../packages/core/modules/schedule/src/Data/OccurrenceReceipt.php) | class | **Api** |  |
+| [`OccurrenceView`](../../packages/core/modules/schedule/src/Data/OccurrenceView.php) | class | **Api** | Read model of one occurrence incarnation with the schedule revision that currently applies to its period. |
 | [`PeriodPolicy`](../../packages/core/modules/schedule/src/Data/PeriodPolicy.php) | class | **Api** | D56; owner schedule. |
 | [`PeriodQuote`](../../packages/core/modules/schedule/src/Data/PeriodQuote.php) | class | **Api** |  |
 | [`ResolvedInterval`](../../packages/core/modules/schedule/src/Data/ResolvedInterval.php) | class | **Api** | Immutable UTC boundaries plus retained source resolution evidence (D56; owner schedule). |

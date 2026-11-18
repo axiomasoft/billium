@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-rating
 
-Path `packages/core/modules/rating/src`, namespace `Billium\Rating\`, layer L2. 113 types.
+Path `packages/core/modules/rating/src`, namespace `Billium\Rating\`, layer L2. 114 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -224,6 +224,12 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
 | [`TaxCalculator`](../../packages/core/modules/rating/src/Internal/Tax/TaxCalculator.php) | class | *Internal* |  |
+
+## Internal/Time
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`Micros`](../../packages/core/modules/rating/src/Internal/Time/Micros.php) | class | *Internal* | Frozen rating inputs carry period instants as integer Unix microseconds so digests never depend on a timezone. |
 
 ## Internal
 
