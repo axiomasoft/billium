@@ -522,8 +522,11 @@ final readonly class DatabaseDocumentCorrectionService implements DocumentCorrec
                     $lineTaxSum = 0;
                     $lineGrossSum = 0;
                     foreach ($finLines as $finLine) {
-                        if (RowCast::str($finLine['obligationRef'] ?? null, 'obligationRef') !== $command->obligationRef) {
-                            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.correction_finalization_line_mismatch');
+                        if (
+                            RowCast::str($finLine['obligationRef'] ?? null, 'obligationRef') !== $command->obligationRef
+                            || RowCast::str($finLine['componentRef'] ?? null, 'componentRef') !== $command->componentRef
+                        ) {
+                            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.correction_finalization_mismatch');
                         }
                         $lineNetSum += RowCast::integer($finLine['netMinor'] ?? null, 'netMinor');
                         $lineTaxSum += RowCast::integer($finLine['taxMinor'] ?? null, 'taxMinor');

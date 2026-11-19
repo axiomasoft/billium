@@ -83,5 +83,6 @@
   "2026_11_19_000002_create_billium_documents_series_and_legal_issue",
   "2026_11_19_000003_create_billium_documents_render_tables",
   "2026_11_19_000004_create_billium_documents_corrections",
-  "2026_11_19_000034_create_billium_fiscal_tables"
+  "2026_11_19_000034_create_billium_fiscal_tables",
+  "2026_11_20_000005_add_render_blob_deleting_state"
 ]

@@ -562,10 +562,15 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
             throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.basis_changed_under_lock');
         }
 
+        $matchedObligations = [];
         foreach ($finalization->lines as $basisLine) {
-            if (! isset($ledgerByObligation[$basisLine->obligationRef], $taxByLineRef[$basisLine->lineRef])) {
+            if (
+                isset($matchedObligations[$basisLine->obligationRef])
+                || ! isset($ledgerByObligation[$basisLine->obligationRef], $taxByLineRef[$basisLine->lineRef])
+            ) {
                 throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.basis_changed_under_lock');
             }
+            $matchedObligations[$basisLine->obligationRef] = true;
             $lLine = $ledgerByObligation[$basisLine->obligationRef];
             $tLine = $taxByLineRef[$basisLine->lineRef];
 
@@ -576,6 +581,10 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
             ) {
                 throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.basis_changed_under_lock');
             }
+        }
+
+        if (count($matchedObligations) !== count($ledgerByObligation)) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.basis_changed_under_lock');
         }
     }
 

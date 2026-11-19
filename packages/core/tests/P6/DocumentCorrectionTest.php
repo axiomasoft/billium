@@ -660,7 +660,7 @@ final class DocumentCorrectionTest extends DocumentsTestCase
         self::assertSame(179, $heLines[0]->grossMinor);
         self::assertSame('half_even/1', $heLines[0]->originalRoundingPolicyVersion);
 
-        // 2. Persisted heterogeneous-line document: line-1 has half_up/1, line-2 has half_even/1 (333/25/358, credit 179 -> tax 12, NOT 13).
+        // 2. End-to-end heterogeneous rounding through LegalDocumentIssuer::issueInvoiceDocument() + two sequential partial credits.
         $this->ledger()->recordObligation(new RecordObligation('rec-het1', $this->account(), 'ob-het1', 'basis-het1', 'cust-het', 'comp-a', new Money(1191, Currency::of('EUR')), self::digest('d')));
         $this->ledger()->recordObligation(new RecordObligation('rec-het2', $this->account(), 'ob-het2', 'basis-het2', 'cust-het', 'comp-b', new Money(358, Currency::of('EUR')), self::digest('d')));
         $this->ledger()->createInvoice(new CreateInvoice(
@@ -692,7 +692,12 @@ final class DocumentCorrectionTest extends DocumentsTestCase
                 new DocumentLineBasis('line-2', 'ob-het2', 'comp-b', '1', '3.33', 333, 0, 'VAT75', '0.075'),
             ],
             buyerSnapshot: ['legalName' => 'Heterogeneous Buyer'],
-            termsSnapshot: ['roundingPolicyVersion' => 'half_up/1'],
+            termsSnapshot: [
+                'lineRoundingPolicies' => [
+                    'line-1' => 'half_up/1',
+                    'line-2' => 'half_even/1',
+                ],
+            ],
         ));
         $startedHet = $this->finalizations()->startFinalization($this->docScope(), 'fin-het');
         $readyHet = $this->finalizations()->attachTaxSnapshot(new AttachTaxSnapshot(
@@ -721,76 +726,30 @@ final class DocumentCorrectionTest extends DocumentsTestCase
             ),
         ))->finalization;
 
-        $runner = $this->application()->make(OperationRunner::class);
-        $ledgerParticipants = $this->application()->make(LedgerParticipants::class);
-        $numbering = $this->application()->make(DocumentsNumberingParticipant::class);
+        $issuedHet = $this->issuer()->issueInvoiceDocument(new IssueLegalDocument(
+            commandKey: 'issue-het',
+            scope: $this->account(),
+            invoiceRef: 'inv-het',
+            economicRef: 'inv-het',
+            documentRevision: 1,
+            finalizationRef: 'fin-het',
+            approvedSnapshotDigest: $readyHet->approvedSnapshotDigest ?? '',
+            seriesRef: 'INV',
+            periodKey: '2026',
+        ));
+        $hetLegalRef = (string) ($issuedHet->body['legalDocumentRef'] ?? '');
+        $hetDocView = $this->docQueries()->find($this->docScope(), $hetLegalRef);
+        self::assertNotNull($hetDocView);
+        self::assertSame('half_up/1', $hetDocView->linesSnapshot[0]['roundingPolicyVersion'] ?? null);
+        self::assertSame('half_even/1', $hetDocView->linesSnapshot[1]['roundingPolicyVersion'] ?? null);
 
-        $runner->run(
-            spec: new OperationSpec(
-                commandKind: 'documents.test.persist_heterogeneous.v1',
-                sellerRef: $this->docScope()->sellerRef,
-                environment: $this->docScope()->environment,
-                mode: FinancialMode::Active,
-                operationClass: ModuleOperationClass::NewIntent,
-                modules: ['platform', 'ledger', 'documents'],
-                commitKind: 'documents.legal_document.issued',
-            ),
-            body: function (TransactionContext $context) use ($ledgerParticipants, $numbering, $invSeries, $profile, $readyHet): DocumentReceipt {
-                $ledgerParticipants->issueInvoice($context, new IssueInvoice('issue-het-ledger', $this->account(), 'inv-het'), 'ldoc-het-1');
-                $numbering->allocateAndRecord($context, new AllocateLegalNumberCommand(
-                    legalDocumentRef: 'ldoc-het-1',
-                    documentType: DocumentType::Invoice,
-                    economicRef: 'inv-het',
-                    documentRevision: 1,
-                    seriesId: $invSeries->id,
-                    profileId: $profile->id,
-                    profileVersion: $profile->version,
-                    finalizationId: $readyHet->id,
-                    basisRevision: 1,
-                    basisDigest: $readyHet->basisDigest,
-                    approvedSnapshotDigest: $readyHet->approvedSnapshotDigest ?? '',
-                    currency: 'EUR',
-                    subtotalMinor: 1334,
-                    taxMinor: 215,
-                    totalMinor: 1549,
-                    sellerSnapshot: $profile->sellerSnapshot,
-                    buyerSnapshot: ['legalName' => 'Heterogeneous Buyer'],
-                    taxSnapshot: ['taxSnapshotRef' => 'tsnap-het', 'roundingPolicyVersion' => 'half_up/1'],
-                    termsSnapshot: ['roundingPolicyVersion' => 'half_up/1'],
-                    linesSnapshot: [
-                        [
-                            'lineRef' => 'line-1',
-                            'obligationRef' => 'ob-het1',
-                            'componentRef' => 'comp-a',
-                            'netMinor' => 1001,
-                            'taxMinor' => 190,
-                            'grossMinor' => 1191,
-                            'roundingPolicyVersion' => 'half_up/1',
-                        ],
-                        [
-                            'lineRef' => 'line-2',
-                            'obligationRef' => 'ob-het2',
-                            'componentRef' => 'comp-b',
-                            'netMinor' => 333,
-                            'taxMinor' => 25,
-                            'grossMinor' => 358,
-                            'roundingPolicyVersion' => 'half_even/1',
-                        ],
-                    ],
-                    displayMetadata: [],
-                    receiptRef: 'legal-het-1',
-                ));
-
-                return new DocumentReceipt('documents.test.persisted', ['legalDocumentRef' => 'ldoc-het-1']);
-            },
-        );
-
-        $cnHet = $this->correctionService()->issueCreditNote(new IssueDocumentCreditNote(
+        // Step 1 partial credit: line-1 (600) -> 504/96/600 (half_up/1); line-2 (179) -> 167/12/179 (strictly half_even/1).
+        $cnHet1 = $this->correctionService()->issueCreditNote(new IssueDocumentCreditNote(
             commandKey: 'cmd-cn-het-1',
             scope: $this->account(),
             correctionRef: 'corr-cn-het-1',
             creditNoteRef: 'cn-het-1',
-            originalLegalDocumentRef: 'ldoc-het-1',
+            originalLegalDocumentRef: $hetLegalRef,
             invoiceRef: 'inv-het',
             mode: CreditNoteMode::OpenOnly,
             lines: [
@@ -798,22 +757,64 @@ final class DocumentCorrectionTest extends DocumentsTestCase
                 new CreditNoteLineRequest('line-2', '0.5', 179),
             ],
             taxPolicy: $originalRatePolicy,
-            reason: 'heterogeneous_line_rounding',
+            reason: 'heterogeneous_line_rounding_step_1',
             issueLegalDocument: false,
         ));
-        self::assertTrue($cnHet->accepted);
-        $hetLines = $this->correctionService()->creditNoteLines($this->docScope(), 'corr-cn-het-1');
-        self::assertCount(2, $hetLines);
-        self::assertSame('line-1', $hetLines[0]->originalInvoiceLineId);
-        self::assertSame(504, $hetLines[0]->netMinor);
-        self::assertSame(96, $hetLines[0]->taxMinor);
-        self::assertSame(600, $hetLines[0]->grossMinor);
-        self::assertSame('half_up/1', $hetLines[0]->originalRoundingPolicyVersion);
-        self::assertSame('line-2', $hetLines[1]->originalInvoiceLineId);
-        self::assertSame(167, $hetLines[1]->netMinor);
-        self::assertSame(12, $hetLines[1]->taxMinor);
-        self::assertSame(179, $hetLines[1]->grossMinor);
-        self::assertSame('half_even/1', $hetLines[1]->originalRoundingPolicyVersion);
+        self::assertTrue($cnHet1->accepted);
+        $hetLines1 = $this->correctionService()->creditNoteLines($this->docScope(), 'corr-cn-het-1');
+        self::assertCount(2, $hetLines1);
+        self::assertSame('line-1', $hetLines1[0]->originalInvoiceLineId);
+        self::assertSame(504, $hetLines1[0]->netMinor);
+        self::assertSame(96, $hetLines1[0]->taxMinor);
+        self::assertSame(600, $hetLines1[0]->grossMinor);
+        self::assertSame('half_up/1', $hetLines1[0]->originalRoundingPolicyVersion);
+        self::assertSame('line-2', $hetLines1[1]->originalInvoiceLineId);
+        self::assertSame(167, $hetLines1[1]->netMinor);
+        self::assertSame(12, $hetLines1[1]->taxMinor);
+        self::assertSame(179, $hetLines1[1]->grossMinor);
+        self::assertSame('half_even/1', $hetLines1[1]->originalRoundingPolicyVersion);
+
+        // Step 2 partial credit: line-1 (591) -> 497/94/591; line-2 (179) -> 166/13/179; exact full-basis conservation and open_minor === 0.
+        $cnHet2 = $this->correctionService()->issueCreditNote(new IssueDocumentCreditNote(
+            commandKey: 'cmd-cn-het-2',
+            scope: $this->account(),
+            correctionRef: 'corr-cn-het-2',
+            creditNoteRef: 'cn-het-2',
+            originalLegalDocumentRef: $hetLegalRef,
+            invoiceRef: 'inv-het',
+            mode: CreditNoteMode::OpenOnly,
+            lines: [
+                new CreditNoteLineRequest('line-1', '0.5', 591),
+                new CreditNoteLineRequest('line-2', '0.5', 179),
+            ],
+            taxPolicy: $originalRatePolicy,
+            reason: 'heterogeneous_line_rounding_step_2',
+            issueLegalDocument: false,
+        ));
+        self::assertTrue($cnHet2->accepted);
+        $hetLines2 = $this->correctionService()->creditNoteLines($this->docScope(), 'corr-cn-het-2');
+        self::assertCount(2, $hetLines2);
+        self::assertSame('line-1', $hetLines2[0]->originalInvoiceLineId);
+        self::assertSame(497, $hetLines2[0]->netMinor);
+        self::assertSame(94, $hetLines2[0]->taxMinor);
+        self::assertSame(591, $hetLines2[0]->grossMinor);
+        self::assertSame(1001, $hetLines2[0]->cumulativeNetMinor);
+        self::assertSame(190, $hetLines2[0]->cumulativeTaxMinor);
+        self::assertSame(1191, $hetLines2[0]->cumulativeGrossMinor);
+        self::assertSame('half_up/1', $hetLines2[0]->originalRoundingPolicyVersion);
+        self::assertSame('line-2', $hetLines2[1]->originalInvoiceLineId);
+        self::assertSame(166, $hetLines2[1]->netMinor);
+        self::assertSame(13, $hetLines2[1]->taxMinor);
+        self::assertSame(179, $hetLines2[1]->grossMinor);
+        self::assertSame(333, $hetLines2[1]->cumulativeNetMinor);
+        self::assertSame(25, $hetLines2[1]->cumulativeTaxMinor);
+        self::assertSame(358, $hetLines2[1]->cumulativeGrossMinor);
+        self::assertSame('half_even/1', $hetLines2[1]->originalRoundingPolicyVersion);
+        self::assertSame(0, $this->value("SELECT open_minor FROM billium_invoice WHERE invoice_ref='inv-het'"));
+
+        $runner = $this->application()->make(OperationRunner::class);
+        $ledgerParticipants = $this->application()->make(LedgerParticipants::class);
+        $numbering = $this->application()->make(DocumentsNumberingParticipant::class);
 
         // 3. Missing frozen rounding policy on line, taxSnapshot, and termsSnapshot MUST fail (never fallback to half_up).
         $this->ledger()->recordObligation(new RecordObligation('rec-nr1', $this->account(), 'ob-nr1', 'basis-nr1', 'cust-nr', 'comp-nr', new Money(358, Currency::of('EUR')), self::digest('3')));
@@ -1095,6 +1096,83 @@ final class DocumentCorrectionTest extends DocumentsTestCase
         self::assertSame(0, $this->rows('billium_obligation', "obligation_ref = 'ob-f7-pos-bad'"));
         self::assertSame($corrCountBefore, $this->rows('billium_document_correction'));
         self::assertSame($legalCountBefore, $this->rows('billium_document_legal'));
+
+        // F12: Ready Correction finalization with matching obligation/amounts (1000/200/1200) but mismatched componentRef ('component-B' vs 'component-A') MUST refuse.
+        $this->finalizations()->createDraft(new CreateDocumentDraft(
+            scope: $this->docScope(),
+            finalizationRef: 'fin-f12-comp',
+            documentType: DocumentType::Correction,
+            economicRef: 'ob-f12-corr',
+            basisRevision: 1,
+            basisDigest: self::digest('c'),
+            profileRef: 'prof-default',
+            profileVersion: 1,
+            currency: 'RUB',
+            currencyExponent: 2,
+            convention: TaxConvention::Exclusive,
+            roundingMode: 'half_up',
+            discountTaxOrder: DiscountTaxOrder::DiscountBeforeTax,
+            lines: [new DocumentLineBasis('c1', 'ob-f12-corr', 'component-B', '1', '10.00', 1000, 0, 'VAT20', '0.20')],
+            buyerSnapshot: ['legalName' => 'Buyer Corp'],
+            termsSnapshot: [],
+        ));
+        $stF12 = $this->finalizations()->startFinalization($this->docScope(), 'fin-f12-comp');
+        $rdF12 = $this->finalizations()->attachTaxSnapshot(new AttachTaxSnapshot(
+            scope: $this->docScope(),
+            finalizationRef: 'fin-f12-comp',
+            finalizationRevision: $stF12->finalizationRevision,
+            inputDigest: $stF12->inputDigest,
+            snapshot: new DocumentTaxSnapshot(
+                taxSnapshotRef: 'tsnap-f12-comp',
+                taxPolicyVersion: 'v1',
+                taxPoint: '2026-11-19',
+                convention: TaxConvention::Exclusive,
+                currency: 'RUB',
+                currencyExponent: 2,
+                subtotalMinor: 1000,
+                taxMinor: 200,
+                totalMinor: 1200,
+                lines: [new DocumentTaxLineSnapshot('c1', 'VAT20', '0.20', 1000, 200, 1200)],
+                inputDigest: $stF12->inputDigest,
+                evidenceDigest: self::digest('d'),
+                resolver: 'f12-port',
+                resolverVersion: '1.0',
+            ),
+        ))->finalization;
+
+        $corrNextBefore = $this->value("SELECT next_number FROM billium_document_series WHERE series_ref='CORR' AND period_key='2026'");
+
+        try {
+            $this->correctionService()->issuePositiveCorrection(new IssuePositiveDocumentCorrection(
+                commandKey: 'cmd-f12-comp-mismatch',
+                scope: $this->account(),
+                correctionRef: 'corr-f12-comp-mismatch',
+                originalLegalDocumentRef: $origRef,
+                obligationRef: 'ob-f12-corr',
+                customerRef: 'cust-f7orig',
+                componentRef: 'component-A',
+                parentOccurrenceRef: 'occ-f12',
+                correctionRevision: 1,
+                deltaNetMinor: 1000,
+                deltaTaxMinor: 200,
+                currency: 'RUB',
+                taxPolicy: $policy,
+                reason: 'mismatched_component_finalization',
+                issueLegalDocument: true,
+                seriesRef: 'CORR',
+                periodKey: '2026',
+                finalizationRef: 'fin-f12-comp',
+                approvedSnapshotDigest: $rdF12->approvedSnapshotDigest,
+            ));
+            self::fail('Positive correction with mismatched componentRef (component-A vs component-B) must be refused');
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::ValidationInvalid, $error->problem);
+        }
+
+        self::assertSame(0, $this->rows('billium_obligation', "obligation_ref = 'ob-f12-corr'"));
+        self::assertSame($corrCountBefore, $this->rows('billium_document_correction'));
+        self::assertSame($legalCountBefore, $this->rows('billium_document_legal'));
+        self::assertSame($corrNextBefore, $this->value("SELECT next_number FROM billium_document_series WHERE series_ref='CORR' AND period_key='2026'"));
 
         // F8: Succeed with issueLegalDocument=false, then replay same commandKey with issueLegalDocument=true or mutated customerRef/componentRef -> IdempotencyConflict.
         $this->finalizations()->createDraft(new CreateDocumentDraft(

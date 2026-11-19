@@ -554,19 +554,19 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
                 }
 
                 $attachedRows = $db->select(
-                    "UPDATE billium_document_render_blob SET status = 'attached', render_request_id = ?, updated_at = ? WHERE seller_ref = ? AND environment = ? AND blob_ref = ? AND status <> 'deleted' RETURNING id",
+                    "UPDATE billium_document_render_blob SET status = 'attached', render_request_id = ?, updated_at = ? WHERE seller_ref = ? AND environment = ? AND blob_ref = ? AND status NOT IN ('deleting', 'deleted') RETURNING id",
                     [$targetId, $now, $caller->sellerRef, $caller->environment, $command->blobRef],
                 );
 
                 if ($attachedRows === []) {
-                    $deletedExists = $db->table('billium_document_render_blob')
+                    $blockedExists = $db->table('billium_document_render_blob')
                         ->where('seller_ref', $caller->sellerRef)
                         ->where('environment', $caller->environment)
                         ->where('blob_ref', $command->blobRef)
-                        ->where('status', 'deleted')
+                        ->whereIn('status', ['deleting', 'deleted'])
                         ->exists();
 
-                    if ($deletedExists) {
+                    if ($blockedExists) {
                         throw new ProblemException(ProblemCode::RecoveryRequired, 'billium.documents.render_blob_deleted');
                     }
                 }
@@ -733,10 +733,10 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
             throw new ProblemException(ProblemCode::CapabilityUnsupported, 'billium.documents.storage_unbound');
         }
 
-        $orphans = $this->databases->connection($this->options->connection)->table('billium_document_render_blob')
+        $candidates = $this->databases->connection($this->options->connection)->table('billium_document_render_blob')
             ->where('seller_ref', $caller->sellerRef)
             ->where('environment', $caller->environment)
-            ->where('status', 'orphaned')
+            ->whereIn('status', ['orphaned', 'deleting'])
             ->orderBy('id')
             ->get();
 
@@ -744,16 +744,58 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
         $skippedPinned = 0;
         $asOfUtc = $asOf->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z');
 
-        foreach ($orphans as $orphan) {
-            $pinnedRaw = $orphan->retention_pinned_until;
-            if ($pinnedRaw !== null && new DateTimeImmutable(RowCast::str($pinnedRaw, 'retention_pinned_until')) > $asOf) {
-                $skippedPinned++;
+        foreach ($candidates as $candidate) {
+            $status = RowCast::str($candidate->status, 'status');
+            $blobRef = RowCast::str($candidate->blob_ref, 'blob_ref');
+            $blobId = RowCast::integer($candidate->id, 'id');
 
+            if ($status === 'orphaned') {
+                $pinnedRaw = $candidate->retention_pinned_until;
+                if ($pinnedRaw !== null && new DateTimeImmutable(RowCast::str($pinnedRaw, 'retention_pinned_until')) > $asOf) {
+                    $skippedPinned++;
+
+                    continue;
+                }
+
+                $claimOutcome = $this->runner->run(
+                    spec: new OperationSpec(
+                        commandKind: 'documents.render.cleanup_claim.v1',
+                        sellerRef: $caller->sellerRef,
+                        environment: $caller->environment,
+                        mode: FinancialMode::Administrative,
+                        operationClass: ModuleOperationClass::NewIntent,
+                        modules: ['platform', 'ledger', 'documents'],
+                    ),
+                    body: function (TransactionContext $context) use ($caller, $blobId, $blobRef, $asOfUtc): DocumentReceipt {
+                        $this->runner->assertCurrent($context, 'documents');
+                        $rows = $this->databases->connection($context->connectionName())->select(
+                            "UPDATE billium_document_render_blob SET status = 'deleting', updated_at = ? WHERE id = ? AND seller_ref = ? AND environment = ? AND status = 'orphaned' AND (retention_pinned_until IS NULL OR retention_pinned_until <= ?) RETURNING id",
+                            [self::nowUtc(), $blobId, $caller->sellerRef, $caller->environment, $asOfUtc],
+                        );
+
+                        return new DocumentReceipt('documents.render.orphan_claimed', [
+                            'blobRef' => $blobRef,
+                            'claimed' => count($rows) === 1,
+                        ]);
+                    },
+                );
+
+                if (! RowCast::boolean($claimOutcome->body['claimed'] ?? null, 'claimed')) {
+                    continue;
+                }
+            }
+
+            try {
+                $storageDeleted = $storage->deleteOrphan($caller->sellerRef, $caller->environment, $blobRef);
+            } catch (Throwable) {
                 continue;
             }
-            $blobRef = RowCast::str($orphan->blob_ref, 'blob_ref');
-            $blobId = RowCast::integer($orphan->id, 'id');
-            $claimOutcome = $this->runner->run(
+
+            if (! $storageDeleted) {
+                continue;
+            }
+
+            $finalizeOutcome = $this->runner->run(
                 spec: new OperationSpec(
                     commandKind: 'documents.render.cleanup_orphan.v1',
                     sellerRef: $caller->sellerRef,
@@ -762,25 +804,21 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
                     operationClass: ModuleOperationClass::NewIntent,
                     modules: ['platform', 'ledger', 'documents'],
                 ),
-                body: function (TransactionContext $context) use ($caller, $blobId, $blobRef, $asOfUtc): DocumentReceipt {
+                body: function (TransactionContext $context) use ($caller, $blobId, $blobRef): DocumentReceipt {
                     $this->runner->assertCurrent($context, 'documents');
                     $rows = $this->databases->connection($context->connectionName())->select(
-                        "UPDATE billium_document_render_blob SET status = 'deleted', updated_at = ? WHERE id = ? AND seller_ref = ? AND environment = ? AND status = 'orphaned' AND (retention_pinned_until IS NULL OR retention_pinned_until <= ?) RETURNING id",
-                        [self::nowUtc(), $blobId, $caller->sellerRef, $caller->environment, $asOfUtc],
+                        "UPDATE billium_document_render_blob SET status = 'deleted', updated_at = ? WHERE id = ? AND seller_ref = ? AND environment = ? AND status = 'deleting' RETURNING id",
+                        [self::nowUtc(), $blobId, $caller->sellerRef, $caller->environment],
                     );
 
                     return new DocumentReceipt('documents.render.orphan_deleted', [
                         'blobRef' => $blobRef,
-                        'claimed' => count($rows) === 1,
+                        'finalized' => count($rows) === 1,
                     ]);
                 },
             );
 
-            if (! RowCast::boolean($claimOutcome->body['claimed'] ?? null, 'claimed')) {
-                continue;
-            }
-
-            if ($storage->deleteOrphan($caller->sellerRef, $caller->environment, $blobRef)) {
+            if (RowCast::boolean($finalizeOutcome->body['finalized'] ?? null, 'finalized')) {
                 $deleted[] = $blobRef;
             }
         }

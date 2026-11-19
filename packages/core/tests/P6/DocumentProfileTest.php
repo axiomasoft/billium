@@ -750,4 +750,106 @@ final class DocumentProfileTest extends DocumentsTestCase
         self::assertSame(0, $this->rows('billium_document_number_journal'));
         self::assertSame(1, $this->value("SELECT next_number FROM billium_document_series WHERE series_ref='INV'"));
     }
+
+    public function test_duplicate_finalized_obligation_refs_against_distinct_invoice_obligations_refuse_issue(): void
+    {
+        $this->registerCompleteProfile();
+        $this->registerSeries();
+
+        $this->ledger()->recordObligation(new RecordObligation(
+            commandKey: 'rec-dup-a',
+            scope: $this->account(),
+            obligationRef: 'ob-dup-a',
+            basisRef: 'basis-dup-a',
+            customerRef: 'cust-dup',
+            componentRef: 'comp-a',
+            money: new Money(6000, Currency::of('RUB')),
+            termsDigest: self::digest('a'),
+        ))->orThrow();
+        $this->ledger()->recordObligation(new RecordObligation(
+            commandKey: 'rec-dup-b',
+            scope: $this->account(),
+            obligationRef: 'ob-dup-b',
+            basisRef: 'basis-dup-b',
+            customerRef: 'cust-dup',
+            componentRef: 'comp-b',
+            money: new Money(6000, Currency::of('RUB')),
+            termsDigest: self::digest('b'),
+        ))->orThrow();
+
+        $this->ledger()->createInvoice(new CreateInvoice(
+            commandKey: 'create-inv-dup',
+            scope: $this->account(),
+            invoiceRef: 'inv-dup',
+            customerRef: 'cust-dup',
+            lines: [
+                new InvoiceLineInput('ob-dup-a', 0, ['name' => 'Line A']),
+                new InvoiceLineInput('ob-dup-b', 0, ['name' => 'Line B']),
+            ],
+            snapshot: ['buyer' => 'Duplicate Check Buyer'],
+        ))->orThrow();
+
+        // Finalize two distinct lineRefs that BOTH reference ob-dup-a (A/A) against a ledger invoice holding A/B.
+        $this->finalizations()->createDraft(new CreateDocumentDraft(
+            scope: $this->docScope(),
+            finalizationRef: 'fin-dup',
+            documentType: DocumentType::Invoice,
+            economicRef: 'inv-dup',
+            basisRevision: 1,
+            basisDigest: self::digest('c'),
+            profileRef: 'prof-default',
+            profileVersion: 1,
+            currency: 'RUB',
+            currencyExponent: 2,
+            convention: TaxConvention::Exclusive,
+            roundingMode: 'half_up',
+            discountTaxOrder: DiscountTaxOrder::DiscountBeforeTax,
+            lines: [
+                new DocumentLineBasis('line-1', 'ob-dup-a', 'comp-a', '1', '60.00', 6000, 0, 'VAT0', '0.00', 'Line 1'),
+                new DocumentLineBasis('line-2', 'ob-dup-a', 'comp-a', '1', '60.00', 6000, 0, 'VAT0', '0.00', 'Line 2'),
+            ],
+            buyerSnapshot: ['legalName' => 'Duplicate Check Buyer', 'taxId' => 'BUYER-DUP'],
+            termsSnapshot: ['paymentTerm' => 'NET30'],
+        ));
+        $started = $this->finalizations()->startFinalization($this->docScope(), 'fin-dup');
+        $ready = $this->finalizations()->attachTaxSnapshot(new AttachTaxSnapshot(
+            scope: $this->docScope(),
+            finalizationRef: 'fin-dup',
+            finalizationRevision: $started->finalizationRevision,
+            inputDigest: $started->inputDigest,
+            snapshot: new DocumentTaxSnapshot(
+                taxSnapshotRef: 'snap-dup',
+                taxPolicyVersion: 'v1',
+                taxPoint: '2026-11-19',
+                convention: TaxConvention::Exclusive,
+                currency: 'RUB',
+                currencyExponent: 2,
+                subtotalMinor: 12000,
+                taxMinor: 0,
+                totalMinor: 12000,
+                lines: [
+                    new DocumentTaxLineSnapshot('line-1', 'VAT0', '0.00', 6000, 0, 6000),
+                    new DocumentTaxLineSnapshot('line-2', 'VAT0', '0.00', 6000, 0, 6000),
+                ],
+                inputDigest: $started->inputDigest,
+                evidenceDigest: self::digest('d'),
+                resolver: 'fixture-tax-port',
+                resolverVersion: '1.0',
+            ),
+        ))->finalization;
+
+        try {
+            $this->issuer()->issueInvoiceDocument($this->issueCommand('issue-dup', 'dup', $ready->approvedSnapshotDigest ?? ''));
+            self::fail('Issuance must refuse A/A finalized obligations against an A/B ledger invoice');
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::ValidationInvalid, $error->problem);
+            self::assertSame('billium.documents.basis_changed_under_lock', $error->detail);
+        }
+
+        self::assertSame('draft', $this->invoiceStatus('inv-dup'));
+        self::assertNull($this->invoiceRow('inv-dup')['legal_document_ref']);
+        self::assertSame(0, $this->rows('billium_document_legal'));
+        self::assertSame(0, $this->rows('billium_document_number_journal'));
+        self::assertSame(1, $this->value("SELECT next_number FROM billium_document_series WHERE series_ref='INV'"));
+    }
 }

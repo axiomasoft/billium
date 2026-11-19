@@ -23,6 +23,7 @@ use Closure;
 use DateTimeImmutable;
 use DateTimeZone;
 use PHPUnit\Framework\Attributes\Group;
+use RuntimeException;
 
 #[Group('pg')]
 final class DocumentRenderTest extends DocumentsTestCase
@@ -552,5 +553,152 @@ final class DocumentRenderTest extends DocumentsTestCase
         }
 
         self::assertSame(RenderState::Pending->value, $this->value("SELECT state FROM billium_document_render_request WHERE render_request_ref='rreq-race-deleted'"));
+    }
+
+    public function test_orphan_cleanup_retries_deleting_blobs_after_storage_false_or_exception_while_fencing_attach(): void
+    {
+        $this->registerCompleteProfile();
+        $this->registerSeries();
+        $fin = $this->prepareFinalizedInvoiceBasis(suffix: 'rnd-f10');
+        $issued = $this->issuer()->issueInvoiceDocument($this->issueCommand('cmd-rnd-f10', 'rnd-f10', $fin->approvedSnapshotDigest ?? ''));
+        $legalRef = (string) ($issued->body['legalDocumentRef'] ?? '');
+
+        $clock = new DateTimeImmutable('2026-11-19T12:00:00Z', new DateTimeZone('UTC'));
+        $innerStorage = new InMemoryDocumentStorage($clock);
+
+        $rFalse = $this->renderService()->requestRender(new RequestDocumentRender(
+            scope: $this->docScope(),
+            renderRequestRef: 'rreq-f10-false',
+            legalDocumentRef: $legalRef,
+            templateId: 'tmpl-false',
+            templateVersion: '1.0',
+            templateDigest: self::digest('a'),
+            locale: 'en-US',
+            rendererName: 'in-memory-pdf',
+            rendererVersion: '1.0.0',
+            rendererDigest: self::digest('r'),
+        ));
+        $rThrow = $this->renderService()->requestRender(new RequestDocumentRender(
+            scope: $this->docScope(),
+            renderRequestRef: 'rreq-f10-throw',
+            legalDocumentRef: $legalRef,
+            templateId: 'tmpl-throw',
+            templateVersion: '1.0',
+            templateDigest: self::digest('b'),
+            locale: 'en-US',
+            rendererName: 'in-memory-pdf',
+            rendererVersion: '1.0.0',
+            rendererDigest: self::digest('r'),
+        ));
+
+        $falseBytes = '%PDF-1.4 orphan-returns-false';
+        $throwBytes = '%PDF-1.4 orphan-throws-once';
+        $falseBlob = $innerStorage->store(new StoreRenderBlob(
+            sellerRef: 'seller-a',
+            environment: 'test',
+            uploadKey: 'f10-orphan-false',
+            contentType: 'application/pdf',
+            bytes: $falseBytes,
+            outputDigest: 'sha256:'.hash('sha256', $falseBytes),
+        ));
+        $throwBlob = $innerStorage->store(new StoreRenderBlob(
+            sellerRef: 'seller-a',
+            environment: 'test',
+            uploadKey: 'f10-orphan-throw',
+            contentType: 'application/pdf',
+            bytes: $throwBytes,
+            outputDigest: 'sha256:'.hash('sha256', $throwBytes),
+        ));
+
+        $nowStr = $clock->format('Y-m-d\TH:i:s.u\Z');
+        $this->owner()->insert(
+            'INSERT INTO public.billium_document_render_blob (seller_ref, environment, upload_key, blob_ref, render_request_id, output_digest, content_type, byte_size, status, retention_pinned_until, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [
+                'seller-a', 'test', 'f10-orphan-false', $falseBlob->blobRef, $rFalse->id, $falseBlob->outputDigest, 'application/pdf', $falseBlob->byteSize, 'orphaned', null, $nowStr, $nowStr,
+                'seller-a', 'test', 'f10-orphan-throw', $throwBlob->blobRef, $rThrow->id, $throwBlob->outputDigest, 'application/pdf', $throwBlob->byteSize, 'orphaned', null, $nowStr, $nowStr,
+            ],
+        );
+
+        // Storage double: attempt 1 returns false for falseBlob and throws for throwBlob without removing either object;
+        // attempt 2 succeeds for both.
+        $flakyStorage = new class($innerStorage, $falseBlob->blobRef, $throwBlob->blobRef) implements DocumentStorage
+        {
+            /** @var array<string, int> */
+            public array $attempts = [];
+
+            public function __construct(
+                private InMemoryDocumentStorage $inner,
+                private string $falseFirstRef,
+                private string $throwFirstRef,
+            ) {}
+
+            public function store(StoreRenderBlob $command): StoredBlob
+            {
+                return $this->inner->store($command);
+            }
+
+            public function issueReadGrant(ReadBlobGrantRequest $request): TemporaryBlobGrant
+            {
+                return $this->inner->issueReadGrant($request);
+            }
+
+            public function deleteOrphan(string $sellerRef, string $environment, string $blobRef): bool
+            {
+                $this->attempts[$blobRef] = ($this->attempts[$blobRef] ?? 0) + 1;
+                if ($this->attempts[$blobRef] === 1) {
+                    if ($blobRef === $this->falseFirstRef) {
+                        return false;
+                    }
+                    if ($blobRef === $this->throwFirstRef) {
+                        throw new RuntimeException('transient storage delete outage');
+                    }
+                }
+
+                return $this->inner->deleteOrphan($sellerRef, $environment, $blobRef);
+            }
+        };
+        $this->application()->instance(DocumentStorage::class, $flakyStorage);
+
+        // Pass 1: both rows transition to deleting, neither is marked deleted, both remain alive in storage.
+        $pass1 = $this->renderService()->cleanupOrphanBlobs($this->docScope(), $clock);
+        self::assertSame(0, $pass1->deletedCount);
+        self::assertSame([], $pass1->deletedBlobRefs);
+        self::assertTrue($innerStorage->isBlobAlive($falseBlob->blobRef));
+        self::assertTrue($innerStorage->isBlobAlive($throwBlob->blobRef));
+        self::assertSame('deleting', $this->value('SELECT status FROM billium_document_render_blob WHERE blob_ref=?', [$falseBlob->blobRef]));
+        self::assertSame('deleting', $this->value('SELECT status FROM billium_document_render_blob WHERE blob_ref=?', [$throwBlob->blobRef]));
+
+        // While in deleting state, concurrent attachRenderResult is strictly fenced and refuses both blobs.
+        foreach ([[$rFalse, $falseBlob], [$rThrow, $throwBlob]] as [$req, $blob]) {
+            try {
+                $this->renderService()->attachRenderResult(new AttachRenderResult(
+                    scope: $this->docScope(),
+                    renderRequestRef: $req->renderRequestRef,
+                    renderRevision: $req->renderRevision,
+                    renderKeyDigest: $req->renderKeyDigest,
+                    blobRef: $blob->blobRef,
+                    outputDigest: $blob->outputDigest,
+                    contentType: 'application/pdf',
+                    byteSize: $blob->byteSize,
+                ));
+                self::fail('Attaching a deleting blob must be refused');
+            } catch (ProblemException $error) {
+                self::assertSame(ProblemCode::RecoveryRequired, $error->problem);
+                self::assertSame('billium.documents.render_blob_deleted', $error->detail);
+            }
+        }
+        self::assertSame(RenderState::Pending->value, $this->value("SELECT state FROM billium_document_render_request WHERE render_request_ref='rreq-f10-false'"));
+        self::assertSame(RenderState::Pending->value, $this->value("SELECT state FROM billium_document_render_request WHERE render_request_ref='rreq-f10-throw'"));
+
+        // Pass 2: cleanup retries both deleting rows, removes both objects from storage, and finalizes them as deleted.
+        $pass2 = $this->renderService()->cleanupOrphanBlobs($this->docScope(), $clock);
+        self::assertSame(2, $pass2->deletedCount);
+        self::assertSame([$falseBlob->blobRef, $throwBlob->blobRef], $pass2->deletedBlobRefs);
+        self::assertFalse($innerStorage->isBlobAlive($falseBlob->blobRef));
+        self::assertFalse($innerStorage->isBlobAlive($throwBlob->blobRef));
+        self::assertSame('deleted', $this->value('SELECT status FROM billium_document_render_blob WHERE blob_ref=?', [$falseBlob->blobRef]));
+        self::assertSame('deleted', $this->value('SELECT status FROM billium_document_render_blob WHERE blob_ref=?', [$throwBlob->blobRef]));
+        self::assertSame(2, $flakyStorage->attempts[$falseBlob->blobRef]);
+        self::assertSame(2, $flakyStorage->attempts[$throwBlob->blobRef]);
     }
 }
