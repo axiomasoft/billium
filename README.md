@@ -13,12 +13,20 @@ and the `billium-contracts` packages for PHP and Dart. Core implements the P3 pl
 guarded PostgreSQL routines, financial-session admission, receipts, observations, outbox and feed (D60).
 Live PSP execution and legal numbering belong to later modules (D55/D59).
 
-The `axiomasoft/billium-core` distribution includes the platform, ledger, execution, usage, rating and schedule implementations. Enable modules with `billium.modules.enabled`. Usage, rating and schedule also have feature-specific configuration. The host can restrict the resulting plugin graph through the Packman activation gate. Billium's financial-session and operation admission rules continue to govern writes.
+The `axiomasoft/billium-core` distribution includes the platform, ledger, execution, usage, rating, schedule and documents implementations. Enable modules with `billium.modules.enabled`. Usage, rating, schedule and documents (`billium.documents.enabled`) also have feature-specific configuration. The host can restrict the resulting plugin graph through the Packman activation gate. Billium's financial-session and operation admission rules continue to govern writes.
 
-Usage, rating and schedule are optional internal core modules. Fixed-price schedule booking can omit
-usage; pure quotes can omit ledger; obligation booking needs no legal renderer or payment executor.
+Usage, rating, schedule and documents are optional internal core modules. Fixed-price schedule booking can omit
+usage; pure quotes can omit ledger; obligation booking needs no legal renderer or payment executor;
+disabling `documents` (`billium.documents.enabled = false`) keeps obligations, invoices, allocations and
+payments operational without documents routes or workers.
 See the [module, provider and capability matrix](docs/architecture/optional-commercial-modules.md)
 for host enablement, migration ownership, trusted versioned extensions and A–D composition proofs (D55/D56).
+For P6 legal documents, fiscal orchestration and accounting export boundaries, see:
+
+- [Documents module architecture and operational runbook](docs/architecture/documents.md) (`billium-documents`: legal profiles, outside-Tx tax finalization, atomic seller-scoped numbering, async rendering, credit notes/corrections, and failure isolation)
+- [Fiscal orchestration boundary](docs/architecture/fiscal-boundary.md) (`execution`-owned independent fiscal receipt lifecycle, lookup recovery without duplicate registration, and projection-only `embedded-commerz` mode)
+- [Accounting facts and FinBridge export contract](docs/contracts/accounting-facts.md) (`platform`-owned replay-safe economic facts, explicit delivery ACK vs. applied receipt separation, schema quarantine, and zero GL ownership — independent of `documents`)
+
 The [P4 evidence guide](docs/architecture/p4-acceptance.md) and
 [acceptance manifest](docs/architecture/p4-acceptance.json) map exact amounts, restore/permutation,
 concurrency and unsupported combinations to executable tests. Implementation evidence and pending
@@ -51,6 +59,7 @@ docker compose run --rm toolchain composer install --no-interaction
 docker compose up -d postgres
 docker compose run --rm toolchain php scripts/db/preflight.php
 docker compose run --rm toolchain vendor/bin/pest --group ACC-RST-10
+docker compose run --rm toolchain vendor/bin/pest packages/core/tests/P6
 docker compose run --rm toolchain bash scripts/ci.sh                 # full gate
 docker compose run --rm toolchain bash scripts/ci.sh --layer derived # one layer
 docker compose run --rm toolchain bash scripts/ci.sh --list          # layers and subjects

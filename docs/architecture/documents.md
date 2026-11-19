@@ -53,3 +53,42 @@ PostgreSQL `BEFORE UPDATE OR DELETE` triggers enforce append-only history, monot
 - Positive post-issue deltas (`issuePositiveCorrection`) record a new linked correction obligation via `LedgerParticipants::recordObligation()` rather than mutating frozen original obligations.
 - Negative credits (`issueCreditNote`) invoke `LedgerParticipants::issueCreditNote()` (`open_only` or `reverse_allocations`) and persist immutable `billium_document_credit_note_line` lineage (`original_invoice_line_id`, `original_obligation_ref`, `original_component_ref`, `original_tax_snapshot_ref`, `original_rounding_policy_version`, cumulative sums and original basis bounds), enforced by deferred PostgreSQL constraint trigger `billium_documents_check_credit_note_sums()`.
 - `PartialCreditAllocator` applies the host `DocumentTaxCorrectionPolicy` (rejecting missing/unsupported policies) and guarantees that final partial credits exhausting a line receive the exact remaining net/tax/gross remainder under the frozen original rounding policy.
+
+## Operational Integration & Failure Isolation
+
+### Independent Receipt Levels
+
+Legal documents, payment execution, fiscalization, accounting export, and host fulfilment operate as strictly independent receipt boundaries (`COV-006`, `COV-364`, `COV-365`, `COV-372`, `COV-523`):
+
+| Receipt Level | Owner | Independence & Failure Isolation Rule |
+|:--|:--|:--|
+| `payment` | `Billium\Execution\` / `Billium\Ledger\` | Durable provider custody and bounded ledger observations. Replaying `PaymentSucceeded` or observation deliveries never creates a second PSP charge. |
+| `legal_document` | `Billium\Documents\` | Frozen legal snapshot and monotonic seller-scoped number. Never mutated by rerenders, fiscal outages, accounting backpressure, or over-refund discrepancies. |
+| `fiscal` | `Billium\Execution\` ([fiscal-boundary.md](fiscal-boundary.md)) | Independent fiscal intent FSM owned strictly by the original payment executor (`standalone-billium` / `remote-billium`), or projection-only with 0 provider sends in `embedded-commerz`. Fiscal outage/rejection leaves settled `paid` state intact and triggers 0 compensating PSP actions. |
+| `accounting` | `Billium\Platform\` ([accounting-facts.md](../contracts/accounting-facts.md)) | Replay-safe `AccountingFactEnvelope` and optional `FinBridgeExportEnvelope` with separate transport `AccountingDeliveryAck` and idempotent economic `AccountingAppliedReceipt`. Billium owns 0 GL tables. |
+| Host `provisioning` / `fulfilment` | Host application | Rights, licensing, provisioning, and fulfilment remain host-owned. Payment facts are money evidence, not fulfilment completion; host timeouts or delayed activation never alter payment, legal, fiscal, or accounting receipts. |
+
+### End-to-End Integration & Recovery Runbook
+
+Standard and fault-recovery flow across `ledger`, `documents`, `execution` (fiscal), and `platform` (accounting):
+
+1. **Issue (`LegalDocumentIssuer`)**: A single root `OperationRunner` transaction (`Obligation -> Invoice -> DocumentSeries`) issues the ledger invoice and allocates the frozen legal document snapshot/number; async PDF/HTML rendering runs strictly outside DB transactions.
+2. **Partial Allocation (`Ledger::allocate`)**: Applies settled capture funds partially against the issued invoice, producing 1 `cash_in` accounting fact for the actual capture and separate `noncash_allocation` facts for allocations.
+3. **Credit Note (`DocumentCorrectionService::issueCreditNote`)**: Creates an immutable credit note with `CreditNoteLine` lineage (`open_only` or `reverse_allocations`) and a linked `receivable` fact without mutating the frozen invoice snapshot and without auto-dispatching a PSP refund.
+4. **Separately Authorized Refund (`Execution`)**: A distinct host-authorized refund command executes through the original payment executor's frozen binding and produces authenticated actual provider evidence. Under exceptional over-refund (`ACC-RST-12`: capture `100`, two distinct confirmed actual refunds `70 + 70`), fiscalization creates 2 refund intents totaling `140` (second marked `exceptional = true` with exposure provenance), accounting emits 2 `cash_out` facts totaling `140` plus 1 `noncash_exposure` fact for `40` (never double-counted as cash out), bounded ledger projection holds at `100 / 70` (`financial_hold = true`, `spendable = 0`), the frozen legal document snapshot/number stays byte-identical, and 0 automatic compensations run.
+5. **Fiscal `unknown` & Lookup Recovery (`FiscalOrchestrator`)**: If a fiscal registration response is lost or the provider is unavailable, the committed `submitted` intent transitions to `unknown` while `paid` stays intact. Recovery runs bounded seller-scoped due-lookup claims (`claimDueLookups`) and invokes `FiscalDriver::findReceipt()` exclusively (with `ContinuityMerchantCredentials` for historical merchant revisions) — never re-registering.
+6. **Accounting Replay (`AccountingFactMapper` / `AccountingConsumer`)**: Replaying callbacks, lookups, or outbox records in any permutation preserves identical `sourceFactRef` identities, counts, and amounts; unknown input schemas quarantine without data loss and apply once after explicit schema registration and replay.
+
+### Safely Disabling `documents` and/or FinBridge
+
+- **Disabling `documents`**: Omit `'documents'` from `billium.modules.enabled` or set `billium.documents.enabled = false`. Core `ledger` API (`RecordObligation`, `CreateInvoice`, `IssueInvoice`, `Allocate`, `LedgerQueries`) and `platform` `AccountingFactMapper` remain fully functional with zero documents routes, workers, or cross-module table coupling. Historical ready renders remain readable via `readRender()` even when `DocumentRenderer` is unbound.
+- **Disabling or Backpressuring FinBridge**: Omitting or pausing `AccountingExportExtension` / `AccountingConsumer` never blocks or rolls back `ledger` commits, `documents` issuance, or `execution` transitions. Consumers catch up idempotently from durable source records once delivery resumes.
+
+### Reproduction Commands
+
+```bash
+docker compose run --rm toolchain vendor/bin/pest packages/core/tests/P6
+docker compose run --rm toolchain vendor/bin/pest --filter=DocumentsIntegration
+docker compose run --rm toolchain vendor/bin/pest packages/core/tests/P6/FiscalAccountingExposureTest.php
+docker compose run --rm toolchain bash scripts/ci.sh
+```

@@ -140,10 +140,15 @@ abstract class CompositionTestCase extends TestCase
     private static function resetSchema(): void
     {
         TestEnvironment::assertDestructiveResetAllowed();
-        TestEnvironment::pdo(owner: true)->exec(<<<'SQL'
+        $runtime = '"'.str_replace('"', '""', TestEnvironment::identity()->username).'"';
+        TestEnvironment::pdo(owner: true)->exec(<<<SQL
             DROP SCHEMA public CASCADE;
             CREATE SCHEMA public AUTHORIZATION pg_database_owner;
+            REVOKE CREATE ON SCHEMA public FROM PUBLIC;
             GRANT USAGE ON SCHEMA public TO PUBLIC;
+            GRANT USAGE ON SCHEMA public TO {$runtime};
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO {$runtime};
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
             SQL);
     }
 }

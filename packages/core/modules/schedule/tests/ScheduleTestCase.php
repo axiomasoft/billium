@@ -34,6 +34,7 @@ abstract class ScheduleTestCase extends PlatformTestCase
     {
         parent::defineEnvironment($app);
         $app->make(Repository::class)->set('billium.modules.enabled', ['platform', 'ledger', 'rating', 'schedule']);
+        $app->make(Repository::class)->set('billium.rating.enabled', true);
         $app->make(Repository::class)->set('billium.schedule.enabled', true);
     }
 

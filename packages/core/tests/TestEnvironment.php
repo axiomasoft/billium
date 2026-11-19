@@ -66,7 +66,9 @@ final class TestEnvironment
         public.billium_execution_accept_provider_fact(jsonb,jsonb),
         public.billium_execution_reservation_actual_guard(),
         public.billium_execution_child_operation_guard(),
-        public.billium_execution_authorization_release_guard()
+        public.billium_execution_authorization_release_guard(),
+        public.billium_fiscal_append_only(),
+        public.billium_fiscal_intent_guard()
         SQL;
 
     public static function prepareFreshRebuild(Application $app): void
