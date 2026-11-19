@@ -24,10 +24,7 @@ use Packman\Plugins\Contracts\Registry\PluginInspector;
 #[Api(since: '1.0')]
 final class BilliumCoreServiceProvider extends ServiceProvider
 {
-    use RegistersPackageRegistrars {
-        register as protected registerRegistrars;
-        boot as protected bootRegistrars;
-    }
+    use RegistersPackageRegistrars;
 
     /** @var list<class-string<PackageRegistrar>> */
     protected const array REGISTRARS = [BilliumCoreRegistrar::class];
@@ -48,8 +45,7 @@ final class BilliumCoreServiceProvider extends ServiceProvider
             return;
         }
 
-        $this->registerRegistrars();
-
+        $this->registerPackageRegistrars();
         if ($this->app instanceof Application && $this->app->isBooted()) {
             $this->activateModules();
         } else {
@@ -79,6 +75,6 @@ final class BilliumCoreServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->bootRegistrars();
+        $this->bootPackageRegistrars();
     }
 }
