@@ -29,6 +29,8 @@ use Billium\Execution\Contracts\ExecutionQueries;
 use Billium\Execution\Contracts\ExecutionReadiness;
 use Billium\Execution\Contracts\ExecutionReconciliationQueries;
 use Billium\Execution\Contracts\ExecutionStore;
+use Billium\Execution\Contracts\Fiscal\FiscalDrivers;
+use Billium\Execution\Contracts\Fiscal\FiscalOrchestrator;
 use Billium\Execution\Contracts\MerchantActionGate;
 use Billium\Execution\Contracts\MerchantCredentials;
 use Billium\Execution\Contracts\MerchantRegistry;
@@ -61,6 +63,8 @@ use Billium\Execution\Internal\Dispatch\AttemptLeases;
 use Billium\Execution\Internal\Dispatch\OneAttemptWorker;
 use Billium\Execution\Internal\Dispatch\TransportBoundary;
 use Billium\Execution\Internal\Disputes\InventoryComparison;
+use Billium\Execution\Internal\Fiscal\ActualEffectExtractor;
+use Billium\Execution\Internal\Fiscal\DatabaseFiscalOrchestrator;
 use Billium\Execution\Internal\Merchants\ContinuityMerchantCredentials;
 use Billium\Execution\Internal\Merchants\DatabaseMerchantRegistry;
 use Billium\Execution\Internal\Publication\OutcomeEmitter;
@@ -204,6 +208,26 @@ final class ExecutionRegistrar implements PackageRegistrar
         $app->bind(ExecutionHistoryQueries::class, DatabaseExecutionHistory::class);
         $app->bind(ExecutionEvidenceQueries::class, DatabaseExecutionEvidence::class);
         $app->bind(ExecutionReconciliationQueries::class, DatabaseExecutionReconciliationQueries::class);
+        $fiscalDrivers = static fn (): FiscalDrivers => $app->bound(FiscalDrivers::class)
+            ? $app->make(FiscalDrivers::class)
+            : throw new ProblemException(ProblemCode::CapabilityUnsupported, 'No fiscal drivers are configured');
+        $app->bind(ActualEffectExtractor::class, static fn (Application $app): ActualEffectExtractor => new ActualEffectExtractor(
+            $app->make(DatabaseManager::class),
+            $app->make(BilliumOptions::class),
+        ));
+        $app->bind(DatabaseFiscalOrchestrator::class, static fn (Application $app): DatabaseFiscalOrchestrator => new DatabaseFiscalOrchestrator(
+            $app->make(DatabaseManager::class),
+            $app->make(OperationRunner::class),
+            $app->make(CallerContext::class),
+            $app->make(Installation::class),
+            $app->make(ExecutionStore::class),
+            $app->make(ContinuityMerchantCredentials::class),
+            $app->make(TransportBoundary::class),
+            $fiscalDrivers,
+            $app->make(ActualEffectExtractor::class),
+            $app->make(BilliumOptions::class),
+        ));
+        $app->alias(DatabaseFiscalOrchestrator::class, FiscalOrchestrator::class);
         $app->singleton(DispatchAuthority::class, static fn (Application $app): DispatchAuthority => new DispatchAuthority(
             $app->make(DatabaseManager::class),
             static fn (): OperationRunner => $app->make(OperationRunner::class),

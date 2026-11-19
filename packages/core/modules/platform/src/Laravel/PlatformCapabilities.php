@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Billium\Platform\Laravel;
 
 use Billium\Core\Contracts\Modules\ModuleStateReader;
+use Billium\Platform\Contracts\Accounting\AccountingMapper;
 use Billium\Platform\Contracts\EventContracts\EventContractRegistrar;
 use Billium\Platform\Contracts\Feed\EventFeed;
 use Billium\Platform\Contracts\Feed\FeedPartitions;
@@ -18,6 +19,7 @@ use Billium\Platform\Contracts\Outbox\CommandOutbox;
 use Billium\Platform\Contracts\Outbox\FactualCommandOutbox;
 use Billium\Platform\Contracts\Outbox\Outbox;
 use Billium\Platform\Contracts\Outbox\OutboxDeliveryQueries;
+use Billium\Platform\Internal\Accounting\AccountingFactMapper;
 use Billium\Platform\Internal\CommandOutbox\CommandRecorder;
 use Billium\Platform\Internal\CommandOutbox\FactualCommandRecorder;
 use Billium\Platform\Internal\EventContracts\DatabaseEventContractRegistrar;
@@ -58,6 +60,7 @@ final class PlatformCapabilities
             FeedRecoveryQueries::class => DatabaseFeedRecoveryQueries::class,
             RootAdmission::class => PlatformRootAdmission::class,
             EventContractRegistrar::class => DatabaseEventContractRegistrar::class,
+            AccountingMapper::class => AccountingFactMapper::class,
         ];
     }
 }

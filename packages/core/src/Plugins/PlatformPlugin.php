@@ -27,6 +27,7 @@ use Billium\Core\Internal\Runner\UnboundCallerContext;
 use Billium\Core\Internal\Runner\UnboundFinancialAuthorityEvidence;
 use Billium\Core\Internal\Runner\UnboundSessionAdmission;
 use Billium\Core\Internal\Runtime\TransportObservationContext;
+use Billium\Platform\Contracts\Accounting\AccountingMapper;
 use Billium\Platform\Contracts\EventContracts\EventContractRegistrar;
 use Billium\Platform\Contracts\Feed\EventFeed;
 use Billium\Platform\Contracts\Feed\FeedPartitions;
@@ -187,6 +188,7 @@ final class PlatformPlugin implements ExtensionPlugin, WithCapabilities, WithCon
             FeedRecoveryQueries::class => Cardinality::OptionalSingle->value,
             RootAdmission::class => Cardinality::OptionalSingle->value,
             EventContractRegistrar::class => Cardinality::OptionalSingle->value,
+            AccountingMapper::class => Cardinality::OptionalSingle->value,
         ];
     }
 

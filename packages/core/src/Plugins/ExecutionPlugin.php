@@ -15,6 +15,8 @@ use Billium\Execution\Contracts\ExecutionHistoryQueries;
 use Billium\Execution\Contracts\ExecutionQueries;
 use Billium\Execution\Contracts\ExecutionReconciliationQueries;
 use Billium\Execution\Contracts\ExecutionStore;
+use Billium\Execution\Contracts\Fiscal\FiscalDrivers;
+use Billium\Execution\Contracts\Fiscal\FiscalOrchestrator;
 use Billium\Execution\Contracts\MerchantActionGate;
 use Billium\Execution\Contracts\MerchantRegistry;
 use Billium\Execution\Contracts\OriginalIdentityRecovery;
@@ -85,6 +87,8 @@ final class ExecutionPlugin implements ExtensionPlugin, WithCapabilities, WithSc
             ExecutionHistoryQueries::class => Cardinality::OptionalSingle->value,
             ExecutionEvidenceQueries::class => Cardinality::OptionalSingle->value,
             ExecutionReconciliationQueries::class => Cardinality::OptionalSingle->value,
+            FiscalOrchestrator::class => Cardinality::OptionalSingle->value,
+            FiscalDrivers::class => Cardinality::OptionalSingle->value,
         ];
     }
 
@@ -137,6 +141,10 @@ final class ExecutionPlugin implements ExtensionPlugin, WithCapabilities, WithSc
             'execution_recon_review',
             'execution_original_replay',
             'execution_original_identity_import',
+            'fiscal_policy',
+            'fiscal_intent',
+            'fiscal_evidence',
+            'fiscal_projection',
         ];
     }
 

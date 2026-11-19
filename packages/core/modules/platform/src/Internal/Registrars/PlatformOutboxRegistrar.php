@@ -12,6 +12,7 @@ use Billium\Core\Contracts\Runtime\AuthenticatedObservationContext;
 use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Contracts\Runtime\EventPublisher;
 use Billium\Core\Contracts\Runtime\ScopedCallerContext;
+use Billium\Platform\Contracts\Accounting\AccountingMapper;
 use Billium\Platform\Contracts\Feed\EventFeed;
 use Billium\Platform\Contracts\Feed\FeedPartitions;
 use Billium\Platform\Contracts\Feed\FeedRecoveryQueries;
@@ -23,6 +24,7 @@ use Billium\Platform\Contracts\Outbox\FactualCommandOutbox;
 use Billium\Platform\Contracts\Outbox\Outbox;
 use Billium\Platform\Contracts\Outbox\OutboxDeliveryQueries;
 use Billium\Platform\Data\EventContracts\PublicEventDestinations;
+use Billium\Platform\Internal\Accounting\AccountingFactMapper;
 use Billium\Platform\Internal\CommandOutbox\CommandOutboxRelay;
 use Billium\Platform\Internal\CommandOutbox\CommandRecorder;
 use Billium\Platform\Internal\CommandOutbox\FactualCommandRecorder;
@@ -154,6 +156,8 @@ final class PlatformOutboxRegistrar implements PackageRegistrar
             static fn (): OperationRunner => $app->make(OperationRunner::class),
             $app->bound(PublicEventDestinations::class) ? $app->make(PublicEventDestinations::class) : null,
         ));
+
+        $app->singleton(AccountingMapper::class, static fn (): AccountingFactMapper => new AccountingFactMapper);
     }
 
     #[Override]

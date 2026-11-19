@@ -14,6 +14,7 @@ use Billium\Execution\Contracts\ExecutionHistoryQueries;
 use Billium\Execution\Contracts\ExecutionQueries;
 use Billium\Execution\Contracts\ExecutionReconciliationQueries;
 use Billium\Execution\Contracts\ExecutionStore;
+use Billium\Execution\Contracts\Fiscal\FiscalOrchestrator;
 use Billium\Execution\Contracts\MerchantActionGate;
 use Billium\Execution\Contracts\MerchantRegistry;
 use Billium\Execution\Contracts\OriginalIdentityRecovery;
@@ -28,6 +29,7 @@ use Billium\Execution\Internal\Callbacks\CallbackIntake;
 use Billium\Execution\Internal\Capacity\ExecutionCapacity;
 use Billium\Execution\Internal\Capture\AuthorizedPayments;
 use Billium\Execution\Internal\Dispatch\OneAttemptWorker;
+use Billium\Execution\Internal\Fiscal\DatabaseFiscalOrchestrator;
 use Billium\Execution\Internal\Merchants\DatabaseMerchantRegistry;
 use Billium\Execution\Internal\Publication\OutcomeEmitter;
 use Billium\Execution\Internal\Publication\PlatformPaymentObservationSink;
@@ -73,6 +75,7 @@ final class ExecutionCapabilities
             ExecutionHistoryQueries::class => DatabaseExecutionHistory::class,
             ExecutionEvidenceQueries::class => DatabaseExecutionEvidence::class,
             ExecutionReconciliationQueries::class => DatabaseExecutionReconciliationQueries::class,
+            FiscalOrchestrator::class => DatabaseFiscalOrchestrator::class,
         ];
     }
 }

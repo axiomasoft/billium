@@ -1105,14 +1105,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "execution",
-      "currentSchemaVersion": 33,
+      "currentSchemaVersion": 34,
       "supportedSchemaReadRange": {
-        "min": 33,
-        "max": 33
+        "min": 34,
+        "max": 34
       },
       "supportedSchemaWriteRange": {
-        "min": 33,
-        "max": 33
+        "min": 34,
+        "max": 34
       },
       "requiresModules": [
         {
@@ -1187,7 +1187,11 @@
         "billium_execution_recon_item",
         "billium_execution_recon_review",
         "billium_execution_original_replay",
-        "billium_execution_original_identity_import"
+        "billium_execution_original_identity_import",
+        "billium_fiscal_policy",
+        "billium_fiscal_intent",
+        "billium_fiscal_evidence",
+        "billium_fiscal_projection"
       ],
       "configKeys": [
         "billium.execution.release_evidence_ref",
@@ -1359,6 +1363,11 @@
           "id": "2026_11_18_000033_guard_archived_child_reservations",
           "version": 33,
           "checksum": "sha256:d4327f68458625e72d0764f0254ef7021ed4b4753615d8c8a01179fb48bcd51e"
+        },
+        {
+          "id": "2026_11_19_000034_create_billium_fiscal_tables",
+          "version": 34,
+          "checksum": "sha256:cde40512bdbfa59cb598987c16f20bdba83096c61d5ba70020664e7fc73fa7e9"
         }
       ],
       "disablePolicy": {

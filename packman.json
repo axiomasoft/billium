@@ -158,8 +158,10 @@
             "type": "dev",
             "dev_only": true,
             "owns": [
+                "Accounting",
                 "Documents",
                 "Drivers",
+                "Fiscal",
                 "Fixtures",
                 "Oracles",
                 "Restore"

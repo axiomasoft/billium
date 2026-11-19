@@ -4937,6 +4937,13 @@
       "source": "packages/core/database/migrations/documents/2026_11_19_000004_create_billium_documents_corrections.php"
     },
     {
+      "kind": "migration",
+      "id": "2026_11_19_000034_create_billium_fiscal_tables",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_19_000034_create_billium_fiscal_tables.php"
+    },
+    {
       "kind": "doctor-finding",
       "id": "module.composition_forbidden",
       "status": "new",

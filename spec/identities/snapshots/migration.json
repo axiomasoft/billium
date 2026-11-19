@@ -82,5 +82,6 @@
   "2026_11_19_000001_create_billium_documents_profiles_and_finalization",
   "2026_11_19_000002_create_billium_documents_series_and_legal_issue",
   "2026_11_19_000003_create_billium_documents_render_tables",
-  "2026_11_19_000004_create_billium_documents_corrections"
+  "2026_11_19_000004_create_billium_documents_corrections",
+  "2026_11_19_000034_create_billium_fiscal_tables"
 ]
