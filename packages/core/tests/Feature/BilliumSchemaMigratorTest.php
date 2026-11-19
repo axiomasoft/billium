@@ -39,6 +39,7 @@ final class BilliumSchemaMigratorTest extends DatabaseTestCase
             'usage' => SchemaLifecycle::Module,
             'schedule' => SchemaLifecycle::Module,
             'rating' => SchemaLifecycle::Module,
+            'documents' => SchemaLifecycle::Module,
             'execution' => SchemaLifecycle::Module,
         ];
 

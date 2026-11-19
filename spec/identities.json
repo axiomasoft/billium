@@ -4140,6 +4140,13 @@
     },
     {
       "kind": "config-key",
+      "id": "billium.documents.enabled",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/config/billium.php"
+    },
+    {
+      "kind": "config-key",
       "id": "billium.execution.outgoing_enabled",
       "status": "new",
       "since": "2026-10",
@@ -4900,6 +4907,20 @@
       "status": "new",
       "since": "2026-10",
       "source": "packages/core/database/migrations/platform/2026_11_18_010009_validate_original_execution_binding.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_19_000001_create_billium_documents_profiles_and_finalization",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/documents/2026_11_19_000001_create_billium_documents_profiles_and_finalization.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_19_000002_create_billium_documents_series_and_legal_issue",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/documents/2026_11_19_000002_create_billium_documents_series_and_legal_issue.php"
     },
     {
       "kind": "doctor-finding",

@@ -1,5 +1,6 @@
 [
   "billium.connection",
+  "billium.documents.enabled",
   "billium.execution.outgoing_enabled",
   "billium.execution.release_evidence_ref",
   "billium.execution.retention_policy_ref",

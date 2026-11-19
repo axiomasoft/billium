@@ -13,6 +13,16 @@
                     ],
                     "default": null
                 },
+                "documents": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    },
+                    "additionalProperties": false
+                },
                 "execution": {
                     "type": "object",
                     "properties": {

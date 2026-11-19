@@ -994,14 +994,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "documents",
-      "currentSchemaVersion": 0,
+      "currentSchemaVersion": 2,
       "supportedSchemaReadRange": {
-        "min": 0,
-        "max": 0
+        "min": 2,
+        "max": 2
       },
       "supportedSchemaWriteRange": {
-        "min": 0,
-        "max": 0
+        "min": 2,
+        "max": 2
       },
       "requiresModules": [
         {
@@ -1029,9 +1029,29 @@
       ],
       "emits": [],
       "consumes": [],
-      "ownedTables": [],
-      "configKeys": [],
-      "migrationIdentities": [],
+      "ownedTables": [
+        "billium_document_profile",
+        "billium_document_finalization",
+        "billium_document_finalization_event",
+        "billium_document_series",
+        "billium_document_legal",
+        "billium_document_number_journal"
+      ],
+      "configKeys": [
+        "billium.documents.enabled"
+      ],
+      "migrationIdentities": [
+        {
+          "id": "2026_11_19_000001_create_billium_documents_profiles_and_finalization",
+          "version": 1,
+          "checksum": "sha256:071b98883952205358c69af2ac655f5c501f85fd93c8b38ac090d2f7c52586ec"
+        },
+        {
+          "id": "2026_11_19_000002_create_billium_documents_series_and_legal_issue",
+          "version": 2,
+          "checksum": "sha256:a77f5e80aa966fddba522f64514da2db9e92df43786cc2b4dce3d0e85363ef4f"
+        }
+      ],
       "disablePolicy": {
         "dependents": "block",
         "keeps": [

@@ -28,12 +28,16 @@ use Billium\Core\Internal\Runner\UnboundFinancialAuthorityEvidence;
 use Billium\Core\Internal\Runner\UnboundSessionAdmission;
 use Billium\Core\Internal\Runtime\PaymentObservationCommandReceiver;
 use Billium\Core\Internal\Runtime\TransportObservationContext;
+use Billium\Core\Plugins\DocumentsPlugin;
 use Billium\Core\Plugins\ExecutionPlugin;
 use Billium\Core\Plugins\LedgerPlugin;
 use Billium\Core\Plugins\PlatformPlugin;
 use Billium\Core\Plugins\RatingPlugin;
 use Billium\Core\Plugins\SchedulePlugin;
 use Billium\Core\Plugins\UsagePlugin;
+use Billium\Documents\Contracts\DocumentRenderer;
+use Billium\Documents\Contracts\DocumentTaxSnapshotPort;
+use Billium\Documents\Laravel\DocumentsCapabilities;
 use Billium\Execution\Contracts\AdapterQualification;
 use Billium\Execution\Contracts\CallbackPayloadArchive;
 use Billium\Execution\Contracts\DispatchEgress;
@@ -137,6 +141,7 @@ final class BilliumCoreRegistrar implements PackageRegistrar
             UsagePlugin::class,
             SchedulePlugin::class,
             RatingPlugin::class,
+            DocumentsPlugin::class,
         );
 
         ExtensionRegistrar::addActivationGate($app, BilliumPluginActivationGate::class);
@@ -149,6 +154,7 @@ final class BilliumCoreRegistrar implements PackageRegistrar
             'axiomasoft.billium.usage' => UsagePlugin::class,
             'axiomasoft.billium.schedule' => SchedulePlugin::class,
             'axiomasoft.billium.rating' => RatingPlugin::class,
+            'axiomasoft.billium.documents' => DocumentsPlugin::class,
         ];
         foreach ($plugins as $pluginClass) {
             $app->singletonIf($pluginClass);
@@ -177,6 +183,9 @@ final class BilliumCoreRegistrar implements PackageRegistrar
                 if (self::hasCustomPort($app, FinancialAuthorityEvidence::class, UnboundFinancialAuthorityEvidence::class)) {
                     $ports[] = 'FinancialAuthorityEvidence';
                 }
+                if (self::hasCustomPort($app, DocumentTaxSnapshotPort::class, DocumentsCapabilities::unboundTaxSnapshotPort())) {
+                    $ports[] = 'TaxSnapshotPort';
+                }
 
                 // Report configured bindings without resolving host services or performing qualification I/O.
                 foreach ([
@@ -192,6 +201,7 @@ final class BilliumCoreRegistrar implements PackageRegistrar
                     'ExecutionReadiness' => ExecutionReadiness::class,
                     'OriginalReplayAuthority' => OriginalReplayAuthority::class,
                     'OriginalIdentityArchive' => OriginalIdentityArchive::class,
+                    'DocumentRenderer' => DocumentRenderer::class,
                 ] as $port => $contract) {
                     if ($app->bound($contract)) {
                         $ports[] = $port;

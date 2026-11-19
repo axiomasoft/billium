@@ -120,6 +120,21 @@
             ]
         },
         {
+            "name": "axiomasoft/billium-documents",
+            "path": "packages/core/modules/documents",
+            "namespace": "Billium\\Documents\\",
+            "profile": "laravel-package",
+            "layer": "L2",
+            "type": "domain",
+            "owns": [
+                "Contracts",
+                "Data",
+                "Enums",
+                "Internal",
+                "Laravel"
+            ]
+        },
+        {
             "name": "axiomasoft/billium-execution",
             "path": "packages/core/modules/execution",
             "namespace": "Billium\\Execution\\",

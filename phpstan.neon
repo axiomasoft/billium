@@ -13,6 +13,7 @@ parameters:
         - packages/core/modules/usage/src
         - packages/core/modules/rating/src
         - packages/core/modules/schedule/src
+        - packages/core/modules/documents/src
         - packages/core/modules/execution/src
         - packages/testkit/src
     ignoreErrors:

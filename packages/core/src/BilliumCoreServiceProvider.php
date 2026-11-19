@@ -7,6 +7,7 @@ namespace Billium\Core;
 use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Internal\Runtime\ExecutionCompositionGuard;
 use Billium\Core\Laravel\Registrars\BilliumCoreRegistrar;
+use Billium\Documents\Laravel\DocumentsServiceProvider;
 use Billium\Execution\Laravel\ExecutionServiceProvider;
 use Billium\Ledger\Laravel\LedgerServiceProvider;
 use Billium\Platform\Laravel\PlatformServiceProvider;
@@ -36,6 +37,7 @@ final class BilliumCoreServiceProvider extends ServiceProvider
         'usage' => UsageServiceProvider::class,
         'schedule' => ScheduleServiceProvider::class,
         'rating' => RatingServiceProvider::class,
+        'documents' => DocumentsServiceProvider::class,
     ];
 
     #[Override]
@@ -44,7 +46,6 @@ final class BilliumCoreServiceProvider extends ServiceProvider
         if ($this->app->getProviders(self::class) !== []) {
             return;
         }
-
         $this->registerPackageRegistrars();
         if ($this->app instanceof Application && $this->app->isBooted()) {
             $this->activateModules();
@@ -56,11 +57,9 @@ final class BilliumCoreServiceProvider extends ServiceProvider
     private function activateModules(): void
     {
         $active = array_column($this->app->make(PluginInspector::class)->describe(), null, 'id');
-
         if (! isset($active['axiomasoft.billium.platform'])) {
             return;
         }
-
         $this->app->register(PlatformServiceProvider::class);
         foreach (self::OPTIONAL_MODULES as $module => $providerClass) {
             if (! isset($active['axiomasoft.billium.'.$module])) {

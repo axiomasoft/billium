@@ -64,6 +64,7 @@
             "Billium\\Usage\\Tests\\": "packages/core/modules/usage/tests/",
             "Billium\\Rating\\Tests\\": "packages/core/modules/rating/tests/",
             "Billium\\Schedule\\Tests\\": "packages/core/modules/schedule/tests/",
+            "Billium\\Documents\\Tests\\": "packages/core/modules/documents/tests/",
             "Billium\\Tooling\\PhpStan\\": "scripts/phpstan/src/",
             "Billium\\Execution\\Tests\\": "packages/core/modules/execution/tests/",
             "Billium\\Testkit\\Tests\\": "packages/testkit/tests/"

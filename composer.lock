@@ -62,7 +62,7 @@
             "dist": {
                 "type": "path",
                 "url": "packages/core",
-                "reference": "fa401404f10a4d427920acea8b0e5e130bbe8c3e"
+                "reference": "f3db5937cb012f55bb5cc791162840a311b4ef95"
             },
             "require": {
                 "axiomasoft/billium-contracts": "^0.1",
@@ -74,6 +74,7 @@
                 "php": "^8.4"
             },
             "replace": {
+                "axiomasoft/billium-documents": "self.version",
                 "axiomasoft/billium-execution": "self.version",
                 "axiomasoft/billium-ledger": "self.version",
                 "axiomasoft/billium-platform": "self.version",
@@ -117,6 +118,7 @@
                     "Billium\\Usage\\": "modules/usage/src/",
                     "Billium\\Rating\\": "modules/rating/src/",
                     "Billium\\Schedule\\": "modules/schedule/src/",
+                    "Billium\\Documents\\": "modules/documents/src/",
                     "Billium\\Execution\\": "modules/execution/src/"
                 },
                 "files": [
@@ -11352,5 +11354,5 @@
         "php": "^8.4"
     },
     "platform-dev": {},
-    "plugin-api-version": "2.6.0"
+    "plugin-api-version": "2.9.0"
 }

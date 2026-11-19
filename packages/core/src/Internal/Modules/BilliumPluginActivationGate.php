@@ -23,6 +23,7 @@ final readonly class BilliumPluginActivationGate implements PluginActivationGate
             'axiomasoft.billium.usage' => $this->options->moduleEnabled('usage'),
             'axiomasoft.billium.schedule' => $this->options->moduleEnabled('schedule'),
             'axiomasoft.billium.rating' => $this->options->moduleEnabled('rating'),
+            'axiomasoft.billium.documents' => $this->options->moduleEnabled('documents'),
             default => true,
         };
     }

@@ -395,3 +395,10 @@ PE-01…PE-09 — предложенные сценарии паспорта и�
 | PE-07 | Тот же ключ после 30-дневного prune receipts и restore: прежний charge/refund не исполняется снова | ACC-RST-08, PF-07, PB-19, ACC-RST-03 | полное |
 | PE-08 | Два merchants с одинаковым external ID, ротация credentials, callback без internal ref: изоляция и исходный binding; unmatched callback — только с durable custody | ACC-CON-23 | полное |
 | PE-09 | Несовпадение суммы/валюты refund, нет суммы при partial capture, отозванный actor, decline после success: несогласованное наблюдение отвергнуто или в quarantine | PB-08, PB-17, PF-06, ACC-CON-24 | полное |
+
+### P6 — Documents, fiscal boundary и accounting facts
+
+| ID | Сценарий | Тест / проверка | Покрытие |
+|:--|:--|:--|:--|
+| P6.1 | `DocumentProfile` (неполный профиль запрещает issue), `draft -> finalizing -> snapshot_ready` с CAS `input_digest`, external `TaxSnapshotPort` вне Tx, timeout/retry, late/stale snapshot ignored, currency/amount conflict, recheck под lock блокирует changed lines, zero-float tax arithmetic (`tax-arithmetic.json`), disabled mode не блокирует ledger | `DocumentProfileTest` (`--filter=DocumentProfile`) | P6.1 |
+| P6.2 | Атомарная выдача под single root `OperationRunner` (`Obligation -> Invoice -> DocumentSeries`), 20 concurrent issue same basis -> 1 номер, 20 different basis -> 20 номеров без пропусков/дублей, rollback после ledger issue, forged `TransactionContext` reject, cross-seller series reject, lost-reply replay, void без переиспользования номера, DB immutability triggers, allow-listed metadata | `LegalIssueTest` (`--filter=LegalIssue`) | P6.2 |

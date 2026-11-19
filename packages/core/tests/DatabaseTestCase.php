@@ -31,6 +31,7 @@ abstract class DatabaseTestCase extends TestCase
         'usage' => 'axiomasoft/billium-core:billium-usage',
         'schedule' => 'axiomasoft/billium-core:billium-schedule',
         'rating' => 'axiomasoft/billium-core:billium-rating',
+        'documents' => 'axiomasoft/billium-core:billium-documents',
         'execution' => 'axiomasoft/billium-core:billium-execution',
     ];
 

@@ -78,6 +78,17 @@ final readonly class BilliumSchemaSetProvider implements SchemaSetProvider
                 requires: ['axiomasoft/billium-core'],
                 prerequisiteSets: ['axiomasoft/billium-core:billium-platform'],
             ),
+            new SchemaSet(
+                package: 'axiomasoft/billium-core',
+                name: 'billium-documents',
+                scope: SchemaScope::Central,
+                path: $migrationsRoot.'/documents',
+                version: 1,
+                drivers: ['pgsql'],
+                lifecycle: SchemaLifecycle::Module,
+                requires: ['axiomasoft/billium-core'],
+                prerequisiteSets: ['axiomasoft/billium-core:billium-platform'],
+            ),
         ];
     }
 }
