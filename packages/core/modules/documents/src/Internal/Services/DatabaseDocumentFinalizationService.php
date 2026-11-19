@@ -7,6 +7,7 @@ namespace Billium\Documents\Internal\Services;
 use Billium\Contracts\Data\Currency;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Contracts\Runner\OperationRunner;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Contracts\Runtime\CallerContext;
@@ -52,6 +53,7 @@ final readonly class DatabaseDocumentFinalizationService implements DocumentFina
         private CallerContext $callers,
         private DocumentProfileRegistry $profiles,
         private DocumentTaxSnapshotPort $taxSnapshotPort,
+        private BilliumOptions $options,
     ) {}
 
     public function createDraft(CreateDocumentDraft $command): DocumentFinalizationView
@@ -405,14 +407,14 @@ final readonly class DatabaseDocumentFinalizationService implements DocumentFina
         RowCast::assertScope($caller, $scope);
         RowCast::bounded($finalizationRef, 'finalizationRef');
 
-        if ($this->databases->connection()->transactionLevel() !== 0) {
+        if ($this->databases->connection($this->options->connection)->transactionLevel() !== 0) {
             throw new LogicException('finalizeWithTaxPort must not be called inside an open database transaction');
         }
 
         // Tx 1: CAS draft -> finalizing (or idempotent reuse of finalizing revision).
         $finalizing = $this->startFinalization($scope, $finalizationRef);
 
-        $row = $this->databases->connection()->table('billium_document_finalization')
+        $row = $this->databases->connection($this->options->connection)->table('billium_document_finalization')
             ->where('id', $finalizing->id)
             ->where('seller_ref', $caller->sellerRef)
             ->where('environment', $caller->environment)
@@ -666,7 +668,7 @@ final readonly class DatabaseDocumentFinalizationService implements DocumentFina
     {
         $caller = $this->callers->current();
         RowCast::assertScope($caller, $scope);
-        $query = $this->databases->connection()->table('billium_document_finalization')
+        $query = $this->databases->connection($this->options->connection)->table('billium_document_finalization')
             ->where('seller_ref', $caller->sellerRef)
             ->where('environment', $caller->environment)
             ->where('finalization_ref', $finalizationRef);
@@ -687,7 +689,7 @@ final readonly class DatabaseDocumentFinalizationService implements DocumentFina
     {
         $caller = $this->callers->current();
         RowCast::assertScope($caller, $scope);
-        $db = $this->databases->connection();
+        $db = $this->databases->connection($this->options->connection);
 
         $rows = $db->table('billium_document_finalization_event as e')
             ->join('billium_document_finalization as f', 'f.id', '=', 'e.finalization_id')
@@ -847,7 +849,7 @@ final readonly class DatabaseDocumentFinalizationService implements DocumentFina
 
     private function requireById(int $id, string $sellerRef, string $environment): DocumentFinalizationView
     {
-        $row = $this->databases->connection()->table('billium_document_finalization')
+        $row = $this->databases->connection($this->options->connection)->table('billium_document_finalization')
             ->where('id', $id)
             ->where('seller_ref', $sellerRef)
             ->where('environment', $environment)

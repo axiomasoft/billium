@@ -859,6 +859,63 @@
             "enum_backing": null,
             "enum_cases": []
         },
+        "Billium\\Ledger\\Contracts\\LockedInvoiceSnapshotParticipant": {
+            "kind": "interface",
+            "layer": "spi",
+            "since": "1.0",
+            "final": false,
+            "readonly": false,
+            "abstract": false,
+            "extends": [],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "lockedInvoiceSnapshot": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "context",
+                            "type": "Billium\\Core\\Contracts\\Runner\\TransactionContext",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "scope",
+                            "type": "Billium\\Ledger\\Data\\Runtime\\BillingAccountScope",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "invoiceRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "array",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": [],
+            "spi_kind": "call"
+        },
         "Billium\\Ledger\\Contracts\\ObservationApplier": {
             "kind": "interface",
             "layer": "spi",

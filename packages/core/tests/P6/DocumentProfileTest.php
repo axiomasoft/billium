@@ -16,6 +16,7 @@ use Billium\Core\Tests\Support\Concurrency\WorkerApplication;
 use Billium\Core\Tests\Support\FixedCallerContext;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
 use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
+use Billium\Core\Tests\TestEnvironment;
 use Billium\Documents\Contracts\DocumentRenderer;
 use Billium\Documents\Contracts\DocumentTaxArithmetic;
 use Billium\Documents\Contracts\DocumentTaxSnapshotPort;
@@ -28,6 +29,7 @@ use Billium\Documents\Data\DocumentTaxSnapshot;
 use Billium\Documents\Data\RegisterDocumentProfile;
 use Billium\Documents\Data\RenderDocumentInput;
 use Billium\Documents\Data\RenderedArtifact;
+use Billium\Documents\Data\RequestDocumentRender;
 use Billium\Documents\Data\ReviseDocumentDraft;
 use Billium\Documents\Data\TaxArithmeticLineInput;
 use Billium\Documents\Data\TaxSnapshotRequest;
@@ -576,5 +578,176 @@ final class DocumentProfileTest extends DocumentsTestCase
                 self::assertSame($expLine['residualMinor'], $actual->residualMinor, $name.' residualMinor');
             }
         }
+    }
+
+    public function test_documents_services_and_queries_use_billium_connection_when_host_default_is_unavailable(): void
+    {
+        $config = $this->application()->make(Repository::class);
+        $config->set('database.default', 'unavailable_host');
+        $config->set('database.connections.unavailable_host', [
+            ...TestEnvironment::connection(),
+            'database' => 'absent_host_database',
+        ]);
+
+        $profile = $this->registerCompleteProfile('prof-conn', 1);
+        $foundProfile = $this->profiles()->find($this->docScope(), 'prof-conn', 1);
+        self::assertNotNull($foundProfile);
+        self::assertSame($profile->profileDigest, $foundProfile->profileDigest);
+
+        $series = $this->registerSeries('CON', '2026');
+        $foundSeries = $this->seriesRegistry()->findSeries($this->docScope(), 'CON', '2026');
+        self::assertNotNull($foundSeries);
+        self::assertSame($series->id, $foundSeries->id);
+
+        $finalized = $this->prepareFinalizedInvoiceBasis(suffix: 'conn', profileRef: 'prof-conn');
+        $foundFin = $this->finalizations()->find($this->docScope(), 'fin-conn');
+        self::assertNotNull($foundFin);
+        self::assertSame(FinalizationState::SnapshotReady, $foundFin->state);
+        self::assertNotEmpty($this->finalizations()->events($this->docScope(), 'fin-conn'));
+
+        $issued = $this->issuer()->issueInvoiceDocument($this->issueCommand('issue-conn', 'conn', $finalized->approvedSnapshotDigest ?? '', seriesRef: 'CON'));
+        self::assertTrue($issued->accepted);
+        $legalRef = (string) ($issued->body['legalDocumentRef'] ?? '');
+
+        $foundLegal = $this->docQueries()->find($this->docScope(), $legalRef);
+        self::assertNotNull($foundLegal);
+        self::assertSame('CON-2026-000001', $foundLegal->legalNumber);
+        self::assertNotNull($this->docQueries()->findByEconomicRef($this->docScope(), DocumentType::Invoice, 'inv-conn', 1));
+        self::assertCount(1, $this->docQueries()->numberJournal($this->docScope(), 'CON', '2026'));
+
+        $renderReq = $this->renderService()->requestRender(new RequestDocumentRender(
+            scope: $this->docScope(),
+            renderRequestRef: 'rreq-conn',
+            legalDocumentRef: $legalRef,
+            templateId: 'default',
+            templateVersion: '1.0',
+            templateDigest: self::digest('t'),
+            locale: 'en-US',
+            rendererName: 'in-memory-pdf',
+            rendererVersion: '1.0.0',
+            rendererDigest: self::digest('r'),
+        ));
+        self::assertSame($legalRef, $renderReq->legalDocumentRef);
+
+        self::assertArrayNotHasKey('unavailable_host', $this->application()->make(DatabaseManager::class)->getConnections());
+    }
+
+    public function test_offsetting_obligation_adjustments_keeping_same_total_refuse_stale_finalization(): void
+    {
+        $this->registerCompleteProfile();
+        $this->registerSeries();
+
+        $this->ledger()->recordObligation(new RecordObligation(
+            commandKey: 'rec-off-1',
+            scope: $this->account(),
+            obligationRef: 'ob-off-1',
+            basisRef: 'basis-off-1',
+            customerRef: 'cust-off',
+            componentRef: 'comp-1',
+            money: new Money(6000, Currency::of('RUB')),
+            termsDigest: self::digest('b'),
+        ))->orThrow();
+        $this->ledger()->recordObligation(new RecordObligation(
+            commandKey: 'rec-off-2',
+            scope: $this->account(),
+            obligationRef: 'ob-off-2',
+            basisRef: 'basis-off-2',
+            customerRef: 'cust-off',
+            componentRef: 'comp-2',
+            money: new Money(6000, Currency::of('RUB')),
+            termsDigest: self::digest('b'),
+        ))->orThrow();
+
+        $this->ledger()->createInvoice(new CreateInvoice(
+            commandKey: 'create-inv-off',
+            scope: $this->account(),
+            invoiceRef: 'inv-off',
+            customerRef: 'cust-off',
+            lines: [
+                new InvoiceLineInput('ob-off-1', 0, ['name' => 'Line 1']),
+                new InvoiceLineInput('ob-off-2', 0, ['name' => 'Line 2']),
+            ],
+            snapshot: ['buyer' => 'Offset Buyer'],
+        ))->orThrow();
+
+        $this->finalizations()->createDraft(new CreateDocumentDraft(
+            scope: $this->docScope(),
+            finalizationRef: 'fin-off',
+            documentType: DocumentType::Invoice,
+            economicRef: 'inv-off',
+            basisRevision: 1,
+            basisDigest: self::digest('c'),
+            profileRef: 'prof-default',
+            profileVersion: 1,
+            currency: 'RUB',
+            currencyExponent: 2,
+            convention: TaxConvention::Exclusive,
+            roundingMode: 'half_up',
+            discountTaxOrder: DiscountTaxOrder::DiscountBeforeTax,
+            lines: [
+                new DocumentLineBasis('line-1', 'ob-off-1', 'comp-1', '1', '60.00', 6000, 0, 'VAT0', '0.00', 'Line 1'),
+                new DocumentLineBasis('line-2', 'ob-off-2', 'comp-2', '1', '60.00', 6000, 0, 'VAT0', '0.00', 'Line 2'),
+            ],
+            buyerSnapshot: ['legalName' => 'Offset Buyer', 'taxId' => 'BUYER-OFF'],
+            termsSnapshot: ['paymentTerm' => 'NET30'],
+        ));
+        $started = $this->finalizations()->startFinalization($this->docScope(), 'fin-off');
+        $ready = $this->finalizations()->attachTaxSnapshot(new AttachTaxSnapshot(
+            scope: $this->docScope(),
+            finalizationRef: 'fin-off',
+            finalizationRevision: $started->finalizationRevision,
+            inputDigest: $started->inputDigest,
+            snapshot: new DocumentTaxSnapshot(
+                taxSnapshotRef: 'snap-off',
+                taxPolicyVersion: 'v1',
+                taxPoint: '2026-11-19',
+                convention: TaxConvention::Exclusive,
+                currency: 'RUB',
+                currencyExponent: 2,
+                subtotalMinor: 12000,
+                taxMinor: 0,
+                totalMinor: 12000,
+                lines: [
+                    new DocumentTaxLineSnapshot('line-1', 'VAT0', '0.00', 6000, 0, 6000),
+                    new DocumentTaxLineSnapshot('line-2', 'VAT0', '0.00', 6000, 0, 6000),
+                ],
+                inputDigest: $started->inputDigest,
+                evidenceDigest: self::digest('d'),
+                resolver: 'fixture-tax-port',
+                resolverVersion: '1.0',
+            ),
+        ))->finalization;
+
+        // Offsetting +10 / -10 adjustments keep invoice total 12000 while shifting locked lines to 7000 / 5000.
+        $this->ledger()->adjustObligation(new AdjustObligation(
+            commandKey: 'adj-off-1',
+            scope: $this->account(),
+            adjustmentRef: 'adj-off-plus',
+            obligationRef: 'ob-off-1',
+            money: new Money(1000, Currency::of('RUB')),
+            causeRef: 'offsetting-increase',
+        ))->orThrow();
+        $this->ledger()->adjustObligation(new AdjustObligation(
+            commandKey: 'adj-off-2',
+            scope: $this->account(),
+            adjustmentRef: 'adj-off-minus',
+            obligationRef: 'ob-off-2',
+            money: new Money(-1000, Currency::of('RUB')),
+            causeRef: 'offsetting-decrease',
+        ))->orThrow();
+
+        try {
+            $this->issuer()->issueInvoiceDocument($this->issueCommand('issue-off', 'off', $ready->approvedSnapshotDigest ?? ''));
+            self::fail('Issuance must refuse stale 60/60 finalization when locked lines shifted to 70/50');
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::ValidationInvalid, $error->problem);
+            self::assertSame('billium.documents.basis_changed_under_lock', $error->detail);
+        }
+
+        self::assertSame('draft', $this->invoiceStatus('inv-off'));
+        self::assertNull($this->invoiceRow('inv-off')['legal_document_ref']);
+        self::assertSame(0, $this->rows('billium_document_legal'));
+        self::assertSame(0, $this->rows('billium_document_number_journal'));
+        self::assertSame(1, $this->value("SELECT next_number FROM billium_document_series WHERE series_ref='INV'"));
     }
 }

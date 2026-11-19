@@ -39,6 +39,7 @@ use Billium\Execution\Contracts\Fiscal\FiscalDrivers;
 use Billium\Execution\Contracts\Fiscal\FiscalOrchestrator;
 use Billium\Execution\Contracts\RefundCommands;
 use Billium\Execution\Data\Fiscal\FiscalCallbackEnvelope;
+use Billium\Execution\Data\Fiscal\FiscalExternalOutcome;
 use Billium\Execution\Data\Fiscal\FiscalIntentRecord;
 use Billium\Execution\Data\Fiscal\FiscalPolicyConfig;
 use Billium\Execution\Data\Fiscal\FiscalProjectionRecord;
@@ -524,9 +525,38 @@ final class FiscalAccountingExposureTest extends ExecutionTestCase
                 static fn () => $fiscal->syncActualEffectsForRoot($execScope, 'root-a', 'embedded-commerz'),
             );
 
-            // Sync projections (and replay idempotently): 1 sale (100) + 2 refunds (70 + 70 = 140), 0 fiscal intents, 0 provider sends.
-            $projections = $fiscal->syncActualProjectionsForRoot($execScope, 'root-a', 'embedded-commerz');
-            $replayed = $fiscal->syncActualProjectionsForRoot($execScope, 'root-a', 'embedded-commerz');
+            // Without authenticated external fiscal outcomes, embedded-commerz records 0 projections (never fabricates registered).
+            self::assertSame([], $fiscal->syncActualProjectionsForRoot($execScope, 'root-a', 'embedded-commerz'));
+            self::assertSame(0, $this->rows('billium_fiscal_projection'));
+
+            // Supply genuine authenticated external fiscal outcomes for capture (100) + two confirmed refunds (70 + 70).
+            $extracted = $app->make(ActualEffectExtractor::class)->extractForRoot($execScope, 'root-a', 'embedded-commerz');
+            self::assertCount(3, $extracted);
+            $externalOutcomes = [];
+            foreach ($extracted as $effect) {
+                $extRef = match ($effect->operationRef) {
+                    'root-a' => 'commerz-acc12-sale-100',
+                    'replacement' => 'commerz-acc12-refund-replacement-70',
+                    default => 'commerz-acc12-refund-old-70',
+                };
+                $externalOutcomes[] = new FiscalExternalOutcome(
+                    operationRef: $effect->operationRef,
+                    economicEffectRef: $effect->economicEffectRef,
+                    receiptKind: $effect->receiptKind,
+                    fiscalStatus: 'registered',
+                    evidenceDigest: 'sha256:'.hash('sha256', $extRef.':'.$effect->economicEffectRef),
+                    externalFiscalRef: $extRef,
+                    correctionRevision: 0,
+                    sourcePayload: [
+                        'fiscalProvider' => 'commerz-ofd',
+                        'externalReceiptNo' => $extRef,
+                    ],
+                );
+            }
+
+            // Sync projections (and replay idempotently in reversed order): 1 sale (100) + 2 refunds (70 + 70 = 140), 0 fiscal intents, 0 provider sends.
+            $projections = $fiscal->syncActualProjectionsForRoot($execScope, 'root-a', 'embedded-commerz', $externalOutcomes);
+            $replayed = $fiscal->syncActualProjectionsForRoot($execScope, 'root-a', 'embedded-commerz', array_reverse($externalOutcomes));
             self::assertCount(3, $projections);
             self::assertCount(3, $replayed);
 
@@ -537,8 +567,14 @@ final class FiscalAccountingExposureTest extends ExecutionTestCase
             self::assertCount(2, $refundProjections);
             self::assertSame(140, array_sum(array_map(static fn (FiscalProjectionRecord $p): int => $p->amount->minor, $refundProjections)));
             self::assertCount(1, array_filter($refundProjections, static fn (FiscalProjectionRecord $p): bool => $p->exceptional));
+            foreach ($projections as $projection) {
+                self::assertSame('registered', $projection->fiscalStatus);
+                self::assertNotNull($projection->externalFiscalRef);
+                self::assertStringStartsWith('commerz-acc12-', $projection->externalFiscalRef);
+            }
 
             self::assertSame(3, $this->rows('billium_fiscal_projection'));
+            self::assertSame(0, $this->rows('billium_fiscal_projection', "external_fiscal_ref LIKE 'source-receipt:%'"));
             self::assertSame(2, $this->rows('billium_fiscal_projection', "receipt_kind='refund' AND execution_profile='embedded-commerz'"));
             self::assertSame(0, $this->rows('billium_fiscal_intent'));
             self::assertSame(0, $unusedDriver->registerCalls);

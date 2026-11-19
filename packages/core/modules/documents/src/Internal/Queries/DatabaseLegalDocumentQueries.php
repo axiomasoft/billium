@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Documents\Internal\Queries;
 
+use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Documents\Contracts\LegalDocumentQueries;
 use Billium\Documents\Data\DocumentNumberJournalEntry;
@@ -21,6 +22,7 @@ final readonly class DatabaseLegalDocumentQueries implements LegalDocumentQuerie
     public function __construct(
         private DatabaseManager $databases,
         private CallerContext $callers,
+        private BilliumOptions $options,
     ) {}
 
     public function find(DocumentScope $scope, string $legalDocumentRef): ?LegalDocumentView
@@ -28,7 +30,7 @@ final readonly class DatabaseLegalDocumentQueries implements LegalDocumentQuerie
         $caller = $this->callers->current();
         RowCast::assertScope($caller, $scope);
 
-        $row = $this->databases->connection()->table('billium_document_legal')
+        $row = $this->databases->connection($this->options->connection)->table('billium_document_legal')
             ->where('seller_ref', $caller->sellerRef)
             ->where('environment', $caller->environment)
             ->where('legal_document_ref', $legalDocumentRef)
@@ -42,7 +44,7 @@ final readonly class DatabaseLegalDocumentQueries implements LegalDocumentQuerie
         $caller = $this->callers->current();
         RowCast::assertScope($caller, $scope);
 
-        $row = $this->databases->connection()->table('billium_document_legal')
+        $row = $this->databases->connection($this->options->connection)->table('billium_document_legal')
             ->where('seller_ref', $caller->sellerRef)
             ->where('environment', $caller->environment)
             ->where('document_type', $documentType->value)
@@ -59,7 +61,7 @@ final readonly class DatabaseLegalDocumentQueries implements LegalDocumentQuerie
         $caller = $this->callers->current();
         RowCast::assertScope($caller, $scope);
 
-        $rows = $this->databases->connection()->table('billium_document_number_journal')
+        $rows = $this->databases->connection($this->options->connection)->table('billium_document_number_journal')
             ->where('seller_ref', $caller->sellerRef)
             ->where('environment', $caller->environment)
             ->where('series_ref', $seriesRef)

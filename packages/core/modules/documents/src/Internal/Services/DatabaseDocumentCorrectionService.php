@@ -8,6 +8,7 @@ use Billium\Contracts\Data\Currency;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Contracts\Runner\OperationRunner;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Contracts\Runtime\CallerContext;
@@ -21,10 +22,12 @@ use Billium\Documents\Contracts\DocumentsNumberingParticipant;
 use Billium\Documents\Data\AllocateLegalNumberCommand;
 use Billium\Documents\Data\DocumentCorrectionView;
 use Billium\Documents\Data\DocumentCreditNoteLineView;
+use Billium\Documents\Data\DocumentFinalizationView;
 use Billium\Documents\Data\DocumentScope;
 use Billium\Documents\Data\DocumentTaxCorrectionPolicy;
 use Billium\Documents\Data\IssueDocumentCreditNote;
 use Billium\Documents\Data\IssuePositiveDocumentCorrection;
+use Billium\Documents\Data\LegalDocumentView;
 use Billium\Documents\Data\RecordDocumentWriteOff;
 use Billium\Documents\Data\VoidAndReissueLegalDocument;
 use Billium\Documents\Enums\CorrectionKind;
@@ -57,6 +60,7 @@ final readonly class DatabaseDocumentCorrectionService implements DocumentCorrec
         private DocumentsNumberingParticipant $numberingParticipant,
         private DocumentProfileRegistry $profiles,
         private PartialCreditAllocator $allocator,
+        private BilliumOptions $options,
     ) {}
 
     public function issueCreditNote(IssueDocumentCreditNote $command): StoredOutcome
@@ -144,9 +148,6 @@ final readonly class DatabaseDocumentCorrectionService implements DocumentCorrec
 
                 $original = DatabaseLegalDocumentIssuer::hydrate($origRow);
                 $currencyObj = Currency::of($original->currency);
-                $originalRounding = is_string($original->termsSnapshot['roundingPolicyVersion'] ?? null)
-                    ? $original->termsSnapshot['roundingPolicyVersion']
-                    : 'half_up/1';
                 $taxSnapshotRef = is_string($original->taxSnapshot['taxSnapshotRef'] ?? null)
                     ? $original->taxSnapshot['taxSnapshotRef']
                     : 'tsnap-orig';
@@ -186,6 +187,7 @@ final readonly class DatabaseDocumentCorrectionService implements DocumentCorrec
                         throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.unknown_original_line: '.$req->originalInvoiceLineId);
                     }
                     $origLine = $origLineMap[$req->originalInvoiceLineId];
+                    $lineRounding = self::resolveLineRoundingPolicyVersion($origLine, $original);
                     $obRef = RowCast::str($origLine['obligationRef'] ?? null, 'obligationRef');
                     $compRef = RowCast::str($origLine['componentRef'] ?? null, 'componentRef');
                     $origNet = RowCast::integer($origLine['netMinor'] ?? null, 'netMinor');
@@ -203,7 +205,7 @@ final readonly class DatabaseDocumentCorrectionService implements DocumentCorrec
                         priorNetMinor: $priorNet,
                         priorTaxMinor: $priorTax,
                         priorGrossMinor: $priorGross,
-                        originalRoundingPolicyVersion: $originalRounding,
+                        originalRoundingPolicyVersion: $lineRounding,
                         currency: $original->currency,
                         currencyExponent: $currencyObj->scale,
                         policy: $command->taxPolicy,
@@ -219,7 +221,7 @@ final readonly class DatabaseDocumentCorrectionService implements DocumentCorrec
                         originalInvoiceLineId: $req->originalInvoiceLineId,
                         originalComponentRef: $compRef,
                         originalTaxSnapshotRef: $taxSnapshotRef,
-                        originalRoundingPolicyVersion: $originalRounding,
+                        originalRoundingPolicyVersion: $lineRounding,
                         creditedQuantity: $req->creditedQuantity,
                     );
 
@@ -231,7 +233,7 @@ final readonly class DatabaseDocumentCorrectionService implements DocumentCorrec
                         'original_obligation_ref' => $obRef,
                         'original_component_ref' => $compRef,
                         'original_tax_snapshot_ref' => $taxSnapshotRef,
-                        'original_rounding_policy_version' => $originalRounding,
+                        'original_rounding_policy_version' => $lineRounding,
                         'credited_quantity' => $req->creditedQuantity,
                         'net_minor' => $allocated['netMinor'],
                         'tax_minor' => $allocated['taxMinor'],
@@ -389,6 +391,16 @@ final readonly class DatabaseDocumentCorrectionService implements DocumentCorrec
         }
         $this->allocator->validatePolicy($command->taxPolicy);
 
+        if ($command->issueLegalDocument) {
+            if ($command->seriesRef === null || $command->periodKey === null || $command->finalizationRef === null || $command->approvedSnapshotDigest === null) {
+                throw new ProblemException(ProblemCode::ValidationInvalid, 'legal positive correction requires seriesRef, periodKey, finalizationRef, and approvedSnapshotDigest');
+            }
+            RowCast::bounded($command->seriesRef, 'seriesRef');
+            RowCast::bounded($command->periodKey, 'periodKey', 32);
+            RowCast::bounded($command->finalizationRef, 'finalizationRef');
+            RowCast::bounded($command->approvedSnapshotDigest, 'approvedSnapshotDigest');
+        }
+
         $currencyObj = Currency::of($command->currency);
         $grossDelta = $command->deltaNetMinor + $command->deltaTaxMinor;
         $policyPayload = self::serializePolicy($command->taxPolicy);
@@ -397,12 +409,21 @@ final readonly class DatabaseDocumentCorrectionService implements DocumentCorrec
             'correctionRef' => $command->correctionRef,
             'originalLegalDocumentRef' => $command->originalLegalDocumentRef,
             'obligationRef' => $command->obligationRef,
+            'customerRef' => $command->customerRef,
+            'componentRef' => $command->componentRef,
             'parentOccurrenceRef' => $command->parentOccurrenceRef,
             'correctionRevision' => $command->correctionRevision,
             'deltaNetMinor' => $command->deltaNetMinor,
             'deltaTaxMinor' => $command->deltaTaxMinor,
+            'deltaGrossMinor' => $grossDelta,
             'currency' => $currencyObj->code,
-            'policy' => $policyPayload,
+            'taxPolicy' => $policyPayload,
+            'reason' => $command->reason,
+            'issueLegalDocument' => $command->issueLegalDocument,
+            'seriesRef' => $command->seriesRef,
+            'periodKey' => $command->periodKey,
+            'finalizationRef' => $command->finalizationRef,
+            'approvedSnapshotDigest' => $command->approvedSnapshotDigest,
         ]);
 
         return $this->runner->run(
@@ -436,6 +457,101 @@ final readonly class DatabaseDocumentCorrectionService implements DocumentCorrec
                     throw new ProblemException(ProblemCode::MoneyCurrencyMismatch, 'correction currency differs from original document');
                 }
 
+                $legalIssuePlan = null;
+
+                if ($command->issueLegalDocument) {
+                    $seriesRef = $command->seriesRef ?? '';
+                    $periodKey = $command->periodKey ?? '';
+                    $finalizationRef = $command->finalizationRef ?? '';
+                    $approvedSnapshotDigest = $command->approvedSnapshotDigest ?? '';
+
+                    $series = $db->table('billium_document_series')
+                        ->where('seller_ref', $caller->sellerRef)
+                        ->where('environment', $caller->environment)
+                        ->where('series_ref', $seriesRef)
+                        ->where('period_key', $periodKey)
+                        ->first();
+                    if (
+                        $series === null
+                        || ! RowCast::boolean($series->active, 'active')
+                        || RowCast::str($series->document_type, 'document_type') !== DocumentType::Correction->value
+                    ) {
+                        throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.correction_series_invalid');
+                    }
+                    $seriesId = RowCast::integer($series->id, 'id');
+
+                    $fin = $db->table('billium_document_finalization')
+                        ->where('seller_ref', $caller->sellerRef)
+                        ->where('environment', $caller->environment)
+                        ->where('finalization_ref', $finalizationRef)
+                        ->where('state', FinalizationState::SnapshotReady->value)
+                        ->where('approved_snapshot_digest', $approvedSnapshotDigest)
+                        ->first();
+                    if ($fin === null) {
+                        throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.snapshot_not_ready');
+                    }
+
+                    $finalization = DatabaseDocumentFinalizationService::hydrate($fin);
+                    $roundingMode = RowCast::str($fin->rounding_mode, 'rounding_mode');
+
+                    if (
+                        $finalization->documentType !== DocumentType::Correction
+                        || ($finalization->economicRef !== $command->obligationRef && $finalization->economicRef !== $command->correctionRef)
+                        || $finalization->currency !== $currencyObj->code
+                    ) {
+                        throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.correction_finalization_mismatch');
+                    }
+                    if (
+                        $finalization->subtotalMinor !== $command->deltaNetMinor
+                        || $finalization->taxMinor !== $command->deltaTaxMinor
+                        || $finalization->totalMinor !== $grossDelta
+                        || $finalization->taxSnapshot === null
+                        || $finalization->taxSnapshot->currency !== $currencyObj->code
+                        || $finalization->taxSnapshot->subtotalMinor !== $command->deltaNetMinor
+                        || $finalization->taxSnapshot->taxMinor !== $command->deltaTaxMinor
+                        || $finalization->taxSnapshot->totalMinor !== $grossDelta
+                    ) {
+                        throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.correction_finalization_amount_mismatch');
+                    }
+
+                    $finLines = self::serializeFinalizationLines($finalization, $roundingMode);
+                    if ($finLines === []) {
+                        throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.correction_finalization_lines_missing');
+                    }
+                    $lineNetSum = 0;
+                    $lineTaxSum = 0;
+                    $lineGrossSum = 0;
+                    foreach ($finLines as $finLine) {
+                        if (RowCast::str($finLine['obligationRef'] ?? null, 'obligationRef') !== $command->obligationRef) {
+                            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.correction_finalization_line_mismatch');
+                        }
+                        $lineNetSum += RowCast::integer($finLine['netMinor'] ?? null, 'netMinor');
+                        $lineTaxSum += RowCast::integer($finLine['taxMinor'] ?? null, 'taxMinor');
+                        $lineGrossSum += RowCast::integer($finLine['grossMinor'] ?? null, 'grossMinor');
+                    }
+                    if ($lineNetSum !== $command->deltaNetMinor || $lineTaxSum !== $command->deltaTaxMinor || $lineGrossSum !== $grossDelta) {
+                        throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.correction_finalization_amount_mismatch');
+                    }
+
+                    $profile = $this->profiles->requireComplete(
+                        new DocumentScope($caller->sellerRef, $caller->environment),
+                        RowCast::str($fin->profile_ref, 'profile_ref'),
+                        $finalization->profileVersion,
+                        DocumentType::Correction,
+                    );
+                    $taxPayload = DatabaseDocumentFinalizationService::serializeSnapshot($finalization->taxSnapshot);
+                    $taxPayload['roundingPolicyVersion'] = $roundingMode.'/1';
+
+                    $legalIssuePlan = [
+                        'seriesId' => $seriesId,
+                        'profile' => $profile,
+                        'finalization' => $finalization,
+                        'lines' => $finLines,
+                        'taxPayload' => $taxPayload,
+                        'approvedSnapshotDigest' => $approvedSnapshotDigest,
+                    ];
+                }
+
                 // Positive issued-period delta creates a NEW linked obligation (never adjustObligation on frozen original).
                 $this->ledgerParticipants->recordObligation($context, new RecordObligation(
                     commandKey: $command->commandKey,
@@ -449,61 +565,29 @@ final readonly class DatabaseDocumentCorrectionService implements DocumentCorrec
                 ));
 
                 $resultingDoc = null;
-                if ($command->issueLegalDocument && $command->seriesRef !== null && $command->periodKey !== null && $command->finalizationRef !== null && $command->approvedSnapshotDigest !== null) {
-                    $series = $db->table('billium_document_series')
-                        ->where('seller_ref', $caller->sellerRef)
-                        ->where('environment', $caller->environment)
-                        ->where('series_ref', $command->seriesRef)
-                        ->where('period_key', $command->periodKey)
-                        ->first();
-                    if ($series === null || RowCast::str($series->document_type, 'document_type') !== DocumentType::Correction->value) {
-                        throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.correction_series_invalid');
-                    }
-                    $fin = $db->table('billium_document_finalization')
-                        ->where('seller_ref', $caller->sellerRef)
-                        ->where('environment', $caller->environment)
-                        ->where('finalization_ref', $command->finalizationRef)
-                        ->where('state', FinalizationState::SnapshotReady->value)
-                        ->where('approved_snapshot_digest', $command->approvedSnapshotDigest)
-                        ->first();
-                    if ($fin === null) {
-                        throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.snapshot_not_ready');
-                    }
-                    $profile = $this->profiles->requireComplete(
-                        new DocumentScope($caller->sellerRef, $caller->environment),
-                        RowCast::str($fin->profile_ref, 'profile_ref'),
-                        RowCast::integer($fin->profile_version, 'profile_version'),
-                        DocumentType::Correction,
-                    );
+                if ($legalIssuePlan !== null) {
                     $resultingLegalRef = self::deterministicRef($caller->sellerRef, $caller->environment, 'correction', $command->correctionRef, $command->correctionRevision);
                     $resultingDoc = $this->numberingParticipant->allocateAndRecord($context, new AllocateLegalNumberCommand(
                         legalDocumentRef: $resultingLegalRef,
                         documentType: DocumentType::Correction,
-                        economicRef: $command->obligationRef,
+                        economicRef: $legalIssuePlan['finalization']->economicRef,
                         documentRevision: $command->correctionRevision,
-                        seriesId: RowCast::integer($series->id, 'id'),
-                        profileId: $profile->id,
-                        profileVersion: $profile->version,
-                        finalizationId: RowCast::integer($fin->id, 'id'),
-                        basisRevision: $command->correctionRevision,
-                        basisDigest: $original->basisDigest,
-                        approvedSnapshotDigest: $command->approvedSnapshotDigest,
-                        currency: $currencyObj->code,
+                        seriesId: $legalIssuePlan['seriesId'],
+                        profileId: $legalIssuePlan['profile']->id,
+                        profileVersion: $legalIssuePlan['profile']->version,
+                        finalizationId: $legalIssuePlan['finalization']->id,
+                        basisRevision: $legalIssuePlan['finalization']->basisRevision,
+                        basisDigest: $legalIssuePlan['finalization']->basisDigest,
+                        approvedSnapshotDigest: $legalIssuePlan['approvedSnapshotDigest'],
+                        currency: $legalIssuePlan['finalization']->currency,
                         subtotalMinor: $command->deltaNetMinor,
                         taxMinor: $command->deltaTaxMinor,
                         totalMinor: $grossDelta,
-                        sellerSnapshot: $profile->sellerSnapshot,
-                        buyerSnapshot: $original->buyerSnapshot,
-                        taxSnapshot: $policyPayload,
-                        termsSnapshot: $original->termsSnapshot,
-                        linesSnapshot: [[
-                            'lineRef' => 'corr-line-1',
-                            'obligationRef' => $command->obligationRef,
-                            'componentRef' => $command->componentRef,
-                            'netMinor' => $command->deltaNetMinor,
-                            'taxMinor' => $command->deltaTaxMinor,
-                            'grossMinor' => $grossDelta,
-                        ]],
+                        sellerSnapshot: $legalIssuePlan['profile']->sellerSnapshot,
+                        buyerSnapshot: $legalIssuePlan['finalization']->buyerSnapshot,
+                        taxSnapshot: $legalIssuePlan['taxPayload'],
+                        termsSnapshot: $legalIssuePlan['finalization']->termsSnapshot,
+                        linesSnapshot: $legalIssuePlan['lines'],
                         displayMetadata: ['displayLabel' => 'Correction for '.$original->legalNumber],
                         receiptRef: 'legal-corr:'.$resultingLegalRef,
                         originalLegalDocumentRef: $original->legalDocumentRef,
@@ -614,6 +698,31 @@ final readonly class DatabaseDocumentCorrectionService implements DocumentCorrec
                     throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.snapshot_not_ready');
                 }
                 $finalization = DatabaseDocumentFinalizationService::hydrate($finRow);
+                $roundingMode = RowCast::str($finRow->rounding_mode, 'rounding_mode');
+
+                if (
+                    $finalization->documentType !== $original->documentType
+                    || $finalization->economicRef !== $original->economicRef
+                    || $finalization->currency !== $original->currency
+                ) {
+                    throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.reissue_basis_mismatch');
+                }
+                if (
+                    $finalization->subtotalMinor !== $original->subtotalMinor
+                    || $finalization->taxMinor !== $original->taxMinor
+                    || $finalization->totalMinor !== $original->totalMinor
+                    || $finalization->taxSnapshot === null
+                    || $finalization->taxSnapshot->currency !== $original->currency
+                    || $finalization->taxSnapshot->subtotalMinor !== $original->subtotalMinor
+                    || $finalization->taxSnapshot->taxMinor !== $original->taxMinor
+                    || $finalization->taxSnapshot->totalMinor !== $original->totalMinor
+                ) {
+                    throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.reissue_amount_mismatch');
+                }
+
+                $newLinesSnapshot = self::serializeFinalizationLines($finalization, $roundingMode);
+                self::assertReissueLinesMatchOriginal($newLinesSnapshot, $original->linesSnapshot);
+
                 $profile = $this->profiles->requireComplete(
                     $command->scope,
                     RowCast::str($finRow->profile_ref, 'profile_ref'),
@@ -630,6 +739,9 @@ final readonly class DatabaseDocumentCorrectionService implements DocumentCorrec
 
                 if ($series === null || ! RowCast::boolean($series->active, 'active')) {
                     throw new ProblemException(ProblemCode::AuthDenied, 'billium.documents.series_not_in_scope');
+                }
+                if (RowCast::str($series->document_type, 'document_type') !== $original->documentType->value) {
+                    throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.series_document_type_mismatch');
                 }
 
                 // Step 1: Void original legal document (number preserved in journal and never reused).
@@ -658,9 +770,8 @@ final readonly class DatabaseDocumentCorrectionService implements DocumentCorrec
                 // Step 2: Allocate new revision legal document linked to voided original.
                 $newRevision = $original->documentRevision + 1;
                 $newLegalRef = self::deterministicRef($caller->sellerRef, $caller->environment, 'reissue', $original->economicRef, $newRevision);
-                $taxPayload = $finalization->taxSnapshot !== null
-                    ? DatabaseDocumentFinalizationService::serializeSnapshot($finalization->taxSnapshot)
-                    : [];
+                $taxPayload = DatabaseDocumentFinalizationService::serializeSnapshot($finalization->taxSnapshot);
+                $taxPayload['roundingPolicyVersion'] = $roundingMode.'/1';
 
                 $reissued = $this->numberingParticipant->allocateAndRecord($context, new AllocateLegalNumberCommand(
                     legalDocumentRef: $newLegalRef,
@@ -675,14 +786,14 @@ final readonly class DatabaseDocumentCorrectionService implements DocumentCorrec
                     basisDigest: $finalization->basisDigest,
                     approvedSnapshotDigest: $command->approvedSnapshotDigest,
                     currency: $finalization->currency,
-                    subtotalMinor: $finalization->subtotalMinor ?? 0,
-                    taxMinor: $finalization->taxMinor ?? 0,
-                    totalMinor: $finalization->totalMinor ?? 0,
+                    subtotalMinor: $finalization->subtotalMinor,
+                    taxMinor: $finalization->taxMinor,
+                    totalMinor: $finalization->totalMinor,
                     sellerSnapshot: $profile->sellerSnapshot,
                     buyerSnapshot: $finalization->buyerSnapshot,
                     taxSnapshot: $taxPayload,
                     termsSnapshot: $finalization->termsSnapshot,
-                    linesSnapshot: $original->linesSnapshot,
+                    linesSnapshot: $newLinesSnapshot,
                     displayMetadata: ['displayLabel' => 'Reissue of '.$original->legalNumber],
                     receiptRef: 'legal-reissue:'.$newLegalRef,
                     originalLegalDocumentRef: $original->legalDocumentRef,
@@ -818,7 +929,7 @@ final readonly class DatabaseDocumentCorrectionService implements DocumentCorrec
         $caller = $this->callers->current();
         RowCast::assertScope($caller, $scope);
 
-        $row = $this->databases->connection()->table('billium_document_correction')
+        $row = $this->databases->connection($this->options->connection)->table('billium_document_correction')
             ->where('seller_ref', $caller->sellerRef)
             ->where('environment', $caller->environment)
             ->where('correction_ref', $correctionRef)
@@ -833,7 +944,7 @@ final readonly class DatabaseDocumentCorrectionService implements DocumentCorrec
         $caller = $this->callers->current();
         RowCast::assertScope($caller, $scope);
 
-        $rows = $this->databases->connection()->table('billium_document_credit_note_line as l')
+        $rows = $this->databases->connection($this->options->connection)->table('billium_document_credit_note_line as l')
             ->join('billium_document_correction as c', 'c.id', '=', 'l.credit_note_id')
             ->where('c.seller_ref', $caller->sellerRef)
             ->where('c.environment', $caller->environment)
@@ -898,6 +1009,108 @@ final readonly class DatabaseDocumentCorrectionService implements DocumentCorrec
             receiptRef: RowCast::str($row->receipt_ref, 'receipt_ref'),
             createdAt: RowCast::timestamp($row->created_at, 'created_at'),
         );
+    }
+
+    /** @param array<string, mixed> $origLine */
+    private static function resolveLineRoundingPolicyVersion(array $origLine, LegalDocumentView $original): string
+    {
+        foreach ([
+            $origLine['roundingPolicyVersion'] ?? null,
+            $original->taxSnapshot['roundingPolicyVersion'] ?? null,
+            $original->termsSnapshot['roundingPolicyVersion'] ?? null,
+        ] as $candidate) {
+            if (is_string($candidate) && trim($candidate) !== '') {
+                return trim($candidate);
+            }
+        }
+
+        throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.rounding_policy_missing');
+    }
+
+    /** @return list<array<string, mixed>> */
+    private static function serializeFinalizationLines(DocumentFinalizationView $finalization, string $roundingMode): array
+    {
+        if ($finalization->taxSnapshot === null) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.snapshot_not_ready');
+        }
+
+        $taxByLine = [];
+        foreach ($finalization->taxSnapshot->lines as $line) {
+            $taxByLine[$line->lineRef] = $line;
+        }
+
+        $termsRounding = $finalization->termsSnapshot['roundingPolicyVersion'] ?? null;
+        $defaultRoundingPolicyVersion = is_string($termsRounding) && trim($termsRounding) !== ''
+            ? trim($termsRounding)
+            : $roundingMode.'/1';
+        $linePolicies = is_array($finalization->termsSnapshot['lineRoundingPolicies'] ?? null)
+            ? $finalization->termsSnapshot['lineRoundingPolicies']
+            : [];
+
+        $out = [];
+        foreach ($finalization->lines as $line) {
+            if (! isset($taxByLine[$line->lineRef])) {
+                throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.finalization_line_tax_missing');
+            }
+            $t = $taxByLine[$line->lineRef];
+            $perLinePolicy = $linePolicies[$line->lineRef] ?? null;
+            $roundingPolicyVersion = is_string($perLinePolicy) && trim($perLinePolicy) !== ''
+                ? trim($perLinePolicy)
+                : $defaultRoundingPolicyVersion;
+            $out[] = [
+                'lineRef' => $line->lineRef,
+                'obligationRef' => $line->obligationRef,
+                'componentRef' => $line->componentRef,
+                'quantity' => $line->quantity,
+                'unitPriceDecimal' => $line->unitPriceDecimal,
+                'netMinor' => $t->netMinor,
+                'discountMinor' => $line->discountMinor,
+                'taxCode' => $line->taxCode,
+                'taxRate' => $t->rateDecimal,
+                'taxMinor' => $t->taxMinor,
+                'grossMinor' => $t->grossMinor,
+                'description' => $line->description,
+                'roundingPolicyVersion' => $roundingPolicyVersion,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $newLines
+     * @param  list<array<string, mixed>>  $origLines
+     */
+    private static function assertReissueLinesMatchOriginal(array $newLines, array $origLines): void
+    {
+        if (count($newLines) !== count($origLines)) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.reissue_line_mismatch');
+        }
+
+        $origByRef = [];
+        foreach ($origLines as $origLine) {
+            $lineRef = RowCast::str($origLine['lineRef'] ?? null, 'lineRef');
+            $origByRef[$lineRef] = $origLine;
+        }
+        if (count($origByRef) !== count($origLines)) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.reissue_line_mismatch');
+        }
+
+        foreach ($newLines as $newLine) {
+            $lineRef = RowCast::str($newLine['lineRef'] ?? null, 'lineRef');
+            if (! isset($origByRef[$lineRef])) {
+                throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.reissue_line_mismatch');
+            }
+            $origLine = $origByRef[$lineRef];
+            if (
+                RowCast::str($newLine['obligationRef'] ?? null, 'obligationRef') !== RowCast::str($origLine['obligationRef'] ?? null, 'obligationRef')
+                || RowCast::integer($newLine['netMinor'] ?? null, 'netMinor') !== RowCast::integer($origLine['netMinor'] ?? null, 'netMinor')
+                || RowCast::integer($newLine['taxMinor'] ?? null, 'taxMinor') !== RowCast::integer($origLine['taxMinor'] ?? null, 'taxMinor')
+                || RowCast::integer($newLine['grossMinor'] ?? null, 'grossMinor') !== RowCast::integer($origLine['grossMinor'] ?? null, 'grossMinor')
+            ) {
+                throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.reissue_line_mismatch');
+            }
+        }
     }
 
     /** @return array<string, mixed> */

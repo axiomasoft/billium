@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Documents\Internal\Registrars;
 
+use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Contracts\Runner\OperationRunner;
 use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Documents\Contracts\DocumentCorrectionService;
@@ -58,6 +59,7 @@ final class DocumentsRuntimeRegistrar implements PackageRegistrar
             databases: $app->make(DatabaseManager::class),
             runner: $app->make(OperationRunner::class),
             callers: $app->make(CallerContext::class),
+            options: $app->make(BilliumOptions::class),
             rendererResolver: static fn (): ?DocumentRenderer => $app->bound(DocumentRenderer::class) ? $app->make(DocumentRenderer::class) : null,
             storageResolver: static fn (): ?DocumentStorage => $app->bound(DocumentStorage::class) ? $app->make(DocumentStorage::class) : null,
         ));

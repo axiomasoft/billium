@@ -6,6 +6,7 @@ namespace Billium\Documents\Internal\Services;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Contracts\Runner\OperationRunner;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Contracts\Runtime\CallerContext;
@@ -35,6 +36,7 @@ final readonly class DatabaseDocumentSeriesRegistry implements DocumentSeriesReg
         private DatabaseManager $databases,
         private OperationRunner $runner,
         private CallerContext $callers,
+        private BilliumOptions $options,
     ) {}
 
     public function createSeries(CreateDocumentSeries $command): DocumentSeriesView
@@ -134,7 +136,7 @@ final readonly class DatabaseDocumentSeriesRegistry implements DocumentSeriesReg
     {
         $caller = $this->callers->current();
         RowCast::assertScope($caller, $scope);
-        $row = $this->databases->connection()->table('billium_document_series')
+        $row = $this->databases->connection($this->options->connection)->table('billium_document_series')
             ->where('seller_ref', $caller->sellerRef)
             ->where('environment', $caller->environment)
             ->where('series_ref', $seriesRef)

@@ -160,6 +160,37 @@ final class FiscalLifecycleTest extends ExecutionTestCase
             receiptRequired: true,
             fiscalRoute: FiscalRoute::ProjectionOnly,
         ));
+        // Registered projections MUST carry a non-empty externalFiscalRef (never fabricated).
+        HistoricalMerchantRefundTest::problem(
+            ProblemCode::ValidationInvalid,
+            static fn () => $orchestrator->recordProjection(new FiscalProjectionInput(
+                scope: $scope,
+                sourceAuthority: 'embedded-commerz',
+                economicEffectRef: 'fact:embedded-missing-ref',
+                rootOperationRef: 'root-a',
+                operationRef: 'root-a',
+                receiptKind: FiscalReceiptKind::Sale,
+                correctionRevision: 0,
+                actualAmount: new Money(1000, Currency::of('RUB')),
+                fiscalStatus: 'registered',
+                externalFiscalRef: null,
+            )),
+        );
+        HistoricalMerchantRefundTest::problem(
+            ProblemCode::ValidationInvalid,
+            static fn () => $orchestrator->recordProjection(new FiscalProjectionInput(
+                scope: $scope,
+                sourceAuthority: 'embedded-commerz',
+                economicEffectRef: 'fact:embedded-blank-ref',
+                rootOperationRef: 'root-a',
+                operationRef: 'root-a',
+                receiptKind: FiscalReceiptKind::Sale,
+                correctionRevision: 0,
+                actualAmount: new Money(1000, Currency::of('RUB')),
+                fiscalStatus: 'registered',
+                externalFiscalRef: '   ',
+            )),
+        );
         $projection = $orchestrator->recordProjection(new FiscalProjectionInput(
             scope: $scope,
             sourceAuthority: 'embedded-commerz',
@@ -173,6 +204,7 @@ final class FiscalLifecycleTest extends ExecutionTestCase
             externalFiscalRef: 'commerz-rcpt-1',
         ));
         self::assertSame('embedded-commerz', $projection->executionProfile);
+        self::assertSame('commerz-rcpt-1', $projection->externalFiscalRef);
         self::assertSame(1, $this->rows('billium_fiscal_projection'));
         self::assertSame(0, $this->rows('billium_fiscal_intent', "root_operation_ref='root-a'"));
         self::assertSame(0, $pspDriver->registerCalls + $cloudDriver->registerCalls);

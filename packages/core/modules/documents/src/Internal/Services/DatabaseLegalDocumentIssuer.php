@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Billium\Documents\Internal\Services;
 
-use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runner\OperationRunner;
@@ -32,7 +31,7 @@ use Billium\Documents\Enums\LegalDocumentStatus;
 use Billium\Documents\Internal\Canonical\CanonicalJson;
 use Billium\Documents\Internal\DocumentReceipt;
 use Billium\Documents\Internal\Support\RowCast;
-use Billium\Ledger\Contracts\LedgerQueries;
+use Billium\Ledger\Contracts\LockedInvoiceSnapshotParticipant;
 use Billium\Ledger\Data\Invoices\IssueInvoice;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -59,7 +58,7 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
         private CallerContext $callers,
         private DocumentProfileRegistry $profiles,
         private LedgerIssuePolicy $ledgerIssuePolicy,
-        private LedgerQueries $ledgerQueries,
+        private LockedInvoiceSnapshotParticipant $lockedInvoiceSnapshots,
         private DocumentsNumberingParticipant $numberingParticipant,
     ) {}
 
@@ -100,9 +99,6 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
             'legalDocumentRef' => $legalDocumentRef,
         ]);
 
-        // Pre-Tx read-only snapshot of invoice lines via ReadSession (requires transactionLevel() === 0).
-        $preInvoice = $this->ledgerQueries->invoice($command->invoiceRef);
-
         return $this->runner->run(
             spec: new OperationSpec(
                 commandKind: 'documents.legal_document.issue.v1',
@@ -115,7 +111,7 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
                 digest: $digest,
                 commitKind: 'documents.legal_document.issued',
             ),
-            body: function (TransactionContext $context) use ($caller, $command, $legalDocumentRef, $preInvoice): DocumentReceipt {
+            body: function (TransactionContext $context) use ($caller, $command, $legalDocumentRef): DocumentReceipt {
                 $this->runner->assertCurrent($context, 'documents');
                 $db = $this->databases->connection($context->connectionName());
 
@@ -165,15 +161,16 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
 
                 $seriesId = RowCast::integer($series->id, 'id');
 
-                // Step 1 in lock DAG: issue ledger invoice first (locks Obligation 70 -> Invoice 80) and capture locked totals.
+                // Step 1 in lock DAG: issue ledger invoice first (locks Obligation 70 -> Invoice 80) and capture locked snapshot.
                 $ledgerReceipt = $this->ledgerIssuePolicy->issue(
                     $context,
                     new IssueInvoice($command->commandKey, $command->scope, $command->invoiceRef),
                     $legalDocumentRef,
                 );
+                $lockedInvoice = $this->lockedInvoiceSnapshots->lockedInvoiceSnapshot($context, $command->scope, $command->invoiceRef);
 
-                // Step 2: verify pre-Tx line basis AND locked receipt totals from Obligation/Invoice lock match finalization.
-                self::assertLockedInvoiceMatchesFinalization($preInvoice, $ledgerReceipt->body(), $finalization, $legalDocumentRef);
+                // Step 2: verify live locked invoice totals and every refreshed line under Obligation/Invoice lock match finalization.
+                self::assertLockedInvoiceMatchesFinalization($lockedInvoice, $ledgerReceipt->body(), $finalization, $legalDocumentRef);
 
                 // Step 3: if another concurrent worker already committed this exact legal basis, replay cleanly without touching series.
                 $existingLegal = $db->table('billium_document_legal')
@@ -201,9 +198,19 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
                 }
 
                 // Step 4: lock DocumentSeries (130), increment next_number, insert legal doc + number journal.
-                $linesSnapshot = self::serializeFinalizationLines($finalization);
+                $roundingMode = RowCast::str($finRow->rounding_mode, 'rounding_mode');
+                $roundingPolicyVersion = $roundingMode.'/1';
+                $termsRoundingPolicy = $finalization->termsSnapshot['roundingPolicyVersion'] ?? null;
+                $defaultLineRoundingPolicy = is_string($termsRoundingPolicy) && trim($termsRoundingPolicy) !== ''
+                    ? $termsRoundingPolicy
+                    : $roundingPolicyVersion;
+
+                $linesSnapshot = self::serializeFinalizationLines($finalization, $defaultLineRoundingPolicy);
                 $taxSnapshotPayload = $finalization->taxSnapshot !== null
-                    ? DatabaseDocumentFinalizationService::serializeSnapshot($finalization->taxSnapshot)
+                    ? [
+                        ...DatabaseDocumentFinalizationService::serializeSnapshot($finalization->taxSnapshot),
+                        'roundingPolicyVersion' => $roundingPolicyVersion,
+                    ]
                     : throw new LogicException('Snapshot-ready finalization missing tax snapshot payload');
 
                 $view = $this->numberingParticipant->allocateAndRecord($context, new AllocateLegalNumberCommand(
@@ -498,11 +505,11 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
     }
 
     /**
-     * @param  array<string, mixed>  $invoice
+     * @param  array{currency: string, subtotalMinor: int, taxMinor: int, totalMinor: int, lines: list<array{obligationRef: string, subtotalMinor: int, taxMinor: int, totalMinor: int}>}  $lockedInvoice
      * @param  array<string, mixed>  $lockedReceiptBody
      */
     private static function assertLockedInvoiceMatchesFinalization(
-        array $invoice,
+        array $lockedInvoice,
         array $lockedReceiptBody,
         DocumentFinalizationView $finalization,
         string $legalDocumentRef,
@@ -510,42 +517,38 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
         if (
             ($lockedReceiptBody['legal_document_ref'] ?? null) !== $legalDocumentRef
             || ($lockedReceiptBody['currency'] ?? null) !== $finalization->currency
+            || $lockedInvoice['currency'] !== $finalization->currency
         ) {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.basis_changed_under_lock');
         }
 
-        $preLegalRef = $invoice['legalDocumentRef'] ?? null;
-        if ($preLegalRef !== null && $preLegalRef !== $legalDocumentRef) {
-            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.basis_changed_under_lock');
-        }
-
-        $invTotal = Money::fromWire($invoice['total'] ?? null);
-        $invSub = Money::fromWire($invoice['subtotal'] ?? null);
-        $invTax = Money::fromWire($invoice['tax'] ?? null);
         $lockedTotalMinor = RowCast::integer($lockedReceiptBody['total_minor'] ?? null, 'total_minor');
-
-        if ($invTotal->currency->code !== $finalization->currency) {
+        if (
+            $finalization->subtotalMinor === null
+            || $finalization->taxMinor === null
+            || $finalization->totalMinor === null
+            || $lockedTotalMinor !== $finalization->totalMinor
+            || $lockedInvoice['subtotalMinor'] !== $finalization->subtotalMinor
+            || $lockedInvoice['taxMinor'] !== $finalization->taxMinor
+            || $lockedInvoice['totalMinor'] !== $finalization->totalMinor
+        ) {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.basis_changed_under_lock');
         }
 
-        $rawInvLines = $invoice['lines'] ?? null;
-        if (! is_array($rawInvLines) || count($rawInvLines) !== count($finalization->lines)) {
+        if (count($lockedInvoice['lines']) !== count($finalization->lines)) {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.basis_changed_under_lock');
         }
 
         $ledgerByObligation = [];
-        foreach ($rawInvLines as $invLine) {
-            if (! is_array($invLine) || ! is_array($invLine['obligation'] ?? null)) {
-                throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.basis_changed_under_lock');
-            }
-            $obRef = $invLine['obligation']['obligationRef'] ?? null;
-            if (! is_string($obRef)) {
+        foreach ($lockedInvoice['lines'] as $invLine) {
+            $obRef = $invLine['obligationRef'];
+            if (isset($ledgerByObligation[$obRef])) {
                 throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.basis_changed_under_lock');
             }
             $ledgerByObligation[$obRef] = [
-                'sub' => Money::fromWire($invLine['subtotal'] ?? null)->minor,
-                'tax' => Money::fromWire($invLine['tax'] ?? null)->minor,
-                'tot' => Money::fromWire($invLine['total'] ?? null)->minor,
+                'sub' => $invLine['subtotalMinor'],
+                'tax' => $invLine['taxMinor'],
+                'tot' => $invLine['totalMinor'],
             ];
         }
 
@@ -555,42 +558,32 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
                 $taxByLineRef[$tLine->lineRef] = $tLine;
             }
         }
+        if (count($taxByLineRef) !== count($finalization->lines)) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.basis_changed_under_lock');
+        }
 
-        $hasNonZeroLedgerTax = $invTax->minor > 0;
-        $draftNetSum = 0;
         foreach ($finalization->lines as $basisLine) {
             if (! isset($ledgerByObligation[$basisLine->obligationRef], $taxByLineRef[$basisLine->lineRef])) {
                 throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.basis_changed_under_lock');
             }
             $lLine = $ledgerByObligation[$basisLine->obligationRef];
             $tLine = $taxByLineRef[$basisLine->lineRef];
-            $draftNetSum += $basisLine->netMinor;
 
-            if ($hasNonZeroLedgerTax) {
-                if ($lLine['sub'] !== $tLine->netMinor || $lLine['tax'] !== $tLine->taxMinor || $lLine['tot'] !== $tLine->grossMinor) {
-                    throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.basis_changed_under_lock');
-                }
-            } elseif ($lLine['tot'] !== $basisLine->netMinor) {
+            if (
+                $lLine['sub'] !== $tLine->netMinor
+                || $lLine['tax'] !== $tLine->taxMinor
+                || $lLine['tot'] !== $tLine->grossMinor
+            ) {
                 throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.basis_changed_under_lock');
             }
-        }
-
-        $expectedTotalMinor = $hasNonZeroLedgerTax ? $finalization->totalMinor : $draftNetSum;
-        if ($expectedTotalMinor === null || $lockedTotalMinor !== $expectedTotalMinor) {
-            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.basis_changed_under_lock');
-        }
-        if ($hasNonZeroLedgerTax && (
-            $invSub->minor !== $finalization->subtotalMinor
-            || $invTax->minor !== $finalization->taxMinor
-            || $invTotal->minor !== $finalization->totalMinor
-        )) {
-            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.basis_changed_under_lock');
         }
     }
 
     /** @return list<array<string, mixed>> */
-    private static function serializeFinalizationLines(DocumentFinalizationView $finalization): array
-    {
+    private static function serializeFinalizationLines(
+        DocumentFinalizationView $finalization,
+        string $defaultRoundingPolicyVersion,
+    ): array {
         $taxByLine = [];
         if ($finalization->taxSnapshot !== null) {
             foreach ($finalization->taxSnapshot->lines as $line) {
@@ -598,9 +591,18 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
             }
         }
 
+        $linePolicies = is_array($finalization->termsSnapshot['lineRoundingPolicies'] ?? null)
+            ? $finalization->termsSnapshot['lineRoundingPolicies']
+            : [];
+
         $out = [];
         foreach ($finalization->lines as $line) {
             $t = $taxByLine[$line->lineRef] ?? null;
+            $lineSpecific = $linePolicies[$line->lineRef] ?? null;
+            $lineRounding = is_string($lineSpecific) && trim($lineSpecific) !== ''
+                ? $lineSpecific
+                : $defaultRoundingPolicyVersion;
+
             $out[] = [
                 'lineRef' => $line->lineRef,
                 'obligationRef' => $line->obligationRef,
@@ -613,6 +615,7 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
                 'taxRate' => $t->rateDecimal ?? $line->taxRate,
                 'taxMinor' => $t->taxMinor ?? 0,
                 'grossMinor' => $t->grossMinor ?? $line->netMinor,
+                'roundingPolicyVersion' => $lineRounding,
                 'description' => $line->description,
             ];
         }

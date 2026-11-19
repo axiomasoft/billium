@@ -61,6 +61,8 @@ final class LegalIssueTest extends DocumentsTestCase
         self::assertSame(10000, $view->subtotalMinor);
         self::assertSame(2000, $view->taxMinor);
         self::assertSame(12000, $view->totalMinor);
+        self::assertSame('half_up/1', $view->taxSnapshot['roundingPolicyVersion'] ?? null);
+        self::assertSame('half_up/1', $view->linesSnapshot[0]['roundingPolicyVersion'] ?? null);
 
         $byEconomic = $this->docQueries()->findByEconomicRef($this->docScope(), DocumentType::Invoice, 'inv-doc1', 1);
         self::assertNotNull($byEconomic);
@@ -372,5 +374,31 @@ final class LegalIssueTest extends DocumentsTestCase
 
         self::assertSame('draft', $this->invoiceStatus('inv-b1'));
         self::assertSame(0, $this->rows('billium_document_legal'));
+    }
+
+    public function test_zero_ledger_tax_with_positive_finalized_tax_refuses_issue(): void
+    {
+        $this->registerCompleteProfile();
+        $this->registerSeries();
+        $fin = $this->prepareFinalizedInvoiceBasis(
+            suffix: 'notax',
+            netMinor: 10000,
+            taxMinor: 2000,
+            includeLedgerTax: false,
+        );
+
+        try {
+            $this->issuer()->issueInvoiceDocument($this->issueCommand('cmd-notax', 'notax', $fin->approvedSnapshotDigest ?? ''));
+            self::fail('Issuance must refuse a 10000 zero-tax ledger invoice against a 12000 finalized tax snapshot');
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::ValidationInvalid, $error->problem);
+            self::assertSame('billium.documents.basis_changed_under_lock', $error->detail);
+        }
+
+        self::assertSame('draft', $this->invoiceStatus('inv-notax'));
+        self::assertNull($this->invoiceRow('inv-notax')['legal_document_ref']);
+        self::assertSame(0, $this->rows('billium_document_legal'));
+        self::assertSame(0, $this->rows('billium_document_number_journal'));
+        self::assertSame(1, $this->value("SELECT next_number FROM billium_document_series WHERE series_ref='INV'"));
     }
 }

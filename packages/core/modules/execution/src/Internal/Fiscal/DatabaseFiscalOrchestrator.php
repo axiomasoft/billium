@@ -24,6 +24,7 @@ use Billium\Execution\Data\Fiscal\FiscalCallbackEnvelope;
 use Billium\Execution\Data\Fiscal\FiscalCorrectionRequest;
 use Billium\Execution\Data\Fiscal\FiscalDriverResult;
 use Billium\Execution\Data\Fiscal\FiscalEvidenceRecord;
+use Billium\Execution\Data\Fiscal\FiscalExternalOutcome;
 use Billium\Execution\Data\Fiscal\FiscalIntentRecord;
 use Billium\Execution\Data\Fiscal\FiscalLookupRequest;
 use Billium\Execution\Data\Fiscal\FiscalPolicyConfig;
@@ -921,6 +922,20 @@ final readonly class DatabaseFiscalOrchestrator implements FiscalOrchestrator
         $this->boundary->assertOutsideTransaction();
         $this->assertScope($input->scope);
 
+        if ($input->fiscalStatus === 'registered') {
+            if ($input->externalFiscalRef === null || trim($input->externalFiscalRef) === '' || strlen($input->externalFiscalRef) > 200) {
+                throw new ProblemException(
+                    ProblemCode::ValidationInvalid,
+                    'Registered fiscal projection requires a non-empty bounded externalFiscalRef',
+                );
+            }
+        } elseif ($input->externalFiscalRef !== null && (trim($input->externalFiscalRef) === '' || strlen($input->externalFiscalRef) > 200)) {
+            throw new ProblemException(
+                ProblemCode::ValidationInvalid,
+                'externalFiscalRef must be null or a non-empty bounded string',
+            );
+        }
+
         $scope = $input->scope;
         $sourcePayload = [
             'economicEffectRef' => $input->economicEffectRef,
@@ -997,11 +1012,13 @@ final readonly class DatabaseFiscalOrchestrator implements FiscalOrchestrator
                 && (
                     $hydrated->amount->minor !== $input->actualAmount->minor
                     || $hydrated->amount->currency->code !== $input->actualAmount->currency->code
+                    || $hydrated->externalFiscalRef !== $input->externalFiscalRef
+                    || $hydrated->sourceDigest !== $sourceDigest
                 )
             ) {
                 throw new ProblemException(
                     ProblemCode::IdempotencyConflict,
-                    'Conflicting amount or currency for existing fiscal projection key',
+                    'Conflicting amount, currency, externalFiscalRef, or source payload for existing fiscal projection key',
                 );
             }
             $record = $hydrated;
@@ -1015,40 +1032,66 @@ final readonly class DatabaseFiscalOrchestrator implements FiscalOrchestrator
         return $record ?? throw new LogicException('Fiscal projection write returned no record');
     }
 
-    /** @return list<FiscalProjectionRecord> */
+    /**
+     * @param  list<FiscalExternalOutcome>  $externalOutcomes
+     * @return list<FiscalProjectionRecord>
+     */
     public function syncActualProjectionsForRoot(
         ExecutionScope $scope,
         string $rootOperationRef,
         string $sourceAuthority = 'embedded-commerz',
+        array $externalOutcomes = [],
     ): array {
         $this->boundary->assertOutsideTransaction();
         $this->assertScope($scope);
 
+        if ($sourceAuthority === '' || strlen($sourceAuthority) > 200) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'sourceAuthority must be a non-empty bounded string');
+        }
+        if ($externalOutcomes === []) {
+            return [];
+        }
+
         $effects = $this->extractor->extractForRoot($scope, $rootOperationRef, 'embedded-commerz');
-        $projections = [];
+        $projectionsByRef = [];
         foreach ($effects as $effect) {
             $policy = $this->activePolicy($scope, 'embedded-commerz', $effect->operationKind);
             if ($policy === null || ! $policy->receiptRequired || $policy->fiscalRoute !== FiscalRoute::ProjectionOnly) {
                 continue;
             }
-            $projections[] = $this->recordProjection(new FiscalProjectionInput(
-                scope: $scope,
-                sourceAuthority: $sourceAuthority,
-                economicEffectRef: $effect->economicEffectRef,
-                rootOperationRef: $effect->rootOperationRef,
-                operationRef: $effect->operationRef,
-                receiptKind: $effect->receiptKind,
-                correctionRevision: 0,
-                actualAmount: $effect->actualAmount,
-                fiscalStatus: 'registered',
-                externalFiscalRef: 'source-receipt:'.$effect->operationRef,
-                exceptional: $effect->exceptional,
-                exposureProvenance: $effect->exposureProvenance,
-                sourcePayload: $effect->receiptPayload,
-            ));
+            foreach ($externalOutcomes as $outcome) {
+                if (
+                    $outcome->operationRef !== $effect->operationRef
+                    || $outcome->economicEffectRef !== $effect->economicEffectRef
+                    || $outcome->receiptKind !== $effect->receiptKind
+                    || $outcome->correctionRevision !== 0
+                ) {
+                    continue;
+                }
+                $recorded = $this->recordProjection(new FiscalProjectionInput(
+                    scope: $scope,
+                    sourceAuthority: $sourceAuthority,
+                    economicEffectRef: $effect->economicEffectRef,
+                    rootOperationRef: $effect->rootOperationRef,
+                    operationRef: $effect->operationRef,
+                    receiptKind: $outcome->receiptKind,
+                    correctionRevision: $outcome->correctionRevision,
+                    actualAmount: $effect->actualAmount,
+                    fiscalStatus: $outcome->fiscalStatus,
+                    externalFiscalRef: $outcome->externalFiscalRef,
+                    exceptional: $effect->exceptional,
+                    exposureProvenance: $effect->exposureProvenance,
+                    sourcePayload: [
+                        'evidenceDigest' => $outcome->evidenceDigest,
+                        'externalOutcome' => $outcome->sourcePayload,
+                        'actualEffect' => $effect->receiptPayload,
+                    ],
+                ));
+                $projectionsByRef[$recorded->projectionRef] = $recorded;
+            }
         }
 
-        return $projections;
+        return array_values($projectionsByRef);
     }
 
     public function findIntent(ExecutionScope $scope, string $intentRef): ?FiscalIntentRecord

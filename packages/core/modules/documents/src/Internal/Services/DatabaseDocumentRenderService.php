@@ -8,6 +8,7 @@ use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Data\Envelopes\BilliumQuery;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Contracts\Runner\OperationRunner;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Contracts\Runtime\CallerContext;
@@ -67,6 +68,7 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
         private DatabaseManager $databases,
         private OperationRunner $runner,
         private CallerContext $callers,
+        private BilliumOptions $options,
         private Closure $rendererResolver,
         private Closure $storageResolver,
     ) {}
@@ -85,7 +87,7 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
         RowCast::bounded($command->rendererVersion, 'rendererVersion', 64);
         RowCast::bounded($command->rendererDigest, 'rendererDigest');
 
-        $legalRow = $this->databases->connection()->table('billium_document_legal')
+        $legalRow = $this->databases->connection($this->options->connection)->table('billium_document_legal')
             ->where('seller_ref', $caller->sellerRef)
             ->where('environment', $caller->environment)
             ->where('legal_document_ref', $command->legalDocumentRef)
@@ -229,7 +231,7 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
         RowCast::assertScope($caller, $scope);
         RowCast::bounded($renderRequestRef, 'renderRequestRef');
 
-        if ($this->databases->connection()->transactionLevel() !== 0) {
+        if ($this->databases->connection($this->options->connection)->transactionLevel() !== 0) {
             throw new LogicException('executeRender must not be called inside an open database transaction');
         }
 
@@ -309,7 +311,7 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
 
         $this->assertAssetsAllowed($caller->sellerRef, $caller->environment, $reqId, $requestedAssets, $allowedAssetPrefixes);
 
-        $legalRow = $this->databases->connection()->table('billium_document_legal')
+        $legalRow = $this->databases->connection($this->options->connection)->table('billium_document_legal')
             ->where('seller_ref', $caller->sellerRef)
             ->where('environment', $caller->environment)
             ->where('legal_document_ref', $reqView->legalDocumentRef)
@@ -551,12 +553,23 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
                     ]);
                 }
 
-                $db->table('billium_document_render_blob')
-                    ->where('seller_ref', $caller->sellerRef)
-                    ->where('environment', $caller->environment)
-                    ->where('blob_ref', $command->blobRef)
-                    ->whereIn('status', ['uploaded', 'orphaned'])
-                    ->update(['status' => 'attached', 'render_request_id' => $targetId, 'updated_at' => $now]);
+                $attachedRows = $db->select(
+                    "UPDATE billium_document_render_blob SET status = 'attached', render_request_id = ?, updated_at = ? WHERE seller_ref = ? AND environment = ? AND blob_ref = ? AND status <> 'deleted' RETURNING id",
+                    [$targetId, $now, $caller->sellerRef, $caller->environment, $command->blobRef],
+                );
+
+                if ($attachedRows === []) {
+                    $deletedExists = $db->table('billium_document_render_blob')
+                        ->where('seller_ref', $caller->sellerRef)
+                        ->where('environment', $caller->environment)
+                        ->where('blob_ref', $command->blobRef)
+                        ->where('status', 'deleted')
+                        ->exists();
+
+                    if ($deletedExists) {
+                        throw new ProblemException(ProblemCode::RecoveryRequired, 'billium.documents.render_blob_deleted');
+                    }
+                }
 
                 return new DocumentReceipt('documents.render.attached', [
                     'attached' => true,
@@ -592,7 +605,7 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
             throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.render_url_ttl_invalid');
         }
 
-        $db = $this->databases->connection();
+        $db = $this->databases->connection($this->options->connection);
 
         $legalExists = $db->table('billium_document_legal')
             ->where('seller_ref', $caller->sellerRef)
@@ -649,8 +662,11 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
         );
     }
 
-    /** @return array<string, mixed> */
-    public function dispatchReadRenderQuery(string $json): array
+    /**
+     * @param  list<string>|null  $allowedActorRefs
+     * @return array<string, mixed>
+     */
+    public function dispatchReadRenderQuery(string $json, ?array $allowedActorRefs = null): array
     {
         $query = (new Codec)->decode($json);
         if (! $query instanceof BilliumQuery || $query->query !== 'readRender') {
@@ -685,6 +701,7 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
             locale: $locale,
             ttlSeconds: $ttl,
             renderRequestRef: is_string($selector['renderRequestRef'] ?? null) ? $selector['renderRequestRef'] : null,
+            allowedActorRefs: $allowedActorRefs,
         ));
 
         return [
@@ -716,7 +733,7 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
             throw new ProblemException(ProblemCode::CapabilityUnsupported, 'billium.documents.storage_unbound');
         }
 
-        $orphans = $this->databases->connection()->table('billium_document_render_blob')
+        $orphans = $this->databases->connection($this->options->connection)->table('billium_document_render_blob')
             ->where('seller_ref', $caller->sellerRef)
             ->where('environment', $caller->environment)
             ->where('status', 'orphaned')
@@ -725,6 +742,7 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
 
         $deleted = [];
         $skippedPinned = 0;
+        $asOfUtc = $asOf->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z');
 
         foreach ($orphans as $orphan) {
             $pinnedRaw = $orphan->retention_pinned_until;
@@ -735,32 +753,34 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
             }
             $blobRef = RowCast::str($orphan->blob_ref, 'blob_ref');
             $blobId = RowCast::integer($orphan->id, 'id');
-            if ($storage->deleteOrphan($caller->sellerRef, $caller->environment, $blobRef)) {
-                $this->runner->run(
-                    spec: new OperationSpec(
-                        commandKind: 'documents.render.cleanup_orphan.v1',
-                        sellerRef: $caller->sellerRef,
-                        environment: $caller->environment,
-                        mode: FinancialMode::Administrative,
-                        operationClass: ModuleOperationClass::NewIntent,
-                        modules: ['platform', 'ledger', 'documents'],
-                    ),
-                    body: function (TransactionContext $context) use ($caller, $blobId, $blobRef): DocumentReceipt {
-                        $this->runner->assertCurrent($context, 'documents');
-                        $this->databases->connection($context->connectionName())
-                            ->table('billium_document_render_blob')
-                            ->where('id', $blobId)
-                            ->where('seller_ref', $caller->sellerRef)
-                            ->where('environment', $caller->environment)
-                            ->where('status', 'orphaned')
-                            ->update([
-                                'status' => 'deleted',
-                                'updated_at' => self::nowUtc(),
-                            ]);
+            $claimOutcome = $this->runner->run(
+                spec: new OperationSpec(
+                    commandKind: 'documents.render.cleanup_orphan.v1',
+                    sellerRef: $caller->sellerRef,
+                    environment: $caller->environment,
+                    mode: FinancialMode::Administrative,
+                    operationClass: ModuleOperationClass::NewIntent,
+                    modules: ['platform', 'ledger', 'documents'],
+                ),
+                body: function (TransactionContext $context) use ($caller, $blobId, $blobRef, $asOfUtc): DocumentReceipt {
+                    $this->runner->assertCurrent($context, 'documents');
+                    $rows = $this->databases->connection($context->connectionName())->select(
+                        "UPDATE billium_document_render_blob SET status = 'deleted', updated_at = ? WHERE id = ? AND seller_ref = ? AND environment = ? AND status = 'orphaned' AND (retention_pinned_until IS NULL OR retention_pinned_until <= ?) RETURNING id",
+                        [self::nowUtc(), $blobId, $caller->sellerRef, $caller->environment, $asOfUtc],
+                    );
 
-                        return new DocumentReceipt('documents.render.orphan_deleted', ['blobRef' => $blobRef]);
-                    },
-                );
+                    return new DocumentReceipt('documents.render.orphan_deleted', [
+                        'blobRef' => $blobRef,
+                        'claimed' => count($rows) === 1,
+                    ]);
+                },
+            );
+
+            if (! RowCast::boolean($claimOutcome->body['claimed'] ?? null, 'claimed')) {
+                continue;
+            }
+
+            if ($storage->deleteOrphan($caller->sellerRef, $caller->environment, $blobRef)) {
                 $deleted[] = $blobRef;
             }
         }
@@ -931,7 +951,7 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
 
     private function requireRenderById(int $id, string $sellerRef, string $environment): DocumentRenderView
     {
-        $row = $this->databases->connection()->table('billium_document_render_request')
+        $row = $this->databases->connection($this->options->connection)->table('billium_document_render_request')
             ->where('id', $id)
             ->where('seller_ref', $sellerRef)
             ->where('environment', $environment)

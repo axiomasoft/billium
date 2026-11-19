@@ -9,6 +9,7 @@ use Billium\Ledger\Contracts\CorrectionLocks;
 use Billium\Ledger\Contracts\Ledger;
 use Billium\Ledger\Contracts\LedgerParticipants;
 use Billium\Ledger\Contracts\LedgerQueries;
+use Billium\Ledger\Contracts\LockedInvoiceSnapshotParticipant;
 use Billium\Ledger\Contracts\ObservationApplier;
 use Billium\Ledger\Contracts\ObservationCheckpointQueries;
 use Billium\Ledger\Contracts\QualifiedObservationApplier;
@@ -103,6 +104,7 @@ final class LedgerPlugin implements ExtensionPlugin, WithCapabilities, WithSchem
             Ledger::class => Cardinality::OptionalSingle->value,
             LedgerParticipants::class => Cardinality::OptionalSingle->value,
             LedgerQueries::class => Cardinality::OptionalSingle->value,
+            LockedInvoiceSnapshotParticipant::class => Cardinality::OptionalSingle->value,
             ObservationApplier::class => Cardinality::OptionalSingle->value,
             ObservationCheckpointQueries::class => Cardinality::OptionalSingle->value,
             QualifiedObservationApplier::class => Cardinality::OptionalSingle->value,

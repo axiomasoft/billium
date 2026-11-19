@@ -35,6 +35,7 @@ All four tables are owned by `ExecutionPlugin` (`tablePrefix = 'billium_'`, noun
 4. **`public.billium_fiscal_projection`** (append-only `embedded-commerz` projection log; runtime grants `SELECT, INSERT`):
    - Strictly `CHECK (execution_profile = 'embedded-commerz')`, idempotent on `(installation_ref, seller_ref, environment, economic_effect_ref, receipt_kind, correction_revision, fiscal_status)`.
    - Preserves `exceptional` and `exposure_provenance` while guaranteeing zero external fiscal driver invocations.
+   - **No fabrication from payment facts**: `embedded-commerz` only projects authenticated external fiscal outcomes (`FiscalExternalOutcome`) matched by `(operationRef, economicEffectRef, receiptKind, correctionRevision = 0)` with a valid `sha256` `evidenceDigest`. Confirmed payment or refund facts without matching external fiscal evidence produce **0** `billium_fiscal_projection` rows; Billium never synthesizes `fiscal_status = 'registered'` or `'source-receipt:*'` identifiers. `recordProjection()` rejects `fiscalStatus = 'registered'` unless a non-empty bounded `externalFiscalRef` is supplied (`ValidationInvalid`) and rejects conflicting replays (`IdempotencyConflict`).
 
 ## Fiscal Intent State Machine & Recovery Protocol
 
@@ -67,6 +68,7 @@ stateDiagram-v2
 - In an over-refund hold (`capture 100`, two confirmed actual refunds `70 + 70`), fiscalization creates **1 sale intent (`100`)** and **2 refund intents (`70 + 70 = 140`)**; the discrepancy-triggering refund carries `exceptional = true` and `exposure_provenance` and is never suppressed.
 - An `unknown` or unconfirmed refund produces **0 fiscal intents** until authenticated actual provider evidence arrives.
 - Replaying extraction or preparation across any permutation order yields identical intent counts, amounts, and `external_id`s with **0 compensating PSP actions**.
+- In `embedded-commerz` (`projection_only`), `syncActualProjectionsForRoot()` projects only confirmed actual effects that have a matching authenticated `FiscalExternalOutcome` supplied by the execution-owning host—recording the genuine `fiscalStatus`, `externalFiscalRef`, `evidenceDigest`, and `sourcePayload` with **0 provider sends**—and leaves `billium_fiscal_projection` empty when no external fiscal evidence has arrived (never synthesizing `registered` status from payment facts alone).
 
 ## COV-337 Due-Lookup Index & Bounded Seller-Scoped Claim
 

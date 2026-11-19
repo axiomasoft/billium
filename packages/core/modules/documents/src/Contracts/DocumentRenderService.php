@@ -31,8 +31,11 @@ interface DocumentRenderService
 
     public function readRender(ReadDocumentRender $command): ReadRenderResult;
 
-    /** @return array<string, mixed> */
-    public function dispatchReadRenderQuery(string $json): array;
+    /**
+     * @param  list<string>|null  $allowedActorRefs
+     * @return array<string, mixed>
+     */
+    public function dispatchReadRenderQuery(string $json, ?array $allowedActorRefs = null): array;
 
     public function cleanupOrphanBlobs(DocumentScope $scope, DateTimeImmutable $asOf): OrphanCleanupResult;
 }

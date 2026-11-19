@@ -9,6 +9,7 @@ use Billium\Ledger\Contracts\CorrectionLocks;
 use Billium\Ledger\Contracts\Ledger;
 use Billium\Ledger\Contracts\LedgerParticipants;
 use Billium\Ledger\Contracts\LedgerQueries;
+use Billium\Ledger\Contracts\LockedInvoiceSnapshotParticipant;
 use Billium\Ledger\Contracts\ObservationApplier;
 use Billium\Ledger\Contracts\ObservationCheckpointQueries;
 use Billium\Ledger\Contracts\QualifiedObservationApplier;
@@ -48,6 +49,7 @@ final class LedgerCapabilities
             Ledger::class => LedgerFacade::class,
             LedgerParticipants::class => DatabaseLedgerParticipants::class,
             LedgerQueries::class => DatabaseLedgerQueries::class,
+            LockedInvoiceSnapshotParticipant::class => DatabaseLedgerParticipants::class,
             ObservationApplier::class => ObservationIntake::class,
             ObservationCheckpointQueries::class => DatabaseObservationCheckpointQueries::class,
             QualifiedObservationApplier::class => ObservationIntake::class,

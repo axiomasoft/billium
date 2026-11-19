@@ -6,6 +6,7 @@ namespace Billium\Documents\Internal\Services;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Contracts\Runner\OperationRunner;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Contracts\Runtime\CallerContext;
@@ -34,6 +35,7 @@ final readonly class DatabaseDocumentProfileRegistry implements DocumentProfileR
         private DatabaseManager $databases,
         private OperationRunner $runner,
         private CallerContext $callers,
+        private BilliumOptions $options,
     ) {}
 
     public function register(RegisterDocumentProfile $command): DocumentProfile
@@ -140,7 +142,7 @@ final readonly class DatabaseDocumentProfileRegistry implements DocumentProfileR
     {
         $caller = $this->callers->current();
         RowCast::assertScope($caller, $scope);
-        $db = $this->databases->connection();
+        $db = $this->databases->connection($this->options->connection);
 
         $row = $db->table('billium_document_profile')
             ->where('seller_ref', $caller->sellerRef)

@@ -15,8 +15,10 @@ use Billium\Execution\Contracts\Fiscal\FiscalDrivers;
 use Billium\Execution\Contracts\Fiscal\FiscalOrchestrator;
 use Billium\Execution\Contracts\RefundCommands;
 use Billium\Execution\Data\Fiscal\FiscalActualEffect;
+use Billium\Execution\Data\Fiscal\FiscalExternalOutcome;
 use Billium\Execution\Data\Fiscal\FiscalIntentRecord;
 use Billium\Execution\Data\Fiscal\FiscalPolicyConfig;
+use Billium\Execution\Data\Fiscal\FiscalProjectionInput;
 use Billium\Execution\Data\Fiscal\FiscalProjectionRecord;
 use Billium\Execution\Enums\Fiscal\FiscalIntentState;
 use Billium\Execution\Enums\Fiscal\FiscalOperationKind;
@@ -310,11 +312,44 @@ final class FiscalExceptionalEffectsTest extends ExecutionTestCase
                 static fn () => $orchestrator->syncActualEffectsForRoot($scope, 'root-a', 'embedded-commerz'),
             );
 
-            // Sync projections (and replay idempotently): 1 sale (100) + 2 refunds (70 + 70 = 140), 0 intents, 0 sends.
-            $projections = $orchestrator->syncActualProjectionsForRoot($scope, 'root-a', 'embedded-commerz');
-            $replayed = $orchestrator->syncActualProjectionsForRoot($scope, 'root-a', 'embedded-commerz');
+            // Without authenticated external fiscal outcomes, embedded-commerz MUST NOT fabricate projections from payment facts.
+            self::assertSame([], $orchestrator->syncActualProjectionsForRoot($scope, 'root-a', 'embedded-commerz'));
+            self::assertSame(0, $this->rows('billium_fiscal_projection'));
+
+            // Supply genuine authenticated external fiscal outcomes for capture (100) + two confirmed refunds (70 + 70).
+            $extracted = $app->make(ActualEffectExtractor::class)->extractForRoot($scope, 'root-a', 'embedded-commerz');
+            self::assertCount(3, $extracted);
+            $externalOutcomes = [];
+            foreach ($extracted as $effect) {
+                $extRef = match ($effect->operationRef) {
+                    'root-a' => 'commerz-ofd-sale-100',
+                    'replacement' => 'commerz-ofd-refund-replacement-70',
+                    default => 'commerz-ofd-refund-old-70',
+                };
+                $externalOutcomes[] = new FiscalExternalOutcome(
+                    operationRef: $effect->operationRef,
+                    economicEffectRef: $effect->economicEffectRef,
+                    receiptKind: $effect->receiptKind,
+                    fiscalStatus: 'registered',
+                    evidenceDigest: 'sha256:'.hash('sha256', $extRef.':'.$effect->economicEffectRef),
+                    externalFiscalRef: $extRef,
+                    correctionRevision: 0,
+                    sourcePayload: [
+                        'fiscalProvider' => 'commerz-ofd',
+                        'externalReceiptNo' => $extRef,
+                    ],
+                );
+            }
+
+            // Sync projections (and replay idempotently in reversed order): 1 sale (100) + 2 refunds (70 + 70 = 140), 0 intents, 0 sends.
+            $projections = $orchestrator->syncActualProjectionsForRoot($scope, 'root-a', 'embedded-commerz', $externalOutcomes);
+            $replayed = $orchestrator->syncActualProjectionsForRoot($scope, 'root-a', 'embedded-commerz', array_reverse($externalOutcomes));
             self::assertCount(3, $projections);
             self::assertCount(3, $replayed);
+            self::assertSame(
+                array_map(static fn (FiscalProjectionRecord $p): string => $p->projectionRef, $projections),
+                array_map(static fn (FiscalProjectionRecord $p): string => $p->projectionRef, $replayed),
+            );
 
             $refundProjections = array_values(array_filter(
                 $projections,
@@ -323,14 +358,152 @@ final class FiscalExceptionalEffectsTest extends ExecutionTestCase
             self::assertCount(2, $refundProjections);
             self::assertSame(140, array_sum(array_map(static fn (FiscalProjectionRecord $p): int => $p->amount->minor, $refundProjections)));
             self::assertCount(1, array_filter($refundProjections, static fn (FiscalProjectionRecord $p): bool => $p->exceptional));
+            foreach ($projections as $projection) {
+                self::assertSame('registered', $projection->fiscalStatus);
+                self::assertNotNull($projection->externalFiscalRef);
+                self::assertStringStartsWith('commerz-ofd-', $projection->externalFiscalRef);
+                $nestedPayload = $projection->sourcePayload['sourcePayload'] ?? null;
+                self::assertIsArray($nestedPayload);
+                $evidenceDigest = $nestedPayload['evidenceDigest'] ?? null;
+                self::assertIsString($evidenceDigest);
+                self::assertStringStartsWith('sha256:', $evidenceDigest);
+            }
 
             self::assertSame(3, $this->rows('billium_fiscal_projection'));
+            self::assertSame(0, $this->rows('billium_fiscal_projection', "external_fiscal_ref LIKE 'source-receipt:%'"));
             self::assertSame(0, $this->rows('billium_fiscal_intent'));
             self::assertSame(0, $driver->registerCalls);
             self::assertSame(0, $driver->lookupCalls);
             self::assertSame(3, UnknownResultTest::events($path, 'provider.call'));
         } finally {
             InventoryReconciliationTest::clear($path);
+        }
+    }
+
+    public function test_embedded_commerz_never_fabricates_fiscal_projection_without_authenticated_external_outcome(): void
+    {
+        $path = Fixture::tempPath();
+        try {
+            $app = $this->application();
+            $scope = Fixture::scope();
+            Refunds::captured($app, $path);
+
+            $driver = new SimulatedFiscalDriver(
+                id: 'unused-fiscal-f9',
+                version: 'fiscal-driver.v1',
+                supportedRoutes: [FiscalRoute::FiscalDriver],
+            );
+            $app->instance(FiscalDrivers::class, new SimulatedFiscalDrivers([$driver]));
+            $orchestrator = $app->make(FiscalOrchestrator::class);
+
+            foreach ([FiscalOperationKind::Charge, FiscalOperationKind::Refund] as $opKind) {
+                $orchestrator->configurePolicy(new FiscalPolicyConfig(
+                    scope: $scope,
+                    executionProfile: 'embedded-commerz',
+                    operationKind: $opKind,
+                    receiptRequired: true,
+                    fiscalRoute: FiscalRoute::ProjectionOnly,
+                ));
+            }
+
+            // Confirmed payment with zero external fiscal evidence MUST produce 0 projection rows (never fabricated registered / source-receipt:*).
+            $withoutEvidence = $orchestrator->syncActualProjectionsForRoot($scope, 'root-a', 'embedded-commerz');
+            self::assertSame([], $withoutEvidence);
+            self::assertSame(0, $this->rows('billium_fiscal_projection'));
+
+            // Unmatched external fiscal evidence for a different effect MUST NOT project the confirmed payment.
+            $unmatched = $orchestrator->syncActualProjectionsForRoot($scope, 'root-a', 'embedded-commerz', [
+                new FiscalExternalOutcome(
+                    operationRef: 'root-a',
+                    economicEffectRef: 'fact:unrelated-effect',
+                    receiptKind: FiscalReceiptKind::Sale,
+                    fiscalStatus: 'registered',
+                    evidenceDigest: 'sha256:'.str_repeat('d', 64),
+                    externalFiscalRef: 'commerz-unrelated-1',
+                ),
+            ]);
+            self::assertSame([], $unmatched);
+            self::assertSame(0, $this->rows('billium_fiscal_projection'));
+
+            $extracted = $app->make(ActualEffectExtractor::class)->extractForRoot($scope, 'root-a', 'embedded-commerz');
+            self::assertCount(1, $extracted);
+            $saleEffect = $extracted[0];
+
+            // Registered status without externalFiscalRef is refused both by FiscalExternalOutcome and recordProjection.
+            HistoricalMerchantRefundTest::problem(
+                ProblemCode::ValidationInvalid,
+                static fn (): FiscalExternalOutcome => new FiscalExternalOutcome(
+                    operationRef: $saleEffect->operationRef,
+                    economicEffectRef: $saleEffect->economicEffectRef,
+                    receiptKind: FiscalReceiptKind::Sale,
+                    fiscalStatus: 'registered',
+                    evidenceDigest: 'sha256:'.str_repeat('e', 64),
+                    externalFiscalRef: null,
+                ),
+            );
+            HistoricalMerchantRefundTest::problem(
+                ProblemCode::ValidationInvalid,
+                static fn () => $orchestrator->recordProjection(new FiscalProjectionInput(
+                    scope: $scope,
+                    sourceAuthority: 'embedded-commerz',
+                    economicEffectRef: $saleEffect->economicEffectRef,
+                    rootOperationRef: $saleEffect->rootOperationRef,
+                    operationRef: $saleEffect->operationRef,
+                    receiptKind: FiscalReceiptKind::Sale,
+                    correctionRevision: 0,
+                    actualAmount: $saleEffect->actualAmount,
+                    fiscalStatus: 'registered',
+                    externalFiscalRef: '',
+                )),
+            );
+
+            // Genuine pending external fiscal outcome projects as pending with null externalFiscalRef (never upgraded to registered).
+            $pendingDigest = 'sha256:'.hash('sha256', 'commerz-pending-sale');
+            $pendingProjections = $orchestrator->syncActualProjectionsForRoot($scope, 'root-a', 'embedded-commerz', [
+                new FiscalExternalOutcome(
+                    operationRef: $saleEffect->operationRef,
+                    economicEffectRef: $saleEffect->economicEffectRef,
+                    receiptKind: FiscalReceiptKind::Sale,
+                    fiscalStatus: 'pending',
+                    evidenceDigest: $pendingDigest,
+                    externalFiscalRef: null,
+                    sourcePayload: ['externalQueueId' => 'q-pending-1'],
+                ),
+            ]);
+            self::assertCount(1, $pendingProjections);
+            self::assertSame('pending', $pendingProjections[0]->fiscalStatus);
+            self::assertNull($pendingProjections[0]->externalFiscalRef);
+            self::assertSame(0, $this->rows('billium_fiscal_projection', "fiscal_status='registered'"));
+            self::assertSame(0, $this->rows('billium_fiscal_projection', "external_fiscal_ref LIKE 'source-receipt:%'"));
+
+            // Once genuine registered external fiscal evidence arrives, it projects with authentic externalFiscalRef and digest.
+            $registeredDigest = 'sha256:'.hash('sha256', 'commerz-registered-sale');
+            $registeredProjections = $orchestrator->syncActualProjectionsForRoot($scope, 'root-a', 'embedded-commerz', [
+                new FiscalExternalOutcome(
+                    operationRef: $saleEffect->operationRef,
+                    economicEffectRef: $saleEffect->economicEffectRef,
+                    receiptKind: FiscalReceiptKind::Sale,
+                    fiscalStatus: 'registered',
+                    evidenceDigest: $registeredDigest,
+                    externalFiscalRef: 'commerz-ofd-genuine-100',
+                    sourcePayload: ['fiscalDocumentNumber' => 'FDN-CMZ-100'],
+                ),
+            ]);
+            self::assertCount(1, $registeredProjections);
+            self::assertSame('registered', $registeredProjections[0]->fiscalStatus);
+            self::assertSame('commerz-ofd-genuine-100', $registeredProjections[0]->externalFiscalRef);
+            $storedPayload = $registeredProjections[0]->sourcePayload['sourcePayload'] ?? null;
+            self::assertIsArray($storedPayload);
+            self::assertSame($registeredDigest, $storedPayload['evidenceDigest'] ?? null);
+            self::assertSame(['fiscalDocumentNumber' => 'FDN-CMZ-100'], $storedPayload['externalOutcome'] ?? null);
+
+            self::assertSame(2, $this->rows('billium_fiscal_projection'));
+            self::assertSame(0, $this->rows('billium_fiscal_projection', "external_fiscal_ref LIKE 'source-receipt:%'"));
+            self::assertSame(0, $this->rows('billium_fiscal_intent'));
+            self::assertSame(0, $driver->registerCalls);
+            self::assertSame(0, $driver->lookupCalls);
+        } finally {
+            UnknownResultTest::clean($path);
         }
     }
 }

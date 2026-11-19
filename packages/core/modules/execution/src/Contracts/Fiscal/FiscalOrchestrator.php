@@ -9,6 +9,7 @@ use Billium\Execution\Data\Fiscal\FiscalActualEffect;
 use Billium\Execution\Data\Fiscal\FiscalCallbackEnvelope;
 use Billium\Execution\Data\Fiscal\FiscalCorrectionRequest;
 use Billium\Execution\Data\Fiscal\FiscalEvidenceRecord;
+use Billium\Execution\Data\Fiscal\FiscalExternalOutcome;
 use Billium\Execution\Data\Fiscal\FiscalIntentRecord;
 use Billium\Execution\Data\Fiscal\FiscalPolicyConfig;
 use Billium\Execution\Data\Fiscal\FiscalPolicyRecord;
@@ -59,11 +60,17 @@ interface FiscalOrchestrator
 
     public function recordProjection(FiscalProjectionInput $input): FiscalProjectionRecord;
 
-    /** @return list<FiscalProjectionRecord> */
+    /**
+     * Projects confirmed actual effects onto billium_fiscal_projection only when matching authenticated external fiscal outcomes are supplied.
+     *
+     * @param  list<FiscalExternalOutcome>  $externalOutcomes
+     * @return list<FiscalProjectionRecord>
+     */
     public function syncActualProjectionsForRoot(
         ExecutionScope $scope,
         string $rootOperationRef,
         string $sourceAuthority = 'embedded-commerz',
+        array $externalOutcomes = [],
     ): array;
 
     public function findIntent(ExecutionScope $scope, string $intentRef): ?FiscalIntentRecord;

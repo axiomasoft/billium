@@ -10,12 +10,16 @@ use Billium\Core\Tests\P6\Support\DocumentsTestCase;
 use Billium\Documents\Contracts\DocumentRenderer;
 use Billium\Documents\Contracts\DocumentStorage;
 use Billium\Documents\Data\AttachRenderResult;
+use Billium\Documents\Data\ReadBlobGrantRequest;
 use Billium\Documents\Data\ReadDocumentRender;
 use Billium\Documents\Data\RequestDocumentRender;
+use Billium\Documents\Data\StoredBlob;
 use Billium\Documents\Data\StoreRenderBlob;
+use Billium\Documents\Data\TemporaryBlobGrant;
 use Billium\Documents\Enums\RenderState;
 use Billium\Testkit\Documents\InMemoryDocumentRenderer;
 use Billium\Testkit\Documents\InMemoryDocumentStorage;
+use Closure;
 use DateTimeImmutable;
 use DateTimeZone;
 use PHPUnit\Framework\Attributes\Group;
@@ -244,6 +248,19 @@ final class DocumentRenderTest extends DocumentsTestCase
         self::assertIsArray($dispatched['result']);
         self::assertSame($blobRef, $dispatched['result']['blobRef'] ?? null);
 
+        // dispatchReadRenderQuery enforces host-supplied allowedActorRefs boundary.
+        $dispatchedAuthorized = $this->renderService()->dispatchReadRenderQuery($queryJson, [$this->callers->current()->actorRef]);
+        self::assertIsArray($dispatchedAuthorized['result']);
+        self::assertSame($blobRef, $dispatchedAuthorized['result']['blobRef'] ?? null);
+
+        try {
+            $this->renderService()->dispatchReadRenderQuery($queryJson, ['actor-finance-only']);
+            self::fail('Unauthorized actor must be rejected by dispatchReadRenderQuery');
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::AuthDenied, $error->problem);
+            self::assertSame('billium.documents.actor_not_authorized', $error->detail);
+        }
+
         // Actor authorization check rejects unauthorized actor.
         try {
             $this->renderService()->readRender(new ReadDocumentRender(
@@ -368,5 +385,172 @@ final class DocumentRenderTest extends DocumentsTestCase
         self::assertStringNotContainsString('super.jwt.token', $okDiag);
         self::assertStringNotContainsString('secret-signature', $okDiag);
         self::assertStringContainsString('[REDACTED]', $okDiag);
+    }
+
+    public function test_orphan_cleanup_race_with_concurrent_retry_attach_never_deletes_attached_blob_and_refuses_deleted_blob(): void
+    {
+        $this->registerCompleteProfile();
+        $this->registerSeries();
+        $fin = $this->prepareFinalizedInvoiceBasis(suffix: 'rnd-race');
+        $issued = $this->issuer()->issueInvoiceDocument($this->issueCommand('cmd-rnd-race', 'rnd-race', $fin->approvedSnapshotDigest ?? ''));
+        $legalRef = (string) ($issued->body['legalDocumentRef'] ?? '');
+
+        $clock = new DateTimeImmutable('2026-11-19T12:00:00Z', new DateTimeZone('UTC'));
+        $innerStorage = new InMemoryDocumentStorage($clock);
+
+        $rBarrier = $this->renderService()->requestRender(new RequestDocumentRender(
+            scope: $this->docScope(),
+            renderRequestRef: 'rreq-race-first',
+            legalDocumentRef: $legalRef,
+            templateId: 'tmpl-a',
+            templateVersion: '1.0',
+            templateDigest: self::digest('a'),
+            locale: 'en-US',
+            rendererName: 'in-memory-pdf',
+            rendererVersion: '1.0.0',
+            rendererDigest: self::digest('r'),
+        ));
+        $rRetry = $this->renderService()->requestRender(new RequestDocumentRender(
+            scope: $this->docScope(),
+            renderRequestRef: 'rreq-race-retry',
+            legalDocumentRef: $legalRef,
+            templateId: 'tmpl-b',
+            templateVersion: '1.0',
+            templateDigest: self::digest('b'),
+            locale: 'en-US',
+            rendererName: 'in-memory-pdf',
+            rendererVersion: '1.0.0',
+            rendererDigest: self::digest('r'),
+        ));
+
+        $firstBytes = '%PDF-1.4 stale-orphan-first';
+        $racedBytes = '%PDF-1.4 retried-live-render';
+        $firstBlob = $innerStorage->store(new StoreRenderBlob(
+            sellerRef: 'seller-a',
+            environment: 'test',
+            uploadKey: 'race-orphan-1',
+            contentType: 'application/pdf',
+            bytes: $firstBytes,
+            outputDigest: 'sha256:'.hash('sha256', $firstBytes),
+        ));
+        $racedBlob = $innerStorage->store(new StoreRenderBlob(
+            sellerRef: 'seller-a',
+            environment: 'test',
+            uploadKey: 'race-orphan-2',
+            contentType: 'application/pdf',
+            bytes: $racedBytes,
+            outputDigest: 'sha256:'.hash('sha256', $racedBytes),
+        ));
+
+        $nowStr = $clock->format('Y-m-d\TH:i:s.u\Z');
+        $this->owner()->insert(
+            'INSERT INTO public.billium_document_render_blob (seller_ref, environment, upload_key, blob_ref, render_request_id, output_digest, content_type, byte_size, status, retention_pinned_until, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [
+                'seller-a', 'test', 'race-orphan-1', $firstBlob->blobRef, $rBarrier->id, $firstBlob->outputDigest, 'application/pdf', $firstBlob->byteSize, 'orphaned', null, $nowStr, $nowStr,
+                'seller-a', 'test', 'race-orphan-2', $racedBlob->blobRef, $rRetry->id, $racedBlob->outputDigest, 'application/pdf', $racedBlob->byteSize, 'orphaned', null, $nowStr, $nowStr,
+            ],
+        );
+
+        // Storage barrier double: when cleanup deletes firstBlob (after selecting BOTH orphans),
+        // simulate a concurrent render retry attaching racedBlob BEFORE cleanup processes racedBlob.
+        $barrierTriggered = false;
+        $onFirstDelete = function () use (&$barrierTriggered, $rRetry, $racedBlob): void {
+            $barrierTriggered = true;
+            $attached = $this->renderService()->attachRenderResult(new AttachRenderResult(
+                scope: $this->docScope(),
+                renderRequestRef: 'rreq-race-retry',
+                renderRevision: $rRetry->renderRevision,
+                renderKeyDigest: $rRetry->renderKeyDigest,
+                blobRef: $racedBlob->blobRef,
+                outputDigest: $racedBlob->outputDigest,
+                contentType: 'application/pdf',
+                byteSize: $racedBlob->byteSize,
+            ));
+            self::assertTrue($attached->attached);
+            self::assertSame(RenderState::Ready, $attached->render->state);
+        };
+
+        $barrierStorage = new class($innerStorage, $firstBlob->blobRef, $onFirstDelete) implements DocumentStorage
+        {
+            /** @param Closure(): void $onFirstDelete */
+            public function __construct(
+                private InMemoryDocumentStorage $inner,
+                private string $triggerBlobRef,
+                private Closure $onFirstDelete,
+            ) {}
+
+            public function store(StoreRenderBlob $command): StoredBlob
+            {
+                return $this->inner->store($command);
+            }
+
+            public function issueReadGrant(ReadBlobGrantRequest $request): TemporaryBlobGrant
+            {
+                return $this->inner->issueReadGrant($request);
+            }
+
+            public function deleteOrphan(string $sellerRef, string $environment, string $blobRef): bool
+            {
+                $deleted = $this->inner->deleteOrphan($sellerRef, $environment, $blobRef);
+                if ($blobRef === $this->triggerBlobRef) {
+                    ($this->onFirstDelete)();
+                }
+
+                return $deleted;
+            }
+        };
+        $this->application()->instance(DocumentStorage::class, $barrierStorage);
+
+        $cleanup = $this->renderService()->cleanupOrphanBlobs($this->docScope(), $clock);
+
+        self::assertTrue($barrierTriggered);
+        self::assertSame(1, $cleanup->deletedCount);
+        self::assertSame([$firstBlob->blobRef], $cleanup->deletedBlobRefs);
+        self::assertFalse($innerStorage->isBlobAlive($firstBlob->blobRef));
+        self::assertTrue($innerStorage->isBlobAlive($racedBlob->blobRef));
+        self::assertSame('deleted', $this->value('SELECT status FROM billium_document_render_blob WHERE blob_ref=?', [$firstBlob->blobRef]));
+        self::assertSame('attached', $this->value('SELECT status FROM billium_document_render_blob WHERE blob_ref=?', [$racedBlob->blobRef]));
+
+        $read = $this->renderService()->readRender(new ReadDocumentRender(
+            scope: $this->docScope(),
+            legalDocumentRef: $legalRef,
+            templateId: 'tmpl-b',
+            locale: 'en-US',
+        ));
+        self::assertSame($racedBlob->blobRef, $read->blobRef);
+        self::assertSame($racedBytes, $innerStorage->fetchByTemporaryUrl($read->temporaryUrl, $clock->modify('+10 seconds')));
+
+        // Reverse race: attempting to attach a blob already transitioned to deleted must be refused.
+        $rDeleted = $this->renderService()->requestRender(new RequestDocumentRender(
+            scope: $this->docScope(),
+            renderRequestRef: 'rreq-race-deleted',
+            legalDocumentRef: $legalRef,
+            templateId: 'tmpl-c',
+            templateVersion: '1.0',
+            templateDigest: self::digest('c'),
+            locale: 'en-US',
+            rendererName: 'in-memory-pdf',
+            rendererVersion: '1.0.0',
+            rendererDigest: self::digest('r'),
+        ));
+
+        try {
+            $this->renderService()->attachRenderResult(new AttachRenderResult(
+                scope: $this->docScope(),
+                renderRequestRef: 'rreq-race-deleted',
+                renderRevision: $rDeleted->renderRevision,
+                renderKeyDigest: $rDeleted->renderKeyDigest,
+                blobRef: $firstBlob->blobRef,
+                outputDigest: $firstBlob->outputDigest,
+                contentType: 'application/pdf',
+                byteSize: $firstBlob->byteSize,
+            ));
+            self::fail('Attaching an already-deleted blob must be refused');
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::RecoveryRequired, $error->problem);
+            self::assertSame('billium.documents.render_blob_deleted', $error->detail);
+        }
+
+        self::assertSame(RenderState::Pending->value, $this->value("SELECT state FROM billium_document_render_request WHERE render_request_ref='rreq-race-deleted'"));
     }
 }
