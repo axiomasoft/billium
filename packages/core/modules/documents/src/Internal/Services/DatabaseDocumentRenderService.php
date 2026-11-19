@@ -231,9 +231,7 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
         RowCast::assertScope($caller, $scope);
         RowCast::bounded($renderRequestRef, 'renderRequestRef');
 
-        if ($this->databases->connection($this->options->connection)->transactionLevel() !== 0) {
-            throw new LogicException('executeRender must not be called inside an open database transaction');
-        }
+        $this->assertOutsideTransaction();
 
         $renderer = ($this->rendererResolver)();
         if ($renderer === null) {
@@ -605,6 +603,8 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
             throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.render_url_ttl_invalid');
         }
 
+        $this->assertOutsideTransaction();
+
         $db = $this->databases->connection($this->options->connection);
 
         $legalExists = $db->table('billium_document_legal')
@@ -727,6 +727,7 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
     {
         $caller = $this->callers->current();
         RowCast::assertScope($caller, $scope);
+        $this->assertOutsideTransaction();
 
         $storage = ($this->storageResolver)();
         if ($storage === null) {
@@ -784,6 +785,8 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
                     continue;
                 }
             }
+
+            $this->assertOutsideTransaction();
 
             try {
                 $storageDeleted = $storage->deleteOrphan($caller->sellerRef, $caller->environment, $blobRef);
@@ -1045,6 +1048,15 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
         $value = (string) preg_replace('/Bearer\s+[A-Za-z0-9\-._~+\/=]+/i', 'Bearer [REDACTED]', $value);
 
         return (string) preg_replace('/([?&](?:token|sig|secret|key|auth|password)=)[^&#\s]+/i', '$1[REDACTED]', $value);
+    }
+
+    private function assertOutsideTransaction(): void
+    {
+        foreach ($this->databases->getConnections() as $connection) {
+            if ($connection->transactionLevel() !== 0 || $connection->getPdo()->inTransaction()) {
+                throw new LogicException('Document render and storage I/O must run outside every database transaction');
+            }
+        }
     }
 
     private static function nowUtc(): string

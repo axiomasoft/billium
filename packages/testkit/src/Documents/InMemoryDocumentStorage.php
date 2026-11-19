@@ -125,7 +125,7 @@ final class InMemoryDocumentStorage implements DocumentStorage
     {
         $key = $this->uploadKeyByBlobRef[$blobRef] ?? null;
         if ($key === null) {
-            return false;
+            return true;
         }
         $record = $this->byUploadKey[$key];
         if ($record['sellerRef'] !== $sellerRef || $record['environment'] !== $environment) {

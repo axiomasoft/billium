@@ -6,6 +6,12 @@ namespace Billium\Core\Tests\P6;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\OperationSpec;
+use Billium\Core\Data\Runner\Receipt;
+use Billium\Core\Enums\Modules\ModuleOperationClass;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Tests\P6\Support\DocumentsTestCase;
 use Billium\Documents\Contracts\DocumentRenderer;
 use Billium\Documents\Contracts\DocumentStorage;
@@ -22,6 +28,7 @@ use Billium\Testkit\Documents\InMemoryDocumentStorage;
 use Closure;
 use DateTimeImmutable;
 use DateTimeZone;
+use LogicException;
 use PHPUnit\Framework\Attributes\Group;
 use RuntimeException;
 
@@ -700,5 +707,190 @@ final class DocumentRenderTest extends DocumentsTestCase
         self::assertSame('deleted', $this->value('SELECT status FROM billium_document_render_blob WHERE blob_ref=?', [$throwBlob->blobRef]));
         self::assertSame(2, $flakyStorage->attempts[$falseBlob->blobRef]);
         self::assertSame(2, $flakyStorage->attempts[$throwBlob->blobRef]);
+    }
+
+    public function test_cleanup_orphan_blobs_rejects_open_transaction_for_deleting_blob_with_zero_storage_calls(): void
+    {
+        $this->registerCompleteProfile();
+        $this->registerSeries();
+        $fin = $this->prepareFinalizedInvoiceBasis(suffix: 'rnd-f13');
+        $issued = $this->issuer()->issueInvoiceDocument($this->issueCommand('cmd-rnd-f13', 'rnd-f13', $fin->approvedSnapshotDigest ?? ''));
+        $legalRef = (string) ($issued->body['legalDocumentRef'] ?? '');
+
+        $clock = new DateTimeImmutable('2026-11-19T12:00:00Z', new DateTimeZone('UTC'));
+        $innerStorage = new InMemoryDocumentStorage($clock);
+
+        $req = $this->renderService()->requestRender(new RequestDocumentRender(
+            scope: $this->docScope(),
+            renderRequestRef: 'rreq-f13',
+            legalDocumentRef: $legalRef,
+            templateId: 'tmpl-f13',
+            templateVersion: '1.0',
+            templateDigest: self::digest('f'),
+            locale: 'en-US',
+            rendererName: 'in-memory-pdf',
+            rendererVersion: '1.0.0',
+            rendererDigest: self::digest('r'),
+        ));
+
+        $bytes = '%PDF-1.4 orphan-deleting-tx-guard';
+        $blob = $innerStorage->store(new StoreRenderBlob(
+            sellerRef: 'seller-a',
+            environment: 'test',
+            uploadKey: 'f13-orphan',
+            contentType: 'application/pdf',
+            bytes: $bytes,
+            outputDigest: 'sha256:'.hash('sha256', $bytes),
+        ));
+
+        $nowStr = $clock->format('Y-m-d\TH:i:s.u\Z');
+        $this->owner()->insert(
+            'INSERT INTO public.billium_document_render_blob (seller_ref, environment, upload_key, blob_ref, render_request_id, output_digest, content_type, byte_size, status, retention_pinned_until, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            ['seller-a', 'test', 'f13-orphan', $blob->blobRef, $req->id, $blob->outputDigest, 'application/pdf', $blob->byteSize, 'orphaned', null, $nowStr, $nowStr],
+        );
+
+        $countingStorage = new class($innerStorage) implements DocumentStorage
+        {
+            public bool $failNext = true;
+
+            public int $deleteCalls = 0;
+
+            public function __construct(private InMemoryDocumentStorage $inner) {}
+
+            public function store(StoreRenderBlob $command): StoredBlob
+            {
+                return $this->inner->store($command);
+            }
+
+            public function issueReadGrant(ReadBlobGrantRequest $request): TemporaryBlobGrant
+            {
+                return $this->inner->issueReadGrant($request);
+            }
+
+            public function deleteOrphan(string $sellerRef, string $environment, string $blobRef): bool
+            {
+                $this->deleteCalls++;
+                if ($this->failNext) {
+                    $this->failNext = false;
+
+                    return false;
+                }
+
+                return $this->inner->deleteOrphan($sellerRef, $environment, $blobRef);
+            }
+        };
+        $this->application()->instance(DocumentStorage::class, $countingStorage);
+
+        // Pass 1 fails storage deletion, leaving the row in 'deleting'.
+        $first = $this->renderService()->cleanupOrphanBlobs($this->docScope(), $clock);
+        self::assertSame(0, $first->deletedCount);
+        self::assertSame(1, $countingStorage->deleteCalls);
+        self::assertSame('deleting', $this->value('SELECT status FROM billium_document_render_blob WHERE blob_ref=?', [$blob->blobRef]));
+
+        // Invoking cleanupOrphanBlobs inside an open Billium transaction MUST fail closed with 0 storage calls.
+        $countingStorage->deleteCalls = 0;
+        /** @var OperationRunner $runner */
+        $runner = $this->application()->make(OperationRunner::class);
+        try {
+            $runner->run(
+                spec: new OperationSpec(
+                    commandKind: 'documents.test.open_tx_cleanup_guard.v1',
+                    sellerRef: 'seller-a',
+                    environment: 'test',
+                    mode: FinancialMode::Administrative,
+                    operationClass: ModuleOperationClass::NewIntent,
+                    modules: ['platform', 'ledger', 'documents'],
+                ),
+                body: function (TransactionContext $context) use ($clock): Receipt {
+                    $this->renderService()->cleanupOrphanBlobs($this->docScope(), $clock);
+                    self::fail('cleanupOrphanBlobs must throw LogicException inside an open transaction');
+                },
+            );
+            self::fail('Open transaction must reject cleanupOrphanBlobs');
+        } catch (LogicException $error) {
+            self::assertStringContainsString('outside every database transaction', $error->getMessage());
+        }
+
+        self::assertSame(0, $countingStorage->deleteCalls);
+        self::assertTrue($innerStorage->isBlobAlive($blob->blobRef));
+        self::assertSame('deleting', $this->value('SELECT status FROM billium_document_render_blob WHERE blob_ref=?', [$blob->blobRef]));
+
+        // Outside the transaction, cleanup retries cleanly and transitions deleting -> deleted.
+        $retried = $this->renderService()->cleanupOrphanBlobs($this->docScope(), $clock);
+        self::assertSame(1, $retried->deletedCount);
+        self::assertSame([$blob->blobRef], $retried->deletedBlobRefs);
+        self::assertSame(1, $countingStorage->deleteCalls);
+        self::assertFalse($innerStorage->isBlobAlive($blob->blobRef));
+        self::assertSame('deleted', $this->value('SELECT status FROM billium_document_render_blob WHERE blob_ref=?', [$blob->blobRef]));
+    }
+
+    public function test_orphan_cleanup_recovers_deleting_blob_already_absent_in_storage(): void
+    {
+        $this->registerCompleteProfile();
+        $this->registerSeries();
+        $fin = $this->prepareFinalizedInvoiceBasis(suffix: 'rnd-abs');
+        $issued = $this->issuer()->issueInvoiceDocument($this->issueCommand('cmd-rnd-abs', 'rnd-abs', $fin->approvedSnapshotDigest ?? ''));
+        $legalRef = (string) ($issued->body['legalDocumentRef'] ?? '');
+
+        $clock = new DateTimeImmutable('2026-11-19T12:00:00Z', new DateTimeZone('UTC'));
+        $storage = new InMemoryDocumentStorage($clock);
+        $this->application()->instance(DocumentStorage::class, $storage);
+
+        $req = $this->renderService()->requestRender(new RequestDocumentRender(
+            scope: $this->docScope(),
+            renderRequestRef: 'rreq-abs',
+            legalDocumentRef: $legalRef,
+            templateId: 'tmpl-abs',
+            templateVersion: '1.0',
+            templateDigest: self::digest('a'),
+            locale: 'en-US',
+            rendererName: 'in-memory-pdf',
+            rendererVersion: '1.0.0',
+            rendererDigest: self::digest('r'),
+        ));
+
+        // Simulate crash after storage deleted the blob before DB deleting -> deleted committed:
+        // (1) blob-already-absent does not exist in storage at all;
+        // (2) alreadyDeletedBlob was already deleted in storage before the crash;
+        // (3) sellerALiveBlob verifies cross-seller deleteOrphan still returns false.
+        $alreadyDeletedBytes = '%PDF-1.4 already-deleted-before-crash';
+        $alreadyDeletedBlob = $storage->store(new StoreRenderBlob(
+            sellerRef: 'seller-a',
+            environment: 'test',
+            uploadKey: 'abs-already-deleted',
+            contentType: 'application/pdf',
+            bytes: $alreadyDeletedBytes,
+            outputDigest: 'sha256:'.hash('sha256', $alreadyDeletedBytes),
+        ));
+        self::assertTrue($storage->deleteOrphan('seller-a', 'test', $alreadyDeletedBlob->blobRef));
+
+        $liveBytes = '%PDF-1.4 seller-a-live';
+        $sellerALiveBlob = $storage->store(new StoreRenderBlob(
+            sellerRef: 'seller-a',
+            environment: 'test',
+            uploadKey: 'abs-live',
+            contentType: 'application/pdf',
+            bytes: $liveBytes,
+            outputDigest: 'sha256:'.hash('sha256', $liveBytes),
+        ));
+        self::assertFalse($storage->deleteOrphan('seller-b', 'test', $sellerALiveBlob->blobRef));
+        self::assertTrue($storage->isBlobAlive($sellerALiveBlob->blobRef));
+
+        $nowStr = $clock->format('Y-m-d\TH:i:s.u\Z');
+        $absentRef = 'blob-already-absent-in-storage';
+        $this->owner()->insert(
+            'INSERT INTO public.billium_document_render_blob (seller_ref, environment, upload_key, blob_ref, render_request_id, output_digest, content_type, byte_size, status, retention_pinned_until, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [
+                'seller-a', 'test', 'abs-missing', $absentRef, $req->id, 'sha256:'.hash('sha256', 'absent'), 'application/pdf', 12, 'deleting', null, $nowStr, $nowStr,
+                'seller-a', 'test', 'abs-already-deleted', $alreadyDeletedBlob->blobRef, $req->id, $alreadyDeletedBlob->outputDigest, 'application/pdf', $alreadyDeletedBlob->byteSize, 'deleting', null, $nowStr, $nowStr,
+            ],
+        );
+
+        $cleanup = $this->renderService()->cleanupOrphanBlobs($this->docScope(), $clock);
+        self::assertSame(2, $cleanup->deletedCount);
+        self::assertSame([$absentRef, $alreadyDeletedBlob->blobRef], $cleanup->deletedBlobRefs);
+        self::assertSame('deleted', $this->value('SELECT status FROM billium_document_render_blob WHERE blob_ref=?', [$absentRef]));
+        self::assertSame('deleted', $this->value('SELECT status FROM billium_document_render_blob WHERE blob_ref=?', [$alreadyDeletedBlob->blobRef]));
+        self::assertTrue($storage->isBlobAlive($sellerALiveBlob->blobRef));
     }
 }
