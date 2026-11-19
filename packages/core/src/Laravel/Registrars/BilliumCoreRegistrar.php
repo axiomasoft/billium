@@ -324,7 +324,11 @@ final class BilliumCoreRegistrar implements PackageRegistrar
             return false;
         }
 
-        return ! $app instanceof Container || ! $app->isAlias($legacy)
-            || $app->getAlias($legacy) !== $app->getAlias($canonical);
+        return ! $app instanceof Container || self::hasIndependentLegacyBinding($app, $legacy, $canonical);
+    }
+
+    private static function hasIndependentLegacyBinding(Container $container, string $legacy, string $canonical): bool
+    {
+        return ! $container->isAlias($legacy) || $container->getAlias($legacy) !== $container->getAlias($canonical);
     }
 }
