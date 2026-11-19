@@ -59,6 +59,7 @@ final class P4BootstrapTest extends ModuleTestCase
         $app = new Application(dirname(__DIR__, 5));
         $app->instance('config', new Repository);
         $app->register(BilliumCoreServiceProvider::class);
+        $app->boot();
         self::assertSame(['platform', 'ledger'], $app['config']->get('billium.modules.enabled'));
         foreach (['usage', 'rating', 'schedule'] as $module) {
             self::assertFalse($app['config']->get("billium.{$module}.enabled"));
@@ -75,6 +76,7 @@ final class P4BootstrapTest extends ModuleTestCase
             ],
         ]));
         $app->register(BilliumCoreServiceProvider::class);
+        $app->boot();
         self::assertArrayHasKey(UsageServiceProvider::class, $app->getLoadedProviders());
         self::assertArrayHasKey(ScheduleServiceProvider::class, $app->getLoadedProviders());
         self::assertArrayHasKey(RatingServiceProvider::class, $app->getLoadedProviders());

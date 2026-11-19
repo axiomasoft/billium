@@ -29,6 +29,7 @@ final class ScheduleProviderTest extends TestCase
         $app = new Application(dirname(__DIR__, 6));
         $app->instance('config', new Repository);
         $app->register(BilliumCoreServiceProvider::class);
+        $app->boot();
         self::assertFalse($app->bound(IntervalResolver::class));
         self::assertFalse($app->bound(AgreementRevisionCommit::class));
         self::assertArrayNotHasKey(ScheduleServiceProvider::class, $app->getLoadedProviders());
@@ -36,17 +37,18 @@ final class ScheduleProviderTest extends TestCase
         Container::setInstance(null);
     }
 
-    public function test_enabled_available_provider_binds_ports_without_installing_or_booting(): void
+    public function test_enabled_available_provider_binds_ports_at_boot_without_installing(): void
     {
         $app = new Application(dirname(__DIR__, 6));
-        $app->instance('config', new Repository(['billium' => ['modules' => ['enabled' => ['platform', 'ledger', 'rating', 'schedule']], 'schedule' => ['enabled' => true]]]));
+        $app->instance('config', new Repository(['billium' => ['modules' => ['enabled' => ['platform', 'ledger', 'rating', 'schedule']], 'rating' => ['enabled' => true], 'schedule' => ['enabled' => true]]]));
         $app->register(BilliumCoreServiceProvider::class);
+        $app->boot();
         foreach ([IntervalResolver::class, AgreementRevisionCommit::class, CommercialPeriods::class, OccurrenceService::class, OccurrenceParticipants::class, CorrectionParticipants::class, OccurrenceLocks::class, ScheduleQueries::class] as $contract) {
             self::assertTrue($app->bound($contract));
         }
         self::assertInstanceOf(UnboundAgreementRevisionGuard::class, $app->make(AgreementRevisionGuard::class));
         self::assertArrayHasKey(ScheduleServiceProvider::class, $app->getLoadedProviders());
-        self::assertFalse($app->isBooted());
+        self::assertTrue($app->isBooted());
         $descriptor = ModuleCatalog::packaged()->descriptor('schedule');
         self::assertNotNull($descriptor);
         self::assertSame(4, $descriptor->currentSchemaVersion);

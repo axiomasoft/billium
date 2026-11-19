@@ -13,12 +13,12 @@ use Billium\Platform\Laravel\PlatformServiceProvider;
 use Billium\Rating\Laravel\RatingServiceProvider;
 use Billium\Schedule\Laravel\ScheduleServiceProvider;
 use Billium\Usage\Laravel\UsageServiceProvider;
-use Illuminate\Contracts\Config\Repository;
 use Illuminate\Support\ServiceProvider;
 use Override;
 use Packman\Attributes\Api;
 use Packman\Foundation\Concerns\RegistersPackageRegistrars;
 use Packman\Foundation\Contracts\PackageRegistrar;
+use Packman\Plugins\Contracts\Registry\PluginInspector;
 
 #[Api(since: '1.0')]
 final class BilliumCoreServiceProvider extends ServiceProvider
@@ -43,21 +43,30 @@ final class BilliumCoreServiceProvider extends ServiceProvider
     #[Override]
     public function register(): void
     {
-        $options = $this->app->bound(BilliumOptions::class) ? $this->app->make(BilliumOptions::class) : null;
         $this->registerRegistrars();
-        $this->app->register(PlatformServiceProvider::class);
 
-        if ($options === null) {
-            $raw = $this->app->bound(Repository::class) ? $this->app->make(Repository::class)->get('billium', []) : [];
-            $options = BilliumOptions::fromArray(is_array($raw) ? $raw : ['__invalid_root' => $raw], 'billium');
+        if ($this->app->isBooted()) {
+            $this->activateModules();
+        } else {
+            $this->app->booting($this->activateModules(...));
+        }
+    }
+
+    private function activateModules(): void
+    {
+        $active = array_column($this->app->make(PluginInspector::class)->describe(), null, 'id');
+
+        if (! isset($active['axiomasoft.billium.platform'])) {
+            return;
         }
 
+        $this->app->register(PlatformServiceProvider::class);
         foreach (self::OPTIONAL_MODULES as $module => $providerClass) {
-            if (! $options->moduleEnabled($module)) {
+            if (! isset($active['axiomasoft.billium.'.$module])) {
                 continue;
             }
             if ($module === 'execution') {
-                (new ExecutionCompositionGuard)->assertReady($this->app, $options);
+                (new ExecutionCompositionGuard)->assertReady($this->app, $this->app->make(BilliumOptions::class), isset($active['axiomasoft.billium.ledger']));
             }
             $this->app->register($providerClass);
         }

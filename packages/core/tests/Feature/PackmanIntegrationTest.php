@@ -46,7 +46,9 @@ use Billium\Schedule\Laravel\ScheduleServiceProvider;
 use Billium\Usage\Laravel\UsageServiceProvider;
 use Closure;
 use Illuminate\Config\Repository;
+use Illuminate\Console\Application as Artisan;
 use Illuminate\Container\Container;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\DatabaseServiceProvider;
 use Illuminate\Database\Schema\Blueprint;
@@ -142,6 +144,7 @@ final class PackmanIntegrationTest extends PackageTestCase
 
             $app->register(BilliumCoreServiceProvider::class);
 
+            $app->boot();
             self::assertSame($options, $app->make(BilliumOptions::class));
             self::assertNotEmpty($app->getProviders(PlatformServiceProvider::class));
             self::assertNotEmpty($app->getProviders(RatingServiceProvider::class));
@@ -237,6 +240,8 @@ final class PackmanIntegrationTest extends PackageTestCase
             $other->register(PluginsServiceProvider::class);
             $billing->register(BilliumCoreServiceProvider::class);
 
+            $billing->boot();
+            self::assertFalse($billing->bound(Ledger::class));
             self::assertSame($hostGate, $billing->make(PluginActivationGate::class));
             self::assertSame(['axiomasoft.billium.platform'], array_map(
                 static fn ($plugin): string => $plugin->id,
@@ -244,6 +249,32 @@ final class PackmanIntegrationTest extends PackageTestCase
             ));
             self::assertSame([], $other->make(PluginInspector::class)->describe());
             self::assertSame('axiomasoft/packman-modules:tenant', $billing->make('config')->get('packman.schema.module_prerequisite_set'));
+        } finally {
+            Container::setInstance($previous);
+        }
+    }
+
+    public function test_disabled_module_runtime_and_commands_follow_each_host(): void
+    {
+        $previous = Container::getInstance();
+        try {
+            $enabled = new Application(dirname(__DIR__, 4));
+            $enabled->instance('config', new Repository);
+            $enabled->register(BilliumCoreServiceProvider::class);
+            $enabled->boot();
+
+            $disabled = new Application(dirname(__DIR__, 4));
+            $disabled->instance('config', new Repository(['billium' => ['modules' => ['enabled' => ['platform', 'ledger', 'execution']]]]));
+            $disabled->register(BilliumCoreServiceProvider::class);
+            $disabled['config']->set('packman.disabled_plugins', ['axiomasoft.billium.execution', 'axiomasoft.billium.ledger']);
+            $disabled->boot();
+
+            foreach ([$enabled, $disabled, $enabled] as $host) {
+                $artisan = new Artisan($host, $host->make(Dispatcher::class), $host->version());
+                $artisan->setContainerCommandLoader();
+                self::assertSame($host === $enabled, $artisan->has('billium:ledger:drain-parked'));
+                self::assertSame($host === $enabled, $host->bound(Ledger::class));
+            }
         } finally {
             Container::setInstance($previous);
         }
@@ -338,6 +369,7 @@ final class PackmanIntegrationTest extends PackageTestCase
             $preOptions = BilliumOptions::fromArray(['runner' => ['max_attempts' => 7]], 'billium');
             $preApp->instance(BilliumOptions::class, $preOptions);
             $preApp->register(BilliumCoreServiceProvider::class);
+            $preApp->boot();
 
             self::assertSame($preOptions, $preApp->make(BilliumOptions::class));
             self::assertSame(7, $preApp->make(BilliumOptions::class)->runner->maxAttempts);
@@ -361,6 +393,7 @@ final class PackmanIntegrationTest extends PackageTestCase
             $preAliasApp->instance(FixedCallerContext::class, $aliasCaller);
             $preAliasApp->alias(FixedCallerContext::class, 'Billium\\Core\\Contracts\\CallerContext');
             $preAliasApp->register(BilliumCoreServiceProvider::class);
+            $preAliasApp->boot();
             self::assertSame($aliasCaller, $preAliasApp->make(CallerContext::class));
 
             // Post-registered host legacy bindings (bound after BilliumCoreServiceProvider):
@@ -373,6 +406,7 @@ final class PackmanIntegrationTest extends PackageTestCase
             ]));
             $postApp->register(DatabaseServiceProvider::class);
             $postApp->register(BilliumCoreServiceProvider::class);
+            $postApp->boot();
             $postCaller = FixedCallerContext::default('post-legacy');
             $postSession = new FixedSessionAdmission(FixedSessionAdmission::token('post-legacy'));
             $postPublisher = new readonly class implements EventPublisher
@@ -396,6 +430,7 @@ final class PackmanIntegrationTest extends PackageTestCase
             ]));
             $postAliasApp->register(DatabaseServiceProvider::class);
             $postAliasApp->register(BilliumCoreServiceProvider::class);
+            $postAliasApp->boot();
             $postAliasCaller = FixedCallerContext::default('post-alias-legacy');
             $postAliasApp->instance(FixedCallerContext::class, $postAliasCaller);
             $postAliasApp->alias(FixedCallerContext::class, 'Billium\\Core\\Contracts\\CallerContext');
@@ -450,6 +485,7 @@ final class PackmanIntegrationTest extends PackageTestCase
             }
 
             self::assertSame($override, $app->make($key));
+            $app->boot();
             $reader = $app->make(EventFeed::class);
             self::assertInstanceOf(EventFeedReader::class, $reader);
             /** @var callable(): iterable<SnapshotSource> $resolver */
@@ -506,6 +542,7 @@ final class PackmanIntegrationTest extends PackageTestCase
             $app->instance($override::class, $override);
             $app->tag($override::class, 'billium.snapshot_sources');
 
+            $app->boot();
             $reader = $app->make(EventFeed::class);
             self::assertInstanceOf(EventFeedReader::class, $reader);
             /** @var callable(): iterable<SnapshotSource> $resolver */

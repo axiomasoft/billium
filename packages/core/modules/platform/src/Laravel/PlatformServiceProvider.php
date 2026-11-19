@@ -10,6 +10,8 @@ use Billium\Platform\Internal\Console\RelayCommand;
 use Billium\Platform\Internal\Installation\InitInstallationCommand;
 use Billium\Platform\Internal\Registrars\PlatformInstallationRegistrar;
 use Billium\Platform\Internal\Registrars\PlatformOutboxRegistrar;
+use Illuminate\Console\Events\ArtisanStarting;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Override;
 use Packman\Attributes\Spi;
@@ -45,12 +47,14 @@ final class PlatformServiceProvider extends ServiceProvider
         $this->bootRegistrars();
 
         if ($this->app->runningInConsole()) {
-            $this->commands([
-                InitInstallationCommand::class,
-                RelayCommand::class,
-                PruneCommand::class,
-                RegisterEventContractsCommand::class,
-            ]);
+            $this->app->make(Dispatcher::class)->listen(ArtisanStarting::class, static function (ArtisanStarting $event): void {
+                $event->artisan->resolveCommands([
+                    InitInstallationCommand::class,
+                    RelayCommand::class,
+                    PruneCommand::class,
+                    RegisterEventContractsCommand::class,
+                ]);
+            });
         }
     }
 }

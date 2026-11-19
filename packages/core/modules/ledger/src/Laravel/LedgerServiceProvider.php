@@ -7,6 +7,8 @@ namespace Billium\Ledger\Laravel;
 use Billium\Ledger\Internal\Console\DrainParkedCommand;
 use Billium\Ledger\Internal\Console\ReconcileRefundsCommand;
 use Billium\Ledger\Internal\Registrars\LedgerRuntimeRegistrar;
+use Illuminate\Console\Events\ArtisanStarting;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Override;
 use Packman\Attributes\Spi;
@@ -41,10 +43,12 @@ final class LedgerServiceProvider extends ServiceProvider
         $this->bootRegistrars();
 
         if ($this->app->runningInConsole()) {
-            $this->commands([
-                DrainParkedCommand::class,
-                ReconcileRefundsCommand::class,
-            ]);
+            $this->app->make(Dispatcher::class)->listen(ArtisanStarting::class, static function (ArtisanStarting $event): void {
+                $event->artisan->resolveCommands([
+                    DrainParkedCommand::class,
+                    ReconcileRefundsCommand::class,
+                ]);
+            });
         }
     }
 }

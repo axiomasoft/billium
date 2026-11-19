@@ -40,6 +40,7 @@ final class P4ModuleCompositionTest extends ModuleTestCase
             $app->instance('config', new Repository(['billium' => ['modules' => ['enabled' => ['platform', 'rating', 'usage']],
                 'rating' => ['enabled' => true], 'usage' => ['enabled' => false], 'schedule' => ['enabled' => true]]]));
             $app->register(BilliumCoreServiceProvider::class);
+            $app->boot();
             self::assertFalse($app->bound(Usage::class));
             self::assertArrayNotHasKey(ScheduleServiceProvider::class, $app->getLoadedProviders());
             self::assertInstanceOf(RatingQuoter::class, $app->make(RatingQuoter::class));

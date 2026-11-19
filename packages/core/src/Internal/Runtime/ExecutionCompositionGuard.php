@@ -17,13 +17,13 @@ use Packman\Config\Laravel\ConfigurationValidator;
 #[Internal]
 final readonly class ExecutionCompositionGuard
 {
-    public function assertReady(Application $app, BilliumOptions $options): void
+    public function assertReady(Application $app, BilliumOptions $options, bool $ledgerActive): void
     {
         $validator = new ConfigurationValidator;
         if (! in_array($options->modules->composition, ['remote-billium', 'standalone-billium'], true)) {
             $validator->add('billium.modules.composition', 'execution requires remote-billium or standalone-billium');
         }
-        if (! in_array('platform', $options->modules->enabled, true) || ! in_array('ledger', $options->modules->enabled, true)) {
+        if (! in_array('platform', $options->modules->enabled, true) || ! $ledgerActive) {
             $validator->add('billium.modules.enabled', 'an execution composition requires platform and ledger');
         }
         $validator->failIfAny();
