@@ -85,7 +85,7 @@ final class QualifiedOriginalReplayTest extends ExecutionTestCase
             $receipt = $app->make(RootPaymentCommands::class)->admit($scope, Fixture::wire())->orThrow();
             $worker = $app->make(AttemptWorker::class);
             $ref = UnknownResultTest::attemptRef();
-            self::assertSame('unknown', $worker->dispatch($scope, $ref, 'first-worker', new DateTimeImmutable('+10 seconds'))->orThrow()->body['status']);
+            self::assertSame('unknown', $worker->dispatch($scope, $ref, 'first-worker', new DateTimeImmutable('+1 minute'))->orThrow()->body['status']);
             $originalStart = self::text($this->value('SELECT started_at::text FROM billium_execution_attempt'));
             $record = self::single($path.'.psp', 'first-request');
             if ($case !== 'missing-approval') {
