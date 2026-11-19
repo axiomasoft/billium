@@ -158,6 +158,7 @@
             "type": "dev",
             "dev_only": true,
             "owns": [
+                "Documents",
                 "Drivers",
                 "Fixtures",
                 "Oracles",

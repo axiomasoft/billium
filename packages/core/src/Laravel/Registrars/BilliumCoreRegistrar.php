@@ -35,7 +35,9 @@ use Billium\Core\Plugins\PlatformPlugin;
 use Billium\Core\Plugins\RatingPlugin;
 use Billium\Core\Plugins\SchedulePlugin;
 use Billium\Core\Plugins\UsagePlugin;
+use Billium\Documents\Contracts\DocumentDelivery;
 use Billium\Documents\Contracts\DocumentRenderer;
+use Billium\Documents\Contracts\DocumentStorage;
 use Billium\Documents\Contracts\DocumentTaxSnapshotPort;
 use Billium\Documents\Laravel\DocumentsCapabilities;
 use Billium\Execution\Contracts\AdapterQualification;
@@ -202,6 +204,8 @@ final class BilliumCoreRegistrar implements PackageRegistrar
                     'OriginalReplayAuthority' => OriginalReplayAuthority::class,
                     'OriginalIdentityArchive' => OriginalIdentityArchive::class,
                     'DocumentRenderer' => DocumentRenderer::class,
+                    'DocumentStorage' => DocumentStorage::class,
+                    'DocumentDelivery' => DocumentDelivery::class,
                 ] as $port => $contract) {
                     if ($app->bound($contract)) {
                         $ports[] = $port;

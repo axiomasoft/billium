@@ -6,9 +6,11 @@ namespace Billium\Core\Tests\P6\Support;
 
 use Billium\Contracts\Data\Currency;
 use Billium\Contracts\Data\Money;
+use Billium\Documents\Contracts\DocumentCorrectionService;
 use Billium\Documents\Contracts\DocumentFinalizationService;
 use Billium\Documents\Contracts\DocumentProfileRegistry;
 use Billium\Documents\Contracts\DocumentRenderer;
+use Billium\Documents\Contracts\DocumentRenderService;
 use Billium\Documents\Contracts\DocumentSeriesRegistry;
 use Billium\Documents\Contracts\DocumentTaxArithmetic;
 use Billium\Documents\Contracts\DocumentTaxSnapshotPort;
@@ -26,6 +28,8 @@ use Billium\Documents\Data\DocumentTaxLineSnapshot;
 use Billium\Documents\Data\DocumentTaxSnapshot;
 use Billium\Documents\Data\IssueLegalDocument;
 use Billium\Documents\Data\RegisterDocumentProfile;
+use Billium\Documents\Data\RenderDocumentInput;
+use Billium\Documents\Data\RenderedArtifact;
 use Billium\Documents\Data\TaxArithmeticLineInput;
 use Billium\Documents\Data\TaxSnapshotRequest;
 use Billium\Documents\Enums\DiscountTaxOrder;
@@ -95,6 +99,16 @@ abstract class DocumentsTestCase extends LedgerTestCase
         return $this->application()->make(LegalDocumentQueries::class);
     }
 
+    protected function renderService(): DocumentRenderService
+    {
+        return $this->application()->make(DocumentRenderService::class);
+    }
+
+    protected function correctionService(): DocumentCorrectionService
+    {
+        return $this->application()->make(DocumentCorrectionService::class);
+    }
+
     protected function taxArithmetic(): DocumentTaxArithmetic
     {
         return $this->application()->make(DocumentTaxArithmetic::class);
@@ -104,9 +118,21 @@ abstract class DocumentsTestCase extends LedgerTestCase
     {
         $this->application()->instance(DocumentRenderer::class, new class implements DocumentRenderer
         {
+            public function rendererName(): string
+            {
+                return 'stub';
+            }
+
             public function rendererVersion(): string
             {
                 return 'stub-1.0';
+            }
+
+            public function render(RenderDocumentInput $input): RenderedArtifact
+            {
+                $bytes = '%PDF-1.4 '.$input->legalNumber;
+
+                return new RenderedArtifact('application/pdf', $bytes, 'sha256:'.hash('sha256', $bytes));
             }
         });
     }

@@ -6304,11 +6304,12 @@
             "dist": {
                 "type": "path",
                 "url": "packages/testkit",
-                "reference": "0fe392cdd837d40043136e6c24ce4379dca80b0b"
+                "reference": "378f872ab691c1e19f3e2b354c498aed84c72dc2"
             },
             "require": {
                 "axiomasoft/billium-contracts": "^0.1",
                 "axiomasoft/billium-core": "^0.1",
+                "axiomasoft/billium-documents": "^0.1",
                 "axiomasoft/billium-execution": "^0.1",
                 "axiomasoft/billium-platform": "^0.1",
                 "axiomasoft/packman": "^0.1",
@@ -6323,6 +6324,7 @@
                     "dev_only": true,
                     "stability": "dev",
                     "owns": [
+                        "Documents",
                         "Drivers",
                         "Fixtures",
                         "Oracles",

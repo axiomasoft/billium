@@ -4923,6 +4923,20 @@
       "source": "packages/core/database/migrations/documents/2026_11_19_000002_create_billium_documents_series_and_legal_issue.php"
     },
     {
+      "kind": "migration",
+      "id": "2026_11_19_000003_create_billium_documents_render_tables",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/documents/2026_11_19_000003_create_billium_documents_render_tables.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_19_000004_create_billium_documents_corrections",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/documents/2026_11_19_000004_create_billium_documents_corrections.php"
+    },
+    {
       "kind": "doctor-finding",
       "id": "module.composition_forbidden",
       "status": "new",

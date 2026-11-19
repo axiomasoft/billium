@@ -4,10 +4,16 @@ declare(strict_types=1);
 
 namespace Billium\Documents\Internal\Registrars;
 
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Documents\Contracts\DocumentCorrectionService;
 use Billium\Documents\Contracts\DocumentFinalizationService;
 use Billium\Documents\Contracts\DocumentProfileRegistry;
+use Billium\Documents\Contracts\DocumentRenderer;
+use Billium\Documents\Contracts\DocumentRenderService;
 use Billium\Documents\Contracts\DocumentSeriesRegistry;
 use Billium\Documents\Contracts\DocumentsNumberingParticipant;
+use Billium\Documents\Contracts\DocumentStorage;
 use Billium\Documents\Contracts\DocumentTaxArithmetic;
 use Billium\Documents\Contracts\DocumentTaxSnapshotPort;
 use Billium\Documents\Contracts\LedgerIssuePolicy;
@@ -16,13 +22,17 @@ use Billium\Documents\Contracts\LegalDocumentQueries;
 use Billium\Documents\Internal\Participants\DatabaseDocumentsNumberingParticipant;
 use Billium\Documents\Internal\Participants\ParticipantLedgerIssuePolicy;
 use Billium\Documents\Internal\Queries\DatabaseLegalDocumentQueries;
+use Billium\Documents\Internal\Services\DatabaseDocumentCorrectionService;
 use Billium\Documents\Internal\Services\DatabaseDocumentFinalizationService;
 use Billium\Documents\Internal\Services\DatabaseDocumentProfileRegistry;
+use Billium\Documents\Internal\Services\DatabaseDocumentRenderService;
 use Billium\Documents\Internal\Services\DatabaseDocumentSeriesRegistry;
 use Billium\Documents\Internal\Services\DatabaseLegalDocumentIssuer;
 use Billium\Documents\Internal\Tax\BcDocumentTaxArithmetic;
+use Billium\Documents\Internal\Tax\PartialCreditAllocator;
 use Billium\Documents\Internal\UnboundDocumentTaxSnapshotPort;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Database\DatabaseManager;
 use Override;
 use Packman\Attributes\Internal;
 use Packman\Foundation\Contracts\PackageRegistrar;
@@ -42,6 +52,15 @@ final class DocumentsRuntimeRegistrar implements PackageRegistrar
         $app->bind(DocumentsNumberingParticipant::class, DatabaseDocumentsNumberingParticipant::class);
         $app->bind(LegalDocumentIssuer::class, DatabaseLegalDocumentIssuer::class);
         $app->bind(LegalDocumentQueries::class, DatabaseLegalDocumentQueries::class);
+        $app->bind(PartialCreditAllocator::class, PartialCreditAllocator::class);
+        $app->bind(DocumentCorrectionService::class, DatabaseDocumentCorrectionService::class);
+        $app->bind(DocumentRenderService::class, static fn (Application $app): DatabaseDocumentRenderService => new DatabaseDocumentRenderService(
+            databases: $app->make(DatabaseManager::class),
+            runner: $app->make(OperationRunner::class),
+            callers: $app->make(CallerContext::class),
+            rendererResolver: static fn (): ?DocumentRenderer => $app->bound(DocumentRenderer::class) ? $app->make(DocumentRenderer::class) : null,
+            storageResolver: static fn (): ?DocumentStorage => $app->bound(DocumentStorage::class) ? $app->make(DocumentStorage::class) : null,
+        ));
     }
 
     #[Override]

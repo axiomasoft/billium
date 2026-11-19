@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace Billium\Core\Plugins;
 
+use Billium\Documents\Contracts\DocumentCorrectionService;
+use Billium\Documents\Contracts\DocumentDelivery;
 use Billium\Documents\Contracts\DocumentFinalizationService;
 use Billium\Documents\Contracts\DocumentProfileRegistry;
 use Billium\Documents\Contracts\DocumentRenderer;
+use Billium\Documents\Contracts\DocumentRenderService;
 use Billium\Documents\Contracts\DocumentSeriesRegistry;
 use Billium\Documents\Contracts\DocumentsNumberingParticipant;
+use Billium\Documents\Contracts\DocumentStorage;
 use Billium\Documents\Contracts\DocumentTaxArithmetic;
 use Billium\Documents\Contracts\DocumentTaxSnapshotPort;
 use Billium\Documents\Contracts\LedgerIssuePolicy;
@@ -68,6 +72,10 @@ final class DocumentsPlugin implements ExtensionPlugin, WithCapabilities, WithSc
             'document_series',
             'document_legal',
             'document_number_journal',
+            'document_render_request',
+            'document_render_blob',
+            'document_correction',
+            'document_credit_note_line',
         ];
     }
 
@@ -92,6 +100,10 @@ final class DocumentsPlugin implements ExtensionPlugin, WithCapabilities, WithSc
             LegalDocumentIssuer::class => Cardinality::OptionalSingle->value,
             LegalDocumentQueries::class => Cardinality::OptionalSingle->value,
             DocumentRenderer::class => Cardinality::OptionalSingle->value,
+            DocumentStorage::class => Cardinality::OptionalSingle->value,
+            DocumentDelivery::class => Cardinality::OptionalSingle->value,
+            DocumentRenderService::class => Cardinality::OptionalSingle->value,
+            DocumentCorrectionService::class => Cardinality::OptionalSingle->value,
         ];
     }
 

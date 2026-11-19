@@ -37,3 +37,19 @@ PostgreSQL `BEFORE UPDATE OR DELETE` triggers enforce append-only history, monot
 ## Zero-Float Tax Arithmetic
 
 `DocumentTaxArithmetic` (`BcDocumentTaxArithmetic`) computes exact decimal arithmetic using `bcmath` and deterministic `LargestRemainder` allocation across lines without any `float` types or casts, supporting `exclusive`, `inclusive`, `none_declared` (requiring non-empty `noTaxReason`), and `discount_before_tax` / `tax_before_discount` ordering.
+
+## Asynchronous Rendering & Read Access (`readRender`)
+
+- `billium_document_render_request` keys render idempotency on `(seller_ref, environment, render_key_digest)` covering legal document revision, approved snapshot digest, template ID/version/digest, locale, and renderer name/version/digest. Retries or repeat requests never allocate a second `legal_document`.
+- `DocumentRenderer` and `DocumentStorage` execute strictly **outside DB transactions**. `DocumentStorage::store()` receives a deterministic `uploadKey` so timeouts after upload return the identical `blobRef` on retry without duplicating storage objects.
+- `attachRenderResult()` uses compare-and-swap on `(render_revision, render_key_digest)` and marks stale/superseded uploads as `orphaned` rather than overwriting newer revisions.
+- `readRender()` and `dispatchReadRenderQuery()` (`billium.query.v1`) enforce caller seller scope and actor authorization, issue short-lived expiring grants (`1..900` seconds) without storing URLs in PostgreSQL, and continue serving historical ready renders when `DocumentRenderer` is disabled/unbound.
+- Asset URLs are restricted to allow-listed prefixes (`asset://`), and diagnostic logs scrub tokens, secrets, signatures, and sensitive query parameters.
+- `cleanupOrphanBlobs()` deletes expired/unpinned `orphaned` blobs via `DocumentStorage::deleteOrphan()` while respecting `retention_pinned_until` pins and never deleting `attached` blobs.
+
+## Document Corrections, Credit Notes & Void/Reissue
+
+- `DocumentCorrectionService` separates distinct economic commands (`credit_note`, `document_correction`, `void_reissue`, `write_off`) while keeping frozen legal document snapshots and provider refunds strictly separate (credit approval never dispatches a PSP refund).
+- Positive post-issue deltas (`issuePositiveCorrection`) record a new linked correction obligation via `LedgerParticipants::recordObligation()` rather than mutating frozen original obligations.
+- Negative credits (`issueCreditNote`) invoke `LedgerParticipants::issueCreditNote()` (`open_only` or `reverse_allocations`) and persist immutable `billium_document_credit_note_line` lineage (`original_invoice_line_id`, `original_obligation_ref`, `original_component_ref`, `original_tax_snapshot_ref`, `original_rounding_policy_version`, cumulative sums and original basis bounds), enforced by deferred PostgreSQL constraint trigger `billium_documents_check_credit_note_sums()`.
+- `PartialCreditAllocator` applies the host `DocumentTaxCorrectionPolicy` (rejecting missing/unsupported policies) and guarantees that final partial credits exhausting a line receive the exact remaining net/tax/gross remainder under the frozen original rounding policy.

@@ -26,6 +26,8 @@ use Billium\Documents\Data\DocumentLineBasis;
 use Billium\Documents\Data\DocumentTaxLineSnapshot;
 use Billium\Documents\Data\DocumentTaxSnapshot;
 use Billium\Documents\Data\RegisterDocumentProfile;
+use Billium\Documents\Data\RenderDocumentInput;
+use Billium\Documents\Data\RenderedArtifact;
 use Billium\Documents\Data\ReviseDocumentDraft;
 use Billium\Documents\Data\TaxArithmeticLineInput;
 use Billium\Documents\Data\TaxSnapshotRequest;
@@ -225,9 +227,21 @@ final class DocumentProfileTest extends DocumentsTestCase
         $hostApp->instance(DocumentTaxSnapshotPort::class, $customPort);
         $hostApp->instance(DocumentRenderer::class, new class implements DocumentRenderer
         {
+            public function rendererName(): string
+            {
+                return 'host-renderer';
+            }
+
             public function rendererVersion(): string
             {
                 return 'host-renderer-1.0';
+            }
+
+            public function render(RenderDocumentInput $input): RenderedArtifact
+            {
+                $bytes = '%PDF-1.4 '.$input->legalNumber;
+
+                return new RenderedArtifact('application/pdf', $bytes, 'sha256:'.hash('sha256', $bytes));
             }
         });
 

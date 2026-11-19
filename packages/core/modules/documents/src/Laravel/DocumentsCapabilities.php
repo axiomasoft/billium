@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Billium\Documents\Laravel;
 
+use Billium\Documents\Contracts\DocumentCorrectionService;
 use Billium\Documents\Contracts\DocumentFinalizationService;
 use Billium\Documents\Contracts\DocumentProfileRegistry;
+use Billium\Documents\Contracts\DocumentRenderService;
 use Billium\Documents\Contracts\DocumentSeriesRegistry;
 use Billium\Documents\Contracts\DocumentsNumberingParticipant;
 use Billium\Documents\Contracts\DocumentTaxArithmetic;
@@ -16,8 +18,10 @@ use Billium\Documents\Contracts\LegalDocumentQueries;
 use Billium\Documents\Internal\Participants\DatabaseDocumentsNumberingParticipant;
 use Billium\Documents\Internal\Participants\ParticipantLedgerIssuePolicy;
 use Billium\Documents\Internal\Queries\DatabaseLegalDocumentQueries;
+use Billium\Documents\Internal\Services\DatabaseDocumentCorrectionService;
 use Billium\Documents\Internal\Services\DatabaseDocumentFinalizationService;
 use Billium\Documents\Internal\Services\DatabaseDocumentProfileRegistry;
+use Billium\Documents\Internal\Services\DatabaseDocumentRenderService;
 use Billium\Documents\Internal\Services\DatabaseDocumentSeriesRegistry;
 use Billium\Documents\Internal\Services\DatabaseLegalDocumentIssuer;
 use Billium\Documents\Internal\Tax\BcDocumentTaxArithmetic;
@@ -44,6 +48,8 @@ final class DocumentsCapabilities
             DocumentsNumberingParticipant::class => DatabaseDocumentsNumberingParticipant::class,
             LegalDocumentIssuer::class => DatabaseLegalDocumentIssuer::class,
             LegalDocumentQueries::class => DatabaseLegalDocumentQueries::class,
+            DocumentRenderService::class => DatabaseDocumentRenderService::class,
+            DocumentCorrectionService::class => DatabaseDocumentCorrectionService::class,
         ];
     }
 

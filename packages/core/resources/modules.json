@@ -994,14 +994,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "documents",
-      "currentSchemaVersion": 2,
+      "currentSchemaVersion": 4,
       "supportedSchemaReadRange": {
         "min": 2,
-        "max": 2
+        "max": 4
       },
       "supportedSchemaWriteRange": {
-        "min": 2,
-        "max": 2
+        "min": 4,
+        "max": 4
       },
       "requiresModules": [
         {
@@ -1035,7 +1035,11 @@
         "billium_document_finalization_event",
         "billium_document_series",
         "billium_document_legal",
-        "billium_document_number_journal"
+        "billium_document_number_journal",
+        "billium_document_render_request",
+        "billium_document_render_blob",
+        "billium_document_correction",
+        "billium_document_credit_note_line"
       ],
       "configKeys": [
         "billium.documents.enabled"
@@ -1050,6 +1054,16 @@
           "id": "2026_11_19_000002_create_billium_documents_series_and_legal_issue",
           "version": 2,
           "checksum": "sha256:a77f5e80aa966fddba522f64514da2db9e92df43786cc2b4dce3d0e85363ef4f"
+        },
+        {
+          "id": "2026_11_19_000003_create_billium_documents_render_tables",
+          "version": 3,
+          "checksum": "sha256:b8683b80a84d4d11df49828f0b806dd85c377535521762067712f42d93a4b286"
+        },
+        {
+          "id": "2026_11_19_000004_create_billium_documents_corrections",
+          "version": 4,
+          "checksum": "sha256:9106bd796bb5b6e6eb30bf9723eff77bab34b62226027f67f559bf7ea72d15e9"
         }
       ],
       "disablePolicy": {

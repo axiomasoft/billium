@@ -1,0 +1,116 @@
+{
+  "id": "documents/correction-partial-credit",
+  "description": "P6.4 heterogeneous bundle lines with sequential partial credits and exact final remainder conservation under frozen original rounding policy.",
+  "spec_refs": [
+    "D19",
+    "D56"
+  ],
+  "profiles": [
+    "php"
+  ],
+  "given": {
+    "example": {
+      "currency": "EUR",
+      "currencyExponent": 2,
+      "bundleLines": [
+        {
+          "originalInvoiceLineId": "line-1",
+          "origNetMinor": 1001,
+          "origTaxMinor": 190,
+          "origGrossMinor": 1191,
+          "originalRoundingPolicyVersion": "half_up/1"
+        },
+        {
+          "originalInvoiceLineId": "line-2",
+          "origNetMinor": 333,
+          "origTaxMinor": 25,
+          "origGrossMinor": 358,
+          "originalRoundingPolicyVersion": "half_even/1"
+        }
+      ],
+      "sequentialCredits": [
+        {
+          "step": 1,
+          "requests": [
+            {
+              "originalInvoiceLineId": "line-1",
+              "requestedGrossMinor": 600
+            },
+            {
+              "originalInvoiceLineId": "line-2",
+              "requestedGrossMinor": 179
+            }
+          ],
+          "expected": [
+            {
+              "originalInvoiceLineId": "line-1",
+              "netMinor": 504,
+              "taxMinor": 96,
+              "grossMinor": 600,
+              "cumNet": 504,
+              "cumTax": 96,
+              "cumGross": 600
+            },
+            {
+              "originalInvoiceLineId": "line-2",
+              "netMinor": 167,
+              "taxMinor": 12,
+              "grossMinor": 179,
+              "cumNet": 167,
+              "cumTax": 12,
+              "cumGross": 179
+            }
+          ]
+        },
+        {
+          "step": 2,
+          "requests": [
+            {
+              "originalInvoiceLineId": "line-1",
+              "requestedGrossMinor": 591
+            },
+            {
+              "originalInvoiceLineId": "line-2",
+              "requestedGrossMinor": 179
+            }
+          ],
+          "expected": [
+            {
+              "originalInvoiceLineId": "line-1",
+              "netMinor": 497,
+              "taxMinor": 94,
+              "grossMinor": 591,
+              "cumNet": 1001,
+              "cumTax": 190,
+              "cumGross": 1191
+            },
+            {
+              "originalInvoiceLineId": "line-2",
+              "netMinor": 166,
+              "taxMinor": 13,
+              "grossMinor": 179,
+              "cumNet": 333,
+              "cumTax": 25,
+              "cumGross": 358
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "script": [
+    {
+      "op": "canon.digest",
+      "args": {
+        "json_text": "{\"bundleLines\":[{\"origGrossMinor\":1191,\"origNetMinor\":1001,\"origTaxMinor\":190,\"originalInvoiceLineId\":\"line-1\",\"originalRoundingPolicyVersion\":\"half_up/1\"},{\"origGrossMinor\":358,\"origNetMinor\":333,\"origTaxMinor\":25,\"originalInvoiceLineId\":\"line-2\",\"originalRoundingPolicyVersion\":\"half_even/1\"}],\"currency\":\"EUR\",\"currencyExponent\":2,\"sequentialCredits\":[{\"expected\":[{\"cumGross\":600,\"cumNet\":504,\"cumTax\":96,\"grossMinor\":600,\"netMinor\":504,\"originalInvoiceLineId\":\"line-1\",\"taxMinor\":96},{\"cumGross\":179,\"cumNet\":167,\"cumTax\":12,\"grossMinor\":179,\"netMinor\":167,\"originalInvoiceLineId\":\"line-2\",\"taxMinor\":12}],\"requests\":[{\"originalInvoiceLineId\":\"line-1\",\"requestedGrossMinor\":600},{\"originalInvoiceLineId\":\"line-2\",\"requestedGrossMinor\":179}],\"step\":1},{\"expected\":[{\"cumGross\":1191,\"cumNet\":1001,\"cumTax\":190,\"grossMinor\":591,\"netMinor\":497,\"originalInvoiceLineId\":\"line-1\",\"taxMinor\":94},{\"cumGross\":358,\"cumNet\":333,\"cumTax\":25,\"grossMinor\":179,\"netMinor\":166,\"originalInvoiceLineId\":\"line-2\",\"taxMinor\":13}],\"requests\":[{\"originalInvoiceLineId\":\"line-1\",\"requestedGrossMinor\":591},{\"originalInvoiceLineId\":\"line-2\",\"requestedGrossMinor\":179}],\"step\":2}]}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "digest": "sha256:e7bb349e4293f10e80756d89ba91bc08e6826d3a0c5037fc60cda49624258f00"
+      }
+    }
+  ]
+}

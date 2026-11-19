@@ -80,5 +80,7 @@
   "2026_11_18_010008_retain_original_execution_binding",
   "2026_11_18_010009_validate_original_execution_binding",
   "2026_11_19_000001_create_billium_documents_profiles_and_finalization",
-  "2026_11_19_000002_create_billium_documents_series_and_legal_issue"
+  "2026_11_19_000002_create_billium_documents_series_and_legal_issue",
+  "2026_11_19_000003_create_billium_documents_render_tables",
+  "2026_11_19_000004_create_billium_documents_corrections"
 ]
