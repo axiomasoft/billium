@@ -74,7 +74,6 @@ use Packman\Plugins\Laravel\ExtensionRegistrar;
 use Packman\Plugins\Laravel\PluginsServiceProvider;
 use Packman\Schema\Laravel\SchemaExtensions;
 use Packman\Schema\Laravel\SchemaServiceProvider;
-use ReflectionProperty;
 use Throwable;
 
 /**
@@ -324,13 +323,8 @@ final class BilliumCoreRegistrar implements PackageRegistrar
         if (! $app->bound($legacy)) {
             return false;
         }
-        if ($app instanceof Container) {
-            $aliases = new ReflectionProperty(Container::class, 'aliases')->getValue($app);
-            if (is_array($aliases) && ($aliases[$legacy] ?? null) === $canonical) {
-                return false;
-            }
-        }
 
-        return true;
+        return ! $app instanceof Container || ! $app->isAlias($legacy)
+            || $app->getAlias($legacy) !== $app->getAlias($canonical);
     }
 }

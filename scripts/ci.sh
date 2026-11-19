@@ -114,6 +114,7 @@ layer_conformance() {
     python3 -m unittest discover -s conformance/tests
     python3 conformance/runner/run.py --check-golden
     PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 php conformance/adapters/php/bin/with-database-lease.php python3 conformance/runner/run.py --adapter php
+    (cd conformance/adapters/dart && dart pub get)
     python3 conformance/runner/run.py --adapter dart
 }
 

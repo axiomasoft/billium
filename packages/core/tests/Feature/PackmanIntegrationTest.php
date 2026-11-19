@@ -300,6 +300,13 @@ final class PackmanIntegrationTest extends PackageTestCase
     {
         $containerBackup = Container::getInstance();
         try {
+            $chainApp = new Application(dirname(__DIR__, 4));
+            $chainApp->instance('config', new Repository);
+            $chainApp->alias(CallerContext::class, 'host.caller');
+            $chainApp->alias('host.caller', 'Billium\\Core\\Contracts\\CallerContext');
+            $chainApp->register(BilliumCoreServiceProvider::class);
+            self::assertSame($chainApp->make(CallerContext::class), $chainApp->make('host.caller'));
+
             // Pre-registered host legacy bindings (registered before BilliumCoreServiceProvider):
             $preApp = new Application(dirname(__DIR__, 4));
             $preApp->instance('config', new Repository([
