@@ -28,6 +28,7 @@ final readonly class ExecutionSchemaSetProvider implements SchemaSetProvider
             drivers: ['pgsql'],
             lifecycle: SchemaLifecycle::Module,
             requires: ['axiomasoft/billium-core'],
+            prerequisiteSets: ['axiomasoft/billium-core:billium-platform'],
         )];
     }
 }

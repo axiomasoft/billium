@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f5781f7e2df9ae0fc46bb67dd4f4a9a2",
+    "content-hash": "3f93f273ad20b0d792d9c4743f52c4ed",
     "packages": [
         {
             "name": "axiomasoft/billium-contracts",
@@ -12,7 +12,7 @@
             "dist": {
                 "type": "path",
                 "url": "packages/contracts",
-                "reference": "40e73e2b154d9405cc488fa428e532de5d22bb1f"
+                "reference": "35067fb696e43983ea8d11241dbee4b1ebf905af"
             },
             "require": {
                 "axiomasoft/packman": "^0.1",
@@ -62,24 +62,24 @@
             "dist": {
                 "type": "path",
                 "url": "packages/core",
-                "reference": "f064e7df6d41a71051cf735795107f5d92a6ee3c"
+                "reference": "fa401404f10a4d427920acea8b0e5e130bbe8c3e"
             },
             "require": {
                 "axiomasoft/billium-contracts": "^0.1",
-                "axiomasoft/packman": "^0.1",
-                "axiomasoft/packman-plugins": "^0.1",
-                "axiomasoft/packman-schema": "^0.1",
+                "axiomasoft/packman": "^0.1.1",
+                "axiomasoft/packman-plugins": "^0.1.1",
+                "axiomasoft/packman-schema": "^0.1.1",
                 "ext-pdo_pgsql": "*",
                 "laravel/framework": "^13.0",
                 "php": "^8.4"
             },
-            "suggest": {
-                "axiomasoft/billium-execution": "Optional Billium payment execution and reconciliation module.",
-                "axiomasoft/billium-ledger": "Required Billium financial ledger module runtime.",
-                "axiomasoft/billium-platform": "Required Billium financial platform module runtime.",
-                "axiomasoft/billium-rating": "Optional Billium pricing and rating module.",
-                "axiomasoft/billium-schedule": "Optional Billium billing schedule module.",
-                "axiomasoft/billium-usage": "Optional Billium usage admission and aggregation module."
+            "replace": {
+                "axiomasoft/billium-execution": "self.version",
+                "axiomasoft/billium-ledger": "self.version",
+                "axiomasoft/billium-platform": "self.version",
+                "axiomasoft/billium-rating": "self.version",
+                "axiomasoft/billium-schedule": "self.version",
+                "axiomasoft/billium-usage": "self.version"
             },
             "type": "library",
             "extra": {
@@ -134,11 +134,11 @@
         },
         {
             "name": "axiomasoft/packman",
-            "version": "0.1.0",
+            "version": "0.1.1",
             "dist": {
                 "type": "path",
                 "url": "../packman/packages/core",
-                "reference": "d59304489dbd8c1c265dac688c6e03f22bf0bce6"
+                "reference": "03f3e687e4608163b53dc8a812169735f45ddf0c"
             },
             "require": {
                 "php": "^8.4",
@@ -216,19 +216,22 @@
         },
         {
             "name": "axiomasoft/packman-plugins",
-            "version": "0.1.0",
+            "version": "0.1.1",
             "dist": {
                 "type": "path",
                 "url": "../packman/packages/plugins",
-                "reference": "14d0a3b218a5c877f5d9d7795f1b3632fd972f7b"
+                "reference": "a2148d7c609f03f57815623d9ae342c86178515c"
             },
             "require": {
-                "axiomasoft/packman": "^0.1",
+                "axiomasoft/packman": "^0.1.1",
                 "illuminate/console": "^12.0|^13.0",
                 "illuminate/container": "^12.0|^13.0",
                 "illuminate/contracts": "^12.0|^13.0",
                 "illuminate/support": "^12.0|^13.0",
                 "php": "^8.4"
+            },
+            "conflict": {
+                "axiomasoft/packman-schema": "<0.1.1"
             },
             "suggest": {
                 "axiomasoft/packman-schema": "Optional schema ownership integration for plugins declaring owned schema nouns."
@@ -268,11 +271,11 @@
         },
         {
             "name": "axiomasoft/packman-schema",
-            "version": "0.1.0",
+            "version": "0.1.1",
             "dist": {
                 "type": "path",
                 "url": "../packman/packages/schema",
-                "reference": "8f70671de59880cf7721b47bab1cca07552495f2"
+                "reference": "80134fd6eba0ab2ff4d9dbc29af498a563f3b0f2"
             },
             "require": {
                 "axiomasoft/packman": "^0.1",
@@ -6294,12 +6297,58 @@
     ],
     "packages-dev": [
         {
+            "name": "axiomasoft/billium-testkit",
+            "version": "0.1.x-dev",
+            "dist": {
+                "type": "path",
+                "url": "packages/testkit",
+                "reference": "0fe392cdd837d40043136e6c24ce4379dca80b0b"
+            },
+            "require": {
+                "axiomasoft/billium-contracts": "^0.1",
+                "axiomasoft/billium-core": "^0.1",
+                "axiomasoft/billium-execution": "^0.1",
+                "axiomasoft/billium-platform": "^0.1",
+                "axiomasoft/packman": "^0.1",
+                "laravel/framework": "^13.0",
+                "php": "^8.4"
+            },
+            "type": "library",
+            "extra": {
+                "packman": {
+                    "schema-version": 1,
+                    "package-type": "dev",
+                    "dev_only": true,
+                    "stability": "dev",
+                    "owns": [
+                        "Drivers",
+                        "Fixtures",
+                        "Oracles",
+                        "Restore"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Billium\\Testkit\\": "src/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "description": "Test-only deterministic Billium provider, receiver and recovery protocol fixtures.",
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
+        },
+        {
             "name": "axiomasoft/packman-devtools",
-            "version": "0.1.0",
+            "version": "0.1.1",
             "dist": {
                 "type": "path",
                 "url": "../packman/packages/devtools",
-                "reference": "02a6ce246ef81b858ae6c003c1f6d9dbbe9960b0"
+                "reference": "e733e967eccd29ce2ce030d8c85291770bc583ae"
             },
             "require": {
                 "axiomasoft/packman": "^0.1",
@@ -6352,11 +6401,11 @@
         },
         {
             "name": "axiomasoft/packman-testkit",
-            "version": "0.1.0",
+            "version": "0.1.1",
             "dist": {
                 "type": "path",
                 "url": "../packman/packages/testkit",
-                "reference": "451cf33d32ca05859bc955e814c58f562de17f0a"
+                "reference": "1a8e30e1794ae2927d05bb8da6d5f69a408bc9ab"
             },
             "require": {
                 "axiomasoft/packman": "^0.1",

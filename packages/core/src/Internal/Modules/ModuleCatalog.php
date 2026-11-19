@@ -15,44 +15,14 @@ use Billium\Core\Data\Modules\ModuleManifest;
 use Billium\Core\Data\Modules\PublicEventDeclaration;
 use Billium\Core\Enums\Modules\CompatibilityFindingCode as Code;
 use Billium\Core\Enums\Modules\ModulePresence;
-use Billium\Core\Plugins\LedgerPlugin;
-use Billium\Core\Plugins\PlatformPlugin;
-use Billium\Core\Plugins\RatingPlugin;
-use Billium\Core\Plugins\SchedulePlugin;
-use Billium\Core\Plugins\UsagePlugin;
-use Illuminate\Contracts\Container\Container;
 use Packman\Attributes\Internal;
-use Packman\Plugins\Contracts\Contributions\Contributions;
-use Packman\Plugins\Contracts\Registry\ExtensionPlugin;
-use Packman\Plugins\Contracts\Registry\PluginActivationGate;
-use Packman\Plugins\Contracts\Registry\PluginInspector;
-use Packman\Plugins\Testing\PluginGraph;
+use Packman\Foundation\DependencyOrder;
 
 /** Descriptor set + desired config + capabilities + checkpoints → report. Pure: no database, no filesystem after load. */
 #[Internal]
 final readonly class ModuleCatalog implements ModuleRegistry
 {
-    /** @var list<class-string<ExtensionPlugin>> */
-    public const array PACKAGED_PLUGINS = [
-        PlatformPlugin::class,
-        LedgerPlugin::class,
-        UsagePlugin::class,
-        SchedulePlugin::class,
-        RatingPlugin::class,
-    ];
-
     public function __construct(private ModuleManifest $manifest) {}
-
-    public static function compilePluginGraph(Container $container, ?PluginActivationGate $activationGate = null): Contributions&PluginInspector
-    {
-        return PluginGraph::compile(
-            container: $container,
-            plugins: [],
-            corePluginId: 'axiomasoft.billium.platform',
-            builtIn: self::PACKAGED_PLUGINS,
-            activationGate: $activationGate,
-        );
-    }
 
     /** Loads the packaged resource only; the installed package never reads the monorepo spec/ directory. */
     public static function packaged(): self
@@ -197,7 +167,7 @@ final readonly class ModuleCatalog implements ModuleRegistry
                 }
             }
         }
-        [, $cycle] = self::topologicalSort($byId);
+        $cycle = self::dependencyOrder($byId)->blocked;
         if ($cycle !== []) {
             $findings[] = new CompatibilityFinding(Code::DependencyCycle, null, 'dependency cycle: '.implode(' -> ', $cycle));
         }
@@ -254,20 +224,23 @@ final readonly class ModuleCatalog implements ModuleRegistry
      */
     private function bootOrder(array $enabled): array
     {
-        [$order, $cycle] = self::topologicalSort($enabled);
+        $order = self::dependencyOrder($enabled);
 
-        return $cycle === [] ? $order : [];
+        return $order->blocked === [] ? $order->ordered : [];
     }
 
-    /**
-     * Delegates Kahn topological sort and cycle detection to Packman's PluginGraph compiler.
-     *
-     * @param  array<string, ModuleDescriptor>  $nodes
-     * @return array{0: list<string>, 1: list<string>}
-     */
-    private static function topologicalSort(array $nodes): array
+    /** @param array<string, ModuleDescriptor> $nodes */
+    private static function dependencyOrder(array $nodes): DependencyOrder
     {
-        return ModuleGraphPluginBridge::sort($nodes);
+        $dependencies = [];
+        foreach ($nodes as $id => $descriptor) {
+            $dependencies[$id] = array_values(array_filter(
+                $descriptor->requiredModuleIds(),
+                static fn (string $required): bool => isset($nodes[$required]),
+            ));
+        }
+
+        return DependencyOrder::resolve($dependencies);
     }
 
     private static function samePublicEvent(PublicEventDeclaration $a, PublicEventDeclaration $b): bool

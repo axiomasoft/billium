@@ -29,7 +29,7 @@ smoke_php() {
     "require": {"axiomasoft/billium-contracts": "*@dev"},
     "repositories": [
         {"type": "path", "url": "$ROOT/packages/contracts", "options": {"symlink": false}},
-        {"type": "path", "url": "$ROOT/../packman/packages/core", "options": {"symlink": false, "versions": {"axiomasoft/packman": "0.1.0"}}}
+        {"type": "path", "url": "$ROOT/../packman/packages/core", "options": {"symlink": false, "versions": {"axiomasoft/packman": "0.1.1"}}}
         $extra_repos
     ],
     "minimum-stability": "dev",
@@ -58,6 +58,7 @@ JSON
             echo "smoke php: ok\n";
         '
     )
+    python3 "$ROOT/scripts/smoke/laravel-consumer.py" "$WORK/laravel"
 }
 
 smoke_dart() {

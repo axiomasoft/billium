@@ -43,6 +43,7 @@ final readonly class BilliumSchemaSetProvider implements SchemaSetProvider
                 drivers: ['pgsql'],
                 lifecycle: SchemaLifecycle::Module,
                 requires: ['axiomasoft/billium-core'],
+                prerequisiteSets: ['axiomasoft/billium-core:billium-platform'],
             ),
             new SchemaSet(
                 package: 'axiomasoft/billium-core',
@@ -53,6 +54,7 @@ final readonly class BilliumSchemaSetProvider implements SchemaSetProvider
                 drivers: ['pgsql'],
                 lifecycle: SchemaLifecycle::Module,
                 requires: ['axiomasoft/billium-core'],
+                prerequisiteSets: ['axiomasoft/billium-core:billium-platform'],
             ),
             new SchemaSet(
                 package: 'axiomasoft/billium-core',
@@ -63,6 +65,7 @@ final readonly class BilliumSchemaSetProvider implements SchemaSetProvider
                 drivers: ['pgsql'],
                 lifecycle: SchemaLifecycle::Module,
                 requires: ['axiomasoft/billium-core'],
+                prerequisiteSets: ['axiomasoft/billium-core:billium-platform'],
             ),
             new SchemaSet(
                 package: 'axiomasoft/billium-core',
@@ -73,6 +76,7 @@ final readonly class BilliumSchemaSetProvider implements SchemaSetProvider
                 drivers: ['pgsql'],
                 lifecycle: SchemaLifecycle::Module,
                 requires: ['axiomasoft/billium-core'],
+                prerequisiteSets: ['axiomasoft/billium-core:billium-platform'],
             ),
         ];
     }

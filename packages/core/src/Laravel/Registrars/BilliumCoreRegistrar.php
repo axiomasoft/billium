@@ -19,6 +19,7 @@ use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
 use Billium\Core\Contracts\Runtime\IncomingCommandAuthenticator;
 use Billium\Core\Contracts\Runtime\InternalCommandReceiver;
 use Billium\Core\Diagnostics\BilliumCompatibilityDoctorCheck;
+use Billium\Core\Internal\Modules\BilliumPluginActivationGate;
 use Billium\Core\Internal\Modules\ModuleCatalog;
 use Billium\Core\Internal\Modules\ModuleLifecycle;
 use Billium\Core\Internal\Runner\DatabaseOperationRunner;
@@ -69,7 +70,6 @@ use Packman\Errors\Laravel\ProblemDefinitions;
 use Packman\Extensions\Laravel\ExtensionFacetRegistrar;
 use Packman\Foundation\Contracts\PackageRegistrar;
 use Packman\PackmanServiceProvider;
-use Packman\Plugins\Contracts\Registry\PluginActivationGate;
 use Packman\Plugins\Laravel\ExtensionRegistrar;
 use Packman\Plugins\Laravel\PluginsServiceProvider;
 use Packman\Schema\Laravel\SchemaExtensions;
@@ -130,7 +130,8 @@ final class BilliumCoreRegistrar implements PackageRegistrar
             return BilliumOptions::fromArray(is_array($raw) ? $raw : ['__invalid_root' => $raw], 'billium');
         });
 
-        ExtensionRegistrar::builtIn(
+        ExtensionRegistrar::builtInFor(
+            $app,
             PlatformPlugin::class,
             LedgerPlugin::class,
             ExecutionPlugin::class,
@@ -139,26 +140,7 @@ final class BilliumCoreRegistrar implements PackageRegistrar
             RatingPlugin::class,
         );
 
-        $app->singletonIf(PluginActivationGate::class, static fn (Application $app): PluginActivationGate => new class($app) implements PluginActivationGate
-        {
-            public function __construct(private Application $app) {}
-
-            public function isEnabled(string $pluginId): bool
-            {
-                $options = $this->app->make(BilliumOptions::class);
-                $enabled = $options->modules->enabled;
-
-                return match ($pluginId) {
-                    'axiomasoft.billium.platform' => true,
-                    'axiomasoft.billium.ledger' => in_array('ledger', $enabled, true),
-                    'axiomasoft.billium.execution' => in_array('execution', $enabled, true),
-                    'axiomasoft.billium.usage' => $options->usage->enabled && in_array('usage', $enabled, true),
-                    'axiomasoft.billium.schedule' => $options->schedule->enabled && in_array('schedule', $enabled, true),
-                    'axiomasoft.billium.rating' => $options->rating->enabled && in_array('rating', $enabled, true),
-                    default => true,
-                };
-            }
-        });
+        ExtensionRegistrar::addActivationGate($app, BilliumPluginActivationGate::class);
 
         $coreManifest = dirname(__DIR__, 3).'/composer.json';
         $plugins = [
@@ -225,13 +207,6 @@ final class BilliumCoreRegistrar implements PackageRegistrar
         ConfigSectionRegistration::own($app, 'billium', static function (array $section): void {
             BilliumOptions::fromArray($section, 'billium');
         });
-
-        if ($app->bound(Repository::class)) {
-            $repo = $app->make(Repository::class);
-            if (! $repo->has('packman.schema.module_prerequisite_set')) {
-                $repo->set('packman.schema.module_prerequisite_set', 'axiomasoft/billium-core:billium-platform');
-            }
-        }
 
         foreach ($plugins as $ownerId => $pluginClass) {
             ExtensionFacetRegistrar::register($app, $pluginClass, $coreManifest);

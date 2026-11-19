@@ -13,6 +13,8 @@ and the `billium-contracts` packages for PHP and Dart. Core implements the P3 pl
 guarded PostgreSQL routines, financial-session admission, receipts, observations, outbox and feed (D60).
 Live PSP execution and legal numbering belong to later modules (D55/D59).
 
+The `axiomasoft/billium-core` distribution includes the platform, ledger, execution, usage, rating and schedule implementations. Enable modules with `billium.modules.enabled`. Usage, rating and schedule also have feature-specific configuration. The host can restrict the resulting plugin graph through the Packman activation gate. Billium's financial-session and operation admission rules continue to govern writes.
+
 Usage, rating and schedule are optional internal core modules. Fixed-price schedule booking can omit
 usage; pure quotes can omit ledger; obligation booking needs no legal renderer or payment executor.
 See the [module, provider and capability matrix](docs/architecture/optional-commercial-modules.md)
@@ -39,6 +41,7 @@ Stack: PHP 8.4+, Laravel 13, PostgreSQL 16+; packages `axiomasoft/billium-*` in 
 ## Development
 
 All checks run in the `toolchain` image (PHP 8.4, Composer, Dart SDK, Python tooling).
+Check out `axiomasoft/packman` at `v0.1.1` in `../packman` for the Composer path dependencies.
 The host needs Docker and the `axioma` workspace checkout. Compose mounts the workspace read-only;
 set `SKM_WORKSPACES` to its parent directory when it is outside the default SwissKnifeman machine home.
 

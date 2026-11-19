@@ -59,7 +59,9 @@ use Packman\Doctor\Enums\CheckStatus;
 use Packman\Errors\Contracts\ProblemRegistry;
 use Packman\Plugins\Contracts\Contributions\Capabilities;
 use Packman\Plugins\Contracts\Contributions\Extensions;
+use Packman\Plugins\Contracts\Registry\PluginActivationGate;
 use Packman\Plugins\Contracts\Registry\PluginInspector;
+use Packman\Plugins\Laravel\PluginsServiceProvider;
 use Packman\Schema\Contracts\Migration\SchemaSets;
 use Packman\Schema\Enums\SchemaLifecycle;
 use Packman\Schema\Enums\SchemaScope;
@@ -215,6 +217,38 @@ final class PackmanIntegrationTest extends PackageTestCase
         self::assertSame(CheckStatus::Error, $badComp[0]->status);
     }
 
+    public function test_package_gate_composes_with_the_host_gate_in_the_registered_application(): void
+    {
+        $previous = Container::getInstance();
+        try {
+            $billing = new Application(dirname(__DIR__, 4));
+            $billing->instance('config', new Repository);
+            $hostGate = new class implements PluginActivationGate
+            {
+                public function isEnabled(string $pluginId): bool
+                {
+                    return $pluginId !== 'axiomasoft.billium.ledger';
+                }
+            };
+            $billing->instance(PluginActivationGate::class, $hostGate);
+
+            $other = new Application(dirname(__DIR__, 4));
+            $other->instance('config', new Repository);
+            $other->register(PluginsServiceProvider::class);
+            $billing->register(BilliumCoreServiceProvider::class);
+
+            self::assertSame($hostGate, $billing->make(PluginActivationGate::class));
+            self::assertSame(['axiomasoft.billium.platform'], array_map(
+                static fn ($plugin): string => $plugin->id,
+                $billing->make(PluginInspector::class)->describe(),
+            ));
+            self::assertSame([], $other->make(PluginInspector::class)->describe());
+            self::assertSame('axiomasoft/packman-modules:tenant', $billing->make('config')->get('packman.schema.module_prerequisite_set'));
+        } finally {
+            Container::setInstance($previous);
+        }
+    }
+
     public function test_schema_sets_declare_platform_as_platform_and_modules_as_module_lifecycle(): void
     {
         $sets = $this->app->make(SchemaSets::class);
@@ -229,6 +263,7 @@ final class PackmanIntegrationTest extends PackageTestCase
             self::assertSame(SchemaScope::Central, $set->scope);
             self::assertSame(SchemaLifecycle::Module, $set->lifecycle);
             self::assertSame(['axiomasoft/billium-core'], $set->requires);
+            self::assertSame([$platform->id()], $set->prerequisiteSets);
         }
 
         $nonModule = $sets->forScope(SchemaScope::Central, includeModules: false);

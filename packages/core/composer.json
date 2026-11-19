@@ -7,18 +7,18 @@
         "php": "^8.4",
         "ext-pdo_pgsql": "*",
         "axiomasoft/billium-contracts": "^0.1",
-        "axiomasoft/packman": "^0.1",
-        "axiomasoft/packman-plugins": "^0.1",
-        "axiomasoft/packman-schema": "^0.1",
+        "axiomasoft/packman": "^0.1.1",
+        "axiomasoft/packman-plugins": "^0.1.1",
+        "axiomasoft/packman-schema": "^0.1.1",
         "laravel/framework": "^13.0"
     },
-    "suggest": {
-        "axiomasoft/billium-platform": "Required Billium financial platform module runtime.",
-        "axiomasoft/billium-ledger": "Required Billium financial ledger module runtime.",
-        "axiomasoft/billium-execution": "Optional Billium payment execution and reconciliation module.",
-        "axiomasoft/billium-usage": "Optional Billium usage admission and aggregation module.",
-        "axiomasoft/billium-rating": "Optional Billium pricing and rating module.",
-        "axiomasoft/billium-schedule": "Optional Billium billing schedule module."
+    "replace": {
+        "axiomasoft/billium-execution": "self.version",
+        "axiomasoft/billium-ledger": "self.version",
+        "axiomasoft/billium-platform": "self.version",
+        "axiomasoft/billium-rating": "self.version",
+        "axiomasoft/billium-schedule": "self.version",
+        "axiomasoft/billium-usage": "self.version"
     },
     "autoload": {
         "psr-4": {

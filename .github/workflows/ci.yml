@@ -18,9 +18,9 @@ jobs:
           path: billium
       - uses: actions/checkout@v4
         with:
-          repository: ${{ github.repository_owner }}/packman
+          repository: axiomasoft/packman
+          ref: v0.1.1
           path: packman
-          token: ${{ secrets.SKM_WORKSPACE_TOKEN || secrets.GITHUB_TOKEN }}
           persist-credentials: false
       - uses: actions/checkout@v4
         with:
@@ -28,6 +28,10 @@ jobs:
           path: workspaces/axioma
           token: ${{ secrets.SKM_WORKSPACE_TOKEN }}
           persist-credentials: false
+      - name: Match toolchain user to the checkout owner
+        run: |
+          echo "UID=$(id -u)" >> "$GITHUB_ENV"
+          echo "GID=$(id -g)" >> "$GITHUB_ENV"
       - run: docker compose build toolchain
       - run: docker compose run --rm toolchain composer install --no-interaction --prefer-dist
       - run: docker compose run --rm toolchain bash scripts/ci.sh

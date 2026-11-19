@@ -97,6 +97,20 @@ final readonly class BilliumOptions implements OptionsFactory
         );
     }
 
+    public function moduleEnabled(string $module): bool
+    {
+        if ($module === 'platform') {
+            return true;
+        }
+
+        return in_array($module, $this->modules->enabled, true) && match ($module) {
+            'usage' => $this->usage->enabled,
+            'rating' => $this->rating->enabled,
+            'schedule' => $this->schedule->enabled,
+            default => true,
+        };
+    }
+
     public function connectionName(string $defaultConnection): string
     {
         return $this->connection ?? $defaultConnection;

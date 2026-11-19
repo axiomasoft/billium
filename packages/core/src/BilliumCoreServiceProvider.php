@@ -53,21 +53,13 @@ final class BilliumCoreServiceProvider extends ServiceProvider
         }
 
         foreach (self::OPTIONAL_MODULES as $module => $providerClass) {
-            if (! in_array($module, $options->modules->enabled, true)) {
+            if (! $options->moduleEnabled($module)) {
                 continue;
             }
             if ($module === 'execution') {
                 (new ExecutionCompositionGuard)->assertReady($this->app, $options);
             }
-            $enabled = match ($module) {
-                'usage' => $options->usage->enabled,
-                'rating' => $options->rating->enabled,
-                'schedule' => $options->schedule->enabled,
-                default => true,
-            };
-            if ($enabled) {
-                $this->app->register($providerClass);
-            }
+            $this->app->register($providerClass);
         }
     }
 

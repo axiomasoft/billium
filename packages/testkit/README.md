@@ -1,6 +1,6 @@
 # Billium Testkit
 
-Dev-only fixtures for Billium execution protocol tests. Runtime packages do not depend on this package; it is registered through the monorepo development autoloader.
+Dev-only fixtures for Billium execution protocol tests. Runtime packages do not depend on this package; the monorepo installs it through Composer `require-dev`.
 
 The package provides deterministic provider capability modes, independently durable provider/receiver/authority journals, dispatch ticket and egress controls, an independent effect oracle, and child-process/crash barriers. Journal state lives outside the Billium database so a test can compare it across database rollback or dump/restore.
 
