@@ -13,6 +13,7 @@ use Billium\Platform\Laravel\PlatformServiceProvider;
 use Billium\Rating\Laravel\RatingServiceProvider;
 use Billium\Schedule\Laravel\ScheduleServiceProvider;
 use Billium\Usage\Laravel\UsageServiceProvider;
+use Illuminate\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 use Override;
 use Packman\Attributes\Api;
@@ -43,13 +44,13 @@ final class BilliumCoreServiceProvider extends ServiceProvider
     #[Override]
     public function register(): void
     {
-        if ($this->app->getProvider(self::class) !== null) {
+        if ($this->app->getProviders(self::class) !== []) {
             return;
         }
 
         $this->registerRegistrars();
 
-        if ($this->app->isBooted()) {
+        if ($this->app instanceof Application && $this->app->isBooted()) {
             $this->activateModules();
         } else {
             $this->app->booting($this->activateModules(...));
