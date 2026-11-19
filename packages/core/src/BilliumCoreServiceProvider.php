@@ -43,6 +43,10 @@ final class BilliumCoreServiceProvider extends ServiceProvider
     #[Override]
     public function register(): void
     {
+        if ($this->app->getProvider(self::class) !== null) {
+            return;
+        }
+
         $this->registerRegistrars();
 
         if ($this->app->isBooted()) {

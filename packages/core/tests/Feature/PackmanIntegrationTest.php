@@ -268,6 +268,7 @@ final class PackmanIntegrationTest extends PackageTestCase
             $disabled->register(BilliumCoreServiceProvider::class);
             $disabled['config']->set('packman.disabled_plugins', ['axiomasoft.billium.execution', 'axiomasoft.billium.ledger']);
             $disabled->boot();
+            $disabled->register(BilliumCoreServiceProvider::class, true);
 
             foreach ([$enabled, $disabled, $enabled] as $host) {
                 $artisan = new Artisan($host, $host->make(Dispatcher::class), $host->version());
