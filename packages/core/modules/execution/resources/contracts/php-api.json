@@ -802,7 +802,7 @@
             "enum_cases": [],
             "spi_kind": "call"
         },
-        "Billium\\Execution\\Contracts\\CollectionOriginLookup": {
+        "Billium\\Execution\\Contracts\\Collection\\CollectionOriginLookup": {
             "kind": "interface",
             "layer": "spi",
             "since": "1.0",
@@ -874,6 +874,119 @@
             "enum_backing": null,
             "enum_cases": [],
             "spi_kind": "implement"
+        },
+        "Billium\\Execution\\Contracts\\Collection\\RootIdentityStore": {
+            "kind": "interface",
+            "layer": "spi",
+            "since": "1.0",
+            "final": false,
+            "readonly": false,
+            "abstract": false,
+            "extends": [],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "lockRootIdentity": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "context",
+                            "type": "Billium\\Core\\Contracts\\Runner\\TransactionContext",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "scope",
+                            "type": "Billium\\Execution\\Data\\ExecutionScope",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "operationRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "businessIntentRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "void",
+                    "doc": []
+                },
+                "rootIdentityExists": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "context",
+                            "type": "Billium\\Core\\Contracts\\Runner\\TransactionContext",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "scope",
+                            "type": "Billium\\Execution\\Data\\ExecutionScope",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "operationRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "businessIntentRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "bool",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": [],
+            "spi_kind": "call"
         },
         "Billium\\Execution\\Contracts\\DispatchEgress": {
             "kind": "interface",
@@ -3533,53 +3646,6 @@
                     "return": "Billium\\Execution\\Data\\NamespaceRecord",
                     "doc": []
                 },
-                "lockRootIdentity": {
-                    "visibility": "public",
-                    "static": false,
-                    "final": false,
-                    "abstract": false,
-                    "by_reference": false,
-                    "parameters": [
-                        {
-                            "name": "context",
-                            "type": "Billium\\Core\\Contracts\\Runner\\TransactionContext",
-                            "by_reference": false,
-                            "variadic": false,
-                            "optional": false,
-                            "default": null,
-                            "flags": 0
-                        },
-                        {
-                            "name": "scope",
-                            "type": "Billium\\Execution\\Data\\ExecutionScope",
-                            "by_reference": false,
-                            "variadic": false,
-                            "optional": false,
-                            "default": null,
-                            "flags": 0
-                        },
-                        {
-                            "name": "operationRef",
-                            "type": "string",
-                            "by_reference": false,
-                            "variadic": false,
-                            "optional": false,
-                            "default": null,
-                            "flags": 0
-                        },
-                        {
-                            "name": "businessIntentRef",
-                            "type": "string",
-                            "by_reference": false,
-                            "variadic": false,
-                            "optional": false,
-                            "default": null,
-                            "flags": 0
-                        }
-                    ],
-                    "return": "void",
-                    "doc": []
-                },
                 "merchantRevision": {
                     "visibility": "public",
                     "static": false,
@@ -4112,53 +4178,6 @@
                         }
                     ],
                     "return": "Billium\\Execution\\Data\\CapacitySnapshot",
-                    "doc": []
-                },
-                "rootIdentityExists": {
-                    "visibility": "public",
-                    "static": false,
-                    "final": false,
-                    "abstract": false,
-                    "by_reference": false,
-                    "parameters": [
-                        {
-                            "name": "context",
-                            "type": "Billium\\Core\\Contracts\\Runner\\TransactionContext",
-                            "by_reference": false,
-                            "variadic": false,
-                            "optional": false,
-                            "default": null,
-                            "flags": 0
-                        },
-                        {
-                            "name": "scope",
-                            "type": "Billium\\Execution\\Data\\ExecutionScope",
-                            "by_reference": false,
-                            "variadic": false,
-                            "optional": false,
-                            "default": null,
-                            "flags": 0
-                        },
-                        {
-                            "name": "operationRef",
-                            "type": "string",
-                            "by_reference": false,
-                            "variadic": false,
-                            "optional": false,
-                            "default": null,
-                            "flags": 0
-                        },
-                        {
-                            "name": "businessIntentRef",
-                            "type": "string",
-                            "by_reference": false,
-                            "variadic": false,
-                            "optional": false,
-                            "default": null,
-                            "flags": 0
-                        }
-                    ],
-                    "return": "bool",
                     "doc": []
                 },
                 "rootOrderingFrontier": {
@@ -8852,6 +8871,71 @@
                         }
                     ],
                     "return": null,
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": []
+        },
+        "Billium\\Execution\\Data\\Collection\\RootPaymentSemanticDigest": {
+            "kind": "class",
+            "layer": "api",
+            "since": "1.0",
+            "final": true,
+            "readonly": true,
+            "abstract": false,
+            "extends": [],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "forCharge": {
+                    "visibility": "public",
+                    "static": true,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "scope",
+                            "type": "Billium\\Execution\\Data\\ExecutionScope",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "command",
+                            "type": "Billium\\Contracts\\Data\\Envelopes\\ExecutePayment",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "merchant",
+                            "type": "Billium\\Execution\\Data\\MerchantRevision",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "origin",
+                            "type": "Billium\\Execution\\Data\\OriginDecision",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "string",
                     "doc": []
                 }
             },
@@ -15618,72 +15702,6 @@
             "constants": [],
             "enum_backing": null,
             "enum_cases": []
-        },
-        "Billium\\Execution\\Data\\RootPaymentSemanticDigest": {
-            "kind": "class",
-            "layer": "spi",
-            "since": "1.0",
-            "final": true,
-            "readonly": false,
-            "abstract": false,
-            "extends": [],
-            "implements": [],
-            "uses": [],
-            "doc": [],
-            "methods": {
-                "forCharge": {
-                    "visibility": "public",
-                    "static": true,
-                    "final": false,
-                    "abstract": false,
-                    "by_reference": false,
-                    "parameters": [
-                        {
-                            "name": "scope",
-                            "type": "Billium\\Execution\\Data\\ExecutionScope",
-                            "by_reference": false,
-                            "variadic": false,
-                            "optional": false,
-                            "default": null,
-                            "flags": 0
-                        },
-                        {
-                            "name": "command",
-                            "type": "Billium\\Contracts\\Data\\Envelopes\\ExecutePayment",
-                            "by_reference": false,
-                            "variadic": false,
-                            "optional": false,
-                            "default": null,
-                            "flags": 0
-                        },
-                        {
-                            "name": "merchant",
-                            "type": "Billium\\Execution\\Data\\MerchantRevision",
-                            "by_reference": false,
-                            "variadic": false,
-                            "optional": false,
-                            "default": null,
-                            "flags": 0
-                        },
-                        {
-                            "name": "origin",
-                            "type": "Billium\\Execution\\Data\\OriginDecision",
-                            "by_reference": false,
-                            "variadic": false,
-                            "optional": false,
-                            "default": null,
-                            "flags": 0
-                        }
-                    ],
-                    "return": "string",
-                    "doc": []
-                }
-            },
-            "properties": {},
-            "constants": [],
-            "enum_backing": null,
-            "enum_cases": [],
-            "spi_kind": "call"
         },
         "Billium\\Execution\\Data\\SecretRef": {
             "kind": "class",

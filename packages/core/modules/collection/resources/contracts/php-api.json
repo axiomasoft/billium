@@ -69,7 +69,7 @@
             "extends": [
                 "Billium\\Execution\\Contracts\\CollectionCancellationParticipant",
                 "Billium\\Execution\\Contracts\\CollectionExecutionGuard",
-                "Billium\\Execution\\Contracts\\CollectionOriginLookup"
+                "Billium\\Execution\\Contracts\\Collection\\CollectionOriginLookup"
             ],
             "implements": [],
             "uses": [],

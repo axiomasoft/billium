@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Billium\Execution\Contracts;
+namespace Billium\Execution\Contracts\Collection;
 
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Execution\Data\ExecutionScope;

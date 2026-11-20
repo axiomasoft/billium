@@ -19,6 +19,7 @@ use Billium\Core\Data\Runtime\FinancialScope;
 use Billium\Core\Enums\Runner\LockRank;
 use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Exceptions\Runner\LockPlanChanged;
+use Billium\Execution\Contracts\Collection\RootIdentityStore;
 use Billium\Execution\Contracts\ExecutionStore;
 use Billium\Execution\Contracts\OriginalIdentityArchive;
 use Billium\Execution\Data\AdmissionConflict;
@@ -64,7 +65,7 @@ use stdClass;
 use WeakMap;
 
 #[Internal]
-final class DatabaseExecutionStore implements ExecutionStore
+final class DatabaseExecutionStore implements ExecutionStore, RootIdentityStore
 {
     use ExecutionEvidencePersistence;
 

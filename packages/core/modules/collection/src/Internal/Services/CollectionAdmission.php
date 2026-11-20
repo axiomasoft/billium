@@ -25,12 +25,13 @@ use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Data\Runtime\Caller;
-use Billium\Execution\Contracts\CollectionOriginLookup;
+use Billium\Execution\Contracts\Collection\CollectionOriginLookup;
+use Billium\Execution\Contracts\Collection\RootIdentityStore;
 use Billium\Execution\Contracts\ExecutionStore;
 use Billium\Execution\Contracts\MerchantActionGate;
+use Billium\Execution\Data\Collection\RootPaymentSemanticDigest;
 use Billium\Execution\Data\MerchantRevision;
 use Billium\Execution\Data\OriginDecision;
-use Billium\Execution\Data\RootPaymentSemanticDigest;
 use Billium\Ledger\Contracts\CollectionObligation;
 use Billium\Ledger\Contracts\LedgerParticipants;
 use Billium\Ledger\Contracts\LedgerQueries;
@@ -51,6 +52,7 @@ final readonly class CollectionAdmission
         private DunningQueries $cases,
         private CollectionConsentGuard $host,
         private ExecutionStore $execution,
+        private RootIdentityStore $rootIdentities,
         private MerchantActionGate $merchantActions,
         private CollectionObligation $obligations,
         private LedgerParticipants $ledger,
@@ -87,7 +89,7 @@ final readonly class CollectionAdmission
     {
         $scope = $command->executionScope;
         $this->merchantActions->lock($ctx, $scope, $merchant->revisionRef, 'new');
-        $this->execution->lockRootIdentity($ctx, $scope, $command->step->operationRef, $command->step->businessPaymentIntentRef);
+        $this->rootIdentities->lockRootIdentity($ctx, $scope, $command->step->operationRef, $command->step->businessPaymentIntentRef);
     }
 
     public function lockAndSize(
@@ -107,7 +109,7 @@ final readonly class CollectionAdmission
             || $host->cancellationGeneration !== $case->cancellationGeneration || $guard->cancellationGeneration !== $case->cancellationGeneration) {
             throw new ProblemException(ProblemCode::OperationFinancialHold, 'Collection consent, merchant or cancellation generation is ineligible');
         }
-        if ($this->execution->rootIdentityExists($ctx, $command->executionScope, $step->operationRef, $step->businessPaymentIntentRef)) {
+        if ($this->rootIdentities->rootIdentityExists($ctx, $command->executionScope, $step->operationRef, $step->businessPaymentIntentRef)) {
             throw new ProblemException(ProblemCode::IdempotencyConflict, 'Collection operation or business intent is already claimed by execution');
         }
         $scope = new BillingAccountScope($case->sellerRef, $case->environment, $case->billingAccountRef);

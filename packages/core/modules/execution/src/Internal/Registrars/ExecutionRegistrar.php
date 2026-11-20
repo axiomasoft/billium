@@ -18,9 +18,10 @@ use Billium\Execution\Contracts\AttemptWorker;
 use Billium\Execution\Contracts\AuthorizationCommands;
 use Billium\Execution\Contracts\CallbackCustody;
 use Billium\Execution\Contracts\CapacityParticipants;
+use Billium\Execution\Contracts\Collection\CollectionOriginLookup;
+use Billium\Execution\Contracts\Collection\RootIdentityStore;
 use Billium\Execution\Contracts\CollectionCancellationParticipant;
 use Billium\Execution\Contracts\CollectionExecutionGuard;
-use Billium\Execution\Contracts\CollectionOriginLookup;
 use Billium\Execution\Contracts\DispatchEgress;
 use Billium\Execution\Contracts\EvidenceReducer;
 use Billium\Execution\Contracts\ExecutionEvidenceQueries;
@@ -118,6 +119,7 @@ final class ExecutionRegistrar implements PackageRegistrar
             $app->make(VerifiedReduction::class),
         ));
         $app->alias(DatabaseExecutionStore::class, ExecutionStore::class);
+        $app->alias(DatabaseExecutionStore::class, RootIdentityStore::class);
         $app->singleton(DatabaseMerchantRegistry::class);
         $app->alias(DatabaseMerchantRegistry::class, MerchantRegistry::class);
         $app->alias(DatabaseMerchantRegistry::class, MerchantActionGate::class);

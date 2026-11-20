@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Billium\Collection\Contracts;
 
+use Billium\Execution\Contracts\Collection\CollectionOriginLookup;
 use Billium\Execution\Contracts\CollectionCancellationParticipant;
 use Billium\Execution\Contracts\CollectionExecutionGuard;
-use Billium\Execution\Contracts\CollectionOriginLookup;
 use Billium\Execution\Data\ExecutionScope;
 use Packman\Attributes\Spi;
 use Packman\Attributes\SpiKind;

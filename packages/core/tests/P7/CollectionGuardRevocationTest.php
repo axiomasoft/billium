@@ -17,7 +17,7 @@ use Billium\Core\Tests\P7\Support\ExecutableCollectionTestCase;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
 use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Execution\Contracts\AttemptWorker;
-use Billium\Execution\Contracts\CollectionOriginLookup;
+use Billium\Execution\Contracts\Collection\CollectionOriginLookup;
 use Billium\Execution\Contracts\RootPaymentCommands;
 use Billium\Execution\Data\ExecutionScope;
 use Billium\Execution\Data\OriginDecision;

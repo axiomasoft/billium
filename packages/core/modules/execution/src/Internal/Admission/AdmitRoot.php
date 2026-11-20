@@ -8,7 +8,8 @@ use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
-use Billium\Execution\Contracts\CollectionOriginLookup;
+use Billium\Execution\Contracts\Collection\CollectionOriginLookup;
+use Billium\Execution\Contracts\Collection\RootIdentityStore;
 use Billium\Execution\Contracts\ExecutionStore;
 use Billium\Execution\Contracts\MerchantActionGate;
 use Billium\Execution\Data\AdmissionPlan;
@@ -22,7 +23,13 @@ use Packman\Attributes\Internal;
 #[Internal]
 final readonly class AdmitRoot
 {
-    public function __construct(private ExecutionStore $store, private CollectionChecks $collection, private MerchantActionGate $merchants, private FinancialSessionAdmission $sessions) {}
+    public function __construct(
+        private ExecutionStore $store,
+        private RootIdentityStore $rootIdentities,
+        private CollectionChecks $collection,
+        private MerchantActionGate $merchants,
+        private FinancialSessionAdmission $sessions,
+    ) {}
 
     public function apply(TransactionContext $ctx, AdmissionPlan $plan, bool $replayOnly, ?CollectionOriginLookup $collectionOrigins): ExecutionReceipt
     {
@@ -34,7 +41,7 @@ final readonly class AdmitRoot
         }
         if (! $replayOnly) {
             $this->merchants->lock($ctx, $plan->scope, $plan->binding->merchantRevisionRef, 'new');
-            $this->store->lockRootIdentity($ctx, $plan->scope, $plan->operationRef, $plan->binding->businessIntentRef);
+            $this->rootIdentities->lockRootIdentity($ctx, $plan->scope, $plan->operationRef, $plan->binding->businessIntentRef);
             // A late collection reservation would require a different guard plan and runner module closure.
             $origin = $collectionOrigins?->findOrigin($plan->scope, $plan->operationRef, $plan->binding->businessIntentRef, $ctx);
             if ($origin !== null && ExecutionCodec::encode($origin) !== ExecutionCodec::encode($plan->binding->origin)) {
