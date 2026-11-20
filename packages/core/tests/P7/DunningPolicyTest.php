@@ -23,7 +23,7 @@ use Billium\Collection\Enums\DeclineCategory;
 use Billium\Collection\Enums\DunningCaseStatus;
 use Billium\Collection\Enums\RecurringOwnerMode;
 use Billium\Collection\Enums\RecurringOwnerStatus;
-use Billium\Collection\Internal\Services\DatabaseDunningCaseService;
+use Billium\Collection\Internal\Support\RetryJitter;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Configuration\BilliumOptions;
@@ -323,7 +323,7 @@ final class DunningPolicyTest extends CollectionTestCase
         self::assertSame(1, $declined1->case->businessDeclineAttemptsUsed);
         self::assertSame(DunningCaseStatus::Open, $declined1->case->status);
         // Step 2 delaySeconds=3600, backoffMultiplierBps=15000 (1.5x), maxBackoffSeconds=7200 => +5400s plus configured jitter.
-        $jitter = DatabaseDunningCaseService::retryJitterSeconds('case-budgets', 'step-b-1', $occurred, 60);
+        $jitter = RetryJitter::seconds('case-budgets', 'step-b-1', $occurred, 60);
         self::assertEquals($occurred->modify('+'.(5400 + $jitter).' seconds'), $declined1->nextEligibleAt);
 
         // Step 2 starts with a fresh independent delivery retry budget (0/2).

@@ -25,6 +25,7 @@ use Billium\Collection\Enums\RecurringOwnerStatus;
 use Billium\Collection\Internal\Canonical\CanonicalJson;
 use Billium\Collection\Internal\CollectionReceipt;
 use Billium\Collection\Internal\Queries\DatabaseDunningQueries;
+use Billium\Collection\Internal\Support\RetryJitter;
 use Billium\Collection\Internal\Support\RowCast;
 use Billium\Collection\Internal\Work\CollectionWork;
 use Billium\Collection\Internal\Work\CollectionWorkClaim;
@@ -1297,7 +1298,7 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
                         if ($nextDef !== null) {
                             $scaledDelay = intdiv($nextDef->delaySeconds * $nextDef->backoffMultiplierBps, 10000);
                             $baseDelay = min($nextDef->maxBackoffSeconds, max($nextDef->delaySeconds, $scaledDelay));
-                            $jitter = self::retryJitterSeconds($case->caseRef, $step->stepRef, $command->occurredAt, $nextDef->jitterMaxSeconds);
+                            $jitter = RetryJitter::seconds($case->caseRef, $step->stepRef, $command->occurredAt, $nextDef->jitterMaxSeconds);
                             $effectiveDelay = $baseDelay + min($jitter, max(0, $nextDef->maxBackoffSeconds - $baseDelay));
                             $candidateEligibleAt = $command->occurredAt->setTimezone(new DateTimeZone('UTC'))
                                 ->modify('+'.$effectiveDelay.' seconds');
@@ -1471,17 +1472,6 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
         if (! in_array(self::DIRECT_LIFECYCLE_PERMISSION, $caller->permissions, true)) {
             throw new ProblemException(ProblemCode::AuthDenied, 'billium.collection.direct_step_lifecycle_permission_required');
         }
-    }
-
-    public static function retryJitterSeconds(string $caseRef, string $stepRef, DateTimeImmutable $occurredAt, int $jitterMaxSeconds): int
-    {
-        if ($jitterMaxSeconds < 1) {
-            return 0;
-        }
-        $material = $caseRef."\0".$stepRef."\0".RowCast::formatUtc($occurredAt);
-        $slice = substr(hash('sha256', $material), 0, 8);
-
-        return ((int) hexdec($slice)) % ($jitterMaxSeconds + 1);
     }
 
     private function assertOutsideTransaction(): void
