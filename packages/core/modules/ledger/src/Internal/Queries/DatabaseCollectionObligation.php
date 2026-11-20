@@ -38,15 +38,19 @@ final readonly class DatabaseCollectionObligation implements CollectionObligatio
         }
 
         // D35: a refund reversal may leave an accounting balance, but cannot create automatically collectible debt.
+        $seller = is_string($row->seller_ref) ? $row->seller_ref : throw new LockPlanChanged('Collection obligation vanished');
+        $environment = is_string($row->environment) ? $row->environment : throw new LockPlanChanged('Collection obligation vanished');
         $minor = $db->scalar(<<<'SQL'
             SELECT greatest(0, o.open_minor::numeric - greatest(0,
-                -coalesce((SELECT sum(a.amount_minor) FROM billium_allocation a WHERE a.obligation_id = o.id AND a.cause = 'refund'), 0)
+                -coalesce((SELECT sum(a.amount_minor) FROM billium_allocation a
+                    WHERE a.seller_ref = ? AND a.environment = ? AND a.obligation_id = o.id AND a.cause = 'refund'), 0)
                 -coalesce((SELECT sum(n.amount_minor) FROM billium_credit_note n
-                    WHERE n.obligation_id = o.id AND n.reason = 'refund'
-                    AND EXISTS (SELECT 1 FROM billium_allocation a WHERE a.obligation_id = o.id
-                      AND a.cause = 'refund' AND a.reverses_id IS NOT NULL AND a.receipt_ref = n.receipt_ref)), 0)
+                    WHERE n.seller_ref = ? AND n.environment = ? AND n.obligation_id = o.id AND n.reason = 'refund'
+                    AND EXISTS (SELECT 1 FROM billium_allocation a
+                        WHERE a.seller_ref = ? AND a.environment = ? AND a.obligation_id = o.id
+                          AND a.cause = 'refund' AND a.reverses_id IS NOT NULL AND a.receipt_ref = n.receipt_ref)), 0)
             ))::bigint FROM billium_obligation o WHERE o.id = ?
-            SQL, [$id]);
+            SQL, [$seller, $environment, $seller, $environment, $seller, $environment, $id]);
 
         return is_int($minor) ? $minor : throw new LockPlanChanged('Collection obligation vanished');
     }

@@ -57,6 +57,8 @@ use Billium\Testkit\Drivers\ResponseMode;
 use Closure;
 use DateTimeImmutable;
 use Error;
+use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Events\QueryExecuted;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -101,7 +103,17 @@ final class CollectionRecoveryTest extends ExecutableCollectionTestCase
             'obligation-b', 1, 'policy-a', 1, 'RUB', 5000, openedAt: $due));
         $this->atConsentRead(fn () => $this->allocate(2500));
 
+        $capturedSql = [];
+        $recordSql = true;
+        $this->application()->make(DatabaseManager::class)->listen(static function (QueryExecuted $query) use (&$capturedSql, &$recordSql): void {
+            if ($recordSql) {
+                $capturedSql[] = $query->sql;
+            }
+        });
         $first = $this->schedule($asOf, 1);
+        $recordSql = false;
+        self::assertTrue(array_any($capturedSql, static fn (string $sql): bool => str_contains($sql, 'a.seller_ref = ?')
+            && str_contains($sql, 'a.environment = ?') && str_contains($sql, 'a.obligation_id')));
         self::assertCount(1, $first['authorized']);
         self::assertSame(2500, $first['authorized'][0]->amountMinor);
         self::assertIsString($first['nextCursor']);
