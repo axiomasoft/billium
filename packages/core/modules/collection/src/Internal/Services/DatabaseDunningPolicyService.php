@@ -382,6 +382,9 @@ final readonly class DatabaseDunningPolicyService implements DunningPolicyServic
                     : RowCast::integer($latest->owner_revision, 'owner_revision') + 1;
                 $now = RowCast::formatUtc(new DateTimeImmutable('now', new DateTimeZone('UTC')));
 
+                // A revision-key collision aborts the current PostgreSQL transaction.
+                // The savepoint keeps the root attempt alive so the loser can read the winner.
+                $db->beginTransaction();
                 try {
                     $inserted = $db->selectOne(
                         <<<'SQL'
@@ -410,8 +413,9 @@ final readonly class DatabaseDunningPolicyService implements DunningPolicyServic
                             $now,
                         ],
                     );
+                    $db->commit();
                 } catch (UniqueConstraintViolationException) {
-                    // The revision key can lose the race when the partial active index does not.
+                    $db->rollBack();
                     $inserted = null;
                 }
 
