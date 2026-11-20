@@ -143,6 +143,16 @@ abstract class CompositionTestCase extends TestCase
         TestEnvironment::assertDestructiveResetAllowed();
         $runtime = '"'.str_replace('"', '""', TestEnvironment::identity()->username).'"';
         TestEnvironment::pdo(owner: true)->exec(<<<SQL
+            DROP FUNCTION IF EXISTS
+                public.billium_collection_consent_guard_check(),
+                public.billium_collection_customer_action_guard(),
+                public.billium_collection_recurring_owner_guard(),
+                public.billium_collection_dunning_case_guard(),
+                public.billium_collection_step_guard(),
+                public.billium_lock_collection_dunning_case(bigint[],text,text,boolean),
+                public.billium_collection_select_work(text,text,text,text,text,boolean,bigint,integer),
+                public.billium_collection_notification_guard()
+            CASCADE;
             DROP SCHEMA public CASCADE;
             CREATE SCHEMA public AUTHORIZATION pg_database_owner;
             REVOKE CREATE ON SCHEMA public FROM PUBLIC;

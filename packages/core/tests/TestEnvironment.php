@@ -13,6 +13,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Events\MigrationsStarted;
+use Illuminate\Database\Events\MigrationStarted;
 use Illuminate\Foundation\Application;
 use Packman\Testkit\Data\Database\TestDatabaseIdentity;
 use Packman\Testkit\Support\Database\TestDatabaseGuard;
@@ -38,13 +39,18 @@ final class TestEnvironment
 
     private const string SUITE_LEASE_ENV = 'BILLIUM_TEST_SUITE_LEASE';
 
+    private const string COLLECTION_WORK_ROUTINES = <<<'SQL'
+        public.billium_lock_collection_dunning_case(bigint[],text,text,boolean),
+        public.billium_collection_select_work(text,text,text,text,text,boolean,bigint,integer)
+        SQL;
+
     // These two forward-only P5 routines are created with a new identity when ledger tables are rebuilt.
     private const string LEDGER_REBUILD_ROUTINES = <<<'SQL'
         public.billium_claim_observation_owner(text,text,text,text,text,text,text,text,jsonb),
         public.billium_prove_observation_revision(text,text,text,text,text,text,text,text,jsonb,text)
         SQL;
 
-    // Only P5 routines whose migrations use plain CREATE FUNCTION. All replaceable routines retain their OIDs.
+    // P5 routines created with plain CREATE FUNCTION and all collection routines.
     private const string FRESH_REBUILD_ROUTINES = <<<'SQL'
         public.billium_qualified_retirement_guard(),
         public.billium_idempotency_scope_immutable(),
@@ -68,8 +74,14 @@ final class TestEnvironment
         public.billium_execution_child_operation_guard(),
         public.billium_execution_authorization_release_guard(),
         public.billium_fiscal_append_only(),
-        public.billium_fiscal_intent_guard()
-        SQL;
+        public.billium_fiscal_intent_guard(),
+        public.billium_collection_consent_guard_check(),
+        public.billium_collection_customer_action_guard(),
+        public.billium_collection_recurring_owner_guard(),
+        public.billium_collection_dunning_case_guard(),
+        public.billium_collection_step_guard(),
+        public.billium_collection_notification_guard()
+        SQL.', '.self::COLLECTION_WORK_ROUTINES;
 
     public static function prepareFreshRebuild(Application $app): void
     {
@@ -146,6 +158,23 @@ final class TestEnvironment
         $app['config']->set('database.connections.pgsql', self::connection());
         $app['config']->set('database.connections.billium_owner', self::connection(owner: true));
         $app['config']->set('billium.connection', 'pgsql');
+
+        // A fixture wiped before the fresh-rebuild cleanup can still have these standalone routines.
+        $app->make(Dispatcher::class)->listen(MigrationStarted::class, static function (MigrationStarted $event) use ($app): void {
+            if ($event->method !== 'up' || $event->name !== '2026_11_20_000004_create_billium_collection_work') {
+                return;
+            }
+
+            $owner = $app->make(DatabaseManager::class)->connection($event->migration->getConnection());
+            if ($owner->getName() !== 'billium_owner'
+                || $owner->scalar("SELECT to_regclass('public.billium_collection_work') IS NULL") !== true) {
+                return;
+            }
+
+            self::assertDestructiveResetAllowed();
+            self::assertRebuildOwner($owner);
+            $owner->unprepared('DROP FUNCTION IF EXISTS '.self::COLLECTION_WORK_ROUTINES.' RESTRICT');
+        });
     }
 
     public static function assertDestructiveResetAllowed(bool $owner = true): void

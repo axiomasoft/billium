@@ -28,6 +28,14 @@ final class P4MigrationRebuildTest extends RatingTestCase
         self::assertNull($this->value("SELECT to_regclass('public.billium_rating_rated_basis')"));
         self::assertSame($before, $this->functions());
 
+        // Reproduce a previously wiped fixture whose standalone work functions survived.
+        TestEnvironment::pdo(owner: true)->exec(<<<'SQL'
+            CREATE FUNCTION public.billium_lock_collection_dunning_case(bigint[], text, text, boolean)
+                RETURNS TABLE(lock_key bigint) LANGUAGE sql AS $$ SELECT NULL::bigint WHERE false $$;
+            CREATE FUNCTION public.billium_collection_select_work(text, text, text, text, text, boolean, bigint, integer)
+                RETURNS TABLE(lock_key bigint) LANGUAGE sql AS $$ SELECT NULL::bigint WHERE false $$;
+            SQL);
+
         $rebuild = $this->artisan('packman:schema:migrate', [
             '--scope' => 'central', '--database' => 'billium_owner', '--modules' => true, '--force' => true,
         ]);
