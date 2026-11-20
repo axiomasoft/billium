@@ -5,6 +5,11 @@ declare(strict_types=1);
 namespace Billium\Core\Plugins;
 
 use Billium\Collection\Contracts\CollectionConsentGuard;
+use Billium\Collection\Contracts\CollectionInterventionQueries;
+use Billium\Collection\Contracts\CollectionManualInterventionService;
+use Billium\Collection\Contracts\CollectionNotificationPort;
+use Billium\Collection\Contracts\CollectionNotificationService;
+use Billium\Collection\Contracts\CollectionSignalService;
 use Billium\Collection\Contracts\ConsentBindingService;
 use Billium\Collection\Contracts\ConsentQueries;
 use Billium\Collection\Contracts\DunningCaseService;
@@ -74,6 +79,9 @@ final class CollectionPlugin implements ExtensionPlugin, WithCapabilities, WithS
             'collection_case_policy_migration',
             'collection_step',
             'collection_work',
+            'collection_notification',
+            'collection_host_signal',
+            'collection_manual_intervention',
         ];
     }
 
@@ -89,12 +97,17 @@ final class CollectionPlugin implements ExtensionPlugin, WithCapabilities, WithS
     {
         return [
             CollectionConsentGuard::class => Cardinality::OptionalSingle->value,
+            CollectionNotificationPort::class => Cardinality::OptionalSingle->value,
             SavedMethodCapabilityValidator::class => Cardinality::OptionalSingle->value,
             ConsentBindingService::class => Cardinality::OptionalSingle->value,
             ConsentQueries::class => Cardinality::OptionalSingle->value,
             DunningPolicyService::class => Cardinality::OptionalSingle->value,
             DunningCaseService::class => Cardinality::OptionalSingle->value,
             DunningQueries::class => Cardinality::OptionalSingle->value,
+            CollectionNotificationService::class => Cardinality::OptionalSingle->value,
+            CollectionSignalService::class => Cardinality::OptionalSingle->value,
+            CollectionManualInterventionService::class => Cardinality::OptionalSingle->value,
+            CollectionInterventionQueries::class => Cardinality::OptionalSingle->value,
         ];
     }
 

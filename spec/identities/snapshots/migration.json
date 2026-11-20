@@ -88,5 +88,6 @@
   "2026_11_20_000002_create_billium_collection_policy_case_and_ownership_tables",
   "2026_11_20_000003_create_billium_collection_authorization",
   "2026_11_20_000004_create_billium_collection_work",
-  "2026_11_20_000005_add_render_blob_deleting_state"
+  "2026_11_20_000005_add_render_blob_deleting_state",
+  "2026_11_20_000005_create_billium_collection_notification_signal_and_intervention_tables"
 ]

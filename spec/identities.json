@@ -4986,6 +4986,13 @@
       "source": "packages/core/database/migrations/documents/2026_11_20_000005_add_render_blob_deleting_state.php"
     },
     {
+      "kind": "migration",
+      "id": "2026_11_20_000005_create_billium_collection_notification_signal_and_intervention_tables",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/collection/2026_11_20_000005_create_billium_collection_notification_signal_and_intervention_tables.php"
+    },
+    {
       "kind": "doctor-finding",
       "id": "module.composition_forbidden",
       "status": "new",

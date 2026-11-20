@@ -5,6 +5,7 @@
     "license": "proprietary",
     "require": {
         "php": "^8.4",
+        "axiomasoft/billium-collection": "^0.1",
         "axiomasoft/billium-contracts": "^0.1",
         "axiomasoft/billium-core": "^0.1",
         "axiomasoft/billium-documents": "^0.1",
@@ -26,6 +27,7 @@
             "stability": "dev",
             "owns": [
                 "Accounting",
+                "Coordinator",
                 "Documents",
                 "Drivers",
                 "Fiscal",

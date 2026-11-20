@@ -65,6 +65,10 @@
       "providedBy": "host"
     },
     {
+      "id": "CollectionNotificationPort",
+      "providedBy": "host"
+    },
+    {
       "id": "DocumentRenderer",
       "providedBy": "host"
     },
@@ -1455,14 +1459,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "collection",
-      "currentSchemaVersion": 4,
+      "currentSchemaVersion": 5,
       "supportedSchemaReadRange": {
-        "min": 3,
-        "max": 4
+        "min": 4,
+        "max": 5
       },
       "supportedSchemaWriteRange": {
-        "min": 4,
-        "max": 4
+        "min": 5,
+        "max": 5
       },
       "requiresModules": [
         {
@@ -1490,7 +1494,9 @@
       "requiresPorts": [
         "CollectionConsentGuard"
       ],
-      "optionalPorts": [],
+      "optionalPorts": [
+        "CollectionNotificationPort"
+      ],
       "emits": [],
       "consumes": [
         "collection.authorize.v1"
@@ -1509,7 +1515,10 @@
         "billium_collection_authorization",
         "billium_collection_dispatch_permit",
         "billium_collection_no_effect",
-        "billium_collection_work"
+        "billium_collection_work",
+        "billium_collection_notification",
+        "billium_collection_host_signal",
+        "billium_collection_manual_intervention"
       ],
       "configKeys": [
         "billium.collection.enabled"
@@ -1534,6 +1543,11 @@
           "id": "2026_11_20_000004_create_billium_collection_work",
           "version": 4,
           "checksum": "sha256:d0f0f04a771bdb6977c107b7ebb144a60ad44f6dc1ffae816de4f3f35b01356b"
+        },
+        {
+          "id": "2026_11_20_000005_create_billium_collection_notification_signal_and_intervention_tables",
+          "version": 5,
+          "checksum": "sha256:5fb558f6c42fa5c23e0292e0d139e7ce1c774bb0871eb58818597c79d0e39fcb"
         }
       ],
       "disablePolicy": {

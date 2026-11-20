@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace Billium\Core\Tests\P7\Support;
 
 use Billium\Collection\Contracts\CollectionConsentGuard;
+use Billium\Collection\Contracts\CollectionInterventionQueries;
+use Billium\Collection\Contracts\CollectionManualInterventionService;
+use Billium\Collection\Contracts\CollectionNotificationService;
+use Billium\Collection\Contracts\CollectionSignalService;
 use Billium\Collection\Contracts\ConsentBindingService;
 use Billium\Collection\Contracts\ConsentQueries;
 use Billium\Collection\Contracts\DunningCaseService;
@@ -98,6 +102,26 @@ abstract class CollectionTestCase extends ExecutionTestCase
     protected function dunningQueries(): DunningQueries
     {
         return $this->application()->make(DunningQueries::class);
+    }
+
+    protected function notificationService(): CollectionNotificationService
+    {
+        return $this->application()->make(CollectionNotificationService::class);
+    }
+
+    protected function signalService(): CollectionSignalService
+    {
+        return $this->application()->make(CollectionSignalService::class);
+    }
+
+    protected function manualInterventionService(): CollectionManualInterventionService
+    {
+        return $this->application()->make(CollectionManualInterventionService::class);
+    }
+
+    protected function interventionQueries(): CollectionInterventionQueries
+    {
+        return $this->application()->make(CollectionInterventionQueries::class);
     }
 
     protected function bindHostConsentGuard(HostConsentAuthoritySnapshot $snapshot): void
