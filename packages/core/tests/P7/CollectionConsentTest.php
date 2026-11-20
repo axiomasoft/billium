@@ -215,6 +215,84 @@ final class CollectionConsentTest extends CollectionTestCase
             self::assertSame('23514', $exception->getCode());
         }
 
+        try {
+            $ownerPdo->exec(<<<'SQL'
+                INSERT INTO public.billium_collection_consent_binding (
+                    seller_ref, environment, billing_account_ref, customer_ref,
+                    consent_ref, consent_version, payment_method_ref, token_locator,
+                    merchant_account_ref, merchant_config_revision, provider_id, driver_id,
+                    driver_contract_version, capability_snapshot_ref, capability_digest,
+                    allowed_purposes, allowed_currencies, captured_at, valid_from,
+                    source_evidence_ref, source_evidence_digest, proof_digest, created_at
+                ) VALUES (
+                    'seller-a', 'test', 'account-a', 'customer-a',
+                    'consent-db-cvv', 1, 'pm_ok', 'cvv:123',
+                    'merchant-a', 'mrev-a1', 'p', 'd', 'd.v1', 'cap', 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
+                    '["recurring_charge"]'::jsonb, '["RUB"]'::jsonb, now(), now(),
+                    'ev', 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
+                    'sha256:0000000000000000000000000000000000000000000000000000000000000000', now()
+                )
+                SQL);
+            self::fail('PostgreSQL CHECK constraint must reject a cvv label in token_locator');
+        } catch (PDOException $exception) {
+            self::assertSame('23514', $exception->getCode());
+        }
+
+        $policy = $ownerPdo->query(<<<'SQL'
+            INSERT INTO public.billium_collection_dunning_policy (
+                seller_ref, environment, policy_ref, policy_version, allowed_channels, ordered_steps,
+                max_business_decline_attempts, max_delivery_retries, retryable_decline_categories,
+                recovery_horizon_seconds, min_outstanding_minor, policy_digest, created_at
+            ) VALUES (
+                'seller-a', 'test', 'policy-sql-guard', 1, '["sms"]'::jsonb, '[{"channel":"sms"}]'::jsonb,
+                1, 1, '[]'::jsonb, 86400, 0, 'digest', now()
+            ) RETURNING id
+            SQL);
+        self::assertNotFalse($policy);
+        $policyId = $policy->fetchColumn();
+        self::assertTrue(is_int($policyId) || (is_string($policyId) && ctype_digit($policyId)));
+        $case = $ownerPdo->query(<<<SQL
+            INSERT INTO public.billium_collection_dunning_case (
+                seller_ref, environment, case_ref, billing_account_ref, obligation_ref,
+                collection_generation, policy_id, policy_ref, policy_version, currency,
+                initial_amount_minor, current_open_minor, status, case_revision,
+                cancellation_generation, max_business_decline_attempts,
+                recovery_deadline_at, opened_at, updated_at, case_digest
+            ) VALUES (
+                'seller-a', 'test', 'case-sql-guard', 'account-a', 'obligation-sql-guard',
+                1, {$policyId}, 'policy-sql-guard', 1, 'RUB',
+                100, 100, 'open', 1,
+                0, 1,
+                now() + interval '1 day', now(), now(), 'digest'
+            ) RETURNING id
+            SQL);
+        self::assertNotFalse($case);
+        $caseId = $case->fetchColumn();
+        self::assertTrue(is_int($caseId) || (is_string($caseId) && ctype_digit($caseId)));
+        foreach ([
+            'sql-grouped-pan' => '{"note":"4111-1111-1111-1111"}',
+            'sql-cvv-key' => '{"cvv":"123"}',
+        ] as $messageId => $payload) {
+            try {
+                $ownerPdo->exec(<<<SQL
+                    INSERT INTO public.billium_collection_notification (
+                        seller_ref, environment, message_id, dunning_case_id, case_ref, step_no,
+                        template_ref, template_revision, recipient_channel, recipient_ref,
+                        payload, payload_digest, status, notification_revision, delivery_attempts,
+                        enqueued_at, updated_at
+                    ) VALUES (
+                        'seller-a', 'test', '{$messageId}', {$caseId}, 'case-sql-guard', 0,
+                        'tpl-{$messageId}', 'v1', 'sms', 'rcpt',
+                        '{$payload}'::jsonb, 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
+                        'pending', 1, 0, now(), now()
+                    )
+                    SQL);
+                self::fail('PostgreSQL CHECK constraint must reject notification payload '.$messageId);
+            } catch (PDOException $exception) {
+                self::assertSame('23514', $exception->getCode(), $messageId);
+            }
+        }
+
         // 2. Unsupported saved_method / recurring_consent / unverified live qualification are refused.
         [$noSavedMerchant, $noSavedCap] = $this->savedMethodMerchant(
             merchantAccountRef: 'merchant-nosaved',

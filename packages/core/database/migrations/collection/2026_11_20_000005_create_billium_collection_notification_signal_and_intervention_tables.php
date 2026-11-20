@@ -27,6 +27,8 @@ return new class extends PackmanMigration
                 payload jsonb NOT NULL CHECK (
                     jsonb_typeof(payload) = 'object'
                     AND payload::text !~ '[0-9]{13,19}'
+                    AND payload::text !~ '(^|[^0-9A-Za-z])([0-9][ .-]?){13,19}($|[^0-9A-Za-z])'
+                    AND payload::text !~* '"(cvv2?|cvc2?|pan|card_?cvv|card_?number|api_?key|password|secret)"[[:space:]]*:'
                 ),
                 payload_digest text NOT NULL CHECK (payload_digest ~ '^sha256:[0-9a-f]{64}$'),
                 status text NOT NULL CHECK (status IN ('pending', 'delivered', 'failed_delivery')),
@@ -84,6 +86,8 @@ return new class extends PackmanMigration
                 payload jsonb NOT NULL CHECK (
                     jsonb_typeof(payload) = 'object'
                     AND payload::text !~ '[0-9]{13,19}'
+                    AND payload::text !~ '(^|[^0-9A-Za-z])([0-9][ .-]?){13,19}($|[^0-9A-Za-z])'
+                    AND payload::text !~* '"(cvv2?|cvc2?|pan|card_?cvv|card_?number|api_?key|password|secret)"[[:space:]]*:'
                 ),
                 signal_digest text NOT NULL CHECK (signal_digest ~ '^sha256:[0-9a-f]{64}$'),
                 effective_at timestamptz NOT NULL,

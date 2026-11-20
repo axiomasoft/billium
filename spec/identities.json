@@ -4981,7 +4981,7 @@
     {
       "kind": "migration",
       "id": "2026_11_20_000005_add_render_blob_deleting_state",
-      "status": "new",
+      "status": "retired",
       "since": "2026-10",
       "source": "packages/core/database/migrations/documents/2026_11_20_000005_add_render_blob_deleting_state.php"
     },
@@ -4991,6 +4991,34 @@
       "status": "new",
       "since": "2026-10",
       "source": "packages/core/database/migrations/collection/2026_11_20_000005_create_billium_collection_notification_signal_and_intervention_tables.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_20_000006_add_render_blob_deleting_state",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/documents/2026_11_20_000006_add_render_blob_deleting_state.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_21_000001_index_billium_feed_hot_paths",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/platform/2026_11_21_000001_index_billium_feed_hot_paths.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_21_000002_index_billium_ledger_hot_paths",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/ledger/2026_11_21_000002_index_billium_ledger_hot_paths.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_21_000003_index_billium_execution_admission",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_21_000003_index_billium_execution_admission.php"
     },
     {
       "kind": "doctor-finding",

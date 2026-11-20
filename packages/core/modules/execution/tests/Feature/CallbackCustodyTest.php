@@ -99,7 +99,7 @@ final class CallbackCustodyTest extends ExecutionTestCase
             $source = self::dispatched($app, $journal);
             $event = self::signed($source, ['revision' => '3']);
             if ($secret) {
-                $event = new ProviderEvidence($event->evidenceRef, $event->scope, $event->providerId, $event->merchantAccountRef, $event->providerEventId, $event->payloadDigest, $event->signatureVerdict, $event->handlerContractVersion, $event->receivedAt, [...$event->sanitizedPayload, 'password' => 'fixture-sensitive'], $event->securePayloadRef);
+                $event = new ProviderEvidence($event->evidenceRef, $event->scope, $event->providerId, $event->merchantAccountRef, $event->providerEventId, $event->payloadDigest, $event->signatureVerdict, $event->handlerContractVersion, $event->receivedAt, [...$event->sanitizedPayload, 'password' => 'fixture-sensitive', 'api_key' => 'not-inline-api-key', 'note' => '4111111111111111', 'cvv2' => 'not-inline-cvv2'], $event->securePayloadRef);
             }
             $original = $app->make(AdapterQualification::class);
             $verifier = $this->createMock(AdapterQualification::class);
@@ -133,6 +133,9 @@ final class CallbackCustodyTest extends ExecutionTestCase
             }
             $ref = self::text($this->value("SELECT evidence_ref FROM billium_execution_provider_work WHERE state='quarantined'"));
             self::assertSame(0, $this->rows('billium_execution_provider_evidence', "sanitized_payload::text LIKE '%fixture-sensitive%'"));
+            self::assertSame(0, $this->rows('billium_execution_provider_evidence', "sanitized_payload::text LIKE '%not-inline-api-key%'"));
+            self::assertSame(0, $this->rows('billium_execution_provider_evidence', "sanitized_payload::text LIKE '%4111111111111111%'"));
+            self::assertSame(0, $this->rows('billium_execution_provider_evidence', "sanitized_payload::text LIKE '%not-inline-cvv2%'"));
             self::assertSame(1, $this->rows('billium_execution_provider_evidence', $secret ? "secure_payload_ref='fixture-archive:1' AND sanitized_payload->>'archived'='true'" : "sanitized_payload->'original' IS NOT NULL"));
             $app->instance(AdapterQualification::class, $original);
             $spec = $this->spec(kind: 'execution.upgrade_provider_work', mode: FinancialMode::RawCustody, class: ModuleOperationClass::CallbackCustody, modules: ['execution', 'platform']);

@@ -40,7 +40,7 @@ trait ExecutionEvidencePersistence
         $this->custody($transactionContext);
         $this->assertScope($providerEvidence->scope, $transactionContext);
         $payload = ExecutionCodec::encode($providerEvidence->sanitizedPayload);
-        if (strlen($payload) > 65536 || preg_match('/"(?:pan|cvc|cvv|password|secret|accessToken|refreshToken|providerToken)"\s*:/i', $payload) === 1) {
+        if (strlen($payload) > 65536 || self::sensitiveEvidence($payload)) {
             $this->refuse('Evidence payload is not sanitized/bounded');
         }
         $db = $this->database($transactionContext);
@@ -73,11 +73,20 @@ trait ExecutionEvidencePersistence
         $ref = 'conflict:'.bin2hex(random_bytes(20));
         $delivery['evidence_ref'] = $ref;
         $delivery['signature_verdict'] = 'quarantined_conflict';
-        $delivery['sanitized_payload'] = ExecutionCodec::encode(['externalEvidenceRef' => $providerEvidence->evidenceRef,
+        $conflictPayload = ExecutionCodec::encode(['externalEvidenceRef' => $providerEvidence->evidenceRef,
             'originalVerdict' => $providerEvidence->signatureVerdict, 'originalPayload' => $providerEvidence->sanitizedPayload]);
+        if (self::sensitiveEvidence($conflictPayload)) {
+            $this->refuse('Evidence payload is not sanitized/bounded');
+        }
+        $delivery['sanitized_payload'] = $conflictPayload;
         $db->table('billium_execution_provider_evidence')->insert($delivery);
 
         return $ref;
+    }
+
+    private static function sensitiveEvidence(string $payload): bool
+    {
+        return preg_match('/"(?:pan|cvc|cvv2?|password|secret|access_?token|refresh_?token|provider_?token|authorization|api_?key|client_?secret|card_?cvv|card_?number)"\s*:/i', $payload) === 1;
     }
 
     /** @param array<string,string|null> $fields */

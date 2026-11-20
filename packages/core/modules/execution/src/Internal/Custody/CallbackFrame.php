@@ -20,13 +20,15 @@ final readonly class CallbackFrame
 {
     private const string SCHEMA = 'billium.execution.callback-frame.v1';
 
+    private const string SENSITIVE_PAYLOAD = '/"(?:pan|cvc|cvv2?|password|secret|access_?token|refresh_?token|provider_?token|authorization|api_?key|client_?secret|card_?cvv|card_?number)"\s*:/i';
+
     public function __construct(private TransportBoundary $boundary, private ?CallbackPayloadArchive $archive = null) {}
 
     public function retain(MerchantRevision $route, ProviderEvidence $source, bool $authenticated): ProviderEvidence
     {
         $this->boundary->assertOutsideTransaction();
         $frame = ExecutionCodec::encode($source);
-        $safe = strlen($frame) <= 24000 && preg_match('/"(?:pan|cvc|cvv|password|secret|accessToken|refreshToken|providerToken|authorization|apiKey|clientSecret)"\s*:/i', $frame) !== 1;
+        $safe = strlen($frame) <= 24000 && preg_match(self::SENSITIVE_PAYLOAD, $frame) !== 1;
         if ($safe && $authenticated && $source->providerEventId !== null && $source->securePayloadRef !== null && ($source->sanitizedPayload['schema'] ?? null) !== self::SCHEMA) {
             return $source;
         }

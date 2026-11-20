@@ -44,8 +44,8 @@ return new class extends PackmanMigration
                 CHECK (valid_until IS NULL OR valid_until > valid_from),
                 CHECK ((per_charge_cap_minor IS NULL AND per_period_cap_minor IS NULL) OR cap_currency IS NOT NULL),
                 CHECK (per_charge_cap_minor IS NULL OR per_period_cap_minor IS NULL OR per_charge_cap_minor <= per_period_cap_minor),
-                CHECK (payment_method_ref !~ '[0-9]{13,19}' AND payment_method_ref !~ '(^|[^0-9A-Za-z])([0-9][ -]?){13,19}($|[^0-9A-Za-z])'),
-                CHECK (token_locator !~ '[0-9]{13,19}' AND token_locator !~ '(^|[^0-9A-Za-z])([0-9][ -]?){13,19}($|[^0-9A-Za-z])')
+                CHECK (payment_method_ref !~ '[0-9]{13,19}' AND payment_method_ref !~ '(^|[^0-9A-Za-z])([0-9][ -]?){13,19}($|[^0-9A-Za-z])' AND payment_method_ref !~* '(^|[^0-9A-Za-z_])(cvv2?|cvc2?|pan)[[:space:]]*[:=]'),
+                CHECK (token_locator !~ '[0-9]{13,19}' AND token_locator !~ '(^|[^0-9A-Za-z])([0-9][ -]?){13,19}($|[^0-9A-Za-z])' AND token_locator !~* '(^|[^0-9A-Za-z_])(cvv2?|cvc2?|pan)[[:space:]]*[:=]')
             );
 
             CREATE INDEX billium_collection_consent_binding_account_idx
@@ -138,7 +138,12 @@ return new class extends PackmanMigration
                 action_type text NOT NULL CHECK (action_type IN ('three_ds_challenge','mandate_confirmation','redirect_authentication','sca_challenge')),
                 status text NOT NULL CHECK (status IN ('requires_action','expired','superseded')),
                 challenge_ref text NOT NULL,
-                action_payload jsonb NOT NULL CHECK (jsonb_typeof(action_payload) = 'object'),
+                action_payload jsonb NOT NULL CHECK (
+                    jsonb_typeof(action_payload) = 'object'
+                    AND action_payload::text !~ '[0-9]{13,19}'
+                    AND action_payload::text !~ '(^|[^0-9A-Za-z])([0-9][ .-]?){13,19}($|[^0-9A-Za-z])'
+                    AND action_payload::text !~* '"(cvv2?|cvc2?|pan|card_?cvv|card_?number|api_?key|password|secret)"[[:space:]]*:'
+                ),
                 expires_at timestamptz NOT NULL,
                 receipt_digest text NOT NULL,
                 recorded_at timestamptz NOT NULL,

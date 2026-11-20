@@ -61,7 +61,7 @@ return new class extends PackmanMigration
             ALTER TABLE public.billium_execution_provider_evidence ADD CONSTRAINT ex_evidence_secure_custody
                 CHECK (secure_payload_ref IS NOT NULL AND length(secure_payload_ref) BETWEEN 1 AND 200 AND raw_payload IS NULL
                     AND octet_length(sanitized_payload::text)<=65536
-                    AND sanitized_payload::text !~* '"(pan|cvc|cvv|password|secret|accessToken|refreshToken|providerToken)"[[:space:]]*:') NOT VALID;
+                    AND sanitized_payload::text !~* '"(pan|cvc|cvv2?|password|secret|access_?token|refresh_?token|provider_?token|authorization|api_?key|client_?secret|card_?cvv|card_?number)"[[:space:]]*:') NOT VALID;
 
             CREATE FUNCTION public.billium_execution_operation_binding_guard() RETURNS trigger
             LANGUAGE plpgsql SET search_path=pg_catalog,pg_temp AS $$

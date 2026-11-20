@@ -205,14 +205,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "platform",
-      "currentSchemaVersion": 25,
+      "currentSchemaVersion": 26,
       "supportedSchemaReadRange": {
-        "min": 25,
-        "max": 25
+        "min": 26,
+        "max": 26
       },
       "supportedSchemaWriteRange": {
-        "min": 25,
-        "max": 25
+        "min": 26,
+        "max": 26
       },
       "requiresModules": [],
       "requiresPorts": [
@@ -398,6 +398,11 @@
           "id": "2026_11_18_010009_validate_original_execution_binding",
           "version": 25,
           "checksum": "sha256:d7d777b231c14cadfe9f3b19a3cdec1f792876994087ae21ef4b7ec0bb6feed6"
+        },
+        {
+          "id": "2026_11_21_000001_index_billium_feed_hot_paths",
+          "version": 26,
+          "checksum": "sha256:c190ca326a0a87a47c005d8aa2b34e21f06215327b32b65be67f1a2eb250efe5"
         }
       ],
       "disablePolicy": {
@@ -441,14 +446,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "ledger",
-      "currentSchemaVersion": 12,
+      "currentSchemaVersion": 13,
       "supportedSchemaReadRange": {
-        "min": 12,
-        "max": 12
+        "min": 13,
+        "max": 13
       },
       "supportedSchemaWriteRange": {
-        "min": 12,
-        "max": 12
+        "min": 13,
+        "max": 13
       },
       "requiresModules": [
         {
@@ -504,7 +509,7 @@
         {
           "id": "2026_10_21_000001_create_billium_ledger",
           "version": 1,
-          "checksum": "sha256:083d645d3c022001ed2e2e7511b8a44e6de877c83b03ba23ce14cb4532a520b0"
+          "checksum": "sha256:720f7d9f95bc5dedf4c635e34867ab731bccef88e97aab76933cadcba10e9695"
         },
         {
           "id": "2026_10_21_000002_guard_billium_ledger",
@@ -560,6 +565,11 @@
           "id": "2026_11_17_020002_prove_billium_observed_revision_owner",
           "version": 12,
           "checksum": "sha256:0b33c049ff921fe01bac47a3190bd746bee9aecfebab6c54a1d8e9d7fc2ce773"
+        },
+        {
+          "id": "2026_11_21_000002_index_billium_ledger_hot_paths",
+          "version": 13,
+          "checksum": "sha256:48bc187a6f2720aea9e8a5c9964760abd3f9e6b17483b1cf8329beed9736b5e3"
         }
       ],
       "disablePolicy": {
@@ -1070,7 +1080,7 @@
           "checksum": "sha256:9106bd796bb5b6e6eb30bf9723eff77bab34b62226027f67f559bf7ea72d15e9"
         },
         {
-          "id": "2026_11_20_000005_add_render_blob_deleting_state",
+          "id": "2026_11_20_000006_add_render_blob_deleting_state",
           "version": 5,
           "checksum": "sha256:b04fb882d1c92cdc8902ebb8996dae84700ad09dbfc5a5295c280b3382066063"
         }
@@ -1114,14 +1124,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "execution",
-      "currentSchemaVersion": 34,
+      "currentSchemaVersion": 35,
       "supportedSchemaReadRange": {
-        "min": 34,
-        "max": 34
+        "min": 35,
+        "max": 35
       },
       "supportedSchemaWriteRange": {
-        "min": 34,
-        "max": 34
+        "min": 35,
+        "max": 35
       },
       "requiresModules": [
         {
@@ -1216,7 +1226,7 @@
         {
           "id": "2026_11_17_000002_guard_billium_execution_merchants",
           "version": 2,
-          "checksum": "sha256:da179dd52f5a92141f19b6b3abf5a9485d7739af48bd8ec3edd1463d1c3f31e1"
+          "checksum": "sha256:7709686086696457b5aea14465b5ea13c508bb8631059b33f6ad4a300e9b6010"
         },
         {
           "id": "2026_11_17_000003_guard_billium_execution_identities",
@@ -1377,6 +1387,11 @@
           "id": "2026_11_19_000034_create_billium_fiscal_tables",
           "version": 34,
           "checksum": "sha256:cde40512bdbfa59cb598987c16f20bdba83096c61d5ba70020664e7fc73fa7e9"
+        },
+        {
+          "id": "2026_11_21_000003_index_billium_execution_admission",
+          "version": 35,
+          "checksum": "sha256:e86d738671d2457a2bdbf7dcdf93d33584c514b48095be9ad4635dc9f61e5c87"
         }
       ],
       "disablePolicy": {
@@ -1527,7 +1542,7 @@
         {
           "id": "2026_11_20_000001_create_billium_collection_consent_tables",
           "version": 1,
-          "checksum": "sha256:46c4a87ea34c594214170818c70ccda67415a462e2a9022f0e718e6044e40e2f"
+          "checksum": "sha256:f37cdf61f165df7fa631aee64c3c7e2916b3cc2f6e24b82ea667efb17cff8042"
         },
         {
           "id": "2026_11_20_000002_create_billium_collection_policy_case_and_ownership_tables",
@@ -1547,7 +1562,7 @@
         {
           "id": "2026_11_20_000005_create_billium_collection_notification_signal_and_intervention_tables",
           "version": 5,
-          "checksum": "sha256:5fb558f6c42fa5c23e0292e0d139e7ce1c774bb0871eb58818597c79d0e39fcb"
+          "checksum": "sha256:cc7cfd2ad6e7bfd175534af7b4248f4e073d68ff0c25a9f0758ed3fc9ba705d9"
         }
       ],
       "disablePolicy": {

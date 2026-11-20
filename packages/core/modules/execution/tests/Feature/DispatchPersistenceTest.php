@@ -277,5 +277,15 @@ final class DispatchPersistenceTest extends ExecutionTestCase
         self::assertSame(3, $this->rows('billium_execution_provider_evidence'));
         self::assertSame(2, $this->rows('billium_execution_provider_work', "state='quarantined'"));
         self::assertSame(1, $this->rows('billium_execution_provider_evidence', "sanitized_payload->>'externalEvidenceRef'='different-external-ref' AND sanitized_payload#>>'{originalPayload,value}'='changed'"));
+        try {
+            $this->tx(function (TransactionContext $ctx) use ($scope): void {
+                $this->store->appendEvidence($ctx, new ProviderEvidence('sensitive-conflict', $scope, 'provider', 'account', 'provider-event', 'digest-sensitive', 'verified', 'v1', new DateTimeImmutable, ['api_key' => 'not-inline-api-key', 'note' => '4111111111111111', 'cvv2' => 'not-inline-cvv2'], 'secure://sensitive'));
+            });
+            self::fail('Sensitive evidence must be refused before a conflict row can copy it');
+        } catch (ProblemException $exception) {
+            self::assertSame(ProblemCode::ValidationInvalid, $exception->problem);
+        }
+        self::assertSame(3, $this->rows('billium_execution_provider_evidence'));
+        self::assertSame(0, $this->rows('billium_execution_provider_evidence', "sanitized_payload::text LIKE '%not-inline-api-key%' OR sanitized_payload::text LIKE '%4111111111111111%' OR sanitized_payload::text LIKE '%not-inline-cvv2%'"));
     }
 }
