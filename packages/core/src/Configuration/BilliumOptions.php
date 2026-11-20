@@ -100,8 +100,8 @@ final readonly class BilliumOptions implements OptionsFactory
             rating: $rating,
             schedule: $schedule,
             documents: $documents,
-            collection: $collection,
             execution: $execution,
+            collection: $collection,
         );
     }
 
