@@ -6,6 +6,7 @@ namespace Billium\Core\Tests\P6;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Contracts\Runner\OperationRunner;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Data\Runner\OperationSpec;
@@ -28,6 +29,7 @@ use Billium\Testkit\Documents\InMemoryDocumentStorage;
 use Closure;
 use DateTimeImmutable;
 use DateTimeZone;
+use Illuminate\Database\DatabaseManager;
 use LogicException;
 use PHPUnit\Framework\Attributes\Group;
 use RuntimeException;
@@ -892,5 +894,92 @@ final class DocumentRenderTest extends DocumentsTestCase
         self::assertSame('deleted', $this->value('SELECT status FROM billium_document_render_blob WHERE blob_ref=?', [$absentRef]));
         self::assertSame('deleted', $this->value('SELECT status FROM billium_document_render_blob WHERE blob_ref=?', [$alreadyDeletedBlob->blobRef]));
         self::assertTrue($storage->isBlobAlive($sellerALiveBlob->blobRef));
+    }
+
+    public function test_render_read_and_orphan_cleanup_succeed_after_database_disconnect(): void
+    {
+        $this->registerCompleteProfile();
+        $this->registerSeries();
+        $fin = $this->prepareFinalizedInvoiceBasis(suffix: 'rnd-f14');
+        $issued = $this->issuer()->issueInvoiceDocument($this->issueCommand('cmd-rnd-f14', 'rnd-f14', $fin->approvedSnapshotDigest ?? ''));
+        $legalRef = (string) ($issued->body['legalDocumentRef'] ?? '');
+
+        $clock = new DateTimeImmutable('2026-11-19T12:00:00Z', new DateTimeZone('UTC'));
+        $renderer = new InMemoryDocumentRenderer('in-memory-pdf', '1.0.0');
+        $storage = new InMemoryDocumentStorage($clock);
+        $this->application()->instance(DocumentRenderer::class, $renderer);
+        $this->application()->instance(DocumentStorage::class, $storage);
+
+        /** @var DatabaseManager $databases */
+        $databases = $this->application()->make(DatabaseManager::class);
+        /** @var BilliumOptions $options */
+        $options = $this->application()->make(BilliumOptions::class);
+        $connectionName = $options->connection ?? 'pgsql';
+
+        $req = $this->renderService()->requestRender(new RequestDocumentRender(
+            scope: $this->docScope(),
+            renderRequestRef: 'rreq-f14',
+            legalDocumentRef: $legalRef,
+            templateId: 'tmpl-f14',
+            templateVersion: '1.0',
+            templateDigest: self::digest('e'),
+            locale: 'en-US',
+            rendererName: 'in-memory-pdf',
+            rendererVersion: '1.0.0',
+            rendererDigest: self::digest('r'),
+        ));
+
+        // Disconnect both the Billium connection and an unrelated cached connection before executeRender().
+        $this->owner()->select('SELECT 1');
+        $databases->disconnect($connectionName);
+        $databases->disconnect('billium_owner');
+        self::assertNull($databases->getConnections()[$connectionName]->getRawPdo());
+        self::assertNull($databases->getConnections()['billium_owner']->getRawPdo());
+
+        $attached = $this->renderService()->executeRender($this->docScope(), 'rreq-f14');
+        self::assertTrue($attached->attached);
+        self::assertSame(RenderState::Ready, $attached->render->state);
+        $readyBlobRef = $attached->render->blobRef ?? '';
+
+        // Disconnect again before readRender().
+        $databases->disconnect($connectionName);
+        $databases->disconnect('billium_owner');
+        self::assertNull($databases->getConnections()[$connectionName]->getRawPdo());
+
+        $read = $this->renderService()->readRender(new ReadDocumentRender(
+            scope: $this->docScope(),
+            legalDocumentRef: $legalRef,
+            templateId: 'tmpl-f14',
+            locale: 'en-US',
+        ));
+        self::assertSame($readyBlobRef, $read->blobRef);
+        self::assertNotNull($storage->fetchByTemporaryUrl($read->temporaryUrl, $clock->modify('+10 seconds')));
+
+        // Seed an unpinned orphan, disconnect both connections, and verify cleanupOrphanBlobs() succeeds cleanly.
+        $orphanBytes = '%PDF-1.4 f14-orphan';
+        $orphanBlob = $storage->store(new StoreRenderBlob(
+            sellerRef: 'seller-a',
+            environment: 'test',
+            uploadKey: 'f14-orphan',
+            contentType: 'application/pdf',
+            bytes: $orphanBytes,
+            outputDigest: 'sha256:'.hash('sha256', $orphanBytes),
+        ));
+        $nowStr = $clock->format('Y-m-d\TH:i:s.u\Z');
+        $this->owner()->insert(
+            'INSERT INTO public.billium_document_render_blob (seller_ref, environment, upload_key, blob_ref, render_request_id, output_digest, content_type, byte_size, status, retention_pinned_until, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            ['seller-a', 'test', 'f14-orphan', $orphanBlob->blobRef, $req->id, $orphanBlob->outputDigest, 'application/pdf', $orphanBlob->byteSize, 'orphaned', null, $nowStr, $nowStr],
+        );
+
+        $databases->disconnect($connectionName);
+        $databases->disconnect('billium_owner');
+        self::assertNull($databases->getConnections()[$connectionName]->getRawPdo());
+        self::assertNull($databases->getConnections()['billium_owner']->getRawPdo());
+
+        $cleanup = $this->renderService()->cleanupOrphanBlobs($this->docScope(), $clock);
+        self::assertSame(1, $cleanup->deletedCount);
+        self::assertSame([$orphanBlob->blobRef], $cleanup->deletedBlobRefs);
+        self::assertFalse($storage->isBlobAlive($orphanBlob->blobRef));
+        self::assertSame('deleted', $this->value('SELECT status FROM billium_document_render_blob WHERE blob_ref=?', [$orphanBlob->blobRef]));
     }
 }

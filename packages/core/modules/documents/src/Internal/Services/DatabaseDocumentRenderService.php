@@ -40,6 +40,7 @@ use DateTimeZone;
 use Illuminate\Database\DatabaseManager;
 use LogicException;
 use Packman\Attributes\Internal;
+use PDO;
 use stdClass;
 use Throwable;
 
@@ -1053,7 +1054,13 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
     private function assertOutsideTransaction(): void
     {
         foreach ($this->databases->getConnections() as $connection) {
-            if ($connection->transactionLevel() !== 0 || $connection->getPdo()->inTransaction()) {
+            $writePdo = $connection->getRawPdo();
+            $readPdo = $connection->getRawReadPdo();
+            if (
+                $connection->transactionLevel() !== 0
+                || ($writePdo instanceof PDO && $writePdo->inTransaction())
+                || ($readPdo instanceof PDO && $readPdo->inTransaction())
+            ) {
                 throw new LogicException('Document render and storage I/O must run outside every database transaction');
             }
         }
