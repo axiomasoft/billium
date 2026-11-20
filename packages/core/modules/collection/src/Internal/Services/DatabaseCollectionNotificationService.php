@@ -24,11 +24,13 @@ use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Data\Runner\LockRequest;
 use Billium\Core\Data\Runner\OperationSpec;
+use Billium\Core\Data\Runtime\FinancialScope;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Core\Enums\Runner\LockRank;
 use Billium\Core\Enums\Runner\LockScope;
 use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Exceptions\Runner\LockPlanChanged;
+use Billium\Platform\Contracts\Idempotency\IdempotencyReceiptQueries;
 use Closure;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -48,6 +50,8 @@ final readonly class DatabaseCollectionNotificationService implements Collection
     /** @var list<string> */
     private const array COLLECTION_MODULES = ['platform', 'ledger', 'execution', 'collection'];
 
+    private const string DISPATCH_KIND = 'collection.notification.dispatch.v1';
+
     /** @param Closure(): CollectionNotificationPort $notificationPortResolver */
     public function __construct(
         private DatabaseManager $databases,
@@ -55,6 +59,7 @@ final readonly class DatabaseCollectionNotificationService implements Collection
         private CallerContext $callers,
         private BilliumOptions $options,
         private Closure $notificationPortResolver,
+        private IdempotencyReceiptQueries $receipts,
     ) {}
 
     #[Override]
@@ -304,18 +309,15 @@ final readonly class DatabaseCollectionNotificationService implements Collection
         );
 
         // Host notification transport MUST execute strictly outside every database transaction.
+        // A completed claim for this key is read through the platform receipt query so a replay
+        // returns the stored outcome and does not call the port again.
         $this->assertOutsideTransaction();
-        $prior = $this->databases->connection($this->options->connection)
-            ->table('billium_idempotency_receipt')
-            ->where('environment', $caller->environment)
-            ->where('seller_ref', $caller->sellerRef)
-            ->where('command_kind', 'collection.notification.dispatch.v1')
-            ->where('command_key', $deliveryCommandKey)
-            ->first();
+        $selection = new FinancialScope($caller->installationRef, $caller->sellerRef, $caller->environment, null);
+        $prior = $this->receipts->byCommandKey($selection, self::DISPATCH_KIND, $deliveryCommandKey);
         $port = ($this->notificationPortResolver)();
         $ack = null;
         $deliveryError = null;
-        $digest = is_object($prior) ? RowCast::str($prior->digest, 'digest') : null;
+        $digest = $prior?->semanticDigest;
         if ($digest === null) {
             try {
                 $ack = $port->deliver($message);
@@ -358,7 +360,7 @@ final readonly class DatabaseCollectionNotificationService implements Collection
 
         $outcome = $this->runner->run(
             spec: new OperationSpec(
-                commandKind: 'collection.notification.dispatch.v1',
+                commandKind: self::DISPATCH_KIND,
                 sellerRef: $caller->sellerRef,
                 environment: $caller->environment,
                 mode: FinancialMode::Active,
@@ -367,6 +369,7 @@ final readonly class DatabaseCollectionNotificationService implements Collection
                 commandKey: $deliveryCommandKey,
                 digest: $digest,
                 commitKind: 'collection.notification.dispatch',
+                financialScope: $selection,
             ),
             body: function (TransactionContext $context) use ($caller, $current, $ack, $deliveryError, $attemptInstant): CollectionReceipt {
                 $this->runner->assertCurrent($context, 'collection');

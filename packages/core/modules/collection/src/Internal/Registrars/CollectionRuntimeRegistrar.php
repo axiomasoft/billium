@@ -41,6 +41,7 @@ use Billium\Execution\Contracts\RootPaymentCommands;
 use Billium\Ledger\Contracts\CollectionObligation;
 use Billium\Ledger\Contracts\LedgerParticipants;
 use Billium\Ledger\Contracts\SettlementIntentLocks;
+use Billium\Platform\Contracts\Idempotency\IdempotencyReceiptQueries;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\DatabaseManager;
 use Override;
@@ -69,6 +70,7 @@ final class CollectionRuntimeRegistrar implements PackageRegistrar
             callers: $app->make(CallerContext::class),
             options: $app->make(BilliumOptions::class),
             notificationPortResolver: static fn (): CollectionNotificationPort => $app->make(CollectionNotificationPort::class),
+            receipts: $app->make(IdempotencyReceiptQueries::class),
         ));
         $app->bind(DatabaseCollectionParticipants::class, static fn (Application $app): DatabaseCollectionParticipants => new DatabaseCollectionParticipants(
             $app->make(DatabaseManager::class), $app->make(BilliumOptions::class), $app->make(CallerContext::class),
