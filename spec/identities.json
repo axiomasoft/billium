@@ -4959,6 +4959,13 @@
     },
     {
       "kind": "migration",
+      "id": "2026_11_20_000002_create_billium_collection_policy_case_and_ownership_tables",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/collection/2026_11_20_000002_create_billium_collection_policy_case_and_ownership_tables.php"
+    },
+    {
+      "kind": "migration",
       "id": "2026_11_20_000005_add_render_blob_deleting_state",
       "status": "new",
       "since": "2026-10",

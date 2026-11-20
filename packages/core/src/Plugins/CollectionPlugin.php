@@ -7,6 +7,9 @@ namespace Billium\Core\Plugins;
 use Billium\Collection\Contracts\CollectionConsentGuard;
 use Billium\Collection\Contracts\ConsentBindingService;
 use Billium\Collection\Contracts\ConsentQueries;
+use Billium\Collection\Contracts\DunningCaseService;
+use Billium\Collection\Contracts\DunningPolicyService;
+use Billium\Collection\Contracts\DunningQueries;
 use Billium\Collection\Contracts\SavedMethodCapabilityValidator;
 use Billium\Collection\Laravel\CollectionCapabilities;
 use Override;
@@ -65,6 +68,11 @@ final class CollectionPlugin implements ExtensionPlugin, WithCapabilities, WithS
             'collection_guard_tombstone',
             'collection_customer_action',
             'collection_refund_route',
+            'collection_dunning_policy',
+            'collection_recurring_owner',
+            'collection_dunning_case',
+            'collection_case_policy_migration',
+            'collection_step',
         ];
     }
 
@@ -83,6 +91,9 @@ final class CollectionPlugin implements ExtensionPlugin, WithCapabilities, WithS
             SavedMethodCapabilityValidator::class => Cardinality::OptionalSingle->value,
             ConsentBindingService::class => Cardinality::OptionalSingle->value,
             ConsentQueries::class => Cardinality::OptionalSingle->value,
+            DunningPolicyService::class => Cardinality::OptionalSingle->value,
+            DunningCaseService::class => Cardinality::OptionalSingle->value,
+            DunningQueries::class => Cardinality::OptionalSingle->value,
         ];
     }
 

@@ -7,6 +7,9 @@ namespace Billium\Core\Tests\P7\Support;
 use Billium\Collection\Contracts\CollectionConsentGuard;
 use Billium\Collection\Contracts\ConsentBindingService;
 use Billium\Collection\Contracts\ConsentQueries;
+use Billium\Collection\Contracts\DunningCaseService;
+use Billium\Collection\Contracts\DunningPolicyService;
+use Billium\Collection\Contracts\DunningQueries;
 use Billium\Collection\Contracts\SavedMethodCapabilityValidator;
 use Billium\Collection\Data\CollectionScope;
 use Billium\Collection\Data\HostConsentAuthoritySnapshot;
@@ -80,6 +83,21 @@ abstract class CollectionTestCase extends ExecutionTestCase
     protected function capabilityValidator(): SavedMethodCapabilityValidator
     {
         return $this->application()->make(SavedMethodCapabilityValidator::class);
+    }
+
+    protected function dunningPolicyService(): DunningPolicyService
+    {
+        return $this->application()->make(DunningPolicyService::class);
+    }
+
+    protected function dunningCaseService(): DunningCaseService
+    {
+        return $this->application()->make(DunningCaseService::class);
+    }
+
+    protected function dunningQueries(): DunningQueries
+    {
+        return $this->application()->make(DunningQueries::class);
     }
 
     protected function bindHostConsentGuard(HostConsentAuthoritySnapshot $snapshot): void

@@ -1455,14 +1455,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "collection",
-      "currentSchemaVersion": 1,
+      "currentSchemaVersion": 2,
       "supportedSchemaReadRange": {
-        "min": 1,
-        "max": 1
+        "min": 2,
+        "max": 2
       },
       "supportedSchemaWriteRange": {
-        "min": 1,
-        "max": 1
+        "min": 2,
+        "max": 2
       },
       "requiresModules": [
         {
@@ -1500,7 +1500,12 @@
         "billium_collection_consent_guard",
         "billium_collection_guard_tombstone",
         "billium_collection_customer_action",
-        "billium_collection_refund_route"
+        "billium_collection_refund_route",
+        "billium_collection_dunning_policy",
+        "billium_collection_recurring_owner",
+        "billium_collection_dunning_case",
+        "billium_collection_case_policy_migration",
+        "billium_collection_step"
       ],
       "configKeys": [
         "billium.collection.enabled"
@@ -1510,6 +1515,11 @@
           "id": "2026_11_20_000001_create_billium_collection_consent_tables",
           "version": 1,
           "checksum": "sha256:46c4a87ea34c594214170818c70ccda67415a462e2a9022f0e718e6044e40e2f"
+        },
+        {
+          "id": "2026_11_20_000002_create_billium_collection_policy_case_and_ownership_tables",
+          "version": 2,
+          "checksum": "sha256:bd3720a13134f75c6b22f6dfbaa58f20df6c3b5deedb4edfe16f9ad3475d10d9"
         }
       ],
       "disablePolicy": {

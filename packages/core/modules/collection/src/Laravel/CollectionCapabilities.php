@@ -7,9 +7,15 @@ namespace Billium\Collection\Laravel;
 use Billium\Collection\Contracts\CollectionConsentGuard;
 use Billium\Collection\Contracts\ConsentBindingService;
 use Billium\Collection\Contracts\ConsentQueries;
+use Billium\Collection\Contracts\DunningCaseService;
+use Billium\Collection\Contracts\DunningPolicyService;
+use Billium\Collection\Contracts\DunningQueries;
 use Billium\Collection\Contracts\SavedMethodCapabilityValidator;
 use Billium\Collection\Internal\Queries\DatabaseConsentQueries;
+use Billium\Collection\Internal\Queries\DatabaseDunningQueries;
 use Billium\Collection\Internal\Services\DatabaseConsentBindingService;
+use Billium\Collection\Internal\Services\DatabaseDunningCaseService;
+use Billium\Collection\Internal\Services\DatabaseDunningPolicyService;
 use Billium\Collection\Internal\UnboundCollectionConsentGuard;
 use Billium\Collection\Internal\Validation\DefaultSavedMethodCapabilityValidator;
 use Packman\Attributes\Spi;
@@ -29,6 +35,9 @@ final class CollectionCapabilities
             SavedMethodCapabilityValidator::class => DefaultSavedMethodCapabilityValidator::class,
             ConsentBindingService::class => DatabaseConsentBindingService::class,
             ConsentQueries::class => DatabaseConsentQueries::class,
+            DunningPolicyService::class => DatabaseDunningPolicyService::class,
+            DunningCaseService::class => DatabaseDunningCaseService::class,
+            DunningQueries::class => DatabaseDunningQueries::class,
         ];
     }
 

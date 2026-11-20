@@ -7,9 +7,15 @@ namespace Billium\Collection\Internal\Registrars;
 use Billium\Collection\Contracts\CollectionConsentGuard;
 use Billium\Collection\Contracts\ConsentBindingService;
 use Billium\Collection\Contracts\ConsentQueries;
+use Billium\Collection\Contracts\DunningCaseService;
+use Billium\Collection\Contracts\DunningPolicyService;
+use Billium\Collection\Contracts\DunningQueries;
 use Billium\Collection\Contracts\SavedMethodCapabilityValidator;
 use Billium\Collection\Internal\Queries\DatabaseConsentQueries;
+use Billium\Collection\Internal\Queries\DatabaseDunningQueries;
 use Billium\Collection\Internal\Services\DatabaseConsentBindingService;
+use Billium\Collection\Internal\Services\DatabaseDunningCaseService;
+use Billium\Collection\Internal\Services\DatabaseDunningPolicyService;
 use Billium\Collection\Internal\UnboundCollectionConsentGuard;
 use Billium\Collection\Internal\Validation\DefaultSavedMethodCapabilityValidator;
 use Billium\Core\Configuration\BilliumOptions;
@@ -30,6 +36,9 @@ final class CollectionRuntimeRegistrar implements PackageRegistrar
         $app->bindIf(CollectionConsentGuard::class, UnboundCollectionConsentGuard::class);
         $app->bind(SavedMethodCapabilityValidator::class, DefaultSavedMethodCapabilityValidator::class);
         $app->bind(ConsentQueries::class, DatabaseConsentQueries::class);
+        $app->bind(DunningQueries::class, DatabaseDunningQueries::class);
+        $app->bind(DunningPolicyService::class, DatabaseDunningPolicyService::class);
+        $app->bind(DunningCaseService::class, DatabaseDunningCaseService::class);
         $app->bind(ConsentBindingService::class, static fn (Application $app): DatabaseConsentBindingService => new DatabaseConsentBindingService(
             databases: $app->make(DatabaseManager::class),
             runner: $app->make(OperationRunner::class),
