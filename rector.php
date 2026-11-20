@@ -18,6 +18,7 @@ use Rector\TypeDeclaration\Rector\ClassMethod\NarrowObjectReturnTypeRector;
 
 return static function (RectorConfig $rectorConfig): void {
     $rectorConfig->disableParallel();
+    $rectorConfig->cacheDirectory(__DIR__.'/build/rector');
     $rectorConfig->paths([
         __DIR__.'/packages/contracts/src',
         __DIR__.'/packages/core/src',

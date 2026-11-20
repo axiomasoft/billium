@@ -19,6 +19,11 @@ final class BilliumSchemaMigratorTest extends DatabaseTestCase
 {
     use MigratesSchemaSets;
 
+    protected function migratesFromEmptyDatabase(): bool
+    {
+        return true;
+    }
+
     public function test_packman_schema_migrator_tracks_billium_platform_and_module_sets(): void
     {
         self::assertNotNull($this->app);

@@ -37,6 +37,12 @@ final class TestEnvironment
 
     private static bool $preflightVerified = false;
 
+    private static int $migrationRuns = 0;
+
+    private static ?string $isolatedTokenDatabase = null;
+
+    public const string WORKER_TEMPLATE = 'billium_worker_schema_test';
+
     private const string SUITE_LEASE_ENV = 'BILLIUM_TEST_SUITE_LEASE';
 
     private const string COLLECTION_WORK_ROUTINES = <<<'SQL'
@@ -153,6 +159,7 @@ final class TestEnvironment
 
     public static function configure(Application $app): void
     {
+        self::isolateParallelDatabase();
         TestDatabaseGuard::assertSafe(self::identity(owner: true));
         $app['config']->set('database.default', 'pgsql');
         $app['config']->set('database.connections.pgsql', self::connection());
@@ -213,6 +220,7 @@ final class TestEnvironment
     /** Creates an empty owner/runtime database for a proof that requires physically absent module tables. */
     public static function openProfileDatabase(): Closure
     {
+        self::isolateParallelDatabase();
         if (self::$profileDatabase !== null) {
             throw new RuntimeException('A profile test database is already open');
         }
@@ -290,6 +298,7 @@ final class TestEnvironment
 
     public static function preflight(int $timeoutSeconds = 30): void
     {
+        self::isolateParallelDatabase();
         self::databaseName();
         self::connection();
         self::connection(owner: true);
@@ -333,6 +342,7 @@ final class TestEnvironment
      */
     public static function acquireSuiteLease(int $timeoutSeconds = 1800): void
     {
+        self::isolateParallelDatabase();
         if (self::$suiteLease !== null) {
             return;
         }
@@ -380,7 +390,7 @@ final class TestEnvironment
             'database' => self::databaseName(), 'pid' => $pid, 'token' => self::$suiteLeaseToken,
         ], JSON_THROW_ON_ERROR)];
 
-        return self::$profileDatabase === null ? $claim : ['DB_DATABASE' => self::$profileDatabase, ...$claim];
+        return ['DB_DATABASE' => self::databaseName(), ...$claim];
     }
 
     private static function assertInheritedSuiteLease(string $claim): void
@@ -449,6 +459,271 @@ final class TestEnvironment
         if ($table !== false) {
             throw new RuntimeException("D60: runtime has direct DML grants on protected ledger table {$table}");
         }
+    }
+
+    public static function migrationRuns(): int
+    {
+        return self::$migrationRuns;
+    }
+
+    public static function noteMigrationRun(): void
+    {
+        self::$migrationRuns++;
+    }
+
+    /**
+     * ParaTest's TEST_TOKEN is an integer, so billium_test_<token> does not end in _test and
+     * TestDatabaseGuard refuses it. billium_<token>_test keeps the token and stays a test database.
+     */
+    public static function isolateParallelDatabase(): void
+    {
+        $token = getenv('TEST_TOKEN');
+        if (! is_string($token) || preg_match('/^[A-Za-z0-9]+$/', $token) !== 1) {
+            return;
+        }
+        $name = 'billium_'.$token.'_test';
+        $current = getenv('DB_DATABASE');
+        $current = is_string($current) ? $current : '';
+        // Only the shared compose database is retargeted. An empty name is a
+        // deliberate missing-database probe. A child that already inherited the
+        // worker name must not rewrite that database's ACL.
+        if ($current === $name) {
+            self::$isolatedTokenDatabase = $name;
+
+            return;
+        }
+        if ($current !== 'billium_test' || self::$isolatedTokenDatabase === $name) {
+            return;
+        }
+        self::ensureWorkerDatabase($name);
+        putenv('DB_DATABASE='.$name);
+        $_ENV['DB_DATABASE'] = $name;
+        $_SERVER['DB_DATABASE'] = $name;
+        self::$isolatedTokenDatabase = $name;
+        self::$preflightVerified = false;
+    }
+
+    public static function workerTemplateSealed(): bool
+    {
+        $admin = self::adminPdo();
+        $statement = $admin->prepare('SELECT datallowconn FROM pg_database WHERE datname = ?');
+        $statement->execute([self::WORKER_TEMPLATE]);
+        $row = $statement->fetch(PDO::FETCH_NUM);
+
+        return is_array($row) && ($row[0] === false || $row[0] === 'f' || $row[0] === 0);
+    }
+
+    public static function provisionWorkerTemplate(): void
+    {
+        $admin = self::adminPdo();
+        $name = self::WORKER_TEMPLATE;
+        if (self::databaseExists($admin, $name)) {
+            $admin->exec('ALTER DATABASE '.self::quoteIdent($name).' WITH ALLOW_CONNECTIONS true');
+            $admin->exec('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '.self::literal($admin, $name).' AND pid <> pg_backend_pid()');
+            $admin->exec('DROP DATABASE '.self::quoteIdent($name).' WITH (FORCE)');
+        }
+        self::dropParallelDatabases($admin);
+        $admin->exec('CREATE DATABASE '.self::quoteIdent($name));
+        self::grantRuntime($name);
+        putenv('DB_DATABASE='.$name);
+        $_ENV['DB_DATABASE'] = $name;
+        $_SERVER['DB_DATABASE'] = $name;
+        self::$preflightVerified = false;
+    }
+
+    public static function sealWorkerTemplate(): void
+    {
+        self::$suiteLease = null;
+        $admin = self::adminPdo();
+        $quoted = self::quoteIdent(self::WORKER_TEMPLATE);
+        $admin->exec('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '.self::literal($admin, self::WORKER_TEMPLATE).' AND pid <> pg_backend_pid()');
+        $admin->exec('ALTER DATABASE '.$quoted.' WITH ALLOW_CONNECTIONS false');
+    }
+
+    /** @param list<string> $setIds */
+    public static function adoptProfileTemplate(array $setIds, Closure $disconnect): bool
+    {
+        $template = self::profileTemplateName($setIds);
+        $admin = self::adminPdo();
+        if (! self::databaseExists($admin, $template)) {
+            return false;
+        }
+        $profile = self::$profileDatabase ?? throw new RuntimeException('Profile database is not open');
+        $disconnect();
+        self::releaseSuiteLease();
+        $admin->exec('DROP DATABASE '.self::quoteIdent($profile).' WITH (FORCE)');
+        $admin->exec('CREATE DATABASE '.self::quoteIdent($profile).' TEMPLATE '.self::quoteIdent($template));
+        $admin->exec('ALTER DATABASE '.self::quoteIdent($profile).' WITH ALLOW_CONNECTIONS true');
+        self::grantDatabaseAcl($profile);
+        self::acquireSuiteLease();
+
+        return true;
+    }
+
+    /** @param list<string> $setIds */
+    public static function publishProfileTemplate(array $setIds, Closure $disconnect): void
+    {
+        $template = self::profileTemplateName($setIds);
+        $admin = self::adminPdo();
+        if (self::databaseExists($admin, $template)) {
+            return;
+        }
+        $profile = self::$profileDatabase ?? throw new RuntimeException('Profile database is not open');
+        $disconnect();
+        self::releaseSuiteLease();
+        try {
+            $admin->exec('CREATE DATABASE '.self::quoteIdent($template).' TEMPLATE '.self::quoteIdent($profile));
+            $admin->exec('ALTER DATABASE '.self::quoteIdent($template).' WITH ALLOW_CONNECTIONS false');
+        } catch (PDOException $exception) {
+            self::acquireSuiteLease();
+            if (($exception->errorInfo[0] ?? '') !== '42P04') {
+                throw $exception;
+            }
+
+            return;
+        }
+        self::acquireSuiteLease();
+    }
+
+    public static function truncateBilliumTables(PDO $pdo): void
+    {
+        $rows = $pdo->query(<<<'SQL'
+            SELECT format('%I.%I', schemaname, tablename)
+            FROM pg_tables
+            WHERE schemaname = 'public'
+              AND starts_with(tablename, 'billium_')
+              AND tablename <> 'billium_event_contract'
+            ORDER BY 1
+            SQL);
+        if ($rows === false) {
+            throw new RuntimeException('Unable to list billium tables for truncate');
+        }
+        $tables = $rows->fetchAll(PDO::FETCH_COLUMN);
+        if ($tables === []) {
+            return;
+        }
+        $pdo->exec('TRUNCATE '.implode(', ', $tables).' RESTART IDENTITY CASCADE');
+    }
+
+    private static function ensureWorkerDatabase(string $name): void
+    {
+        $admin = self::adminPdo();
+        if (! self::databaseExists($admin, $name)) {
+            if (self::databaseExists($admin, self::WORKER_TEMPLATE)) {
+                $admin->exec('CREATE DATABASE '.self::quoteIdent($name).' TEMPLATE '.self::quoteIdent(self::WORKER_TEMPLATE));
+                $admin->exec('ALTER DATABASE '.self::quoteIdent($name).' WITH ALLOW_CONNECTIONS true');
+            } else {
+                $admin->exec('CREATE DATABASE '.self::quoteIdent($name));
+                self::grantRuntime($name);
+            }
+        }
+        // CREATE DATABASE does not copy database ACLs, so a template clone would
+        // keep PUBLIC TEMP and fail the runtime safety check.
+        self::grantDatabaseAcl($name);
+    }
+
+    private static function dropParallelDatabases(PDO $admin): void
+    {
+        $statement = $admin->query(<<<'SQL'
+            SELECT datname FROM pg_database
+            WHERE datname ~ '^billium_[A-Za-z0-9]+_test$'
+               OR datname ~ '^billium_profile_[a-f0-9]+_test$'
+               OR datname ~ '^billium_ps[a-f0-9]+_test$'
+            SQL);
+        if ($statement === false) {
+            throw new RuntimeException('Unable to list parallel test databases');
+        }
+        foreach ($statement->fetchAll(PDO::FETCH_COLUMN) as $name) {
+            if (! is_string($name) || $name === self::WORKER_TEMPLATE || $name === 'billium_test') {
+                continue;
+            }
+            $admin->exec('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '.self::literal($admin, $name).' AND pid <> pg_backend_pid()');
+            $admin->exec('DROP DATABASE '.self::quoteIdent($name).' WITH (FORCE)');
+        }
+    }
+
+    private static function grantDatabaseAcl(string $database): void
+    {
+        $admin = self::adminPdo();
+        $quoted = self::quoteIdent($database);
+        $admin->exec('REVOKE TEMPORARY ON DATABASE '.$quoted.' FROM PUBLIC');
+        $admin->exec('GRANT CONNECT ON DATABASE '.$quoted.' TO '.self::quoteIdent(self::required('DB_USERNAME')));
+    }
+
+    private static function grantRuntime(string $database): void
+    {
+        $runtime = self::quoteIdent(self::required('DB_USERNAME'));
+        $owner = self::ownerPdoTo($database);
+        $quoted = self::quoteIdent($database);
+        $owner->exec('REVOKE CREATE ON SCHEMA public FROM PUBLIC');
+        $owner->exec('REVOKE TEMPORARY ON DATABASE '.$quoted.' FROM PUBLIC');
+        $owner->exec('GRANT CONNECT ON DATABASE '.$quoted.' TO '.$runtime);
+        $owner->exec('GRANT USAGE ON SCHEMA public TO '.$runtime);
+        $owner->exec('ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO '.$runtime);
+        $owner->exec('ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC');
+    }
+
+    /** @param list<string> $setIds */
+    private static function profileTemplateName(array $setIds): string
+    {
+        $ids = array_values($setIds);
+        sort($ids, SORT_STRING);
+
+        return 'billium_ps'.substr(hash('sha256', implode("\0", $ids)), 0, 12).'_test';
+    }
+
+    private static function releaseSuiteLease(): void
+    {
+        self::$suiteLease = null;
+        self::$suiteLeaseToken = null;
+    }
+
+    private static function adminPdo(): PDO
+    {
+        try {
+            return self::ownerPdoTo('postgres');
+        } catch (PDOException) {
+            return self::ownerPdoTo(self::required('DB_DATABASE'));
+        }
+    }
+
+    private static function ownerPdoTo(string $database): PDO
+    {
+        $config = self::connection(owner: true);
+
+        return new PDO(
+            "pgsql:host={$config['host']};port={$config['port']};dbname={$database}",
+            $config['username'],
+            $config['password'],
+            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_EMULATE_PREPARES => false, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC],
+        );
+    }
+
+    private static function databaseExists(PDO $admin, string $name): bool
+    {
+        $statement = $admin->prepare('SELECT 1 FROM pg_database WHERE datname = ?');
+        $statement->execute([$name]);
+
+        return $statement->fetchColumn() !== false;
+    }
+
+    private static function literal(PDO $pdo, string $value): string
+    {
+        $quoted = $pdo->quote($value);
+        if ($quoted === false) {
+            throw new RuntimeException('Unable to quote a SQL literal');
+        }
+
+        return $quoted;
+    }
+
+    private static function quoteIdent(string $name): string
+    {
+        if (preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $name) !== 1) {
+            throw new RuntimeException('Unsafe PostgreSQL identifier');
+        }
+
+        return '"'.$name.'"';
     }
 
     private static function required(string $name): string

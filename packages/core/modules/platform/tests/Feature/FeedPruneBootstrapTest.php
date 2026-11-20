@@ -18,6 +18,7 @@ use RuntimeException;
 
 #[Group('ACC-RST-06')]
 #[Group('pg')]
+#[Group('pg-serial')]
 final class FeedPruneBootstrapTest extends OutboxTestCase
 {
     #[Group('PB-23')]

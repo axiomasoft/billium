@@ -10,6 +10,7 @@ use Billium\Contracts\Data\Money;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Tests\TestEnvironment;
 use BilliumConformance\LedgerAdapter;
+use PDO;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use stdClass;
@@ -20,6 +21,8 @@ use Symfony\Component\Process\Process;
 #[Group('pg')]
 final class RuntimeCoherenceVectorsTest extends TestCase
 {
+    private static ?PDO $owner = null;
+
     public function test_worked_examples_and_durable_counters_agree(): void
     {
         $root = dirname(__DIR__, 6);
@@ -173,7 +176,8 @@ final class RuntimeCoherenceVectorsTest extends TestCase
 
     private static function scalar(string $sql): mixed
     {
-        $statement = TestEnvironment::pdo(owner: true)->query($sql);
+        self::$owner ??= TestEnvironment::pdo(owner: true);
+        $statement = self::$owner->query($sql);
         self::assertNotFalse($statement);
 
         return $statement->fetchColumn();

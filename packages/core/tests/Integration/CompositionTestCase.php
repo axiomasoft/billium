@@ -21,6 +21,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 use Orchestra\Testbench\TestCase;
 use Packman\Schema\Contracts\Migration\SchemaMigrator;
+use PDOException;
 
 /** Fresh schema per composition in the leased test database, with committed roots and distinct roles (D50/D55). */
 abstract class CompositionTestCase extends TestCase
@@ -48,7 +49,7 @@ abstract class CompositionTestCase extends TestCase
     {
         TestEnvironment::preflight();
         TestEnvironment::acquireSuiteLease();
-        self::resetSchema();
+        $reused = $this->reuseOrWipeSchema();
         parent::setUp();
         SimulatedFinancialAuthorityEvidence::reset();
         $this->owner()->unprepared('REVOKE CREATE ON SCHEMA public FROM PUBLIC');
@@ -56,8 +57,12 @@ abstract class CompositionTestCase extends TestCase
         $this->application()->instance(FinancialSessionAdmission::class, new FixedSessionAdmission(FixedSessionAdmission::token()));
         SimulatedFinancialAuthorityEvidence::admitCurrent($this->application());
         // Boot is migration discovery, never installation.
-        self::assertNull($this->owner()->scalar("SELECT to_regclass('public.billium_module_state')::text"));
-        $this->migrateModules();
+        if ($reused) {
+            self::assertSame(0, (int) $this->owner()->scalar('SELECT count(*) FROM public.billium_module_state'));
+        } else {
+            self::assertNull($this->owner()->scalar("SELECT to_regclass('public.billium_module_state')::text"));
+            $this->migrateModules();
+        }
         $installation = $this->application()->make(Installation::class);
         $installation->init('inst-test');
         SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('open', 'open-1', ['owner-1', 1,
@@ -101,6 +106,7 @@ abstract class CompositionTestCase extends TestCase
             }
         }
         $this->application()->make(SchemaMigrator::class)->migrateSets($ids, 'billium_owner');
+        TestEnvironment::noteMigrationRun();
     }
 
     /** @param class-string<ServiceProvider> $provider */
@@ -127,15 +133,41 @@ abstract class CompositionTestCase extends TestCase
 
     protected function tearDown(): void
     {
-        try {
-            $databases = $this->application()->make(DatabaseManager::class);
-            foreach (array_keys($databases->getConnections()) as $name) {
-                $databases->purge($name);
-            }
-            parent::tearDown();
-        } finally {
-            self::resetSchema();
+        $databases = $this->application()->make(DatabaseManager::class);
+        foreach (array_keys($databases->getConnections()) as $name) {
+            $databases->purge($name);
         }
+        parent::tearDown();
+    }
+
+    private function reuseOrWipeSchema(): bool
+    {
+        $expected = [];
+        $root = dirname(__DIR__, 2).'/database/migrations';
+        foreach ($this->modules() as $module) {
+            foreach (glob($root.'/'.$module.'/*.php') ?: [] as $file) {
+                $expected[] = basename($file, '.php');
+            }
+        }
+        sort($expected, SORT_STRING);
+        $owner = TestEnvironment::pdo(owner: true);
+        try {
+            $statement = $owner->query('SELECT migration FROM public.migrations ORDER BY migration');
+            $actual = $statement === false ? [] : $statement->fetchAll(\PDO::FETCH_COLUMN);
+        } catch (PDOException $exception) {
+            if (($exception->errorInfo[0] ?? '') !== '42P01') {
+                throw $exception;
+            }
+            $actual = [];
+        }
+        if ($actual !== [] && $actual === $expected) {
+            TestEnvironment::truncateBilliumTables($owner);
+
+            return true;
+        }
+        self::resetSchema();
+
+        return false;
     }
 
     private static function resetSchema(): void

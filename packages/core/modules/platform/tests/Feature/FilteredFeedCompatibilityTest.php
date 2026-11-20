@@ -28,6 +28,7 @@ use PHPUnit\Framework\Attributes\Group;
 #[Group('EVT-02')]
 #[Group('EVT-06')]
 #[Group('pg')]
+#[Group('pg-serial')]
 final class FilteredFeedCompatibilityTest extends OutboxTestCase
 {
     public function test_original_v1_selection_does_not_grow_after_v2_registration(): void

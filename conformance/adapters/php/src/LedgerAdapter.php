@@ -270,6 +270,7 @@ final class LedgerAdapter
             restore_exception_handler();
         }
         $output = new BufferedOutput;
+        TestEnvironment::noteMigrationRun();
         if ($app->make(Kernel::class)->call('packman:schema:migrate', ['--scope' => 'central', '--database' => 'billium_owner', '--modules' => true, '--force' => true], $output) !== 0) {
             throw new LogicException('Ledger migrations failed: '.$output->fetch());
         }
@@ -292,28 +293,7 @@ final class LedgerAdapter
         $this->setCaller($this->callerInput);
         $owner = $app['db']->connection('billium_owner');
         // D50: committed fixtures, no RefreshDatabase transaction. Never truncate host tables.
-        $owner->unprepared(<<<'SQL'
-            DO $$
-            DECLARE
-                r record;
-                has_rows boolean;
-                non_empty_tables text[] := ARRAY[]::text[];
-            BEGIN
-                FOR r IN SELECT tablename FROM pg_tables
-                    WHERE schemaname = 'public' AND starts_with(tablename, 'billium_')
-                      AND tablename <> 'billium_event_contract'
-                    ORDER BY tablename
-                LOOP
-                    EXECUTE format('SELECT EXISTS (SELECT 1 FROM public.%I LIMIT 1)', r.tablename) INTO has_rows;
-                    IF has_rows THEN
-                        non_empty_tables := array_append(non_empty_tables, format('public.%I', r.tablename));
-                    END IF;
-                END LOOP;
-                IF cardinality(non_empty_tables) > 0 THEN
-                    EXECUTE 'TRUNCATE ' || array_to_string(non_empty_tables, ', ') || ' RESTART IDENTITY CASCADE';
-                END IF;
-            END $$
-            SQL);
+        TestEnvironment::truncateBilliumTables($owner->getPdo());
         $contractsIntact = $owner->scalar(<<<'SQL'
             SELECT (SELECT count(*) FROM public.billium_event_contract) = 7 AND NOT EXISTS (
                 SELECT 1 FROM public.billium_event_contract

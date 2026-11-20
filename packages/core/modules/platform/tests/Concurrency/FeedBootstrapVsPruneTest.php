@@ -12,6 +12,7 @@ use PHPUnit\Framework\Attributes\Group;
 
 #[Group('EVT-05')]
 #[Group('pg')]
+#[Group('pg-serial')]
 final class FeedBootstrapVsPruneTest extends OutboxTestCase
 {
     public function test_snapshot_overlap_with_a_horizon_delayed_tail_preserves_economic_identity(): void

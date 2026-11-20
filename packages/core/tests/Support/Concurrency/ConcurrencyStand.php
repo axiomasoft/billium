@@ -34,11 +34,13 @@ final class ConcurrencyStand
         $children = [];
         $deadline = microtime(true) + $timeoutSeconds;
         try {
+            $environment = getenv();
+            $environment['DB_DATABASE'] = TestEnvironment::databaseName();
             for ($index = 0; $index < $workers; $index++) {
                 $process = proc_open([
                     PHP_BINARY, $root.'/packages/core/tests/Support/Concurrency/bin/worker.php',
                     $scenario, (string) $index, $arguments, (string) $key,
-                ], [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, $root);
+                ], [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, $root, $environment);
                 if ($process === false) {
                     throw new RuntimeException("Unable to start worker {$index}");
                 }

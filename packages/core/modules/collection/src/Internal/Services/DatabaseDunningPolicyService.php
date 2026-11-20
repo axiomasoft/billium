@@ -36,6 +36,7 @@ use Billium\Core\Exceptions\Runner\LockPlanChanged;
 use DateTimeImmutable;
 use DateTimeZone;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\UniqueConstraintViolationException;
 use LogicException;
 use Override;
 use Packman\Attributes\Internal;
@@ -381,33 +382,38 @@ final readonly class DatabaseDunningPolicyService implements DunningPolicyServic
                     : RowCast::integer($latest->owner_revision, 'owner_revision') + 1;
                 $now = RowCast::formatUtc(new DateTimeImmutable('now', new DateTimeZone('UTC')));
 
-                $inserted = $db->selectOne(
-                    <<<'SQL'
-                    INSERT INTO public.billium_collection_recurring_owner (
-                        seller_ref, environment, agreement_ref, component_ref,
-                        owner_mode, owner_ref, owner_revision, status, retired_reason,
-                        config_digest, recorded_at, updated_at
-                    ) VALUES (
-                        ?, ?, ?, ?,
-                        ?, ?, ?, 'active', NULL,
-                        ?, ?, ?
-                    )
-                    ON CONFLICT (seller_ref, environment, component_ref) WHERE status = 'active' DO NOTHING
-                    RETURNING id
-                    SQL,
-                    [
-                        $caller->sellerRef,
-                        $caller->environment,
-                        $command->agreementRef,
-                        $command->componentRef,
-                        $command->ownerMode->value,
-                        $command->ownerRef,
-                        $nextRevision,
-                        $configDigest,
-                        $now,
-                        $now,
-                    ],
-                );
+                try {
+                    $inserted = $db->selectOne(
+                        <<<'SQL'
+                        INSERT INTO public.billium_collection_recurring_owner (
+                            seller_ref, environment, agreement_ref, component_ref,
+                            owner_mode, owner_ref, owner_revision, status, retired_reason,
+                            config_digest, recorded_at, updated_at
+                        ) VALUES (
+                            ?, ?, ?, ?,
+                            ?, ?, ?, 'active', NULL,
+                            ?, ?, ?
+                        )
+                        ON CONFLICT (seller_ref, environment, component_ref) WHERE status = 'active' DO NOTHING
+                        RETURNING id
+                        SQL,
+                        [
+                            $caller->sellerRef,
+                            $caller->environment,
+                            $command->agreementRef,
+                            $command->componentRef,
+                            $command->ownerMode->value,
+                            $command->ownerRef,
+                            $nextRevision,
+                            $configDigest,
+                            $now,
+                            $now,
+                        ],
+                    );
+                } catch (UniqueConstraintViolationException) {
+                    // The revision key can lose the race when the partial active index does not.
+                    $inserted = null;
+                }
 
                 if (! $inserted instanceof stdClass) {
                     $racedActive = $db->table('billium_collection_recurring_owner')

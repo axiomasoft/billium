@@ -71,6 +71,8 @@ layer_php() {
         [[ -f "$manifest" ]] || fail "php: missing manifest $manifest"
         composer validate --strict "$manifest"
     done
+    mkdir -p build/phpstan build/rector .phpunit.cache
+    chmod -R a+rwX build .phpunit.cache
     vendor/bin/pint --test
     vendor/bin/phpstan analyse --memory-limit=1G
     vendor/bin/rector process --dry-run
@@ -81,10 +83,12 @@ layer_php() {
     php vendor/bin/packman ai:sync --dry-run
     need_path scripts/db/preflight.php
     PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 php scripts/db/preflight.php
+    PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 php scripts/db/prepare-worker-template.php
     python3 -m unittest discover -s scripts/lint/tests -p test_test_discovery.py
     python3 scripts/lint/test-discovery.py
     vendor/bin/pest --exclude-group=pg
-    PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 vendor/bin/pest --group=pg
+    PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 vendor/bin/pest --group=pg --exclude-group=pg-serial --parallel --processes=8
+    PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 vendor/bin/pest --group=pg-serial
     need_path scripts/smoke/consumer-install.sh
     bash scripts/smoke/consumer-install.sh php
 }
