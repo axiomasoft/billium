@@ -117,13 +117,8 @@ final class PanCvvGuard
         if (in_array($normalized, self::normalizedForbiddenKeys(), true)) {
             return true;
         }
-        foreach (self::FORBIDDEN_KEY_SUFFIXES as $suffix) {
-            if (str_ends_with($normalized, $suffix)) {
-                return true;
-            }
-        }
 
-        return false;
+        return array_any(self::FORBIDDEN_KEY_SUFFIXES, fn (string $suffix): bool => str_ends_with($normalized, $suffix));
     }
 
     private static function normalizeKey(string $key): string
@@ -135,7 +130,7 @@ final class PanCvvGuard
     private static function normalizedForbiddenKeys(): array
     {
         return array_map(
-            static fn (string $key): string => self::normalizeKey($key),
+            self::normalizeKey(...),
             self::FORBIDDEN_KEYS,
         );
     }
