@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Billium\Core\Laravel\Registrars;
 
+use Billium\Collection\Contracts\CollectionConsentGuard;
+use Billium\Collection\Laravel\CollectionCapabilities;
 use Billium\Contracts\Errors\BilliumProblemDefinitions;
 use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Contracts\Modules\ModuleAdmissionGate;
@@ -28,6 +30,7 @@ use Billium\Core\Internal\Runner\UnboundFinancialAuthorityEvidence;
 use Billium\Core\Internal\Runner\UnboundSessionAdmission;
 use Billium\Core\Internal\Runtime\PaymentObservationCommandReceiver;
 use Billium\Core\Internal\Runtime\TransportObservationContext;
+use Billium\Core\Plugins\CollectionPlugin;
 use Billium\Core\Plugins\DocumentsPlugin;
 use Billium\Core\Plugins\ExecutionPlugin;
 use Billium\Core\Plugins\LedgerPlugin;
@@ -144,6 +147,7 @@ final class BilliumCoreRegistrar implements PackageRegistrar
             SchedulePlugin::class,
             RatingPlugin::class,
             DocumentsPlugin::class,
+            CollectionPlugin::class,
         );
 
         ExtensionRegistrar::addActivationGate($app, BilliumPluginActivationGate::class);
@@ -157,6 +161,7 @@ final class BilliumCoreRegistrar implements PackageRegistrar
             'axiomasoft.billium.schedule' => SchedulePlugin::class,
             'axiomasoft.billium.rating' => RatingPlugin::class,
             'axiomasoft.billium.documents' => DocumentsPlugin::class,
+            'axiomasoft.billium.collection' => CollectionPlugin::class,
         ];
         foreach ($plugins as $pluginClass) {
             $app->singletonIf($pluginClass);
@@ -187,6 +192,9 @@ final class BilliumCoreRegistrar implements PackageRegistrar
                 }
                 if (self::hasCustomPort($app, DocumentTaxSnapshotPort::class, DocumentsCapabilities::unboundTaxSnapshotPort())) {
                     $ports[] = 'TaxSnapshotPort';
+                }
+                if (self::hasCustomPort($app, CollectionConsentGuard::class, CollectionCapabilities::unboundConsentGuard())) {
+                    $ports[] = 'CollectionConsentGuard';
                 }
 
                 // Report configured bindings without resolving host services or performing qualification I/O.

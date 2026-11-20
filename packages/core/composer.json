@@ -13,6 +13,7 @@
         "laravel/framework": "^13.0"
     },
     "replace": {
+        "axiomasoft/billium-collection": "self.version",
         "axiomasoft/billium-documents": "self.version",
         "axiomasoft/billium-execution": "self.version",
         "axiomasoft/billium-ledger": "self.version",
@@ -30,7 +31,8 @@
             "Billium\\Rating\\": "modules/rating/src/",
             "Billium\\Schedule\\": "modules/schedule/src/",
             "Billium\\Documents\\": "modules/documents/src/",
-            "Billium\\Execution\\": "modules/execution/src/"
+            "Billium\\Execution\\": "modules/execution/src/",
+            "Billium\\Collection\\": "modules/collection/src/"
         },
         "files": [
             "src/aliases.php"

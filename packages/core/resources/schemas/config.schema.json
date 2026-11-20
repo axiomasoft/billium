@@ -6,6 +6,16 @@
         "billium": {
             "type": "object",
             "properties": {
+                "collection": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    },
+                    "additionalProperties": false
+                },
                 "connection": {
                     "type": [
                         "string",

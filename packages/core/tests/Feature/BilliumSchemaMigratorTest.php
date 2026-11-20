@@ -41,6 +41,7 @@ final class BilliumSchemaMigratorTest extends DatabaseTestCase
             'rating' => SchemaLifecycle::Module,
             'documents' => SchemaLifecycle::Module,
             'execution' => SchemaLifecycle::Module,
+            'collection' => SchemaLifecycle::Module,
         ];
 
         foreach ($lifecycles as $module => $lifecycle) {

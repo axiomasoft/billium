@@ -1,4 +1,5 @@
 [
+  "billium.collection.enabled",
   "billium.connection",
   "billium.documents.enabled",
   "billium.execution.outgoing_enabled",

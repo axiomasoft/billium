@@ -33,6 +33,7 @@ abstract class DatabaseTestCase extends TestCase
         'rating' => 'axiomasoft/billium-core:billium-rating',
         'documents' => 'axiomasoft/billium-core:billium-documents',
         'execution' => 'axiomasoft/billium-core:billium-execution',
+        'collection' => 'axiomasoft/billium-core:billium-collection',
     ];
 
     protected function getPackageProviders($app): array

@@ -4133,6 +4133,13 @@
     },
     {
       "kind": "config-key",
+      "id": "billium.collection.enabled",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/config/billium.php"
+    },
+    {
+      "kind": "config-key",
       "id": "billium.connection",
       "status": "new",
       "since": "2026-10",
@@ -4942,6 +4949,13 @@
       "status": "new",
       "since": "2026-10",
       "source": "packages/core/database/migrations/execution/2026_11_19_000034_create_billium_fiscal_tables.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_20_000001_create_billium_collection_consent_tables",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/collection/2026_11_20_000001_create_billium_collection_consent_tables.php"
     },
     {
       "kind": "migration",

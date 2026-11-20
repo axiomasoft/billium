@@ -1,0 +1,37 @@
+{
+    "name": "axiomasoft/billium-collection",
+    "description": "Billium Collection module: versioned ConsentBinding proofs, saved-method capability validation, durable consent/cancellation guards, and customer-action receipts.",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.4",
+        "axiomasoft/billium-contracts": "^0.1",
+        "axiomasoft/billium-core": "^0.1",
+        "axiomasoft/billium-execution": "^0.1",
+        "axiomasoft/billium-ledger": "^0.1",
+        "axiomasoft/billium-platform": "^0.1",
+        "axiomasoft/packman": "^0.1",
+        "laravel/framework": "^13.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Billium\\Collection\\": "src/"
+        }
+    },
+    "extra": {
+        "packman": {
+            "schema-version": 1,
+            "package-type": "domain",
+            "stability": "dev",
+            "owns": [
+                "Contracts",
+                "Data",
+                "Enums",
+                "Internal",
+                "Laravel"
+            ]
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

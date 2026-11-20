@@ -62,7 +62,7 @@
             "dist": {
                 "type": "path",
                 "url": "packages/core",
-                "reference": "f3db5937cb012f55bb5cc791162840a311b4ef95"
+                "reference": "287dc8f2616c511615419919bc135b72dd16addc"
             },
             "require": {
                 "axiomasoft/billium-contracts": "^0.1",
@@ -74,6 +74,7 @@
                 "php": "^8.4"
             },
             "replace": {
+                "axiomasoft/billium-collection": "self.version",
                 "axiomasoft/billium-documents": "self.version",
                 "axiomasoft/billium-execution": "self.version",
                 "axiomasoft/billium-ledger": "self.version",
@@ -119,7 +120,8 @@
                     "Billium\\Rating\\": "modules/rating/src/",
                     "Billium\\Schedule\\": "modules/schedule/src/",
                     "Billium\\Documents\\": "modules/documents/src/",
-                    "Billium\\Execution\\": "modules/execution/src/"
+                    "Billium\\Execution\\": "modules/execution/src/",
+                    "Billium\\Collection\\": "modules/collection/src/"
                 },
                 "files": [
                     "src/aliases.php"
@@ -6304,7 +6306,7 @@
             "dist": {
                 "type": "path",
                 "url": "packages/testkit",
-                "reference": "378f872ab691c1e19f3e2b354c498aed84c72dc2"
+                "reference": "30d5324bf1365a967bdebc169d0d4035ac9ae44f"
             },
             "require": {
                 "axiomasoft/billium-contracts": "^0.1",
@@ -6324,8 +6326,10 @@
                     "dev_only": true,
                     "stability": "dev",
                     "owns": [
+                        "Accounting",
                         "Documents",
                         "Drivers",
+                        "Fiscal",
                         "Fixtures",
                         "Oracles",
                         "Restore"

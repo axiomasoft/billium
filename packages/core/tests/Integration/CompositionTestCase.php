@@ -37,7 +37,7 @@ abstract class CompositionTestCase extends TestCase
         TestEnvironment::configure($app);
         $config = $app->make(Repository::class);
         $config->set('billium.modules.enabled', $this->modules());
-        foreach (['usage', 'rating', 'schedule', 'documents'] as $module) {
+        foreach (['usage', 'rating', 'schedule', 'documents', 'collection'] as $module) {
             $config->set("billium.{$module}.enabled", in_array($module, $this->modules(), true));
         }
 
@@ -90,6 +90,7 @@ abstract class CompositionTestCase extends TestCase
             'rating' => 'axiomasoft/billium-core:billium-rating',
             'documents' => 'axiomasoft/billium-core:billium-documents',
             'execution' => 'axiomasoft/billium-core:billium-execution',
+            'collection' => 'axiomasoft/billium-core:billium-collection',
         ];
         $enabled = $this->application()->make(Repository::class)->get('billium.modules.enabled', $this->modules());
         /** @var list<string> $ids */

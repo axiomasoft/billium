@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Core;
 
+use Billium\Collection\Laravel\CollectionServiceProvider;
 use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Internal\Runtime\ExecutionCompositionGuard;
 use Billium\Core\Laravel\Registrars\BilliumCoreRegistrar;
@@ -32,12 +33,10 @@ final class BilliumCoreServiceProvider extends ServiceProvider
 
     /** @var array<string, class-string<ServiceProvider>> */
     private const array OPTIONAL_MODULES = [
-        'ledger' => LedgerServiceProvider::class,
-        'execution' => ExecutionServiceProvider::class,
-        'usage' => UsageServiceProvider::class,
-        'schedule' => ScheduleServiceProvider::class,
-        'rating' => RatingServiceProvider::class,
-        'documents' => DocumentsServiceProvider::class,
+        'ledger' => LedgerServiceProvider::class, 'execution' => ExecutionServiceProvider::class,
+        'usage' => UsageServiceProvider::class, 'schedule' => ScheduleServiceProvider::class,
+        'rating' => RatingServiceProvider::class, 'documents' => DocumentsServiceProvider::class,
+        'collection' => CollectionServiceProvider::class,
     ];
 
     #[Override]

@@ -208,6 +208,15 @@
                             "flags": 1
                         },
                         {
+                            "name": "collection",
+                            "type": "Billium\\Core\\Configuration\\OptionalModuleOptions",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": true,
+                            "default": "new \\Billium\\Core\\Configuration\\OptionalModuleOptions()",
+                            "flags": 1
+                        },
+                        {
                             "name": "execution",
                             "type": "Billium\\Core\\Configuration\\ExecutionOptions",
                             "by_reference": false,
@@ -7714,6 +7723,111 @@
             "enum_backing": null,
             "enum_cases": [],
             "spi_kind": "call"
+        },
+        "Billium\\Core\\Plugins\\CollectionPlugin": {
+            "kind": "class",
+            "layer": "api",
+            "since": "1.0",
+            "final": true,
+            "readonly": false,
+            "abstract": false,
+            "extends": [],
+            "implements": [
+                "Packman\\Plugins\\Contracts\\Registry\\ExtensionPlugin",
+                "Packman\\Extensions\\Contracts\\Composition\\WithCapabilities",
+                "Packman\\Extensions\\Contracts\\Persistence\\WithSchema"
+            ],
+            "uses": [
+                "Packman\\Extensions\\Concerns\\Persistence\\OwnsSchema",
+                "Packman\\Extensions\\Concerns\\Composition\\ProvidesCapabilities"
+            ],
+            "doc": [],
+            "methods": {
+                "definedCapabilities": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [],
+                    "return": "array",
+                    "doc": []
+                },
+                "manifest": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [],
+                    "return": "Packman\\Plugins\\Data\\Plugin\\PluginManifest",
+                    "doc": []
+                },
+                "migrationPath": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [],
+                    "return": "string",
+                    "doc": []
+                },
+                "providedCapabilities": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [],
+                    "return": "array",
+                    "doc": []
+                },
+                "register": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "registrar",
+                            "type": "Packman\\Plugins\\Laravel\\PluginRegistrar",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "void",
+                    "doc": []
+                },
+                "tableNouns": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [],
+                    "return": "array",
+                    "doc": []
+                },
+                "tablePrefix": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [],
+                    "return": "string",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": []
         },
         "Billium\\Core\\Plugins\\DocumentsPlugin": {
             "kind": "class",

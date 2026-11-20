@@ -15,6 +15,7 @@ parameters:
         - packages/core/modules/schedule/src
         - packages/core/modules/documents/src
         - packages/core/modules/execution/src
+        - packages/core/modules/collection/src
         - packages/testkit/src
     ignoreErrors:
         # JSON Schema keyword bounds (minLength, minimum, ...) are schema numbers, never money.

@@ -30,6 +30,7 @@
             <directory>packages/core/modules/schedule/src</directory>
             <directory>packages/core/modules/documents/src</directory>
             <directory>packages/core/modules/execution/src</directory>
+            <directory>packages/core/modules/collection/src</directory>
         </include>
     </source>
 

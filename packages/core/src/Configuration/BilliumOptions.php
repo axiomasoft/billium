@@ -32,6 +32,7 @@ final readonly class BilliumOptions implements OptionsFactory
         'rating',
         'schedule',
         'documents',
+        'collection',
         'execution',
     ];
 
@@ -51,6 +52,7 @@ final readonly class BilliumOptions implements OptionsFactory
         public OptionalModuleOptions $rating = new OptionalModuleOptions,
         public OptionalModuleOptions $schedule = new OptionalModuleOptions,
         public OptionalModuleOptions $documents = new OptionalModuleOptions,
+        public OptionalModuleOptions $collection = new OptionalModuleOptions,
         public ExecutionOptions $execution = new ExecutionOptions,
     ) {}
 
@@ -77,6 +79,7 @@ final readonly class BilliumOptions implements OptionsFactory
         $rating = OptionalModuleOptions::fromSection($config['rating'] ?? [], $path.'.rating', $validator);
         $schedule = OptionalModuleOptions::fromSection($config['schedule'] ?? [], $path.'.schedule', $validator);
         $documents = OptionalModuleOptions::fromSection($config['documents'] ?? [], $path.'.documents', $validator);
+        $collection = OptionalModuleOptions::fromSection($config['collection'] ?? [], $path.'.collection', $validator);
         $execution = ExecutionOptions::fromSection($config['execution'] ?? [], $path.'.execution', $validator);
 
         $validator->failIfAny();
@@ -97,6 +100,7 @@ final readonly class BilliumOptions implements OptionsFactory
             rating: $rating,
             schedule: $schedule,
             documents: $documents,
+            collection: $collection,
             execution: $execution,
         );
     }
@@ -112,6 +116,7 @@ final readonly class BilliumOptions implements OptionsFactory
             'rating' => $this->rating->enabled,
             'schedule' => $this->schedule->enabled,
             'documents' => $this->documents->enabled,
+            'collection' => $this->collection->enabled,
             default => true,
         };
     }

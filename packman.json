@@ -150,6 +150,21 @@
             ]
         },
         {
+            "name": "axiomasoft/billium-collection",
+            "path": "packages/core/modules/collection",
+            "namespace": "Billium\\Collection\\",
+            "profile": "laravel-package",
+            "layer": "L2",
+            "type": "domain",
+            "owns": [
+                "Contracts",
+                "Data",
+                "Enums",
+                "Internal",
+                "Laravel"
+            ]
+        },
+        {
             "name": "axiomasoft/billium-testkit",
             "path": "packages/testkit",
             "namespace": "Billium\\Testkit\\",
