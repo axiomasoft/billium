@@ -18,10 +18,10 @@ use RuntimeException;
 
 #[Group('ACC-RST-06')]
 #[Group('pg')]
-#[Group('pg-serial')]
 final class FeedPruneBootstrapTest extends OutboxTestCase
 {
     #[Group('PB-23')]
+    #[Group('pg-serial')]
     public function test_pruned_old_cursor_requires_bootstrap_and_retains_the_complete_tail(): void
     {
         $selection = $this->selection();
@@ -45,6 +45,7 @@ final class FeedPruneBootstrapTest extends OutboxTestCase
         self::assertSame(60, count($bootstrap->snapshots['ledger.obligations']) + count($tail->events));
     }
 
+    #[Group('pg-serial')]
     public function test_prune_works_in_bounded_batches_and_stops_at_the_first_blocked_row(): void
     {
         $this->events(20);
@@ -67,6 +68,7 @@ final class FeedPruneBootstrapTest extends OutboxTestCase
         new OutboxPruner($this->owner(), 0, 0)->prune();
     }
 
+    #[Group('pg-serial')]
     public function test_closing_a_required_feed_releases_the_prune_pin_and_cannot_be_undone(): void
     {
         $selection = $this->selection(required: true);
@@ -101,6 +103,7 @@ final class FeedPruneBootstrapTest extends OutboxTestCase
         self::assertInstanceOf(FeedSelection::class, $this->selection(required: true));
     }
 
+    #[Group('pg-serial')]
     public function test_failed_snapshot_releases_its_pin(): void
     {
         $selection = $this->selection();
@@ -119,6 +122,7 @@ final class FeedPruneBootstrapTest extends OutboxTestCase
         self::assertSame(2, $this->pruner()->prune(), 'a failed snapshot must not block prune until the lease runs out');
     }
 
+    #[Group('pg-serial')]
     public function test_no_retention_floor_refuses_and_undelivered_work_blocks_the_prefix(): void
     {
         $command = $this->artisan('billium:outbox:prune');
@@ -130,6 +134,7 @@ final class FeedPruneBootstrapTest extends OutboxTestCase
         self::assertSame(2, $this->rows('billium_outbox_event'));
     }
 
+    #[Group('pg-serial')]
     public function test_required_consumer_floor_and_active_bootstrap_pin_are_respected(): void
     {
         $selection = $this->selection(required: true);

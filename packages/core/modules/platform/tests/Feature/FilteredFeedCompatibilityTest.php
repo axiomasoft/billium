@@ -28,9 +28,9 @@ use PHPUnit\Framework\Attributes\Group;
 #[Group('EVT-02')]
 #[Group('EVT-06')]
 #[Group('pg')]
-#[Group('pg-serial')]
 final class FilteredFeedCompatibilityTest extends OutboxTestCase
 {
+    #[Group('pg-serial')]
     public function test_original_v1_selection_does_not_grow_after_v2_registration(): void
     {
         $selection = $this->selection(PublicEventDeclaration::STRICT_V1_TYPES);
@@ -44,6 +44,7 @@ final class FilteredFeedCompatibilityTest extends OutboxTestCase
         self::assertSame('billium.event.v1', $page->events[0]['schema']);
     }
 
+    #[Group('pg-serial')]
     public function test_unselected_empty_pages_advance_over_every_scanned_physical_row(): void
     {
         $selection = $this->selection();
@@ -62,6 +63,7 @@ final class FilteredFeedCompatibilityTest extends OutboxTestCase
         self::assertFalse($third->hasMore);
     }
 
+    #[Group('pg-serial')]
     public function test_changed_type_set_catalog_subscription_or_signature_cannot_reuse_a_cursor(): void
     {
         $old = $this->selection();
@@ -91,6 +93,7 @@ final class FilteredFeedCompatibilityTest extends OutboxTestCase
         $this->feed()->read($old);
     }
 
+    #[Group('pg-serial')]
     public function test_lower_xid_commit_is_not_skipped_even_when_its_identity_is_higher(): void
     {
         $selection = $this->selection();
@@ -120,6 +123,7 @@ final class FilteredFeedCompatibilityTest extends OutboxTestCase
         self::assertCount(1, $second->events);
     }
 
+    #[Group('pg-serial')]
     public function test_v2_fact_is_negotiated_and_same_revision_with_changed_payload_conflicts(): void
     {
         $old = $this->selection(PublicEventDeclaration::STRICT_V1_TYPES);
@@ -150,6 +154,7 @@ final class FilteredFeedCompatibilityTest extends OutboxTestCase
         }
     }
 
+    #[Group('pg-serial')]
     public function test_registered_event_is_wire_valid_before_content_or_deliveries_commit(): void
     {
         $contract = $this->registerExecutionWriter();

@@ -26,9 +26,9 @@ use PHPUnit\Framework\Attributes\TestWith;
 
 #[Group('EVT-03')]
 #[Group('pg')]
-#[Group('pg-serial')]
 final class CommandPublicLaneTest extends OutboxTestCase
 {
+    #[Group('pg-serial')]
     public function test_command_and_fact_share_root_tx_but_only_the_fact_enters_the_public_feed(): void
     {
         $this->declareCommand('ledger.test.v1');

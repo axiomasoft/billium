@@ -17,7 +17,6 @@ use LogicException;
 use PHPUnit\Framework\Attributes\Group;
 
 #[Group('pg')]
-#[Group('pg-serial')]
 final class LedgerSnapshotSourceTest extends QueryTestCase
 {
     public function test_snapshot_keeps_pending_actual_refund_children_and_discrepancy_evidence(): void
@@ -51,6 +50,7 @@ final class LedgerSnapshotSourceTest extends QueryTestCase
         self::assertSame('op-1', $discrepancy['operationRef']);
     }
 
+    #[Group('pg-serial')]
     public function test_feed_bootstrap_contains_ledger_state_receipts_and_stable_revisions_then_tails(): void
     {
         $this->seedQueryState();
@@ -91,6 +91,7 @@ final class LedgerSnapshotSourceTest extends QueryTestCase
     }
 
     #[Group('PB-23')]
+    #[Group('pg-serial')]
     public function test_a_refund_only_revision_after_bootstrap_emits_one_payment_event_and_replay_emits_none(): void
     {
         $this->debt('o1', 10000);
