@@ -19,6 +19,7 @@ use Billium\Core\Data\Runtime\FinancialScope;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Execution\Contracts\CollectionCancellationParticipant;
+use Billium\Execution\Contracts\CollectionOriginLookup;
 use Billium\Execution\Contracts\ExecutionOriginResolver;
 use Billium\Execution\Contracts\ExecutionStore;
 use Billium\Execution\Contracts\MerchantRegistry;
@@ -28,6 +29,7 @@ use Billium\Execution\Data\AdmissionPlan;
 use Billium\Execution\Data\ExecutionReceipt;
 use Billium\Execution\Data\ExecutionScope;
 use Billium\Execution\Data\FrozenBinding;
+use Billium\Execution\Data\OriginDecision;
 use Billium\Execution\Enums\EffectKind;
 use Billium\Execution\Enums\ExecutionPhase;
 use Billium\Execution\Enums\NamespaceState;
@@ -43,7 +45,7 @@ final readonly class RootPayments implements RootPaymentCommands
     public function __construct(private OperationRunner $runner, private CallerContext $callers, private ExecutionStore $store,
         private Closure $origins, private MerchantRegistry $merchants, private QualifiedAdapter $adapters,
         private CollectionChecks $collection, private AdmitRoot $admission, private TransportBoundary $boundary,
-        private ExecutionReadinessGuard $readiness, private CommandInputReplay $inputReplay, private ?CollectionCancellationParticipant $cancellation = null) {}
+        private ExecutionReadinessGuard $readiness, private CommandInputReplay $inputReplay, private ?CollectionCancellationParticipant $cancellation = null, private ?CollectionOriginLookup $collectionOrigins = null) {}
 
     public function admit(ExecutionScope $scope, ExecutePayment|AuthorizePayment $command): StoredOutcome
     {
@@ -115,7 +117,7 @@ final readonly class RootPayments implements RootPaymentCommands
                 throw new ProblemException(ProblemCode::KeyExpired, 'The closed business namespace has no retained original identity');
             }
         }
-        $origin = $existing === null ? ($this->origins)()->resolve($scope, $wire->operationRef, $intent)
+        $origin = $existing === null ? $this->origin($scope, $wire, $intent)
             : ($existing->binding->origin ?? throw new ProblemException(ProblemCode::RecoveryRequired, 'Stored original has no verified commercial basis'));
         if (get_object_vars($origin->scope) !== get_object_vars($scope) || $origin->operationRef !== $wire->operationRef || $origin->businessIntentRef !== $wire->source->intentRef
             || $origin->sourceContext !== $wire->source->context || $origin->executionProfile !== $wire->executionProfile || $origin->routingEpoch !== $wire->routingEpoch) {
@@ -156,6 +158,19 @@ final readonly class RootPayments implements RootPaymentCommands
             originalExecutionBindingRef: $binding->rootOperationRef);
 
         return $this->runner->run($spec, fn (TransactionContext $ctx): ExecutionReceipt => $this->admission->apply($ctx, $plan, $existing !== null));
+    }
+
+    private function origin(ExecutionScope $scope, ExecutePayment|AuthorizePayment $command, string $intent): OriginDecision
+    {
+        $collection = $this->collectionOrigins?->findOrigin($scope, $command->operationRef, $intent);
+        if ($collection !== null) {
+            return $collection;
+        }
+        if ($this->sourceContext($command) === CollectionOriginLookup::SOURCE_CONTEXT) {
+            throw new ProblemException(ProblemCode::RecoveryRequired, 'Collection command has no registered original authorization');
+        }
+
+        return ($this->origins)()->resolve($scope, $command->operationRef, $intent);
     }
 
     public function cancel(ExecutionScope $scope, CancelOperation $command): StoredOutcome

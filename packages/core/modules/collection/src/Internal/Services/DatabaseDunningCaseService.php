@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Billium\Collection\Internal\Services;
 
+use Billium\Collection\Contracts\ConsentBindingService;
 use Billium\Collection\Contracts\DunningCaseService;
+use Billium\Collection\Data\AuthorizeCollection;
 use Billium\Collection\Data\CollectionStepView;
 use Billium\Collection\Data\DunningCasePolicyMigrationView;
 use Billium\Collection\Data\DunningCaseTransitionResult;
@@ -32,11 +34,13 @@ use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Data\Runner\LockRequest;
 use Billium\Core\Data\Runner\OperationSpec;
+use Billium\Core\Data\Runtime\FinancialScope;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Core\Enums\Runner\LockRank;
 use Billium\Core\Enums\Runner\LockScope;
 use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Exceptions\Runner\LockPlanChanged;
+use Billium\Platform\Contracts\Idempotency\IdempotencyReceiptQueries;
 use DateTimeImmutable;
 use DateTimeZone;
 use Illuminate\Database\Connection;
@@ -61,6 +65,10 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
         private OperationRunner $runner,
         private CallerContext $callers,
         private BilliumOptions $options,
+        private CollectionAdmission $admission,
+        private ConsentBindingService $consents,
+        private DatabaseCollectionParticipants $participants,
+        private IdempotencyReceiptQueries $receipts,
     ) {}
 
     #[Override]
@@ -534,6 +542,17 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
     #[Override]
     public function planStep(PlanCollectionStep $command): CollectionStepView
     {
+        return $this->createStep($command, null);
+    }
+
+    #[Override]
+    public function authorizeCollection(AuthorizeCollection $command): CollectionStepView
+    {
+        return $this->createStep($command->step, $command);
+    }
+
+    private function createStep(PlanCollectionStep $command, ?AuthorizeCollection $authorization): CollectionStepView
+    {
         $this->assertOutsideTransaction();
         $caller = $this->callers->current();
         RowCast::assertScope($caller, $command->scope);
@@ -555,6 +574,13 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
             throw new ProblemException(ProblemCode::ValidationInvalid, 'expectedCaseRevision must be >= 1');
         }
 
+        $executionScope = $authorization?->executionScope;
+        $authorizationRef = $command->stepAuthorizationRef;
+        if ($authorization !== null && $authorizationRef === null) {
+            $authorizationRef = 'collection:'.hash('sha256', CanonicalJson::encode([
+                $caller->installationRef, $caller->sellerRef, $caller->environment, $command->caseRef, $command->stepNo,
+            ]));
+        }
         $stepDigest = CanonicalJson::digest([
             'sellerRef' => $caller->sellerRef,
             'environment' => $caller->environment,
@@ -564,13 +590,30 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
             'businessPaymentIntentRef' => $command->businessPaymentIntentRef,
             'operationRef' => $command->operationRef,
             'stepAuthorizationRef' => $command->stepAuthorizationRef,
-            'amountMinor' => $command->amountMinor,
+            'amountMinor' => $authorization === null ? $command->amountMinor : (string) $command->amountMinor,
             'scheduledAt' => RowCast::formatUtc($command->scheduledAt),
-        ]);
+        ] + ($authorization === null ? [] : [
+            'executionScope' => $executionScope,
+            'executionProfile' => $authorization->executionProfile,
+            'routingEpoch' => $authorization->routingEpoch,
+            'consentRef' => $authorization->consentRef,
+            'consentVersion' => $authorization->consentVersion,
+            'expectedCaseRevision' => $command->expectedCaseRevision,
+        ]));
 
-        $outcome = $this->runner->run(
+        $kind = $authorization === null ? 'collection.step.plan.v1' : 'collection.authorize.v1';
+        $financialScope = $authorization === null ? null : new FinancialScope($authorization->executionScope->installationRef,
+            $authorization->executionScope->sellerRef, $authorization->executionScope->environment,
+            $authorization->executionScope->intentOwnerNamespace, $authorization->executionProfile);
+        $cached = $financialScope === null ? null : $this->receipts->byCommandKey($financialScope, $kind, $command->commandKey);
+        if ($cached !== null && $cached->inputDigest !== $stepDigest) {
+            throw new ProblemException(ProblemCode::IdempotencyConflict, 'Collection command key has different terms');
+        }
+        $prepared = $authorization === null || $cached !== null ? null : $this->admission->prepare($caller, $authorization);
+
+        $outcome = ($cached->outcome ?? $this->runner->run(
             spec: new OperationSpec(
-                commandKind: 'collection.step.plan.v1',
+                commandKind: $kind,
                 sellerRef: $caller->sellerRef,
                 environment: $caller->environment,
                 mode: FinancialMode::Active,
@@ -578,9 +621,11 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
                 modules: self::COLLECTION_MODULES,
                 commandKey: $command->commandKey,
                 digest: $stepDigest,
-                commitKind: 'collection.step.plan',
+                commitKind: $authorization === null ? 'collection.step.plan' : 'collection.authorize',
+                financialScope: $financialScope,
+                inputDigest: $authorization === null ? null : $stepDigest,
             ),
-            body: function (TransactionContext $context) use ($caller, $command, $stepDigest): CollectionReceipt {
+            body: function (TransactionContext $context) use ($caller, $command, $stepDigest, $authorization, $authorizationRef, $prepared): CollectionReceipt {
                 $this->runner->assertCurrent($context, 'collection');
                 $db = $this->databases->connection($context->connectionName());
 
@@ -594,6 +639,12 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
                     throw new ProblemException(ProblemCode::ReferenceUnknown, 'billium.collection.dunning_case_not_found');
                 }
 
+                $recurringOwnerId = null;
+                if ($authorization !== null && $prepared !== null) {
+                    $this->admission->lockMerchant($context, $authorization, $prepared['merchant']);
+                    $this->consents->lockGuard($context, $command->scope, $authorization->consentRef);
+                    $recurringOwnerId = $this->lockCollectionOwner($context, $db, $prepared['componentRef']);
+                }
                 $caseId = RowCast::integer($caseRow->id, 'id');
                 $locked = $context->lock(new LockRequest(
                     LockRank::DunningCase,
@@ -610,6 +661,10 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
                     ->where('id', $caseId)
                     ->first() ?? throw new LockPlanChanged('Dunning case missing after lock');
                 $case = DatabaseDunningQueries::hydrateCase($caseRow);
+                if ($prepared !== null && ($case->obligationRef !== $prepared['obligationRef']
+                    || ($case->componentRef !== null && $case->componentRef !== $prepared['componentRef']))) {
+                    throw new ProblemException(ProblemCode::AuthDenied, 'Collection case differs from the ledger obligation');
+                }
 
                 $existingByStepNo = $db->table('billium_collection_step')
                     ->where('dunning_case_id', $caseId)
@@ -621,7 +676,7 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
                         RowCast::str($existingByStepNo->step_ref, 'step_ref') === $command->stepRef
                         && RowCast::str($existingByStepNo->step_digest, 'step_digest') === $stepDigest
                     ) {
-                        return new CollectionReceipt('collection.step.planned', [
+                        return new CollectionReceipt($authorization === null ? 'collection.step.planned' : 'collection.step.authorized', [
                             'stepId' => RowCast::integer($existingByStepNo->id, 'id'),
                             'stepRef' => $command->stepRef,
                         ]);
@@ -724,17 +779,21 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
                 if ($stepDef === null) {
                     throw new ProblemException(ProblemCode::PolicyUnknown, 'billium.collection.policy_step_not_defined');
                 }
-                if ($command->amountMinor > $case->currentOpenMinor) {
+                $amount = $command->amountMinor;
+                if ($authorization !== null && $prepared !== null) {
+                    $amount = $this->admission->lockAndSize($context, $db, $authorization, $case, $stepDef->channel, $authorizationRef,
+                        $prepared['binding'], $prepared['merchant'], $prepared['host'], $prepared['componentRef']);
+                } elseif ($amount > $case->currentOpenMinor) {
                     throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.collection.amount_exceeds_open');
                 }
-                if ($policy->minOutstandingMinor > 0 && $command->amountMinor < $policy->minOutstandingMinor) {
+                if ($policy->minOutstandingMinor > 0 && $amount < $policy->minOutstandingMinor) {
                     throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.collection.below_outstanding_threshold');
                 }
                 if ($command->scheduledAt > $case->recoveryDeadlineAt) {
                     throw new ProblemException(ProblemCode::OperationFinancialHold, 'billium.collection.recovery_horizon_exceeded');
                 }
 
-                $now = RowCast::formatUtc(new DateTimeImmutable('now', new DateTimeZone('UTC')));
+                $now = RowCast::formatUtc(new DateTimeImmutable);
                 $scheduledAtUtc = RowCast::formatUtc($command->scheduledAt);
 
                 $inserted = $db->selectOne(
@@ -752,12 +811,13 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
                         ?, ?, ?, ?, ?, ?,
                         ?, ?, ?, ?,
                         ?, ?, ?,
-                        ?, ?, 'planned', 1,
+                        ?, ?, ?, 1,
                         0, ?, ?,
                         NULL, NULL, NULL,
                         ?, NULL, NULL,
                         ?, ?, ?
                     )
+                    ON CONFLICT DO NOTHING
                     RETURNING id
                     SQL,
                     [
@@ -773,9 +833,10 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
                         $stepDef->channel->value,
                         $command->businessPaymentIntentRef,
                         $command->operationRef,
-                        $command->stepAuthorizationRef,
+                        $authorizationRef,
                         $case->currency,
-                        $command->amountMinor,
+                        $amount,
+                        $authorization === null ? CollectionStepStatus::Planned->value : CollectionStepStatus::Authorized->value,
                         $policy->maxDeliveryRetries,
                         $priorStepId,
                         $scheduledAtUtc,
@@ -801,15 +862,21 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
                 }
 
                 if (! $inserted instanceof stdClass) {
-                    throw new LogicException('Collection step insert did not return an id');
+                    throw new ProblemException(ProblemCode::IdempotencyConflict, 'billium.collection.step_conflict');
                 }
 
-                return new CollectionReceipt('collection.step.planned', [
-                    'stepId' => RowCast::integer($inserted->id, 'id'),
+                $stepId = RowCast::integer($inserted->id, 'id');
+                if ($authorization !== null && $prepared !== null) {
+                    $this->admission->record($context, $db, $authorization, $case, $prepared['binding'], $prepared['merchant'], $authorizationRef, $stepId, $amount, $now,
+                        $recurringOwnerId ?? throw new LogicException('Collection authorization requires a locked recurring owner'), $prepared['componentRef']);
+                }
+
+                return new CollectionReceipt($authorization === null ? 'collection.step.planned' : 'collection.step.authorized', [
+                    'stepId' => $stepId,
                     'stepRef' => $command->stepRef,
                 ]);
             },
-        )->orThrow();
+        ))->orThrow();
 
         $stepId = RowCast::integer($outcome->body['stepId'] ?? null, 'stepId');
         $row = $this->databases->connection($this->options->connection)
@@ -1001,6 +1068,7 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
                 commandKey: $command->commandKey,
                 digest: $digest,
                 commitKind: 'collection.step.transition',
+                financialScope: $this->participants->transitionScope($command),
             ),
             body: function (TransactionContext $context) use ($caller, $command): CollectionReceipt {
                 $this->runner->assertCurrent($context, 'collection');
@@ -1051,6 +1119,8 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
                 if (! self::isValidStepTransition($step->status, $command->targetStatus)) {
                     throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.collection.step_transition_invalid');
                 }
+
+                $this->participants->checkTransition($context, $step, $command);
 
                 $now = RowCast::formatUtc(new DateTimeImmutable('now', new DateTimeZone('UTC')));
                 $occurredUtc = RowCast::formatUtc($command->occurredAt);
@@ -1299,6 +1369,26 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
         if ($updated !== 1) {
             throw new LockPlanChanged('Dunning case transition CAS failed');
         }
+    }
+
+    private function lockCollectionOwner(TransactionContext $ctx, Connection $db, string $componentRef): int
+    {
+        $caller = $ctx->caller();
+        $owner = $db->table('billium_collection_recurring_owner')->where('seller_ref', $caller->sellerRef)
+            ->where('environment', $caller->environment)->where('component_ref', $componentRef)
+            ->where('status', RecurringOwnerStatus::Active->value);
+        $id = $owner->value('id');
+        if ($id === null) {
+            throw new ProblemException(ProblemCode::OperationFinancialHold, 'Collection requires an active recurring owner');
+        }
+        $id = RowCast::integer($id, 'id');
+        $lock = new LockRequest(LockRank::DunningCase, 'billium_collection_recurring_owner', [$id], scope: LockScope::Seller,
+            segment: DatabaseDunningPolicyService::RECURRING_OWNER_LOCK_SEGMENT);
+        if ($ctx->lock($lock) !== [$id] || $owner->where('id', $id)->value('owner_mode') !== RecurringOwnerMode::BilliumScheduler->value) {
+            throw new ProblemException(ProblemCode::OperationFinancialHold, 'Billium does not own recurrence for this component');
+        }
+
+        return $id;
     }
 
     private static function stepDefinition(DunningPolicyView $policy, int $stepNo): ?DunningPolicyStepDefinition

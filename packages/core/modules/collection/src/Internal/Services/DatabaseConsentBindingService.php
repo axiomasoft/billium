@@ -838,7 +838,7 @@ final readonly class DatabaseConsentBindingService implements ConsentBindingServ
             if ($binding->capCurrency !== $request->currency) {
                 return $deny('cap_currency_mismatch');
             }
-            if ($request->periodCommittedMinor + $request->amountMinor > $binding->perPeriodCapMinor) {
+            if ($request->amountMinor > $binding->perPeriodCapMinor - $request->periodCommittedMinor) {
                 return $deny('per_period_cap_exceeded');
             }
         }

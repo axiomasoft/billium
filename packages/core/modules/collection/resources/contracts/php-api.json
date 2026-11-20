@@ -59,6 +59,58 @@
             "enum_cases": [],
             "spi_kind": "implement"
         },
+        "Billium\\Collection\\Contracts\\CollectionParticipants": {
+            "kind": "interface",
+            "layer": "spi",
+            "since": "1.0",
+            "final": false,
+            "readonly": false,
+            "abstract": false,
+            "extends": [
+                "Billium\\Execution\\Contracts\\CollectionCancellationParticipant",
+                "Billium\\Execution\\Contracts\\CollectionExecutionGuard",
+                "Billium\\Execution\\Contracts\\CollectionOriginLookup"
+            ],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "closeRevoked": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "scope",
+                            "type": "Billium\\Execution\\Data\\ExecutionScope",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "authorizationRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "string",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": [],
+            "spi_kind": "call"
+        },
         "Billium\\Collection\\Contracts\\ConsentBindingService": {
             "kind": "interface",
             "layer": "api",
@@ -529,6 +581,26 @@
             "uses": [],
             "doc": [],
             "methods": {
+                "authorizeCollection": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "command",
+                            "type": "Billium\\Collection\\Data\\AuthorizeCollection",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "Billium\\Collection\\Data\\CollectionStepView",
+                    "doc": []
+                },
                 "migrateCasePolicy": {
                     "visibility": "public",
                     "static": false,
@@ -1087,6 +1159,89 @@
                         }
                     ],
                     "return": "void",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": []
+        },
+        "Billium\\Collection\\Data\\AuthorizeCollection": {
+            "kind": "class",
+            "layer": "api",
+            "since": "1.0",
+            "final": true,
+            "readonly": true,
+            "abstract": false,
+            "extends": [],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "__construct": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "step",
+                            "type": "Billium\\Collection\\Data\\PlanCollectionStep",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "executionScope",
+                            "type": "Billium\\Execution\\Data\\ExecutionScope",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "consentRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "consentVersion",
+                            "type": "int",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "routingEpoch",
+                            "type": "int",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "executionProfile",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": true,
+                            "default": "'standalone-billium'",
+                            "flags": 1
+                        }
+                    ],
+                    "return": null,
                     "doc": []
                 }
             },

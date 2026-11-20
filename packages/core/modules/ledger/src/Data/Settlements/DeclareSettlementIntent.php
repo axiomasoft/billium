@@ -25,8 +25,12 @@ final readonly class DeclareSettlementIntent
         public string $currency,
         public array $obligationRefs,
         public string $policyVersion = 'pro_rata_open/1',
+        public ?int $requestedMinor = null,
     ) {
         self::validateTargets($obligationRefs);
+        if ($requestedMinor !== null && $requestedMinor <= 0) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'requested settlement amount must be positive');
+        }
     }
 
     /**

@@ -1455,14 +1455,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "collection",
-      "currentSchemaVersion": 2,
+      "currentSchemaVersion": 3,
       "supportedSchemaReadRange": {
-        "min": 2,
-        "max": 2
+        "min": 3,
+        "max": 3
       },
       "supportedSchemaWriteRange": {
-        "min": 2,
-        "max": 2
+        "min": 3,
+        "max": 3
       },
       "requiresModules": [
         {
@@ -1505,7 +1505,10 @@
         "billium_collection_recurring_owner",
         "billium_collection_dunning_case",
         "billium_collection_case_policy_migration",
-        "billium_collection_step"
+        "billium_collection_step",
+        "billium_collection_authorization",
+        "billium_collection_dispatch_permit",
+        "billium_collection_no_effect"
       ],
       "configKeys": [
         "billium.collection.enabled"
@@ -1520,6 +1523,11 @@
           "id": "2026_11_20_000002_create_billium_collection_policy_case_and_ownership_tables",
           "version": 2,
           "checksum": "sha256:bd3720a13134f75c6b22f6dfbaa58f20df6c3b5deedb4edfe16f9ad3475d10d9"
+        },
+        {
+          "id": "2026_11_20_000003_create_billium_collection_authorization",
+          "version": 3,
+          "checksum": "sha256:25c2ac76ff93cf5eb0ba69c58f611d92e1541bc662cdd3f916c3ddeec5eb826b"
         }
       ],
       "disablePolicy": {
@@ -1550,7 +1558,14 @@
       },
       "retentionClass": "financial-permanent",
       "publicEvents": [],
-      "internalCommands": []
+      "internalCommands": [
+        {
+          "commandType": "collection.execute.v1",
+          "commandSchema": "billium.command.v1",
+          "payloadSchemaRef": "packages/core/modules/collection/resources/contracts/execute-command.json",
+          "payloadSchemaDigest": "sha256:5806637c490adf62012f460f6e55676af8c08cd6fbbbe8bc1b5d142fb7fa400f"
+        }
+      ]
     }
   ]
 }

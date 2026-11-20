@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Collection\Contracts;
 
+use Billium\Collection\Data\AuthorizeCollection;
 use Billium\Collection\Data\CollectionStepView;
 use Billium\Collection\Data\DunningCasePolicyMigrationView;
 use Billium\Collection\Data\DunningCaseTransitionResult;
@@ -36,6 +37,9 @@ interface DunningCaseService
      * Refuses when a prior step is unknown (case parked) or in-flight, or when decline budget/policy does not permit it.
      */
     public function planStep(PlanCollectionStep $command): CollectionStepView;
+
+    /** D63/F04: commits the executable step, incoming reservation, settlement intent and command together. */
+    public function authorizeCollection(AuthorizeCollection $command): CollectionStepView;
 
     /**
      * Records a transport/command delivery retry against the step's distinct delivery retry budget,

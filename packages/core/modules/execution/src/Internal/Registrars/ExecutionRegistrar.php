@@ -20,6 +20,7 @@ use Billium\Execution\Contracts\CallbackCustody;
 use Billium\Execution\Contracts\CapacityParticipants;
 use Billium\Execution\Contracts\CollectionCancellationParticipant;
 use Billium\Execution\Contracts\CollectionExecutionGuard;
+use Billium\Execution\Contracts\CollectionOriginLookup;
 use Billium\Execution\Contracts\DispatchEgress;
 use Billium\Execution\Contracts\EvidenceReducer;
 use Billium\Execution\Contracts\ExecutionEvidenceQueries;
@@ -195,6 +196,7 @@ final class ExecutionRegistrar implements PackageRegistrar
             $app->make(ExecutionReadinessGuard::class),
             $app->make(CommandInputReplay::class),
             $app->bound(CollectionCancellationParticipant::class) ? $app->make(CollectionCancellationParticipant::class) : null,
+            $app->bound(CollectionOriginLookup::class) ? $app->make(CollectionOriginLookup::class) : null,
         ));
         $app->bind(AttemptWorker::class, OneAttemptWorker::class);
         $app->bind(AuthorizationCommands::class, AuthorizedPayments::class);

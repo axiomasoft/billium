@@ -27,6 +27,13 @@ final class CommandPayload
         $values = get_object_vars($command);
         unset($values['commandKey']);
         $values['scope'] = get_object_vars($command->scope);
+        if ($command instanceof DeclareSettlementIntent) {
+            if ($command->requestedMinor === null) {
+                unset($values['requestedMinor']);
+            } else {
+                $values['requestedMinor'] = (string) $command->requestedMinor;
+            }
+        }
         if (isset($values['money']) && $values['money'] instanceof Money) {
             $values['money'] = ['minor' => (string) $values['money']->minor, 'currency' => $values['money']->currency->code];
         }
