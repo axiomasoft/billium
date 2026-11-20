@@ -34,11 +34,14 @@ docker compose run --rm toolchain bash scripts/smoke/consumer-install.sh [php|da
 `scripts/ci.sh` is the single carrier of the gate composition and `.github/workflows/ci.yml` calls it unchanged.
 A layer without its subject, or a missing tool, is red, never skipped. Regenerate derived files with the
 script that `--check` names (for example `python3 scripts/spec/identities.py`).
+The php layer runs Packman as `php -d memory_limit=1G vendor/bin/packman gate`, and the same memory limit
+for `php-api --check`, `error-codes --check`, `config-schema --check`, and `ai:sync --dry-run`. There is no `bin/packman`.
 
 GitHub Actions checks out the product into `billium/` and the workspace repository
 `academici/swissknifeman-axioma-workspace` into `workspaces/axioma/`, then installs Composer
 dependencies before the gate. Configure the repository secret `SKM_WORKSPACE_TOKEN` with read
 access to that private workspace repository. The workspace checkout stays separate from the product.
+CI for this gate runs from the private mirror https://github.com/corestructor/billium-mirror/ on a `refactor/wave-*` branch, not from a push to the canonical remote.
 
 Identities (`spec/identities.json`, snapshots in `spec/identities/snapshots/`) and `spec/type-map.json` are
 frozen to 1.0 by major versions only: an entry that disappears must be kept with status `retired`.
@@ -52,10 +55,14 @@ no `laravel/framework`) and decodes the pilot `payment.execute.v1`. PB-15 (the p
 ## PostgreSQL proofs and host commands (D21/D50/D60/D62)
 
 `scripts/db/preflight.php` fails on missing pdo_pgsql, PostgreSQL <16, unsafe runtime privileges,
-missing owner/runtime credentials or a database name without `_test`. Tests migrate with the owner,
-then use TRUNCATE isolation and real runtime transactions. RefreshDatabase/DatabaseTransactions are
-forbidden for these proofs; the suite lease serializes independent test runs against the same database.
+missing owner/runtime credentials or a database name without `_test`. `scripts/db/prepare-worker-template.php`
+migrates the template database `billium_worker_schema_test`. Ordinary tests then `TRUNCATE ... RESTART IDENTITY CASCADE`
+and use real runtime transactions. A worker database is `billium_${TEST_TOKEN}_test`; `billium_test_${TEST_TOKEN}` is rejected.
+`P4MigrationRebuildTest` and `BilliumSchemaMigratorTest` still migrate an empty database.
+RefreshDatabase/DatabaseTransactions are forbidden for these proofs; the suite lease serializes independent test runs against the same database.
 Four/six-worker drill processes do not take separate suite leases and are supervised by the owning test.
+`scripts/ci.sh` runs `vendor/bin/pest --group=pg --exclude-group=pg-serial --parallel --processes=8`, then `vendor/bin/pest --group=pg-serial`,
+with `PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1`. `pg-serial` stays one process because a foreign transaction holds the cluster xmin and breaks feed horizon and prune counts.
 
 ```bash
 docker compose run --rm toolchain vendor/bin/pest --group ACC-RST-10

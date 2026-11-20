@@ -70,5 +70,5 @@ docker compose run --rm toolchain vendor/bin/pest packages/core/tests/P7/Collect
 docker compose run --rm -u 0:0 toolchain vendor/bin/pest --filter=CollectionConsent
 docker compose run --rm -u 0:0 toolchain vendor/bin/pest --filter=DunningPolicy
 docker compose run --rm -u 0:0 toolchain vendor/bin/pest --filter=ModuleBoundaries
-docker compose run --rm -u 0:0 toolchain php bin/packman gate
+docker compose run --rm -u 0:0 toolchain php -d memory_limit=1G vendor/bin/packman gate
 ```

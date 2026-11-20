@@ -72,9 +72,15 @@ docker compose run --rm toolchain bash scripts/smoke/consumer-install.sh
 ```
 
 Gate layers, in order: `lint` (spec documents, schemas, vectors, migration/role rules and P3 acceptance groups), `derived` (freshness of generated files,
-identities, type-map), `php` (Pint, PHPStan max with `NoFloatTypeRule`, Rector, Pest, install smoke), `dart`
+identities, type-map), `php` (Pint, PHPStan max with `NoFloatTypeRule`, Rector, Packman checks, Pest, install smoke), `dart`
 (format, analyze, test, `no-double`, install smoke), `conformance` (shared vectors and golden through both
-adapters against the baseline). Details: [development environment](docs/development-environment.md).
+adapters against the baseline). The php layer runs Packman as `php -d memory_limit=1G vendor/bin/packman gate`,
+with the same memory limit for `php-api --check`, `error-codes --check`, `config-schema --check`, and `ai:sync --dry-run`.
+There is no `bin/packman`. PostgreSQL tests are `vendor/bin/pest --group=pg --exclude-group=pg-serial --parallel --processes=8`,
+then `vendor/bin/pest --group=pg-serial`; `scripts/ci.sh` sets `PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1` for both.
+`pg-serial` stays one process because a foreign transaction holds the cluster xmin and breaks feed horizon and prune counts.
+CI for this gate runs from the private mirror https://github.com/corestructor/billium-mirror/ on a `refactor/wave-*` branch, not from a push to the canonical remote.
+Details: [development environment](docs/development-environment.md).
 
 ## Agent environment
 
