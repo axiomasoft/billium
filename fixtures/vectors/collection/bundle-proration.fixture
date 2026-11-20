@@ -1,0 +1,19 @@
+{
+  "id": "COV-AC-546",
+  "timezone": "Europe/Berlin",
+  "prorationPolicy": "local_calendar_days",
+  "replacementTimezone": "Etc/UTC",
+  "anchorLocal": "2026-10-01T00:00:00",
+  "effectiveAt": "2026-10-16T00:00:00+02:00",
+  "originalPrice": "31.00",
+  "replacementPrice": "99.00",
+  "siblingPrice": "20.00",
+  "taxRate": "0.20",
+  "elapsedDays": "15",
+  "totalDays": "31",
+  "deltaNetMinor": "-1600",
+  "deltaTaxMinor": "-320",
+  "refundMinor": 1920,
+  "originalGrossMinor": 3720,
+  "siblingGrossMinor": 2400
+}

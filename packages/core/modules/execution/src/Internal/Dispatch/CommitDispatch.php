@@ -54,7 +54,7 @@ final readonly class CommitDispatch
             $session->ownerSessionRef, $session->epoch, $session->authorityEpoch, $session->deploymentGeneration, $session->attachmentGeneration,
             $attempt->leaseFence, 'billium.psp_dispatch.v1');
         $ticket = $this->authority->prepare($request);
-        $plan = $this->collection->plan($binding->collectionAuthorizationRef, ExecutionPhase::Dispatch, $scope);
+        $plan = $this->collection->plan(AuthorityClaims::collectionPermitAuthorizationRef($binding, $operation->kind), ExecutionPhase::Dispatch, $scope);
         $class = match ($operation->kind) {
             EffectKind::Charge, EffectKind::Authorize => $plan->operationClass ?? ModuleOperationClass::NewIntent,
             EffectKind::Capture, EffectKind::VoidAuthorization => ModuleOperationClass::FrozenIntentCompletion,

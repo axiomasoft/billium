@@ -206,6 +206,7 @@ final readonly class DatabaseCollectionParticipants implements CollectionPartici
             $this->assertUnsent($db, $step);
             $guard = $this->consents->lockGuard($ctx, new CollectionScope($step->sellerRef, $step->environment), RowCast::str($row->consent_ref, 'consent_ref'));
             $evidence = $guard->status === ConsentGuardStatus::Active ? null : $guard->revocationReceiptRef;
+            $evidence ??= $this->retiredOwnerEvidence($db, $row);
             if ($evidence === null) {
                 $verdict = $this->validate($ctx, $plan, $operationRef, $businessDigest);
                 if ($verdict->permitted || $verdict->reason === 'collection_reservation_unavailable') {
@@ -354,6 +355,23 @@ final readonly class DatabaseCollectionParticipants implements CollectionPartici
         if ($step->status !== CollectionStepStatus::Authorized || $db->table('billium_collection_dispatch_permit')->where('step_id', $step->id)->exists()) {
             throw new ProblemException(ProblemCode::OperationNotCancellable, 'Collection might have an external effect');
         }
+    }
+
+    private function retiredOwnerEvidence(Connection $db, stdClass $authorization): ?string
+    {
+        if ($authorization->recurring_owner_id === null) {
+            return null;
+        }
+        $id = RowCast::integer($authorization->recurring_owner_id, 'recurring_owner_id');
+        $revision = $db->table('billium_collection_recurring_owner')->where('id', $id)
+            ->where('seller_ref', $authorization->seller_ref)->where('environment', $authorization->environment)
+            ->where('status', RecurringOwnerStatus::Retired->value)->value('owner_revision');
+        if ($revision === null) {
+            return null;
+        }
+
+        // The locked, retired owner is durable evidence even after a financial epoch change (REQ-FAIL-19, D54/D63).
+        return 'collection-owner-retired:'.hash('sha256', $id.':'.RowCast::integer($revision, 'owner_revision'));
     }
 
     private function authorization(ExecutionScope $scope, string $ref, ?TransactionContext $context = null): stdClass

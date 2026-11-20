@@ -106,7 +106,17 @@ final readonly class CollectionRecoveryWorker
                     return $this->finish($claim, 'parked', 'active_dispatch_required');
                 }
                 if ($auth->financial_epoch !== $claim->epoch) {
-                    return $this->finish($claim, 'parked', 'collection_epoch_changed');
+                    try {
+                        $this->participants->closeRevoked($scope, $ref);
+                    } catch (ProblemException $e) {
+                        if ($e->problem !== ProblemCode::OperationNotCancellable) {
+                            throw $e;
+                        }
+
+                        return $this->finish($claim, 'parked', 'collection_epoch_changed');
+                    }
+
+                    return $this->finish($claim, 'done', 'guard_refused');
                 }
                 try {
                     $this->payments->admit($scope, CollectionAdmission::decodePayment(CollectionAdmission::paymentPayload($auth)))->orThrow();

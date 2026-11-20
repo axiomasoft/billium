@@ -175,7 +175,7 @@ final readonly class OriginalRequestReplay
     {
         $binding = $op->binding;
         $scope = $binding->scope;
-        $plan = $this->collection->plan($binding->collectionAuthorizationRef, ExecutionPhase::Dispatch, $scope);
+        $plan = $this->collection->plan(AuthorityClaims::collectionPermitAuthorizationRef($binding, $op->kind), ExecutionPhase::Dispatch, $scope);
         $class = match ($op->kind) {
             EffectKind::Charge, EffectKind::Authorize => $plan->operationClass ?? ModuleOperationClass::NewIntent,
             EffectKind::Capture, EffectKind::VoidAuthorization => ModuleOperationClass::FrozenIntentCompletion,

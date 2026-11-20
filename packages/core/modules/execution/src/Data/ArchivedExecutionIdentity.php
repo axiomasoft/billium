@@ -40,7 +40,8 @@ final readonly class ArchivedExecutionIdentity
         if ($binding->origin === null || $root !== ($operationRef === $binding->rootOperationRef)
             || ($root && ($businessIntentRef !== $binding->businessIntentRef || $semanticDigest !== $binding->semanticDigest))
             || $requested->minor <= 0 || $originalFence < 1 || $originalFence === PHP_INT_MAX || $originalEpoch < 1 || $createdAt > $startedAt || $startedAt >= $deadline
-            || ($binding->collectionAuthorizationRef === null) !== ($collectionPermitRef === null)
+            || ($binding->collectionAuthorizationRef === null && $collectionPermitRef !== null)
+            || ($kind !== EffectKind::Refund && $binding->collectionAuthorizationRef !== null && $collectionPermitRef === null)
             || in_array($kind, [EffectKind::VoidAuthorization, EffectKind::Refund], true) !== ($reasonCode !== null)
             || ($kind === EffectKind::Refund) !== ($category !== null)) {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'Archived dispatch differs from its original commercial terms');

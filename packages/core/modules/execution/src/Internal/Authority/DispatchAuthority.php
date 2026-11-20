@@ -198,7 +198,7 @@ final class DispatchAuthority
             || $request->providerReference !== $r->providerReference || $request->amount->toWire() !== $r->amount->toWire()
             || $request->credentials->merchantAccountRef !== $request->binding->merchantAccountRef
             || $request->credentials->expiresAt <= new DateTimeImmutable
-            || ($request->binding->collectionAuthorizationRef !== null && $p->collectionDispatchPermitRef === null)) {
+            || ((AuthorityClaims::collectionPermitAuthorizationRef($request->binding, $r->kind) === null) !== ($p->collectionDispatchPermitRef === null))) {
             $this->refuse('Egress request differs from immutable dispatch permit');
         }
         // No send can follow a rolled-back CAS. This read is outside any financial transaction.

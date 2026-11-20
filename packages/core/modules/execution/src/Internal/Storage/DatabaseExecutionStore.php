@@ -701,8 +701,9 @@ final class DatabaseExecutionStore implements ExecutionStore, RootIdentityStore
             || AuthorityClaims::immutableDriverRequestDigest($operation->binding, $operation->operationRef, $attempt->attemptRef, $attempt->providerReference, $operation->kind, $operation->requested) !== $dispatchDecision->immutableRequestDigest) {
             return false;
         }
+        $collectionAuthorization = AuthorityClaims::collectionPermitAuthorizationRef($operation->binding, $operation->kind);
         if ($dispatchDecision->sessionEpoch !== $transactionContext->sessionEpoch() || $dispatchDecision->requestDeadlineAt === null
-            || $operation->state !== 'admitted' || (($operation->binding->collectionAuthorizationRef === null) !== ($dispatchDecision->collectionDispatchPermitRef === null))) {
+            || $operation->state !== 'admitted' || (($collectionAuthorization === null) !== ($dispatchDecision->collectionDispatchPermitRef === null))) {
             return false;
         }
 

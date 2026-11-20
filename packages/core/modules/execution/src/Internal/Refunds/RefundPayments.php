@@ -31,7 +31,6 @@ use Billium\Execution\Data\ExecutionScope;
 use Billium\Execution\Data\ResolvedCredentials;
 use Billium\Execution\Enums\DriverCapability;
 use Billium\Execution\Enums\EffectKind;
-use Billium\Execution\Enums\ExecutionPhase;
 use Billium\Execution\Enums\NamespaceState;
 use Billium\Execution\Internal\Admission\CollectionChecks;
 use Billium\Execution\Internal\Admission\CommandInputReplay;
@@ -109,7 +108,7 @@ final readonly class RefundPayments implements RefundCommands
                 return $cached;
             }
             $replay = $retained !== null || $this->receipts->byCommandKey($selected, RequestRefund::SCHEMA, $key) !== null;
-            $guard = $credentials = $capability = null;
+            $credentials = $capability = null;
             if (! $replay) {
                 $this->readiness->assertReady($binding, EffectKind::Refund, $wire->money);
                 $merchant = $this->merchants->historical($scope, $root->operationRef);
@@ -121,11 +120,10 @@ final readonly class RefundPayments implements RefundCommands
                 } catch (RuntimeException) {
                     throw new ProblemException(ProblemCode::RecoveryRequired, 'Historical refund access could not be verified for the original account');
                 }
-                $guard = $this->collection->plan($binding->collectionAuthorizationRef, ExecutionPhase::Admission, $scope);
             }
-            $modules = $this->collection->modules($guard);
+            $modules = $this->collection->modules(null);
             $plan = new AdmissionPlan($scope, $binding, $wire->operationRef, EffectKind::Refund, $wire->money, $wire->commandKey,
-                $semantic, $binding->canonicalizationVersion, $modules, $guard->locks ?? [], $guard);
+                $semantic, $binding->canonicalizationVersion, $modules, [], null);
             $spec = new OperationSpec(RequestRefund::SCHEMA, $scope->sellerRef, $scope->environment, FinancialMode::Active,
                 $replay ? ModuleOperationClass::ReceiptReplay : ModuleOperationClass::OriginalOwnerRefund,
                 $modules, $key, $semantic, 'execution.admission', $selected, $inputDigest, originalExecutionBindingRef: $binding->rootOperationRef);
@@ -179,7 +177,6 @@ final readonly class RefundPayments implements RefundCommands
             throw new LockPlanChanged('Refund observation partition changed during admission');
         }
         $locks = $this->store->plan($scope, $original, true, $ctx);
-        $this->collection->validate($ctx, $plan->collectionGuard, $locks, $plan->operationRef, $plan->semanticDigest);
         $this->store->lock($ctx, $locks);
         $root = $this->store->operation($scope, $original, $ctx);
         if ($root === null || ExecutionCodec::encode($root->binding) !== ExecutionCodec::encode($plan->binding)) {
