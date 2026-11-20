@@ -314,11 +314,20 @@ final readonly class DatabaseCollectionNotificationService implements Collection
         $this->assertOutsideTransaction();
         $selection = new FinancialScope($caller->installationRef, $caller->sellerRef, $caller->environment, null);
         $prior = $this->receipts->byCommandKey($selection, self::DISPATCH_KIND, $deliveryCommandKey);
-        $port = ($this->notificationPortResolver)();
         $ack = null;
         $deliveryError = null;
-        $digest = $prior?->semanticDigest;
-        if ($digest === null) {
+        if ($prior !== null) {
+            $claimedId = $prior->outcome->body['notificationId'] ?? null;
+            $claimed = is_int($claimedId) ? $claimedId : (is_string($claimedId) && preg_match('/\A[0-9]+\z/', $claimedId) === 1 ? (int) $claimedId : null);
+            if ($claimed !== $current->id) {
+                throw new ProblemException(
+                    ProblemCode::IdempotencyConflict,
+                    'billium.collection.notification_dispatch_key_conflict',
+                );
+            }
+            $digest = $prior->semanticDigest;
+        } else {
+            $port = ($this->notificationPortResolver)();
             try {
                 $ack = $port->deliver($message);
             } catch (ProblemException $problem) {

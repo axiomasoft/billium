@@ -194,6 +194,24 @@ final class CollectionInterventionTest extends ExecutableCollectionTestCase
         self::assertSame(1, $replayedFailure->deliveryAttempts);
         self::assertSame($deliveriesAfterFailure, $port->deliveryCount($first->messageId));
 
+        $this->assertRefused(
+            ProblemCode::IdempotencyConflict,
+            fn () => $this->notificationService()->dispatch($scope, $sms->messageId, 'notif-dispatch-1'),
+        );
+        self::assertSame($deliveriesAfterFailure, $port->deliveryCount($first->messageId));
+        self::assertSame(0, $port->deliveryCount($sms->messageId));
+        $smsAfterConflict = $this->interventionQueries()->findNotificationByKey(
+            $scope,
+            'case-a',
+            1,
+            'dunning_reminder',
+            'v1',
+            NotificationChannel::Sms,
+        );
+        self::assertNotNull($smsAfterConflict);
+        self::assertSame(NotificationStatus::Pending, $smsAfterConflict->status);
+        self::assertSame(0, $smsAfterConflict->deliveryAttempts);
+
         // Port claiming transportDeliveryOnly = false is rejected cleanly.
         $port->setForceInvalidAckFlag(true);
         $this->assertRefused(

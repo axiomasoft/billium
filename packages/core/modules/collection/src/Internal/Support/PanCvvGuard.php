@@ -67,8 +67,8 @@ final class PanCvvGuard
                     );
                 }
             }
-            if (is_string($value)) {
-                if (self::containsPanOrCvvPattern($value)) {
+            if (is_string($value) || is_int($value) || is_float($value)) {
+                if (self::containsPanOrCvvPattern(self::scalarText($value))) {
                     throw new ProblemException(
                         ProblemCode::ValidationInvalid,
                         'billium.collection.sensitive_card_data_forbidden',
@@ -80,6 +80,21 @@ final class PanCvvGuard
                 self::assertCleanPayload(get_object_vars($value), $depth + 1);
             }
         }
+    }
+
+    private static function scalarText(string|int|float $value): string
+    {
+        if (is_int($value)) {
+            return (string) $value;
+        }
+        if (is_string($value)) {
+            return $value;
+        }
+        if (! is_finite($value)) {
+            return '';
+        }
+
+        return sprintf('%.0F', $value);
     }
 
     private static function containsPanOrCvvPattern(string $value): bool

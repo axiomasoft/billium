@@ -6,6 +6,7 @@ namespace Billium\Core\Tests\Feature;
 
 use Billium\Core\Tests\DatabaseTestCase;
 use Billium\Core\Tests\TestEnvironment;
+use PDO;
 use PDOException;
 use PHPUnit\Framework\Attributes\Group;
 use Symfony\Component\Process\Process;
@@ -67,5 +68,42 @@ final class SuiteLeaseTest extends DatabaseTestCase
 
         self::assertNotSame(0, $probe->run());
         self::assertStringContainsString('inherited test database lease', $probe->getErrorOutput().$probe->getOutput());
+    }
+
+    public function test_template_cleanup_keeps_a_database_that_holds_a_suite_lease(): void
+    {
+        $admin = TestEnvironment::pdo(owner: true);
+        $leasedName = 'billium_cleanupleased_test';
+        $openName = 'billium_cleanupopen_test';
+        $leased = null;
+        $drop = static function (string $name) use ($admin): void {
+            $quoted = '"'.str_replace('"', '""', $name).'"';
+            $admin->exec('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '.$admin->quote($name).' AND pid <> pg_backend_pid()');
+            $admin->exec('DROP DATABASE IF EXISTS '.$quoted.' WITH (FORCE)');
+        };
+        $drop($leasedName);
+        $drop($openName);
+        try {
+            $admin->exec('CREATE DATABASE "'.$leasedName.'"');
+            $admin->exec('CREATE DATABASE "'.$openName.'"');
+            $config = TestEnvironment::connection(owner: true);
+            $leased = new PDO(
+                "pgsql:host={$config['host']};port={$config['port']};dbname={$leasedName}",
+                $config['username'],
+                $config['password'],
+                [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION],
+            );
+            $leased->query('SELECT pg_advisory_lock('.TestEnvironment::LEASE_CLASS.', '.TestEnvironment::LEASE_OBJECT.')');
+
+            $targets = TestEnvironment::unleasedParallelDatabases($admin);
+
+            self::assertContains($openName, $targets);
+            self::assertNotContains($leasedName, $targets);
+            self::assertNotContains(TestEnvironment::databaseName(), $targets);
+        } finally {
+            $leased = null;
+            $drop($leasedName);
+            $drop($openName);
+        }
     }
 }

@@ -616,6 +616,28 @@ final class CollectionConsentTest extends CollectionTestCase
             self::assertSame(ProblemCode::ValidationInvalid, $error->problem);
             self::assertSame('billium.collection.sensitive_card_data_forbidden', $error->detail);
         }
+
+        $actionsBeforeIntegerPan = $this->rows('billium_collection_customer_action');
+        try {
+            $this->consentService()->recordCustomerAction(new RecordCustomerAction(
+                commandKey: 'act-3ds-int-pan',
+                scope: $this->collectionScope(),
+                actionRef: 'cact-3ds-int-pan',
+                billingAccountRef: 'account-a',
+                consentRef: 'consent-route',
+                consentVersion: 2,
+                businessPaymentIntentRef: 'bpi-002',
+                actionType: CustomerActionType::ScaChallenge,
+                challengeRef: 'chal_int_pan',
+                actionPayload: ['value' => 4111111111111111],
+                expiresAt: new DateTimeImmutable('2026-11-20T13:00:00Z', new DateTimeZone('UTC')),
+            ));
+            self::fail('An integer PAN in actionPayload must be rejected');
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::ValidationInvalid, $error->problem);
+            self::assertSame('billium.collection.sensitive_card_data_forbidden', $error->detail);
+        }
+        self::assertSame($actionsBeforeIntegerPan, $this->rows('billium_collection_customer_action'));
     }
 
     public function test_pre_operation_revocation_tombstone_local_receipt_effectiveness_and_host_authority_guard(): void

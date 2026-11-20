@@ -623,19 +623,52 @@ final class TestEnvironment
         self::grantDatabaseAcl($name);
     }
 
-    private static function dropParallelDatabases(PDO $admin): void
+    /**
+     * Parallel databases whose suite lease is not held. A second template rebuild must not
+     * terminate or drop a database another run still holds (D50).
+     *
+     * @return list<string>
+     */
+    public static function unleasedParallelDatabases(PDO $admin): array
     {
-        $statement = $admin->query(<<<'SQL'
-            SELECT datname FROM pg_database
-            WHERE datname ~ '^billium_[A-Za-z0-9]+_test$'
-               OR datname ~ '^billium_profile_[a-f0-9]+_test$'
-               OR datname ~ '^billium_ps[a-f0-9]+_test$'
+        $class = self::LEASE_CLASS;
+        $object = self::LEASE_OBJECT;
+        $statement = $admin->query(<<<SQL
+            SELECT d.datname
+            FROM pg_database d
+            WHERE (
+                d.datname ~ '^billium_[A-Za-z0-9]+_test$'
+                OR d.datname ~ '^billium_profile_[a-f0-9]+_test$'
+                OR d.datname ~ '^billium_ps[a-f0-9]+_test$'
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM pg_locks l
+                WHERE l.locktype = 'advisory'
+                  AND l.granted
+                  AND l.objsubid = 2
+                  AND l.classid = {$class}
+                  AND l.objid = {$object}
+                  AND l.database = d.oid
+            )
+            ORDER BY d.datname
             SQL);
         if ($statement === false) {
             throw new RuntimeException('Unable to list parallel test databases');
         }
+        $names = [];
         foreach ($statement->fetchAll(PDO::FETCH_COLUMN) as $name) {
-            if (! is_string($name) || $name === self::WORKER_TEMPLATE || $name === 'billium_test') {
+            if (is_string($name)) {
+                $names[] = $name;
+            }
+        }
+
+        return $names;
+    }
+
+    private static function dropParallelDatabases(PDO $admin): void
+    {
+        foreach (self::unleasedParallelDatabases($admin) as $name) {
+            if ($name === self::WORKER_TEMPLATE || $name === 'billium_test') {
                 continue;
             }
             $admin->exec('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '.self::literal($admin, $name).' AND pid <> pg_backend_pid()');
