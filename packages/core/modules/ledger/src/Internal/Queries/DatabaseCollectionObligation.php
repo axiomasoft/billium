@@ -14,16 +14,52 @@ use Billium\Core\Exceptions\Runner\LockPlanChanged;
 use Billium\Ledger\Contracts\CollectionObligation;
 use Billium\Ledger\Data\Runtime\BillingAccountScope;
 use DateTimeImmutable;
+use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
 use Packman\Attributes\Internal;
+use stdClass;
 
 #[Internal]
 final readonly class DatabaseCollectionObligation implements CollectionObligation
 {
     public function __construct(private DatabaseManager $databases, private OperationRunner $runner) {}
 
-    public function lockCollectibleMinor(TransactionContext $context, BillingAccountScope $scope, string $obligationRef, string $intentRef, string $currency, string $customerRef, ?string $componentRef): int
+    public function lockCollectibleMinor(TransactionContext $context, BillingAccountScope $scope, string $obligationRef, string $intentRef, string $currency, string $customerRef, ?string $componentRef, ?DateTimeImmutable $dueAsOf = null): int
+    {
+        [$db, $row, $id] = $this->lockObligation($context, $scope, $obligationRef, $intentRef, $currency, $customerRef, $componentRef);
+        $eligibleAt = $row->collection_eligible_at;
+        $asOf = $dueAsOf ?? new DateTimeImmutable;
+        if ($row->status !== 'open' || $row->open_minor <= 0
+            || ($eligibleAt !== null && (! is_string($eligibleAt) || new DateTimeImmutable($eligibleAt) > $asOf))
+            || ($dueAsOf !== null && (! is_string($row->due_at) || new DateTimeImmutable($row->due_at) > $dueAsOf
+                || $row->due_policy_version === null))) {
+            return 0;
+        }
+
+        // D35: a refund reversal may leave an accounting balance, but cannot create automatically collectible debt.
+        $minor = $db->scalar(<<<'SQL'
+            SELECT greatest(0, o.open_minor::numeric - greatest(0,
+                -coalesce((SELECT sum(a.amount_minor) FROM billium_allocation a WHERE a.obligation_id = o.id AND a.cause = 'refund'), 0)
+                -coalesce((SELECT sum(n.amount_minor) FROM billium_credit_note n
+                    WHERE n.obligation_id = o.id AND n.reason = 'refund'
+                    AND EXISTS (SELECT 1 FROM billium_allocation a WHERE a.obligation_id = o.id
+                      AND a.cause = 'refund' AND a.reverses_id IS NOT NULL AND a.receipt_ref = n.receipt_ref)), 0)
+            ))::bigint FROM billium_obligation o WHERE o.id = ?
+            SQL, [$id]);
+
+        return is_int($minor) ? $minor : throw new LockPlanChanged('Collection obligation vanished');
+    }
+
+    public function lockOutstandingMinor(TransactionContext $context, BillingAccountScope $scope, string $obligationRef, string $intentRef, string $currency, string $customerRef): int
+    {
+        [, $row] = $this->lockObligation($context, $scope, $obligationRef, $intentRef, $currency, $customerRef, null);
+
+        return is_int($row->open_minor) ? $row->open_minor : throw new LockPlanChanged('Collection outstanding amount is unavailable');
+    }
+
+    /** @return array{Connection, stdClass, int} */
+    private function lockObligation(TransactionContext $context, BillingAccountScope $scope, string $obligationRef, string $intentRef, string $currency, string $customerRef, ?string $componentRef): array
     {
         $this->runner->assertCurrent($context, 'ledger');
         $caller = $context->caller();
@@ -51,24 +87,8 @@ final readonly class DatabaseCollectionObligation implements CollectionObligatio
         if ($row->currency !== $currency || $row->customer_ref !== $customerRef || ($componentRef !== null && $row->component_ref !== $componentRef)) {
             throw new ProblemException(ProblemCode::AuthDenied, 'Collection obligation differs from the frozen consent scope');
         }
-        $eligibleAt = $row->collection_eligible_at;
-        if ($row->status !== 'open' || $row->open_minor <= 0
-            || ($eligibleAt !== null && (! is_string($eligibleAt) || new DateTimeImmutable($eligibleAt) > new DateTimeImmutable))) {
-            return 0;
-        }
 
-        // D35: a refund reversal may leave an accounting balance, but cannot create automatically collectible debt.
-        $minor = $db->scalar(<<<'SQL'
-            SELECT greatest(0, o.open_minor::numeric - greatest(0,
-                -coalesce((SELECT sum(a.amount_minor) FROM billium_allocation a WHERE a.obligation_id = o.id AND a.cause = 'refund'), 0)
-                -coalesce((SELECT sum(n.amount_minor) FROM billium_credit_note n
-                    WHERE n.obligation_id = o.id AND n.reason = 'refund'
-                    AND EXISTS (SELECT 1 FROM billium_allocation a WHERE a.obligation_id = o.id
-                      AND a.cause = 'refund' AND a.reverses_id IS NOT NULL AND a.receipt_ref = n.receipt_ref)), 0)
-            ))::bigint FROM billium_obligation o WHERE o.id = ?
-            SQL, [$id]);
-
-        return is_int($minor) ? $minor : throw new LockPlanChanged('Collection obligation vanished');
+        return [$db, $row, $id];
     }
 
     public function outcomeApplied(TransactionContext $context, BillingAccountScope $scope, string $intentRef, string $operationRef, string $authority, int $revision, string $state): bool

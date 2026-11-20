@@ -31,6 +31,8 @@ use DateTimeImmutable;
 
 abstract class ExecutableCollectionTestCase extends CollectionTestCase
 {
+    protected const ?int LOOKUP_RETENTION_SECONDS = null;
+
     protected string $journal;
 
     protected CapabilitySnapshot $capability;
@@ -41,7 +43,10 @@ abstract class ExecutableCollectionTestCase extends CollectionTestCase
         $app = $this->application();
         $this->journal = Fixture::tempPath();
         $base = SimulatedCapabilities::snapshot();
-        $details = new CapabilityDetails(...array_replace(get_object_vars($base->details), ['savedMethod' => true, 'recurringConsent' => true]));
+        $details = new CapabilityDetails(...array_replace(get_object_vars($base->details), [
+            'savedMethod' => true, 'recurringConsent' => true,
+            'lookupRetentionSeconds' => static::LOOKUP_RETENTION_SECONDS ?? $base->details->lookupRetentionSeconds,
+        ]));
         $this->capability = new CapabilitySnapshot(...array_replace(get_object_vars($base), [
             'snapshotRef' => 'collection-saved-method', 'digest' => self::digest('c'), 'details' => $details,
         ]));

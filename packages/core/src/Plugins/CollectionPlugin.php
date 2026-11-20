@@ -73,6 +73,7 @@ final class CollectionPlugin implements ExtensionPlugin, WithCapabilities, WithS
             'collection_dunning_case',
             'collection_case_policy_migration',
             'collection_step',
+            'collection_work',
         ];
     }
 

@@ -1455,14 +1455,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "collection",
-      "currentSchemaVersion": 3,
+      "currentSchemaVersion": 4,
       "supportedSchemaReadRange": {
         "min": 3,
-        "max": 3
+        "max": 4
       },
       "supportedSchemaWriteRange": {
-        "min": 3,
-        "max": 3
+        "min": 4,
+        "max": 4
       },
       "requiresModules": [
         {
@@ -1508,7 +1508,8 @@
         "billium_collection_step",
         "billium_collection_authorization",
         "billium_collection_dispatch_permit",
-        "billium_collection_no_effect"
+        "billium_collection_no_effect",
+        "billium_collection_work"
       ],
       "configKeys": [
         "billium.collection.enabled"
@@ -1528,12 +1529,18 @@
           "id": "2026_11_20_000003_create_billium_collection_authorization",
           "version": 3,
           "checksum": "sha256:25c2ac76ff93cf5eb0ba69c58f611d92e1541bc662cdd3f916c3ddeec5eb826b"
+        },
+        {
+          "id": "2026_11_20_000004_create_billium_collection_work",
+          "version": 4,
+          "checksum": "sha256:d0f0f04a771bdb6977c107b7ebb144a60ad44f6dc1ffae816de4f3f35b01356b"
         }
       ],
       "disablePolicy": {
         "dependents": "block",
         "keeps": [
           "frozen_intent_completion",
+          "unknown_resolution",
           "receipt_replay",
           "historical_read"
         ],

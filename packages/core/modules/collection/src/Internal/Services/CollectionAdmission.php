@@ -95,7 +95,7 @@ final readonly class CollectionAdmission
     public function lockAndSize(
         TransactionContext $ctx, Connection $db, AuthorizeCollection $command, DunningCaseView $case,
         CollectionChannel $channel, string $ref, ConsentBindingView $binding, MerchantRevision $merchant,
-        HostConsentAuthoritySnapshot $host, string $componentRef,
+        HostConsentAuthoritySnapshot $host, string $componentRef, ?DateTimeImmutable $dueAsOf,
     ): int {
         $step = $command->step;
         $guard = $this->consents->lockGuard($ctx, $step->scope, $command->consentRef);
@@ -113,7 +113,9 @@ final readonly class CollectionAdmission
             throw new ProblemException(ProblemCode::IdempotencyConflict, 'Collection operation or business intent is already claimed by execution');
         }
         $scope = new BillingAccountScope($case->sellerRef, $case->environment, $case->billingAccountRef);
-        $open = $this->obligations->lockCollectibleMinor($ctx, $scope, $case->obligationRef, $step->businessPaymentIntentRef, $case->currency, $binding->customerRef, $componentRef);
+        $now = new DateTimeImmutable;
+        $open = $this->obligations->lockCollectibleMinor($ctx, $scope, $case->obligationRef, $step->businessPaymentIntentRef,
+            $case->currency, $binding->customerRef, $componentRef, $dueAsOf);
         $pending = $db->table('billium_collection_authorization as a')
             ->join('billium_collection_step as s', 's.id', '=', 'a.step_id')
             ->where('a.seller_ref', $case->sellerRef)->where('a.environment', $case->environment)
@@ -123,7 +125,6 @@ final readonly class CollectionAdmission
             throw new ProblemException(ProblemCode::OperationFinancialHold, 'Collection has no unreserved collectible balance');
         }
 
-        $now = new DateTimeImmutable;
         if ($case->nextAttemptAt !== null && $case->nextAttemptAt > $now || $step->scheduledAt > $now || $case->recoveryDeadlineAt < $now) {
             throw new ProblemException(ProblemCode::OperationFinancialHold, 'Collection step is outside its due window');
         }
@@ -145,7 +146,7 @@ final readonly class CollectionAdmission
 
     public function record(
         TransactionContext $ctx, Connection $db, AuthorizeCollection $command, DunningCaseView $case, ConsentBindingView $binding,
-        MerchantRevision $merchant, string $ref, int $stepId, int $amount, string $issuedAt, int $recurringOwnerId, string $componentRef,
+        MerchantRevision $merchant, string $ref, int $stepId, int $amount, string $issuedAt, int $recurringOwnerId, string $componentRef, bool $automaticDue,
     ): void {
         $step = $command->step;
         $scope = $command->executionScope;
@@ -182,28 +183,8 @@ final readonly class CollectionAdmission
         $basis = CanonicalJson::digest(array_replace($authorization, ['amount_minor' => (string) $amount]) + ['binding_digest' => $binding->proofDigest, 'component_ref' => $componentRef]);
         $origin = new OriginDecision($scope, $step->operationRef, $step->businessPaymentIntentRef, CollectionOriginLookup::SOURCE_CONTEXT,
             $command->executionProfile, $command->routingEpoch, $ref, $basis, $authorization['policy_version'], null);
-        $money = new Money($amount, Currency::of($case->currency));
-        $payload = [
-            'schema' => ExecutePayment::SCHEMA,
-            'commandKey' => self::commandKey($ref, 'execute'),
-            'installationRef' => $scope->installationRef,
-            'sellerRef' => $scope->sellerRef,
-            'environment' => $scope->environment,
-            'operationRef' => $origin->operationRef,
-            'operationKind' => 'charge',
-            'source' => (object) ['context' => $origin->sourceContext, 'intentRef' => $origin->businessIntentRef],
-            'executionProfile' => $origin->executionProfile,
-            'routingEpoch' => $origin->routingEpoch,
-            'merchantAccountRef' => $merchant->merchantAccountRef,
-            'money' => $money->toWire(),
-            'bindingRevision' => $merchant->revisionRef,
-            'requestedAt' => $issuedAt,
-        ];
-        $codec = new Codec;
-        $payment = $codec->decode(json_encode($payload, JSON_THROW_ON_ERROR));
-        if (! $payment instanceof ExecutePayment) {
-            throw new \LogicException('Collection produced an invalid execution command');
-        }
+        $payload = self::paymentPayload((object) $authorization);
+        $payment = self::decodePayment($payload);
         $inserted = $db->table('billium_collection_authorization')->insertOrIgnore($authorization + [
             'basis_digest' => $basis,
             'business_digest' => RootPaymentSemanticDigest::forCharge($scope, $payment, $merchant, $origin),
@@ -218,6 +199,44 @@ final readonly class CollectionAdmission
         $this->outbox->record($ctx, new PreparedInternalCommand('collection.execute:'.hash('sha256', $basis), $step->businessPaymentIntentRef,
             'collection', 'collection.execute.v1', 'billium.command.v1',
             ['intentOwnerNamespace' => $scope->intentOwnerNamespace, 'payment' => $payload], ['execution']));
+        $db->table('billium_collection_work')->insert([
+            'step_id' => $stepId, 'seller_ref' => $scope->sellerRef, 'environment' => $scope->environment,
+            'next_attempt_at' => $issuedAt, 'automatic_due' => $automaticDue,
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    public static function paymentPayload(\stdClass $authorization): array
+    {
+        $money = new Money(RowCast::integer($authorization->amount_minor, 'amount_minor'), Currency::of(RowCast::str($authorization->currency, 'currency')));
+
+        return [
+            'schema' => ExecutePayment::SCHEMA,
+            'commandKey' => self::commandKey(RowCast::str($authorization->authorization_ref, 'authorization_ref'), 'execute'),
+            'installationRef' => $authorization->installation_ref,
+            'sellerRef' => $authorization->seller_ref,
+            'environment' => $authorization->environment,
+            'operationRef' => $authorization->operation_ref,
+            'operationKind' => 'charge',
+            'source' => (object) ['context' => CollectionOriginLookup::SOURCE_CONTEXT, 'intentRef' => $authorization->business_intent_ref],
+            'executionProfile' => $authorization->execution_profile,
+            'routingEpoch' => RowCast::integer($authorization->routing_epoch, 'routing_epoch'),
+            'merchantAccountRef' => $authorization->merchant_account_ref,
+            'money' => $money->toWire(),
+            'bindingRevision' => $authorization->merchant_revision_ref,
+            'requestedAt' => RowCast::formatUtc(RowCast::utcDateTime($authorization->issued_at, 'issued_at')),
+        ];
+    }
+
+    /** @param array<string, mixed> $payload */
+    public static function decodePayment(array $payload): ExecutePayment
+    {
+        $payment = (new Codec)->decode(json_encode($payload, JSON_THROW_ON_ERROR));
+        if (! $payment instanceof ExecutePayment) {
+            throw new \LogicException('Collection produced an invalid execution command');
+        }
+
+        return $payment;
     }
 
     public static function commandKey(string $ref, string $purpose): string

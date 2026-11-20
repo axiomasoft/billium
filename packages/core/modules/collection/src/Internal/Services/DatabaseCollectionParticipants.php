@@ -38,6 +38,7 @@ use Billium\Execution\Contracts\RootPaymentCommands;
 use Billium\Execution\Data\CollectionGuardPlan;
 use Billium\Execution\Data\CollectionGuardReceipt;
 use Billium\Execution\Data\DispatchDecision;
+use Billium\Execution\Data\ExecutionLockPlan;
 use Billium\Execution\Data\ExecutionScope;
 use Billium\Execution\Data\OperationRecord;
 use Billium\Execution\Data\OriginDecision;
@@ -137,9 +138,13 @@ final readonly class DatabaseCollectionParticipants implements CollectionPartici
                     $reason = 'collection_case_changed';
                 } elseif (! is_string($componentRef)) {
                     $reason = 'collection_owner_changed';
-                } elseif ($this->obligations->lockCollectibleMinor($ctx, self::account($row), RowCast::str($row->obligation_ref, 'obligation_ref'),
-                    $step->businessPaymentIntentRef, $currency, RowCast::str($binding->customer_ref, 'customer_ref'), $componentRef) < $amount) {
-                    $reason = 'collection_balance_changed';
+                } else {
+                    $dueOnly = $db->table('billium_collection_work')->where('step_id', $step->id)->value('automatic_due') === true;
+                    if ($this->obligations->lockCollectibleMinor($ctx, self::account($row), RowCast::str($row->obligation_ref, 'obligation_ref'),
+                        $step->businessPaymentIntentRef, $currency, RowCast::str($binding->customer_ref, 'customer_ref'),
+                        $componentRef, $dueOnly ? new DateTimeImmutable : null) < $amount) {
+                        $reason = 'collection_balance_changed';
+                    }
                 }
             }
         }
@@ -244,29 +249,57 @@ final readonly class DatabaseCollectionParticipants implements CollectionPartici
             RowCast::str($row->intent_owner_namespace, 'intent_owner_namespace'), RowCast::str($row->execution_profile, 'execution_profile'));
     }
 
-    public function checkTransition(TransactionContext $ctx, CollectionStepView $step, TransitionCollectionStep $command): void
+    public function prelockOutcome(TransactionContext $ctx, ExecutionScope $scope, string $operationRef): ExecutionLockPlan
+    {
+        $plan = $this->execution->plan($scope, $operationRef, context: $ctx);
+        $ctx->lock(...array_filter($plan->locks, static fn (LockRequest $lock): bool => $lock->rank === LockRank::FeedPartition));
+
+        return $plan;
+    }
+
+    public function checkTransition(TransactionContext $ctx, CollectionStepView $step, TransitionCollectionStep $command,
+        ?int $executionRevision, ?ExecutionLockPlan $plan): ?int
     {
         $db = $this->databases->connection($ctx->connectionName());
         $row = $db->table('billium_collection_authorization')->where('step_id', $step->id)->first();
         if ($row === null) {
-            return;
+            return null;
         }
+        $scope = new ExecutionScope(RowCast::str($row->installation_ref, 'installation_ref'), $step->sellerRef, $step->environment,
+            RowCast::str($row->intent_owner_namespace, 'intent_owner_namespace'));
         if ($command->targetStatus === CollectionStepStatus::Unknown) {
-            return;
+            if ($plan !== null) {
+                $this->execution->lock($ctx, $plan);
+                $operation = $this->execution->operation($scope, $step->operationRef, $ctx);
+                if ($operation === null || in_array($operation->state, ['succeeded', 'failed', 'cancelled'], true)) {
+                    throw new ProblemException(ProblemCode::RecoveryRequired, 'Collection outcome changed before parking');
+                }
+            }
+
+            return null;
         }
         $state = match ($command->targetStatus) {
             CollectionStepStatus::Succeeded => 'succeeded',
             CollectionStepStatus::FailedTerminal => 'failed',
             default => throw new ProblemException(ProblemCode::OperationNotCancellable, 'Use the execution guard for an authorized step'),
         };
-        $scope = new ExecutionScope(RowCast::str($row->installation_ref, 'installation_ref'), $step->sellerRef, $step->environment,
-            RowCast::str($row->intent_owner_namespace, 'intent_owner_namespace'));
+        $open = null;
+        if ($plan !== null) {
+            $customer = $db->table('billium_collection_consent_binding')->where('id', $row->consent_binding_id)->value('customer_ref');
+            $open = $this->obligations->lockOutstandingMinor($ctx, self::account($row), RowCast::str($row->obligation_ref, 'obligation_ref'),
+                $step->businessPaymentIntentRef, $step->currency, RowCast::str($customer, 'customer_ref'));
+            $this->execution->lock($ctx, $plan);
+        }
         $operation = $this->execution->operation($scope, $step->operationRef, $ctx);
         if ($operation === null || $operation->state !== $state || $operation->binding->semanticDigest !== $row->business_digest
+            || ($executionRevision !== null && $operation->revision !== $executionRevision)
             || ! $this->obligations->outcomeApplied($ctx, self::account($row), $step->businessPaymentIntentRef, $step->operationRef,
                 RowCast::str($row->execution_profile, 'execution_profile'), $operation->revision, $state)) {
-            throw new ProblemException(ProblemCode::OperationFinancialHold, 'Collection outcome is unresolved or awaiting ledger application');
+            throw new ProblemException($executionRevision === null ? ProblemCode::OperationFinancialHold : ProblemCode::RecoveryRequired,
+                'Collection outcome is unresolved or awaiting ledger application');
         }
+
+        return $open;
     }
 
     /** @return array{Connection, stdClass, CollectionStepView} */

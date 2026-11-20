@@ -4973,6 +4973,13 @@
     },
     {
       "kind": "migration",
+      "id": "2026_11_20_000004_create_billium_collection_work",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/collection/2026_11_20_000004_create_billium_collection_work.php"
+    },
+    {
+      "kind": "migration",
       "id": "2026_11_20_000005_add_render_blob_deleting_state",
       "status": "new",
       "since": "2026-10",
