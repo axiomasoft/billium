@@ -13,7 +13,7 @@ and the `billium-contracts` packages for PHP and Dart. Core implements the P3 pl
 guarded PostgreSQL routines, financial-session admission, receipts, observations, outbox and feed (D60).
 Live PSP execution and legal numbering belong to later modules (D55/D59).
 
-The `axiomasoft/billium-core` distribution includes the platform, ledger, execution, usage, rating, schedule and documents implementations. Enable modules with `billium.modules.enabled`. Usage, rating, schedule and documents (`billium.documents.enabled`) also have feature-specific configuration. The host can restrict the resulting plugin graph through the Packman activation gate. Billium's financial-session and operation admission rules continue to govern writes.
+The `axiomasoft/billium-core` distribution includes the platform, ledger, execution, usage, rating, schedule, documents and collection implementations. Enable modules with `billium.modules.enabled`. Usage, rating, schedule, documents and collection also have feature-specific configuration. The host can restrict the resulting plugin graph through the Packman activation gate. Billium's financial-session and operation admission rules continue to govern writes.
 
 Usage, rating, schedule and documents are optional internal core modules. Fixed-price schedule booking can omit
 usage; pure quotes can omit ledger; obligation booking needs no legal renderer or payment executor;
@@ -31,6 +31,11 @@ The [P4 evidence guide](docs/architecture/p4-acceptance.md) and
 [acceptance manifest](docs/architecture/p4-acceptance.json) map exact amounts, restore/permutation,
 concurrency and unsupported combinations to executable tests. Implementation evidence and pending
 independent phase acceptance are recorded separately (D59/D64; owner PLAN1.P4.10).
+
+The optional `collection` module owns saved-method collection and dunning (REQ-OWN-06, D56).
+See the [collection runbook](docs/operations/collection.md) for the PostgreSQL pilot, aggregate
+alert metrics and the response to overdue work or unresolved outcomes (COV-AC-519, D59; owners
+Billium collection and host monitoring).
 
 - [Requirements and traceability](docs/requirements.md)
 - [Target architecture](docs/architecture/target-architecture.md) and

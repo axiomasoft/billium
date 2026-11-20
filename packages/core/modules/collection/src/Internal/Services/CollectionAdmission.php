@@ -41,7 +41,9 @@ use Billium\Platform\Contracts\Outbox\CommandOutbox;
 use Billium\Platform\Data\EventContracts\PreparedInternalCommand;
 use DateTimeImmutable;
 use Illuminate\Database\Connection;
+use LogicException;
 use Packman\Attributes\Internal;
+use stdClass;
 
 #[Internal]
 final readonly class CollectionAdmission
@@ -206,7 +208,7 @@ final readonly class CollectionAdmission
     }
 
     /** @return array<string, mixed> */
-    public static function paymentPayload(\stdClass $authorization): array
+    public static function paymentPayload(stdClass $authorization): array
     {
         $money = new Money(RowCast::integer($authorization->amount_minor, 'amount_minor'), Currency::of(RowCast::str($authorization->currency, 'currency')));
 
@@ -233,7 +235,7 @@ final readonly class CollectionAdmission
     {
         $payment = (new Codec)->decode(json_encode($payload, JSON_THROW_ON_ERROR));
         if (! $payment instanceof ExecutePayment) {
-            throw new \LogicException('Collection produced an invalid execution command');
+            throw new LogicException('Collection produced an invalid execution command');
         }
 
         return $payment;

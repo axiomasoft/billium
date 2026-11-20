@@ -62,6 +62,11 @@ abstract class ExecutableCollectionTestCase extends CollectionTestCase
             [new DunningPolicyStepDefinition(1, CollectionChannel::SavedMethod, 0)],
             1, 3, [DeclineCategory::SoftDecline], 86400,
         ));
+        $this->seedObligation();
+    }
+
+    protected function seedObligation(): void
+    {
         $this->application()->make(Ledger::class)->recordObligation(new RecordObligation(
             'obligation', $this->account(), 'obligation-a', 'basis-a', 'customer-a', 'component-a', $this->money(5000), self::digest(),
         ))->orThrow();

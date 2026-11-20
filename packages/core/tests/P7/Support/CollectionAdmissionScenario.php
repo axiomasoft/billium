@@ -40,7 +40,8 @@ final class CollectionAdmissionScenario implements CollectionConsentGuard, Scena
         ConsentGuardRaceScenario::prepare($app);
         $app->instance(CollectionConsentGuard::class, $this);
         try {
-            $step = $app->make(DunningCaseService::class)->authorizeCollection(self::command('worker-'.$index));
+            $id = ($args['replaySameCommand'] ?? false) === true ? 'a' : 'worker-'.$index;
+            $step = $app->make(DunningCaseService::class)->authorizeCollection(self::command($id));
 
             return ['accepted' => true, 'id' => $step->id];
         } catch (ProblemException $e) {
