@@ -7,8 +7,10 @@ namespace Billium\Core\Tests\P7;
 use Billium\Collection\Data\CollectionStepView;
 use Billium\Collection\Data\DunningCaseTransitionResult;
 use Billium\Collection\Data\OpenDunningCase;
+use Billium\Collection\Data\RecordOutcomeSignal;
 use Billium\Collection\Data\RegisterRecurringOwner;
 use Billium\Collection\Data\TransitionCollectionStep;
+use Billium\Collection\Enums\CollectionSignalKind;
 use Billium\Collection\Enums\CollectionStepStatus;
 use Billium\Collection\Enums\DunningCaseStatus;
 use Billium\Collection\Enums\RecurringOwnerMode;
@@ -96,6 +98,16 @@ final class CollectionAdmissionTest extends ExecutableCollectionTestCase
         self::assertSame(1500, $complete->case->currentOpenMinor);
         self::assertSame(1500, $this->value('SELECT open_minor FROM billium_obligation'));
         self::assertSame(1500, $this->value('SELECT current_open_minor FROM billium_collection_dunning_case'));
+        $status = $this->signalService()->readHostStatus($this->collectionScope(), 'case-a');
+        self::assertFalse($status->paymentSettled);
+        $this->assertRefused(ProblemCode::OperationFinancialHold, fn () => $this->signalService()->recordOutcomeSignal(new RecordOutcomeSignal(
+            commandKey: 'outcome-partial-renewal',
+            scope: $this->collectionScope(),
+            caseRef: 'case-a',
+            signalKind: CollectionSignalKind::RenewalSucceeded,
+            signalDedupeKey: 'partial-renewal',
+            effectiveAt: new DateTimeImmutable('2026-11-20T12:05:00Z', new DateTimeZone('UTC')),
+        )));
     }
 
     public function test_monthly_consent_cap_allows_later_renewal_after_a_settled_charge(): void

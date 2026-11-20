@@ -295,17 +295,11 @@ final readonly class DatabaseCollectionSignalService implements CollectionSignal
                     ->first() ?? throw new LockPlanChanged('Dunning case missing after lock');
                 $case = DatabaseDunningQueries::hydrateCase($caseRow);
 
-                if ($command->signalKind === CollectionSignalKind::RenewalSucceeded) {
-                    $hasSucceededStep = $db->table('billium_collection_step')
-                        ->where('dunning_case_id', $caseId)
-                        ->where('status', CollectionStepStatus::Succeeded->value)
-                        ->exists();
-                    if ($case->status !== DunningCaseStatus::Settled && ! $hasSucceededStep) {
-                        throw new ProblemException(
-                            ProblemCode::OperationFinancialHold,
-                            'billium.collection.renewal_succeeded_requires_verified_settlement',
-                        );
-                    }
+                if ($command->signalKind === CollectionSignalKind::RenewalSucceeded && $case->status !== DunningCaseStatus::Settled) {
+                    throw new ProblemException(
+                        ProblemCode::OperationFinancialHold,
+                        'billium.collection.renewal_succeeded_requires_verified_settlement',
+                    );
                 }
 
                 $signalId = self::insertSignalIdempotent(
@@ -404,7 +398,7 @@ final readonly class DatabaseCollectionSignalService implements CollectionSignal
             }
         }
 
-        $paymentSettled = $case->status === DunningCaseStatus::Settled || $latestStepStatus === CollectionStepStatus::Succeeded;
+        $paymentSettled = $case->status === DunningCaseStatus::Settled;
         if ($paymentSettled) {
             $graceActive = false;
             $readOnlyActive = false;

@@ -305,46 +305,56 @@ final readonly class DatabaseCollectionNotificationService implements Collection
 
         // Host notification transport MUST execute strictly outside every database transaction.
         $this->assertOutsideTransaction();
+        $prior = $this->databases->connection($this->options->connection)
+            ->table('billium_idempotency_receipt')
+            ->where('environment', $caller->environment)
+            ->where('seller_ref', $caller->sellerRef)
+            ->where('command_kind', 'collection.notification.dispatch.v1')
+            ->where('command_key', $deliveryCommandKey)
+            ->first();
         $port = ($this->notificationPortResolver)();
         $ack = null;
         $deliveryError = null;
-        try {
-            $ack = $port->deliver($message);
-        } catch (ProblemException $problem) {
-            if ($problem->problem === ProblemCode::LookupUnavailable) {
-                throw new ProblemException(ProblemCode::LookupUnavailable, 'billium.collection.notification_transport_unavailable');
+        $digest = is_object($prior) ? RowCast::str($prior->digest, 'digest') : null;
+        if ($digest === null) {
+            try {
+                $ack = $port->deliver($message);
+            } catch (ProblemException $problem) {
+                if ($problem->problem === ProblemCode::LookupUnavailable) {
+                    throw new ProblemException(ProblemCode::LookupUnavailable, 'billium.collection.notification_transport_unavailable');
+                }
+                // Transport exception text can contain credentials or card data in arbitrary formats.
+                $deliveryError = $problem->problem->value;
+            } catch (Throwable) {
+                $deliveryError = 'delivery_failed';
             }
-            // Transport exception text can contain credentials or card data in arbitrary formats.
-            $deliveryError = $problem->problem->value;
-        } catch (Throwable) {
-            $deliveryError = 'delivery_failed';
-        }
 
-        if ($ack !== null) {
-            if ($ack->messageId !== $current->messageId) {
-                throw new ProblemException(
-                    ProblemCode::ValidationInvalid,
-                    'billium.collection.transport_ack_message_mismatch',
-                );
+            if ($ack !== null) {
+                if ($ack->messageId !== $current->messageId) {
+                    throw new ProblemException(
+                        ProblemCode::ValidationInvalid,
+                        'billium.collection.transport_ack_message_mismatch',
+                    );
+                }
+                if (! $ack->transportDeliveryOnly) {
+                    throw new ProblemException(
+                        ProblemCode::ValidationInvalid,
+                        'billium.collection.transport_ack_must_not_claim_payment_outcome',
+                    );
+                }
+                RowCast::bounded($ack->transportAckRef, 'transportAckRef');
             }
-            if (! $ack->transportDeliveryOnly) {
-                throw new ProblemException(
-                    ProblemCode::ValidationInvalid,
-                    'billium.collection.transport_ack_must_not_claim_payment_outcome',
-                );
-            }
-            RowCast::bounded($ack->transportAckRef, 'transportAckRef');
-        }
 
-        $digest = CanonicalJson::digest([
-            'sellerRef' => $caller->sellerRef,
-            'environment' => $caller->environment,
-            'messageId' => $current->messageId,
-            'expectedRevision' => $current->notificationRevision,
-            'delivered' => $ack !== null,
-            'transportAckRef' => $ack?->transportAckRef,
-            'deliveryError' => $deliveryError,
-        ]);
+            $digest = CanonicalJson::digest([
+                'sellerRef' => $caller->sellerRef,
+                'environment' => $caller->environment,
+                'messageId' => $current->messageId,
+                'expectedRevision' => $current->notificationRevision,
+                'delivered' => $ack !== null,
+                'transportAckRef' => $ack?->transportAckRef,
+                'deliveryError' => $deliveryError,
+            ]);
+        }
 
         $outcome = $this->runner->run(
             spec: new OperationSpec(

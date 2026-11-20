@@ -97,6 +97,17 @@ final class CollectionInterventionTest extends ExecutableCollectionTestCase
             recipientRef: 'customer:alpha',
             payload: ['nested' => ['api_key' => 'sk_live_secret_value']],
         )));
+        $this->assertRefused(ProblemCode::ValidationInvalid, fn () => $this->notificationService()->enqueue(new EnqueueCollectionNotification(
+            commandKey: 'notif-cvv-object',
+            scope: $scope,
+            caseRef: 'case-a',
+            stepRef: $step->stepRef,
+            templateRef: 'dunning_reminder',
+            templateRevision: 'v1',
+            channel: NotificationChannel::Email,
+            recipientRef: 'customer:alpha',
+            payload: ['nested' => (object) ['cvv' => '123']],
+        )));
         self::assertSame(0, $this->rows('billium_collection_notification'));
 
         // 2. Stable deduplication by (case, step, template, templateRevision, channel).
@@ -177,6 +188,11 @@ final class CollectionInterventionTest extends ExecutableCollectionTestCase
         self::assertSame(2, $failed->notificationRevision);
         self::assertSame('delivery_failed', $failed->lastDeliveryError);
         self::assertNull($failed->transportAckRef);
+        $deliveriesAfterFailure = $port->deliveryCount($first->messageId);
+        $replayedFailure = $this->notificationService()->dispatch($scope, $first->messageId, 'notif-dispatch-1');
+        self::assertSame(NotificationStatus::FailedDelivery, $replayedFailure->status);
+        self::assertSame(1, $replayedFailure->deliveryAttempts);
+        self::assertSame($deliveriesAfterFailure, $port->deliveryCount($first->messageId));
 
         // Port claiming transportDeliveryOnly = false is rejected cleanly.
         $port->setForceInvalidAckFlag(true);

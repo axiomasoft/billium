@@ -515,6 +515,7 @@ final class TestEnvironment
 
     public static function provisionWorkerTemplate(): void
     {
+        self::assertDestructiveResetAllowed();
         $admin = self::adminPdo();
         $name = self::WORKER_TEMPLATE;
         if (self::databaseExists($admin, $name)) {

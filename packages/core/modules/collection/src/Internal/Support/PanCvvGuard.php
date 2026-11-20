@@ -76,6 +76,8 @@ final class PanCvvGuard
                 }
             } elseif (is_array($value)) {
                 self::assertCleanPayload($value, $depth + 1);
+            } elseif (is_object($value)) {
+                self::assertCleanPayload(get_object_vars($value), $depth + 1);
             }
         }
     }
