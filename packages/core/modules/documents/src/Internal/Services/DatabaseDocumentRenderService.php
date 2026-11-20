@@ -350,12 +350,12 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
         try {
             $artifact = $renderer->render($renderInput);
         } catch (Throwable $error) {
-            $this->recordRenderFailure($caller->sellerRef, $caller->environment, $reqId, ['error' => $error->getMessage()]);
+            $this->recordRenderFailure($caller->sellerRef, $caller->environment, $reqId, ['error' => $error::class]);
             if ($error instanceof ProblemException) {
                 throw $error;
             }
 
-            throw new ProblemException(ProblemCode::TransportUnavailable, 'billium.documents.renderer_failed: '.$error->getMessage());
+            throw new ProblemException(ProblemCode::TransportUnavailable, 'billium.documents.renderer_failed');
         }
 
         $this->assertArtifactValid($caller->sellerRef, $caller->environment, $reqId, $artifact, $allowedAssetPrefixes);
@@ -383,14 +383,14 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
             ));
         } catch (Throwable $error) {
             $this->recordRenderFailure($caller->sellerRef, $caller->environment, $reqId, [
-                'error' => $error->getMessage(),
+                'error' => $error::class,
                 'uploadKey' => $uploadKey,
             ]);
             if ($error instanceof ProblemException) {
                 throw $error;
             }
 
-            throw new ProblemException(ProblemCode::TransportUnavailable, 'billium.documents.storage_failed: '.$error->getMessage());
+            throw new ProblemException(ProblemCode::TransportUnavailable, 'billium.documents.storage_failed');
         }
 
         // Persist uploaded blob metadata idempotently before CAS attach.
@@ -1027,6 +1027,8 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
                 $out[$key] = self::redactDiagnostics($nested);
             } elseif (is_string($val)) {
                 $out[$key] = self::redactString($val);
+            } elseif (is_int($val) && preg_match('/^\d{13,19}$/', (string) $val) === 1) {
+                $out[$key] = '[REDACTED]';
             } else {
                 $out[$key] = $val;
             }
@@ -1047,8 +1049,10 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
     private static function redactString(string $value): string
     {
         $value = (string) preg_replace('/Bearer\s+[A-Za-z0-9\-._~+\/=]+/i', 'Bearer [REDACTED]', $value);
+        $value = (string) preg_replace('/([?&](?:token|sig|secret|key|auth|password)=)[^&#\s]+/i', '$1[REDACTED]', $value);
+        $value = (string) preg_replace('/\b(?:cvv|cvc|pan)\b\s*[:=]\s*\S+/i', '[REDACTED]', $value);
 
-        return (string) preg_replace('/([?&](?:token|sig|secret|key|auth|password)=)[^&#\s]+/i', '$1[REDACTED]', $value);
+        return (string) preg_replace('/(?<!\d)\d{13,19}(?!\d)/', '[REDACTED]', $value);
     }
 
     private function assertOutsideTransaction(): void

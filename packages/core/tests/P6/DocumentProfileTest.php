@@ -299,7 +299,7 @@ final class DocumentProfileTest extends DocumentsTestCase
                 $this->txLevels[] = $this->db->connection()->transactionLevel();
                 $this->attempts++;
                 if ($this->attempts === 1) {
-                    throw new RuntimeException('tax provider timeout');
+                    throw new RuntimeException('tax provider timeout 4111111111111111');
                 }
                 $calc = $this->arithmetic->calculate(
                     [new TaxArithmeticLineInput('l1', '10.00', '0', '0.10', 'VAT')],
@@ -334,7 +334,26 @@ final class DocumentProfileTest extends DocumentsTestCase
             self::fail('Simulated tax port timeout must fail');
         } catch (ProblemException $error) {
             self::assertSame(ProblemCode::TransportUnavailable, $error->problem);
+            self::assertSame('billium.documents.tax_port_failed', $error->detail);
+            self::assertStringNotContainsString('4111111111111111', $error->detail);
+            $problemDetails = json_encode($error->errorDescriptor()->details, JSON_THROW_ON_ERROR);
+            self::assertIsString($problemDetails);
+            self::assertStringNotContainsString('4111111111111111', $problemDetails);
         }
+
+        $timeoutEvents = $this->finalizations()->events($this->docScope(), 'fin-cas');
+        $failedEventDetails = null;
+        foreach ($timeoutEvents as $event) {
+            if ($event->eventKind !== 'tax_port_failed') {
+                continue;
+            }
+            $failedEventDetails = json_encode($event->details, JSON_THROW_ON_ERROR);
+            self::assertIsString($failedEventDetails);
+            self::assertSame(RuntimeException::class, $event->details['exceptionClass'] ?? null);
+            self::assertArrayNotHasKey('message', $event->details);
+            self::assertStringNotContainsString('4111111111111111', $failedEventDetails);
+        }
+        self::assertNotNull($failedEventDetails);
 
         // State stayed Finalizing, tax_port_failed event recorded, and resolve ran strictly outside any DB Tx.
         $afterTimeout = $this->finalizations()->find($this->docScope(), 'fin-cas');

@@ -71,6 +71,25 @@ final class DocumentRenderTest extends DocumentsTestCase
         self::assertSame(RenderState::Pending, $first->state);
         self::assertSame(1, $this->rows('billium_document_legal'));
 
+        $renderer->failNextMessage = 'renderer transport failure 4111111111111111 cvv=123';
+        try {
+            $this->renderService()->executeRender($this->docScope(), 'rreq-1');
+            self::fail('Renderer failure must throw TransportUnavailable');
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::TransportUnavailable, $error->problem);
+            self::assertSame('billium.documents.renderer_failed', $error->detail);
+            $renderedDetails = json_encode($error->errorDescriptor()->details, JSON_THROW_ON_ERROR);
+            self::assertIsString($renderedDetails);
+            self::assertStringNotContainsString('4111111111111111', $error->detail);
+            self::assertStringNotContainsString('cvv=123', $error->detail);
+            self::assertStringNotContainsString('4111111111111111', $renderedDetails);
+            self::assertStringNotContainsString('cvv=123', $renderedDetails);
+        }
+        $rendererDiag = (string) $this->value("SELECT redacted_diagnostics::text FROM billium_document_render_request WHERE render_request_ref='rreq-1'");
+        self::assertStringNotContainsString('4111111111111111', $rendererDiag);
+        self::assertStringNotContainsString('cvv=123', $rendererDiag);
+        self::assertStringContainsString(RuntimeException::class, $rendererDiag);
+
         // Simulate timeout AFTER storage accepted the upload on attempt 1.
         $storage->failAfterStoreNext = true;
         try {
@@ -78,6 +97,11 @@ final class DocumentRenderTest extends DocumentsTestCase
             self::fail('Storage timeout after upload must throw TransportUnavailable');
         } catch (ProblemException $error) {
             self::assertSame(ProblemCode::TransportUnavailable, $error->problem);
+            self::assertSame('billium.documents.storage_failed', $error->detail);
+            self::assertStringNotContainsString('simulated storage timeout after upload', $error->detail);
+            $storageDetails = json_encode($error->errorDescriptor()->details, JSON_THROW_ON_ERROR);
+            self::assertIsString($storageDetails);
+            self::assertStringNotContainsString('simulated storage timeout after upload', $storageDetails);
         }
         self::assertSame(1, $storage->activeBlobCount());
 

@@ -462,13 +462,13 @@ final readonly class DatabaseDocumentFinalizationService implements DocumentFina
                 revision: $finalizing->finalizationRevision,
                 eventKind: 'tax_port_failed',
                 inputDigest: $finalizing->inputDigest,
-                details: ['message' => substr($error->getMessage(), 0, 200)],
+                details: ['exceptionClass' => $error::class],
             );
             if ($error instanceof ProblemException) {
                 throw $error;
             }
 
-            throw new ProblemException(ProblemCode::TransportUnavailable, 'billium.documents.tax_port_failed: '.$error->getMessage());
+            throw new ProblemException(ProblemCode::TransportUnavailable, 'billium.documents.tax_port_failed');
         }
 
         // Tx 2: CAS finalizing -> snapshot_ready guarded on finalization_revision + input_digest.
