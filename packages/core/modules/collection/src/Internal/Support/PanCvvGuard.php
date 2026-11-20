@@ -59,8 +59,8 @@ final class PanCvvGuard
         }
         foreach ($payload as $key => $value) {
             if (is_string($key)) {
-                $normalized = strtolower(trim($key));
-                if (in_array($normalized, self::FORBIDDEN_KEYS, true)) {
+                $normalized = strtolower((string) preg_replace('/[^a-z0-9]/i', '', $key));
+                if (in_array($normalized, self::normalizedForbiddenKeys(), true)) {
                     throw new ProblemException(
                         ProblemCode::ValidationInvalid,
                         'billium.collection.sensitive_card_data_forbidden',
@@ -80,6 +80,15 @@ final class PanCvvGuard
                 self::assertCleanPayload(get_object_vars($value), $depth + 1);
             }
         }
+    }
+
+    /** @return list<string> */
+    private static function normalizedForbiddenKeys(): array
+    {
+        return array_map(
+            static fn (string $key): string => strtolower((string) preg_replace('/[^a-z0-9]/', '', $key)),
+            self::FORBIDDEN_KEYS,
+        );
     }
 
     private static function containsPanOrCvvPattern(string $value): bool

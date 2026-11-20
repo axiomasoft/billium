@@ -208,21 +208,21 @@
                             "flags": 1
                         },
                         {
-                            "name": "collection",
-                            "type": "Billium\\Core\\Configuration\\OptionalModuleOptions",
-                            "by_reference": false,
-                            "variadic": false,
-                            "optional": true,
-                            "default": "new \\Billium\\Core\\Configuration\\OptionalModuleOptions()",
-                            "flags": 1
-                        },
-                        {
                             "name": "execution",
                             "type": "Billium\\Core\\Configuration\\ExecutionOptions",
                             "by_reference": false,
                             "variadic": false,
                             "optional": true,
                             "default": "new \\Billium\\Core\\Configuration\\ExecutionOptions()",
+                            "flags": 1
+                        },
+                        {
+                            "name": "collection",
+                            "type": "Billium\\Core\\Configuration\\OptionalModuleOptions",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": true,
+                            "default": "new \\Billium\\Core\\Configuration\\OptionalModuleOptions()",
                             "flags": 1
                         }
                     ],

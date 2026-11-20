@@ -52,8 +52,8 @@ final readonly class BilliumOptions implements OptionsFactory
         public OptionalModuleOptions $rating = new OptionalModuleOptions,
         public OptionalModuleOptions $schedule = new OptionalModuleOptions,
         public OptionalModuleOptions $documents = new OptionalModuleOptions,
-        public OptionalModuleOptions $collection = new OptionalModuleOptions,
         public ExecutionOptions $execution = new ExecutionOptions,
+        public OptionalModuleOptions $collection = new OptionalModuleOptions,
     ) {}
 
     /** @param array<array-key, mixed> $config */

@@ -589,6 +589,27 @@ final class CollectionConsentTest extends CollectionTestCase
         self::assertFalse($action->paid);
         self::assertFalse($action->terminalFailure);
         self::assertSame('chal_3ds_9988', $action->challengeRef);
+        $actionsBeforeIdentityConflict = $this->rows('billium_collection_customer_action');
+        try {
+            $this->consentService()->recordCustomerAction(new RecordCustomerAction(
+                commandKey: 'act-3ds-identity',
+                scope: $this->collectionScope(),
+                actionRef: 'cact-3ds-002',
+                billingAccountRef: 'account-a',
+                consentRef: 'consent-route',
+                consentVersion: 2,
+                businessPaymentIntentRef: 'bpi-001',
+                actionType: CustomerActionType::ThreeDsChallenge,
+                challengeRef: 'chal_3ds_9988',
+                actionPayload: ['method' => '3ds2_challenge'],
+                expiresAt: new DateTimeImmutable('2026-11-20T13:00:00Z', new DateTimeZone('UTC')),
+            ));
+            self::fail('A second action for the same challenge identity must conflict');
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::IdempotencyConflict, $error->problem);
+            self::assertSame('billium.collection.customer_action_conflict', $error->detail);
+        }
+        self::assertSame($actionsBeforeIdentityConflict, $this->rows('billium_collection_customer_action'));
 
         $reloadedAction = $this->consentQueries()->findCustomerAction($this->collectionScope(), 'cact-3ds-001');
         self::assertNotNull($reloadedAction);

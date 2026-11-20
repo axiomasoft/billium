@@ -5,6 +5,17 @@ declare(strict_types=1);
 namespace Billium\Core\Tests\Unit\Configuration;
 
 use Billium\Core\Configuration\BilliumOptions;
+use Billium\Core\Configuration\ExecutionOptions;
+use Billium\Core\Configuration\FeedOptions;
+use Billium\Core\Configuration\FinancialSessionOptions;
+use Billium\Core\Configuration\IdempotencyOptions;
+use Billium\Core\Configuration\InboxOptions;
+use Billium\Core\Configuration\LedgerOptions;
+use Billium\Core\Configuration\ModulesOptions;
+use Billium\Core\Configuration\OptionalModuleOptions;
+use Billium\Core\Configuration\OutboxOptions;
+use Billium\Core\Configuration\RunnerOptions;
+use Billium\Core\Configuration\RuntimeRoleOptions;
 use LogicException;
 use Packman\Config\Data\SecretRef;
 use Packman\Config\Exceptions\InvalidConfiguration;
@@ -69,5 +80,31 @@ final class BilliumOptionsTest extends TestCase
 
         $this->expectException(LogicException::class);
         serialize($options->feed->signingKey);
+    }
+
+    public function test_execution_remains_the_sixteenth_positional_argument(): void
+    {
+        $execution = new ExecutionOptions(releaseEvidenceRef: 'evidence-1');
+        $options = new BilliumOptions(
+            null,
+            null,
+            new RunnerOptions,
+            new FinancialSessionOptions,
+            new IdempotencyOptions,
+            new OutboxOptions,
+            new FeedOptions,
+            new InboxOptions,
+            new RuntimeRoleOptions,
+            new LedgerOptions,
+            new ModulesOptions,
+            new OptionalModuleOptions,
+            new OptionalModuleOptions,
+            new OptionalModuleOptions,
+            new OptionalModuleOptions,
+            $execution,
+        );
+
+        self::assertSame($execution, $options->execution);
+        self::assertFalse($options->collection->enabled);
     }
 }

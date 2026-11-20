@@ -1156,7 +1156,22 @@ final readonly class DatabaseConsentBindingService implements ConsentBindingServ
                     ->where('seller_ref', $caller->sellerRef)
                     ->where('environment', $caller->environment)
                     ->where('action_ref', $command->actionRef)
-                    ->first() ?? throw new LogicException('Customer action receipt vanished');
+                    ->first();
+                if ($existing === null) {
+                    $identity = $db->table('billium_collection_customer_action')
+                        ->where('seller_ref', $caller->sellerRef)
+                        ->where('environment', $caller->environment)
+                        ->where('business_payment_intent_ref', $command->businessPaymentIntentRef)
+                        ->where('challenge_ref', $command->challengeRef)
+                        ->first();
+                    if ($identity !== null) {
+                        throw new ProblemException(
+                            ProblemCode::IdempotencyConflict,
+                            'billium.collection.customer_action_conflict',
+                        );
+                    }
+                    throw new LogicException('Customer action receipt vanished');
+                }
 
                 if (RowCast::str($existing->receipt_digest, 'receipt_digest') !== $receiptDigest) {
                     throw new ProblemException(

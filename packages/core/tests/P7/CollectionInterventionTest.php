@@ -108,6 +108,17 @@ final class CollectionInterventionTest extends ExecutableCollectionTestCase
             recipientRef: 'customer:alpha',
             payload: ['nested' => (object) ['cvv' => '123']],
         )));
+        $this->assertRefused(ProblemCode::ValidationInvalid, fn () => $this->notificationService()->enqueue(new EnqueueCollectionNotification(
+            commandKey: 'notif-apikey-camel',
+            scope: $scope,
+            caseRef: 'case-a',
+            stepRef: $step->stepRef,
+            templateRef: 'dunning_reminder',
+            templateRevision: 'v1',
+            channel: NotificationChannel::Email,
+            recipientRef: 'customer:alpha',
+            payload: ['apiKey' => 'sk_live_secret_value', 'privateKey' => 'pem-secret'],
+        )));
         self::assertSame(0, $this->rows('billium_collection_notification'));
 
         // 2. Stable deduplication by (case, step, template, templateRevision, channel).
