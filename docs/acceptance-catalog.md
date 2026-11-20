@@ -435,3 +435,11 @@ PE-01…PE-09 — предложенные сценарии паспорта и�
 | P7.7 / observability | Scrape просроченного и будущего work, неизвестного исхода до и после reconcile, classified decline и повторного transport claim. | Фиксированный набор из четырёх агрегатов. Чужой scope возвращает нули, классификация и transport retry считаются раздельно. Ответы привязаны к [runbook](operations/collection.md#collection-alerts-and-response) (INV-14, D56, D59, D63; владельцы Billium collection и host monitoring). |
 
 P7.3–P7.6 содержат дополнительные проверки многопроцессных гонок. Фикстуры P7.7 используют имитацию внешних эффектов. Квалификация live PSP, восстановление production deployment и независимая фазовая приёмка проверяются отдельными gates (D54, D59, D64, D66; владельцы deployment и release).
+
+#### P7.8 — Регрессии аудита collection
+
+| Проверка | Ожидаемый результат |
+|:--|:--|
+| `CollectionAdmissionTest` | После частичного capture остаток в dunning case совпадает с ledger даже без `updatedOpenMinor`. Оплаченный renewal учитывается в лимите согласия текущего месяца UTC. Новый месяц получает отдельный лимит. |
+| `DunningPolicyTest` | Миграция сохраняет запас на возможный decline активного шага. Действующий шаг сохраняет исходный лимит повторов доставки. |
+| `CollectionInterventionTest` | Вызовы `planStep` и `transitionStep` требуют отдельного полномочия хоста. Ошибка доставки сохраняется и возвращается как безопасный код. Отсутствующий payload хранится как пустой JSON-объект. |

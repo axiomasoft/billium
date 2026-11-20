@@ -15,6 +15,7 @@ use Billium\Collection\Enums\ManualOverrideAction;
 use Billium\Collection\Enums\NotificationChannel;
 use Billium\Collection\Enums\NotificationStatus;
 use Billium\Collection\Internal\Support\RowCast;
+use Billium\Contracts\Enums\ProblemCode;
 use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Contracts\Runtime\CallerContext;
 use Illuminate\Database\DatabaseManager;
@@ -165,6 +166,8 @@ final readonly class DatabaseCollectionInterventionQueries implements Collection
 
     public static function hydrateNotification(stdClass $row): CollectionNotificationView
     {
+        $deliveryError = RowCast::optStr($row->last_delivery_error, 'last_delivery_error');
+
         return new CollectionNotificationView(
             id: RowCast::integer($row->id, 'id'),
             sellerRef: RowCast::str($row->seller_ref, 'seller_ref'),
@@ -186,7 +189,7 @@ final readonly class DatabaseCollectionInterventionQueries implements Collection
             deliveryAttempts: RowCast::integer($row->delivery_attempts, 'delivery_attempts'),
             transportAckRef: RowCast::optStr($row->transport_ack_ref, 'transport_ack_ref'),
             transportAckedAt: RowCast::optUtcDateTime($row->transport_acked_at, 'transport_acked_at'),
-            lastDeliveryError: RowCast::optStr($row->last_delivery_error, 'last_delivery_error'),
+            lastDeliveryError: $deliveryError === null ? null : (ProblemCode::tryFrom($deliveryError)->value ?? 'delivery_failed'),
             lastAttemptAt: RowCast::optUtcDateTime($row->last_attempt_at, 'last_attempt_at'),
             enqueuedAt: RowCast::utcDateTime($row->enqueued_at, 'enqueued_at'),
             updatedAt: RowCast::utcDateTime($row->updated_at, 'updated_at'),

@@ -20,6 +20,7 @@ use Billium\Collection\Data\HostConsentAuthoritySnapshot;
 use Billium\Collection\Data\RegisterConsentBinding;
 use Billium\Collection\Enums\ConsentPurpose;
 use Billium\Collection\Laravel\CollectionServiceProvider;
+use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Tests\ExecutionTestCase;
 use Billium\Execution\Data\CapabilityDetails;
 use Billium\Execution\Data\CapabilitySnapshot;
@@ -42,6 +43,8 @@ use Packman\Schema\Contracts\Migration\SchemaMigrator;
  */
 abstract class CollectionTestCase extends ExecutionTestCase
 {
+    public const string DIRECT_STEP_LIFECYCLE = 'billium.collection.direct_step_lifecycle';
+
     /** @param Application $app */
     protected function getPackageProviders($app): array
     {
@@ -61,6 +64,9 @@ abstract class CollectionTestCase extends ExecutionTestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $caller = $this->callers->current();
+        $this->callers->set(new Caller($caller->sellerRef, $caller->environment, $caller->installationRef,
+            $caller->actorRef, $caller->sourceAuthorities, $caller->intentOwnerNamespaces, [...$caller->permissions, self::DIRECT_STEP_LIFECYCLE]));
         $this->application()->make(SchemaMigrator::class)->migrateSets(
             ['axiomasoft/billium-core:billium-collection'],
             'billium_owner',

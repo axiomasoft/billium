@@ -33,6 +33,10 @@ abstract class ExecutableCollectionTestCase extends CollectionTestCase
 {
     protected const ?int LOOKUP_RETENTION_SECONDS = null;
 
+    protected const int PER_CHARGE_CAP_MINOR = 10000;
+
+    protected const int PER_PERIOD_CAP_MINOR = 25000;
+
     protected string $journal;
 
     protected CapabilitySnapshot $capability;
@@ -55,7 +59,8 @@ abstract class ExecutableCollectionTestCase extends CollectionTestCase
         $app->instance(CollectionConsentGuard::class, new CollectionAdmissionScenario);
         $merchant = $app->make(MerchantRegistry::class)->forAdmission(Fixture::scope(), 'merchant-a');
         $this->consentService()->registerBinding($this->registerCommand(
-            merchantAccountRef: 'account-a', merchantConfigRevision: 'merchant-a', currencies: ['RUB'], validFrom: new DateTimeImmutable('2026-11-20T00:00:00Z'),
+            merchantAccountRef: 'account-a', merchantConfigRevision: 'merchant-a', currencies: ['RUB'],
+            perChargeCapMinor: static::PER_CHARGE_CAP_MINOR, perPeriodCapMinor: static::PER_PERIOD_CAP_MINOR, validFrom: new DateTimeImmutable('2026-11-20T00:00:00Z'),
         ), $merchant, $this->capability);
         $this->dunningPolicyService()->registerPolicyVersion(new RegisterDunningPolicyVersion(
             'policy', $this->collectionScope(), 'policy-a', 1, [CollectionChannel::SavedMethod],

@@ -236,7 +236,8 @@ final readonly class DatabaseCollectionParticipants implements CollectionPartici
             ->where('step_id', $row->step_id)->value('closure_ref'), 'closure_ref');
     }
 
-    public function transitionScope(TransitionCollectionStep $command): ?FinancialScope
+    /** @return array{scope: FinancialScope, operationRef: string}|null */
+    public function transitionAuthorization(TransitionCollectionStep $command): ?array
     {
         $caller = $this->callers->current();
         RowCast::assertScope($caller, $command->scope);
@@ -244,10 +245,13 @@ final readonly class DatabaseCollectionParticipants implements CollectionPartici
             ->join('billium_collection_step as s', 's.id', '=', 'a.step_id')
             ->where('a.installation_ref', $caller->installationRef)->where('a.seller_ref', $caller->sellerRef)
             ->where('a.environment', $caller->environment)->where('s.case_ref', $command->caseRef)->where('s.step_ref', $command->stepRef)
-            ->first(['a.intent_owner_namespace', 'a.execution_profile']);
+            ->first(['a.intent_owner_namespace', 'a.execution_profile', 'a.operation_ref']);
 
-        return $row === null ? null : new FinancialScope($caller->installationRef, $caller->sellerRef, $caller->environment,
-            RowCast::str($row->intent_owner_namespace, 'intent_owner_namespace'), RowCast::str($row->execution_profile, 'execution_profile'));
+        return $row === null ? null : [
+            'scope' => new FinancialScope($caller->installationRef, $caller->sellerRef, $caller->environment,
+                RowCast::str($row->intent_owner_namespace, 'intent_owner_namespace'), RowCast::str($row->execution_profile, 'execution_profile')),
+            'operationRef' => RowCast::str($row->operation_ref, 'operation_ref'),
+        ];
     }
 
     public function prelockOutcome(TransactionContext $ctx, ExecutionScope $scope, string $operationRef): ExecutionLockPlan
@@ -259,22 +263,35 @@ final readonly class DatabaseCollectionParticipants implements CollectionPartici
     }
 
     public function checkTransition(TransactionContext $ctx, CollectionStepView $step, TransitionCollectionStep $command,
-        ?int $executionRevision, ?ExecutionLockPlan $plan): ?int
+        ?int $executionRevision, ?ExecutionLockPlan $plan, bool $claimed): ?int
     {
+        if (! self::isValidStepTransition($step->status, $command->targetStatus)) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.collection.step_transition_invalid');
+        }
+
         $db = $this->databases->connection($ctx->connectionName());
         $row = $db->table('billium_collection_authorization')->where('step_id', $step->id)->first();
         if ($row === null) {
             return null;
         }
+        if ($row->installation_ref !== $ctx->caller()->installationRef
+            || ! in_array($row->intent_owner_namespace, $ctx->caller()->intentOwnerNamespaces, true)
+            || ! in_array($row->execution_profile, $ctx->caller()->sourceAuthorities, true)) {
+            throw new ProblemException(ProblemCode::AuthDenied, 'Collection authorization is outside the authenticated grants');
+        }
+        if ($plan === null) {
+            throw new ProblemException(ProblemCode::RecoveryRequired, 'Collection authorization appeared before the case was locked');
+        }
         $scope = new ExecutionScope(RowCast::str($row->installation_ref, 'installation_ref'), $step->sellerRef, $step->environment,
             RowCast::str($row->intent_owner_namespace, 'intent_owner_namespace'));
         if ($command->targetStatus === CollectionStepStatus::Unknown) {
-            if ($plan !== null) {
-                $this->execution->lock($ctx, $plan);
-                $operation = $this->execution->operation($scope, $step->operationRef, $ctx);
-                if ($operation === null || in_array($operation->state, ['succeeded', 'failed', 'cancelled'], true)) {
-                    throw new ProblemException(ProblemCode::RecoveryRequired, 'Collection outcome changed before parking');
-                }
+            if (! $claimed) {
+                throw new ProblemException(ProblemCode::AuthDenied, 'Only the collection recovery worker can park an executable step');
+            }
+            $this->execution->lock($ctx, $plan);
+            $operation = $this->execution->operation($scope, $step->operationRef, $ctx);
+            if ($operation === null || in_array($operation->state, ['succeeded', 'failed', 'cancelled'], true)) {
+                throw new ProblemException(ProblemCode::RecoveryRequired, 'Collection outcome changed before parking');
             }
 
             return null;
@@ -284,13 +301,10 @@ final readonly class DatabaseCollectionParticipants implements CollectionPartici
             CollectionStepStatus::FailedTerminal => 'failed',
             default => throw new ProblemException(ProblemCode::OperationNotCancellable, 'Use the execution guard for an authorized step'),
         };
-        $open = null;
-        if ($plan !== null) {
-            $customer = $db->table('billium_collection_consent_binding')->where('id', $row->consent_binding_id)->value('customer_ref');
-            $open = $this->obligations->lockOutstandingMinor($ctx, self::account($row), RowCast::str($row->obligation_ref, 'obligation_ref'),
-                $step->businessPaymentIntentRef, $step->currency, RowCast::str($customer, 'customer_ref'));
-            $this->execution->lock($ctx, $plan);
-        }
+        $customer = $db->table('billium_collection_consent_binding')->where('id', $row->consent_binding_id)->value('customer_ref');
+        $open = $this->obligations->lockOutstandingMinor($ctx, self::account($row), RowCast::str($row->obligation_ref, 'obligation_ref'),
+            $step->businessPaymentIntentRef, $step->currency, RowCast::str($customer, 'customer_ref'));
+        $this->execution->lock($ctx, $plan);
         $operation = $this->execution->operation($scope, $step->operationRef, $ctx);
         if ($operation === null || $operation->state !== $state || $operation->binding->semanticDigest !== $row->business_digest
             || ($executionRevision !== null && $operation->revision !== $executionRevision)
@@ -301,6 +315,35 @@ final readonly class DatabaseCollectionParticipants implements CollectionPartici
         }
 
         return $open;
+    }
+
+    private static function isValidStepTransition(CollectionStepStatus $from, CollectionStepStatus $to): bool
+    {
+        return match ($from) {
+            CollectionStepStatus::Planned => in_array($to, [
+                CollectionStepStatus::Authorized,
+                CollectionStepStatus::Dispatched,
+                CollectionStepStatus::Unknown,
+                CollectionStepStatus::Cancelled,
+            ], true),
+            CollectionStepStatus::Authorized => in_array($to, [
+                CollectionStepStatus::Dispatched,
+                CollectionStepStatus::Unknown,
+                CollectionStepStatus::Cancelled,
+            ], true),
+            CollectionStepStatus::Dispatched => in_array($to, [
+                CollectionStepStatus::Unknown,
+                CollectionStepStatus::Succeeded,
+                CollectionStepStatus::FailedTerminal,
+            ], true),
+            CollectionStepStatus::Unknown => in_array($to, [
+                CollectionStepStatus::Succeeded,
+                CollectionStepStatus::FailedTerminal,
+            ], true),
+            CollectionStepStatus::Succeeded,
+            CollectionStepStatus::FailedTerminal,
+            CollectionStepStatus::Cancelled => false,
+        };
     }
 
     /** @return array{Connection, stdClass, CollectionStepView} */

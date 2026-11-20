@@ -34,6 +34,7 @@ final class ConsentGuardRaceScenario implements Scenario
             $base->actorRef,
             ['remote-billium'],
             ['source-a'],
+            [CollectionTestCase::DIRECT_STEP_LIFECYCLE],
         )));
         $app->instance(FinancialSessionAdmission::class, new FixedSessionAdmission(FixedSessionAdmission::token()));
         SimulatedFinancialAuthorityEvidence::admitCurrent($app);

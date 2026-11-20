@@ -73,8 +73,8 @@ final readonly class DatabaseCollectionNotificationService implements Collection
         PanCvvGuard::assertOpaqueReference($command->recipientRef, 'recipientRef');
         PanCvvGuard::assertCleanPayload($command->payload);
 
-        $payloadJson = CanonicalJson::encode($command->payload);
-        $payloadDigest = CanonicalJson::digest($command->payload);
+        $payloadJson = CanonicalJson::encodeObject($command->payload);
+        $payloadDigest = 'sha256:'.hash('sha256', $payloadJson);
         $commandDigest = CanonicalJson::digest([
             'sellerRef' => $caller->sellerRef,
             'environment' => $caller->environment,
@@ -312,11 +312,12 @@ final readonly class DatabaseCollectionNotificationService implements Collection
             $ack = $port->deliver($message);
         } catch (ProblemException $problem) {
             if ($problem->problem === ProblemCode::LookupUnavailable) {
-                throw $problem;
+                throw new ProblemException(ProblemCode::LookupUnavailable, 'billium.collection.notification_transport_unavailable');
             }
-            $deliveryError = substr($problem->detail !== '' ? $problem->detail : $problem->problem->value, 0, 500);
-        } catch (Throwable $error) {
-            $deliveryError = substr($error->getMessage() !== '' ? $error->getMessage() : $error::class, 0, 500);
+            // Transport exception text can contain credentials or card data in arbitrary formats.
+            $deliveryError = $problem->problem->value;
+        } catch (Throwable) {
+            $deliveryError = 'delivery_failed';
         }
 
         if ($ack !== null) {

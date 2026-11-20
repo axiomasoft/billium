@@ -40,6 +40,7 @@ use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
 use Billium\Platform\Contracts\Outbox\CommandOutbox;
 use Billium\Platform\Data\EventContracts\PreparedInternalCommand;
 use DateTimeImmutable;
+use DateTimeZone;
 use Illuminate\Database\Connection;
 use LogicException;
 use Packman\Attributes\Internal;
@@ -97,7 +98,7 @@ final readonly class CollectionAdmission
     public function lockAndSize(
         TransactionContext $ctx, Connection $db, AuthorizeCollection $command, DunningCaseView $case,
         CollectionChannel $channel, string $ref, ConsentBindingView $binding, MerchantRevision $merchant,
-        HostConsentAuthoritySnapshot $host, string $componentRef, ?DateTimeImmutable $dueAsOf,
+        HostConsentAuthoritySnapshot $host, string $componentRef, ?DateTimeImmutable $dueAsOf, DateTimeImmutable $issuedAt,
     ): int {
         $step = $command->step;
         $guard = $this->consents->lockGuard($ctx, $step->scope, $command->consentRef);
@@ -115,7 +116,6 @@ final readonly class CollectionAdmission
             throw new ProblemException(ProblemCode::IdempotencyConflict, 'Collection operation or business intent is already claimed by execution');
         }
         $scope = new BillingAccountScope($case->sellerRef, $case->environment, $case->billingAccountRef);
-        $now = new DateTimeImmutable;
         $open = $this->obligations->lockCollectibleMinor($ctx, $scope, $case->obligationRef, $step->businessPaymentIntentRef,
             $case->currency, $binding->customerRef, $componentRef, $dueAsOf);
         $pending = $db->table('billium_collection_authorization as a')
@@ -127,17 +127,17 @@ final readonly class CollectionAdmission
             throw new ProblemException(ProblemCode::OperationFinancialHold, 'Collection has no unreserved collectible balance');
         }
 
-        if ($case->nextAttemptAt !== null && $case->nextAttemptAt > $now || $step->scheduledAt > $now || $case->recoveryDeadlineAt < $now) {
+        if ($case->nextAttemptAt !== null && $case->nextAttemptAt > $issuedAt || $step->scheduledAt > $issuedAt || $case->recoveryDeadlineAt < $issuedAt) {
             throw new ProblemException(ProblemCode::OperationFinancialHold, 'Collection step is outside its due window');
         }
 
         $amount = min($open, $step->amountMinor);
-        $committed = $binding->perPeriodCapMinor === null ? 0 : self::committedMinor($db, $binding);
+        $committed = $binding->perPeriodCapMinor === null ? 0 : self::committedMinor($db, $binding, $issuedAt);
         $verdict = $this->consents->evaluateChargeEligibility(new ConsentChargeEligibilityRequest(
             $step->scope, $case->billingAccountRef, $binding->consentRef, $binding->consentVersion,
             $binding->merchantAccountRef, $binding->merchantConfigRevision,
             $step->stepNo === 1 ? ConsentPurpose::RecurringCharge : ConsentPurpose::DunningRetry,
-            $case->currency, $amount, $now, $committed, $case->cancellationGeneration, $ref, $step->businessPaymentIntentRef,
+            $case->currency, $amount, $issuedAt, $committed, $case->cancellationGeneration, $ref, $step->businessPaymentIntentRef,
         ), $ctx);
         if (! $verdict->permitted) {
             throw new ProblemException(ProblemCode::OperationFinancialHold, $verdict->denialCode ?? 'Collection consent refused');
@@ -248,12 +248,14 @@ final readonly class CollectionAdmission
         return substr($hash, 0, 8).'-'.substr($hash, 8, 4).'-'.substr($hash, 12, 4).'-'.substr($hash, 16, 4).'-'.substr($hash, 20, 12);
     }
 
-    private static function committedMinor(Connection $db, ConsentBindingView $binding): int
+    private static function committedMinor(Connection $db, ConsentBindingView $binding, DateTimeImmutable $issuedAt): int
     {
-        // There is no host period boundary on this mandate. Keep its cap across all retained commitments.
+        $periodStart = $issuedAt->setTimezone(new DateTimeZone('UTC'))->modify('first day of this month')->setTime(0, 0);
+        $periodEnd = $periodStart->modify('first day of next month');
         $sum = $db->table('billium_collection_authorization as a')->join('billium_collection_step as s', 's.id', '=', 'a.step_id')
             ->where('a.seller_ref', $binding->sellerRef)->where('a.environment', $binding->environment)
             ->where('a.consent_ref', $binding->consentRef)->where('a.currency', $binding->capCurrency)
+            ->where('a.issued_at', '>=', RowCast::formatUtc($periodStart))->where('a.issued_at', '<', RowCast::formatUtc($periodEnd))
             ->whereNotIn('s.status', ['cancelled', 'failed_terminal'])->sum('a.amount_minor');
 
         return (int) $sum;

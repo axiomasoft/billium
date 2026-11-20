@@ -175,7 +175,7 @@ final class CollectionInterventionTest extends ExecutableCollectionTestCase
         self::assertSame(NotificationStatus::FailedDelivery, $failed->status);
         self::assertSame(1, $failed->deliveryAttempts);
         self::assertSame(2, $failed->notificationRevision);
-        self::assertSame('smtp_503_temporary_unavailable', $failed->lastDeliveryError);
+        self::assertSame('delivery_failed', $failed->lastDeliveryError);
         self::assertNull($failed->transportAckRef);
 
         // Port claiming transportDeliveryOnly = false is rejected cleanly.
@@ -225,6 +225,39 @@ final class CollectionInterventionTest extends ExecutableCollectionTestCase
         self::assertNotNull($byKey);
         self::assertSame($delivered->messageId, $byKey->messageId);
         self::assertCount(2, $this->interventionQueries()->listCaseNotifications($scope, 'case-a'));
+    }
+
+    public function test_notification_delivery_error_discards_transport_secrets(): void
+    {
+        $scope = $this->collectionScope();
+        $notification = $this->notificationService()->enqueue(new EnqueueCollectionNotification(
+            'enqueue-error', $scope, 'case-a', null, 'dunning_reminder', 'v1', NotificationChannel::Email,
+            'customer-channel://email/user-1', ['currency' => 'RUB'],
+        ));
+        $port = new InMemoryCollectionNotificationPort;
+        $this->application()->instance(CollectionNotificationPort::class, $port);
+        $port->failNextWith('transport rejected api_key=demo-secret');
+
+        $failed = $this->notificationService()->dispatch($scope, $notification->messageId, 'dispatch-error');
+
+        self::assertSame(NotificationStatus::FailedDelivery, $failed->status);
+        self::assertSame('delivery_failed', $failed->lastDeliveryError);
+        self::assertSame('delivery_failed', $this->value('SELECT last_delivery_error FROM billium_collection_notification'));
+    }
+
+    public function test_notification_omitted_payload_is_an_empty_json_object(): void
+    {
+        $command = new EnqueueCollectionNotification(
+            'enqueue-empty', $this->collectionScope(), 'case-a', null, 'dunning_reminder', 'v1', NotificationChannel::Email,
+            'customer-channel://email/user-1',
+        );
+        $service = $this->notificationService();
+        $notification = $service->enqueue($command);
+
+        self::assertSame('{}', $this->value('SELECT payload::text FROM billium_collection_notification'));
+        self::assertSame([], $notification->payload);
+        self::assertSame('sha256:'.hash('sha256', '{}'), $notification->payloadDigest);
+        self::assertSame($notification->id, $service->enqueue($command)->id);
     }
 
     public function test_grace_and_read_only_host_signals_are_strictly_signal_only_without_host_resource_or_grant_mutation(): void
@@ -733,8 +766,8 @@ final class CollectionInterventionTest extends ExecutableCollectionTestCase
             recoveryProofDigest: $proofDigest,
         )));
 
-        // 2. Plan a step and transition it to Unknown -> parent case becomes parked_unknown.
-        $step = $this->dunningCaseService()->planStep(new PlanCollectionStep(
+        // 2. The manual override grant does not authorize direct lifecycle changes.
+        $plan = new PlanCollectionStep(
             commandKey: 'plan-unknown-step',
             scope: $scope,
             caseRef: 'case-a',
@@ -744,8 +777,11 @@ final class CollectionInterventionTest extends ExecutableCollectionTestCase
             operationRef: 'op-unknown-1',
             amountMinor: 5000,
             scheduledAt: new DateTimeImmutable('2026-11-20T01:00:00Z', new DateTimeZone('UTC')),
-        ));
-        $unknownResult = $this->dunningCaseService()->transitionStep(new TransitionCollectionStep(
+        );
+        $this->assertRefused(ProblemCode::AuthDenied, fn () => $this->dunningCaseService()->planStep($plan));
+        $this->withOperator('seller-a', 'host-integration', [self::DIRECT_STEP_LIFECYCLE]);
+        $step = $this->dunningCaseService()->planStep($plan);
+        $transition = new TransitionCollectionStep(
             commandKey: 'trans-unknown-1',
             scope: $scope,
             caseRef: 'case-a',
@@ -754,7 +790,12 @@ final class CollectionInterventionTest extends ExecutableCollectionTestCase
             expectedStepRevision: $step->stepRevision,
             occurredAt: new DateTimeImmutable('2026-11-20T01:05:00Z', new DateTimeZone('UTC')),
             declineReason: 'psp_timeout_after_send',
-        ));
+        );
+        $this->withOperator('seller-a', 'operator-a', [CollectionManualInterventionService::PRIVILEGE_MANUAL_OVERRIDE]);
+        $this->assertRefused(ProblemCode::AuthDenied, fn () => $this->dunningCaseService()->transitionStep($transition));
+        $this->withOperator('seller-a', 'host-integration', [self::DIRECT_STEP_LIFECYCLE]);
+        $unknownResult = $this->dunningCaseService()->transitionStep($transition);
+        $this->withOperator('seller-a', 'operator-a', [CollectionManualInterventionService::PRIVILEGE_MANUAL_OVERRIDE]);
         self::assertSame(DunningCaseStatus::ParkedUnknown, $unknownResult->case->status);
         self::assertSame(CollectionStepStatus::Unknown, $unknownResult->step->status);
 

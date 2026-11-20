@@ -33,7 +33,9 @@ interface DunningCaseService
     public function migrateCasePolicy(MigrateDunningCasePolicy $command): DunningCasePolicyMigrationView;
 
     /**
-     * Plans a collection step with an explicit new businessPaymentIntentRef and operationRef.
+     * Records a host-managed step with new explicit businessPaymentIntentRef and operationRef.
+     * Requires the authenticated seller/environment and the host grant billium.collection.direct_step_lifecycle.
+     * Use authorizeCollection for executable collection. Planning only records lifecycle data.
      * Refuses when a prior step is unknown (case parked) or in-flight, or when decline budget/policy does not permit it.
      */
     public function planStep(PlanCollectionStep $command): CollectionStepView;
@@ -48,8 +50,10 @@ interface DunningCaseService
     public function recordDeliveryRetry(RecordStepDeliveryRetry $command): CollectionStepView;
 
     /**
-     * Transitions a collection step (authorized/dispatched/unknown/succeeded/failed_terminal/cancelled).
-     * Unknown parks the case; terminal decline consumes business decline budget and computes next step eligibility.
+     * Records a step transition under the authenticated seller/environment and billium.collection.direct_step_lifecycle grant.
+     * For host-managed steps the caller attests the outcome and supplies its evidence digest for terminal success or decline.
+     * For executable steps the caller also needs the frozen intent-owner namespace and execution-profile grants.
+     * Direct completion requires the matching execution result already applied by ledger. Recovery workers park executable steps.
      */
     public function transitionStep(TransitionCollectionStep $command): DunningCaseTransitionResult;
 }

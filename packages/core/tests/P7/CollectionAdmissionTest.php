@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace Billium\Core\Tests\P7;
 
+use Billium\Collection\Data\CollectionStepView;
+use Billium\Collection\Data\DunningCaseTransitionResult;
 use Billium\Collection\Data\OpenDunningCase;
 use Billium\Collection\Data\RegisterRecurringOwner;
 use Billium\Collection\Data\TransitionCollectionStep;
 use Billium\Collection\Enums\CollectionStepStatus;
+use Billium\Collection\Enums\DunningCaseStatus;
 use Billium\Collection\Enums\RecurringOwnerMode;
 use Billium\Contracts\Enums\ProblemCode;
+use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Tests\P7\Support\CollectionAdmissionScenario as Scenario;
 use Billium\Core\Tests\P7\Support\ExecutableCollectionTestCase;
@@ -33,7 +37,9 @@ use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
 use Billium\Platform\Contracts\Outbox\CommandOutbox;
 use Billium\Platform\Data\EventContracts\PreparedInternalCommand;
 use DateTimeImmutable;
+use DateTimeZone;
 use Error;
+use Illuminate\Support\Facades\Date;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use RuntimeException;
@@ -43,6 +49,10 @@ use RuntimeException;
 #[Group('ACC-CON-21')]
 final class CollectionAdmissionTest extends ExecutableCollectionTestCase
 {
+    protected const int PER_CHARGE_CAP_MINOR = 5000;
+
+    protected const int PER_PERIOD_CAP_MINOR = 5000;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -72,6 +82,53 @@ final class CollectionAdmissionTest extends ExecutableCollectionTestCase
         self::assertSame(1, $this->rows('billium_settlement_target'));
         self::assertSame(1, $this->rows('billium_outbox_command'));
         self::assertSame(0, $this->rows('billium_execution_operation'));
+    }
+
+    public function test_success_without_an_explicit_balance_preserves_a_partially_collected_obligation(): void
+    {
+        $this->allocate(1000);
+        $step = $this->dunningCaseService()->authorizeCollection(Scenario::command(amount: 2500));
+
+        $complete = $this->completeCharge($step);
+
+        self::assertSame(CollectionStepStatus::Succeeded, $complete->step->status);
+        self::assertSame(DunningCaseStatus::Open, $complete->case->status);
+        self::assertSame(1500, $complete->case->currentOpenMinor);
+        self::assertSame(1500, $this->value('SELECT open_minor FROM billium_obligation'));
+        self::assertSame(1500, $this->value('SELECT current_open_minor FROM billium_collection_dunning_case'));
+    }
+
+    public function test_monthly_consent_cap_allows_later_renewal_after_a_settled_charge(): void
+    {
+        $step = $this->dunningCaseService()->authorizeCollection(Scenario::command());
+        self::assertSame(DunningCaseStatus::Settled, $this->completeCharge($step)->case->status);
+        $issuedAt = $this->value('SELECT issued_at FROM billium_collection_authorization');
+        self::assertIsString($issuedAt);
+        $earlier = (new DateTimeImmutable($issuedAt))->setTimezone(new DateTimeZone('UTC'));
+        $nextMonth = $earlier->modify('first day of next month')->setTime(0, 0);
+
+        try {
+            Date::setTestNow($earlier);
+            $this->openRenewalCase('same-month', $earlier->modify('-1 hour'));
+            try {
+                $this->dunningCaseService()->authorizeCollection(Scenario::command('same-month', 'case-same-month'));
+                self::fail('The settled charge must count against the same month');
+            } catch (ProblemException $error) {
+                self::assertSame(ProblemCode::OperationFinancialHold, $error->problem);
+                self::assertSame('per_period_cap_exceeded', $error->detail);
+            }
+            self::assertSame(1, $this->rows('billium_collection_authorization'));
+
+            Date::setTestNow($nextMonth);
+            $this->openRenewalCase('next-month', $nextMonth);
+            $renewal = $this->dunningCaseService()->authorizeCollection(Scenario::command('next-month', 'case-next-month', scheduled: $nextMonth));
+
+            self::assertSame(CollectionStepStatus::Authorized, $renewal->status);
+            self::assertSame(5000, $renewal->amountMinor);
+            self::assertSame(2, $this->rows('billium_collection_authorization'));
+        } finally {
+            Date::setTestNow();
+        }
     }
 
     public function test_provider_owned_obligation_refuses_collection_when_the_case_omits_its_component(): void
@@ -234,5 +291,33 @@ final class CollectionAdmissionTest extends ExecutableCollectionTestCase
         $this->assertRefused(ProblemCode::OperationFinancialHold, fn () => $this->dunningCaseService()->authorizeCollection(Scenario::command('refunded')));
         self::assertSame(0, $this->rows('billium_collection_step'));
         self::assertSame(0, $this->rows('billium_outbox_command', "command_type = 'collection.execute.v1'"));
+    }
+
+    private function completeCharge(CollectionStepView $step): DunningCaseTransitionResult
+    {
+        $app = $this->application();
+        $app->make(RootPaymentCommands::class)->admit(Fixture::scope(), $this->commandFromOutbox())->orThrow();
+        $app->make(AttemptWorker::class)->dispatch(Fixture::scope(), UnknownResultTest::attemptRef(), 'worker', new DateTimeImmutable('+30 seconds'))->orThrow();
+        $evidence = CallbackCustodyTest::providerInput($app);
+        $result = $app->make(EvidenceReducer::class)->reduce(CallbackCustodyTest::work($evidence));
+        self::assertCount(1, $result->observationCommandRefs);
+        $observation = OutcomeDeliveryTest::attest($app, $this->journal, $result->observationCommandRefs[0]);
+        $app->make(ObservationApplier::class)->apply(ObservationFactory::json($observation->raw));
+
+        return $this->dunningCaseService()->transitionStep(new TransitionCollectionStep(
+            'complete-'.$step->stepRef, $this->collectionScope(), $step->caseRef, $step->stepRef, CollectionStepStatus::Succeeded,
+            $step->stepRevision + 1, new DateTimeImmutable, outcomeEvidenceDigest: $observation->contentDigest,
+        ));
+    }
+
+    private function openRenewalCase(string $period, DateTimeImmutable $openedAt): void
+    {
+        $obligation = 'obligation-'.$period;
+        $this->application()->make(Ledger::class)->recordObligation(new RecordObligation(
+            'record-'.$period, $this->account(), $obligation, 'basis-'.$period, 'customer-a', 'component-a', $this->money(5000), self::digest(),
+        ))->orThrow();
+        $this->dunningCaseService()->openCase(new OpenDunningCase(
+            'open-'.$period, $this->collectionScope(), 'case-'.$period, 'account-a', $obligation, 1, 'policy-a', 1, 'RUB', 5000, openedAt: $openedAt,
+        ));
     }
 }

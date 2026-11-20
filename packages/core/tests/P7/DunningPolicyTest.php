@@ -340,6 +340,31 @@ final class DunningPolicyTest extends CollectionTestCase
         self::assertSame(2, $step2->maxDeliveryRetries);
         self::assertSame($step1->id, $step2->priorStepId);
 
+        $active = $this->dunningQueries()->findCase($this->collectionScope(), 'case-budgets');
+        self::assertNotNull($active);
+        $this->dunningPolicyService()->registerPolicyVersion($this->policyCommand(
+            'reg-budget-insufficient', 'pol-budgets', 2, maxBusinessDeclineAttempts: 1, supersedesPolicyVersion: 1,
+        ));
+        $this->dunningPolicyService()->registerPolicyVersion($this->policyCommand(
+            'reg-budget-exact', 'pol-budgets', 3, maxBusinessDeclineAttempts: 2, maxDeliveryRetries: 1, supersedesPolicyVersion: 2,
+        ));
+        try {
+            $this->dunningCaseService()->migrateCasePolicy(new MigrateDunningCasePolicy(
+                'migrate-budget-insufficient', $this->collectionScope(), 'migration-insufficient', 'case-budgets',
+                'pol-budgets', 2, $active->caseRevision, 'reduce decline budget',
+            ));
+            self::fail('Migration must reserve one decline for the planned step');
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::ValidationInvalid, $error->problem);
+            self::assertSame('billium.collection.policy_budget_below_in_flight', $error->detail);
+        }
+        self::assertSame(0, $this->rows('billium_collection_case_policy_migration'));
+
+        $this->dunningCaseService()->migrateCasePolicy(new MigrateDunningCasePolicy(
+            'migrate-budget-exact', $this->collectionScope(), 'migration-exact', 'case-budgets',
+            'pol-budgets', 3, $active->caseRevision, 'retain one decline for the planned step',
+        ));
+
         // Step 2 terminal decline exhausts maxBusinessDeclineAttempts (2/2) even though delivery retries are 0/2 and policy has 3 steps!
         $this->dunningCaseService()->transitionStep(new TransitionCollectionStep(
             commandKey: 'disp-b-2',
@@ -368,6 +393,7 @@ final class DunningPolicyTest extends CollectionTestCase
         self::assertSame('business_decline_budget_exhausted', $declined2->case->closedReason);
         self::assertSame(2, $declined2->case->businessDeclineAttemptsUsed);
         self::assertSame(0, $declined2->step->deliveryAttemptsUsed);
+        self::assertSame(2, $declined2->step->maxDeliveryRetries);
 
         // Planning step 3 is refused because the case is exhausted.
         try {
