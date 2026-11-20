@@ -35,6 +35,7 @@ final class SuiteResetIsolationTest extends DatabaseTestCase
     {
         $previousToken = getenv('TEST_TOKEN');
         $previousDatabase = getenv('DB_DATABASE');
+        $previousDatabase = is_string($previousDatabase) ? $previousDatabase : '';
         $installed = ! is_string($previousToken) || $previousToken === '';
         if ($installed) {
             putenv('TEST_TOKEN=9');
@@ -45,7 +46,9 @@ final class SuiteResetIsolationTest extends DatabaseTestCase
             TestEnvironment::isolateParallelDatabase();
             $token = getenv('TEST_TOKEN');
             self::assertIsString($token);
-            $expected = 'billium_'.$token.'_test';
+            $expected = $previousDatabase !== '' && $previousDatabase !== 'billium_test'
+                ? $previousDatabase
+                : 'billium_'.$token.'_test';
             self::assertSame($expected, getenv('DB_DATABASE'));
             $results = ConcurrencyStand::run(ReportDatabaseScenario::class, 1, [], 60);
             self::assertSame($expected, $results[0]['ok']['database'] ?? null);

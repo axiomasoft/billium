@@ -48,6 +48,8 @@ use Billium\Execution\Tests\Concurrency\OutcomeDeliveryTest;
 use Billium\Execution\Tests\Drill\UnknownResultTest;
 use Billium\Ledger\Contracts\Ledger;
 use Billium\Ledger\Contracts\ObservationApplier;
+use Billium\Ledger\Data\Allocations\Allocate;
+use Billium\Ledger\Data\Credits\RecordCustomerCredit;
 use Billium\Ledger\Data\Obligations\AmendObligationDuePolicy;
 use Billium\Ledger\Data\Obligations\ObligationDuePolicy;
 use Billium\Ledger\Data\Obligations\RecordObligation;
@@ -111,6 +113,59 @@ final class CollectionRecoveryTest extends ExecutableCollectionTestCase
         self::assertSame(2, $this->rows('billium_collection_work', 'automatic_due'));
         self::assertSame(2, $this->rows('billium_outbox_command'));
         self::assertSame(0, $this->providerCalls());
+    }
+
+    public function test_below_threshold_after_discovery_refuses_one_case_and_continues_the_page(): void
+    {
+        $asOf = new DateTimeImmutable;
+        $due = $asOf->modify('-1 minute');
+        $this->owner()->update(
+            'UPDATE billium_collection_dunning_case SET next_attempt_at = ?, case_revision = case_revision + 1 WHERE case_ref = ?',
+            [$asOf->modify('+1 day')->format(DATE_ATOM), 'case-a'],
+        );
+        $this->dunningPolicyService()->registerPolicyVersion(new RegisterDunningPolicyVersion(
+            'policy-threshold',
+            $this->collectionScope(),
+            'policy-threshold',
+            1,
+            [CollectionChannel::SavedMethod],
+            [new DunningPolicyStepDefinition(1, CollectionChannel::SavedMethod, 0)],
+            1,
+            3,
+            [DeclineCategory::SoftDecline],
+            86400,
+            minOutstandingMinor: 1000,
+            thresholdCurrency: 'RUB',
+        ));
+        $ledger = $this->application()->make(Ledger::class);
+        foreach (['obligation-low-a', 'obligation-low-b'] as $ref) {
+            $ledger->recordObligation(new RecordObligation(
+                $ref, $this->account(), $ref, 'basis-'.$ref, 'customer-a', 'component-a', $this->money(5000), self::digest(), duePolicy: $this->duePolicy($due),
+            ))->orThrow();
+            $this->dunningCaseService()->openCase(new OpenDunningCase(
+                'open-'.$ref, $this->collectionScope(), 'case-'.$ref, 'account-a', $ref, 1, 'policy-threshold', 1, 'RUB', 5000, openedAt: $due,
+            ));
+        }
+        $this->atConsentRead(function () use ($ledger): void {
+            static $allocated = false;
+            if ($allocated) {
+                return;
+            }
+            $allocated = true;
+            $ledger->recordCustomerCredit(new RecordCustomerCredit(
+                'credit-low', $this->account(), 'credit-low', 'incoming-low', $this->money(4500),
+            ))->orThrow();
+            $ledger->allocate(new Allocate(
+                'allocation-low', $this->account(), 'allocation-low', 'obligation-low-a', $this->money(4500), customerCreditRef: 'credit-low',
+            ))->orThrow();
+        });
+
+        $page = $this->schedule($asOf);
+
+        self::assertSame(1, $page['refused']);
+        self::assertCount(1, $page['authorized']);
+        self::assertSame('case-obligation-low-b', $page['authorized'][0]->caseRef);
+        self::assertSame(1, $this->rows('billium_collection_step'));
     }
 
     public function test_whole_allocation_or_due_policy_change_after_discovery_creates_no_step(): void

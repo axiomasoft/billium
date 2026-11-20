@@ -87,8 +87,10 @@ final readonly class DueCollectionWorker
             try {
                 $authorized[] = $this->cases->authorizeDueCollection($command, $asOf);
             } catch (ProblemException $e) {
-                if (! in_array($e->problem, [ProblemCode::OperationFinancialHold, ProblemCode::IdempotencyConflict], true)
-                    && $e->detail !== 'billium.collection.due_case_busy') {
+                $skip = in_array($e->problem, [ProblemCode::OperationFinancialHold, ProblemCode::IdempotencyConflict], true)
+                    || $e->detail === 'billium.collection.due_case_busy'
+                    || $e->detail === 'billium.collection.below_outstanding_threshold';
+                if (! $skip) {
                     throw $e;
                 }
                 $refused++;
