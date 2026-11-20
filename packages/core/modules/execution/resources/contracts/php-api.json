@@ -847,6 +847,15 @@
                             "optional": false,
                             "default": null,
                             "flags": 0
+                        },
+                        {
+                            "name": "context",
+                            "type": "?Billium\\Core\\Contracts\\Runner\\TransactionContext",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": true,
+                            "default": "null",
+                            "flags": 0
                         }
                     ],
                     "return": "?Billium\\Execution\\Data\\OriginDecision",
@@ -3524,6 +3533,53 @@
                     "return": "Billium\\Execution\\Data\\NamespaceRecord",
                     "doc": []
                 },
+                "lockRootIdentity": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "context",
+                            "type": "Billium\\Core\\Contracts\\Runner\\TransactionContext",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "scope",
+                            "type": "Billium\\Execution\\Data\\ExecutionScope",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "operationRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "businessIntentRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "void",
+                    "doc": []
+                },
                 "merchantRevision": {
                     "visibility": "public",
                     "static": false,
@@ -4056,6 +4112,53 @@
                         }
                     ],
                     "return": "Billium\\Execution\\Data\\CapacitySnapshot",
+                    "doc": []
+                },
+                "rootIdentityExists": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "context",
+                            "type": "Billium\\Core\\Contracts\\Runner\\TransactionContext",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "scope",
+                            "type": "Billium\\Execution\\Data\\ExecutionScope",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "operationRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "businessIntentRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "bool",
                     "doc": []
                 },
                 "rootOrderingFrontier": {

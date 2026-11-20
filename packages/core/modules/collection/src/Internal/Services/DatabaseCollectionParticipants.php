@@ -74,9 +74,12 @@ final readonly class DatabaseCollectionParticipants implements CollectionPartici
         private Closure $payments,
     ) {}
 
-    public function findOrigin(ExecutionScope $scope, string $operationRef, string $businessIntentRef): ?OriginDecision
+    public function findOrigin(ExecutionScope $scope, string $operationRef, string $businessIntentRef, ?TransactionContext $context = null): ?OriginDecision
     {
-        $row = $this->authorizations($scope)->where(static fn (Builder $query): Builder => $query
+        if ($context !== null) {
+            $this->runner->assertCurrent($context, 'execution');
+        }
+        $row = $this->authorizations($scope, $context)->where(static fn (Builder $query): Builder => $query
             ->where('operation_ref', $operationRef)->orWhere('business_intent_ref', $businessIntentRef))->first();
         if ($row === null) {
             return null;

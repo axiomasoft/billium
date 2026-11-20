@@ -83,9 +83,11 @@ final readonly class CollectionAdmission
         ];
     }
 
-    public function lockMerchant(TransactionContext $ctx, AuthorizeCollection $command, MerchantRevision $merchant): void
+    public function lockMerchantAndIdentity(TransactionContext $ctx, AuthorizeCollection $command, MerchantRevision $merchant): void
     {
-        $this->merchantActions->lock($ctx, $command->executionScope, $merchant->revisionRef, 'new');
+        $scope = $command->executionScope;
+        $this->merchantActions->lock($ctx, $scope, $merchant->revisionRef, 'new');
+        $this->execution->lockRootIdentity($ctx, $scope, $command->step->operationRef, $command->step->businessPaymentIntentRef);
     }
 
     public function lockAndSize(
@@ -105,8 +107,8 @@ final readonly class CollectionAdmission
             || $host->cancellationGeneration !== $case->cancellationGeneration || $guard->cancellationGeneration !== $case->cancellationGeneration) {
             throw new ProblemException(ProblemCode::OperationFinancialHold, 'Collection consent, merchant or cancellation generation is ineligible');
         }
-        if ($this->execution->operation($command->executionScope, $step->operationRef, $ctx) !== null) {
-            throw new ProblemException(ProblemCode::IdempotencyConflict, 'Collection operation reference is already admitted');
+        if ($this->execution->rootIdentityExists($ctx, $command->executionScope, $step->operationRef, $step->businessPaymentIntentRef)) {
+            throw new ProblemException(ProblemCode::IdempotencyConflict, 'Collection operation or business intent is already claimed by execution');
         }
         $scope = new BillingAccountScope($case->sellerRef, $case->environment, $case->billingAccountRef);
         $open = $this->obligations->lockCollectibleMinor($ctx, $scope, $case->obligationRef, $step->businessPaymentIntentRef, $case->currency, $binding->customerRef, $componentRef);

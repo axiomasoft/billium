@@ -641,7 +641,7 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
 
                 $recurringOwnerId = null;
                 if ($authorization !== null && $prepared !== null) {
-                    $this->admission->lockMerchant($context, $authorization, $prepared['merchant']);
+                    $this->admission->lockMerchantAndIdentity($context, $authorization, $prepared['merchant']);
                     $this->consents->lockGuard($context, $command->scope, $authorization->consentRef);
                     $recurringOwnerId = $this->lockCollectionOwner($context, $db, $prepared['componentRef']);
                 }

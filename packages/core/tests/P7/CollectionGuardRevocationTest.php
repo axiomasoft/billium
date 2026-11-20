@@ -10,14 +10,20 @@ use Billium\Collection\Data\RevokeConsentCommand;
 use Billium\Collection\Enums\RecurringOwnerMode;
 use Billium\Collection\Enums\TombstoneKind;
 use Billium\Contracts\Enums\ProblemCode;
+use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Tests\P7\Support\CollectionAdmissionScenario as Scenario;
 use Billium\Core\Tests\P7\Support\ExecutableCollectionTestCase;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
 use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Execution\Contracts\AttemptWorker;
+use Billium\Execution\Contracts\CollectionOriginLookup;
 use Billium\Execution\Contracts\RootPaymentCommands;
+use Billium\Execution\Data\ExecutionScope;
+use Billium\Execution\Data\OriginDecision;
 use Billium\Execution\Tests\Concurrency\AdmissionIdentityTest as Fixture;
 use Billium\Execution\Tests\Drill\UnknownResultTest;
+use Closure;
 use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
@@ -77,6 +83,51 @@ final class CollectionGuardRevocationTest extends ExecutableCollectionTestCase
         self::assertSame(1, $this->rows('billium_settlement_intent_closure', 'closure_ref = ? AND proof_kind = ?', [$receipt, $admitted ? 'not_dispatched' : 'not_admitted']));
         self::assertSame(1, $this->rows('billium_settlement_target'));
         self::assertSame('closed_no_effect', $this->value('SELECT status FROM billium_settlement_intent'));
+    }
+
+    public function test_revoked_collection_cannot_send_through_a_stale_regular_origin_lookup(): void
+    {
+        $app = $this->application();
+        $authorizationRef = null;
+        $reserveAndRevoke = function () use (&$authorizationRef): void {
+            $step = $this->dunningCaseService()->authorizeCollection(Scenario::command());
+            $authorizationRef = $step->stepAuthorizationRef;
+            self::assertNotNull($authorizationRef);
+            $this->revoke($authorizationRef, TombstoneKind::ConsentRevoked);
+        };
+        $lookup = $app->make(CollectionOriginLookup::class);
+        $app->instance(CollectionOriginLookup::class, new readonly class($lookup, $reserveAndRevoke) implements CollectionOriginLookup
+        {
+            public function __construct(private CollectionOriginLookup $lookup, private Closure $afterMiss) {}
+
+            public function findOrigin(ExecutionScope $scope, string $operationRef, string $businessIntentRef, ?TransactionContext $context = null): ?OriginDecision
+            {
+                $origin = $this->lookup->findOrigin($scope, $operationRef, $businessIntentRef, $context);
+                if ($context === null && $origin === null) {
+                    ($this->afterMiss)();
+                }
+
+                return $origin;
+            }
+        });
+
+        $payments = $app->make(RootPaymentCommands::class);
+        $regular = Fixture::wire(['money' => $this->money(5000)->toWire()]);
+        try {
+            $problem = $payments->admit(Fixture::scope(), $regular)->problem;
+        } catch (ProblemException $exception) {
+            $problem = $exception->problem;
+        }
+        if ($problem === null) {
+            $this->dispatch();
+        }
+
+        self::assertNotNull($authorizationRef);
+        self::assertSame(0, UnknownResultTest::events($this->journal, 'provider.call'));
+        self::assertSame(ProblemCode::AuthDenied, $problem);
+        self::assertSame(0, $this->rows('billium_execution_operation'));
+        self::assertSame(0, $this->rows('billium_collection_dispatch_permit'));
+        self::assertSame(ProblemCode::OperationFinancialHold, $payments->admit(Fixture::scope(), $this->commandFromOutbox())->problem);
     }
 
     public function test_revoke_after_dispatch_linearization_keeps_the_permit_and_reservation(): void

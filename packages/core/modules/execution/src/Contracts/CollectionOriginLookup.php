@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Execution\Contracts;
 
+use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Execution\Data\ExecutionScope;
 use Billium\Execution\Data\OriginDecision;
 use Packman\Attributes\Spi;
@@ -15,5 +16,6 @@ interface CollectionOriginLookup
 {
     public const string SOURCE_CONTEXT = 'collection';
 
-    public function findOrigin(ExecutionScope $scope, string $operationRef, string $businessIntentRef): ?OriginDecision;
+    /** With a context, read the reservation on the current execution transaction's connection. */
+    public function findOrigin(ExecutionScope $scope, string $operationRef, string $businessIntentRef, ?TransactionContext $context = null): ?OriginDecision;
 }

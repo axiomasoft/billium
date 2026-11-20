@@ -62,6 +62,12 @@ interface ExecutionStore
     /** Acquire the exact namespace at rank 27 before collection or root rows and reread its state. */
     public function lockNamespace(TransactionContext $context, ExecutionScope $scope): NamespaceRecord;
 
+    /** Lock both root identity references through commit or rollback, before taking collection or execution row locks. */
+    public function lockRootIdentity(TransactionContext $context, ExecutionScope $scope, string $operationRef, string $businessIntentRef): void;
+
+    /** Check for a retained execution claim to either reference under the root identity locks. */
+    public function rootIdentityExists(TransactionContext $context, ExecutionScope $scope, string $operationRef, string $businessIntentRef): bool;
+
     /** Retain a refused command after its root rolls back, using only authenticated raw custody. */
     public function recordAdmissionConflict(TransactionContext $context, AdmissionConflict $conflict): string;
 

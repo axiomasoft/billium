@@ -157,7 +157,7 @@ final readonly class RootPayments implements RootPaymentCommands
             PaymentIdentity::commandKey($scope, 'charge', $origin->sourceContext, $wire->commandKey), $semantic, 'execution.admission', $selected, $inputDigest,
             originalExecutionBindingRef: $binding->rootOperationRef);
 
-        return $this->runner->run($spec, fn (TransactionContext $ctx): ExecutionReceipt => $this->admission->apply($ctx, $plan, $existing !== null));
+        return $this->runner->run($spec, fn (TransactionContext $ctx): ExecutionReceipt => $this->admission->apply($ctx, $plan, $existing !== null, $this->collectionOrigins));
     }
 
     private function origin(ExecutionScope $scope, ExecutePayment|AuthorizePayment $command, string $intent): OriginDecision

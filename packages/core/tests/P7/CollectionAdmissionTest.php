@@ -18,6 +18,7 @@ use Billium\Core\Tests\Support\ObservationFactory;
 use Billium\Execution\Contracts\AttemptWorker;
 use Billium\Execution\Contracts\EvidenceReducer;
 use Billium\Execution\Contracts\RootPaymentCommands;
+use Billium\Execution\Data\OriginDecision;
 use Billium\Execution\Tests\Concurrency\AdmissionIdentityTest as Fixture;
 use Billium\Execution\Tests\Concurrency\OutcomeDeliveryTest;
 use Billium\Execution\Tests\Drill\UnknownResultTest;
@@ -33,6 +34,7 @@ use Billium\Platform\Contracts\Outbox\CommandOutbox;
 use Billium\Platform\Data\EventContracts\PreparedInternalCommand;
 use DateTimeImmutable;
 use Error;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use RuntimeException;
 
@@ -93,6 +95,29 @@ final class CollectionAdmissionTest extends ExecutableCollectionTestCase
         self::assertSame(0, $this->rows('billium_collection_authorization'));
         self::assertSame(0, $this->rows('billium_settlement_intent'));
         self::assertSame(0, $this->rows('billium_outbox_command'));
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function overlappingRootIdentities(): iterable
+    {
+        yield 'operation reference' => ['root-a', 'intent-regular'];
+        yield 'business intent reference' => ['root-regular', 'intent-a'];
+    }
+
+    #[DataProvider('overlappingRootIdentities')]
+    public function test_collection_cannot_reserve_either_reference_of_an_admitted_root(string $operationRef, string $intentRef): void
+    {
+        $app = $this->application();
+        $origin = new OriginDecision(Fixture::scope(), $operationRef, $intentRef, 'checkout', 'remote-billium', 1, null, self::digest(), 'terms-v1', null);
+        Fixture::host($app, $this->journal, [$origin], cap: $this->capability);
+        $regular = Fixture::wire(['operationRef' => $operationRef, 'source' => ['context' => 'checkout', 'intentRef' => $intentRef]]);
+        $app->make(RootPaymentCommands::class)->admit(Fixture::scope(), $regular)->orThrow();
+
+        $this->assertRefused(ProblemCode::IdempotencyConflict, fn () => $this->dunningCaseService()->authorizeCollection(Scenario::command()));
+        self::assertSame(1, $this->rows('billium_execution_operation'));
+        self::assertSame(0, $this->rows('billium_collection_authorization'));
+        self::assertSame(0, $this->rows('billium_settlement_intent'));
+        self::assertSame(0, $this->rows('billium_outbox_command', "command_type = 'collection.execute.v1'"));
     }
 
     public function test_twenty_workers_create_one_executable_step(): void
