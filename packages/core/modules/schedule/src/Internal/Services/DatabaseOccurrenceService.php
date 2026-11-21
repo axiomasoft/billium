@@ -141,8 +141,12 @@ final readonly class DatabaseOccurrenceService implements OccurrenceService
                     'schedule_id' => $head->id, 'revision' => $command->newRevision, 'terms_digest' => $terms->digest(),
                     'inputs_digest' => $command->inputsDigest, 'terms' => Canonical::encode($terms->toArray()),
                     'effective_from' => OccurrenceTime::format($command->effectiveFrom)]);
-                [, $applicableTerms, $next] = $this->applicableInterval(context: $context, head: $head, ordinal: Payload::integer($head->cursor_ordinal),
-                    start: new DateTimeImmutable(Payload::text($head->next_occurrence_at ?? $next->start)));
+                $ordinal = Payload::integer($head->cursor_ordinal);
+                [, $applicableTerms, $next] = $this->applicableInterval(context: $context, head: $head, ordinal: $ordinal,
+                    start: $this->cursorHint(context: $context, head: $head, ordinal: $ordinal, fallback: $next->start));
+                // A resume effective after the parked period must bill that later due interval, not stay paused on it.
+                [$ordinal, $applicableTerms, $next] = $this->skipPausedCursor(context: $context, head: $head, command: $command,
+                    ordinal: $ordinal, applicableTerms: $applicableTerms, next: $next);
                 $this->store->query(table: 'billing_schedule', context: $context)->where('id', $head->id)
                     ->update(['current_revision' => $command->newRevision, 'state' => 'active', 'runnable' => true,
                         'next_occurrence_at' => $next->start]);
@@ -186,7 +190,7 @@ final readonly class DatabaseOccurrenceService implements OccurrenceService
                 $paused = $applicableTerms->action === 'pause';
                 $version = $created ? 1 : Payload::integer($head->row_version) + 1;
                 $this->store->query(table: 'billing_schedule', context: $context)->where('id', $head->id)->update([
-                    'next_occurrence_at' => $paused ? null : $next->start, 'state' => $paused ? 'paused' : 'active',
+                    'cursor_ordinal' => $ordinal, 'next_occurrence_at' => $paused ? null : $next->start, 'state' => $paused ? 'paused' : 'active',
                     'runnable' => ! $paused, 'row_version' => $version, 'attempts' => 0, 'retry_at' => null,
                     'claim_token' => null, 'claim_expires_at' => null]);
                 $receipt = new OccurrenceReceipt(['scheduleRef' => $command->scheduleRef, 'scheduleRevision' => $command->newRevision,
@@ -320,6 +324,55 @@ final readonly class DatabaseOccurrenceService implements OccurrenceService
         )->orThrow();
 
         return new OccurrenceReceipt($outcome->body);
+    }
+
+    private function cursorHint(TransactionContext $context, stdClass $head, int $ordinal, string $fallback): DateTimeImmutable
+    {
+        if ($head->next_occurrence_at !== null) {
+            return new DateTimeImmutable(Payload::text($head->next_occurrence_at));
+        }
+        $row = $this->store->database($context)->table('billium_schedule_billing_schedule_revision')
+            ->where('schedule_id', $head->id)->where('revision', Payload::integer($head->current_revision))->first();
+        if ($row === null) {
+            return new DateTimeImmutable($fallback);
+        }
+        $previous = ScheduleRevisionTerms::fromArray(Payload::decode($row->terms));
+
+        return new DateTimeImmutable($this->resolver->resolve(terms: $previous, ordinal: $ordinal)->start);
+    }
+
+    /** @return array{int, ScheduleRevisionTerms, ResolvedInterval} */
+    private function skipPausedCursor(TransactionContext $context, stdClass $head, ApplyScheduleRevision $command, int $ordinal, ScheduleRevisionTerms $applicableTerms, ResolvedInterval $next): array
+    {
+        if ($applicableTerms->action !== 'pause' || $command->terms->action === 'pause' || ! $this->sameCalendar($applicableTerms, $command->terms)
+            || $command->effectiveFrom <= new DateTimeImmutable($next->start)) {
+            return [$ordinal, $applicableTerms, $next];
+        }
+        $hint = $next;
+        $previousStart = new DateTimeImmutable($next->start);
+        for ($candidate = $ordinal + 1; $candidate <= 100000; $candidate++) {
+            [, $laterTerms, $later] = $this->applicableInterval(context: $context, head: $head, ordinal: $candidate,
+                start: new DateTimeImmutable($hint->end));
+            $laterStart = new DateTimeImmutable($later->start);
+            if ($laterStart <= $previousStart) {
+                break;
+            }
+            if ($laterTerms->action !== 'pause') {
+                return [$candidate, $laterTerms, $later];
+            }
+            $hint = $later;
+            $previousStart = $laterStart;
+        }
+
+        return [$ordinal, $applicableTerms, $next];
+    }
+
+    private function sameCalendar(ScheduleRevisionTerms $left, ScheduleRevisionTerms $right): bool
+    {
+        return $left->anchorLocal === $right->anchorLocal && $left->policy->timezone === $right->policy->timezone
+            && $left->policy->frequency === $right->policy->frequency && $left->policy->intervalCount === $right->policy->intervalCount
+            && $left->policy->endOfMonth === $right->policy->endOfMonth && $left->policy->dstGapPolicy === $right->policy->dstGapPolicy
+            && $left->policy->dstFoldPolicy === $right->policy->dstFoldPolicy;
     }
 
     private function applicableRevision(TransactionContext $context, stdClass $head, DateTimeImmutable $periodStart): stdClass
