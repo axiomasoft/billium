@@ -46,6 +46,15 @@
             ]
         },
         {
+            "name": "axiomasoft/billium-server",
+            "path": "packages/server",
+            "namespace": "Billium\\Server\\",
+            "profile": "laravel-package",
+            "layer": "L3",
+            "type": "domain",
+            "owns": ["Contracts", "Data", "Enums", "Exceptions", "Internal"]
+        },
+        {
             "name": "axiomasoft/billium-platform",
             "path": "packages/core/modules/platform",
             "namespace": "Billium\\Platform\\",

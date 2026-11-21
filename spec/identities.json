@@ -5063,6 +5063,48 @@
       "source": "packages/core/database/migrations/execution/2026_11_21_000003_index_billium_execution_admission.php"
     },
     {
+      "kind": "route",
+      "id": "billium.server.execution.commands",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/server/routes/http.php"
+    },
+    {
+      "kind": "route",
+      "id": "billium.server.execution.find",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/server/routes/http.php"
+    },
+    {
+      "kind": "route",
+      "id": "billium.server.ledger.observations",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/server/routes/http.php"
+    },
+    {
+      "kind": "route",
+      "id": "billium.server.ledger.query",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/server/routes/http.php"
+    },
+    {
+      "kind": "route",
+      "id": "billium.server.live",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/server/routes/http.php"
+    },
+    {
+      "kind": "route",
+      "id": "billium.server.ready",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/server/routes/http.php"
+    },
+    {
       "kind": "doctor-finding",
       "id": "module.composition_forbidden",
       "status": "new",

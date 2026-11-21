@@ -94,6 +94,8 @@ layer_php() {
     PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 vendor/bin/pest --group=pg-serial
     need_path scripts/smoke/consumer-install.sh
     bash scripts/smoke/consumer-install.sh php
+    need_path scripts/smoke/server-install.sh
+    bash scripts/smoke/server-install.sh --profile ledger-only
 }
 
 layer_dart() {

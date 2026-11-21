@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3f93f273ad20b0d792d9c4743f52c4ed",
+    "content-hash": "b0181f85ac1bffb10dee76ac5d4f10d8",
     "packages": [
         {
             "name": "axiomasoft/billium-contracts",
@@ -6300,6 +6300,64 @@
         }
     ],
     "packages-dev": [
+        {
+            "name": "axiomasoft/billium-server",
+            "version": "0.1.x-dev",
+            "dist": {
+                "type": "path",
+                "url": "packages/server",
+                "reference": "be30edc63095f3cce515dbc8447fdd66108833e3"
+            },
+            "require": {
+                "axiomasoft/billium-contracts": "^0.1",
+                "axiomasoft/billium-core": "^0.1",
+                "axiomasoft/billium-ledger": "^0.1",
+                "axiomasoft/packman": "^0.1.1",
+                "laravel/framework": "^13.0",
+                "php": "^8.4"
+            },
+            "suggest": {
+                "axiomasoft/billium-execution": "Execution is bundled with core and enabled only for the remote-billium composition."
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Billium\\Server\\BilliumServerServiceProvider"
+                    ]
+                },
+                "packman": {
+                    "schema-version": 1,
+                    "package-type": "domain",
+                    "stability": "dev",
+                    "owns": [
+                        "Contracts",
+                        "Data",
+                        "Enums",
+                        "Exceptions",
+                        "Internal"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Billium\\Server\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Billium\\Server\\Tests\\": "tests/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "description": "Laravel HTTP delivery for the Billium core.",
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
+        },
         {
             "name": "axiomasoft/billium-testkit",
             "version": "0.1.x-dev",

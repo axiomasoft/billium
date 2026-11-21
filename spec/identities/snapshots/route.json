@@ -1,1 +1,8 @@
-[]
+[
+  "billium.server.execution.commands",
+  "billium.server.execution.find",
+  "billium.server.ledger.observations",
+  "billium.server.ledger.query",
+  "billium.server.live",
+  "billium.server.ready"
+]

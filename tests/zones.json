@@ -26,6 +26,11 @@
       "layers": ["php", "conformance"]
     },
     {
+      "id": "php-server",
+      "paths": ["packages/server/**", "tests/minimal-host/server/**", "scripts/smoke/server-install.sh", "docs/server/**"],
+      "layers": ["derived", "php"]
+    },
+    {
       "id": "dart-contracts",
       "paths": ["packages/contracts-dart/**", "conformance/adapters/dart/**"],
       "layers": ["dart", "conformance"]

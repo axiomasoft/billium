@@ -2,8 +2,8 @@
 """Build spec/identities.json and spec/identities/snapshots/<kind>.json from a spec revision.
 
 The registry is the frozen-identity ledger: every envelope, envelope field, problem code, event type,
-operation status, invoice status and the spec revision itself; config keys, migration identities and doctor
-findings are also tracked. Migration/config identities come from their product files, doctor
+operation status, invoice status and the spec revision itself; config keys, migration identities, route names and doctor
+findings are also tracked. Migration, config and route identities come from their product files, doctor
 findings from spec/modules.json. Entries are appended with status "new";
 an entry that disappears from the sources must be kept with status "retired" by hand, otherwise
 the check fails. Snapshots are sorted id lists of the live (not retired) entries per kind.
@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -29,7 +30,7 @@ MODULES = ROOT / "spec/modules.json"
 
 
 def product_identities(root: Path) -> dict[tuple[str, str], str]:
-    """Read real migration basenames and flattened PHP config, never drill migrations."""
+    """Read real migration basenames, flattened PHP config and named server routes."""
     found: dict[tuple[str, str], str] = {}
     for path in sorted((root / 'packages/core/database/migrations').rglob('*.php')):
         key = ('migration', path.stem)
@@ -50,6 +51,14 @@ def product_identities(root: Path) -> dict[tuple[str, str], str]:
             found[("config-key", prefix)] = config
 
     walk(json.loads(result.stdout), 'billium')
+    routes = 'packages/server/routes/http.php'
+    route_source = root / routes
+    if route_source.is_file():
+        for name in re.findall(r"->name\('([^']+)'\)", route_source.read_text(encoding='utf-8')):
+            key = ('route', name)
+            if key in found:
+                raise IdentityError(f'duplicate route identity {name}: {routes}')
+            found[key] = routes
     return found
 
 
@@ -130,7 +139,7 @@ def merge(found: dict[tuple[str, str], dict[str, str]], previous: list[dict[str,
     for key in sorted(set(found) | set(old), key=lambda k: (KINDS.index(k[0]), k[1])):
         if key in old:
             entry = dict(old[key])
-            if key in found and key[0] in ('migration', 'config-key'):
+            if key in found and key[0] in ('migration', 'config-key', 'route'):
                 entry['source'] = found[key]['source']
             entries.append(entry)
         else:

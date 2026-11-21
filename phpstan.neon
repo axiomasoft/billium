@@ -8,6 +8,7 @@ parameters:
     paths:
         - packages/contracts/src
         - packages/core/src
+        - packages/server/src
         - packages/core/modules/platform/src
         - packages/core/modules/ledger/src
         - packages/core/modules/usage/src

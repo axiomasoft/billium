@@ -22,6 +22,7 @@ return static function (RectorConfig $rectorConfig): void {
     $rectorConfig->paths([
         __DIR__.'/packages/contracts/src',
         __DIR__.'/packages/core/src',
+        __DIR__.'/packages/server/src',
         __DIR__.'/packages/core/modules/platform/src',
         __DIR__.'/packages/core/modules/ledger/src',
         __DIR__.'/packages/core/modules/usage/src',
