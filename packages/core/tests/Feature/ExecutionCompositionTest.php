@@ -16,6 +16,7 @@ use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
 use Billium\Core\Contracts\Runtime\IncomingCommandAuthenticator;
 use Billium\Core\Contracts\Runtime\QualifiedFactualCommandPublisher;
 use Billium\Core\Diagnostics\BilliumCompatibilityDoctorCheck;
+use Billium\Core\Tests\Support\CoreBootTestCase;
 use Billium\Core\Tests\Support\FixedCallerContext;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
 use Billium\Execution\Contracts\AdapterQualification;
@@ -46,11 +47,10 @@ use Packman\Config\Exceptions\InvalidConfiguration;
 use Packman\Doctor\Data\DoctorContext;
 use Packman\Doctor\Data\DoctorFinding;
 use Packman\Doctor\Enums\CheckStatus;
-use Packman\Testkit\PackageTestCase;
 use PDO;
 use PHPUnit\Framework\Attributes\DataProvider;
 
-final class ExecutionCompositionTest extends PackageTestCase
+final class ExecutionCompositionTest extends CoreBootTestCase
 {
     private bool $forbiddenProbe = false;
 

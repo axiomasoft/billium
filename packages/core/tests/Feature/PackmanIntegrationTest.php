@@ -24,6 +24,7 @@ use Billium\Core\Errors\BilliumCoreErrorCode;
 use Billium\Core\Exceptions\Modules\ModuleAdmissionRefused;
 use Billium\Core\Exceptions\Runner\LockOrderViolation;
 use Billium\Core\Exceptions\Runner\LockPlanChanged;
+use Billium\Core\Tests\Support\CoreBootTestCase;
 use Billium\Core\Tests\Support\FixedCallerContext;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
 use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
@@ -69,12 +70,11 @@ use Packman\Schema\Enums\SchemaLifecycle;
 use Packman\Schema\Enums\SchemaScope;
 use Packman\Testkit\Data\Database\TestDatabaseIdentity;
 use Packman\Testkit\Exceptions\Database\UnsafeTestDatabaseException;
-use Packman\Testkit\PackageTestCase;
 use Packman\Testkit\Support\Database\TestDatabaseGuard;
 use PHPUnit\Framework\Attributes\DataProvider;
 use ReflectionProperty;
 
-final class PackmanIntegrationTest extends PackageTestCase
+final class PackmanIntegrationTest extends CoreBootTestCase
 {
     #[Override]
     protected function getPackageProviders($app): array
@@ -170,7 +170,7 @@ final class PackmanIntegrationTest extends PackageTestCase
         SimulatedFinancialAuthorityEvidence::admitCurrent($this->app);
 
         // 1. Empty SQLite DB has no applied migrations: must NOT report fake readiness.
-        config(['billium.feed.signing_key' => str_repeat('k', 32)]);
+        config(['billium.connection' => 'sqlite', 'billium.feed.signing_key' => str_repeat('k', 32)]);
         $check = $this->app->make(BilliumCompatibilityDoctorCheck::class);
         $unmigrated = $check->run(new DoctorContext(production: true));
         $codes = array_map(static fn ($f): string => $f->code, $unmigrated);
@@ -193,8 +193,8 @@ final class PackmanIntegrationTest extends PackageTestCase
         self::assertSame('billium.database.unavailable', $badDb[0]->code);
 
         // 4. With real applied migrations in DB and valid 32+ byte signing key, doctor reports OK.
-        config(['billium.connection' => null]);
-        $db = $this->app->make(DatabaseManager::class)->connection();
+        config(['billium.connection' => 'sqlite']);
+        $db = $this->app->make(DatabaseManager::class)->connection('sqlite');
         $db->getSchemaBuilder()->create('migrations', static function (Blueprint $table): void {
             $table->increments('id');
             $table->string('migration');
@@ -342,10 +342,7 @@ final class PackmanIntegrationTest extends PackageTestCase
             // Pre-registered host legacy bindings (registered before BilliumCoreServiceProvider):
             $preApp = new Application(dirname(__DIR__, 4));
             $preApp->instance('config', new Repository([
-                'database' => [
-                    'default' => 'sqlite',
-                    'connections' => ['sqlite' => ['driver' => 'sqlite', 'database' => ':memory:']],
-                ],
+                'database' => self::POSTGRESQL_BOOT_DATABASE,
             ]));
             $preApp->register(DatabaseServiceProvider::class);
             $preCaller = FixedCallerContext::default('pre-legacy');
@@ -384,10 +381,7 @@ final class PackmanIntegrationTest extends PackageTestCase
             // Host-registered container alias targeting legacy interface before and after registration:
             $preAliasApp = new Application(dirname(__DIR__, 4));
             $preAliasApp->instance('config', new Repository([
-                'database' => [
-                    'default' => 'sqlite',
-                    'connections' => ['sqlite' => ['driver' => 'sqlite', 'database' => ':memory:']],
-                ],
+                'database' => self::POSTGRESQL_BOOT_DATABASE,
             ]));
             $preAliasApp->register(DatabaseServiceProvider::class);
             $aliasCaller = FixedCallerContext::default('alias-legacy');
@@ -400,10 +394,7 @@ final class PackmanIntegrationTest extends PackageTestCase
             // Post-registered host legacy bindings (bound after BilliumCoreServiceProvider):
             $postApp = new Application(dirname(__DIR__, 4));
             $postApp->instance('config', new Repository([
-                'database' => [
-                    'default' => 'sqlite',
-                    'connections' => ['sqlite' => ['driver' => 'sqlite', 'database' => ':memory:']],
-                ],
+                'database' => self::POSTGRESQL_BOOT_DATABASE,
             ]));
             $postApp->register(DatabaseServiceProvider::class);
             $postApp->register(BilliumCoreServiceProvider::class);
@@ -424,10 +415,7 @@ final class PackmanIntegrationTest extends PackageTestCase
 
             $postAliasApp = new Application(dirname(__DIR__, 4));
             $postAliasApp->instance('config', new Repository([
-                'database' => [
-                    'default' => 'sqlite',
-                    'connections' => ['sqlite' => ['driver' => 'sqlite', 'database' => ':memory:']],
-                ],
+                'database' => self::POSTGRESQL_BOOT_DATABASE,
             ]));
             $postAliasApp->register(DatabaseServiceProvider::class);
             $postAliasApp->register(BilliumCoreServiceProvider::class);
@@ -448,10 +436,7 @@ final class PackmanIntegrationTest extends PackageTestCase
         try {
             $app = new Application(dirname(__DIR__, 4));
             $app->instance('config', new Repository([
-                'database' => [
-                    'default' => 'sqlite',
-                    'connections' => ['sqlite' => ['driver' => 'sqlite', 'database' => ':memory:']],
-                ],
+                'database' => self::POSTGRESQL_BOOT_DATABASE,
                 'billium' => ['feed' => ['signing_key' => str_repeat('k', 32)]],
             ]));
             $app->register(DatabaseServiceProvider::class);
@@ -517,10 +502,7 @@ final class PackmanIntegrationTest extends PackageTestCase
         try {
             $app = new Application(dirname(__DIR__, 4));
             $app->instance('config', new Repository([
-                'database' => [
-                    'default' => 'sqlite',
-                    'connections' => ['sqlite' => ['driver' => 'sqlite', 'database' => ':memory:']],
-                ],
+                'database' => self::POSTGRESQL_BOOT_DATABASE,
                 'billium' => [
                     'feed' => ['signing_key' => str_repeat('k', 32)],
                 ],

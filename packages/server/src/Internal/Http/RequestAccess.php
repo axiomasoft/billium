@@ -21,6 +21,7 @@ use Billium\Server\Data\InstallationContext;
 use Billium\Server\Data\RequestMeta;
 use Billium\Server\Enums\Verdict;
 use Billium\Server\Internal\Auth\RequestScope;
+use Billium\Server\Internal\Operations\ServerEvents;
 use Billium\Server\Internal\Readiness;
 use Closure;
 use Illuminate\Contracts\Foundation\Application;
@@ -83,6 +84,12 @@ final readonly class RequestAccess
 
             return RequestCaller::run($request, $caller, static fn (): JsonResponse => $consume($envelope, $context));
         } catch (ProblemException $refusal) {
+            match ($refusal->problem) {
+                ProblemCode::IdempotencyConflict => ServerEvents::CommandConflict->record(),
+                ProblemCode::ObservationConflict => ServerEvents::ObservationConflict->record(),
+                default => null,
+            };
+
             return ProblemResponse::from($refusal->problem === ProblemCode::ReferenceUnknown ? ProblemCode::AuthDenied : $refusal->problem);
         } catch (ModuleAdmissionRefused) {
             return ProblemResponse::from(ProblemCode::ModuleUnavailable);
@@ -91,7 +98,7 @@ final readonly class RequestAccess
             if (! str_starts_with($state, '08') && ! in_array($state, ['57014', '57P01', '57P02', '57P03'], true)) {
                 throw $failure;
             }
-            report($failure);
+            ServerEvents::DatabaseUnavailable->record();
 
             return ProblemResponse::from(ProblemCode::TransportUnavailable);
         }

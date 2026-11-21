@@ -25,7 +25,7 @@ foreach (['Billium\\Contracts\\Internal', 'Illuminate\\', 'Billium\\Core\\', 'Bi
     check(is_string($source) && ! str_contains($source, $forbidden), "client imports {$forbidden}");
 }
 
-$client = new ConformanceClient();
+$client = new ConformanceClient;
 $pilot = '{"schema":"payment.execute.v1","commandKey":"7e0c4a52-91d3-4b6f-8a25-c3d1e9f04b87","operationRef":"op-8f3a21","operationKind":"charge","source":{"context":"commerz","orderRef":"ord-10234","intentRef":"int-10234-1"},"installationRef":"inst-eu-1","environment":"test","executionProfile":"remote-billium","routingEpoch":1,"sellerRef":"seller-acme","merchantAccountRef":"ma-main","money":{"amount":"1490.00","currency":"RUB"},"bindingRevision":"bind-7c91d0e2","returnContextRef":"rc-10234","requestedAt":"2026-10-17T12:00:00Z"}';
 $golden = rtrim((string) file_get_contents($root.'/fixtures/golden/canon/digest/pilot-execute-canonical.txt'), "\n");
 $prepared = $client->execute(['id' => 'pilot', 'op' => 'prepare', 'jsonText' => $pilot]);
@@ -80,9 +80,10 @@ foreach (['client', 'source-authority'] as $directory) {
                 $found = field($result, (string) $expectPath);
             } catch (RuntimeException) {
                 check(false, "{$doc['id']}.{$expectPath}: missing");
+
                 continue;
             }
-            check($found === $value && get_debug_type($found) === get_debug_type($value), "{$doc['id']}.{$expectPath}: expected ".json_encode($value)." got ".json_encode($found));
+            check($found === $value && get_debug_type($found) === get_debug_type($value), "{$doc['id']}.{$expectPath}: expected ".json_encode($value).' got '.json_encode($found));
         }
     }
 }

@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Billium\ClientConformance\ConformanceClient;
-use Billium\Contracts\Contracts\Codec;
 
 /*
  * JSON stdin/stdout for the test-only consumer. Public contracts only (D9).
@@ -16,7 +15,7 @@ try {
     if (! is_array($message)) {
         throw new RuntimeException('client input must be an object');
     }
-    $client = new ConformanceClient();
+    $client = new ConformanceClient;
     if (($message['op'] ?? null) === 'batch') {
         $supported = $message['supportedSchemas'] ?? null;
         $results = [];

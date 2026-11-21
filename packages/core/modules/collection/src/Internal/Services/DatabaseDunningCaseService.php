@@ -1230,11 +1230,11 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
                         if ($command->stepAuthorizationRef !== null && $step->stepAuthorizationRef === null) {
                             $stepUpdate['step_authorization_ref'] = $command->stepAuthorizationRef;
                         }
-                        $this->updateStepCas($db, $step, $stepUpdate);
+                        DunningTransitionWrites::updateStepCas($db, $step, $stepUpdate);
                         break;
 
                     case CollectionStepStatus::Dispatched:
-                        $this->updateStepCas($db, $step, [
+                        DunningTransitionWrites::updateStepCas($db, $step, [
                             'status' => CollectionStepStatus::Dispatched->value,
                             'step_revision' => $step->stepRevision + 1,
                             'last_delivery_attempt_at' => $occurredUtc,
@@ -1244,13 +1244,13 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
 
                     case CollectionStepStatus::Unknown:
                         $parkReason = $command->declineReason ?? 'prior_step_unknown';
-                        $this->updateStepCas($db, $step, [
+                        DunningTransitionWrites::updateStepCas($db, $step, [
                             'status' => CollectionStepStatus::Unknown->value,
                             'step_revision' => $step->stepRevision + 1,
                             'decline_reason' => $parkReason,
                             'updated_at' => $now,
                         ]);
-                        $this->updateCaseCas($db, $case, [
+                        DunningTransitionWrites::updateCaseCas($db, $case, [
                             'status' => DunningCaseStatus::ParkedUnknown->value,
                             'parked_reason' => $parkReason,
                             'parked_step_ref' => $step->stepRef,
@@ -1268,7 +1268,7 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
                         if ($observedOpen === null && $newOpen > $case->currentOpenMinor) {
                             throw new ProblemException(ProblemCode::ValidationInvalid, 'updatedOpenMinor cannot exceed currentOpenMinor');
                         }
-                        $this->updateStepCas($db, $step, [
+                        DunningTransitionWrites::updateStepCas($db, $step, [
                             'status' => CollectionStepStatus::Succeeded->value,
                             'step_revision' => $step->stepRevision + 1,
                             'outcome_evidence_digest' => $command->outcomeEvidenceDigest,
@@ -1293,7 +1293,7 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
                         } else {
                             $caseUpdate['status'] = DunningCaseStatus::Open->value;
                         }
-                        $this->updateCaseCas($db, $case, $caseUpdate);
+                        DunningTransitionWrites::updateCaseCas($db, $case, $caseUpdate);
                         break;
 
                     case CollectionStepStatus::FailedTerminal:
@@ -1304,7 +1304,7 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
                             );
                         }
 
-                        $this->updateStepCas($db, $step, [
+                        DunningTransitionWrites::updateStepCas($db, $step, [
                             'status' => CollectionStepStatus::FailedTerminal->value,
                             'step_revision' => $step->stepRevision + 1,
                             'decline_category' => $command->declineCategory->value,
@@ -1343,7 +1343,7 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
                             $nextStepEligible = true;
                             $nextStepNo = $candidateStepNo;
                             $nextEligibleAtUtc = RowCast::formatUtc($candidateEligibleAt);
-                            $this->updateCaseCas($db, $case, [
+                            DunningTransitionWrites::updateCaseCas($db, $case, [
                                 'status' => DunningCaseStatus::Open->value,
                                 'current_open_minor' => $open,
                                 'business_decline_attempts_used' => $usedDeclines,
@@ -1363,7 +1363,7 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
                                 ! $withinHorizon => 'recovery_horizon_exceeded',
                                 default => 'below_outstanding_threshold',
                             };
-                            $this->updateCaseCas($db, $case, [
+                            DunningTransitionWrites::updateCaseCas($db, $case, [
                                 'status' => DunningCaseStatus::Exhausted->value,
                                 'current_open_minor' => $open,
                                 'business_decline_attempts_used' => $usedDeclines,
@@ -1382,14 +1382,14 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
 
                     case CollectionStepStatus::Cancelled:
                         $cancelReason = $command->declineReason ?? 'step_cancelled';
-                        $this->updateStepCas($db, $step, [
+                        DunningTransitionWrites::updateStepCas($db, $step, [
                             'status' => CollectionStepStatus::Cancelled->value,
                             'step_revision' => $step->stepRevision + 1,
                             'decline_reason' => $cancelReason,
                             'terminal_at' => $occurredUtc,
                             'updated_at' => $now,
                         ]);
-                        $this->updateCaseCas($db, $case, [
+                        DunningTransitionWrites::updateCaseCas($db, $case, [
                             'status' => DunningCaseStatus::Cancelled->value,
                             'active_step_no' => null,
                             'parked_reason' => null,
@@ -1440,32 +1440,6 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
             nextStepNo: RowCast::optInt($outcome->body['nextStepNo'] ?? null, 'nextStepNo'),
             nextEligibleAt: $nextEligibleAtRaw === null ? null : RowCast::utcDateTime($nextEligibleAtRaw, 'nextEligibleAt'),
         );
-    }
-
-    /** @param array<string, mixed> $values */
-    private function updateStepCas(Connection $db, CollectionStepView $step, array $values): void
-    {
-        $updated = $db->table('billium_collection_step')
-            ->where('id', $step->id)
-            ->where('step_revision', $step->stepRevision)
-            ->update($values);
-
-        if ($updated !== 1) {
-            throw new LockPlanChanged('Collection step transition CAS failed');
-        }
-    }
-
-    /** @param array<string, mixed> $values */
-    private function updateCaseCas(Connection $db, DunningCaseView $case, array $values): void
-    {
-        $updated = $db->table('billium_collection_dunning_case')
-            ->where('id', $case->id)
-            ->where('case_revision', $case->caseRevision)
-            ->update($values);
-
-        if ($updated !== 1) {
-            throw new LockPlanChanged('Dunning case transition CAS failed');
-        }
     }
 
     private function lockCollectionOwner(TransactionContext $ctx, Connection $db, string $componentRef): int

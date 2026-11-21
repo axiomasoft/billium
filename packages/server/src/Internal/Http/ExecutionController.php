@@ -22,6 +22,7 @@ use Billium\Execution\Contracts\RootPaymentCommands;
 use Billium\Execution\Data\ExecutionReceipt;
 use Billium\Execution\Data\ExecutionScope;
 use Billium\Server\Data\ExecutionContext;
+use Billium\Server\Internal\Operations\ServerEvents;
 use Closure;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\JsonResponse;
@@ -87,7 +88,11 @@ final readonly class ExecutionController
     private function admit(Request $request, string $seller, string $schema, string $action, Closure $handler): JsonResponse
     {
         return $this->access->run($request, $seller, [$schema], function (Envelope $command, ExecutionContext $context) use ($handler): JsonResponse {
-            $receipt = ExecutionReceipt::admission($handler(self::scope($context), $command));
+            $outcome = $handler(self::scope($context), $command);
+            $receipt = ExecutionReceipt::admission($outcome);
+            if ($outcome->replayed) {
+                ServerEvents::ReceiptReplayed->record();
+            }
 
             return $this->response->from($receipt, $receipt->result === 'accepted' ? 202 : 200);
         }, $action);

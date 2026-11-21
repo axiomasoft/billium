@@ -11,7 +11,7 @@ The repository contains the P1 design, the contracts spec revision
 language-neutral [`fixtures/`](fixtures/README.md), the `conformance/` runner with the JCS oracle,
 and the `billium-contracts` packages for PHP and Dart. Core implements the P3 platform and ledger:
 guarded PostgreSQL routines, financial-session admission, receipts, observations, outbox and feed (D60).
-Live PSP execution and legal numbering belong to later modules (D55/D59).
+The execution and documents modules have their own enablement and qualification requirements (D55/D59).
 
 The `axiomasoft/billium-core` distribution includes the platform, ledger, execution, usage, rating, schedule, documents and collection implementations. Enable modules with `billium.modules.enabled`. Usage, rating, schedule, documents and collection also have feature-specific configuration. The host can restrict the resulting plugin graph through the Packman activation gate. Billium's financial-session and operation admission rules continue to govern writes.
 
@@ -76,7 +76,8 @@ docker compose run --rm toolchain bash scripts/smoke/consumer-install.sh
 Gate layers, in order: `lint` (spec documents, schemas, vectors, migration/role rules and P3 acceptance groups), `derived` (freshness of generated files,
 identities, type-map), `php` (Pint, PHPStan max with `NoFloatTypeRule`, Rector, Packman checks, Pest, install smoke), `dart`
 (format, analyze, test, `no-double`, install smoke), `conformance` (shared vectors and golden through both
-adapters against the baseline). The php layer runs Packman as `php -d memory_limit=1G vendor/bin/packman gate`,
+adapters, required PHP/Dart server HTTP suites, compatibility and archive installs, and the server restore drill).
+The php layer runs Packman as `php -d memory_limit=1G vendor/bin/packman gate`,
 with the same memory limit for `php-api --check`, `error-codes --check`, `config-schema --check`, and `ai:sync --dry-run`.
 There is no `bin/packman`. PostgreSQL tests are `vendor/bin/pest --group=pg --exclude-group=pg-serial --parallel --processes=8`,
 then `vendor/bin/pest --group=pg-serial`; `scripts/ci.sh` sets `PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1` for both.
@@ -89,6 +90,9 @@ Details: [development environment](docs/development-environment.md).
 See [planning and design checks](docs/planning.md) for PLAN1, its execution state and validation commands.
 
 Platform outbox delivery, feed subscriptions and retention setup: [operations guide](docs/operations/outbox-feed.md) (D52/D60/D63).
+
+Server readiness, doctor, metrics, and restore drill commands are in the [server runbook](docs/server/operations.md).
+The [profile evidence manifest](artifacts/server-readiness.json) records the SDK disposition and the outstanding deployment inputs for execution activation (D59/D61/D62).
 
 Authenticated ledger queries, receipt recovery and ledger bootstrap streams: [query guide](docs/contracts/ledger-queries.md) (REQ-CON-14, D35, D60).
 

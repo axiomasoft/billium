@@ -1,0 +1,22 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "axiomasoft/billium-server configuration",
+    "type": "object",
+    "properties": {
+        "billium-server": {
+            "type": "object",
+            "properties": {
+                "max_body_bytes": {
+                    "type": "integer",
+                    "default": 1048576
+                },
+                "max_depth": {
+                    "type": "integer",
+                    "default": 64
+                }
+            },
+            "additionalProperties": false
+        }
+    },
+    "additionalProperties": false
+}

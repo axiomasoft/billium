@@ -6306,7 +6306,7 @@
             "dist": {
                 "type": "path",
                 "url": "packages/server",
-                "reference": "be30edc63095f3cce515dbc8447fdd66108833e3"
+                "reference": "b8972fc5983de52705ea47b484a44df700002a7a"
             },
             "require": {
                 "axiomasoft/billium-contracts": "^0.1",
@@ -6317,7 +6317,12 @@
                 "php": "^8.4"
             },
             "suggest": {
-                "axiomasoft/billium-execution": "Execution is bundled with core and enabled only for the remote-billium composition."
+                "axiomasoft/billium-collection": "Core module for collection commands when enabled.",
+                "axiomasoft/billium-execution": "Execution is bundled with core and enabled only for the remote-billium composition.",
+                "axiomasoft/billium-platform": "Core module providing event feeds and receipt recovery.",
+                "axiomasoft/billium-rating": "Core module for rating commands when enabled.",
+                "axiomasoft/billium-schedule": "Core module for schedule commands when enabled.",
+                "axiomasoft/billium-usage": "Core module for usage submissions when enabled."
             },
             "type": "library",
             "extra": {

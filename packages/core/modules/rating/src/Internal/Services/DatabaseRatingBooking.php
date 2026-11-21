@@ -18,7 +18,6 @@ use Billium\Core\Data\Runner\StoredOutcome;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Exceptions\Modules\ModuleAdmissionRefused;
-use Billium\Platform\Contracts\Idempotency\IdempotencyReceiptQueries;
 use Billium\Platform\Data\Idempotency\PinnedCommand;
 use Billium\Rating\Contracts\PinnedRatingInputs;
 use Billium\Rating\Contracts\RatingBooking;
@@ -29,6 +28,7 @@ use Billium\Rating\Data\Rating\FrozenPrice;
 use Billium\Rating\Enums\BookingOutcome;
 use Billium\Rating\Enums\ChargeKind;
 use Billium\Rating\Internal\Adapters\LedgerAdapter;
+use Billium\Rating\Internal\Adapters\ReceiptReplayAdapter;
 use Billium\Rating\Internal\Adapters\ScheduleOccurrenceAdapter;
 use Billium\Rating\Internal\Adapters\UsageAggregateAdapter;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
@@ -43,7 +43,7 @@ final readonly class DatabaseRatingBooking implements RatingBooking
 {
     public function __construct(private OperationRunner $runner, private CallerContext $callers, private RatingStore $store,
         private RatingComputation $computation, private UsageAggregateAdapter $usage, private ScheduleOccurrenceAdapter $schedule,
-        private LedgerAdapter $ledger, private BilliumOptions $options, private IdempotencyReceiptQueries $receipts) {}
+        private LedgerAdapter $ledger, private BilliumOptions $options, private ReceiptReplayAdapter $receipts) {}
 
     public function book(BookRatedBasis $command): BookingReceipt
     {
@@ -56,7 +56,7 @@ final readonly class DatabaseRatingBooking implements RatingBooking
         $command = $codec->decode($codec->encode($command));
         assert($command instanceof PrepareObligation);
         $wire = new PinnedCommand($this->callers->current(), $command, $command->installationRef, $command->sellerRef, $command->environment, $command->commandKey);
-        $stored = $this->receipts->replayCommand($wire->scope, $wire->kind(), $wire->key, $wire->inputDigest);
+        $stored = $this->receipts->replay($wire);
         if ($stored !== null) {
             return $wire->result($stored);
         }

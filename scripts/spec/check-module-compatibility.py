@@ -339,6 +339,9 @@ def repository_errors(document: dict, root: Path = ROOT) -> list[str]:
     ):
         snapshot = root / f"spec/identities/snapshots/{kind}.json"
         actual = set(json.loads(snapshot.read_text(encoding="utf-8"))) if snapshot.is_file() else None
+        if kind == "config-key" and actual is not None:
+            # The global snapshot also tracks server config. This registry owns billium.php.
+            actual = {key for key in actual if key.startswith("billium.")}
         if actual != expected:
             errors.append(f"identity snapshot {kind} differs from the module registry; run scripts/spec/identities.py")
 

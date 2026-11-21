@@ -71,6 +71,18 @@ final class PublicSurfaceTest extends TestCase
             PHP, true));
     }
 
+    public function test_internal_delivery_may_use_core_module_contracts(): void
+    {
+        $source = <<<'PHP'
+            <?php
+            use Billium\Platform\Contracts\Feed\EventFeed;
+            use Billium\Platform\Internal\Feed\DirectReader;
+            PHP;
+
+        self::assertSame(['Billium\Platform\Internal\Feed\DirectReader'], self::violations($source, false));
+        self::assertSame(['Billium\Platform\Contracts\Feed\EventFeed', 'Billium\Platform\Internal\Feed\DirectReader'], self::violations($source, true));
+    }
+
     /** @return list<string> */
     private static function violations(string $php, bool $public): array
     {
@@ -81,8 +93,10 @@ final class PublicSurfaceTest extends TestCase
         ) as $node) {
             if ($node instanceof Name) {
                 $name = $node->toString();
+                $moduleContract = ! $public && preg_match('/^Billium\\\\(?:Platform|Usage|Rating|Schedule|Collection)\\\\Contracts\\\\/i', $name) === 1;
                 if (str_starts_with(strtolower($name), 'illuminate\\database\\eloquent')
                     || (str_contains($name, '\\')
+                        && ! $moduleContract
                         && preg_match('/^(?:Billium\\\\(?:Contracts|Core|Execution|Ledger|Server)|Packman|Illuminate)(?:\\\\|$)/i', $name) !== 1)
                     || ($public && str_starts_with(strtolower($name), 'illuminate\\'))) {
                     $violations[] = $name;

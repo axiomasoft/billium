@@ -212,7 +212,7 @@ final readonly class DatabaseUsage implements Usage
             'factId' => $fact->factId, 'revision' => $fact->revision, 'metricRef' => $fact->metricRef,
             'metricVersion' => $fact->metricVersion, 'metricDigest' => $metric->digest, 'unit' => $fact->unit,
             'attribution' => $pinned->snapshot->attribution, 'interval' => $fact->interval, 'eventAt' => $fact->eventAt,
-            'receivedAt' => (new DateTimeImmutable('now', new DateTimeZone('UTC')))->format('Y-m-d\TH:i:s.u\Z'),
+            'receivedAt' => new DateTimeImmutable('now', new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z'),
             'value' => $pinned->value, 'grouping' => $pinned->grouping, 'billableStream' => $pinned->billableStream,
             'provenance' => (object) [...get_object_vars($fact->provenance), 'sourceDigest' => $pinned->sourceDigest]];
         if ($pinned->correctionRef !== null) {

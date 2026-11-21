@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Server\Internal\Http;
 
-use Billium\Server\Internal\Readiness;
+use Billium\Server\Internal\Operations\ServerReadinessCheck;
 use Illuminate\Http\Response;
 use Packman\Attributes\Internal;
 
@@ -16,8 +16,8 @@ final readonly class HealthController
         return new Response('', 200, ['Cache-Control' => 'no-store']);
     }
 
-    public function ready(Readiness $readiness): Response
+    public function ready(ServerReadinessCheck $readiness): Response
     {
-        return new Response('', $readiness->ready() ? 200 : 503, ['Cache-Control' => 'no-store']);
+        return new Response('', $readiness->failure() === null ? 200 : 503, ['Cache-Control' => 'no-store']);
     }
 }

@@ -11,6 +11,7 @@ use Billium\Core\Enums\Runner\LockRank;
 use Billium\Core\Enums\Runner\LockScope;
 use Billium\Core\Exceptions\Runner\LockOrderViolation;
 use Billium\Core\Internal\Runner\LockSet;
+use Billium\Core\Tests\Support\CoreBootTestCase;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Schema\Blueprint;
 use LogicException;
@@ -20,11 +21,10 @@ use Packman\Schema\Data\Compiler\TableNames;
 use Packman\Schema\Enums\SchemaScope;
 use Packman\Schema\Exceptions\SchemaSetException;
 use Packman\Schema\Laravel\PackmanMigration;
-use Packman\Testkit\PackageTestCase;
 use PDO;
 use RuntimeException;
 
-final class SqliteNonPgRuntimeTest extends PackageTestCase
+final class SqliteNonPgRuntimeTest extends CoreBootTestCase
 {
     #[Override]
     protected function getPackageProviders($app): array
@@ -34,7 +34,7 @@ final class SqliteNonPgRuntimeTest extends PackageTestCase
 
     public function test_sqlite_in_memory_enforces_packman_migration_tx_atomicity_and_rejects_pgsql_central_sets(): void
     {
-        config(['packman.schema.table_prefix' => 'billium_']);
+        config(['packman.schema.table_prefix' => 'billium_', 'packman.schema.connection' => 'sqlite']);
         $this->app->forgetInstance(TableNames::class);
         $db = $this->app->make(DatabaseManager::class)->connection('sqlite');
         self::assertSame('sqlite', $db->getDriverName());

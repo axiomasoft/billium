@@ -12,6 +12,7 @@ use Billium\Core\Plugins\PlatformPlugin;
 use Billium\Core\Plugins\RatingPlugin;
 use Billium\Core\Plugins\SchedulePlugin;
 use Billium\Core\Plugins\UsagePlugin;
+use Billium\Core\Tests\Support\CoreBootTestCase;
 use Billium\Rating\Contracts\RatingBooking;
 use Billium\Rating\Contracts\RatingCorrection;
 use Billium\Rating\Contracts\RatingPreparer;
@@ -21,12 +22,12 @@ use Illuminate\Container\Container;
 use Illuminate\Database\DatabaseServiceProvider;
 use Illuminate\Encryption\EncryptionServiceProvider;
 use Illuminate\Foundation\Application;
-use Orchestra\Testbench\TestCase;
+use Packman\Config\Exceptions\InvalidConfiguration;
 use Packman\Plugins\Contracts\Contributions\Capabilities;
 use Packman\Plugins\Contracts\Registry\PluginInspector;
 use Packman\Plugins\Testing\PluginGraph;
 
-final class ModulePluginsTest extends TestCase
+final class ModulePluginsTest extends CoreBootTestCase
 {
     public function test_all_module_plugins_compile_deterministically_through_packman_plugin_graph(): void
     {
@@ -42,6 +43,7 @@ final class ModulePluginsTest extends TestCase
                 SchedulePlugin::class,
                 RatingPlugin::class,
             ],
+            database: 'pgsql',
         );
 
         $ids = array_map(static fn ($d): string => $d->id, $registry->describe());
@@ -53,6 +55,14 @@ final class ModulePluginsTest extends TestCase
         self::assertContains('axiomasoft.billium.rating', $ids);
         self::assertNotEmpty($registry->providers());
         self::assertNotEmpty($registry->slotContributions());
+    }
+
+    public function test_platform_plugin_rejects_a_sqlite_target(): void
+    {
+        $this->expectException(InvalidConfiguration::class);
+        $this->expectExceptionMessage("plugin 'axiomasoft.billium.platform' does not support database driver 'sqlite'");
+
+        PluginGraph::compile($this->app, [], builtIn: [PlatformPlugin::class], database: 'sqlite');
     }
 
     public function test_schedule_plugin_dependencies_match_module_descriptor(): void
@@ -89,10 +99,7 @@ final class ModulePluginsTest extends TestCase
                         'key' => 'base64:'.base64_encode(str_repeat('k', 32)),
                         'cipher' => 'AES-256-CBC',
                     ],
-                    'database' => [
-                        'default' => 'sqlite',
-                        'connections' => ['sqlite' => ['driver' => 'sqlite', 'database' => ':memory:']],
-                    ],
+                    'database' => self::POSTGRESQL_BOOT_DATABASE,
                     'billium' => [
                         'modules' => [
                             'composition' => in_array('execution', $enabled, true) ? 'standalone-billium' : 'embedded-commerz',

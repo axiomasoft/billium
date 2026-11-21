@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-collection
 
-Path `packages/core/modules/collection/src`, namespace `Billium\Collection\`, layer L2. 95 types.
+Path `packages/core/modules/collection/src`, namespace `Billium\Collection\`, layer L2. 97 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -21,6 +21,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`DunningCaseService`](../../packages/core/modules/collection/src/Contracts/DunningCaseService.php) | interface | **Api** | Manages dunning_case lifecycle, explicit policy migrations, and collection_step transitions with distinct budgets. |
 | [`DunningPolicyService`](../../packages/core/modules/collection/src/Contracts/DunningPolicyService.php) | interface | **Api** | Manages immutable DunningPolicy versions and enforces single recurring owner per agreement component. |
 | [`DunningQueries`](../../packages/core/modules/collection/src/Contracts/DunningQueries.php) | interface | **Api** | Seller- and environment-scoped read queries for DunningPolicy, recurring ownership, dunning_case, and collection_step. |
+| [`PinnedCollectionInputs`](../../packages/core/modules/collection/src/Contracts/PinnedCollectionInputs.php) | interface | **Spi** |  |
 | [`SavedMethodCapabilityValidator`](../../packages/core/modules/collection/src/Contracts/SavedMethodCapabilityValidator.php) | interface | **Api** | Validates that a merchant revision and its qualified capability snapshot support saved-method/mandate collection. |
 
 ## Data
@@ -127,6 +128,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`DatabaseConsentBindingService`](../../packages/core/modules/collection/src/Internal/Services/DatabaseConsentBindingService.php) | class | *Internal* |  |
 | [`DatabaseDunningCaseService`](../../packages/core/modules/collection/src/Internal/Services/DatabaseDunningCaseService.php) | class | *Internal* |  |
 | [`DatabaseDunningPolicyService`](../../packages/core/modules/collection/src/Internal/Services/DatabaseDunningPolicyService.php) | class | *Internal* |  |
+| [`DunningTransitionWrites`](../../packages/core/modules/collection/src/Internal/Services/DunningTransitionWrites.php) | class | *Internal* |  |
 
 ## Internal/Support
 

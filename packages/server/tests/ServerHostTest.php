@@ -77,7 +77,7 @@ final class ServerHostTest extends TestCase
         Host::migrate($app, ['platform']);
         self::assertSame(503, $this->request($app, '/billium/ready')->getStatusCode());
         Host::migrate($app, ['ledger']);
-        self::assertSame(200, $this->request($app, '/billium/ready')->getStatusCode());
+        self::assertSame(503, $this->request($app, '/billium/ready')->getStatusCode());
         $response = $this->request($app, self::ROOT.'/queries', $this->query());
         self::assertSame(403, $response->getStatusCode());
         self::assertStringContainsString('billium.auth.denied', (string) $response->getContent());
@@ -159,7 +159,7 @@ final class ServerHostTest extends TestCase
         Host::migrate($app, $modules);
         self::assertSame(503, $this->request($app, '/billium/ready')->getStatusCode());
         $app->instance(WriterAdmission::class, $this->createStub(WriterAdmission::class));
-        self::assertSame(200, $this->request($app, '/billium/ready')->getStatusCode());
+        self::assertSame(503, $this->request($app, '/billium/ready')->getStatusCode());
         self::assertSame(404, $this->request($app, self::ROOT.'/observations', $this->observation())->getStatusCode());
 
         $codec = new Codec;

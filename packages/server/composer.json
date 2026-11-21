@@ -12,7 +12,12 @@
         "laravel/framework": "^13.0"
     },
     "suggest": {
-        "axiomasoft/billium-execution": "Execution is bundled with core and enabled only for the remote-billium composition."
+        "axiomasoft/billium-collection": "Core module for collection commands when enabled.",
+        "axiomasoft/billium-execution": "Execution is bundled with core and enabled only for the remote-billium composition.",
+        "axiomasoft/billium-platform": "Core module providing event feeds and receipt recovery.",
+        "axiomasoft/billium-rating": "Core module for rating commands when enabled.",
+        "axiomasoft/billium-schedule": "Core module for schedule commands when enabled.",
+        "axiomasoft/billium-usage": "Core module for usage submissions when enabled."
     },
     "autoload": {
         "psr-4": {

@@ -3,7 +3,7 @@
 Billium uses the AgenTools agent environment with PHP and Dart enabled.
 The contracts packages (`packages/contracts`, `packages/contracts-dart`) and P3 platform/ledger in
 `packages/core` are implemented. Module lifecycle and authority boundaries follow D55/D60/D62;
-PSP execution and legal documents are later modules, not qualified live capabilities (D59).
+the available modules and production qualification requirements are tracked by composition (D55/D59/D61).
 
 ## Toolchain and checks
 
@@ -48,6 +48,20 @@ no `laravel/framework`) and decodes the pilot `payment.execute.v1`. PB-15 (the p
 `payment.outcome.v1`) is proved by the `compat/pilot` vectors in the `conformance` layer for both adapters.
 
 ## PostgreSQL proofs and host commands (D21/D50/D60/D62)
+
+The conformance layer runs the required PHP and Dart HTTP suites against PostgreSQL, the pinned N/N−1 matrix, the archived test consumer installs and the server restore drill. The derived layer checks the HTTP API manifest. These checks apply with the D61 production Dart SDK disposition recorded as skipped. (D59, D61; owners PLAN1.P8.6–P8.8.)
+
+```bash
+docker compose run --rm toolchain python3 scripts/spec/check-server-api.py --check
+docker compose run --rm toolchain vendor/bin/pest packages/server/tests/Integration/ReadinessTest.php
+docker compose run --rm toolchain bash scripts/drills/server-restore.sh
+docker compose run --rm toolchain bash scripts/test/server-http.sh --client php --suite required --report build/server-readiness/http-php.json
+docker compose run --rm toolchain bash scripts/test/server-http.sh --client dart --suite required --report build/server-readiness/http-dart.json
+docker compose run --rm toolchain python3 conformance/compatibility/run.py --matrix conformance/compatibility/matrix.json
+docker compose run --rm toolchain bash scripts/smoke/server-consumers.sh
+```
+
+See the [server operations runbook](server/operations.md) for probe semantics, access to history during recovery and the production activation evidence (D54, D59, D62; owners server and deployment).
 
 `scripts/db/preflight.php` fails on missing pdo_pgsql, PostgreSQL <16, unsafe runtime privileges,
 missing owner/runtime credentials or a database name without `_test`. `scripts/db/prepare-worker-template.php`

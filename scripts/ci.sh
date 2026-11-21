@@ -15,7 +15,7 @@ declare -A SUBJECTS=(
     [derived]="freshness of derived files"
     [php]="PHP packages"
     [dart]="Dart package"
-    [conformance]="cross-language vectors and golden"
+    [conformance]="cross-language vectors, server HTTP, archive compatibility and restore"
 )
 
 fail() {
@@ -60,7 +60,9 @@ layer_derived() {
     done
     ((found == 1)) || fail "derived: no generator found under scripts/spec/"
     need_path scripts/docs/source-index.py
+    need_path scripts/spec/check-server-api.py
     python3 scripts/docs/source-index.py --check
+    python3 scripts/spec/check-server-api.py --check
 }
 
 layer_php() {
@@ -74,7 +76,6 @@ layer_php() {
         composer validate --strict "$manifest"
     done
     mkdir -p build/phpstan build/rector .phpunit.cache
-    chmod -R a+rwX build .phpunit.cache
     vendor/bin/pint --test
     vendor/bin/phpstan analyse --memory-limit=1G
     vendor/bin/rector process --dry-run
@@ -125,6 +126,17 @@ layer_conformance() {
     PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 php conformance/adapters/php/bin/with-database-lease.php python3 conformance/runner/run.py --adapter php
     (cd conformance/adapters/dart && dart pub get)
     python3 conformance/runner/run.py --adapter dart
+    need_path scripts/test/server-http.sh
+    need_path scripts/drills/server-restore.sh
+    need_path conformance/compatibility/matrix.json
+    need_path scripts/smoke/server-consumers.sh
+    need_path artifacts/server-readiness.json
+    python3 -m json.tool artifacts/server-readiness.json >/dev/null
+    bash scripts/test/server-http.sh --client php --suite required --report build/server-readiness/http-php.json
+    bash scripts/test/server-http.sh --client dart --suite required --report build/server-readiness/http-dart.json
+    python3 conformance/compatibility/run.py --matrix conformance/compatibility/matrix.json
+    bash scripts/smoke/server-consumers.sh
+    bash scripts/drills/server-restore.sh
 }
 
 list_layers() {

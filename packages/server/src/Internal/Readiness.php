@@ -19,11 +19,10 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Packman\Attributes\Internal;
-use Packman\Config\Exceptions\InvalidConfiguration;
 use Packman\Doctor\Data\DoctorContext;
-use Packman\Doctor\Data\DoctorFinding;
 use Packman\Doctor\Enums\CheckStatus;
 use PDOException;
+use Throwable;
 
 #[Internal]
 final readonly class Readiness
@@ -54,31 +53,57 @@ final readonly class Readiness
 
     public function ready(bool $read = false): bool
     {
+        return $this->failure($read) === null;
+    }
+
+    public function failure(bool $read = false): ?string
+    {
         $composition = $this->modules->manifest()->composition($this->options->modules->composition);
-        if ($composition === null || $composition->server === ModulePresence::Forbidden
-            || ! $this->hasAuthPorts() || ! $this->app->bound(InstallationContextResolver::class)) {
-            return false;
+        if ($composition === null || $composition->server === ModulePresence::Forbidden) {
+            return 'billium.server.composition_unavailable';
+        }
+        if (! $this->hasAuthPorts() || ! $this->app->bound(InstallationContextResolver::class)) {
+            return 'billium.server.auth_unavailable';
         }
 
         try {
             $this->app->make(HttpLimits::class);
+        } catch (Throwable) {
+            return 'billium.server.limits_invalid';
+        }
+
+        try {
             $database = $this->databases->connection($this->options->connection);
             if ($database->getDriverName() !== 'pgsql') {
-                return false;
+                return 'billium.server.database_incompatible';
             }
             $version = $database->scalar("SELECT current_setting('server_version_num')::integer", [], false);
             if (! is_int($version) || $version < 160000) {
-                return false;
+                return 'billium.server.database_incompatible';
             }
-        } catch (InvalidArgumentException|InvalidConfiguration|PDOException) {
-            return false;
+        } catch (InvalidArgumentException|PDOException) {
+            return 'billium.server.database_unavailable';
         }
 
         // Force real checkpoints even in non-production environments. Doctor is a read-only check.
-        return array_all(
-            $this->doctor->run(new DoctorContext(production: true)),
-            static fn (DoctorFinding $finding): bool => $finding->status !== CheckStatus::Error
-                || ($read && $finding->code === 'billium.modules.module.port_missing' && $finding->slice === 'execution'),
-        );
+        foreach ($this->doctor->run(new DoctorContext(production: true)) as $finding) {
+            if ($finding->status !== CheckStatus::Error) {
+                continue;
+            }
+            if ($finding->code === 'billium.modules.module.port_missing' && $finding->slice === 'execution') {
+                if ($read) {
+                    continue;
+                }
+
+                return 'billium.server.execution_ports_unavailable';
+            }
+
+            return match ($finding->code) {
+                'billium.database.unavailable' => 'billium.server.database_unavailable',
+                default => 'billium.server.modules_incompatible',
+            };
+        }
+
+        return null;
     }
 }

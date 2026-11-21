@@ -82,6 +82,7 @@ final class ConformanceClient
                 if ($tokenIndex + 1 < count($tokens)) {
                     $tokenIndex++;
                 }
+
                 continue;
             }
 
@@ -93,6 +94,7 @@ final class ConformanceClient
                 $fits = $problem['retryable'] && $problem['sameKey'] && $waited + $retryAfter <= $deadlineMs;
                 if ($fits && count($attempts) < $maxAttempts) {
                     $waited += $retryAfter;
+
                     continue;
                 }
 
@@ -309,7 +311,7 @@ final class ConformanceClient
     /** @return array<string, mixed> */
     private function totals(stdClass $raw): array
     {
-        $result = $raw->result instanceof stdClass ? $raw->result : new stdClass();
+        $result = $raw->result instanceof stdClass ? $raw->result : new stdClass;
         $applied = $result->applied instanceof stdClass ? $result->applied : null;
         $observed = $result->observed instanceof stdClass ? $result->observed : null;
         $exposure = $result->exposure instanceof stdClass ? $result->exposure : null;

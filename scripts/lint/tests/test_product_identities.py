@@ -1,4 +1,5 @@
 import importlib.util
+import json
 from pathlib import Path
 import subprocess
 import sys
@@ -23,13 +24,27 @@ class ProductIdentityTests(unittest.TestCase):
                 path = root / rel
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text('<?php')
-            with patch.object(IDENTITIES.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, '{"runner":{"root_deadline_ms":30000},"modules":{"enabled":["platform","ledger"]},"connection":null}', '')):
+            configs = {
+                'packages/core/config/billium.php': {
+                    'runner': {'root_deadline_ms': 30000},
+                    'modules': {'enabled': ['platform', 'ledger']},
+                    'connection': None,
+                },
+                'packages/server/config/billium-server.php': {'max_body_bytes': 1048576, 'max_depth': 64},
+            }
+
+            def read_config(command, **_options):
+                return subprocess.CompletedProcess(command, 0, json.dumps(configs[command[-1]]), '')
+
+            with patch.object(IDENTITIES.subprocess, 'run', side_effect=read_config):
                 found = IDENTITIES.product_identities(root)
             self.assertEqual({
                 ('migration', '2026_10_29_000001_test'): 'packages/core/database/migrations/platform/2026_10_29_000001_test.php',
                 ('config-key', 'billium.runner.root_deadline_ms'): 'packages/core/config/billium.php',
                 ('config-key', 'billium.modules.enabled'): 'packages/core/config/billium.php',
                 ('config-key', 'billium.connection'): 'packages/core/config/billium.php',
+                ('config-key', 'billium-server.max_body_bytes'): 'packages/server/config/billium-server.php',
+                ('config-key', 'billium-server.max_depth'): 'packages/server/config/billium-server.php',
             }, found)
 
     def test_removed_identity_is_red_and_existing_identity_keeps_since_and_status(self):

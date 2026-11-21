@@ -8,13 +8,13 @@ One page per PHP package. Open the package page, find the directory, then read o
 |---|---|---|---|
 | [billium-contracts](billium-contracts.md) | L1 | 80 | — |
 | [billium-core](billium-core.md) | L2 | 110 | billium-collection, billium-contracts, billium-documents, billium-execution, billium-ledger, billium-platform, billium-rating, billium-schedule, billium-usage |
-| [billium-server](billium-server.md) | L3 | 17 | billium-contracts, billium-core, billium-execution, billium-ledger |
-| [billium-platform](billium-platform.md) | L2 | 103 | billium-contracts, billium-core |
+| [billium-server](billium-server.md) | L3 | 38 | billium-collection, billium-contracts, billium-core, billium-execution, billium-ledger, billium-platform, billium-rating, billium-schedule, billium-usage |
+| [billium-platform](billium-platform.md) | L2 | 106 | billium-contracts, billium-core |
 | [billium-ledger](billium-ledger.md) | L2 | 98 | billium-contracts, billium-core, billium-platform |
-| [billium-usage](billium-usage.md) | L2 | 62 | billium-contracts, billium-core, billium-platform |
-| [billium-schedule](billium-schedule.md) | L2 | 55 | billium-contracts, billium-core |
-| [billium-rating](billium-rating.md) | L2 | 117 | billium-contracts, billium-core, billium-ledger, billium-platform, billium-schedule, billium-usage |
+| [billium-usage](billium-usage.md) | L2 | 64 | billium-contracts, billium-core, billium-platform |
+| [billium-schedule](billium-schedule.md) | L2 | 56 | billium-contracts, billium-core, billium-platform |
+| [billium-rating](billium-rating.md) | L2 | 119 | billium-contracts, billium-core, billium-ledger, billium-platform, billium-schedule, billium-usage |
 | [billium-documents](billium-documents.md) | L2 | 89 | billium-contracts, billium-core, billium-ledger |
 | [billium-execution](billium-execution.md) | L2 | 206 | billium-contracts, billium-core, billium-ledger, billium-platform |
-| [billium-collection](billium-collection.md) | L2 | 95 | billium-contracts, billium-core, billium-execution, billium-ledger, billium-platform |
+| [billium-collection](billium-collection.md) | L2 | 97 | billium-contracts, billium-core, billium-execution, billium-ledger, billium-platform |
 | [billium-testkit](billium-testkit.md) | L4 | 33 | billium-collection, billium-contracts, billium-core, billium-documents, billium-execution, billium-platform |

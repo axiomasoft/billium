@@ -1,0 +1,60 @@
+{
+  "item": "PLAN1.P8.8",
+  "decision_ids": ["D54", "D55", "D57", "D58", "D59", "D61", "D62", "D64", "D66"],
+  "profiles": {
+    "ledger-only": {"delivery": "server", "authority": "external", "writer_admission": "forbidden"},
+    "embedded-commerz": {"delivery": "server or embedded", "authority": "external", "writer_admission": "forbidden"},
+    "standalone-billium": {"delivery": "embedded", "authority": "Billium", "server_readiness": "unsupported"},
+    "remote-billium": {"delivery": "server", "authority": "Billium", "writer_admission": "required", "outgoing_default": false}
+  },
+  "operational_identities": {
+    "owner": "PLAN1.P8.8",
+    "api_manifest": "docs/contracts/server-api-v1.md",
+    "doctor": {
+      "billium.server.readiness": "Worker passed the server readiness probe",
+      "billium.server.composition_unavailable": "Unsupported server composition",
+      "billium.server.auth_unavailable": "Host authentication or context bindings missing",
+      "billium.server.limits_invalid": "HTTP limits could not be compiled",
+      "billium.server.database_unavailable": "Cannot inspect PostgreSQL or schema",
+      "billium.server.database_incompatible": "PostgreSQL version or driver incompatible",
+      "billium.server.database_role_invalid": "Connection is read-only, a standby, or privileged",
+      "billium.server.modules_incompatible": "Core module or checkpoint compatibility failed",
+      "billium.server.modules_not_accepting": "Enabled module unavailable for new work",
+      "billium.server.session_quarantined": "Trusted process and activation evidence does not match an active session",
+      "billium.server.execution_ports_unavailable": "Effect-capable host bindings missing",
+      "billium.server.outgoing_disabled": "Explicit outgoing configuration and dossier selectors required",
+      "billium.server.execution_unqualified": "Host execution readiness verifier refused"
+    },
+    "metrics_command": "billium:server:metrics",
+    "metrics_failure": "billium.server.metrics_unavailable",
+    "events": ["billium.server.receipt_replayed", "billium.server.command_conflict", "billium.server.observation_conflict", "billium.server.database_unavailable"]
+  },
+  "sdk_gate": {
+    "item": "PLAN1.P8.7",
+    "status": "skipped",
+    "disposition": "accepted non-extraction (D61)",
+    "reason": "No named Dart server consumer",
+    "transport_gate": "required (PLAN1.P8.6)"
+  },
+  "evidence": [
+    {"check": "V881", "command": "bash scripts/drills/server-restore.sh", "report": "build/server-readiness/drill.json", "boundary": "external-runtime", "evidence_class": "server-runtime", "status": "pending acceptance"},
+    {"check": "V881", "subject": "Lost response over loopback", "boundary": "loopback", "evidence_class": "transport-contract", "status": "pending acceptance"},
+    {"checks": ["V881", "V882", "V883"], "subject": "Fixture deployment authority", "boundary": "double", "evidence_class": "host-double", "status": "pending acceptance"},
+    {"checks": ["V881", "V883"], "subject": "Fixture provider and effect count", "boundary": "double", "evidence_class": "provider-double", "status": "pending acceptance"},
+    {"check": "V882", "subject": "packages/server/tests/Integration/ReadinessTest.php", "boundary": "external-runtime", "evidence_class": "server-runtime", "status": "pending acceptance"},
+    {"check": "V883", "subject": "Required PHP/Dart HTTP suites", "reports": ["build/server-readiness/http-php.json", "build/server-readiness/http-dart.json"], "boundary": "loopback", "evidence_class": "transport-contract", "status": "pending acceptance"},
+    {"check": "V883", "subject": "Pinned N/N−1 matrix and archive installs", "boundary": "package-archive", "evidence_class": "compatibility-archive", "status": "pending acceptance"},
+    {"check": "V884", "subject": "Operations and manifest closure", "boundary": "static", "evidence_class": "profile-evidence-manifest", "status": "pending acceptance"},
+    {"subject": "Selected PaymentDrivers and production host", "boundary": "provider-live", "evidence_class": "provider-live", "status": "pending owner inputs"}
+  ],
+  "activation_gate": {
+    "named_operational_owner": null,
+    "slo_and_escalation_policy": null,
+    "retention_and_backup_policy": null,
+    "deployment_restore_lineage": null,
+    "selected_driver_qualification": null,
+    "external_retirement_and_activation_evidence": null,
+    "production_execution_qualified": false
+  },
+  "phase_closure": {"implementation_acceptance": "pending", "independent_phase_gate": "pending (D64/D66)"}
+}

@@ -145,6 +145,11 @@ Feed open/read/bootstrap используют ответы P3 `billium.feed.sele
 Cursor привязан к subscription, scope, lineage и selectionDigest. Смена набора — новая
 подписка, не старый cursor (D63).
 
+`/billium/live` проверяет HTTP-процесс. `/billium/ready` проверяет схему, runtime-роль,
+допуск текущего процесса и готовность выбранного профиля. Оба ответа без тела.
+Во время recovery сохраняется доступ к авторизованному lookup. (D54, D59, D62; владельцы server и deployment.)
+[Server operations](../server/operations.md)
+
 <!-- billium-routes:start -->
 | Метод | Путь | Действие | Запрос | Результат | Успех | Примечание |
 |:--|:--|:--|:--|:--|:--|:--|

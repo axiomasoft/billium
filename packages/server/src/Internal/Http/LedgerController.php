@@ -17,6 +17,7 @@ use Billium\Ledger\Data\Allocations\AllocationReceipt;
 use Billium\Ledger\Data\Allocations\ReallocatePayment;
 use Billium\Ledger\Data\Allocations\ReallocationMode;
 use Billium\Server\Data\ExecutionContext;
+use Billium\Server\Internal\Operations\ServerEvents;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -58,6 +59,10 @@ final readonly class LedgerController
                 return $this->response->from($receipt, 202);
             }
 
+            if ($receipt->replayed) {
+                ServerEvents::ReceiptReplayed->record();
+            }
+
             return $this->response->fromBody($this->receipts->allocation($context, $receipt));
         }, 'payment.observe');
     }
@@ -75,6 +80,9 @@ final readonly class LedgerController
             }
 
             $allocation = new AllocationReceipt($ref, 'reallocation', $receipt->body, $receipt->replayed);
+            if ($receipt->replayed) {
+                ServerEvents::ReceiptReplayed->record();
+            }
 
             return $this->response->fromBody($this->receipts->allocation($context, $allocation));
         }, 'allocation.reallocate');

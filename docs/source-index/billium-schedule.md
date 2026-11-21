@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-schedule
 
-Path `packages/core/modules/schedule/src`, namespace `Billium\Schedule\`, layer L2. 55 types.
+Path `packages/core/modules/schedule/src`, namespace `Billium\Schedule\`, layer L2. 56 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -19,6 +19,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`OccurrenceLocks`](../../packages/core/modules/schedule/src/Contracts/OccurrenceLocks.php) | interface | **Spi** | Outer roots acquire the complete rank-50 set before settlement/obligation locks (D27/FA03). |
 | [`OccurrenceParticipants`](../../packages/core/modules/schedule/src/Contracts/OccurrenceParticipants.php) | interface | **Spi** |  |
 | [`OccurrenceService`](../../packages/core/modules/schedule/src/Contracts/OccurrenceService.php) | interface | **Spi** |  |
+| [`PinnedOccurrenceInputs`](../../packages/core/modules/schedule/src/Contracts/PinnedOccurrenceInputs.php) | interface | **Spi** |  |
 | [`ScheduleQueries`](../../packages/core/modules/schedule/src/Contracts/ScheduleQueries.php) | interface | **Api** |  |
 
 ## Data/Commands

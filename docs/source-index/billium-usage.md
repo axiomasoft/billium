@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-usage
 
-Path `packages/core/modules/usage/src`, namespace `Billium\Usage\`, layer L2. 62 types.
+Path `packages/core/modules/usage/src`, namespace `Billium\Usage\`, layer L2. 64 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -18,6 +18,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`SourceCompletenessIntake`](../../packages/core/modules/usage/src/Contracts/SourceCompletenessIntake.php) | interface | **Spi** |  |
 | [`Usage`](../../packages/core/modules/usage/src/Contracts/Usage.php) | interface | **Api** |  |
 | [`UsageAttribution`](../../packages/core/modules/usage/src/Contracts/UsageAttribution.php) | interface | **Spi** | D13/D56: host-owned lookup, outside the root Tx. |
+| [`UsageFactV1Attribution`](../../packages/core/modules/usage/src/Contracts/UsageFactV1Attribution.php) | interface | **Spi** |  |
 
 ## Data
 
@@ -47,6 +48,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`MetricReduction`](../../packages/core/modules/usage/src/Data/MetricReduction.php) | class | **Api** |  |
 | [`SourceCompleteness`](../../packages/core/modules/usage/src/Data/SourceCompleteness.php) | class | **Api** |  |
 | [`SourceFinalityContract`](../../packages/core/modules/usage/src/Data/SourceFinalityContract.php) | class | **Api** |  |
+| [`UsageFactV1Inputs`](../../packages/core/modules/usage/src/Data/UsageFactV1Inputs.php) | class | **Api** |  |
 | [`WindowQualification`](../../packages/core/modules/usage/src/Data/WindowQualification.php) | class | **Api** |  |
 | [`WindowSelector`](../../packages/core/modules/usage/src/Data/WindowSelector.php) | class | **Api** |  |
 

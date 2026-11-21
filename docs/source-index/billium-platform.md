@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-platform
 
-Path `packages/core/modules/platform/src`, namespace `Billium\Platform\`, layer L2. 103 types.
+Path `packages/core/modules/platform/src`, namespace `Billium\Platform\`, layer L2. 106 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts/Accounting
@@ -34,6 +34,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`FinancialIdempotencyStore`](../../packages/core/modules/platform/src/Contracts/Idempotency/FinancialIdempotencyStore.php) | interface | **Spi** | Persists the authenticated selection, optional input fingerprint and original execution reference with the first claim. |
 | [`IdempotencyReceiptQueries`](../../packages/core/modules/platform/src/Contracts/Idempotency/IdempotencyReceiptQueries.php) | interface | **Spi** | Authenticated, exact-scope reads; an unqualified historical receipt supplies no scope proof. |
 | [`IdempotencyStore`](../../packages/core/modules/platform/src/Contracts/Idempotency/IdempotencyStore.php) | interface | **Spi** | Atomic first-write claim of (environment, seller, command kind, key) with its semantic digest (INV-05, D51). |
+| [`ReceiptAbsenceAuthority`](../../packages/core/modules/platform/src/Contracts/Idempotency/ReceiptAbsenceAuthority.php) | interface | **Spi** |  |
 
 ## Contracts/Inbox
 
@@ -104,6 +105,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
 | [`IdempotencyClaim`](../../packages/core/modules/platform/src/Data/Idempotency/IdempotencyClaim.php) | class | **Api** | Either a new in-progress claim row of this root Tx or the replay of a completed one (INV-05). |
+| [`PinnedCommand`](../../packages/core/modules/platform/src/Data/Idempotency/PinnedCommand.php) | class | **Api** |  |
 | [`StoredCommandReceipt`](../../packages/core/modules/platform/src/Data/Idempotency/StoredCommandReceipt.php) | class | **Api** | The optional command input fingerprint is separate from the qualified key, claim digest and economic identity. |
 
 ## Data/Inbox
@@ -219,6 +221,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`DatabaseOutboxDeliveryQueries`](../../packages/core/modules/platform/src/Internal/Outbox/DatabaseOutboxDeliveryQueries.php) | class | *Internal* |  |
 | [`EventFeedReader`](../../packages/core/modules/platform/src/Internal/Outbox/EventFeedReader.php) | class | *Internal* |  |
 | [`EventRows`](../../packages/core/modules/platform/src/Internal/Outbox/EventRows.php) | class | *Internal* |  |
+| [`FeedCommandResults`](../../packages/core/modules/platform/src/Internal/Outbox/FeedCommandResults.php) | class | *Internal* |  |
 | [`FeedTokens`](../../packages/core/modules/platform/src/Internal/Outbox/FeedTokens.php) | class | *Internal* | D63: HMAC key comes from the host app key (or explicit feed signing key), never the copied database. |
 | [`OutboxPruner`](../../packages/core/modules/platform/src/Internal/Outbox/OutboxPruner.php) | class | *Internal* | D25/D52/D60: owner-only maintenance, complete safe physical prefix, all delivery destinations and active pins. |
 | [`OutboxRecorder`](../../packages/core/modules/platform/src/Internal/Outbox/OutboxRecorder.php) | class | *Internal* |  |

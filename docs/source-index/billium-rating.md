@@ -2,13 +2,14 @@
 
 # axiomasoft/billium-rating
 
-Path `packages/core/modules/rating/src`, namespace `Billium\Rating\`, layer L2. 117 types.
+Path `packages/core/modules/rating/src`, namespace `Billium\Rating\`, layer L2. 119 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
+| [`PinnedRatingInputs`](../../packages/core/modules/rating/src/Contracts/PinnedRatingInputs.php) | interface | **Spi** |  |
 | [`PriceVersionStore`](../../packages/core/modules/rating/src/Contracts/PriceVersionStore.php) | interface | **Spi** |  |
 | [`PricingStrategy`](../../packages/core/modules/rating/src/Contracts/PricingStrategy.php) | interface | **Spi** |  |
 | [`PricingStrategyRegistry`](../../packages/core/modules/rating/src/Contracts/PricingStrategyRegistry.php) | interface | **Spi** |  |
@@ -109,6 +110,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`ObligationCommandMapper`](../../packages/core/modules/rating/src/Internal/Adapters/ObligationCommandMapper.php) | class | *Internal* | Q1=a: ledger owns gross debt; immutable rating lines own net/tax and source provenance. |
 | [`OutboxAdapter`](../../packages/core/modules/rating/src/Internal/Adapters/OutboxAdapter.php) | class | *Internal* | Rating's route to the platform command outbox. |
 | [`RatedCorrectionBasis`](../../packages/core/modules/rating/src/Internal/Adapters/RatedCorrectionBasis.php) | class | *Internal* | Rating books a correction as a linked ledger obligation, so the schedule child must bind that same basis: ledger's correction derivation over the rated predece… |
+| [`ReceiptReplayAdapter`](../../packages/core/modules/rating/src/Internal/Adapters/ReceiptReplayAdapter.php) | class | *Internal* |  |
 | [`ScheduleOccurrenceAdapter`](../../packages/core/modules/rating/src/Internal/Adapters/ScheduleOccurrenceAdapter.php) | class | *Internal* |  |
 | [`UsageAggregateAdapter`](../../packages/core/modules/rating/src/Internal/Adapters/UsageAggregateAdapter.php) | class | *Internal* | Rating's only route to the optional usage capability; every member is absent when usage is not installed. |
 

@@ -47,7 +47,7 @@ try {
     verify($host->request($app, '/billium/ready')->getStatusCode() === 503, 'Empty schema should refuse readiness');
     verify(! $db->getSchemaBuilder()->hasTable('migrations'), 'Boot ran migrations');
     Host::migrate($app, ['platform', 'ledger']);
-    verify($host->request($app, '/billium/ready')->getStatusCode() === 200, 'Ledger-only schema should be ready');
+    verify($host->request($app, '/billium/ready')->getStatusCode() === 503, 'Money readiness must require a host-authorized worker');
     $capabilities = $host->request($app, '/billium/v1/capabilities');
     verify($capabilities->getStatusCode() === 200 && str_contains((string) $capabilities->getContent(), 'billium.capabilities.v1'), 'Packaged server limits or capabilities are missing');
     $query = json_encode([

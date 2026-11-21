@@ -27,8 +27,8 @@
     },
     {
       "id": "php-server",
-      "paths": ["packages/server/**", "tests/minimal-host/server/**", "scripts/smoke/server-install.sh", "docs/server/**"],
-      "layers": ["derived", "php"]
+      "paths": ["packages/server/**", "tests/minimal-host/server/**", "scripts/smoke/server-install.sh", "scripts/smoke/server-consumers.sh", "scripts/drills/server-restore.sh", "docs/server/**", "artifacts/server-readiness.json"],
+      "layers": ["derived", "php", "conformance"]
     },
     {
       "id": "dart-contracts",

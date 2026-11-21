@@ -7,6 +7,7 @@
         "php": "^8.4",
         "axiomasoft/billium-contracts": "^0.1",
         "axiomasoft/billium-core": "^0.1",
+        "axiomasoft/billium-platform": "^0.1",
         "axiomasoft/packman": "^0.1",
         "laravel/framework": "^13.0"
     },
