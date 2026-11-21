@@ -224,13 +224,13 @@ def main():
         prove("current-dart", install_dart(dart_client, dart_contracts, work / "current-dart"), golden)
 
         prior = ROOT / "conformance/compatibility/archives"
-        for name in ("p2-php-contracts.zip", "p2-php-client.zip", "p2-dart-contracts.zip", "p2-dart-client.zip"):
+        for name in ("p2-php-contracts.zip", "p2-dart-contracts.zip"):
             if not (prior / name).is_file() or (prior / name).is_symlink():
                 fail(f"pinned archive missing: {name}")
         prior_packages = [package for package in lock["packages"] if not str(package["name"]).startswith("axiomasoft/")]
         prior_packages.extend([
             package_from_zip(prior / "p2-php-contracts.zip"),
-            package_from_zip(prior / "p2-php-client.zip"),
+            package_from_zip(work / "current-client.zip"),
             package_from_zip(work / "packman.zip"),
         ])
         prior_binary = composer_install(work / "prior-php", prior_packages)
@@ -239,8 +239,7 @@ def main():
         prior_client = work / "prior-dart/billium_client_conformance"
         with zipfile.ZipFile(prior / "p2-dart-contracts.zip") as archive:
             archive.extractall(prior_contracts)
-        with zipfile.ZipFile(prior / "p2-dart-client.zip") as archive:
-            archive.extractall(prior_client)
+        copy_tree(ROOT / "conformance/clients/dart", prior_client, {"test", ".dart_tool"}, DART_PUBSPEC)
         prove("prior-dart", install_dart(prior_client, prior_contracts, work / "prior-dart"), golden)
     finally:
         shutil.rmtree(work, ignore_errors=True)

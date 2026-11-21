@@ -17,14 +17,10 @@ try {
     }
     $client = new ConformanceClient;
     if (($message['op'] ?? null) === 'batch') {
-        $supported = $message['supportedSchemas'] ?? null;
         $results = [];
         foreach ($message['cases'] ?? [] as $case) {
             if (! is_array($case)) {
                 throw new RuntimeException('case must be an object');
-            }
-            if (is_array($supported) && ! array_key_exists('supportedSchemas', $case)) {
-                $case['supportedSchemas'] = $supported;
             }
             $results[] = $client->execute($case);
         }

@@ -66,6 +66,13 @@
     },
     {
       "kind": "envelope",
+      "id": "billium.feed.bootstrap_ack.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap-ack.v1.json"
+    },
+    {
+      "kind": "envelope",
       "id": "billium.feed.bootstrap_request.v1",
       "status": "new",
       "since": "2026-10",
@@ -1022,6 +1029,69 @@
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/feed/bootstrap.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap_ack.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap-ack.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap_ack.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap-ack.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap_ack.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap-ack.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap_ack.v1#/properties/leaseRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap-ack.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap_ack.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap-ack.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap_ack.v1#/properties/selectionDigest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap-ack.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap_ack.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap-ack.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap_ack.v1#/properties/snapshotDigest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap-ack.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap_ack.v1#/properties/subscriptionRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap-ack.v1.json"
     },
     {
       "kind": "envelope-field",
@@ -6031,6 +6101,13 @@
     {
       "kind": "route",
       "id": "billium.server.feed.bootstrap",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/server/routes/http.php"
+    },
+    {
+      "kind": "route",
+      "id": "billium.server.feed.bootstrap.ack",
       "status": "new",
       "since": "2026-10",
       "source": "packages/server/routes/http.php"

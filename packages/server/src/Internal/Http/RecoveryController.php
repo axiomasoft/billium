@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Billium\Server\Internal\Http;
 
 use Billium\Contracts\Data\Envelopes\AllocationReceiptResult;
+use Billium\Contracts\Data\Envelopes\FeedBootstrapAck;
 use Billium\Contracts\Data\Envelopes\FeedBootstrapRequest;
 use Billium\Contracts\Data\Envelopes\FeedOpen;
 use Billium\Contracts\Data\Envelopes\FeedRead;
@@ -71,6 +72,17 @@ final readonly class RecoveryController
     public function bootstrapFeed(Request $request, string $sellerRef): JsonResponse
     {
         return $this->access->run($request, $sellerRef, [FeedBootstrapRequest::class], fn (FeedBootstrapRequest $command): JsonResponse => $this->response->from($this->app->make(EventFeed::class)->bootstrapSelectedFeed($command)), 'feed.bootstrap');
+    }
+
+    public function acknowledgeBootstrap(Request $request, string $sellerRef): JsonResponse
+    {
+        return $this->access->run($request, $sellerRef, [FeedBootstrapAck::class], function (FeedBootstrapAck $command, ExecutionContext $context): JsonResponse {
+            $feed = $this->app->make(EventFeed::class);
+            $selection = $feed->findSelection(self::scope($context), $command->subscriptionRef, $command->selectionDigest);
+            $feed->acknowledgeBootstrap($selection, $command->leaseRef, $command->snapshotDigest);
+
+            return new JsonResponse(null, 204);
+        }, 'feed.bootstrap.ack');
     }
 
     private static function scope(ExecutionContext $context): FinancialScope

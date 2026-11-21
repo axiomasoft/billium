@@ -3,7 +3,7 @@
   "id": "payment-status-discrepancy",
   "op": "project-status",
   "sources": ["D57"],
-  "shared": true,
+  "shared": false,
   "jsonText": "{\"schema\":\"ledger.payment_status.v1\",\"installationRef\":\"inst-test\",\"environment\":\"test\",\"sellerRef\":\"seller-a\",\"traceRef\":\"keep-me\",\"result\":{\"paymentRef\":\"root-a\",\"sourceAuthority\":\"remote-billium\",\"providerAccountRef\":\"fixture-pa\",\"billingAccountRef\":\"account-a\",\"applied\":{\"revision\":2,\"state\":\"succeeded\",\"requested\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"authorizedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"capturedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"refundedTotal\":{\"amount\":\"70.00\",\"currency\":\"RUB\"},\"allocated\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"unallocated\":{\"amount\":\"0.00\",\"currency\":\"RUB\"}},\"observed\":{\"revision\":3,\"authorizedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"capturedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"refundedTotal\":{\"amount\":\"140.00\",\"currency\":\"RUB\"},\"voidedTotal\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"evidenceRefs\":[\"fixture-evidence\"],\"observedAt\":\"2026-11-19T00:00:00Z\"},\"financialHold\":{\"active\":true,\"reasonCodes\":[\"over-refund\"],\"discrepancyRefs\":[\"disc-1\"]},\"exposure\":{\"currency\":\"RUB\",\"overCaptured\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"overRefunded\":{\"amount\":\"40.00\",\"currency\":\"RUB\"}},\"spendable\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"projectionStatus\":\"held_discrepancy\",\"bootstrap\":{\"status\":\"ready\"},\"reconciliation\":{\"status\":\"discrepancy\",\"lastCompletedAt\":\"2026-11-19T00:00:02Z\",\"completenessCursor\":\"cursor-1\"}}}",
   "expect": {
     "outcome": "accepted",
@@ -23,5 +23,12 @@
     "digestCoversUnknown": true,
     "cancelInvoked": false,
     "newKey": false
+  },
+  "priorExpect": {
+    "outcome": "refused",
+    "error.code": "billium.schema.unsupported",
+    "error.receipt": "none",
+    "totals": null,
+    "attempts.#": 0
   }
 }

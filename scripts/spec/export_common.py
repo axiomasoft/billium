@@ -72,6 +72,7 @@ ENVELOPES = (
     ("FeedOpen", "billium.feed.open.v1", "feed/open.v1.json", None),
     ("FeedRead", "billium.feed.read.v1", "feed/read.v1.json", None),
     ("FeedBootstrapRequest", "billium.feed.bootstrap_request.v1", "feed/bootstrap-request.v1.json", None),
+    ("FeedBootstrapAck", "billium.feed.bootstrap_ack.v1", "feed/bootstrap-ack.v1.json", None),
     ("ObligationView", "ledger.obligation.v1", "query/obligation.v1.json", None),
     ("InvoiceView", "ledger.invoice.v1", "query/invoice.v1.json", None),
     ("AllocationQuery", "ledger.allocations.v1", "query/allocations.v1.json", None),

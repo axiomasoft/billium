@@ -1,15 +1,64 @@
 {
   "protocol": "billium.client.compatibility.v1",
   "forwardCompatibility": false,
+  "corpusExpectations": {
+    "HTTP-15/own": {
+      "current": {"outcome": "prepared", "prepared.schema": "billium.query.v1", "attempts.#": 0},
+      "prior": {"outcome": "refused", "error.code": "billium.validation.invalid", "error.receipt": "none", "attempts.#": 0}
+    },
+    "HTTP-15/wrongRoute": {
+      "current": {"outcome": "prepared", "prepared.schema": "billium.query.v1", "attempts.#": 0},
+      "prior": {"outcome": "refused", "error.code": "billium.validation.invalid", "error.receipt": "none", "attempts.#": 0}
+    },
+    "HTTP-15/wrongBody": {
+      "current": {"outcome": "prepared", "prepared.schema": "billium.query.v1", "attempts.#": 0},
+      "prior": {"outcome": "refused", "error.code": "billium.validation.invalid", "error.receipt": "none", "attempts.#": 0}
+    }
+  },
   "currentOnlySchemas": [
+    "allocation.reallocate.v1",
+    "billium.capabilities.v1",
+    "billium.command_receipt.v1",
+    "billium.event.catalog.v1",
     "billium.event.v2",
+    "billium.event.v3",
+    "billium.event.v4",
+    "billium.feed.bootstrap.v1",
+    "billium.feed.bootstrap_ack.v1",
+    "billium.feed.bootstrap_request.v1",
+    "billium.feed.open.v1",
+    "billium.feed.page.v1",
+    "billium.feed.read.v1",
+    "billium.feed.selection.v1",
+    "ledger.allocation_receipt.v1",
+    "ledger.allocations.v1",
+    "ledger.due_obligations.v1",
+    "ledger.invoice.v1",
+    "ledger.obligation.v1",
+    "ledger.observation_custody.v1",
+    "ledger.payment_status.v1",
+    "ledger.refund_authorization.v1",
+    "obligation.prepare.v2",
+    "occurrence.ensure.v2",
+    "occurrence.no_charge.v1",
     "payment.authorize.v1",
     "payment.capture.v1",
     "payment.effect.outcome.v1",
-    "payment.void_authorization.v1"
+    "payment.execution_status.v1",
+    "payment.void_authorization.v1",
+    "period.commercial.v1",
+    "rating.basis.v1",
+    "rating.price.v1",
+    "receipt.find.v1",
+    "usage.aggregate.v1",
+    "usage.fact.v2",
+    "usage.metric.v1",
+    "usage.quantity.v1",
+    "usage.receipt.v2"
   ],
   "prior": {
     "id": "p2-artifact",
+    "commit": "a2e52060fa75d57e5149755f20e12796a3a3f94d",
     "publishedRelease": false,
     "denotes": "P2 contracts artifact, not a published release",
     "specRevision": "2026-10",
@@ -21,19 +70,11 @@
     "archives": {
       "php-contracts": {
         "path": "archives/p2-php-contracts.zip",
-        "sha256": "9d028e85a2c0b72d7efeb71845ebcda4aac6abab3d69a163ca7b2581888bdbf9"
-      },
-      "php-client": {
-        "path": "archives/p2-php-client.zip",
-        "sha256": "ade8b09fd0fa5ea760ec6be8f9c56d820d61e9ceddfd008702faa469b2ef2f84"
+        "sha256": "bffd91377192f7e3d5042851cc9302be550974d638277aac320862d8d957d659"
       },
       "dart-contracts": {
         "path": "archives/p2-dart-contracts.zip",
-        "sha256": "bc084bd838057fcd8aa184ea6f02fa94ef7b0ca37ff046c5c2b6139ae174fa71"
-      },
-      "dart-client": {
-        "path": "archives/p2-dart-client.zip",
-        "sha256": "771546eb1087cd31dbd3d5c2f58f2f9095ad06e92796d9ed4c310abf302c7c14"
+        "sha256": "21cff3d350012b224ca1f4db8b049d25059c768304ba2e3b81b90342b12fc8a4"
       }
     }
   }

@@ -5,9 +5,11 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import zipfile
@@ -15,17 +17,12 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 SCOPE = {"installationRef": "inst-test", "environment": "test", "sellerRef": "seller-a"}
-ZIP_TIME = (2026, 11, 21, 0, 0, 0)
-DART_PUBSPEC = """name: billium_client_conformance
-description: Test-only Billium HTTP consumer. Not a production SDK and not a money writer (D9, D61).
-version: 0.1.0
-publish_to: none
-environment:
-  sdk: ^3.13.0
-dependencies:
-  billium_contracts:
-    path: ../billium_contracts
-"""
+P2_COMMIT = "a2e52060fa75d57e5149755f20e12796a3a3f94d"
+CONTRACT_PACKAGES = {
+    "php-contracts": "packages/contracts",
+    "dart-contracts": "packages/contracts-dart",
+}
+ENVELOPES = "resources/spec/envelopes.json"
 
 
 def load(path: Path):
@@ -48,6 +45,8 @@ def policy_errors(matrix: dict) -> list[str]:
     denotes = prior.get("denotes")
     if not isinstance(denotes, str) or "P2" not in denotes:
         errors.append("prior snapshot must denote the P2 artifact")
+    if prior.get("commit") != P2_COMMIT:
+        errors.append("prior snapshot must pin the P2 closure commit")
     if not isinstance(matrix.get("currentOnlySchemas"), list) or not matrix["currentOnlySchemas"]:
         errors.append("current-only schemas must be declared")
     return errors
@@ -55,9 +54,11 @@ def policy_errors(matrix: dict) -> list[str]:
 
 def archive_errors(matrix: dict, base: Path) -> list[str]:
     errors = policy_errors(matrix)
+    if errors:
+        return errors
     archives = matrix.get("prior", {}).get("archives", {})
-    if not isinstance(archives, dict) or not archives:
-        return errors + ["prior archives are missing"]
+    if not isinstance(archives, dict) or archives.keys() != CONTRACT_PACKAGES.keys():
+        return errors + ["prior archives must contain the PHP and Dart contracts packages"]
     for name, entry in archives.items():
         if not isinstance(entry, dict):
             errors.append(f"{name} archive entry is not an object")
@@ -79,68 +80,37 @@ def archive_errors(matrix: dict, base: Path) -> list[str]:
     return errors
 
 
-def write_zip(path: Path, members: list[tuple[str, bytes]]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(path, "w") as archive:
-        for name, data in sorted(members):
-            info = zipfile.ZipInfo(name)
-            info.date_time = ZIP_TIME
-            info.compress_type = zipfile.ZIP_DEFLATED
-            info.external_attr = 0o644 << 16
-            archive.writestr(info, data)
-
-
-def tree_members(directory: Path, skip: set[str]) -> list[tuple[str, bytes]]:
-    members = []
-    for path in sorted(directory.rglob("*")):
-        if not path.is_file() or path.is_symlink():
-            continue
-        relative = path.relative_to(directory).as_posix()
-        if any(part in skip for part in Path(relative).parts):
-            continue
-        members.append((relative, path.read_bytes()))
-    return members
-
-
 def pin(matrix_path: Path) -> int:
     matrix = load(matrix_path)
     errors = policy_errors(matrix)
     if errors:
         print("\n".join(errors), flush=True)
         return 1
-    archives = HERE / "archives"
-    contracts = tree_members(ROOT / "packages/contracts", {"tests"})
-    composer = json.loads(next(data for name, data in contracts if name == "composer.json"))
-    composer["version"] = "0.1.0"
-    contracts = [(name, data) for name, data in contracts if name != "composer.json"]
-    contracts.append(("composer.json", (json.dumps(composer, indent=4) + "\n").encode()))
-    dart_contracts = tree_members(ROOT / "packages/contracts-dart", {"test", ".dart_tool"})
-    php_client = tree_members(ROOT / "conformance/clients/php", {"tests"})
-    dart_client = [
-        (name, data)
-        for name, data in tree_members(ROOT / "conformance/clients/dart", {"test", ".dart_tool"})
-        if name != "pubspec.yaml"
-    ]
-    dart_client.append(("pubspec.yaml", DART_PUBSPEC.encode()))
-    files = {
-        "php-contracts": archives / "p2-php-contracts.zip",
-        "php-client": archives / "p2-php-client.zip",
-        "dart-contracts": archives / "p2-dart-contracts.zip",
-        "dart-client": archives / "p2-dart-client.zip",
-    }
     payloads = {
-        "php-contracts": contracts,
-        "php-client": php_client,
-        "dart-contracts": dart_contracts,
-        "dart-client": dart_client,
+        name: package_archive(source)
+        for name, source in CONTRACT_PACKAGES.items()
     }
-    for name, path in files.items():
-        write_zip(path, payloads[name])
-        matrix["prior"]["archives"][name]["sha256"] = digest(path.read_bytes())
-        matrix["prior"]["archives"][name]["path"] = f"archives/{path.name}"
+    archives = HERE / "archives"
+    archives.mkdir(parents=True, exist_ok=True)
+    matrix["prior"]["archives"] = {}
+    for name, data in payloads.items():
+        path = archives / f"p2-{name}.zip"
+        path.write_bytes(data)
+        matrix["prior"]["archives"][name] = {"path": f"archives/{path.name}", "sha256": digest(data)}
     matrix_path.write_text(json.dumps(matrix, indent=2) + "\n", encoding="utf-8")
     print("pinned prior snapshot", flush=True)
     return 0
+
+
+def package_archive(source: str) -> bytes:
+    data = subprocess.check_output(["git", "archive", "--format=zip", P2_COMMIT, source], cwd=ROOT)
+    payload = io.BytesIO()
+    with zipfile.ZipFile(io.BytesIO(data)) as tree, zipfile.ZipFile(payload, "w") as package:
+        for entry in tree.infolist():
+            if not entry.is_dir():
+                path = entry.filename.removeprefix(source + "/")
+                package.writestr(zipfile.ZipInfo(path), tree.read(entry), compress_type=zipfile.ZIP_DEFLATED)
+    return payload.getvalue()
 
 
 def pointer(value, path: str):
@@ -329,16 +299,34 @@ if (!is_string($file) || !str_starts_with((string) realpath($file), $root.'/')) 
     )
 
 
-def supported_schemas(archive: Path, current_only: set[str]) -> list[str]:
+def schema_errors(archive: Path, current_only: set[str]) -> list[str]:
     with zipfile.ZipFile(archive) as zip_file:
-        envelopes = json.loads(zip_file.read("resources/spec/envelopes.json"))
-    return sorted(set(envelopes) - current_only)
+        prior = set(json.loads(zip_file.read(ENVELOPES)))
+    current = set(load(ROOT / CONTRACT_PACKAGES["php-contracts"] / ENVELOPES))
+    errors = []
+    if retired := prior - current:
+        errors.append(f"current codec lost P2 schemas: {sorted(retired)}")
+    if undeclared := (current - prior) ^ current_only:
+        errors.append(f"current-only schemas differ from the codec registries: {sorted(undeclared)}")
+    return errors
 
 
-def run_clients(cases: list[dict], supported: list[str] | None, php: list[str], dart: list[str], cwd_php: Path, cwd_dart: Path, env: dict | None) -> tuple[dict, dict]:
+def stage_prior_clients(root: Path) -> None:
+    source = ROOT / "conformance/clients"
+    shutil.copytree(source / "php", root / "php-client", ignore=shutil.ignore_patterns("tests"))
+    dart = root / "billium_client_conformance"
+    shutil.copytree(source / "dart", dart, ignore=shutil.ignore_patterns("test", ".dart_tool", "pubspec.lock"))
+    pubspec = dart / "pubspec.yaml"
+    current = pubspec.read_text(encoding="utf-8")
+    pinned = current.replace("../../../packages/contracts-dart", "../billium_contracts")
+    if pinned == current:
+        raise RuntimeError("Dart test client no longer points at the expected contracts path")
+    pubspec.write_text(pinned, encoding="utf-8")
+    archive_bootstrap(root, ROOT)
+
+
+def run_clients(cases: list[dict], php: list[str], dart: list[str], cwd_php: Path, cwd_dart: Path, env: dict | None) -> tuple[dict, dict]:
     document = {"op": "batch", "cases": cases}
-    if supported is not None:
-        document["supportedSchemas"] = supported
     php_out = invoke(php, document, cwd_php, env)
     dart_out = invoke(dart, document, cwd_dart, env)
     return (
@@ -353,16 +341,32 @@ def compare_pair(left: dict, right: dict, label: str) -> str | None:
     return None
 
 
+def compare_corpus_generations(current: dict, prior: dict, name: str, expected: dict | None) -> list[str]:
+    if expected is None:
+        failure = compare_pair(current, prior, f"{name}/generation")
+        return [failure] if failure else []
+
+    return [
+        failure
+        for generation, result in (("current", current), ("prior", prior))
+        if (failure := check(result, expected[generation], f"{name}/{generation}"))
+    ]
+
+
 def execute(matrix_path: Path) -> int:
     matrix = load(matrix_path)
     errors = archive_errors(matrix, HERE)
     if errors:
         print("\n".join(errors), flush=True)
         return 1
+    current_only = set(matrix["currentOnlySchemas"])
+    prior = matrix["prior"]["archives"]
+    if errors := schema_errors(HERE / prior["php-contracts"]["path"], current_only):
+        print("\n".join(errors), flush=True)
+        return 1
     if not (ROOT / "vendor/autoload.php").is_file():
         print("vendor/autoload.php is missing", flush=True)
         return 1
-    current_only = set(matrix["currentOnlySchemas"])
     vectors = client_vectors()
     if not vectors:
         print("client vectors are missing", flush=True)
@@ -372,6 +376,10 @@ def execute(matrix_path: Path) -> int:
     if len(corpus) < 21:
         print("shared HTTP command corpus is incomplete", flush=True)
         return 1
+    corpus_expectations = matrix.get("corpusExpectations", {})
+    if unknown := set(corpus_expectations) - {case["id"] for case in corpus}:
+        print(f"unknown HTTP corpus cases in matrix: {sorted(unknown)}", flush=True)
+        return 1
     batch = cases + corpus
     current_php = php_command(str(ROOT / "conformance/clients/php/bin/client.php"))
     ensure_dart(ROOT / "conformance/clients/dart")
@@ -379,22 +387,16 @@ def execute(matrix_path: Path) -> int:
     problems = []
     with tempfile.TemporaryDirectory(prefix="billium-prior-") as temporary:
         root = Path(temporary)
-        prior = matrix["prior"]["archives"]
         extract(HERE / prior["php-contracts"]["path"], root / "php-contracts")
-        extract(HERE / prior["php-client"]["path"], root / "php-client")
         extract(HERE / prior["dart-contracts"]["path"], root / "billium_contracts")
-        extract(HERE / prior["dart-client"]["path"], root / "billium_client_conformance")
-        archive_bootstrap(root, ROOT)
-        ensure_dart(root / "billium_client_conformance")
-        pin_set = supported_schemas(HERE / prior["php-contracts"]["path"], current_only)
-        if current_only & set(pin_set):
-            problems.append("prior pin still negotiates a current-only schema")
         env = {**os.environ, "BILLIUM_ARCHIVE_ROOT": str(root)}
+        env.pop("BILLIUM_AUTOLOAD", None)
         try:
-            current = run_clients(batch, None, current_php, current_dart, ROOT, ROOT / "conformance/clients/dart", None)
+            stage_prior_clients(root)
+            ensure_dart(root / "billium_client_conformance")
+            current = run_clients(batch, current_php, current_dart, ROOT, ROOT / "conformance/clients/dart", None)
             prior_runs = run_clients(
                 batch,
-                pin_set,
                 php_command(str(root / "php-client/bin/client.php")),
                 ["dart", "run", "bin/client.dart"],
                 root,
@@ -475,9 +477,10 @@ def execute(matrix_path: Path) -> int:
                 failure = compare_pair(prior_runs[0][name], prior_runs[1][name], f"{name}/prior")
                 if failure:
                     problems.append(failure)
-                failure = compare_pair(current[0][name], prior_runs[0][name], f"{name}/generation")
-                if failure:
-                    problems.append(failure)
+                expected = corpus_expectations.get(name)
+                problems.extend(compare_corpus_generations(current[0][name], prior_runs[0][name], name, expected))
+                if expected is not None:
+                    archive_steps += 1
             transport += 1
     print(f"transport-contract steps={transport}", flush=True)
     print(f"compatibility-archive steps={archive_steps}", flush=True)

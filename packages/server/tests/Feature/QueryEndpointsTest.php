@@ -9,6 +9,7 @@ use Billium\Contracts\Data\Envelopes\Capabilities;
 use Billium\Contracts\Data\Envelopes\FeedBootstrap;
 use Billium\Contracts\Data\Envelopes\FeedPage;
 use Billium\Contracts\Data\Envelopes\FeedSelection;
+use Billium\Contracts\Enums\ProblemCode;
 use Billium\Platform\Contracts\Installation\Installation;
 use Billium\Server\Contracts\AuthorizationVerdict;
 use Billium\Server\Enums\Verdict;
@@ -148,6 +149,10 @@ final class QueryEndpointsTest extends TestCase
             self::assertSame($selection->selectionDigest, $page->selectionDigest);
             self::assertSame([], $page->events);
             self::assertSame($response->getContent(), self::send($host, $app, 'feed/read', $read)->getContent());
+            self::assertSame(200, self::send($host, $app, 'feed/read', [...$read, 'limit' => 1000])->getStatusCode());
+            $tooLarge = self::send($host, $app, 'feed/read', [...$read, 'limit' => 1001]);
+            self::assertSame(400, $tooLarge->getStatusCode());
+            self::assertSame(ProblemCode::ValidationInvalid, $codec->decodeProblem((string) $tooLarge->getContent())->code);
             self::assertSame(403, self::send($host, $app, 'feed/read', [...$read, 'selectionDigest' => 'sha256:'.str_repeat('0', 64)])->getStatusCode());
             self::assertEquals($before, $db->table('billium_feed_subscription')->first());
             self::assertSame($claims, $db->table('billium_idempotency_receipt')->count());
@@ -157,9 +162,32 @@ final class QueryEndpointsTest extends TestCase
                 'commandKey' => $open['commandKey'], 'subscriptionRef' => $selection->subscriptionRef, 'selectionDigest' => $selection->selectionDigest];
             $snapshot = self::send($host, $app, 'feed/bootstrap', $bootstrap);
             self::assertSame(200, $snapshot->getStatusCode(), (string) $snapshot->getContent());
-            self::assertInstanceOf(FeedBootstrap::class, $codec->decode((string) $snapshot->getContent()));
+            $snapshotBody = $codec->decode((string) $snapshot->getContent());
+            self::assertInstanceOf(FeedBootstrap::class, $snapshotBody);
             self::assertSame($snapshot->getContent(), self::send($host, $app, 'feed/bootstrap', $bootstrap)->getContent());
             self::assertSame(1, $db->table('billium_feed_bootstrap_lease')->count());
+            self::assertSame($claims + 1, $db->table('billium_idempotency_receipt')->count());
+
+            $ack = ['schema' => 'billium.feed.bootstrap_ack.v1', ...$scope, 'subscriptionRef' => $snapshotBody->subscriptionRef,
+                'selectionDigest' => $snapshotBody->selectionDigest, 'leaseRef' => $snapshotBody->leaseRef, 'snapshotDigest' => $snapshotBody->snapshotDigest];
+            $lease = $db->table('billium_feed_bootstrap_lease')->where('lease_ref', $snapshotBody->leaseRef);
+            $invalid = self::send($host, $app, 'feed/bootstrap/ack', [...$ack, 'snapshotDigest' => 'sha256:'.str_repeat('0', 64)]);
+            self::assertSame(400, $invalid->getStatusCode());
+            self::assertSame(ProblemCode::ValidationInvalid, $codec->decodeProblem((string) $invalid->getContent())->code);
+            self::assertSame(403, self::send($host, $app, 'feed/bootstrap/ack', [...$ack, 'sellerRef' => 'foreign'])->getStatusCode());
+            self::assertSame('active', $lease->value('state'));
+
+            $accepted = self::send($host, $app, 'feed/bootstrap/ack', $ack);
+            self::assertSame(204, $accepted->getStatusCode(), (string) $accepted->getContent());
+            self::assertSame('', $accepted->getContent());
+            self::assertSame('acknowledged', $lease->value('state'));
+            $lease->update(['expires_at' => $db->raw("clock_timestamp() - interval '1 second'")]);
+            self::assertSame(204, self::send($host, $app, 'feed/bootstrap/ack', $ack)->getStatusCode());
+            $tail = self::send($host, $app, 'feed/read', [...$read, 'cursor' => $snapshotBody->nextCursor]);
+            self::assertSame(200, $tail->getStatusCode(), (string) $tail->getContent());
+            $tailPage = $codec->decode((string) $tail->getContent());
+            self::assertInstanceOf(FeedPage::class, $tailPage);
+            self::assertSame(200, self::send($host, $app, 'feed/read', [...$read, 'cursor' => $tailPage->nextCursor])->getStatusCode());
             self::assertSame($claims + 1, $db->table('billium_idempotency_receipt')->count());
         } finally {
             Database::drop($database);

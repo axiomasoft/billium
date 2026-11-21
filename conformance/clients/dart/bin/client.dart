@@ -22,7 +22,6 @@ Future<void> main() async {
   final client = ConformanceClient();
   final Object? output;
   if (message['op'] == 'batch') {
-    final supported = message['supportedSchemas'];
     final cases = message['cases'];
     if (cases is! List) {
       stderr.writeln('batch cases must be a list');
@@ -31,12 +30,7 @@ Future<void> main() async {
     output = {
       'results': [
         for (final item in cases)
-          if (item is Map)
-            client.execute({
-              ...Map<String, Object?>.from(item),
-              if (supported is List && !item.containsKey('supportedSchemas'))
-                'supportedSchemas': supported,
-            }),
+          if (item is Map) client.execute(Map<String, Object?>.from(item)),
       ],
     };
   } else {

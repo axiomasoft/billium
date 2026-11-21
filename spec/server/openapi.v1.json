@@ -143,6 +143,11 @@
       "method": "POST",
       "path": "/billium/v1/sellers/{sellerRef}/feed/bootstrap",
       "name": "billium.server.feed.bootstrap"
+    },
+    {
+      "method": "POST",
+      "path": "/billium/v1/sellers/{sellerRef}/feed/bootstrap/ack",
+      "name": "billium.server.feed.bootstrap.ack"
     }
   ],
   "paths": {
@@ -355,6 +360,9 @@
         "parameters": [
           {
             "$ref": "#/components/parameters/sellerRef"
+          },
+          {
+            "$ref": "#/components/parameters/operationRef"
           }
         ]
       }
@@ -647,6 +655,28 @@
           }
         ]
       }
+    },
+    "/billium/v1/sellers/{sellerRef}/feed/bootstrap/ack": {
+      "post": {
+        "operationId": "feed.bootstrap.ack",
+        "x-billium-auth-action": "feed.bootstrap.ack",
+        "x-billium-request-schema": "billium.feed.bootstrap_ack.v1",
+        "x-billium-result-schema": null,
+        "x-billium-statuses": [
+          204
+        ],
+        "x-billium-idempotency-header": false,
+        "responses": {
+          "204": {
+            "description": "success"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/sellerRef"
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -660,6 +690,16 @@
           "minLength": 1
         },
         "description": "Selector. Compared with the authenticated context and the body."
+      },
+      "operationRef": {
+        "name": "operationRef",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": "Operation selector. Compared with the operationRef in the body."
       }
     }
   }

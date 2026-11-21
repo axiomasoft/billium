@@ -41,6 +41,7 @@ CLOSED = {
     ("billium.feed.open.v1", ""),
     ("billium.feed.read.v1", ""),
     ("billium.feed.bootstrap_request.v1", ""),
+    ("billium.feed.bootstrap_ack.v1", ""),
 }
 OPEN = {
     ("payment.outcome.v1", ""),

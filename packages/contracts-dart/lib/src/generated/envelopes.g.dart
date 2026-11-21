@@ -57,6 +57,7 @@ const Map<String, Envelope Function(Map<String, Object?>)> envelopeBuilders = {
   'FeedOpen': FeedOpen.fromRaw,
   'FeedRead': FeedRead.fromRaw,
   'FeedBootstrapRequest': FeedBootstrapRequest.fromRaw,
+  'FeedBootstrapAck': FeedBootstrapAck.fromRaw,
   'ObligationView': ObligationView.fromRaw,
   'InvoiceView': InvoiceView.fromRaw,
   'AllocationQuery': AllocationQuery.fromRaw,
@@ -2418,6 +2419,45 @@ final class FeedBootstrapRequest extends Envelope {
   final String sellerRef;
   final String subscriptionRef;
   final String selectionDigest;
+  final String? digest;
+}
+
+/// `billium.feed.bootstrap_ack.v1`.
+final class FeedBootstrapAck extends Envelope {
+  static const String schemaName = 'billium.feed.bootstrap_ack.v1';
+
+  FeedBootstrapAck({
+    required super.raw,
+    required this.installationRef,
+    required this.environment,
+    required this.sellerRef,
+    required this.subscriptionRef,
+    required this.selectionDigest,
+    required this.leaseRef,
+    required this.snapshotDigest,
+    this.digest,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory FeedBootstrapAck.fromRaw(Map<String, Object?> raw) => FeedBootstrapAck(
+        raw: raw,
+        installationRef: requireString(raw, 'installationRef'),
+        environment: requireString(raw, 'environment'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        subscriptionRef: requireString(raw, 'subscriptionRef'),
+        selectionDigest: requireString(raw, 'selectionDigest'),
+        leaseRef: requireString(raw, 'leaseRef'),
+        snapshotDigest: requireString(raw, 'snapshotDigest'),
+        digest: optionalString(raw, 'digest'),
+      );
+
+  final String installationRef;
+  final String environment;
+  final String sellerRef;
+  final String subscriptionRef;
+  final String selectionDigest;
+  final String leaseRef;
+  final String snapshotDigest;
   final String? digest;
 }
 

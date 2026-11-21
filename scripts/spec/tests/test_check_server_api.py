@@ -5,6 +5,8 @@ A document placeholder and a status that keeps a stored receipt must fail closed
 from __future__ import annotations
 
 import importlib.util
+import json
+import re
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -43,6 +45,18 @@ class CheckServerApiTest(unittest.TestCase):
             *installed, {"method": "POST", "path": "/billium/v1/sellers/{sellerRef}/commands", "name": "billium.server.execution.commands"},
         ], errors)
         self.assertIn("/commands", errors[0])
+
+    def test_operations_declare_every_template_parameter(self) -> None:
+        document = json.loads(self.api.render_openapi([], [], self.api.schemas()))
+        components = document["components"]["parameters"]
+        for path, methods in document["paths"].items():
+            for operation in methods.values():
+                with self.subTest(path=path, operation=operation["operationId"]):
+                    parameters = [components[ref["$ref"].rsplit("/", 1)[1]] for ref in operation.get("parameters", [])]
+                    self.assertCountEqual(re.findall(r"\{([^{}]+)\}", path), [entry["name"] for entry in parameters])
+                    for entry in parameters:
+                        self.assertEqual("path", entry["in"])
+                        self.assertIs(True, entry["required"])
 
     def test_routes_mode_propagates_runtime_registry_failure_without_generating_files(self) -> None:
         with (

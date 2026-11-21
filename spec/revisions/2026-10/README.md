@@ -76,6 +76,7 @@ envelopes, `ERR` — ошибки, `EVT` — события и receipts, `CNF` �
 | `billium.feed.open.v1` | `schema/feed/open.v1.json` | запрос pinned подписки (D63) |
 | `billium.feed.read.v1` | `schema/feed/read.v1.json` | запрос страницы по cursor (D63) |
 | `billium.feed.bootstrap_request.v1` | `schema/feed/bootstrap-request.v1.json` | запрос snapshot с тем же selection (D63) |
+| `billium.feed.bootstrap_ack.v1` | `schema/feed/bootstrap-ack.v1.json` | подтверждение durable snapshot и cursor (D60, D63) |
 | `ledger.obligation.v1` | `schema/query/obligation.v1.json` | ответ query obligation (REQ-CON-14) |
 | `ledger.invoice.v1` | `schema/query/invoice.v1.json` | ответ query invoice (REQ-CON-14) |
 | `ledger.allocations.v1` | `schema/query/allocations.v1.json` | ответ query allocationByOperation (REQ-CON-14) |

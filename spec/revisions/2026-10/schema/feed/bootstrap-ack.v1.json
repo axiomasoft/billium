@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-10:feed/bootstrap-ack.v1.json",
+  "title": "Подтверждение принятого snapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "subscriptionRef",
+    "selectionDigest",
+    "leaseRef",
+    "snapshotDigest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "billium.feed.bootstrap_ack.v1"
+    },
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "subscriptionRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "selectionDigest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    },
+    "leaseRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "snapshotDigest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    }
+  }
+}

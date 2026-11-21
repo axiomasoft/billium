@@ -75,6 +75,7 @@ if ($this->app->bound(EventFeed::class)) {
     $router->post('/billium/v1/sellers/{sellerRef}/feed/open', [RecoveryController::class, 'openFeed'])->name('billium.server.feed.open');
     $router->post('/billium/v1/sellers/{sellerRef}/feed/read', [RecoveryController::class, 'readFeed'])->name('billium.server.feed.read');
     $router->post('/billium/v1/sellers/{sellerRef}/feed/bootstrap', [RecoveryController::class, 'bootstrapFeed'])->name('billium.server.feed.bootstrap');
+    $router->post('/billium/v1/sellers/{sellerRef}/feed/bootstrap/ack', [RecoveryController::class, 'acknowledgeBootstrap'])->name('billium.server.feed.bootstrap.ack');
 }
 
 $router->getRoutes()->refreshNameLookups();

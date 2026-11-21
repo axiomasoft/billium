@@ -27,8 +27,7 @@ final class ConformanceClient
      */
     public function execute(array $case): array
     {
-        $supported = $case['supportedSchemas'] ?? null;
-        $codec = new Codec(is_array($supported) ? array_values(array_filter($supported, is_string(...))) : null);
+        $codec = new Codec;
         $op = is_string($case['op'] ?? null) ? $case['op'] : '';
         $id = is_string($case['id'] ?? null) ? $case['id'] : $op;
 

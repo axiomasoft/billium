@@ -1,11 +1,12 @@
 # N / N−1 client compatibility
 
 `python3 conformance/compatibility/run.py --matrix conformance/compatibility/matrix.json`
-runs the PHP and Dart test clients on the shared client vectors and on every
-HTTP transcript command body. The prior generation is the pinned archive, with
-its negotiated schema set equal to that archive's envelopes minus
-`currentOnlySchemas` (D59, D61).
+runs the PHP and Dart test clients on the client vectors and on every HTTP
+transcript command body. Each run uses its generation's codec and native
+envelope registry. `currentOnlySchemas` lists the envelopes added since P2
+and is checked against the two generations' registries (D59, D61).
 
 Compared values are wire bytes, digest, error code and money totals. Language
 class names are not part of the result. Unknown command fields are refused.
-`billium.event.v2` is not delivered to the prior pin as a success (D63).
+Current-only envelopes must be refused by P2. The feed page and payment-status
+vectors cover envelopes introduced after P2.

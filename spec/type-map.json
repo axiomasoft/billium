@@ -350,6 +350,13 @@
     "category": "Data"
   },
   {
+    "schema": "billium.feed.bootstrap_ack.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\FeedBootstrapAck",
+    "dart": "FeedBootstrapAck",
+    "category": "Data"
+  },
+  {
     "schema": "ledger.obligation.v1",
     "variant": null,
     "php": "Billium\\Contracts\\Data\\Envelopes\\ObligationView",

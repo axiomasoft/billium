@@ -9,6 +9,7 @@
   "billium.server.execution.refund",
   "billium.server.execution.void-authorization",
   "billium.server.feed.bootstrap",
+  "billium.server.feed.bootstrap.ack",
   "billium.server.feed.open",
   "billium.server.feed.read",
   "billium.server.ledger.observations",

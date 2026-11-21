@@ -491,6 +491,16 @@
       }
     ]
   },
+  "billium.feed.bootstrap_ack.v1": {
+    "schemaId": "urn:billium:spec:2026-10:feed/bootstrap-ack.v1.json",
+    "variants": [
+      {
+        "class": "FeedBootstrapAck",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
   "ledger.obligation.v1": {
     "schemaId": "urn:billium:spec:2026-10:query/obligation.v1.json",
     "variants": [

@@ -64,12 +64,7 @@ final class PreparedCommand {
 final class ConformanceClient {
   /// Runs one client vector.
   Map<String, Object?> execute(Map<String, Object?> case_) {
-    final supported = case_['supportedSchemas'];
-    final codec = Codec(
-      supportedSchemas: supported is List
-          ? [for (final item in supported) if (item is String) item]
-          : null,
-    );
+    const codec = Codec();
     final op = case_['op'];
     final name = case_['id'];
     final id = name is String ? name : (op is String ? op : '');

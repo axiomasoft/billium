@@ -53,6 +53,7 @@ D57_FIELDS = (
     "pendingAllocationReason", "reconciliation",
 )
 ROUTE_RE = re.compile(r"\$router->(get|post)\('([^']+)'.*?->name\('([^']+)'\)", re.S)
+PATH_PARAMETER_RE = re.compile(r"\{([^{}]+)\}")
 SECTION_RE = {
     "problem": re.compile(r"<!-- billium-problem-http:start -->.*?<!-- billium-problem-http:end -->", re.S),
     "routes": re.compile(r"<!-- billium-routes:start -->.*?<!-- billium-routes:end -->", re.S),
@@ -82,6 +83,7 @@ ROUTES: tuple[dict[str, object], ...] = (
     {"method": "POST", "path": "/billium/v1/sellers/{sellerRef}/feed/open", "auth": "feed.open", "request": "billium.feed.open.v1", "result": "billium.feed.selection.v1", "statuses": [200]},
     {"method": "POST", "path": "/billium/v1/sellers/{sellerRef}/feed/read", "auth": "feed.read", "request": "billium.feed.read.v1", "result": "billium.feed.page.v1", "statuses": [200]},
     {"method": "POST", "path": "/billium/v1/sellers/{sellerRef}/feed/bootstrap", "auth": "feed.bootstrap", "request": "billium.feed.bootstrap_request.v1", "result": "billium.feed.bootstrap.v1", "statuses": [200]},
+    {"method": "POST", "path": "/billium/v1/sellers/{sellerRef}/feed/bootstrap/ack", "auth": "feed.bootstrap.ack", "request": "billium.feed.bootstrap_ack.v1", "result": None, "statuses": [204]},
 )
 
 
@@ -304,8 +306,9 @@ def operation(route: dict[str, object], documents: dict[str, dict[str, object]])
         "x-billium-idempotency-header": has_command_key(documents, route["request"] if isinstance(route["request"], str) else None),
         "responses": {str(code): {"description": "success"} for code in route["statuses"]},  # type: ignore[union-attr]
     }
-    if "{sellerRef}" in str(route["path"]):
-        op["parameters"] = [{"$ref": "#/components/parameters/sellerRef"}]
+    parameters = PATH_PARAMETER_RE.findall(str(route["path"]))
+    if parameters:
+        op["parameters"] = [{"$ref": f"#/components/parameters/{name}"} for name in parameters]
     if "outcome" in route:
         op["x-billium-outcome-schema"] = route["outcome"]
     if "custody" in route:
@@ -350,7 +353,14 @@ def render_openapi(codes: list[dict[str, object]], installed: list[dict[str, str
                     "required": True,
                     "schema": {"type": "string", "minLength": 1},
                     "description": "Selector. Compared with the authenticated context and the body.",
-                }
+                },
+                "operationRef": {
+                    "name": "operationRef",
+                    "in": "path",
+                    "required": True,
+                    "schema": {"type": "string", "minLength": 1},
+                    "description": "Operation selector. Compared with the operationRef in the body.",
+                },
             }
         },
     }
@@ -430,6 +440,10 @@ def closed_unknown() -> list[tuple[str, str, dict[str, object]]]:
         )),
         ("feed-bootstrap-unknown-field", "billium.feed.bootstrap_request.v1", minimal(
             "billium.feed.bootstrap_request.v1", commandKey=key, subscriptionRef="sub-1", selectionDigest=digest, future=True,
+        )),
+        ("feed-bootstrap-ack-unknown-field", "billium.feed.bootstrap_ack.v1", minimal(
+            "billium.feed.bootstrap_ack.v1", subscriptionRef="sub-1", selectionDigest=digest, leaseRef="lease-1",
+            snapshotDigest=digest, future=True,
         )),
     ]
 

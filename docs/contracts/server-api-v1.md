@@ -144,6 +144,11 @@ Feed open/read/bootstrap используют ответы P3 `billium.feed.sele
 `billium.feed.page.v1` и `billium.feed.bootstrap.v1`. Запросы — новые закрытые schema.
 Cursor привязан к subscription, scope, lineage и selectionDigest. Смена набора — новая
 подписка, не старый cursor (D63).
+Лимит `feed/read` — от 1 до 1000. После проверки snapshot и атомарного сохранения
+`nextCursor` клиент до истечения lease отправляет `feed/bootstrap/ack` с
+`subscriptionRef`, `selectionDigest`, `leaseRef` и `snapshotDigest`. Ответ 204
+подтверждает принятие snapshot. Последующие чтения с этим cursor продолжаются после
+исходного срока lease, пока позиция доступна в retained tail.
 
 `/billium/live` проверяет HTTP-процесс. `/billium/ready` проверяет схему, runtime-роль,
 допуск текущего процесса и готовность выбранного профиля. Оба ответа без тела.
@@ -174,6 +179,7 @@ Cursor привязан к subscription, scope, lineage и selectionDigest. См
 | POST | `/billium/v1/sellers/{sellerRef}/feed/open` | `feed.open` | `billium.feed.open.v1` | `billium.feed.selection.v1` | 200 | — |
 | POST | `/billium/v1/sellers/{sellerRef}/feed/read` | `feed.read` | `billium.feed.read.v1` | `billium.feed.page.v1` | 200 | — |
 | POST | `/billium/v1/sellers/{sellerRef}/feed/bootstrap` | `feed.bootstrap` | `billium.feed.bootstrap_request.v1` | `billium.feed.bootstrap.v1` | 200 | — |
+| POST | `/billium/v1/sellers/{sellerRef}/feed/bootstrap/ack` | `feed.bootstrap.ack` | `billium.feed.bootstrap_ack.v1` | — | 204 | — |
 <!-- billium-routes:end -->
 
 ## Установленный host
@@ -210,6 +216,7 @@ Cursor привязан к subscription, scope, lineage и selectionDigest. См
 | POST | `/billium/v1/sellers/{sellerRef}/feed/open` | `billium.server.feed.open` |
 | POST | `/billium/v1/sellers/{sellerRef}/feed/read` | `billium.server.feed.read` |
 | POST | `/billium/v1/sellers/{sellerRef}/feed/bootstrap` | `billium.server.feed.bootstrap` |
+| POST | `/billium/v1/sellers/{sellerRef}/feed/bootstrap/ack` | `billium.server.feed.bootstrap.ack` |
 <!-- billium-installed:end -->
 
 ## Совместимость
