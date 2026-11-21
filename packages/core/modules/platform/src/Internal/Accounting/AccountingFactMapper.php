@@ -748,7 +748,7 @@ final readonly class AccountingFactMapper implements AccountingMapper
             $money = self::parseMoneyWire($payload[$key] ?? null);
             if ($money !== null) {
                 if ($allowNegativeMagnitude && $money->minor < 0) {
-                    return new Money(abs($money->minor), $money->currency);
+                    return $money->minor === PHP_INT_MIN ? null : new Money(-$money->minor, $money->currency);
                 }
 
                 return $money;
@@ -763,6 +763,9 @@ final readonly class AccountingFactMapper implements AccountingMapper
         foreach ($minorKeys as $key) {
             $minor = self::parseIntValue($payload[$key] ?? null);
             if ($minor !== null) {
+                if ($allowNegativeMagnitude && $minor === PHP_INT_MIN) {
+                    return null;
+                }
                 $value = $allowNegativeMagnitude ? abs($minor) : $minor;
 
                 return new Money($value, Currency::of($currencyCode));

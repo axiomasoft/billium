@@ -112,6 +112,21 @@ final class HardeningAccountingFactMapperTest extends TestCase
         self::assertNull($floatLine->fact);
     }
 
+    public function test_reversal_with_an_unrepresentable_positive_magnitude_does_not_map(): void
+    {
+        $mapper = new AccountingFactMapper;
+        foreach ([['amount_minor' => (string) PHP_INT_MIN, 'currency' => 'RUB'],
+            ['money' => ['amount' => '-92233720368547758.08', 'currency' => 'RUB']]] as $money) {
+            $result = $mapper->map($this->record(new DateTimeImmutable('2026-11-21T00:00:00Z'), 2, $money + [
+                'receipt_ref' => 'reversal:r1',
+                'reverses_receipt_ref' => 'allocation:a1',
+            ]));
+
+            self::assertSame(AccountingMappingStatus::IgnoredNonMonetary, $result->status);
+            self::assertNull($result->fact);
+        }
+    }
+
     /**
      * @param  array<string, mixed>  $payload
      */
