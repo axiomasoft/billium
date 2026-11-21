@@ -3,10 +3,11 @@
 .mcp.json.bak
 .codex/*
 !.codex/hooks/
+!.codex/agents/
+!.codex/agents/**
 .grok/config.toml
 .cursor/mcp.json
 .cursor/memory.env.ini
-.claude/settings.json
 .claude/settings.local.json
 .claude/*.env.ini
 .claude/maind-*.sh
