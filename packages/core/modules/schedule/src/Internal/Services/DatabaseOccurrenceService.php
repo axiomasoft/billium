@@ -344,7 +344,8 @@ final readonly class DatabaseOccurrenceService implements OccurrenceService
     /** @return array{int, ScheduleRevisionTerms, ResolvedInterval} */
     private function skipPausedCursor(TransactionContext $context, stdClass $head, ApplyScheduleRevision $command, int $ordinal, ScheduleRevisionTerms $applicableTerms, ResolvedInterval $next): array
     {
-        if ($applicableTerms->action !== 'pause' || $command->terms->action === 'pause' || ! $this->sameCalendar($applicableTerms, $command->terms)
+        if ($head->state !== 'paused' || $applicableTerms->action !== 'pause' || $command->terms->action !== 'resume'
+            || ! $this->sameCalendar($applicableTerms, $command->terms)
             || $command->effectiveFrom <= new DateTimeImmutable($next->start)) {
             return [$ordinal, $applicableTerms, $next];
         }
@@ -354,7 +355,7 @@ final readonly class DatabaseOccurrenceService implements OccurrenceService
             [, $laterTerms, $later] = $this->applicableInterval(context: $context, head: $head, ordinal: $candidate,
                 start: new DateTimeImmutable($hint->end));
             $laterStart = new DateTimeImmutable($later->start);
-            if ($laterStart <= $previousStart) {
+            if ($laterStart <= $previousStart || ! $this->sameCalendar($applicableTerms, $laterTerms)) {
                 break;
             }
             if ($laterTerms->action !== 'pause') {
