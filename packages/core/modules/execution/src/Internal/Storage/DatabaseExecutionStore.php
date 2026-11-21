@@ -58,6 +58,7 @@ use Billium\Execution\Internal\Reducer\VerifiedReduction;
 use Closure;
 use DateTimeImmutable;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use LogicException;
 use Packman\Attributes\Internal;
 
@@ -179,12 +180,12 @@ final class DatabaseExecutionStore implements ExecutionStore, RootIdentityStore
 
     public function lockRootIdentity(TransactionContext $context, ExecutionScope $scope, string $operationRef, string $businessIntentRef): void
     {
-        $this->financial($context);
-        $this->assertScope($scope, $context);
-        $prefix = ['billium.execution.root-identity.v1', $this->scope($scope)];
+        $this->tables->financial($context);
+        $this->tables->assertScope($scope, $context);
+        $prefix = ['billium.execution.root-identity.v1', ExecutionTables::scope($scope)];
         // Collection reserves either reference across source contexts and intent owner namespaces.
         $keys = [ExecutionCodec::encode([...$prefix, 'operation', $operationRef]), ExecutionCodec::encode([...$prefix, 'intent', $businessIntentRef])];
-        $this->database($context)->select(
+        $this->tables->database($context)->select(
             'SELECT pg_advisory_xact_lock(lock_key) FROM (VALUES (hashtextextended(?, 0)), (hashtextextended(?, 0))) AS identities(lock_key) ORDER BY lock_key',
             $keys,
         );
@@ -192,11 +193,9 @@ final class DatabaseExecutionStore implements ExecutionStore, RootIdentityStore
 
     public function rootIdentityExists(TransactionContext $context, ExecutionScope $scope, string $operationRef, string $businessIntentRef): bool
     {
-        $this->assertScope($scope, $context);
-
-        return $this->query('business_binding', $scope, $context)->where(static fn (Builder $query): Builder => $query
+        return $this->tables->query('business_binding', $scope, $context)->where(static fn (Builder $query): Builder => $query
             ->where('operation_ref', $operationRef)->orWhere('business_intent_ref', $businessIntentRef))->exists()
-            || $this->callerQuery('operation', $context)->where('operation_ref', $operationRef)->exists();
+            || $this->tables->callerQuery('operation', $context)->where('operation_ref', $operationRef)->exists();
     }
 
     public function importOriginalIdentity(TransactionContext $ctx, ArchivedExecutionIdentity $identity, bool $verifyOnly = false): ExecutionReceipt

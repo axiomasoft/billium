@@ -171,6 +171,7 @@ final class CollectionAdmissionTest extends ExecutableCollectionTestCase
     {
         yield 'operation reference' => ['root-a', 'intent-regular'];
         yield 'business intent reference' => ['root-regular', 'intent-a'];
+        yield 'both references' => ['root-a', 'intent-a'];
     }
 
     #[DataProvider('overlappingRootIdentities')]
