@@ -308,14 +308,12 @@ final readonly class DatabaseCollectionNotificationService implements Collection
             attemptNo: $current->deliveryAttempts + 1,
         );
 
-        // Host notification transport MUST execute strictly outside every database transaction.
-        // A completed claim for this key is read through the platform receipt query so a replay
-        // returns the stored outcome and does not call the port again.
+        // The command key is claimed and committed before the port runs. A second caller with the
+        // same key and another message conflicts in that claim. A replay returns the stored row
+        // and does not deliver again. The port itself stays outside every database transaction.
         $this->assertOutsideTransaction();
         $selection = new FinancialScope($caller->installationRef, $caller->sellerRef, $caller->environment, null);
         $prior = $this->receipts->byCommandKey($selection, self::DISPATCH_KIND, $deliveryCommandKey);
-        $ack = null;
-        $deliveryError = null;
         if ($prior !== null) {
             $claimedId = $prior->outcome->body['notificationId'] ?? null;
             $claimed = is_int($claimedId) ? $claimedId : (is_string($claimedId) && preg_match('/\A[0-9]+\z/', $claimedId) === 1 ? (int) $claimedId : null);
@@ -325,49 +323,27 @@ final readonly class DatabaseCollectionNotificationService implements Collection
                     'billium.collection.notification_dispatch_key_conflict',
                 );
             }
-            $digest = $prior->semanticDigest;
-        } else {
-            $port = ($this->notificationPortResolver)();
-            try {
-                $ack = $port->deliver($message);
-            } catch (ProblemException $problem) {
-                if ($problem->problem === ProblemCode::LookupUnavailable) {
-                    throw new ProblemException(ProblemCode::LookupUnavailable, 'billium.collection.notification_transport_unavailable');
-                }
-                // Transport exception text can contain credentials or card data in arbitrary formats.
-                $deliveryError = $problem->problem->value;
-            } catch (Throwable) {
-                $deliveryError = 'delivery_failed';
-            }
 
-            if ($ack !== null) {
-                if ($ack->messageId !== $current->messageId) {
-                    throw new ProblemException(
-                        ProblemCode::ValidationInvalid,
-                        'billium.collection.transport_ack_message_mismatch',
-                    );
-                }
-                if (! $ack->transportDeliveryOnly) {
-                    throw new ProblemException(
-                        ProblemCode::ValidationInvalid,
-                        'billium.collection.transport_ack_must_not_claim_payment_outcome',
-                    );
-                }
-                RowCast::bounded($ack->transportAckRef, 'transportAckRef');
-            }
-
-            $digest = CanonicalJson::digest([
-                'sellerRef' => $caller->sellerRef,
-                'environment' => $caller->environment,
-                'messageId' => $current->messageId,
-                'expectedRevision' => $current->notificationRevision,
-                'delivered' => $ack !== null,
-                'transportAckRef' => $ack?->transportAckRef,
-                'deliveryError' => $deliveryError,
-            ]);
+            return $this->loadById($caller->sellerRef, $caller->environment, $current->id);
         }
 
-        $outcome = $this->runner->run(
+        try {
+            $port = ($this->notificationPortResolver)();
+        } catch (ProblemException $problem) {
+            if ($problem->problem === ProblemCode::LookupUnavailable) {
+                throw new ProblemException(ProblemCode::LookupUnavailable, 'billium.collection.notification_transport_unavailable');
+            }
+            throw $problem;
+        }
+
+        $digest = CanonicalJson::digest([
+            'sellerRef' => $caller->sellerRef,
+            'environment' => $caller->environment,
+            'messageId' => $current->messageId,
+            'notificationId' => $current->id,
+        ]);
+        $won = false;
+        $this->runner->run(
             spec: new OperationSpec(
                 commandKind: self::DISPATCH_KIND,
                 sellerRef: $caller->sellerRef,
@@ -380,10 +356,9 @@ final readonly class DatabaseCollectionNotificationService implements Collection
                 commitKind: 'collection.notification.dispatch',
                 financialScope: $selection,
             ),
-            body: function (TransactionContext $context) use ($caller, $current, $ack, $deliveryError, $attemptInstant): CollectionReceipt {
+            body: function (TransactionContext $context) use (&$won, $caller, $current): CollectionReceipt {
+                $won = true;
                 $this->runner->assertCurrent($context, 'collection');
-                $db = $this->databases->connection($context->connectionName());
-
                 $locked = $context->lock(new LockRequest(
                     LockRank::DunningCase,
                     'billium_collection_notification',
@@ -394,66 +369,95 @@ final readonly class DatabaseCollectionNotificationService implements Collection
                 if ($locked !== [$current->id]) {
                     throw new LockPlanChanged('Collection notification vanished before lock');
                 }
-
-                $freshRow = $db->table('billium_collection_notification')
+                $freshRow = $this->databases->connection($context->connectionName())
+                    ->table('billium_collection_notification')
                     ->where('id', $current->id)
                     ->where('seller_ref', $caller->sellerRef)
                     ->where('environment', $caller->environment)
                     ->first() ?? throw new LockPlanChanged('Collection notification missing after lock');
-                $fresh = DatabaseCollectionInterventionQueries::hydrateNotification($freshRow);
-
-                if ($fresh->status === NotificationStatus::Delivered) {
-                    return new CollectionReceipt('collection.notification.dispatched', [
-                        'notificationId' => $fresh->id,
-                        'status' => $fresh->status->value,
-                    ]);
-                }
-
-                $nowUtc = RowCast::formatUtc(new DateTimeImmutable('now', new DateTimeZone('UTC')));
-                $attemptUtc = RowCast::formatUtc($attemptInstant);
-
-                if ($ack !== null) {
-                    $updated = $db->table('billium_collection_notification')
-                        ->where('id', $fresh->id)
-                        ->where('notification_revision', $fresh->notificationRevision)
-                        ->update([
-                            'status' => NotificationStatus::Delivered->value,
-                            'notification_revision' => $fresh->notificationRevision + 1,
-                            'delivery_attempts' => $fresh->deliveryAttempts + 1,
-                            'transport_ack_ref' => $ack->transportAckRef,
-                            'transport_acked_at' => RowCast::formatUtc($ack->acknowledgedAt),
-                            'last_delivery_error' => null,
-                            'last_attempt_at' => $attemptUtc,
-                            'updated_at' => $nowUtc,
-                        ]);
-                } else {
-                    $updated = $db->table('billium_collection_notification')
-                        ->where('id', $fresh->id)
-                        ->where('notification_revision', $fresh->notificationRevision)
-                        ->update([
-                            'status' => NotificationStatus::FailedDelivery->value,
-                            'notification_revision' => $fresh->notificationRevision + 1,
-                            'delivery_attempts' => $fresh->deliveryAttempts + 1,
-                            'last_delivery_error' => $deliveryError ?? 'delivery_failed',
-                            'last_attempt_at' => $attemptUtc,
-                            'updated_at' => $nowUtc,
-                        ]);
-                }
-
-                if ($updated !== 1) {
-                    throw new LockPlanChanged('Collection notification dispatch CAS failed');
-                }
 
                 return new CollectionReceipt('collection.notification.dispatched', [
-                    'notificationId' => $fresh->id,
-                    'status' => $ack !== null ? NotificationStatus::Delivered->value : NotificationStatus::FailedDelivery->value,
+                    'notificationId' => DatabaseCollectionInterventionQueries::hydrateNotification($freshRow)->id,
                 ]);
             },
         )->orThrow();
+        if (! $won) {
+            return $this->loadById($caller->sellerRef, $caller->environment, $current->id);
+        }
 
-        $notificationId = RowCast::integer($outcome->body['notificationId'] ?? null, 'notificationId');
+        $ack = null;
+        $deliveryError = null;
+        try {
+            $ack = $port->deliver($message);
+        } catch (ProblemException $problem) {
+            if ($problem->problem === ProblemCode::LookupUnavailable) {
+                throw new ProblemException(ProblemCode::LookupUnavailable, 'billium.collection.notification_transport_unavailable');
+            }
+            $deliveryError = $problem->problem->value;
+        } catch (Throwable) {
+            $deliveryError = 'delivery_failed';
+        }
 
-        return $this->loadById($caller->sellerRef, $caller->environment, $notificationId);
+        if ($ack !== null) {
+            if ($ack->messageId !== $current->messageId) {
+                throw new ProblemException(
+                    ProblemCode::ValidationInvalid,
+                    'billium.collection.transport_ack_message_mismatch',
+                );
+            }
+            if (! $ack->transportDeliveryOnly) {
+                throw new ProblemException(
+                    ProblemCode::ValidationInvalid,
+                    'billium.collection.transport_ack_must_not_claim_payment_outcome',
+                );
+            }
+            RowCast::bounded($ack->transportAckRef, 'transportAckRef');
+        }
+
+        $this->databases->connection($this->options->connection)->transaction(function () use ($caller, $current, $ack, $deliveryError, $attemptInstant): void {
+            $db = $this->databases->connection($this->options->connection);
+            $freshRow = $db->table('billium_collection_notification')
+                ->where('id', $current->id)
+                ->where('seller_ref', $caller->sellerRef)
+                ->where('environment', $caller->environment)
+                ->first() ?? throw new LockPlanChanged('Collection notification missing after transport');
+            $fresh = DatabaseCollectionInterventionQueries::hydrateNotification($freshRow);
+            if ($fresh->status === NotificationStatus::Delivered) {
+                return;
+            }
+            $nowUtc = RowCast::formatUtc(new DateTimeImmutable('now', new DateTimeZone('UTC')));
+            $attemptUtc = RowCast::formatUtc($attemptInstant);
+            $updated = $ack !== null
+                ? $db->table('billium_collection_notification')
+                    ->where('id', $fresh->id)
+                    ->where('notification_revision', $fresh->notificationRevision)
+                    ->update([
+                        'status' => NotificationStatus::Delivered->value,
+                        'notification_revision' => $fresh->notificationRevision + 1,
+                        'delivery_attempts' => $fresh->deliveryAttempts + 1,
+                        'transport_ack_ref' => $ack->transportAckRef,
+                        'transport_acked_at' => RowCast::formatUtc($ack->acknowledgedAt),
+                        'last_delivery_error' => null,
+                        'last_attempt_at' => $attemptUtc,
+                        'updated_at' => $nowUtc,
+                    ])
+                : $db->table('billium_collection_notification')
+                    ->where('id', $fresh->id)
+                    ->where('notification_revision', $fresh->notificationRevision)
+                    ->update([
+                        'status' => NotificationStatus::FailedDelivery->value,
+                        'notification_revision' => $fresh->notificationRevision + 1,
+                        'delivery_attempts' => $fresh->deliveryAttempts + 1,
+                        'last_delivery_error' => $deliveryError ?? 'delivery_failed',
+                        'last_attempt_at' => $attemptUtc,
+                        'updated_at' => $nowUtc,
+                    ]);
+            if ($updated !== 1) {
+                throw new LockPlanChanged('Collection notification dispatch CAS failed');
+            }
+        });
+
+        return $this->loadById($caller->sellerRef, $caller->environment, $current->id);
     }
 
     private function loadById(string $sellerRef, string $environment, int $notificationId): CollectionNotificationView
