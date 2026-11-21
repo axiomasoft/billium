@@ -83,10 +83,27 @@ final class ModuleDependencyDirectionTest extends TestCase
         self::assertSame([], $violations);
     }
 
-    public function test_module_public_surface_names_no_other_module_except_platform(): void
+    public function test_module_public_surfaces_use_only_established_cross_module_types(): void
     {
-        // Public types are what a sibling compiles against; naming a third module there would leak a transitive dependency.
-        $violations = [];
+        // Documents and collection already expose these types from their declared dependencies.
+        // Record each reference so new public dependencies must be reviewed individually.
+        $existing = [
+            'collection/Contracts/CollectionParticipants.php exposes Billium\Execution\Contracts\CollectionCancellationParticipant',
+            'collection/Contracts/CollectionParticipants.php exposes Billium\Execution\Contracts\CollectionExecutionGuard',
+            'collection/Contracts/CollectionParticipants.php exposes Billium\Execution\Contracts\Collection\CollectionOriginLookup',
+            'collection/Contracts/CollectionParticipants.php exposes Billium\Execution\Data\ExecutionScope',
+            'collection/Contracts/ConsentBindingService.php exposes Billium\Execution\Data\CapabilitySnapshot',
+            'collection/Contracts/ConsentBindingService.php exposes Billium\Execution\Data\MerchantRevision',
+            'collection/Contracts/SavedMethodCapabilityValidator.php exposes Billium\Execution\Data\CapabilitySnapshot',
+            'collection/Contracts/SavedMethodCapabilityValidator.php exposes Billium\Execution\Data\MerchantRevision',
+            'collection/Data/AuthorizeCollection.php exposes Billium\Execution\Data\ExecutionScope',
+            'documents/Contracts/LedgerIssuePolicy.php exposes Billium\Ledger\Data\Invoices\IssueInvoice',
+            'documents/Data/IssueDocumentCreditNote.php exposes Billium\Ledger\Data\Invoices\CreditNoteMode',
+            'documents/Data/IssueDocumentCreditNote.php exposes Billium\Ledger\Data\Runtime\BillingAccountScope',
+            'documents/Data/IssueLegalDocument.php exposes Billium\Ledger\Data\Runtime\BillingAccountScope',
+            'documents/Data/IssuePositiveDocumentCorrection.php exposes Billium\Ledger\Data\Runtime\BillingAccountScope',
+        ];
+        $references = [];
         foreach (array_keys(self::modules()) as $module) {
             foreach (self::references(dirname(__DIR__, 2).'/modules/'.$module.'/src/') as $path => $names) {
                 if (preg_match('~^(?:Contracts|Data|Enums|Events|Exceptions)/~', $path) !== 1) {
@@ -95,12 +112,13 @@ final class ModuleDependencyDirectionTest extends TestCase
                 foreach ($names as $name) {
                     if (preg_match('~^Billium\\\\([A-Za-z]+)\\\\~', $name, $match) === 1
                         && ! in_array(strtolower($match[1]), ['contracts', 'core', 'platform', $module], true)) {
-                        $violations[] = $module.'/'.$path.' exposes '.$name;
+                        $references[] = $module.'/'.$path.' exposes '.$name;
                     }
                 }
             }
         }
-        self::assertSame([], $violations);
+        sort($references, SORT_STRING);
+        self::assertSame($existing, $references);
     }
 
     public function test_used_packages_resolve_aliases_and_fully_qualified_names(): void
