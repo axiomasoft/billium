@@ -112,6 +112,31 @@ final class HardeningAccountingFactMapperTest extends TestCase
         self::assertNull($floatLine->fact);
     }
 
+    public function test_reversing_a_remainder_links_to_the_fact_that_created_it(): void
+    {
+        $mapper = new AccountingFactMapper;
+        $at = new DateTimeImmutable('2026-11-21T00:00:00Z');
+        $previous = $mapper->map($this->record($at, 2, [
+            'receipt_ref' => 'reversal:r1',
+            'reverses_receipt_ref' => 'allocation:a1',
+            'amount_minor' => '-10000',
+            'remainder_minor' => '6000',
+            'currency' => 'RUB',
+        ]))->fact;
+        $last = $mapper->map($this->record($at, 3, [
+            'receipt_ref' => 'reversal:r2',
+            'reverses_receipt_ref' => 'reversal:r1',
+            'amount_minor' => '-6000',
+            'remainder_minor' => '0',
+            'currency' => 'RUB',
+        ]))->fact;
+
+        self::assertNotNull($previous);
+        self::assertNotNull($last);
+        self::assertSame(10000, $previous->money->minor + $last->money->minor);
+        self::assertSame($previous->sourceFactRef, $last->originalFactRef);
+    }
+
     public function test_reversal_with_an_unrepresentable_positive_magnitude_does_not_map(): void
     {
         $mapper = new AccountingFactMapper;

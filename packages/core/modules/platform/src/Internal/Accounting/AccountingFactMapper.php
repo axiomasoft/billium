@@ -580,7 +580,11 @@ final readonly class AccountingFactMapper implements AccountingMapper
             $sourceFactRef = $this->namedFactRef($record->sellerRef, $record->environment, AccountingFactKind::AllocationReversed, $reversalRef);
             $originalFactRef = self::nonEmptyString($payload['originalFactRef'] ?? null);
             if ($originalFactRef === null && $reversesRef !== null) {
-                $originalFactRef = $this->namedFactRef($record->sellerRef, $record->environment, AccountingFactKind::AllocationApplied, $reversesRef);
+                // Ledger retains a remainder under the receipt of the reversal that produced it.
+                $originalKind = str_starts_with($reversesRef, 'reversal:')
+                    ? AccountingFactKind::AllocationReversed
+                    : AccountingFactKind::AllocationApplied;
+                $originalFactRef = $this->namedFactRef($record->sellerRef, $record->environment, $originalKind, $reversesRef);
             }
 
             $metadata = self::filterNonNull([
