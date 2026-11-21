@@ -13,14 +13,7 @@ final readonly class ProblemResponse
 {
     public static function from(ProblemCode $code): JsonResponse
     {
-        $status = match ($code) {
-            ProblemCode::AuthUnauthenticated => 401,
-            ProblemCode::AuthDenied => 403,
-            ProblemCode::ValidationInvalid, ProblemCode::MoneyScaleInvalid, ProblemCode::SchemaUnsupported => 400,
-            ProblemCode::ReferenceUnknown => 404,
-            ProblemCode::TransportUnavailable, ProblemCode::LookupUnavailable, ProblemCode::RecoveryRequired => 503,
-            default => 409,
-        };
+        $status = HttpContract::PROBLEM_HTTP[$code->value];
 
         return new JsonResponse([
             'code' => $code->value,

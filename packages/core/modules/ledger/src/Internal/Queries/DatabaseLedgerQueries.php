@@ -12,6 +12,7 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Data\Runtime\Caller;
 use Billium\Ledger\Contracts\LedgerQueries;
+use Billium\Ledger\Data\Allocations\AllocationReceipt;
 use Billium\Ledger\Data\Views\LedgerView as View;
 use Billium\Ledger\Internal\Commands\CreditNoteGroupRef;
 use Billium\Platform\Contracts\Feed\FeedRecoveryQueries;
@@ -74,6 +75,15 @@ final readonly class DatabaseLedgerQueries implements LedgerQueries
             }
 
             return ['receiptRef' => $receiptRef, 'parts' => $parts];
+        });
+    }
+
+    public function allocationReceipt(string $receiptRef): ?AllocationReceipt
+    {
+        return $this->read(static function (LedgerReader $reader) use ($receiptRef): ?AllocationReceipt {
+            $row = $reader->scoped('billium_allocation_receipt')->where('receipt_ref', $receiptRef)->first(['kind', 'body']);
+
+            return $row === null ? null : new AllocationReceipt($receiptRef, View::text($row->kind), View::json($row->body));
         });
     }
 
@@ -163,12 +173,14 @@ final readonly class DatabaseLedgerQueries implements LedgerQueries
     }
 
     /**
-     * @param  Closure(LedgerReader): array<string, mixed>  $read
-     * @return array<string, mixed>
+     * @template T
+     *
+     * @param  Closure(LedgerReader): T  $read
+     * @return T
      */
-    private function read(Closure $read): array
+    private function read(Closure $read): mixed
     {
-        return $this->reads->run(fn (Connection $db, Caller $caller): array => $read(new LedgerReader($db, $caller, $this->feedRecovery)));
+        return $this->reads->run(fn (Connection $db, Caller $caller): mixed => $read(new LedgerReader($db, $caller, $this->feedRecovery)));
     }
 
     /**

@@ -59,9 +59,8 @@ Ingress throttle 429 не издаётся: порта и конфигураци
 на очередь или Redis нет. Код для 429 в реестр не добавлен.
 
 Problem+json для `billium.observation.parked` остаётся 409, если хост отдаёт проблему.
-Нормативный успех parked custody на маршруте наблюдений — 202 и схема custody, не problem+json.
-Установленный host P8.1 ещё отдаёт problem+json своим прежним switch; выравнивание контроллера
-этому пункту не принадлежит.
+Нормативный успех parked custody на маршруте наблюдений — 202 и схема custody
+(HTTP-21, D31, владельцы Server и ledger).
 
 <!-- billium-problem-http:start -->
 | Код | HTTP | Категория | Повторяемо | Тот же ключ | Receipt |
@@ -174,18 +173,38 @@ Cursor привязан к subscription, scope, lineage и selectionDigest. См
 
 ## Установленный host
 
-P8.1 публикует более грубые route name. Они перечислены, чтобы карта не молчала о
-реальном коде. Нормативные identity — таблица выше, не эти alias.
+Таблица показывает объединение маршрутов, регистрируемых поддерживаемыми конфигурациями.
+Доступный набор отражается в capabilities. Состав модулей и host SPI определяют доступность
+новых операций. Исторические queries и receipts используют установленные read-порты (D55, D58, D61, владелец Server).
+
+Хост задаёт лимиты `billium-server.max_body_bytes` и `billium-server.max_depth`.
+Значения по умолчанию — 1048576 байт и 64 уровня JSON (D57, владелец Server).
+`specHash` — SHA-256 точных байтов `revision.lock.json` (D9, владелец contracts).
 
 <!-- billium-installed:start -->
 | Метод | Путь host | Route name |
 |:--|:--|:--|
 | GET | `/billium/live` | `billium.server.live` |
 | GET | `/billium/ready` | `billium.server.ready` |
-| POST | `/billium/v1/sellers/{seller}/query` | `billium.server.ledger.query` |
-| POST | `/billium/v1/sellers/{seller}/observations` | `billium.server.ledger.observations` |
-| POST | `/billium/v1/sellers/{seller}/commands` | `billium.server.execution.commands` |
-| POST | `/billium/v1/sellers/{seller}/find` | `billium.server.execution.find` |
+| GET | `/billium/v1/capabilities` | `billium.server.capabilities` |
+| POST | `/billium/v1/sellers/{sellerRef}/queries` | `billium.server.ledger.query` |
+| POST | `/billium/v1/sellers/{sellerRef}/observations` | `billium.server.ledger.observations` |
+| POST | `/billium/v1/sellers/{sellerRef}/allocations/reallocate` | `billium.server.ledger.reallocate` |
+| POST | `/billium/v1/sellers/{sellerRef}/payments/execute` | `billium.server.execution.execute` |
+| POST | `/billium/v1/sellers/{sellerRef}/payments/authorize` | `billium.server.execution.authorize` |
+| POST | `/billium/v1/sellers/{sellerRef}/operations/{operationRef}/cancel` | `billium.server.execution.cancel` |
+| POST | `/billium/v1/sellers/{sellerRef}/payments/refund` | `billium.server.execution.refund` |
+| POST | `/billium/v1/sellers/{sellerRef}/payments/capture` | `billium.server.execution.capture` |
+| POST | `/billium/v1/sellers/{sellerRef}/payments/void-authorization` | `billium.server.execution.void-authorization` |
+| POST | `/billium/v1/sellers/{sellerRef}/operations/find` | `billium.server.execution.find` |
+| POST | `/billium/v1/sellers/{sellerRef}/obligations/prepare` | `billium.server.rating.prepare` |
+| POST | `/billium/v1/sellers/{sellerRef}/occurrences/ensure` | `billium.server.schedule.ensure` |
+| POST | `/billium/v1/sellers/{sellerRef}/collection/authorize` | `billium.server.collection.authorize` |
+| POST | `/billium/v1/sellers/{sellerRef}/usage/facts` | `billium.server.usage.accept` |
+| POST | `/billium/v1/sellers/{sellerRef}/receipts/find` | `billium.server.receipts.find` |
+| POST | `/billium/v1/sellers/{sellerRef}/feed/open` | `billium.server.feed.open` |
+| POST | `/billium/v1/sellers/{sellerRef}/feed/read` | `billium.server.feed.read` |
+| POST | `/billium/v1/sellers/{sellerRef}/feed/bootstrap` | `billium.server.feed.bootstrap` |
 <!-- billium-installed:end -->
 
 ## Совместимость

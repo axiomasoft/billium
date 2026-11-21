@@ -72,13 +72,13 @@ final class ServerHostTest extends TestCase
         self::assertSame(200, $this->request($app, '/billium/live')->getStatusCode());
         self::assertSame([], $app->make(DatabaseManager::class)->getConnections());
         self::assertSame(503, $this->request($app, '/billium/ready')->getStatusCode());
-        self::assertSame(503, $this->request($app, self::ROOT.'/query', $this->query())->getStatusCode());
+        self::assertSame(503, $this->request($app, self::ROOT.'/queries', $this->query())->getStatusCode());
         self::assertFalse(self::owner($app)->getSchemaBuilder()->hasTable('migrations'));
         Host::migrate($app, ['platform']);
         self::assertSame(503, $this->request($app, '/billium/ready')->getStatusCode());
         Host::migrate($app, ['ledger']);
         self::assertSame(200, $this->request($app, '/billium/ready')->getStatusCode());
-        $response = $this->request($app, self::ROOT.'/query', $this->query());
+        $response = $this->request($app, self::ROOT.'/queries', $this->query());
         self::assertSame(403, $response->getStatusCode());
         self::assertStringContainsString('billium.auth.denied', (string) $response->getContent());
         self::assertFalse(self::owner($app)->getSchemaBuilder()->hasTable('billium_execution_operation'));
@@ -94,12 +94,12 @@ final class ServerHostTest extends TestCase
         $invalid = $this->application(modules: ['platform', 'ledger', 'unknown']);
         self::assertSame(200, $this->request($invalid, '/billium/live')->getStatusCode());
         self::assertSame(503, $this->request($invalid, '/billium/ready')->getStatusCode());
-        self::assertSame(503, $this->request($invalid, self::ROOT.'/query', $this->query())->getStatusCode());
+        self::assertSame(503, $this->request($invalid, self::ROOT.'/queries', $this->query())->getStatusCode());
 
         $app->instance(WriterAdmission::class, $this->createStub(WriterAdmission::class));
         self::assertSame(503, $this->request($app, '/billium/ready')->getStatusCode());
-        self::assertSame(503, $this->request($app, self::ROOT.'/query', $this->query())->getStatusCode());
-        self::assertSame(404, $this->request($app, self::ROOT.'/commands', '{}')->getStatusCode());
+        self::assertSame(503, $this->request($app, self::ROOT.'/queries', $this->query())->getStatusCode());
+        self::assertSame(404, $this->request($app, self::ROOT.'/payments/execute', '{}')->getStatusCode());
     }
 
     public function test_seller_and_source_grants_are_checked_before_any_custody(): void
@@ -109,8 +109,8 @@ final class ServerHostTest extends TestCase
         Host::migrate($app, ['platform', 'ledger']);
         $app->make(Installation::class)->init(Host::INSTALLATION);
 
-        self::assertSame(401, $this->host->request($app, self::ROOT.'/query', $this->query(), 'forged')->getStatusCode());
-        self::assertSame(403, $this->request($app, '/billium/v1/sellers/other/query', $this->query())->getStatusCode());
+        self::assertSame(401, $this->host->request($app, self::ROOT.'/queries', $this->query(), 'forged')->getStatusCode());
+        self::assertSame(403, $this->request($app, '/billium/v1/sellers/other/queries', $this->query())->getStatusCode());
         foreach ([
             ['sellerRef' => 'other'], ['installationRef' => 'other'], ['environment' => 'live'],
             ['sourceAuthority' => 'standalone-billium'], ['sourceLineage' => 'forged'], ['partitionRef' => 'forged'],
@@ -120,15 +120,17 @@ final class ServerHostTest extends TestCase
         self::assertSame(0, self::owner($app)->table('billium_inbox_message')->count());
 
         $parked = $this->request($app, self::ROOT.'/observations', $this->observation());
-        self::assertSame(409, $parked->getStatusCode());
-        self::assertStringContainsString('billium.observation.parked', (string) $parked->getContent());
+        self::assertSame(202, $parked->getStatusCode());
+        $custody = (new Codec)->decode((string) $parked->getContent());
+        self::assertSame('ledger.observation_custody.v1', $custody->schema);
+        self::assertSame('none', $custody->raw->receipt);
         $event = '01JBX5Q0Z8M3N4P7R9S2000002';
         $sources = ['embedded-commerz', 'remote-billium'];
         foreach ($sources as $source) {
             $response = $this->request($app, self::ROOT.'/observations', $this->observation([
                 'sourceAuthority' => $source, 'sourceSequence' => 1, 'operationRevision' => 1, 'eventId' => $event,
             ]));
-            self::assertSame(503, $response->getStatusCode(), (string) $response->getContent());
+            self::assertSame(423, $response->getStatusCode(), (string) $response->getContent());
             self::assertStringContainsString('billium.recovery.required', (string) $response->getContent());
         }
         self::assertSame($sources, self::owner($app)->table('billium_inbox_message')->where('external_event_id', $event)
@@ -182,13 +184,13 @@ final class ServerHostTest extends TestCase
             self::assertSame('7e0c4a52-91d3-4b6f-8a25-c3d1e9f04b87', $command->commandKey);
 
             return StoredOutcome::accepted(new ExecutionReceipt('receipt-1', $command->commandKey, $command->operationRef,
-                $codec->digestOf($command), 'accepted-unknown', false, []));
+                $codec->digestOf($command), 'admitted', false, [], 0, $command->operationRef));
         });
         $app->instance(RootPaymentCommands::class, $commands);
 
-        self::assertSame(403, $this->request($app, self::ROOT.'/find', $request)->getStatusCode());
-        self::assertSame(403, $this->request($app, self::ROOT.'/commands', $execute)->getStatusCode());
-        $app->instance(AuthorizationVerdict::class, new class(['payment.find.v1' => $codec->digest($request), 'payment.execute.v1' => $codec->digest($execute)]) implements AuthorizationVerdict
+        self::assertSame(403, $this->request($app, self::ROOT.'/operations/find', $request)->getStatusCode());
+        self::assertSame(403, $this->request($app, self::ROOT.'/payments/execute', $execute)->getStatusCode());
+        $app->instance(AuthorizationVerdict::class, new class(['payment.find' => $codec->digest($request), 'payment.execute' => $codec->digest($execute)]) implements AuthorizationVerdict
         {
             /** @param array<string, string> $digests */
             public function __construct(private readonly array $digests) {}
@@ -200,13 +202,16 @@ final class ServerHostTest extends TestCase
                     : Verdict::Deny;
             }
         });
-        $response = $this->request($app, self::ROOT.'/find', $request);
+        $app->forgetInstance(WriterAdmission::class);
+        self::assertSame(503, $this->request($app, '/billium/ready')->getStatusCode());
+        $response = $this->request($app, self::ROOT.'/operations/find', $request);
         self::assertSame(200, $response->getStatusCode());
         self::assertSame($codec->encode($reply), $response->getContent());
         self::assertSame($body['digest'], $codec->digest($response->getContent()));
-        $admission = $this->request($app, self::ROOT.'/commands', $execute);
-        self::assertSame(200, $admission->getStatusCode());
-        self::assertStringContainsString('receipt-1', (string) $admission->getContent());
+        $app->instance(WriterAdmission::class, $this->createStub(WriterAdmission::class));
+        $admission = $this->request($app, self::ROOT.'/payments/execute', $execute);
+        self::assertSame(202, $admission->getStatusCode());
+        self::assertSame('payment.admission.v1', $codec->decode((string) $admission->getContent())->schema);
     }
 
     /** @param list<string> $modules */

@@ -5015,6 +5015,20 @@
     },
     {
       "kind": "config-key",
+      "id": "billium-server.max_body_bytes",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/server/config/billium-server.php"
+    },
+    {
+      "kind": "config-key",
+      "id": "billium-server.max_depth",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/server/config/billium-server.php"
+    },
+    {
+      "kind": "config-key",
       "id": "billium.collection.enabled",
       "status": "new",
       "since": "2026-10",
@@ -5946,7 +5960,49 @@
     },
     {
       "kind": "route",
+      "id": "billium.server.capabilities",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/server/routes/http.php"
+    },
+    {
+      "kind": "route",
+      "id": "billium.server.collection.authorize",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/server/routes/http.php"
+    },
+    {
+      "kind": "route",
+      "id": "billium.server.execution.authorize",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/server/routes/http.php"
+    },
+    {
+      "kind": "route",
+      "id": "billium.server.execution.cancel",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/server/routes/http.php"
+    },
+    {
+      "kind": "route",
+      "id": "billium.server.execution.capture",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/server/routes/http.php"
+    },
+    {
+      "kind": "route",
       "id": "billium.server.execution.commands",
+      "status": "retired",
+      "since": "2026-10",
+      "source": "packages/server/routes/http.php"
+    },
+    {
+      "kind": "route",
+      "id": "billium.server.execution.execute",
       "status": "new",
       "since": "2026-10",
       "source": "packages/server/routes/http.php"
@@ -5954,6 +6010,41 @@
     {
       "kind": "route",
       "id": "billium.server.execution.find",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/server/routes/http.php"
+    },
+    {
+      "kind": "route",
+      "id": "billium.server.execution.refund",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/server/routes/http.php"
+    },
+    {
+      "kind": "route",
+      "id": "billium.server.execution.void-authorization",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/server/routes/http.php"
+    },
+    {
+      "kind": "route",
+      "id": "billium.server.feed.bootstrap",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/server/routes/http.php"
+    },
+    {
+      "kind": "route",
+      "id": "billium.server.feed.open",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/server/routes/http.php"
+    },
+    {
+      "kind": "route",
+      "id": "billium.server.feed.read",
       "status": "new",
       "since": "2026-10",
       "source": "packages/server/routes/http.php"
@@ -5974,6 +6065,13 @@
     },
     {
       "kind": "route",
+      "id": "billium.server.ledger.reallocate",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/server/routes/http.php"
+    },
+    {
+      "kind": "route",
       "id": "billium.server.live",
       "status": "new",
       "since": "2026-10",
@@ -5981,7 +6079,35 @@
     },
     {
       "kind": "route",
+      "id": "billium.server.rating.prepare",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/server/routes/http.php"
+    },
+    {
+      "kind": "route",
       "id": "billium.server.ready",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/server/routes/http.php"
+    },
+    {
+      "kind": "route",
+      "id": "billium.server.receipts.find",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/server/routes/http.php"
+    },
+    {
+      "kind": "route",
+      "id": "billium.server.schedule.ensure",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/server/routes/http.php"
+    },
+    {
+      "kind": "route",
+      "id": "billium.server.usage.accept",
       "status": "new",
       "since": "2026-10",
       "source": "packages/server/routes/http.php"

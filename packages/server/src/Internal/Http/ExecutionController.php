@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Server\Internal\Http;
 
-use Billium\Contracts\Contracts\Codec;
+use Billium\Contracts\Data\Envelope;
 use Billium\Contracts\Data\Envelopes\AuthorizePayment;
 use Billium\Contracts\Data\Envelopes\CancelOperation;
 use Billium\Contracts\Data\Envelopes\CapturePayment;
@@ -14,13 +14,15 @@ use Billium\Contracts\Data\Envelopes\RequestRefund;
 use Billium\Contracts\Data\Envelopes\VoidAuthorization;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Core\Data\Runner\StoredOutcome;
 use Billium\Execution\Contracts\AuthorizationCommands;
 use Billium\Execution\Contracts\ExecutionQueries;
 use Billium\Execution\Contracts\RefundCommands;
 use Billium\Execution\Contracts\RootPaymentCommands;
+use Billium\Execution\Data\ExecutionReceipt;
 use Billium\Execution\Data\ExecutionScope;
 use Billium\Server\Data\ExecutionContext;
-use Billium\Server\Internal\Readiness;
+use Closure;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,48 +31,66 @@ use Packman\Attributes\Internal;
 #[Internal]
 final readonly class ExecutionController
 {
-    public function __construct(
-        private Application $app,
-        private RequestAccess $access,
-        private Readiness $readiness,
-        private Codec $codec,
-    ) {}
+    public function __construct(private Application $app, private RequestAccess $access, private EnvelopeResponse $response) {}
 
-    public function command(Request $request, string $seller): JsonResponse
+    public function execute(Request $request, string $sellerRef): JsonResponse
     {
-        if (! $this->readiness->hasExecutionDelivery()) {
-            return ProblemResponse::from(ProblemCode::CapabilityUnsupported);
-        }
-
-        return $this->access->run(
-            $request,
-            $seller,
-            [ExecutePayment::class, AuthorizePayment::class, CancelOperation::class, CapturePayment::class, VoidAuthorization::class, RequestRefund::class],
-            function (ExecutePayment|AuthorizePayment|CancelOperation|CapturePayment|VoidAuthorization|RequestRefund $command, ExecutionContext $context): JsonResponse {
-                $scope = self::scope($context);
-                $outcome = match (true) {
-                    $command instanceof ExecutePayment, $command instanceof AuthorizePayment => $this->app->make(RootPaymentCommands::class)->admit($scope, $command),
-                    $command instanceof CancelOperation => $this->app->make(RootPaymentCommands::class)->cancel($scope, $command),
-                    $command instanceof CapturePayment, $command instanceof VoidAuthorization => $this->app->make(AuthorizationCommands::class)->admit($scope, $command),
-                    $command instanceof RequestRefund => $this->app->make(RefundCommands::class)->admit($scope, $command),
-                };
-
-                return new JsonResponse($outcome->orThrow()->body, headers: ['Cache-Control' => 'no-store']);
-            },
-        );
+        return $this->admit($request, $sellerRef, ExecutePayment::class, 'payment.execute',
+            fn (ExecutionScope $scope, ExecutePayment $command): StoredOutcome => $this->app->make(RootPaymentCommands::class)->admit($scope, $command));
     }
 
-    public function find(Request $request, string $seller): JsonResponse
+    public function authorize(Request $request, string $sellerRef): JsonResponse
     {
-        if (! $this->readiness->hasExecutionDelivery()) {
-            return ProblemResponse::from(ProblemCode::CapabilityUnsupported);
-        }
+        return $this->admit($request, $sellerRef, AuthorizePayment::class, 'payment.authorize',
+            fn (ExecutionScope $scope, AuthorizePayment $command): StoredOutcome => $this->app->make(RootPaymentCommands::class)->admit($scope, $command));
+    }
 
-        return $this->access->run($request, $seller, [FindOperation::class], function (FindOperation $command, ExecutionContext $context): JsonResponse {
-            $found = $this->app->make(ExecutionQueries::class)->find(self::scope($context), $command->operationRef);
+    public function refund(Request $request, string $sellerRef): JsonResponse
+    {
+        return $this->admit($request, $sellerRef, RequestRefund::class, 'payment.refund',
+            fn (ExecutionScope $scope, RequestRefund $command): StoredOutcome => $this->app->make(RefundCommands::class)->admit($scope, $command));
+    }
 
-            return JsonResponse::fromJsonString($this->codec->encode($found), headers: ['Cache-Control' => 'no-store']);
-        });
+    public function cancel(Request $request, string $sellerRef, string $operationRef): JsonResponse
+    {
+        return $this->admit($request, $sellerRef, CancelOperation::class, 'payment.cancel',
+            fn (ExecutionScope $scope, CancelOperation $command): StoredOutcome => $this->app->make(RootPaymentCommands::class)->cancel($scope, $command));
+    }
+
+    public function capture(Request $request, string $sellerRef): JsonResponse
+    {
+        return $this->admit($request, $sellerRef, CapturePayment::class, 'payment.capture',
+            fn (ExecutionScope $scope, CapturePayment $command): StoredOutcome => $this->app->make(AuthorizationCommands::class)->admit($scope, $command));
+    }
+
+    public function voidAuthorization(Request $request, string $sellerRef): JsonResponse
+    {
+        return $this->admit($request, $sellerRef, VoidAuthorization::class, 'payment.void_authorization',
+            fn (ExecutionScope $scope, VoidAuthorization $command): StoredOutcome => $this->app->make(AuthorizationCommands::class)->admit($scope, $command));
+    }
+
+    public function find(Request $request, string $sellerRef): JsonResponse
+    {
+        return $this->access->run($request, $sellerRef, [FindOperation::class], function (FindOperation $query, ExecutionContext $context): JsonResponse {
+            $result = $this->app->make(ExecutionQueries::class)->find(self::scope($context), $query->operationRef);
+
+            return $this->response->from($result);
+        }, 'payment.find', read: true);
+    }
+
+    /**
+     * @template T of Envelope
+     *
+     * @param  class-string<T>  $schema
+     * @param  Closure(ExecutionScope, T): StoredOutcome  $handler
+     */
+    private function admit(Request $request, string $seller, string $schema, string $action, Closure $handler): JsonResponse
+    {
+        return $this->access->run($request, $seller, [$schema], function (Envelope $command, ExecutionContext $context) use ($handler): JsonResponse {
+            $receipt = ExecutionReceipt::admission($handler(self::scope($context), $command));
+
+            return $this->response->from($receipt, $receipt->result === 'accepted' ? 202 : 200);
+        }, $action);
     }
 
     private static function scope(ExecutionContext $context): ExecutionScope

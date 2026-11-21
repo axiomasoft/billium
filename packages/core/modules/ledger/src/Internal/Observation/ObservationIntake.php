@@ -15,6 +15,7 @@ use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Data\Runtime\FinancialScope;
 use Billium\Ledger\Contracts\QualifiedObservationApplier;
 use Billium\Ledger\Data\Allocations\AllocationReceipt;
+use Billium\Ledger\Data\Views\LedgerView;
 use Billium\Platform\Contracts\Inbox\CustodyHandler;
 use Billium\Platform\Data\Inbox\CustodyDisposition;
 use Packman\Attributes\Internal;
@@ -137,12 +138,7 @@ final readonly class ObservationIntake implements QualifiedObservationApplier
         if ($row === null || ! is_string($row->kind) || ! is_string($row->body)) {
             throw new ProblemException(ProblemCode::ObservationParked, 'the observation has no business receipt yet');
         }
-        $body = json_decode($row->body, true, 64, JSON_THROW_ON_ERROR);
-        $typed = [];
-        foreach (is_array($body) ? $body : [] as $key => $value) {
-            $typed[(string) $key] = $value;
-        }
 
-        return new AllocationReceipt($ref, $row->kind, $typed, $replayed);
+        return new AllocationReceipt($ref, $row->kind, LedgerView::json($row->body), $replayed);
     }
 }

@@ -7,6 +7,7 @@ from __future__ import annotations
 import importlib.util
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = ROOT / "scripts/spec/check-server-api.py"
@@ -32,6 +33,29 @@ class CheckServerApiTest(unittest.TestCase):
         })
         self.assertIsNotNone(reason)
         self.assertIn("document", reason)
+
+    def test_undeclared_installed_route_is_rejected(self) -> None:
+        errors: list[str] = []
+        installed = self.api.installed_routes()
+        self.api.check_installed_routes(installed, errors)
+        self.assertEqual([], errors)
+        self.api.check_installed_routes([
+            *installed, {"method": "POST", "path": "/billium/v1/sellers/{sellerRef}/commands", "name": "billium.server.execution.commands"},
+        ], errors)
+        self.assertIn("/commands", errors[0])
+
+    def test_routes_mode_propagates_runtime_registry_failure_without_generating_files(self) -> None:
+        with (
+            patch.object(self.api.subprocess, "run") as run,
+            patch.object(self.api, "write") as write,
+        ):
+            run.return_value.returncode = 1
+            self.assertEqual(1, self.api.main(["--routes"]))
+            run.assert_called_once_with([
+                "php", "vendor/bin/pest", "packages/server/tests/Feature/QueryEndpointsTest.php",
+                "--filter", "test_runtime_routes_match_the_http_manifest",
+            ], cwd=ROOT, check=False)
+            write.assert_not_called()
 
     def test_status_rules_follow_the_registry(self) -> None:
         status = self.api.problem_http_status

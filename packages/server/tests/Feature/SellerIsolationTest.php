@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Billium\Server\Tests\Feature;
 
 use Billium\Contracts\Contracts\Codec;
-use Billium\Contracts\Data\Envelopes\FindReceipt;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Core\Contracts\Runtime\CallerContext;
@@ -16,7 +15,6 @@ use Billium\Core\Tests\Support\FixedSessionAdmission;
 use Billium\Core\Tests\Support\ObservationFactory;
 use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Ledger\Contracts\Ledger;
-use Billium\Ledger\Contracts\LedgerQueries;
 use Billium\Ledger\Data\Obligations\ObligationDuePolicy;
 use Billium\Ledger\Data\Obligations\RecordObligation;
 use Billium\Ledger\Data\Runtime\BillingAccountScope;
@@ -31,16 +29,12 @@ use Billium\Server\Data\ResourceScope;
 use Billium\Server\Data\SellerAdmission;
 use Billium\Server\Data\SellerScope;
 use Billium\Server\Enums\Verdict;
-use Billium\Server\Internal\Http\RequestAccess;
 use Billium\Server\Internal\Http\RequestCaller;
 use Billium\Server\Tests\Support\MinimalHost;
 use BilliumMinimalHost\Database;
 use BilliumMinimalHost\Host;
 use DateTimeImmutable;
 use Illuminate\Foundation\Application;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Routing\Router;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Response;
@@ -95,7 +89,7 @@ final class SellerIsolationTest extends TestCase
         $app->instance(SellerEligibility::class, $eligibility);
         $policy = $this->createStub(AuthorizationVerdict::class);
         $policy->method('authorize')->willReturnCallback(static function (AuthenticatedPrincipal $principal, string $action, ResourceScope $scope, string $digest): Verdict {
-            if ($action === 'receipt.find.v1') {
+            if ($action === 'receipt.find') {
                 self::assertArrayHasKey('receiptRef', $scope->selectors);
             }
             if (($scope->selectors['query'] ?? null) === 'dueObligations') {
@@ -119,18 +113,12 @@ final class SellerIsolationTest extends TestCase
         self::assertSame(403, $foreign->getStatusCode());
         self::assertSame($unknown->getContent(), $foreign->getContent());
 
-        // Exercise the shared gateway with the registered receipt envelope and the real scoped core receipt reader.
-        $app->make(Router::class)->post('/billium/v1/sellers/{seller}/receipts/find',
-            static fn (Request $request, RequestAccess $access, string $seller): JsonResponse => $access->run($request, $seller, [FindReceipt::class],
-                static fn (FindReceipt $receipt): JsonResponse => new JsonResponse($app->make(LedgerQueries::class)->receipt($receipt->receiptRef)),
-            ));
         $ownedReceipt = $this->receipt($app, self::SELLER_B, 'obligation:only-b');
         self::assertSame(200, $ownedReceipt->getStatusCode(), (string) $ownedReceipt->getContent());
         $foreignReceipt = $this->receipt($app, Host::SELLER, 'obligation:only-b');
         $unknownReceipt = $this->receipt($app, Host::SELLER, 'obligation:missing');
-        self::assertSame(403, $foreignReceipt->getStatusCode());
+        self::assertSame(503, $foreignReceipt->getStatusCode());
         self::assertSame($unknownReceipt->getContent(), $foreignReceipt->getContent());
-        self::assertSame($foreign->getContent(), $foreignReceipt->getContent());
 
         $account = ['billingAccountRef' => 'shared-account'];
         $page = ['asOf' => self::DUE_AT, 'limit' => 1];
@@ -163,10 +151,17 @@ final class SellerIsolationTest extends TestCase
             self::assertSame(200, $response->getStatusCode(), (string) $response->getContent());
         }
         $fact = ObservationFactory::json($fact);
-        self::assertSame($response->getContent(), $this->host->request($app, $observationUrl, $fact)->getContent());
+        $original = self::body($response);
+        $replay = self::body($this->host->request($app, $observationUrl, $fact));
+        self::assertTrue($replay['replayed']);
+        self::assertSame($original['receiptRef'], $replay['receiptRef']);
+        self::assertSame($original['body'], $replay['body']);
         $policy = $this->createStub(AuthorizationVerdict::class);
-        $policy->method('authorize')->willReturnCallback(static fn (AuthenticatedPrincipal $principal, string $action): Verdict => $action === 'billium.query.v1' ? Verdict::Allow : Verdict::Deny);
+        $policy->method('authorize')->willReturnCallback(static fn (AuthenticatedPrincipal $principal, string $action): Verdict => in_array($action, ['ledger.query', 'receipt.find'], true) ? Verdict::Allow : Verdict::Deny);
         $app->instance(AuthorizationVerdict::class, $policy);
+        $lookup = $this->receipt($app, Host::SELLER, $original['receiptRef']);
+        self::assertSame(200, $lookup->getStatusCode());
+        self::assertSame($original, self::body($lookup)['body']);
         $denied = $this->host->request($app, $observationUrl, $fact);
         self::assertSame(403, $denied->getStatusCode());
         self::assertSame(ProblemCode::AuthDenied, (new Codec)->decodeProblem((string) $denied->getContent())->code);
@@ -224,7 +219,7 @@ final class SellerIsolationTest extends TestCase
      */
     private function query(Application $app, string $seller, string $name, array $selector, array $extra = []): Response
     {
-        return $this->host->request($app, self::endpoint($seller, 'query'), json_encode([
+        return $this->host->request($app, self::endpoint($seller, 'queries'), json_encode([
             'schema' => 'billium.query.v1', 'installationRef' => Host::INSTALLATION, 'environment' => 'test', 'sellerRef' => $seller,
             'query' => $name, 'selector' => $selector, ...$extra,
         ], JSON_THROW_ON_ERROR));

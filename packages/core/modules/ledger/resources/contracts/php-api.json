@@ -909,6 +909,26 @@
                     "return": "array",
                     "doc": []
                 },
+                "allocationReceipt": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "receiptRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "?Billium\\Ledger\\Data\\Allocations\\AllocationReceipt",
+                    "doc": []
+                },
                 "dispatch": {
                     "visibility": "public",
                     "static": false,

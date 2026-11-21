@@ -13,10 +13,12 @@ use Billium\Core\Data\Runtime\VerifiedProcessAdmission;
 use Billium\Core\Data\Runtime\VerifiedSessionAuthorization;
 use Billium\Server\Contracts\Authenticator;
 use Billium\Server\Contracts\AuthorizationVerdict;
+use Billium\Server\Contracts\InstallationContextResolver;
 use Billium\Server\Contracts\SellerContextResolver;
 use Billium\Server\Contracts\SellerEligibility;
 use Billium\Server\Data\AuthenticatedPrincipal;
 use Billium\Server\Data\ExecutionContext;
+use Billium\Server\Data\InstallationContext;
 use Billium\Server\Data\RequestMeta;
 use Billium\Server\Data\ResourceScope;
 use Billium\Server\Data\SellerAdmission;
@@ -69,6 +71,13 @@ final class Host implements Authenticator, AuthorizationVerdict, FinancialAuthor
             FinancialSessionAdmission::class, FinancialAuthorityEvidence::class] as $contract) {
             $app->instance($contract, $this);
         }
+        $app->instance(InstallationContextResolver::class, new class implements InstallationContextResolver
+        {
+            public function resolve(AuthenticatedPrincipal $principal): InstallationContext
+            {
+                return new InstallationContext(Host::INSTALLATION, 'test');
+            }
+        });
 
         return $app;
     }
@@ -127,7 +136,7 @@ final class Host implements Authenticator, AuthorizationVerdict, FinancialAuthor
 
     public function authorize(AuthenticatedPrincipal $principal, string $action, ResourceScope $resourceScope, string $payloadDigest): Verdict
     {
-        return in_array($action, ['billium.query.v1', 'payment.observation.v1'], true) ? Verdict::Allow : Verdict::Deny;
+        return in_array($action, ['ledger.query', 'payment.observe'], true) ? Verdict::Allow : Verdict::Deny;
     }
 
     public function currentToken(string $installationRef): ?FinancialAdmissionToken

@@ -54,8 +54,8 @@ final class CompositionTest extends TestCase
         self::assertSame($server, $routes->hasNamedRoute('billium.server.ready'));
         self::assertSame($server, $routes->hasNamedRoute('billium.server.ledger.query'));
         self::assertSame($observations, $routes->hasNamedRoute('billium.server.ledger.observations'));
-        self::assertSame($commands, $routes->hasNamedRoute('billium.server.execution.commands'));
-        self::assertSame($commands, $routes->hasNamedRoute('billium.server.execution.find'));
+        self::assertSame($commands, $routes->hasNamedRoute('billium.server.execution.execute'));
+        self::assertSame($server && $execution, $routes->hasNamedRoute('billium.server.execution.find'));
         self::assertTrue($app->bound(LedgerQueries::class));
         self::assertSame($execution, $app->bound(AttemptWorker::class));
         self::assertFalse($app->bound(DunningCaseService::class));

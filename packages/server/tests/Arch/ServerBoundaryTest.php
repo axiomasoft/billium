@@ -68,7 +68,7 @@ final class ServerBoundaryTest extends TestCase
         $findings = [];
         foreach ((new NodeFinder)->findInstanceOf($nodes, Name::class) as $name) {
             $import = $name->toString();
-            if ((str_contains($import, '\\') && preg_match('/^(?:Billium\\\\(?:Contracts|Core|Execution|Ledger|Server)|Illuminate|Packman)(?:\\\\|$)/i', $import) !== 1)
+            if ((str_contains($import, '\\') && preg_match('/^(?:Billium\\\\(?:Collection|Contracts|Core|Execution|Ledger|Platform|Rating|Schedule|Server|Usage)|Illuminate|Packman)(?:\\\\|$)/i', $import) !== 1)
                 || preg_match('/^Billium\\\\(?!Server\\\\)[^\\\\]+\\\\Internal\\\\/i', $import) === 1) {
                 $findings[] = $import;
             }

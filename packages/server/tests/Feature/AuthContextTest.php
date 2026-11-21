@@ -86,13 +86,13 @@ final class AuthContextTest extends TestCase
 
         $base = ['installationRef' => Host::INSTALLATION, 'environment' => 'test', 'sellerRef' => Host::SELLER];
         $query = ['schema' => 'billium.query.v1', 'query' => 'obligation', 'selector' => ['obligationRef' => 'obligation-a'], ...$base];
-        $unauthenticated = $this->host->request($app, self::ROOT.'/query', '{', 'wrong-token');
+        $unauthenticated = $this->host->request($app, self::ROOT.'/queries', '{', 'wrong-token');
         self::assertSame(401, $unauthenticated->getStatusCode());
         self::assertSame('billium.auth.unauthenticated', (new Codec)->decodeProblem((string) $unauthenticated->getContent())->code->value);
-        $routeMismatch = $this->host->request($app, '/billium/v1/sellers/seller-b/query', json_encode($query, JSON_THROW_ON_ERROR));
+        $routeMismatch = $this->host->request($app, '/billium/v1/sellers/seller-b/queries', json_encode($query, JSON_THROW_ON_ERROR));
         self::assertSame(403, $routeMismatch->getStatusCode());
         foreach ([['sellerRef' => 'seller-b'], ['environment' => 'live'], ['installationRef' => 'foreign-installation']] as $change) {
-            $response = $this->host->request($app, self::ROOT.'/query', json_encode([...$query, ...$change], JSON_THROW_ON_ERROR));
+            $response = $this->host->request($app, self::ROOT.'/queries', json_encode([...$query, ...$change], JSON_THROW_ON_ERROR));
             self::assertSame($routeMismatch->getContent(), $response->getContent());
         }
 
@@ -152,7 +152,7 @@ final class AuthContextTest extends TestCase
             self::assertSame('delegated-actor-a', $caller->actorRef);
             self::assertSame(['remote-billium'], $caller->sourceAuthorities);
 
-            return StoredOutcome::accepted(new ExecutionReceipt('receipt-a', $command->commandKey, $command->operationRef, $digest, 'accepted-unknown', false, []));
+            return StoredOutcome::accepted(new ExecutionReceipt('receipt-a', $command->commandKey, $command->operationRef, $digest, 'admitted', false, [], 0, $command->operationRef));
         });
         $app->instance(RootPaymentCommands::class, $commands);
         $app->instance(SellerContextResolver::class, $this->createConfiguredStub(SellerContextResolver::class, ['resolve' => new ExecutionContext(
@@ -166,7 +166,7 @@ final class AuthContextTest extends TestCase
             static function (AuthenticatedPrincipal $principal, string $action, ResourceScope $scope, string $payloadDigest) use (&$verdict, $digest): Verdict {
                 self::assertSame('host-fixture', $principal->principalRef);
                 self::assertSame('delegated-actor-a', $scope->actorRef);
-                self::assertSame('payment.execute.v1', $action);
+                self::assertSame('payment.execute', $action);
                 if ($scope->selectors['bindingRevision'] !== 'binding-a') {
                     return Verdict::Deny;
                 }
@@ -177,21 +177,21 @@ final class AuthContextTest extends TestCase
         );
         $app->instance(AuthorizationVerdict::class, $policy);
 
-        $first = $this->host->request($app, self::ROOT.'/commands', $json);
-        self::assertSame(200, $first->getStatusCode(), (string) $first->getContent());
-        self::assertStringContainsString('receipt-a', (string) $first->getContent());
-        self::assertSame($first->getContent(), $this->host->request($app, self::ROOT.'/commands', $json)->getContent());
+        $first = $this->host->request($app, self::ROOT.'/payments/execute', $json);
+        self::assertSame(202, $first->getStatusCode(), (string) $first->getContent());
+        self::assertSame('payment.admission.v1', $codec->decode((string) $first->getContent())->schema);
+        self::assertSame($first->getContent(), $this->host->request($app, self::ROOT.'/payments/execute', $json)->getContent());
         $verdict = Verdict::Deny;
-        $revoked = $this->host->request($app, self::ROOT.'/commands', $json);
+        $revoked = $this->host->request($app, self::ROOT.'/payments/execute', $json);
         self::assertSame(403, $revoked->getStatusCode());
         self::assertSame('none', $codec->decodeProblem((string) $revoked->getContent())->code->receipt());
         self::assertStringNotContainsString('receipt-a', (string) $revoked->getContent());
 
         $verdict = Verdict::Allow;
-        $foreign = $this->host->request($app, self::ROOT.'/commands', json_encode([...$body, 'bindingRevision' => 'known-binding-b'], JSON_THROW_ON_ERROR));
+        $foreign = $this->host->request($app, self::ROOT.'/payments/execute', json_encode([...$body, 'bindingRevision' => 'known-binding-b'], JSON_THROW_ON_ERROR));
         self::assertSame($revoked->getContent(), $foreign->getContent());
         $locator = 'secret://fixture/seller-b';
-        $forged = $this->host->request($app, self::ROOT.'/commands', json_encode([...$body, 'credentialRef' => $locator], JSON_THROW_ON_ERROR));
+        $forged = $this->host->request($app, self::ROOT.'/payments/execute', json_encode([...$body, 'credentialRef' => $locator], JSON_THROW_ON_ERROR));
         self::assertSame(400, $forged->getStatusCode());
         self::assertSame(ProblemCode::ValidationInvalid, $codec->decodeProblem((string) $forged->getContent())->code);
         self::assertStringNotContainsString($locator, (string) $forged->getContent());
@@ -199,7 +199,7 @@ final class AuthContextTest extends TestCase
         foreach ([null, new SellerAdmission(new SellerScope(Host::INSTALLATION, 'test', Host::SELLER), false),
             new SellerAdmission(new SellerScope(Host::INSTALLATION, 'test', 'seller-b'), true)] as $admission) {
             $app->instance(SellerEligibility::class, $this->createConfiguredStub(SellerEligibility::class, ['admission' => $admission]));
-            self::assertSame($revoked->getContent(), $this->host->request($app, self::ROOT.'/commands', $json)->getContent());
+            self::assertSame($revoked->getContent(), $this->host->request($app, self::ROOT.'/payments/execute', $json)->getContent());
         }
     }
 }

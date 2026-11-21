@@ -25,12 +25,20 @@ use Closure;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use JsonException;
 use Packman\Attributes\Internal;
+use PDOException;
 
 #[Internal]
 final readonly class RequestAccess
 {
-    public function __construct(private Application $app, private Readiness $readiness, private Codec $codec, private BilliumOptions $options) {}
+    public function __construct(
+        private Application $app,
+        private Readiness $readiness,
+        private Codec $codec,
+        private BilliumOptions $options,
+        private HttpLimits $limits,
+    ) {}
 
     /**
      * @template T of Envelope
@@ -38,7 +46,7 @@ final readonly class RequestAccess
      * @param  non-empty-list<class-string<T>>  $allowed
      * @param  Closure(T, ExecutionContext): JsonResponse  $consume
      */
-    public function run(Request $request, string $seller, array $allowed, Closure $consume): JsonResponse
+    public function run(Request $request, string $seller, array $allowed, Closure $consume, ?string $action = null, bool $read = false): JsonResponse
     {
         try {
             if (! $this->readiness->hasAuthPorts()) {
@@ -51,7 +59,7 @@ final readonly class RequestAccess
                 throw new ProblemException(ProblemCode::AuthDenied);
             }
 
-            $envelope = $this->codec->decode($request->getContent());
+            $envelope = $this->decode($request);
             if (! in_array($envelope::class, $allowed, true)) {
                 throw new ProblemException(ProblemCode::ValidationInvalid);
             }
@@ -64,18 +72,47 @@ final readonly class RequestAccess
                 throw new ProblemException(ProblemCode::AuthDenied);
             }
 
-            $verdict = $this->app->make(AuthorizationVerdict::class)->authorize($principal, $envelope->schema, $scope, $this->codec->digestOf($envelope));
+            $verdict = $this->app->make(AuthorizationVerdict::class)->authorize($principal, $action ?? $envelope->schema, $scope, $this->codec->digestOf($envelope));
             if ($verdict !== Verdict::Allow) {
                 throw new ProblemException(ProblemCode::AuthDenied);
             }
-            if (! $this->readiness->ready()) {
+            if (! $this->readiness->ready($read)) {
                 throw new ProblemException(ProblemCode::TransportUnavailable);
             }
 
             return RequestCaller::run($request, $caller, static fn (): JsonResponse => $consume($envelope, $context));
         } catch (ProblemException $refusal) {
             return ProblemResponse::from($refusal->problem === ProblemCode::ReferenceUnknown ? ProblemCode::AuthDenied : $refusal->problem);
+        } catch (PDOException $failure) {
+            $state = (string) $failure->getCode();
+            if (! str_starts_with($state, '08') && ! in_array($state, ['57014', '57P01', '57P02', '57P03'], true)) {
+                throw $failure;
+            }
+            report($failure);
+
+            return ProblemResponse::from(ProblemCode::TransportUnavailable);
         }
+    }
+
+    private function decode(Request $request): Envelope
+    {
+        $body = $request->getContent();
+        $type = strtolower(trim(explode(';', $request->headers->get('Content-Type') ?? '', 2)[0]));
+        if ($type !== 'application/json' || strlen($body) > $this->limits->maxBodyBytes) {
+            throw new ProblemException(ProblemCode::ValidationInvalid);
+        }
+        try {
+            json_decode($body, false, $this->limits->maxDepth + 1, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            throw new ProblemException(ProblemCode::ValidationInvalid);
+        }
+        $envelope = $this->codec->decode($body);
+        $header = $request->headers->all('Idempotency-Key');
+        if ($header !== [] && (! is_string($envelope->raw->commandKey ?? null) || $header !== [$envelope->raw->commandKey])) {
+            throw new ProblemException(ProblemCode::ValidationInvalid);
+        }
+
+        return $envelope;
     }
 
     public function installation(Request $request): InstallationContext

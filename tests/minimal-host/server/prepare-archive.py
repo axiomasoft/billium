@@ -39,7 +39,7 @@ def stage(root: Path, work: Path) -> None:
     server = root / "packages/server"
     output = archives / "billium-server.zip"
     with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive:
-        for group in ("composer.json", "README.md", "CHANGELOG.md", "src", "routes", "resources"):
+        for group in ("composer.json", "README.md", "CHANGELOG.md", "src", "config", "routes", "resources"):
             source = server / group
             candidates = [source] if source.is_file() else sorted(source.rglob("*"))
             for path in candidates:

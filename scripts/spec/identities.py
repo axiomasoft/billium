@@ -37,20 +37,19 @@ def product_identities(root: Path) -> dict[tuple[str, str], str]:
         if key in found:
             raise IdentityError(f'duplicate migration identity {path.stem}: {found[key]} and {path.relative_to(root)}')
         found[key] = path.relative_to(root).as_posix()
-    config = 'packages/core/config/billium.php'
-    # Standalone config may call Laravel env(); bootstrap the same helper without booting an application.
-    result = subprocess.run(['php', '-r', 'require "vendor/autoload.php"; echo json_encode(require "' + config + '", JSON_THROW_ON_ERROR);'],
-                            cwd=root, capture_output=True, text=True, check=True)
-
-    def walk(value: object, prefix: str) -> None:
+    def walk(value: object, prefix: str, config: str) -> None:
         if isinstance(value, dict) and value:
             for key, item in value.items():
-                walk(item, prefix + '.' + key)
+                walk(item, prefix + '.' + key, config)
         else:
             # Lists are values (enabled modules, allow-lists), not public numeric config keys.
             found[("config-key", prefix)] = config
 
-    walk(json.loads(result.stdout), 'billium')
+    for config in ['packages/core/config/billium.php', 'packages/server/config/billium-server.php']:
+        # Standalone config may call Laravel env(); load the helper without booting an application.
+        result = subprocess.run(['php', '-r', 'require "vendor/autoload.php"; echo json_encode(require $argv[1], JSON_THROW_ON_ERROR);', config],
+                                cwd=root, capture_output=True, text=True, check=True)
+        walk(json.loads(result.stdout), Path(config).stem, config)
     routes = 'packages/server/routes/http.php'
     route_source = root / routes
     if route_source.is_file():

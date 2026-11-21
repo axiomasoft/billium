@@ -1,4 +1,6 @@
 [
+  "billium-server.max_body_bytes",
+  "billium-server.max_depth",
   "billium.collection.enabled",
   "billium.connection",
   "billium.documents.enabled",

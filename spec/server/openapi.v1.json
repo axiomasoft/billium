@@ -50,24 +50,99 @@
       "name": "billium.server.ready"
     },
     {
+      "method": "GET",
+      "path": "/billium/v1/capabilities",
+      "name": "billium.server.capabilities"
+    },
+    {
       "method": "POST",
-      "path": "/billium/v1/sellers/{seller}/query",
+      "path": "/billium/v1/sellers/{sellerRef}/queries",
       "name": "billium.server.ledger.query"
     },
     {
       "method": "POST",
-      "path": "/billium/v1/sellers/{seller}/observations",
+      "path": "/billium/v1/sellers/{sellerRef}/observations",
       "name": "billium.server.ledger.observations"
     },
     {
       "method": "POST",
-      "path": "/billium/v1/sellers/{seller}/commands",
-      "name": "billium.server.execution.commands"
+      "path": "/billium/v1/sellers/{sellerRef}/allocations/reallocate",
+      "name": "billium.server.ledger.reallocate"
     },
     {
       "method": "POST",
-      "path": "/billium/v1/sellers/{seller}/find",
+      "path": "/billium/v1/sellers/{sellerRef}/payments/execute",
+      "name": "billium.server.execution.execute"
+    },
+    {
+      "method": "POST",
+      "path": "/billium/v1/sellers/{sellerRef}/payments/authorize",
+      "name": "billium.server.execution.authorize"
+    },
+    {
+      "method": "POST",
+      "path": "/billium/v1/sellers/{sellerRef}/operations/{operationRef}/cancel",
+      "name": "billium.server.execution.cancel"
+    },
+    {
+      "method": "POST",
+      "path": "/billium/v1/sellers/{sellerRef}/payments/refund",
+      "name": "billium.server.execution.refund"
+    },
+    {
+      "method": "POST",
+      "path": "/billium/v1/sellers/{sellerRef}/payments/capture",
+      "name": "billium.server.execution.capture"
+    },
+    {
+      "method": "POST",
+      "path": "/billium/v1/sellers/{sellerRef}/payments/void-authorization",
+      "name": "billium.server.execution.void-authorization"
+    },
+    {
+      "method": "POST",
+      "path": "/billium/v1/sellers/{sellerRef}/operations/find",
       "name": "billium.server.execution.find"
+    },
+    {
+      "method": "POST",
+      "path": "/billium/v1/sellers/{sellerRef}/obligations/prepare",
+      "name": "billium.server.rating.prepare"
+    },
+    {
+      "method": "POST",
+      "path": "/billium/v1/sellers/{sellerRef}/occurrences/ensure",
+      "name": "billium.server.schedule.ensure"
+    },
+    {
+      "method": "POST",
+      "path": "/billium/v1/sellers/{sellerRef}/collection/authorize",
+      "name": "billium.server.collection.authorize"
+    },
+    {
+      "method": "POST",
+      "path": "/billium/v1/sellers/{sellerRef}/usage/facts",
+      "name": "billium.server.usage.accept"
+    },
+    {
+      "method": "POST",
+      "path": "/billium/v1/sellers/{sellerRef}/receipts/find",
+      "name": "billium.server.receipts.find"
+    },
+    {
+      "method": "POST",
+      "path": "/billium/v1/sellers/{sellerRef}/feed/open",
+      "name": "billium.server.feed.open"
+    },
+    {
+      "method": "POST",
+      "path": "/billium/v1/sellers/{sellerRef}/feed/read",
+      "name": "billium.server.feed.read"
+    },
+    {
+      "method": "POST",
+      "path": "/billium/v1/sellers/{sellerRef}/feed/bootstrap",
+      "name": "billium.server.feed.bootstrap"
     }
   ],
   "paths": {

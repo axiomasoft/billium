@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Billium\Server\Internal\Auth;
 
 use Billium\Contracts\Data\Envelope;
+use Billium\Contracts\Data\Envelopes\FeedOpen;
 use Billium\Contracts\Data\Envelopes\PaymentObservation;
 use Billium\Contracts\Data\Envelopes\UsageFact;
 use Billium\Contracts\Data\Envelopes\UsageFactV2;
@@ -24,7 +25,10 @@ final readonly class RequestScope
         'merchantAccountRef', 'providerAccountRef', 'eventId', 'sourceAuthority', 'sourceLineage', 'partitionRef',
         'businessIntentRef', 'commandKey', 'receiptRef', 'query', 'selector', 'cursor', 'asOf', 'subscriptionRef',
         'selectionDigest', 'scope', 'source', 'subjectRef', 'factId', 'attribution', 'obligationRef', 'invoiceRef',
-        'billingAccountRef', 'customerRef', 'collectionRef', 'mandateRef',
+        'billingAccountRef', 'customerRef', 'collectionRef', 'mandateRef', 'paymentRef', 'agreementRef',
+        'businessPaymentIntentRef', 'executorBindingRef', 'agreementRevision', 'componentRef', 'billingOccurrenceRef',
+        'priceVersionRef', 'scheduleRevision', 'purpose', 'interval', 'metricRef', 'metricVersion', 'correctsFactId',
+        'eventContractRevision', 'envelopeSchemas', 'eventTypes', 'provenance',
     ];
 
     public static function select(ExecutionContext $context, Envelope $envelope, mixed $routeOperation): ResourceScope
@@ -35,6 +39,11 @@ final readonly class RequestScope
         if (($body->sellerRef ?? null) !== $context->sellerRef
             || ($hasBodyScope && (($body->environment ?? null) !== $context->environment || ($body->installationRef ?? null) !== $context->installationRef))
             || ($routeOperation !== null && $routeOperation !== ($body->operationRef ?? null))) {
+            throw new ProblemException(ProblemCode::AuthDenied);
+        }
+        if ($envelope instanceof FeedOpen && (($envelope->scope->sellerRef ?? null) !== $context->sellerRef
+            || ($envelope->scope->installationRef ?? null) !== $context->installationRef
+            || ($envelope->scope->environment ?? null) !== $context->environment)) {
             throw new ProblemException(ProblemCode::AuthDenied);
         }
 

@@ -11,12 +11,15 @@ use Billium\Core\Enums\Modules\ModulePresence;
 use Billium\Execution\Contracts\RootPaymentCommands;
 use Billium\Server\Contracts\Authenticator;
 use Billium\Server\Contracts\AuthorizationVerdict;
+use Billium\Server\Contracts\InstallationContextResolver;
 use Billium\Server\Contracts\SellerContextResolver;
 use Billium\Server\Contracts\SellerEligibility;
+use Billium\Server\Internal\Http\HttpLimits;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Packman\Attributes\Internal;
+use Packman\Config\Exceptions\InvalidConfiguration;
 use Packman\Doctor\Data\DoctorContext;
 use Packman\Doctor\Data\DoctorFinding;
 use Packman\Doctor\Enums\CheckStatus;
@@ -49,14 +52,16 @@ final readonly class Readiness
             && $this->app->bound(SellerEligibility::class) && $this->app->bound(AuthorizationVerdict::class);
     }
 
-    public function ready(): bool
+    public function ready(bool $read = false): bool
     {
         $composition = $this->modules->manifest()->composition($this->options->modules->composition);
-        if ($composition === null || $composition->server === ModulePresence::Forbidden || ! $this->hasAuthPorts()) {
+        if ($composition === null || $composition->server === ModulePresence::Forbidden
+            || ! $this->hasAuthPorts() || ! $this->app->bound(InstallationContextResolver::class)) {
             return false;
         }
 
         try {
+            $this->app->make(HttpLimits::class);
             $database = $this->databases->connection($this->options->connection);
             if ($database->getDriverName() !== 'pgsql') {
                 return false;
@@ -65,14 +70,15 @@ final readonly class Readiness
             if (! is_int($version) || $version < 160000) {
                 return false;
             }
-        } catch (InvalidArgumentException|PDOException) {
+        } catch (InvalidArgumentException|InvalidConfiguration|PDOException) {
             return false;
         }
 
         // Force real checkpoints even in non-production environments. Doctor is a read-only check.
         return array_all(
             $this->doctor->run(new DoctorContext(production: true)),
-            static fn (DoctorFinding $finding): bool => $finding->status !== CheckStatus::Error,
+            static fn (DoctorFinding $finding): bool => $finding->status !== CheckStatus::Error
+                || ($read && $finding->code === 'billium.modules.module.port_missing' && $finding->slice === 'execution'),
         );
     }
 }

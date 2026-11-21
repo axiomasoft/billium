@@ -48,16 +48,18 @@ try {
     verify(! $db->getSchemaBuilder()->hasTable('migrations'), 'Boot ran migrations');
     Host::migrate($app, ['platform', 'ledger']);
     verify($host->request($app, '/billium/ready')->getStatusCode() === 200, 'Ledger-only schema should be ready');
+    $capabilities = $host->request($app, '/billium/v1/capabilities');
+    verify($capabilities->getStatusCode() === 200 && str_contains((string) $capabilities->getContent(), 'billium.capabilities.v1'), 'Packaged server limits or capabilities are missing');
     $query = json_encode([
         'schema' => 'billium.query.v1', 'installationRef' => Host::INSTALLATION, 'environment' => 'test', 'sellerRef' => Host::SELLER,
         'query' => 'obligation', 'selector' => ['obligationRef' => 'missing'],
     ], JSON_THROW_ON_ERROR);
-    $found = $host->request($app, '/billium/v1/sellers/'.Host::SELLER.'/query', $query);
+    $found = $host->request($app, '/billium/v1/sellers/'.Host::SELLER.'/queries', $query);
     verify($found->getStatusCode() === 403 && str_contains((string) $found->getContent(), 'billium.auth.denied'), 'Discovered query route did not enforce scoped lookup');
     foreach ([AttemptWorker::class, DunningCaseService::class, WriterAdmission::class, PaymentDrivers::class, DocumentRenderer::class] as $port) {
         verify(! $app->bound($port), 'Disabled module provided '.$port);
     }
-    verify(! $app->make(Router::class)->getRoutes()->hasNamedRoute('billium.server.execution.commands'), 'Disabled execution contributed a route');
+    verify(! $app->make(Router::class)->getRoutes()->hasNamedRoute('billium.server.execution.execute'), 'Disabled execution contributed a route');
     verify(! $db->getSchemaBuilder()->hasTable('billium_execution_operation'), 'Disabled execution installed a table');
     fwrite(STDOUT, "smoke server ledger-only archive: ok\n");
 } finally {
