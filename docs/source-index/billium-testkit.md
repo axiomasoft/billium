@@ -2,8 +2,30 @@
 
 # axiomasoft/billium-testkit
 
-Path `packages/testkit/src`, namespace `Billium\Testkit\`, layer L4. 23 types.
+Path `packages/testkit/src`, namespace `Billium\Testkit\`, layer L4. 33 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
+
+## Accounting
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`AccountingExportExtension`](../../packages/testkit/src/Accounting/AccountingExportExtension.php) | class | **Api** | Minimal COV-299 accounting export extension demonstrating capability/version negotiation and extension-owned export state without altering core financial migra… |
+| [`FakeFinBridgeConsumer`](../../packages/testkit/src/Accounting/FakeFinBridgeConsumer.php) | class | **Api** | Deterministic in-memory FinBridge consumer test double for P6.6 conformance and integration tests. |
+
+## Coordinator
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`FakeProductCoordinator`](../../packages/testkit/src/Coordinator/FakeProductCoordinator.php) | class | **Api** | Deterministic host ProductCoordinator test double for P7.6 acceptance tests. |
+| [`InMemoryCollectionNotificationPort`](../../packages/testkit/src/Coordinator/InMemoryCollectionNotificationPort.php) | class | **Api** | Deterministic in-memory CollectionNotificationPort test double for P7.6 acceptance tests. |
+| [`ProvisioningAttemptReceipt`](../../packages/testkit/src/Coordinator/ProvisioningAttemptReceipt.php) | class | **Api** | Durable provisioning attempt receipt owned by the host ProductCoordinator double. |
+
+## Documents
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`InMemoryDocumentRenderer`](../../packages/testkit/src/Documents/InMemoryDocumentRenderer.php) | class | **Api** | Deterministic in-memory DocumentRenderer test double for P6 conformance and integration tests. |
+| [`InMemoryDocumentStorage`](../../packages/testkit/src/Documents/InMemoryDocumentStorage.php) | class | **Api** | Deterministic in-memory DocumentStorage test double supporting idempotent upload keys, simulated timeout-after-upload, ephemeral signed URL grants, and owner o… |
 
 ## Drivers
 
@@ -15,6 +37,14 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`ResponseMode`](../../packages/testkit/src/Drivers/ResponseMode.php) | enum | **Api** |  |
 | [`SimulatedAbsenceVerifier`](../../packages/testkit/src/Drivers/SimulatedAbsenceVerifier.php) | class | **Api** | Authenticates only explicitly simulated complete scopes against independent journals. |
 | [`SimulatedCapabilities`](../../packages/testkit/src/Drivers/SimulatedCapabilities.php) | class | **Api** | Every guarantee in this builder is explicitly simulated, never provider qualification. |
+
+## Fiscal
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`FiscalIntegrationExtension`](../../packages/testkit/src/Fiscal/FiscalIntegrationExtension.php) | class | **Api** | Minimal COV-295 fiscal integration extension stub proving capability/version negotiation without implementing WithSchema or touching any core/platform/ledger/e… |
+| [`SimulatedFiscalDriver`](../../packages/testkit/src/Fiscal/SimulatedFiscalDriver.php) | class | **Api** | Deterministic simulated fiscal driver for testing psp_passthrough and fiscal_driver flows, lost registration responses, 24h outages, duplicate registration gua… |
+| [`SimulatedFiscalDrivers`](../../packages/testkit/src/Fiscal/SimulatedFiscalDrivers.php) | class | **Api** | Exact-version fiscal driver registry for tests. |
 
 ## Fixtures
 

@@ -2,18 +2,20 @@
 
 # axiomasoft/billium-ledger
 
-Path `packages/core/modules/ledger/src`, namespace `Billium\Ledger\`, layer L2. 95 types.
+Path `packages/core/modules/ledger/src`, namespace `Billium\Ledger\`, layer L2. 98 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
+| [`CollectionObligation`](../../packages/core/modules/ledger/src/Contracts/CollectionObligation.php) | interface | **Spi** | Ledger-owned collection eligibility under the obligation lock (D35, D60, D63). |
 | [`CorrectionCreditParticipants`](../../packages/core/modules/ledger/src/Contracts/CorrectionCreditParticipants.php) | interface | **Spi** |  |
 | [`CorrectionLocks`](../../packages/core/modules/ledger/src/Contracts/CorrectionLocks.php) | interface | **Spi** |  |
 | [`Ledger`](../../packages/core/modules/ledger/src/Contracts/Ledger.php) | interface | **Api** | Root-only financial commands (D60). |
 | [`LedgerParticipants`](../../packages/core/modules/ledger/src/Contracts/LedgerParticipants.php) | interface | **Spi** | Typed ledger participants of a root transaction owned by another module (D60, transaction-participants). |
 | [`LedgerQueries`](../../packages/core/modules/ledger/src/Contracts/LedgerQueries.php) | interface | **Api** | Authenticated, side-effect-free recovery reads (REQ-CON-14, INV-14, D35, D60). |
+| [`LockedInvoiceSnapshotParticipant`](../../packages/core/modules/ledger/src/Contracts/LockedInvoiceSnapshotParticipant.php) | interface | **Spi** | Read-only participant reading the live locked invoice totals and per-obligation lines inside an active root transaction (D60). |
 | [`ObservationApplier`](../../packages/core/modules/ledger/src/Contracts/ObservationApplier.php) | interface | **Spi** | applyPaymentObservation (REQ-CON-13, REQ-OWN-11, D28, D41, D46, D60): one authenticated payment.observation.v1 delivery is taken into source-scoped custody and… |
 | [`ObservationCheckpointQueries`](../../packages/core/modules/ledger/src/Contracts/ObservationCheckpointQueries.php) | interface | **Spi** | Exact proven observation revision, independently of transport acknowledgement or later root state. |
 | [`QualifiedObservationApplier`](../../packages/core/modules/ledger/src/Contracts/QualifiedObservationApplier.php) | interface | **Spi** |  |
@@ -42,7 +44,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 |---|---|---|---|
 | [`CreateInvoice`](../../packages/core/modules/ledger/src/Data/Invoices/CreateInvoice.php) | class | **Api** | Creates a draft over unbilled obligations of one account and currency; the draft does not number or freeze anything (D49). |
 | [`CreditNoteGroupReceipt`](../../packages/core/modules/ledger/src/Data/Invoices/CreditNoteGroupReceipt.php) | class | **Api** | `creditNoteRef` names the whole credit: the issued note itself for one invoice, otherwise a group reference that LedgerQueries::receipt('credit-note:'.$creditN… |
-| [`CreditNoteLine`](../../packages/core/modules/ledger/src/Data/Invoices/CreditNoteLine.php) | class | **Api** | One credited obligation of the invoice and the positive amount credited to it. |
+| [`CreditNoteLine`](../../packages/core/modules/ledger/src/Data/Invoices/CreditNoteLine.php) | class | **Api** | One credited obligation of the invoice, the positive amount credited, and optional legal/tax/rounding provenance. |
 | [`CreditNoteMode`](../../packages/core/modules/ledger/src/Data/Invoices/CreditNoteMode.php) | enum | **Api** | open_only credits at most the open amount; reverse_allocations first releases live allocations of the line (last first, full reversal plus remainder) and never… |
 | [`CreditNotePart`](../../packages/core/modules/ledger/src/Data/Invoices/CreditNotePart.php) | class | **Api** | The lines of one invoice inside a credit that may span several invoices. |
 | [`DiscardInvoice`](../../packages/core/modules/ledger/src/Data/Invoices/DiscardInvoice.php) | class | **Api** | draft → discarded; releases the obligations of the lines. |
@@ -159,6 +161,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
+| [`DatabaseCollectionObligation`](../../packages/core/modules/ledger/src/Internal/Queries/DatabaseCollectionObligation.php) | class | *Internal* |  |
 | [`DatabaseLedgerQueries`](../../packages/core/modules/ledger/src/Internal/Queries/DatabaseLedgerQueries.php) | class | *Internal* |  |
 | [`DatabaseObservationCheckpointQueries`](../../packages/core/modules/ledger/src/Internal/Queries/DatabaseObservationCheckpointQueries.php) | class | *Internal* |  |
 | [`DatabaseSettlementIntentLocks`](../../packages/core/modules/ledger/src/Internal/Queries/DatabaseSettlementIntentLocks.php) | class | *Internal* |  |

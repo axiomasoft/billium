@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-core
 
-Path `packages/core/src`, namespace `Billium\Core\`, layer L2. 108 types.
+Path `packages/core/src`, namespace `Billium\Core\`, layer L2. 110 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## .
@@ -175,8 +175,8 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
+| [`BilliumPluginActivationGate`](../../packages/core/src/Internal/Modules/BilliumPluginActivationGate.php) | class | *Internal* |  |
 | [`ModuleCatalog`](../../packages/core/src/Internal/Modules/ModuleCatalog.php) | class | *Internal* | Descriptor set + desired config + capabilities + checkpoints → report. |
-| [`ModuleGraphPluginBridge`](../../packages/core/src/Internal/Modules/ModuleGraphPluginBridge.php) | class | *Internal* | Adapts arbitrary ModuleDescriptor graphs onto Packman's PluginGraph for Kahn ordering and cycle detection. |
 | [`ModuleLifecycle`](../../packages/core/src/Internal/Modules/ModuleLifecycle.php) | class | *Internal* | Operation-class admission and disable/retire/uninstall preview rules (D55). |
 | [`Semver`](../../packages/core/src/Internal/Modules/Semver.php) | class | *Internal* | MAJOR.MINOR.PATCH only: delegates SemVer parsing to Packman PluginManifest without pre-release/build tags. |
 | [`Shape`](../../packages/core/src/Internal/Modules/Shape.php) | class | *Internal* | Strict reader of decoded JSON: unknown, missing or mistyped members fail loudly, so an incomplete or foreign manifest never reaches money admission (COV-301..3… |
@@ -211,6 +211,8 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
+| [`CollectionPlugin`](../../packages/core/src/Plugins/CollectionPlugin.php) | class | **Api** | Stateless Packman extension plugin composing Billium Collection schema ownership and capability contracts. |
+| [`DocumentsPlugin`](../../packages/core/src/Plugins/DocumentsPlugin.php) | class | **Api** | Stateless Packman extension plugin composing Billium Documents schema ownership and capability contracts. |
 | [`ExecutionPlugin`](../../packages/core/src/Plugins/ExecutionPlugin.php) | class | **Api** | Stateless Packman extension plugin composing Billium Execution schema ownership and capability contracts. |
 | [`LedgerPlugin`](../../packages/core/src/Plugins/LedgerPlugin.php) | class | **Api** | Stateless Packman extension plugin composing Billium Ledger schema ownership and capability contracts. |
 | [`PlatformPlugin`](../../packages/core/src/Plugins/PlatformPlugin.php) | class | **Api** | Stateless Packman extension plugin composing Billium Platform configuration, schema, capabilities, slots, and diagnostics. |

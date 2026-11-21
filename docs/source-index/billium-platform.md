@@ -2,8 +2,15 @@
 
 # axiomasoft/billium-platform
 
-Path `packages/core/modules/platform/src`, namespace `Billium\Platform\`, layer L2. 90 types.
+Path `packages/core/modules/platform/src`, namespace `Billium\Platform\`, layer L2. 103 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
+
+## Contracts/Accounting
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`AccountingConsumer`](../../packages/core/modules/platform/src/Contracts/Accounting/AccountingConsumer.php) | interface | **Spi** | Downstream accounting export consumer SPI (FinBridge adapter boundary). |
+| [`AccountingMapper`](../../packages/core/modules/platform/src/Contracts/Accounting/AccountingMapper.php) | interface | **Api** | Platform-owned mapper from authenticated public economic source records to stable accounting facts and FinBridge export envelopes. |
 
 ## Contracts/EventContracts
 
@@ -52,6 +59,21 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`FactualCommandOutbox`](../../packages/core/modules/platform/src/Contracts/Outbox/FactualCommandOutbox.php) | interface | **Spi** | Narrow observation lane; never authorizes a provider effect in recovery. |
 | [`Outbox`](../../packages/core/modules/platform/src/Contracts/Outbox/Outbox.php) | interface | **Spi** | Transactional outbox (PF-10, COV-279): the event is written on the root connection inside the same root Tx as the owning state and receipt, or not at all. |
 | [`OutboxDeliveryQueries`](../../packages/core/modules/platform/src/Contracts/Outbox/OutboxDeliveryQueries.php) | interface | **Spi** | Exact authenticated feed scope; returned status contains no transferable claim token. |
+
+## Data/Accounting
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`AccountingAppliedReceipt`](../../packages/core/modules/platform/src/Data/Accounting/AccountingAppliedReceipt.php) | class | **Api** | Explicit accounting consumer applied receipt, keyed by stable sourceFactRef and stored separately from delivery ACKs. |
+| [`AccountingDeliveryAck`](../../packages/core/modules/platform/src/Data/Accounting/AccountingDeliveryAck.php) | class | **Api** | Explicit transport delivery acknowledgment, tracked independently of accounting application receipts. |
+| [`AccountingFactCategory`](../../packages/core/modules/platform/src/Data/Accounting/AccountingFactCategory.php) | enum | **Api** | Economic category separating actual cash movement from bounded receivables, noncash allocations, and noncash exposure. |
+| [`AccountingFactEnvelope`](../../packages/core/modules/platform/src/Data/Accounting/AccountingFactEnvelope.php) | class | **Api** | Immutable canonical accounting fact keyed by stable economic identity (`sourceFactRef`). |
+| [`AccountingFactKind`](../../packages/core/modules/platform/src/Data/Accounting/AccountingFactKind.php) | enum | **Api** | Canonical economic fact kinds emitted by the accounting mapper. |
+| [`AccountingMappingResult`](../../packages/core/modules/platform/src/Data/Accounting/AccountingMappingResult.php) | class | **Api** | Discriminated result returned by AccountingMapper::map(). |
+| [`AccountingMappingStatus`](../../packages/core/modules/platform/src/Data/Accounting/AccountingMappingStatus.php) | enum | **Api** | Outcome of mapping an authenticated public source record into an accounting fact. |
+| [`AccountingSourceRecord`](../../packages/core/modules/platform/src/Data/Accounting/AccountingSourceRecord.php) | class | **Api** | Neutral authenticated public event or normalized actual-effect input for accounting fact mapping. |
+| [`FinBridgeExportEnvelope`](../../packages/core/modules/platform/src/Data/Accounting/FinBridgeExportEnvelope.php) | class | **Api** | FinBridge-contract export payload derived from an AccountingFactEnvelope. |
+| [`QuarantinedFactRecord`](../../packages/core/modules/platform/src/Data/Accounting/QuarantinedFactRecord.php) | class | **Api** | Durable quarantine entry preserving an unsupported/unknown schema source record for post-upgrade replay. |
 
 ## Data/EventContracts
 
@@ -118,6 +140,12 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
 | [`TransitionRefused`](../../packages/core/modules/platform/src/Exceptions/TransitionRefused.php) | class | **Api** | A session or module transition was refused or could not take its barrier in time. |
+
+## Internal/Accounting
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`AccountingFactMapper`](../../packages/core/modules/platform/src/Internal/Accounting/AccountingFactMapper.php) | class | *Internal* | Deterministic platform-owned accounting fact mapper and FinBridge contract translator (P6.6, D53, D56, D63). |
 
 ## Internal/CommandOutbox
 

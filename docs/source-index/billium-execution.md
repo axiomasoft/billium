@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-execution
 
-Path `packages/core/modules/execution/src`, namespace `Billium\Execution\`, layer L2. 174 types.
+Path `packages/core/modules/execution/src`, namespace `Billium\Execution\`, layer L2. 206 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -15,6 +15,18 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`CallbackCustody`](../../packages/core/modules/execution/src/Contracts/CallbackCustody.php) | interface | **Api** |  |
 | [`CallbackPayloadArchive`](../../packages/core/modules/execution/src/Contracts/CallbackPayloadArchive.php) | interface | **Spi** | Trusted immutable host storage for original callback frames. |
 | [`CapacityParticipants`](../../packages/core/modules/execution/src/Contracts/CapacityParticipants.php) | interface | **Spi** | current(TransactionContext,string $rootRef): CapacitySnapshot; reserve(TransactionContext,string $rootRef,string $operationRef,EffectKind,Money,string $reserva… |
+
+## Contracts/Collection
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`CollectionOriginLookup`](../../packages/core/modules/execution/src/Contracts/Collection/CollectionOriginLookup.php) | interface | **Spi** | The registered collection owner reserves original identities before execution admission (D63/F04). |
+| [`RootIdentityStore`](../../packages/core/modules/execution/src/Contracts/Collection/RootIdentityStore.php) | interface | **Spi** | Coordinates root identity claims between execution admission and collection authorization. |
+
+## Contracts
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
 | [`CollectionCancellationParticipant`](../../packages/core/modules/execution/src/Contracts/CollectionCancellationParticipant.php) | interface | **Spi** | The registered collection owner closes its unsent step/reservation and any ledger association after the local cancellation CAS, in this same root. |
 | [`CollectionExecutionGuard`](../../packages/core/modules/execution/src/Contracts/CollectionExecutionGuard.php) | interface | **Spi** | Plans and validates current collection consent/revocation in the current root before RootCharge locks. |
 | [`DispatchEgress`](../../packages/core/modules/execution/src/Contracts/DispatchEgress.php) | interface | **Spi** | invoke(DispatchTicket $ticket,DriverRequest $request,Closure $send): ProviderLookupResult; host checks enforceable egress fence at send boundary; never a permi… |
@@ -26,6 +38,19 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`ExecutionReadiness`](../../packages/core/modules/execution/src/Contracts/ExecutionReadiness.php) | interface | **Spi** | Independently validate approved, versioned release and retention dossiers for this exact original scope, source, merchant lineage, capability, action, currency… |
 | [`ExecutionReconciliationQueries`](../../packages/core/modules/execution/src/Contracts/ExecutionReconciliationQueries.php) | interface | **Spi** |  |
 | [`ExecutionStore`](../../packages/core/modules/execution/src/Contracts/ExecutionStore.php) | interface |  | Every mutation gets current TransactionContext and asserts runner current execution participant + root connection. |
+
+## Contracts/Fiscal
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`FiscalDriver`](../../packages/core/modules/execution/src/Contracts/Fiscal/FiscalDriver.php) | interface | **Spi** | Fiscal provider / PSP receipt passthrough SPI. |
+| [`FiscalDrivers`](../../packages/core/modules/execution/src/Contracts/Fiscal/FiscalDrivers.php) | interface | **Spi** | Exact (driverId, contractVersion) negotiation registry for fiscal drivers. |
+| [`FiscalOrchestrator`](../../packages/core/modules/execution/src/Contracts/Fiscal/FiscalOrchestrator.php) | interface | **Api** | Fiscal orchestration owned by the original payment executor. |
+
+## Contracts
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
 | [`MerchantActionGate`](../../packages/core/modules/execution/src/Contracts/MerchantActionGate.php) | interface | **Spi** | Holds the original merchant revision through the current financial decision and checks its action permissions. |
 | [`MerchantCredentials`](../../packages/core/modules/execution/src/Contracts/MerchantCredentials.php) | interface | **Spi** | resolve(MerchantRevision $revision,string $purpose): ResolvedCredentials outside Tx; account/purpose continuity must match original binding; rotation may repla… |
 | [`MerchantRegistry`](../../packages/core/modules/execution/src/Contracts/MerchantRegistry.php) | interface | **Spi** | forAdmission(ExecutionScope,string $merchantRevisionRef): MerchantRevision; historical(ExecutionScope,string $rootOperationRef): MerchantRevision; capabilities… |
@@ -61,6 +86,17 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`CapabilitySnapshot`](../../packages/core/modules/execution/src/Data/CapabilitySnapshot.php) | class | **Api** | Immutable declaration only. |
 | [`CapacitySnapshot`](../../packages/core/modules/execution/src/Data/CapacitySnapshot.php) | class | **Api** |  |
 | [`ChildIntentIdentity`](../../packages/core/modules/execution/src/Data/ChildIntentIdentity.php) | class | **Api** |  |
+
+## Data/Collection
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`RootPaymentSemanticDigest`](../../packages/core/modules/execution/src/Data/Collection/RootPaymentSemanticDigest.php) | class | **Api** | Produces the exact execution digest a collection authorization freezes (D63/F04). |
+
+## Data
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
 | [`CollectionGuardPlan`](../../packages/core/modules/execution/src/Data/CollectionGuardPlan.php) | class | **Api** |  |
 | [`CollectionGuardReceipt`](../../packages/core/modules/execution/src/Data/CollectionGuardReceipt.php) | class | **Api** |  |
 | [`DispatchDecision`](../../packages/core/modules/execution/src/Data/DispatchDecision.php) | class | **Api** |  |
@@ -76,6 +112,31 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`ExecutionReviewQueuePage`](../../packages/core/modules/execution/src/Data/ExecutionReviewQueuePage.php) | class | **Api** |  |
 | [`ExecutionReviewQueueRow`](../../packages/core/modules/execution/src/Data/ExecutionReviewQueueRow.php) | class | **Api** |  |
 | [`ExecutionScope`](../../packages/core/modules/execution/src/Data/ExecutionScope.php) | class | **Api** |  |
+
+## Data/Fiscal
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`FiscalActualEffect`](../../packages/core/modules/execution/src/Data/Fiscal/FiscalActualEffect.php) | class | **Api** | Authenticated actual provider effect used as fiscal input; never bounded applied totals. |
+| [`FiscalCallbackEnvelope`](../../packages/core/modules/execution/src/Data/Fiscal/FiscalCallbackEnvelope.php) | class | **Api** |  |
+| [`FiscalCallbackVerification`](../../packages/core/modules/execution/src/Data/Fiscal/FiscalCallbackVerification.php) | class | **Api** |  |
+| [`FiscalCorrectionRequest`](../../packages/core/modules/execution/src/Data/Fiscal/FiscalCorrectionRequest.php) | class | **Api** |  |
+| [`FiscalDriverCapabilities`](../../packages/core/modules/execution/src/Data/Fiscal/FiscalDriverCapabilities.php) | class | **Api** |  |
+| [`FiscalDriverResult`](../../packages/core/modules/execution/src/Data/Fiscal/FiscalDriverResult.php) | class | **Api** |  |
+| [`FiscalEvidenceRecord`](../../packages/core/modules/execution/src/Data/Fiscal/FiscalEvidenceRecord.php) | class | **Api** |  |
+| [`FiscalExternalOutcome`](../../packages/core/modules/execution/src/Data/Fiscal/FiscalExternalOutcome.php) | class | **Api** | Authenticated external fiscal outcome evidence supplied by an execution-owning host for embedded-commerz projection. |
+| [`FiscalIntentRecord`](../../packages/core/modules/execution/src/Data/Fiscal/FiscalIntentRecord.php) | class | **Api** |  |
+| [`FiscalLookupRequest`](../../packages/core/modules/execution/src/Data/Fiscal/FiscalLookupRequest.php) | class | **Api** |  |
+| [`FiscalPolicyConfig`](../../packages/core/modules/execution/src/Data/Fiscal/FiscalPolicyConfig.php) | class | **Api** |  |
+| [`FiscalPolicyRecord`](../../packages/core/modules/execution/src/Data/Fiscal/FiscalPolicyRecord.php) | class | **Api** |  |
+| [`FiscalProjectionInput`](../../packages/core/modules/execution/src/Data/Fiscal/FiscalProjectionInput.php) | class | **Api** | Projection-only fiscal outcome recorded for embedded-commerz; never dispatches to a fiscal provider. |
+| [`FiscalProjectionRecord`](../../packages/core/modules/execution/src/Data/Fiscal/FiscalProjectionRecord.php) | class | **Api** |  |
+| [`FiscalRegisterRequest`](../../packages/core/modules/execution/src/Data/Fiscal/FiscalRegisterRequest.php) | class | **Api** |  |
+
+## Data
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
 | [`FrozenBinding`](../../packages/core/modules/execution/src/Data/FrozenBinding.php) | class | **Api** |  |
 | [`InventoryPage`](../../packages/core/modules/execution/src/Data/InventoryPage.php) | class | **Api** |  |
 | [`InventoryReportFact`](../../packages/core/modules/execution/src/Data/InventoryReportFact.php) | class | **Api** | A qualified statement line. |
@@ -115,6 +176,22 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`DriverCapability`](../../packages/core/modules/execution/src/Enums/DriverCapability.php) | enum | **Api** |  |
 | [`EffectKind`](../../packages/core/modules/execution/src/Enums/EffectKind.php) | enum | **Api** |  |
 | [`ExecutionPhase`](../../packages/core/modules/execution/src/Enums/ExecutionPhase.php) | enum | **Api** |  |
+
+## Enums/Fiscal
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`FiscalCallbackTrustStrategy`](../../packages/core/modules/execution/src/Enums/Fiscal/FiscalCallbackTrustStrategy.php) | enum | **Api** |  |
+| [`FiscalDriverOutcomeState`](../../packages/core/modules/execution/src/Enums/Fiscal/FiscalDriverOutcomeState.php) | enum | **Api** |  |
+| [`FiscalIntentState`](../../packages/core/modules/execution/src/Enums/Fiscal/FiscalIntentState.php) | enum | **Api** |  |
+| [`FiscalOperationKind`](../../packages/core/modules/execution/src/Enums/Fiscal/FiscalOperationKind.php) | enum | **Api** |  |
+| [`FiscalReceiptKind`](../../packages/core/modules/execution/src/Enums/Fiscal/FiscalReceiptKind.php) | enum | **Api** |  |
+| [`FiscalRoute`](../../packages/core/modules/execution/src/Enums/Fiscal/FiscalRoute.php) | enum | **Api** |  |
+
+## Enums
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
 | [`NamespaceState`](../../packages/core/modules/execution/src/Enums/NamespaceState.php) | enum | **Api** |  |
 | [`ProviderEvidenceMode`](../../packages/core/modules/execution/src/Enums/ProviderEvidenceMode.php) | enum | **Api** |  |
 | [`ProviderLookupState`](../../packages/core/modules/execution/src/Enums/ProviderLookupState.php) | enum | **Api** |  |
@@ -191,6 +268,16 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 |---|---|---|---|
 | [`ComparisonBasis`](../../packages/core/modules/execution/src/Internal/Disputes/ComparisonBasis.php) | class | *Internal* |  |
 | [`InventoryComparison`](../../packages/core/modules/execution/src/Internal/Disputes/InventoryComparison.php) | class | *Internal* |  |
+
+## Internal/Fiscal
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`ActualEffectExtractor`](../../packages/core/modules/execution/src/Internal/Fiscal/ActualEffectExtractor.php) | class | *Internal* | Extracts authenticated actual provider effects for a root operation directly from execution custody facts. |
+| [`DatabaseFiscalOrchestrator`](../../packages/core/modules/execution/src/Internal/Fiscal/DatabaseFiscalOrchestrator.php) | class | *Internal* |  |
+| [`FiscalJson`](../../packages/core/modules/execution/src/Internal/Fiscal/FiscalJson.php) | class | *Internal* | Zero-float deterministic JSON helpers for fiscal JSONB storage and canonical digests. |
+| [`FiscalReceipt`](../../packages/core/modules/execution/src/Internal/Fiscal/FiscalReceipt.php) | class | *Internal* |  |
+| [`FiscalStorage`](../../packages/core/modules/execution/src/Internal/Fiscal/FiscalStorage.php) | class | *Internal* | Row hydration, deterministic references, and append-only custody writes for fiscal orchestration. |
 
 ## Internal/Identity
 
