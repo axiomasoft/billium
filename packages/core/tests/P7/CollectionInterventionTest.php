@@ -428,7 +428,7 @@ final class CollectionInterventionTest extends ExecutableCollectionTestCase
     {
         $scope = $this->collectionScope();
         $utc = new DateTimeZone('UTC');
-        $now = new DateTimeImmutable('2026-11-20T12:00:00Z', $utc);
+        $now = new DateTimeImmutable('now', $utc);
         $coordinator = new FakeProductCoordinator;
 
         // 1. Online read caches authoritative snapshot.
