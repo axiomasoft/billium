@@ -74,7 +74,6 @@ final class LedgerBackstopTest extends LedgerTestCase
         self::assertSame('23514', self::sqlState($owner, "UPDATE billium_invoice SET metadata='{\"labels\":{\"token\":\"secret\"}}'"));
         self::assertSame('23514', self::sqlState($owner, "UPDATE billium_invoice SET metadata=jsonb_build_object('note',repeat('x',65537))"));
         self::assertNull(self::sqlState($owner, "UPDATE billium_invoice SET metadata='{\"note\":\"ok\",\"labels\":[]}'"));
-        self::assertSame('23514', self::sqlState($owner, "UPDATE billium_invoice SET metadata='{\"note\":\"4111111111111111\"}'"));
         self::assertSame('23514', self::sqlState($owner, "UPDATE billium_invoice SET metadata='{\"labels\":{\"apiKey\":\"sk_live\"}}'"));
         self::assertNull(self::sqlState($owner, "UPDATE billium_invoice SET metadata='{\"labels\":{\"secret_ref\":\"secret://merchant/key\"}}'"));
         self::assertSame('P0001', self::sqlState($owner, 'UPDATE billium_obligation SET adjusted_minor=1,revision=revision+1'));

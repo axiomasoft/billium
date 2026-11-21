@@ -509,7 +509,7 @@
         {
           "id": "2026_10_21_000001_create_billium_ledger",
           "version": 1,
-          "checksum": "sha256:720f7d9f95bc5dedf4c635e34867ab731bccef88e97aab76933cadcba10e9695"
+          "checksum": "sha256:f3948dc8928f00024388963cbc8267c8c86e04e12db5d2a43ed5974cada0547d"
         },
         {
           "id": "2026_10_21_000002_guard_billium_ledger",
