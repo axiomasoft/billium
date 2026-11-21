@@ -84,7 +84,7 @@ final class HardeningOccurrenceServiceTest extends OccurrenceTestCase
         self::assertSame('2024-05-31T00:00:00.000000Z', $materialized['nextOccurrenceAt']);
         self::assertSame(4, $this->value('SELECT cursor_ordinal FROM billium_schedule_billing_schedule'));
         self::assertSame(1, $this->rows('billium_schedule_billing_occurrence', 'occurrence_ref = ?', [$april['occurrenceRef']]));
-        self::assertSame(1, $this->rows('billium_schedule_billing_occurrence_amendment',
+        self::assertSame(1, $this->rows('billium_schedule_occurrence_amendment',
             "occurrence_ref = ? AND schedule_revision = 3 AND kind = 'amendment_required'", [$april['occurrenceRef']]));
     }
 
