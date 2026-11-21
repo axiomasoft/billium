@@ -1,0 +1,110 @@
+{
+  "protocol": "billium.http.transcript.v1",
+  "id": "HTTP-17",
+  "title": "Malformed, wrong-digest and unknown-enum response cannot become success",
+  "profile": "ledger",
+  "sources": [
+    "D9",
+    "D29",
+    "BC-ID-12"
+  ],
+  "steps": [
+    {
+      "op": "send",
+      "name": "malformed",
+      "path": "/billium/v1/capabilities",
+      "expect": {
+        "status": 200,
+        "decode.error.code": "billium.validation.invalid"
+      },
+      "fault": "malformed"
+    },
+    {
+      "op": "send",
+      "name": "wrongDigest",
+      "use": "malformed",
+      "verifyDigest": true,
+      "expect": {
+        "status": 200,
+        "decode.error.code": "billium.validation.invalid"
+      },
+      "fault": "mutate",
+      "mutation": {
+        "fields": {
+          "extra": "changed"
+        },
+        "seal": false
+      }
+    },
+    {
+      "op": "send",
+      "name": "payment",
+      "path": "/billium/v1/sellers/seller-a/observations",
+      "scoped": true,
+      "body": {
+        "schema": "payment.observation.v1",
+        "eventId": "01JBX5Q0Z8M3N4P7R9S2000001",
+        "sourceAuthority": "embedded-commerz",
+        "sourceLineage": "L1",
+        "partitionRef": "main",
+        "sourceSequence": 1,
+        "operationRef": "root-a",
+        "operationKind": "charge",
+        "businessIntentRef": "intent-a",
+        "operationRevision": 1,
+        "state": "succeeded",
+        "currency": "RUB",
+        "requested": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "authorizedTotal": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "capturedTotal": {
+          "amount": "10.00",
+          "currency": "RUB"
+        },
+        "refundedTotal": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "providerAccountRef": "fixture-pa",
+        "evidenceRef": "fixture-evidence-1",
+        "observedAt": "2026-11-19T00:00:00Z",
+        "recordedAt": "2026-11-19T00:00:01Z"
+      },
+      "expect": {
+        "status": 200,
+        "body.schema": "ledger.allocation_receipt.v1",
+        "body.replayed": false
+      },
+      "seal": "contentDigest"
+    },
+    {
+      "op": "send",
+      "name": "enum",
+      "path": "/billium/v1/sellers/seller-a/queries",
+      "scoped": true,
+      "body": {
+        "schema": "billium.query.v1",
+        "query": "paymentStatus",
+        "selector": {
+          "paymentRef": "root-a"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "decode.error.code": "billium.validation.invalid"
+      },
+      "fault": "mutate",
+      "mutation": {
+        "fields": {
+          "result.projectionStatus": "future"
+        },
+        "seal": true
+      }
+    }
+  ]
+}

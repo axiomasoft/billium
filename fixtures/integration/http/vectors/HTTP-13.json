@@ -1,0 +1,458 @@
+{
+  "protocol": "billium.http.transcript.v1",
+  "id": "HTTP-13",
+  "title": "Select the negotiated event catalog, preserve cursor on empty selected pages",
+  "profile": "execution",
+  "sources": [
+    "D9",
+    "D63"
+  ],
+  "steps": [
+    {
+      "op": "send",
+      "name": "capabilities",
+      "path": "/billium/v1/capabilities",
+      "expect": {
+        "status": 200,
+        "body.specRevision": "2026-10",
+        "body.specHash": {
+          "$ref": "specHash"
+        },
+        "body.selectionMode": "explicit"
+      }
+    },
+    {
+      "op": "send",
+      "name": "legacy",
+      "path": "/billium/v1/sellers/seller-a/feed/open",
+      "scoped": true,
+      "body": {
+        "schema": "billium.feed.open.v1",
+        "commandKey": "00000000-0000-4100-8800-000000000132",
+        "scope": {
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "channel": "events",
+          "sourceAuthority": "billium",
+          "lineage": "1"
+        },
+        "eventContractRevision": "events-2026-10-v1",
+        "envelopeSchemas": [
+          "billium.event.v1"
+        ],
+        "eventTypes": [
+          "payment.outcome.v1"
+        ]
+      },
+      "expect": {
+        "status": 200,
+        "body.eventContractRevision": "events-2026-10-v1"
+      }
+    },
+    {
+      "op": "send",
+      "name": "rejectMixed",
+      "path": "/billium/v1/sellers/seller-a/feed/open",
+      "scoped": true,
+      "body": {
+        "schema": "billium.feed.open.v1",
+        "commandKey": "00000000-0000-4100-8800-000000000130",
+        "scope": {
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "channel": "events",
+          "sourceAuthority": "billium",
+          "lineage": "1"
+        },
+        "eventContractRevision": "events-2026-10-v1",
+        "envelopeSchemas": [
+          "billium.event.v1"
+        ],
+        "eventTypes": [
+          "payment.effect.outcome.v1"
+        ]
+      },
+      "expect": {
+        "status": 400,
+        "body.code": "billium.schema.unsupported",
+        "body.receipt": "none"
+      }
+    },
+    {
+      "op": "send",
+      "name": "newClient",
+      "path": "/billium/v1/sellers/seller-a/feed/open",
+      "scoped": true,
+      "body": {
+        "schema": "billium.feed.open.v1",
+        "commandKey": "00000000-0000-4100-8800-000000000133",
+        "scope": {
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "channel": "events",
+          "sourceAuthority": "billium",
+          "lineage": "1"
+        },
+        "eventContractRevision": "events-2026-10-v2",
+        "envelopeSchemas": [
+          "billium.event.v2"
+        ],
+        "eventTypes": [
+          "payment.effect.outcome.v1"
+        ]
+      },
+      "expect": {
+        "status": 200,
+        "body.eventContractRevision": "events-2026-10-v2"
+      }
+    },
+    {
+      "op": "send",
+      "name": "empty",
+      "path": "/billium/v1/sellers/seller-a/feed/read",
+      "scoped": true,
+      "body": {
+        "schema": "billium.feed.read.v1",
+        "subscriptionRef": {
+          "$ref": "legacy.body.subscriptionRef"
+        },
+        "selectionDigest": {
+          "$ref": "legacy.body.selectionDigest"
+        },
+        "cursor": {
+          "$ref": "legacy.body.nextCursor"
+        },
+        "limit": 1
+      },
+      "expect": {
+        "status": 200,
+        "body.events": [],
+        "body.hasMore": true
+      }
+    },
+    {
+      "op": "send",
+      "name": "progress",
+      "path": "/billium/v1/sellers/seller-a/feed/read",
+      "scoped": true,
+      "body": {
+        "schema": "billium.feed.read.v1",
+        "subscriptionRef": {
+          "$ref": "legacy.body.subscriptionRef"
+        },
+        "selectionDigest": {
+          "$ref": "legacy.body.selectionDigest"
+        },
+        "cursor": {
+          "$ref": "empty.body.nextCursor"
+        },
+        "limit": 1
+      },
+      "expect": {
+        "status": 200,
+        "body.events": []
+      }
+    },
+    {
+      "op": "compare",
+      "name": "cursorProgress",
+      "input": {
+        "left": {
+          "$ref": "legacy.body.nextCursor"
+        },
+        "right": {
+          "$ref": "empty.body.nextCursor"
+        }
+      },
+      "expect": {
+        "different": true
+      }
+    },
+    {
+      "op": "send",
+      "name": "authorize",
+      "path": "/billium/v1/sellers/seller-a/payments/authorize",
+      "scoped": true,
+      "body": {
+        "schema": "payment.authorize.v1",
+        "commandKey": "00000000-0000-4100-8800-000000000001",
+        "operationRef": "root-a",
+        "operationKind": "charge",
+        "source": {
+          "context": "checkout",
+          "intentRef": "intent-a",
+          "orderRef": "order-a"
+        },
+        "executionProfile": "remote-billium",
+        "routingEpoch": 1,
+        "merchantAccountRef": "account-a",
+        "money": {
+          "amount": "1.00",
+          "currency": "RUB"
+        },
+        "bindingRevision": "merchant-a",
+        "requestedAt": "2026-11-17T00:00:00Z"
+      },
+      "expect": {
+        "status": 202,
+        "body.result": "accepted",
+        "body.receipt": "CommandAccepted"
+      },
+      "fault": "forward"
+    },
+    {
+      "op": "worker",
+      "name": "dispatch-root-a",
+      "input": {
+        "operation": "root-a",
+        "action": "dispatch",
+        "mode": "success"
+      },
+      "expect": {
+        "reductions.0.disposition": "applied"
+      }
+    },
+    {
+      "op": "send",
+      "name": "admit-first",
+      "path": "/billium/v1/sellers/seller-a/payments/capture",
+      "scoped": true,
+      "body": {
+        "schema": "payment.capture.v1",
+        "commandKey": "00000000-0000-4100-8800-000000000134",
+        "operationRef": "first",
+        "originalOperationRef": "root-a",
+        "source": {
+          "intentRef": "intent-first",
+          "context": "checkout"
+        },
+        "money": {
+          "amount": "0.80",
+          "currency": "RUB"
+        },
+        "requestedAt": "2026-11-17T00:00:00Z"
+      },
+      "expect": {
+        "status": 202,
+        "body.result": "accepted",
+        "body.receipt": "CommandAccepted",
+        "body.operationRef": "first"
+      }
+    },
+    {
+      "op": "worker",
+      "name": "dispatch-first",
+      "input": {
+        "operation": "first",
+        "action": "dispatch",
+        "mode": "declined"
+      },
+      "expect": {
+        "reductions.0.disposition": "applied"
+      }
+    },
+    {
+      "op": "send",
+      "name": "admit-replacement",
+      "path": "/billium/v1/sellers/seller-a/payments/capture",
+      "scoped": true,
+      "body": {
+        "schema": "payment.capture.v1",
+        "commandKey": "00000000-0000-4100-8800-000000000135",
+        "operationRef": "replacement",
+        "originalOperationRef": "root-a",
+        "source": {
+          "intentRef": "intent-replacement",
+          "context": "checkout"
+        },
+        "money": {
+          "amount": "0.80",
+          "currency": "RUB"
+        },
+        "requestedAt": "2026-11-17T00:00:00Z"
+      },
+      "expect": {
+        "status": 202,
+        "body.result": "accepted",
+        "body.receipt": "CommandAccepted",
+        "body.operationRef": "replacement"
+      }
+    },
+    {
+      "op": "worker",
+      "name": "dispatch-replacement",
+      "input": {
+        "operation": "replacement",
+        "action": "dispatch",
+        "mode": "success"
+      },
+      "expect": {
+        "reductions.0.disposition": "applied"
+      }
+    },
+    {
+      "op": "send",
+      "name": "admit-released",
+      "path": "/billium/v1/sellers/seller-a/payments/void-authorization",
+      "scoped": true,
+      "body": {
+        "schema": "payment.void_authorization.v1",
+        "commandKey": "00000000-0000-4100-8800-000000000136",
+        "operationRef": "released",
+        "originalOperationRef": "root-a",
+        "source": {
+          "intentRef": "intent-released",
+          "context": "checkout"
+        },
+        "money": {
+          "amount": "0.10",
+          "currency": "RUB"
+        },
+        "requestedAt": "2026-11-17T00:00:00Z",
+        "reasonCode": "release_unused"
+      },
+      "expect": {
+        "status": 202,
+        "body.result": "accepted",
+        "body.receipt": "CommandAccepted",
+        "body.operationRef": "released"
+      }
+    },
+    {
+      "op": "worker",
+      "name": "dispatch-released",
+      "input": {
+        "operation": "released",
+        "action": "dispatch",
+        "mode": "success"
+      },
+      "expect": {
+        "reductions.0.disposition": "applied"
+      }
+    },
+    {
+      "op": "late_evidence",
+      "name": "lateOldCapture",
+      "input": {
+        "operation": "first",
+        "changes": {
+          "revision": "10",
+          "status": "succeeded",
+          "operationAmount": {
+            "amount": "0.80",
+            "currency": "RUB"
+          },
+          "captured": {
+            "amount": "1.60",
+            "currency": "RUB"
+          }
+        }
+      },
+      "expect": {
+        "disposition": "held_discrepancy",
+        "publicEventIds.#": 1,
+        "observationCommandRefs.#": 1
+      }
+    },
+    {
+      "op": "deliver",
+      "name": "deliver",
+      "expect": {
+        "failed": 0
+      }
+    },
+    {
+      "op": "send",
+      "name": "childEffects",
+      "path": "/billium/v1/sellers/seller-a/feed/read",
+      "scoped": true,
+      "body": {
+        "schema": "billium.feed.read.v1",
+        "subscriptionRef": {
+          "$ref": "newClient.body.subscriptionRef"
+        },
+        "selectionDigest": {
+          "$ref": "newClient.body.selectionDigest"
+        },
+        "cursor": {
+          "$ref": "newClient.body.nextCursor"
+        },
+        "limit": 100
+      },
+      "expect": {
+        "status": 200,
+        "body.events.1.schema": "billium.event.v2",
+        "body.events.1.payload.operationKind": "capture",
+        "body.events.1.payload.operationRef": "replacement",
+        "body.events.1.payload.originalOperationRef": "root-a",
+        "body.events.1.payload.bindingRevision": "merchant-a",
+        "body.events.1.payload.merchantAccountRef": "account-a",
+        "body.events.1.payload.effectTotal": "0.80",
+        "body.events.2.payload.operationKind": "void_authorization",
+        "body.events.2.payload.effectTotal": "0.10",
+        "body.events.3.eventId": {
+          "$ref": "lateOldCapture.publicEventIds.0"
+        },
+        "body.events.3.payload.effectTotal": "0.80"
+      }
+    },
+    {
+      "op": "send",
+      "name": "strictLegacy",
+      "path": "/billium/v1/sellers/seller-a/feed/read",
+      "scoped": true,
+      "body": {
+        "schema": "billium.feed.read.v1",
+        "subscriptionRef": {
+          "$ref": "legacy.body.subscriptionRef"
+        },
+        "selectionDigest": {
+          "$ref": "legacy.body.selectionDigest"
+        },
+        "cursor": {
+          "$ref": "legacy.body.nextCursor"
+        },
+        "limit": 100
+      },
+      "expect": {
+        "status": 200,
+        "body.events.0.schema": "billium.event.v1",
+        "body.events.0.eventType": "payment.outcome.v1"
+      }
+    },
+    {
+      "op": "send",
+      "name": "hold",
+      "path": "/billium/v1/sellers/seller-a/queries",
+      "scoped": true,
+      "body": {
+        "schema": "billium.query.v1",
+        "query": "paymentStatus",
+        "selector": {
+          "paymentRef": "root-a",
+          "sourceAuthority": "remote-billium"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body.result.applied.capturedTotal.amount": "0.80",
+        "body.result.observed.capturedTotal.amount": "1.60",
+        "body.result.exposure.overCaptured.amount": "0.60",
+        "body.result.financialHold.active": true,
+        "body.result.spendable.amount": "0.00",
+        "body.result.projectionStatus": "held_discrepancy"
+      }
+    },
+    {
+      "op": "provider",
+      "name": "provider",
+      "expect": {
+        "calls.#": 4,
+        "lookups.#": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "protocol": "billium.http.transcript.v1",
+  "id": "HTTP-15",
+  "title": "Route, body, query and cursor enforce seller scope",
+  "profile": "ledger",
+  "sources": [
+    "D23",
+    "D63"
+  ],
+  "steps": [
+    {
+      "op": "seed_seller",
+      "name": "otherSeller",
+      "expect": {"seller": "seller-b"}
+    },
+    {
+      "op": "send",
+      "name": "own",
+      "path": "/billium/v1/sellers/seller-a/queries",
+      "scoped": true,
+      "body": {
+        "schema": "billium.query.v1",
+        "query": "dueObligations",
+        "selector": {
+          "billingAccountRef": "billing-a"
+        },
+        "asOf": "2026-11-19T00:00:00Z",
+        "limit": 1
+      },
+      "expect": {
+        "status": 200,
+        "body.result.obligations.0.obligationRef": "obligation-a"
+      }
+    },
+    {
+      "op": "send",
+      "name": "wrongRoute",
+      "path": "/billium/v1/sellers/seller-b/queries",
+      "scoped": true,
+      "body": {
+        "schema": "billium.query.v1",
+        "query": "dueObligations",
+        "selector": {
+          "billingAccountRef": "billing-a"
+        },
+        "asOf": "2026-11-19T00:00:00Z",
+        "limit": 1
+      },
+      "expect": {
+        "status": 403,
+        "body.code": "billium.auth.denied",
+        "body.receipt": "none"
+      }
+    },
+    {
+      "op": "send",
+      "name": "wrongBody",
+      "path": "/billium/v1/sellers/seller-a/queries",
+      "scoped": true,
+      "body": {
+        "schema": "billium.query.v1",
+        "query": "dueObligations",
+        "selector": {
+          "billingAccountRef": "billing-a"
+        },
+        "asOf": "2026-11-19T00:00:00Z",
+        "limit": 1,
+        "sellerRef": "seller-b"
+      },
+      "expect": {
+        "status": 403,
+        "body.code": "billium.auth.denied",
+        "body.receipt": "none"
+      }
+    },
+    {
+      "op": "send",
+      "name": "foreignCursor",
+      "path": "/billium/v1/sellers/seller-b/queries",
+      "scoped": true,
+      "body": {
+        "schema": "billium.query.v1",
+        "query": "dueObligations",
+        "selector": {
+          "billingAccountRef": "billing-a"
+        },
+        "asOf": "2026-11-19T00:00:00Z",
+        "limit": 1,
+        "sellerRef": "seller-b",
+        "cursor": {
+          "$ref": "own.body.result.nextCursor"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "body.code": "billium.validation.invalid",
+        "body.receipt": "none"
+      },
+      "actor": "other-seller"
+    }
+  ]
+}

@@ -1,0 +1,145 @@
+{
+  "protocol": "billium.http.transcript.v1",
+  "id": "HTTP-12",
+  "title": "Custody, acceptance, outcome, and allocation receipts remain distinct",
+  "profile": "ledger",
+  "sources": [
+    "D31",
+    "D58",
+    "INV-08"
+  ],
+  "steps": [
+    {
+      "op": "send",
+      "name": "ack",
+      "path": "/billium/v1/sellers/seller-a/observations",
+      "scoped": true,
+      "body": {
+        "schema": "payment.observation.v1",
+        "eventId": "01JBX5Q0Z8M3N4P7R9S2000012",
+        "sourceAuthority": "embedded-commerz",
+        "sourceLineage": "L1",
+        "partitionRef": "gap",
+        "sourceSequence": 2,
+        "operationRef": "root-a",
+        "operationKind": "charge",
+        "businessIntentRef": "intent-a",
+        "operationRevision": 1,
+        "state": "succeeded",
+        "currency": "RUB",
+        "requested": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "authorizedTotal": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "capturedTotal": {
+          "amount": "10.00",
+          "currency": "RUB"
+        },
+        "refundedTotal": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "providerAccountRef": "fixture-pa",
+        "evidenceRef": "fixture-evidence-12",
+        "observedAt": "2026-11-19T00:00:00Z",
+        "recordedAt": "2026-11-19T00:00:01Z"
+      },
+      "expect": {
+        "status": 202,
+        "body.schema": "ledger.observation_custody.v1",
+        "body.custodyStatus": "parked_gap",
+        "body.receipt": "none"
+      },
+      "seal": "contentDigest"
+    },
+    {
+      "op": "send",
+      "name": "allocation",
+      "path": "/billium/v1/sellers/seller-a/observations",
+      "scoped": true,
+      "body": {
+        "schema": "payment.observation.v1",
+        "eventId": "01JBX5Q0Z8M3N4P7R9S2000001",
+        "sourceAuthority": "embedded-commerz",
+        "sourceLineage": "L1",
+        "partitionRef": "gap",
+        "sourceSequence": 1,
+        "operationRef": "root-a",
+        "operationKind": "charge",
+        "businessIntentRef": "intent-a",
+        "operationRevision": 1,
+        "state": "succeeded",
+        "currency": "RUB",
+        "requested": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "authorizedTotal": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "capturedTotal": {
+          "amount": "10.00",
+          "currency": "RUB"
+        },
+        "refundedTotal": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "providerAccountRef": "fixture-pa",
+        "evidenceRef": "fixture-evidence-1",
+        "observedAt": "2026-11-19T00:00:00Z",
+        "recordedAt": "2026-11-19T00:00:01Z"
+      },
+      "expect": {
+        "status": 200,
+        "body.schema": "ledger.allocation_receipt.v1",
+        "body.replayed": false
+      },
+      "seal": "contentDigest"
+    },
+    {
+      "op": "send",
+      "name": "lookup",
+      "path": "/billium/v1/sellers/seller-a/receipts/find",
+      "scoped": true,
+      "body": {
+        "schema": "receipt.find.v1",
+        "receiptRef": {
+          "$ref": "allocation.body.receiptRef"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body.status": "found",
+        "body.receiptSchema": "ledger.allocation_receipt.v1",
+        "body.body": {
+          "$ref": "allocation.body"
+        }
+      }
+    },
+    {
+      "op": "send",
+      "name": "outcome",
+      "path": "/billium/v1/sellers/seller-a/queries",
+      "scoped": true,
+      "body": {
+        "schema": "billium.query.v1",
+        "query": "paymentStatus",
+        "selector": {
+          "paymentRef": "root-a"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body.schema": "ledger.payment_status.v1",
+        "body.result.applied.capturedTotal.amount": "10.00",
+        "body.result.applied.allocated.amount": "10.00"
+      }
+    }
+  ]
+}

@@ -3,6 +3,7 @@
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import zipfile
@@ -10,8 +11,9 @@ import zipfile
 
 def package_archive(repo, path, version, output):
     filename = output / f"{repo.name}-{path.name}.zip"
+    # Trust the explicitly selected checkout for this Git invocation under Docker's mapped UID.
     subprocess.run(
-        ["git", "-C", repo, "archive", "--format=zip", "--output", filename,
+        ["git", "-c", f"safe.directory={repo.resolve()}", "-C", repo, "archive", "--format=zip", "--output", filename,
          f"HEAD:{path.as_posix()}"],
         check=True,
     )
@@ -24,6 +26,28 @@ def package_archive(repo, path, version, output):
 def run(consumer, *args):
     env = {**os.environ, "COMPOSER_DISABLE_NETWORK": "1"}
     subprocess.run(args, cwd=consumer, env=env, check=True)
+
+
+def seed_composer_cache(work):
+    configured = subprocess.check_output(
+        ["composer", "config", "--global", "--absolute", "cache-files-dir"],
+        cwd=work,
+        text=True,
+    )
+    shared_files = Path(configured.strip())
+    cache = work / "composer-cache"
+    cache.mkdir()
+    for archive in shared_files.glob("*/*/*.zip"):
+        relative = archive.relative_to(shared_files)
+        if relative.parts[0] == "axiomasoft":
+            continue  # All first-party packages come from this run's Git archives.
+        copy = cache / "files" / relative
+        copy.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            shutil.copyfile(archive, copy)
+        except PermissionError:
+            continue
+    return cache
 
 
 def prepare(consumer, packages, required, development=None):
@@ -90,6 +114,8 @@ def main():
     consumer = Path(sys.argv[1])
     archives = consumer / "archives"
     archives.mkdir(parents=True)
+    # The mounted cache can contain entries owned by another UID.
+    os.environ["COMPOSER_CACHE_DIR"] = str(seed_composer_cache(consumer))
 
     lock = json.loads((root / "composer.lock").read_text())
     packages = [p for p in lock["packages"] if not p["name"].startswith("axiomasoft/")]

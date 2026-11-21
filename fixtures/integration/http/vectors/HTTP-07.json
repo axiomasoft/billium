@@ -1,0 +1,124 @@
+{
+  "protocol": "billium.http.transcript.v1",
+  "id": "HTTP-07",
+  "title": "Client abort after send and provider timeout recover through original lookup",
+  "profile": "execution",
+  "sources": [
+    "D54",
+    "D57",
+    "D58"
+  ],
+  "steps": [
+    {
+      "op": "send",
+      "name": "aborted",
+      "path": "/billium/v1/sellers/seller-a/payments/execute",
+      "scoped": true,
+      "body": {
+        "schema": "payment.execute.v1",
+        "commandKey": "00000000-0000-4100-8800-000000000001",
+        "operationRef": "root-a",
+        "operationKind": "charge",
+        "source": {
+          "context": "checkout",
+          "intentRef": "intent-a",
+          "orderRef": "order-a"
+        },
+        "executionProfile": "remote-billium",
+        "routingEpoch": 1,
+        "merchantAccountRef": "account-a",
+        "money": {
+          "amount": "1.00",
+          "currency": "RUB"
+        },
+        "bindingRevision": "merchant-a",
+        "requestedAt": "2026-11-17T00:00:00Z"
+      },
+      "expect": {
+        "transport": "client-interrupted",
+        "wire.upstreamStatus": 202
+      },
+      "fault": "interrupt"
+    },
+    {
+      "op": "send",
+      "name": "admitted",
+      "path": "/billium/v1/sellers/seller-a/operations/find",
+      "scoped": true,
+      "body": {
+        "schema": "payment.find.v1",
+        "operationRef": "root-a"
+      },
+      "expect": {
+        "status": 200,
+        "body.status": "pending"
+      }
+    },
+    {
+      "op": "worker",
+      "name": "timeout",
+      "expect": {
+        "status": "unknown",
+        "reductions.#": 0
+      },
+      "input": {
+        "operation": "root-a",
+        "action": "dispatch",
+        "mode": "accepted_then_timeout"
+      }
+    },
+    {
+      "op": "send",
+      "name": "unknown",
+      "path": "/billium/v1/sellers/seller-a/operations/find",
+      "scoped": true,
+      "body": {
+        "schema": "payment.find.v1",
+        "operationRef": "root-a"
+      },
+      "expect": {
+        "status": 200,
+        "body.status": "accepted-unknown"
+      }
+    },
+    {
+      "op": "wait",
+      "name": "wait",
+      "expect": {
+        "waitedMs": 1100
+      },
+      "milliseconds": 1100
+    },
+    {
+      "op": "worker",
+      "name": "lookup",
+      "expect": {
+        "status": "pending"
+      },
+      "input": {
+        "operation": "root-a",
+        "action": "lookup"
+      }
+    },
+    {
+      "op": "snapshot",
+      "name": "identity",
+      "expect": {
+        "counts.execution_operation": 1,
+        "counts.execution_attempt": 1,
+        "operations.0.operation_ref": "root-a"
+      }
+    },
+    {
+      "op": "provider",
+      "name": "provider",
+      "expect": {
+        "calls.#": 1,
+        "lookups.#": 1,
+        "calls.0.reference": {
+          "$ref": "identity.attempts.0.provider_reference"
+        }
+      }
+    }
+  ]
+}

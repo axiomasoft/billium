@@ -1,0 +1,144 @@
+{
+  "protocol": "billium.http.transcript.v1",
+  "id": "HTTP-09",
+  "title": "Uncertified receipt lookup and stale/restore boundary do not imply absence",
+  "profile": "ledger",
+  "sources": [
+    "D54",
+    "D58",
+    "D62",
+    "BC-ENV-16"
+  ],
+  "steps": [
+    {
+      "op": "checkpoint",
+      "name": "checkpoint",
+      "expect": {
+        "checkpoint": true
+      }
+    },
+    {
+      "op": "send",
+      "name": "observation",
+      "path": "/billium/v1/sellers/seller-a/observations",
+      "scoped": true,
+      "body": {
+        "schema": "payment.observation.v1",
+        "eventId": "01JBX5Q0Z8M3N4P7R9S2000001",
+        "sourceAuthority": "embedded-commerz",
+        "sourceLineage": "L1",
+        "partitionRef": "main",
+        "sourceSequence": 1,
+        "operationRef": "root-a",
+        "operationKind": "charge",
+        "businessIntentRef": "intent-a",
+        "operationRevision": 1,
+        "state": "succeeded",
+        "currency": "RUB",
+        "requested": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "authorizedTotal": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "capturedTotal": {
+          "amount": "10.00",
+          "currency": "RUB"
+        },
+        "refundedTotal": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "providerAccountRef": "fixture-pa",
+        "evidenceRef": "fixture-evidence-1",
+        "observedAt": "2026-11-19T00:00:00Z",
+        "recordedAt": "2026-11-19T00:00:01Z"
+      },
+      "expect": {
+        "status": 200,
+        "body.schema": "ledger.allocation_receipt.v1",
+        "body.replayed": false
+      },
+      "seal": "contentDigest"
+    },
+    {
+      "op": "send",
+      "name": "receipt",
+      "path": "/billium/v1/sellers/seller-a/receipts/find",
+      "scoped": true,
+      "body": {
+        "schema": "receipt.find.v1",
+        "receiptRef": {
+          "$ref": "observation.body.receiptRef"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body.status": "found"
+      }
+    },
+    {
+      "op": "restore",
+      "name": "restore",
+      "expect": {
+        "restored": true,
+        "admission": "quarantined"
+      }
+    },
+    {
+      "op": "send",
+      "name": "stale",
+      "use": "receipt",
+      "expect": {
+        "status": 503,
+        "body.code": "billium.lookup.unavailable",
+        "body.receipt": "none"
+      }
+    },
+    {
+      "op": "snapshot",
+      "name": "before",
+      "expect": {
+        "counts.payment": 0,
+        "counts.observed_payment": 0
+      }
+    },
+    {
+      "op": "send",
+      "name": "refusedFinancialApply",
+      "use": "observation",
+      "expect": {
+        "status": 423,
+        "body.code": "billium.installation.quarantined",
+        "body.receipt": "none"
+      }
+    },
+    {
+      "op": "snapshot",
+      "name": "after",
+      "expect": {
+        "counts.payment": 0,
+        "counts.inbox_message": 1,
+        "counts.observed_payment": 0,
+        "counts.money_commit_log": {
+          "$ref": "before.counts.money_commit_log"
+        },
+        "events": {
+          "$ref": "before.events"
+        }
+      }
+    },
+    {
+      "op": "send",
+      "name": "stillUnavailable",
+      "use": "receipt",
+      "expect": {
+        "status": 503,
+        "body.code": "billium.lookup.unavailable",
+        "body.receipt": "none"
+      }
+    }
+  ]
+}

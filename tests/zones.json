@@ -12,7 +12,7 @@
     },
     {
       "id": "conformance",
-      "paths": ["conformance/**"],
+      "paths": ["conformance/**", "scripts/test/server-http.sh"],
       "layers": ["conformance"]
     },
     {

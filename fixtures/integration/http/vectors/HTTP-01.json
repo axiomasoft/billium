@@ -1,0 +1,66 @@
+{
+  "protocol": "billium.http.transcript.v1",
+  "id": "HTTP-01",
+  "title": "Fixed scale, int64 and digest independent of binary numeric precision",
+  "profile": "ledger",
+  "sources": [
+    "D9",
+    "D29",
+    "BC-ID-12"
+  ],
+  "steps": [
+    {
+      "op": "send",
+      "name": "live",
+      "path": "/billium/live",
+      "expect": {
+        "status": 200
+      }
+    },
+    {
+      "op": "codec",
+      "name": "above2p53",
+      "codec": "money.parse",
+      "input": {
+        "wire_text": "{\"amount\":\"90071992547409.93\",\"currency\":\"RUB\"}"
+      },
+      "expect": {
+        "ok.minor": "9007199254740993",
+        "ok.currency": "RUB"
+      }
+    },
+    {
+      "op": "codec",
+      "name": "int64",
+      "codec": "money.parse",
+      "input": {
+        "wire_text": "{\"amount\":\"92233720368547758.07\",\"currency\":\"RUB\"}"
+      },
+      "expect": {
+        "ok.minor": "9223372036854775807"
+      }
+    },
+    {
+      "op": "codec",
+      "name": "scale",
+      "codec": "money.parse",
+      "input": {
+        "wire_text": "{\"amount\":\"1.0\",\"currency\":\"RUB\"}"
+      },
+      "expect": {
+        "error.code": "billium.money.scale_invalid"
+      }
+    },
+    {
+      "op": "codec",
+      "name": "digest",
+      "codec": "canon.digest",
+      "input": {
+        "json_text": "{\"z\":\"9007199254740993\",\"a\":\"1.00\"}"
+      },
+      "expect": {
+        "ok.digest": "sha256:c270c7c48377c6c2efe9f9eb466a29729b3f56fbe499c1c5b3d7824a04787e59"
+      }
+    }
+  ]
+}

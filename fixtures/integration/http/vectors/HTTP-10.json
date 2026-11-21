@@ -1,0 +1,167 @@
+{
+  "protocol": "billium.http.transcript.v1",
+  "id": "HTTP-10",
+  "title": "Drain refuses a new intent and permits original recovery",
+  "profile": "execution",
+  "sources": [
+    "D55",
+    "D57"
+  ],
+  "steps": [
+    {
+      "op": "send",
+      "name": "admitted",
+      "path": "/billium/v1/sellers/seller-a/payments/execute",
+      "scoped": true,
+      "body": {
+        "schema": "payment.execute.v1",
+        "commandKey": "00000000-0000-4100-8800-000000000001",
+        "operationRef": "root-a",
+        "operationKind": "charge",
+        "source": {
+          "context": "checkout",
+          "intentRef": "intent-a",
+          "orderRef": "order-a"
+        },
+        "executionProfile": "remote-billium",
+        "routingEpoch": 1,
+        "merchantAccountRef": "account-a",
+        "money": {
+          "amount": "1.00",
+          "currency": "RUB"
+        },
+        "bindingRevision": "merchant-a",
+        "requestedAt": "2026-11-17T00:00:00Z"
+      },
+      "expect": {
+        "status": 202,
+        "body.result": "accepted",
+        "body.receipt": "CommandAccepted",
+        "body.operationRef": "root-a"
+      }
+    },
+    {
+      "op": "worker",
+      "name": "timeout",
+      "expect": {
+        "status": "unknown"
+      },
+      "input": {
+        "operation": "root-a",
+        "action": "dispatch",
+        "mode": "accepted_then_timeout"
+      }
+    },
+    {
+      "op": "drain",
+      "name": "drain",
+      "expect": {}
+    },
+    {
+      "op": "snapshot",
+      "name": "before",
+      "expect": {
+        "modules.execution": "draining",
+        "counts.execution_operation": 1
+      }
+    },
+    {
+      "op": "send",
+      "name": "refused",
+      "path": "/billium/v1/sellers/seller-a/payments/execute",
+      "scoped": true,
+      "body": {
+        "schema": "payment.execute.v1",
+        "commandKey": "00000000-0000-4100-8800-000000000002",
+        "operationRef": "after-drain",
+        "operationKind": "charge",
+        "source": {
+          "context": "checkout",
+          "intentRef": "intent-a",
+          "orderRef": "order-a"
+        },
+        "executionProfile": "remote-billium",
+        "routingEpoch": 1,
+        "merchantAccountRef": "account-a",
+        "money": {
+          "amount": "1.00",
+          "currency": "RUB"
+        },
+        "bindingRevision": "merchant-a",
+        "requestedAt": "2026-11-17T00:00:00Z"
+      },
+      "expect": {
+        "status": 409,
+        "body.code": "billium.module.unavailable",
+        "body.receipt": "none"
+      }
+    },
+    {
+      "op": "snapshot",
+      "name": "after",
+      "expect": {
+        "counts": {
+          "$ref": "before.counts"
+        },
+        "events": {
+          "$ref": "before.events"
+        },
+        "receipts": {
+          "$ref": "before.receipts"
+        },
+        "operations": {
+          "$ref": "before.operations"
+        },
+        "attempts": {
+          "$ref": "before.attempts"
+        },
+        "inbox": {
+          "$ref": "before.inbox"
+        }
+      }
+    },
+    {
+      "op": "send",
+      "name": "replay",
+      "use": "admitted",
+      "expect": {
+        "status": 202,
+        "body.result": "accepted",
+        "body.receipt": "CommandAccepted",
+        "body.operationRef": "root-a",
+        "responseDigest": {
+          "$ref": "admitted.responseDigest"
+        }
+      }
+    },
+    {
+      "op": "wait",
+      "name": "wait",
+      "expect": {
+        "waitedMs": 1100
+      },
+      "milliseconds": 1100
+    },
+    {
+      "op": "worker",
+      "name": "recover",
+      "expect": {
+        "status": "pending"
+      },
+      "input": {
+        "operation": "root-a",
+        "action": "lookup"
+      }
+    },
+    {
+      "op": "provider",
+      "name": "provider",
+      "expect": {
+        "calls.#": 1,
+        "lookups.#": 1,
+        "calls.0.operation": "root-a",
+        "lookups.0.operation": "root-a"
+      }
+    }
+  ]
+}

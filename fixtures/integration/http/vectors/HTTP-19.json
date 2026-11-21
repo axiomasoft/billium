@@ -1,0 +1,340 @@
+{
+  "protocol": "billium.http.transcript.v1",
+  "id": "HTTP-19",
+  "title": "Duplicate delivery IDs preserve economic identity, including discrepancy holds",
+  "profile": "ledger",
+  "sources": [
+    "D29",
+    "D57",
+    "D63"
+  ],
+  "steps": [
+    {
+      "op": "send",
+      "name": "capture1",
+      "path": "/billium/v1/sellers/seller-a/observations",
+      "scoped": true,
+      "body": {
+        "schema": "payment.observation.v1",
+        "eventId": "01JBX5Q0Z8M3N4P7R9S2000001",
+        "sourceAuthority": "embedded-commerz",
+        "sourceLineage": "L1",
+        "partitionRef": "overcapture",
+        "sourceSequence": 1,
+        "operationRef": "root-a",
+        "operationKind": "charge",
+        "businessIntentRef": "intent-a",
+        "operationRevision": 1,
+        "state": "succeeded",
+        "currency": "RUB",
+        "requested": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "authorizedTotal": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "capturedTotal": {
+          "amount": "80.00",
+          "currency": "RUB"
+        },
+        "refundedTotal": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "providerAccountRef": "fixture-pa",
+        "evidenceRef": "fixture-evidence-1",
+        "observedAt": "2026-11-19T00:00:00Z",
+        "recordedAt": "2026-11-19T00:00:01Z"
+      },
+      "expect": {
+        "status": 200,
+        "body.schema": "ledger.allocation_receipt.v1",
+        "body.replayed": false
+      },
+      "seal": "contentDigest",
+      "delivery": "one"
+    },
+    {
+      "op": "send",
+      "name": "overcapture",
+      "path": "/billium/v1/sellers/seller-a/observations",
+      "scoped": true,
+      "body": {
+        "schema": "payment.observation.v1",
+        "eventId": "01JBX5Q0Z8M3N4P7R9S2000002",
+        "sourceAuthority": "embedded-commerz",
+        "sourceLineage": "L1",
+        "partitionRef": "overcapture",
+        "sourceSequence": 2,
+        "operationRef": "root-a",
+        "operationKind": "charge",
+        "businessIntentRef": "intent-a",
+        "operationRevision": 2,
+        "state": "succeeded",
+        "currency": "RUB",
+        "requested": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "authorizedTotal": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "capturedTotal": {
+          "amount": "160.00",
+          "currency": "RUB"
+        },
+        "refundedTotal": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "providerAccountRef": "fixture-pa",
+        "evidenceRef": "fixture-evidence-2",
+        "observedAt": "2026-11-19T00:00:00Z",
+        "recordedAt": "2026-11-19T00:00:01Z"
+      },
+      "expect": {
+        "status": 200,
+        "body.schema": "ledger.allocation_receipt.v1",
+        "body.replayed": false
+      },
+      "seal": "contentDigest",
+      "delivery": "two"
+    },
+    {
+      "op": "send",
+      "name": "captureHold",
+      "path": "/billium/v1/sellers/seller-a/queries",
+      "scoped": true,
+      "body": {
+        "schema": "billium.query.v1",
+        "query": "paymentStatus",
+        "selector": {
+          "paymentRef": "root-a"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body.schema": "ledger.payment_status.v1",
+        "body.result.applied.capturedTotal.amount": "80.00",
+        "body.result.observed.capturedTotal.amount": "160.00",
+        "body.result.exposure.overCaptured.amount": "60.00",
+        "body.result.financialHold.active": true,
+        "body.result.projectionStatus": "held_discrepancy",
+        "body.result.spendable.amount": "0.00"
+      }
+    },
+    {
+      "op": "send",
+      "name": "refund1",
+      "path": "/billium/v1/sellers/seller-a/observations",
+      "scoped": true,
+      "body": {
+        "schema": "payment.observation.v1",
+        "eventId": "01JBX5Q0Z8M3N4P7R9S2000003",
+        "sourceAuthority": "embedded-commerz",
+        "sourceLineage": "L1",
+        "partitionRef": "overrefund",
+        "sourceSequence": 1,
+        "operationRef": "root-b",
+        "operationKind": "charge",
+        "businessIntentRef": "intent-a",
+        "operationRevision": 1,
+        "state": "succeeded",
+        "currency": "RUB",
+        "requested": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "authorizedTotal": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "capturedTotal": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "refundedTotal": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "providerAccountRef": "fixture-pa",
+        "evidenceRef": "fixture-evidence-3",
+        "observedAt": "2026-11-19T00:00:00Z",
+        "recordedAt": "2026-11-19T00:00:01Z"
+      },
+      "expect": {
+        "status": 200,
+        "body.schema": "ledger.allocation_receipt.v1",
+        "body.replayed": false
+      },
+      "seal": "contentDigest"
+    },
+    {
+      "op": "send",
+      "name": "refund2",
+      "path": "/billium/v1/sellers/seller-a/observations",
+      "scoped": true,
+      "body": {
+        "schema": "payment.observation.v1",
+        "eventId": "01JBX5Q0Z8M3N4P7R9S2000004",
+        "sourceAuthority": "embedded-commerz",
+        "sourceLineage": "L1",
+        "partitionRef": "overrefund",
+        "sourceSequence": 2,
+        "operationRef": "root-b",
+        "operationKind": "charge",
+        "businessIntentRef": "intent-a",
+        "operationRevision": 2,
+        "state": "succeeded",
+        "currency": "RUB",
+        "requested": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "authorizedTotal": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "capturedTotal": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "refundedTotal": {
+          "amount": "70.00",
+          "currency": "RUB"
+        },
+        "providerAccountRef": "fixture-pa",
+        "evidenceRef": "fixture-evidence-4",
+        "observedAt": "2026-11-19T00:00:00Z",
+        "recordedAt": "2026-11-19T00:00:01Z"
+      },
+      "expect": {
+        "status": 200,
+        "body.schema": "ledger.allocation_receipt.v1",
+        "body.replayed": false
+      },
+      "seal": "contentDigest"
+    },
+    {
+      "op": "send",
+      "name": "overrefund",
+      "path": "/billium/v1/sellers/seller-a/observations",
+      "scoped": true,
+      "body": {
+        "schema": "payment.observation.v1",
+        "eventId": "01JBX5Q0Z8M3N4P7R9S2000005",
+        "sourceAuthority": "embedded-commerz",
+        "sourceLineage": "L1",
+        "partitionRef": "overrefund",
+        "sourceSequence": 3,
+        "operationRef": "root-b",
+        "operationKind": "charge",
+        "businessIntentRef": "intent-a",
+        "operationRevision": 3,
+        "state": "succeeded",
+        "currency": "RUB",
+        "requested": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "authorizedTotal": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "capturedTotal": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "refundedTotal": {
+          "amount": "140.00",
+          "currency": "RUB"
+        },
+        "providerAccountRef": "fixture-pa",
+        "evidenceRef": "fixture-evidence-5",
+        "observedAt": "2026-11-19T00:00:00Z",
+        "recordedAt": "2026-11-19T00:00:01Z"
+      },
+      "expect": {
+        "status": 200,
+        "body.schema": "ledger.allocation_receipt.v1",
+        "body.replayed": false
+      },
+      "seal": "contentDigest"
+    },
+    {
+      "op": "send",
+      "name": "refundHold",
+      "path": "/billium/v1/sellers/seller-a/queries",
+      "scoped": true,
+      "body": {
+        "schema": "billium.query.v1",
+        "query": "paymentStatus",
+        "selector": {
+          "paymentRef": "root-b"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body.schema": "ledger.payment_status.v1",
+        "body.result.applied.capturedTotal.amount": "100.00",
+        "body.result.applied.refundedTotal.amount": "70.00",
+        "body.result.observed.refundedTotal.amount": "140.00",
+        "body.result.exposure.overRefunded.amount": "40.00",
+        "body.result.financialHold.active": true,
+        "body.result.projectionStatus": "held_discrepancy",
+        "body.result.spendable.amount": "0.00",
+        "body.result.reconciliation.status": "discrepancy"
+      }
+    },
+    {
+      "op": "snapshot",
+      "name": "before",
+      "expect": {
+        "counts.inbox_message": 5
+      }
+    },
+    {
+      "op": "send",
+      "name": "duplicate",
+      "use": "overrefund",
+      "expect": {
+        "status": 200,
+        "body.replayed": true,
+        "body.receiptRef": {
+          "$ref": "overrefund.body.receiptRef"
+        },
+        "body.body": {
+          "$ref": "overrefund.body.body"
+        }
+      },
+      "delivery": "different-transport-id"
+    },
+    {
+      "op": "snapshot",
+      "name": "after",
+      "expect": {
+        "counts": {
+          "$ref": "before.counts"
+        },
+        "events": {
+          "$ref": "before.events"
+        },
+        "receipts": {
+          "$ref": "before.receipts"
+        },
+        "operations": {
+          "$ref": "before.operations"
+        },
+        "attempts": {
+          "$ref": "before.attempts"
+        },
+        "inbox": {
+          "$ref": "before.inbox"
+        }
+      }
+    }
+  ]
+}

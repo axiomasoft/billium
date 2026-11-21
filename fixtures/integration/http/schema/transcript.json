@@ -1,0 +1,297 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "P8.5 HTTP transcript and golden assertions",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol",
+    "id",
+    "title",
+    "profile",
+    "sources",
+    "steps"
+  ],
+  "properties": {
+    "protocol": {
+      "const": "billium.http.transcript.v1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^HTTP-(0[1-9]|1[0-9]|2[01])$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "profile": {
+      "enum": [
+        "execution",
+        "ledger",
+        "custody"
+      ]
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^(D[0-9]+|BC-[A-Z]+-[0-9]+|INV-[0-9]+|COV-AC-[0-9]+)$"
+      }
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 2,
+      "contains": {
+        "properties": {
+          "op": {
+            "const": "send"
+          }
+        },
+        "required": [
+          "op"
+        ]
+      },
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "op",
+          "name",
+          "expect"
+        ],
+        "properties": {
+          "op": {
+            "enum": [
+              "send",
+              "snapshot",
+              "worker",
+              "late_evidence",
+              "provider",
+              "drain",
+              "disable_writer",
+              "stop_new",
+          "deliver",
+          "checkpoint",
+          "seed_seller",
+          "activate_custody",
+              "restore",
+              "correlate",
+              "codec",
+              "archive",
+              "wait",
+              "compare"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z][\\w-]*$"
+          },
+          "expect": {
+            "type": "object"
+          },
+          "path": {
+            "type": "string",
+            "pattern": "^/billium/"
+          },
+          "use": {
+            "type": "string",
+            "minLength": 1
+          },
+          "actor": {
+            "enum": [
+              "owner",
+              "other-seller",
+              "revoked",
+              "expired",
+              "source-x",
+              "source-y"
+            ]
+          },
+          "scoped": {
+            "type": "boolean"
+          },
+          "body": {
+            "type": "object"
+          },
+          "seal": {
+            "enum": [
+              "digest",
+              "contentDigest"
+            ]
+          },
+          "delivery": {
+            "type": "string",
+            "minLength": 1
+          },
+          "fault": {
+            "enum": [
+              "forward",
+              "close",
+              "delay",
+              "malformed",
+              "mutate",
+              "interrupt",
+              "retry-after"
+            ]
+          },
+          "mutation": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "fields",
+              "seal"
+            ],
+            "properties": {
+              "fields": {
+                "type": "object",
+                "minProperties": 1
+              },
+              "seal": {
+                "type": "boolean"
+              }
+            }
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 50,
+            "maximum": 20000
+          },
+        "verifyDigest": {
+          "type": "boolean"
+        },
+          "input": {
+            "type": "object"
+          },
+          "codec": {
+            "enum": [
+              "money.parse",
+              "canon.digest",
+              "envelope.decode"
+            ]
+          },
+          "milliseconds": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "op": {
+                  "enum": [
+                    "send"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "oneOf": [
+                {
+                  "required": [
+                    "path"
+                  ],
+                  "not": {
+                    "required": [
+                      "use"
+                    ]
+                  }
+                },
+                {
+                  "required": [
+                    "use"
+                  ],
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "path"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "body"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "op": {
+                  "enum": [
+                    "codec"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "codec",
+                "input"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "op": {
+                  "enum": [
+                    "wait"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "milliseconds"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "op": {
+                  "enum": [
+                    "worker",
+                    "late_evidence",
+                    "compare",
+                    "correlate"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "input"
+              ]
+            }
+          },
+          {
+            "if": {
+              "required": [
+                "fault"
+              ],
+              "properties": {
+                "fault": {
+                  "const": "mutate"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "mutation"
+              ]
+            }
+          }
+        ]
+      }
+    }
+  }
+}

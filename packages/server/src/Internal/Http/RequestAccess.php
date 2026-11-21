@@ -9,6 +9,7 @@ use Billium\Contracts\Data\Envelope;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Configuration\BilliumOptions;
+use Billium\Core\Exceptions\Modules\ModuleAdmissionRefused;
 use Billium\Server\Contracts\Authenticator;
 use Billium\Server\Contracts\AuthorizationVerdict;
 use Billium\Server\Contracts\InstallationContextResolver;
@@ -83,6 +84,8 @@ final readonly class RequestAccess
             return RequestCaller::run($request, $caller, static fn (): JsonResponse => $consume($envelope, $context));
         } catch (ProblemException $refusal) {
             return ProblemResponse::from($refusal->problem === ProblemCode::ReferenceUnknown ? ProblemCode::AuthDenied : $refusal->problem);
+        } catch (ModuleAdmissionRefused) {
+            return ProblemResponse::from(ProblemCode::ModuleUnavailable);
         } catch (PDOException $failure) {
             $state = (string) $failure->getCode();
             if (! str_starts_with($state, '08') && ! in_array($state, ['57014', '57P01', '57P02', '57P03'], true)) {
