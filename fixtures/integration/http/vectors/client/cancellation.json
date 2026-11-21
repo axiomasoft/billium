@@ -1,0 +1,23 @@
+{
+  "protocol": "billium.client.prepared.v1",
+  "id": "cancellation",
+  "op": "send",
+  "sources": ["D57", "D58"],
+  "shared": true,
+  "path": "/billium/v1/sellers/seller-acme/payments/execute",
+  "jsonText": "{\"schema\":\"payment.execute.v1\",\"commandKey\":\"7e0c4a52-91d3-4b6f-8a25-c3d1e9f04b87\",\"operationRef\":\"op-8f3a21\",\"operationKind\":\"charge\",\"source\":{\"context\":\"commerz\",\"orderRef\":\"ord-10234\",\"intentRef\":\"int-10234-1\"},\"installationRef\":\"inst-eu-1\",\"environment\":\"test\",\"executionProfile\":\"remote-billium\",\"routingEpoch\":1,\"sellerRef\":\"seller-acme\",\"merchantAccountRef\":\"ma-main\",\"money\":{\"amount\":\"1490.00\",\"currency\":\"RUB\"},\"bindingRevision\":\"bind-7c91d0e2\",\"returnContextRef\":\"rc-10234\",\"requestedAt\":\"2026-10-17T12:00:00Z\"}",
+  "transport": [
+    {"transport": "cancelled-after-send"}
+  ],
+  "expect": {
+    "outcome": "unresolved",
+    "error.code": "billium.transport.unavailable",
+    "error.receipt": "none",
+    "attempts.#": 1,
+    "attempts.0.path": "/billium/v1/sellers/seller-acme/payments/execute",
+    "cancelInvoked": false,
+    "newKey": false,
+    "rebuilt": false,
+    "recovery.commandKey": "7e0c4a52-91d3-4b6f-8a25-c3d1e9f04b87"
+  }
+}

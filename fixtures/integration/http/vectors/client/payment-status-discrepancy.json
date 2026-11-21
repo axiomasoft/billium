@@ -1,0 +1,27 @@
+{
+  "protocol": "billium.client.prepared.v1",
+  "id": "payment-status-discrepancy",
+  "op": "project-status",
+  "sources": ["D57"],
+  "shared": true,
+  "jsonText": "{\"schema\":\"ledger.payment_status.v1\",\"installationRef\":\"inst-test\",\"environment\":\"test\",\"sellerRef\":\"seller-a\",\"traceRef\":\"keep-me\",\"result\":{\"paymentRef\":\"root-a\",\"sourceAuthority\":\"remote-billium\",\"providerAccountRef\":\"fixture-pa\",\"billingAccountRef\":\"account-a\",\"applied\":{\"revision\":2,\"state\":\"succeeded\",\"requested\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"authorizedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"capturedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"refundedTotal\":{\"amount\":\"70.00\",\"currency\":\"RUB\"},\"allocated\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"unallocated\":{\"amount\":\"0.00\",\"currency\":\"RUB\"}},\"observed\":{\"revision\":3,\"authorizedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"capturedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"refundedTotal\":{\"amount\":\"140.00\",\"currency\":\"RUB\"},\"voidedTotal\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"evidenceRefs\":[\"fixture-evidence\"],\"observedAt\":\"2026-11-19T00:00:00Z\"},\"financialHold\":{\"active\":true,\"reasonCodes\":[\"over-refund\"],\"discrepancyRefs\":[\"disc-1\"]},\"exposure\":{\"currency\":\"RUB\",\"overCaptured\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"overRefunded\":{\"amount\":\"40.00\",\"currency\":\"RUB\"}},\"spendable\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"projectionStatus\":\"held_discrepancy\",\"bootstrap\":{\"status\":\"ready\"},\"reconciliation\":{\"status\":\"discrepancy\",\"lastCompletedAt\":\"2026-11-19T00:00:02Z\",\"completenessCursor\":\"cursor-1\"}}}",
+  "expect": {
+    "outcome": "accepted",
+    "error": null,
+    "totals.applied.capturedTotal": "100.00",
+    "totals.applied.refundedTotal": "70.00",
+    "totals.observed.capturedTotal": "100.00",
+    "totals.observed.refundedTotal": "140.00",
+    "totals.exposure.overRefunded": "40.00",
+    "totals.exposure.overCaptured": "0.00",
+    "totals.financialHold.active": true,
+    "totals.spendable": "0.00",
+    "totals.projectionStatus": "held_discrepancy",
+    "totals.pendingAllocationReason": null,
+    "totals.reconciliation.status": "discrepancy",
+    "preservedUnknown.0": "traceRef",
+    "digestCoversUnknown": true,
+    "cancelInvoked": false,
+    "newKey": false
+  }
+}

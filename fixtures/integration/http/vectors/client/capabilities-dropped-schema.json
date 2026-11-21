@@ -1,0 +1,22 @@
+{
+  "protocol": "billium.client.prepared.v1",
+  "id": "capabilities-dropped-schema",
+  "op": "capabilities-refresh",
+  "sources": ["D58", "D61"],
+  "shared": true,
+  "jsonText": "{\"schema\":\"payment.execute.v1\",\"commandKey\":\"7e0c4a52-91d3-4b6f-8a25-c3d1e9f04b87\",\"operationRef\":\"op-8f3a21\",\"operationKind\":\"charge\",\"source\":{\"context\":\"commerz\",\"orderRef\":\"ord-10234\",\"intentRef\":\"int-10234-1\"},\"installationRef\":\"inst-eu-1\",\"environment\":\"test\",\"executionProfile\":\"remote-billium\",\"routingEpoch\":1,\"sellerRef\":\"seller-acme\",\"merchantAccountRef\":\"ma-main\",\"money\":{\"amount\":\"1490.00\",\"currency\":\"RUB\"},\"bindingRevision\":\"bind-7c91d0e2\",\"returnContextRef\":\"rc-10234\",\"requestedAt\":\"2026-10-17T12:00:00Z\"}",
+  "replacement": {
+    "acceptedCommandSchemas": ["payment.execute.v2"],
+    "routingEpoch": 4
+  },
+  "expect": {
+    "outcome": "recovery",
+    "error.code": "billium.schema.unsupported",
+    "error.receipt": "none",
+    "rebuilt": false,
+    "newKey": false,
+    "cancelInvoked": false,
+    "routingEpoch": 1,
+    "attempts.#": 0
+  }
+}

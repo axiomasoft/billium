@@ -1,0 +1,22 @@
+{
+  "protocol": "billium.client.prepared.v1",
+  "id": "source-authority-namespaces",
+  "op": "prepare-pair",
+  "sources": ["D63"],
+  "shared": true,
+  "seal": "contentDigest",
+  "leftText": "{\"schema\":\"payment.observation.v1\",\"eventId\":\"01JBX5Q0Z8M3N4P7R9S2000021\",\"sourceAuthority\":\"embedded-commerz\",\"sourceLineage\":\"L1\",\"partitionRef\":\"shared\",\"sourceSequence\":1,\"installationRef\":\"inst-test\",\"environment\":\"test\",\"sellerRef\":\"seller-a\",\"operationRef\":\"root-a\",\"operationKind\":\"charge\",\"businessIntentRef\":\"intent-a\",\"operationRevision\":1,\"state\":\"succeeded\",\"currency\":\"RUB\",\"requested\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"authorizedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"capturedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"refundedTotal\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"providerAccountRef\":\"fixture-pa\",\"evidenceRef\":\"fixture-evidence\",\"observedAt\":\"2026-11-19T00:00:00Z\",\"recordedAt\":\"2026-11-19T00:00:01Z\"}",
+  "rightText": "{\"schema\":\"payment.observation.v1\",\"eventId\":\"01JBX5Q0Z8M3N4P7R9S2000021\",\"sourceAuthority\":\"remote-billium\",\"sourceLineage\":\"L1\",\"partitionRef\":\"shared\",\"sourceSequence\":1,\"installationRef\":\"inst-test\",\"environment\":\"test\",\"sellerRef\":\"seller-a\",\"operationRef\":\"root-a\",\"operationKind\":\"charge\",\"businessIntentRef\":\"intent-a\",\"operationRevision\":1,\"state\":\"succeeded\",\"currency\":\"RUB\",\"requested\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"authorizedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"capturedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"refundedTotal\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"providerAccountRef\":\"fixture-pa\",\"evidenceRef\":\"fixture-evidence\",\"observedAt\":\"2026-11-19T00:00:00Z\",\"recordedAt\":\"2026-11-19T00:00:01Z\"}",
+  "expect": {
+    "outcome": "prepared",
+    "isolated": true,
+    "authorities.0": "embedded-commerz",
+    "authorities.1": "remote-billium",
+    "preservedUnknown.0": "01JBX5Q0Z8M3N4P7R9S2000021",
+    "preservedUnknown.1": "01JBX5Q0Z8M3N4P7R9S2000021",
+    "attempts.#": 0,
+    "cancelInvoked": false,
+    "newKey": false,
+    "rebuilt": false
+  }
+}

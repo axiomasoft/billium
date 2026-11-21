@@ -1,0 +1,15 @@
+name: billium_client_conformance
+description: Test-only Billium HTTP consumer. Not a production SDK and not a money writer (D9, D61).
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  billium_contracts:
+    path: ../../../packages/contracts-dart
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.25.0

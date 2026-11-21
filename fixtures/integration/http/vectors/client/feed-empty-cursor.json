@@ -1,0 +1,17 @@
+{
+  "protocol": "billium.client.prepared.v1",
+  "id": "feed-empty-cursor",
+  "op": "feed-page",
+  "sources": ["D63"],
+  "shared": true,
+  "fixture": "fixtures/vectors/feed/empty-page.json",
+  "fixturePointer": "script.0.args.json_text",
+  "expect": {
+    "outcome": "accepted",
+    "persisted": true,
+    "eventCount": 0,
+    "cursor": "opaque.source.token",
+    "cancelInvoked": false,
+    "newKey": false
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "protocol": "billium.client.prepared.v1",
+  "id": "payment-status-unknown-enum",
+  "op": "project-status",
+  "sources": ["D57"],
+  "shared": true,
+  "jsonText": "{\"schema\":\"ledger.payment_status.v1\",\"installationRef\":\"inst-test\",\"environment\":\"test\",\"sellerRef\":\"seller-a\",\"traceRef\":\"keep-me\",\"result\":{\"paymentRef\":\"root-a\",\"sourceAuthority\":\"remote-billium\",\"providerAccountRef\":\"fixture-pa\",\"billingAccountRef\":\"account-a\",\"observed\":{\"revision\":3,\"authorizedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"capturedTotal\":{\"amount\":\"100.00\",\"currency\":\"RUB\"},\"refundedTotal\":{\"amount\":\"140.00\",\"currency\":\"RUB\"},\"voidedTotal\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"evidenceRefs\":[\"fixture-evidence\"],\"observedAt\":\"2026-11-19T00:00:00Z\"},\"financialHold\":{\"active\":true,\"reasonCodes\":[\"over-refund\"],\"discrepancyRefs\":[\"disc-1\"]},\"exposure\":{\"currency\":\"RUB\",\"overCaptured\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"overRefunded\":{\"amount\":\"40.00\",\"currency\":\"RUB\"}},\"spendable\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"projectionStatus\":\"succeeded\",\"bootstrap\":{\"status\":\"ready\"},\"reconciliation\":{\"status\":\"discrepancy\"}}}",
+  "expect": {
+    "outcome": "refused",
+    "error.code": "billium.validation.invalid",
+    "totals": null,
+    "preservedUnknown.0": "traceRef",
+    "digestCoversUnknown": true,
+    "cancelInvoked": false,
+    "newKey": false
+  }
+}

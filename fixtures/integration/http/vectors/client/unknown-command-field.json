@@ -1,0 +1,17 @@
+{
+  "protocol": "billium.client.prepared.v1",
+  "id": "unknown-command-field",
+  "op": "prepare",
+  "sources": ["D9", "D59"],
+  "shared": true,
+  "jsonText": "{\"schema\":\"payment.execute.v1\",\"commandKey\":\"7e0c4a52-91d3-4b6f-8a25-c3d1e9f04b87\",\"operationRef\":\"op-8f3a21\",\"operationKind\":\"charge\",\"source\":{\"context\":\"commerz\",\"orderRef\":\"ord-10234\",\"intentRef\":\"int-10234-1\"},\"installationRef\":\"inst-eu-1\",\"environment\":\"test\",\"executionProfile\":\"remote-billium\",\"routingEpoch\":1,\"sellerRef\":\"seller-acme\",\"merchantAccountRef\":\"ma-main\",\"money\":{\"amount\":\"1490.00\",\"currency\":\"RUB\"},\"bindingRevision\":\"bind-7c91d0e2\",\"returnContextRef\":\"rc-10234\",\"requestedAt\":\"2026-10-17T12:00:00Z\",\"note\":\"forward\"}",
+  "expect": {
+    "outcome": "refused",
+    "error.code": "billium.validation.invalid",
+    "error.receipt": "none",
+    "attempts.#": 0,
+    "prepared": null,
+    "cancelInvoked": false,
+    "newKey": false
+  }
+}
