@@ -1065,9 +1065,9 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
         $value = (string) preg_replace_callback(
             '/([?&])([^#&=\s]+)=([^&#\s]*)/',
             static function (array $match): string {
-                $full = (string) $match[0];
-                $separator = (string) $match[1];
-                $rawName = (string) $match[2];
+                $full = $match[0];
+                $separator = $match[1];
+                $rawName = $match[2];
                 $decodedName = rawurldecode($rawName);
                 $name = strtolower((string) preg_replace('/(?<=[a-z0-9])(?=[A-Z])/', '_', $decodedName));
                 $tokens = implode('|', self::SENSITIVE_DIAGNOSTIC_KEYS);
