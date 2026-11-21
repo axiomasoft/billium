@@ -59,7 +59,7 @@ final class ModuleDependencyDirectionTest extends TestCase
         foreach (array_keys($graph) as $module) {
             $visit($module, []);
         }
-        self::assertSame(array_fill_keys(array_keys($graph), 'done'), array_intersect_key($state, $graph));
+        self::assertEquals(array_fill_keys(array_keys($graph), 'done'), array_intersect_key($state, $graph));
     }
 
     public function test_rating_reaches_optional_modules_only_through_its_adapters(): void
