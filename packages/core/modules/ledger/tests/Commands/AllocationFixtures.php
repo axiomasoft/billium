@@ -16,7 +16,7 @@ use Billium\Ledger\Data\Invoices\IssueCreditNote;
 
 /**
  * Allocation-family helpers over the public Ledger root. Payments are owner fixtures: their applied projection belongs to
- * the observation path (P3.9); refunded_minor and the derived flag are assigned exactly as that path assigns them.
+ * the observation path; refunded_minor and the derived flag are assigned exactly as that path assigns them.
  */
 trait AllocationFixtures
 {

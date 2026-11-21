@@ -22,6 +22,7 @@ use Billium\Execution\Data\ExecutionScope;
 use Billium\Execution\Data\ReconciliationRun;
 use Billium\Execution\Internal\Identity\PaymentIdentity;
 use Billium\Execution\Internal\Storage\ExecutionCodec;
+use Billium\Execution\Internal\Storage\ExecutionRows;
 use Billium\Platform\Contracts\Installation\Installation;
 use Closure;
 use DateTimeImmutable;
@@ -80,7 +81,7 @@ final readonly class ReconciliationJournal
                 null, null, null, null, 'running', [], new DateTimeImmutable, null);
             $this->store->appendReconciliationRun($ctx, $run);
             $row = $q->first() ?? throw new LogicException('Missing inserted run');
-            $db->table('billium_execution_recon_binding')->insert($bind + ['run_id' => $row->id, 'through_at' => self::stamp($window->through)]);
+            $db->table('billium_execution_recon_binding')->insert($bind + ['run_id' => $row->id, 'through_at' => ExecutionRows::stamp($window->through)]);
         }
         $bound = $db->table('billium_execution_recon_binding')->where('run_id', $row->id)->where($window->bindingFields())->first();
         if ($bound === null || ! is_string($bound->through_at) || ! is_string($row->recovery_horizon)
@@ -127,21 +128,6 @@ final readonly class ReconciliationJournal
         $this->store->lock($ctx, $this->store->plan($scope, $root, true, $ctx));
     }
 
-    public static function stamp(DateTimeImmutable $date): string
-    {
-        return $date->format('Y-m-d H:i:s.uP');
-    }
-
-    public static function integer(mixed $field): int
-    {
-        return is_int($field) || (is_string($field) && ctype_digit($field)) ? (int) $field : throw new LogicException('Unexpected recovery row identity');
-    }
-
-    public static function string(mixed $field): string
-    {
-        return is_string($field) ? $field : throw new LogicException('Unexpected recovery journal field type');
-    }
-
     public function finish(RecoveryWindow $w, ?string $cursor, string $state, ?string $next, ?string $watermark, ?string $pageDigest): StoredOutcome
     {
         return $this->write($w->scope, $w->source, 'execution.advance_reconciliation', function (TransactionContext $ctx) use ($w, $cursor, $state, $next, $watermark, $pageDigest): ExecutionReceipt {
@@ -155,7 +141,7 @@ final readonly class ReconciliationJournal
         ?string $watermark, ?string $pageDigest): ExecutionReceipt
     {
         if ($row->state === 'complete' || $row->inventory_cursor !== $cursor) {
-            return $w->receipt(self::string($row->state));
+            return $w->receipt(ExecutionRows::text($row->state));
         }
         $digest = $pageDigest === null ? $row->inventory_digest : ExecutionCodec::digest([$row->inventory_digest, $pageDigest]);
         $unresolved = [];
@@ -195,15 +181,15 @@ final readonly class ReconciliationJournal
                 $reviews->where('observed->attemptRef', $w->attempt);
             }
             foreach ($reviews->cursor() as $review) {
-                $observed = ExecutionCodec::map(self::string($review->observed));
+                $observed = ExecutionCodec::map(ExecutionRows::text($review->observed));
                 $fact = $observed['factRef'] ?? $observed['attemptRef'] ?? $review->evidence_ref;
-                $unresolved[] = new UnresolvedDisposition(self::string($fact), $w->merchant->merchantAccountRef, 'held', 'manual_review', null, self::string($review->event_ref));
+                $unresolved[] = new UnresolvedDisposition(ExecutionRows::text($fact), $w->merchant->merchantAccountRef, 'held', 'manual_review', null, ExecutionRows::text($review->event_ref));
             }
         }
         $run = new ReconciliationRun($w->ref, $w->scope, $w->merchant->merchantAccountRef, $w->from, $next, $watermark,
             is_string($digest) ? $digest : null, $manifest,
-            $state, $unresolved, new DateTimeImmutable(self::string($row->started_at)), $state === 'complete' ? new DateTimeImmutable : null);
-        $this->store->advanceReconciliationRun($ctx, $run, self::string($row->state));
+            $state, $unresolved, new DateTimeImmutable(ExecutionRows::text($row->started_at)), $state === 'complete' ? new DateTimeImmutable : null);
+        $this->store->advanceReconciliationRun($ctx, $run, ExecutionRows::text($row->state));
 
         return $w->receipt($state);
     }

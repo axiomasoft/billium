@@ -8,6 +8,7 @@ use Billium\Usage\Internal\Canonical\CanonicalJson;
 use Billium\Usage\Internal\Errors\UsageProblems;
 use Packman\Attributes\Api;
 
+/** @phpstan-type WindowPayload array{sellerRef: string, environment: string, metricRef: string, metricVersion: string, group: object, startMicros: int, endMicros: int} */
 #[Api]
 final readonly class WindowSelector
 {
@@ -41,7 +42,7 @@ final readonly class WindowSelector
         $this->groupKey = $normalized;
     }
 
-    /** @return array<string, mixed> */
+    /** @return WindowPayload */
     public function payload(): array
     {
         return [

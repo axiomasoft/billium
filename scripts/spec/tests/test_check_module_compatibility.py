@@ -1,4 +1,4 @@
-"""Negative and positive examples for scripts/spec/check-module-compatibility.py (P3.13)."""
+"""Negative and positive examples for scripts/spec/check-module-compatibility.py."""
 from __future__ import annotations
 
 import copy

@@ -173,14 +173,20 @@ final readonly class RatingComputation implements RatingQuoter
             self::refuse('no_charge_reason_required');
         }
         $digest = $inputs->digest();
-        $basis = 'rb_'.substr(hash('sha256', implode('|', [$inputs->sellerRef, $inputs->environment, $inputs->occurrenceRef,
-            $predecessorBasisRef === null ? 'original' : 'correction:'.$correctionRevision, $digest])), 0, 48);
+        $basis = self::basisRef(inputs: $inputs, correctionRevision: $predecessorBasisRef === null ? null : $correctionRevision);
 
         return new RatedBasisDraft(basisRef: $basis, inputsDigest: $digest,
             ratedDigest: CanonicalJson::digest(['inputsDigest' => $digest, 'lines' => $lines, 'totals' => ['net' => $net, 'tax' => $taxTotal, 'gross' => $gross]]),
             chargeKind: $gross === '0' ? ChargeKind::NoCharge : ChargeKind::Charge,
             noChargeReason: $gross === '0' && $predecessorBasisRef !== null ? 'correction_zero' : $inputs->noChargeReason,
             lines: $lines, netMinor: $net, taxMinor: $taxTotal, grossMinor: $gross);
+    }
+
+    /** Basis identity of the original rating (null revision) or of one correction revision of an occurrence. */
+    public static function basisRef(FrozenRatingInputs $inputs, ?int $correctionRevision = null): string
+    {
+        return 'rb_'.substr(hash('sha256', implode('|', [$inputs->sellerRef, $inputs->environment, $inputs->occurrenceRef,
+            $correctionRevision === null ? 'original' : 'correction:'.$correctionRevision, $inputs->digest()])), 0, 48);
     }
 
     public static function commitmentScope(string $environment, CommitmentTerms $terms): string

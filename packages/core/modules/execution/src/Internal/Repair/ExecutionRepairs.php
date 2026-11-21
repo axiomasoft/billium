@@ -18,6 +18,7 @@ use Billium\Execution\Enums\NamespaceState;
 use Billium\Execution\Internal\Identity\PaymentIdentity;
 use Billium\Execution\Internal\Reconciliation\ReconciliationJournal;
 use Billium\Execution\Internal\Storage\ExecutionCodec;
+use Billium\Execution\Internal\Storage\ExecutionRows;
 use Billium\Platform\Contracts\Outbox\Outbox;
 use Billium\Platform\Data\EventContracts\EventContractRegistration;
 use Billium\Platform\Data\EventContracts\RegisteredPublicEvent;
@@ -87,8 +88,8 @@ final readonly class ExecutionRepairs implements RepairCommands
             $record = get_object_vars($prior);
             unset($record['id']);
             $db->table('billium_execution_recon_review')->insert(array_replace($record, ['event_ref' => $eventRef, 'provenance' => $action->actionKind,
-                'status' => $status, 'receipt_ref' => $ref, 'created_at' => ReconciliationJournal::stamp($now),
-                'next_review_at' => $status === 'resolved' ? null : ReconciliationJournal::stamp($now)]));
+                'status' => $status, 'receipt_ref' => $ref, 'created_at' => ExecutionRows::stamp($now),
+                'next_review_at' => $status === 'resolved' ? null : ExecutionRows::stamp($now)]));
             $storedAction = new RecoveryAction($ref, $scope, $action->actionKind, $action->evidenceRefs, $ctx->caller()->actorRef, $action->reason, $semantic, $root->operationRef);
             $receipt = $this->store->appendRepairReceipt($ctx, $storedAction, $before, $after, [$reviewRef, $eventRef, $eventId, ...$links]);
             $this->recordEvent($ctx, new OutboxEvent($eventId, 'execution.repair_recorded.v1', 'billium.event.v3', $ref, 1, $now,
@@ -126,7 +127,7 @@ final readonly class ExecutionRepairs implements RepairCommands
         $absenceAttempt = null;
         foreach ($supplement as $evidence) {
             $work = $db->table('billium_execution_provider_work')->where($route)->where('evidence_ref', $evidence)->where('state', 'processed')->first();
-            $input = $work === null ? null : $this->store->providerWork(ReconciliationJournal::string($work->work_ref), $ctx);
+            $input = $work === null ? null : $this->store->providerWork(ExecutionRows::text($work->work_ref), $ctx);
             $op = $input?->operationHint === null ? null : $this->store->operation($scope, $input->operationHint, $ctx);
             if ($op === null || $op->rootOperationRef !== $root || $op->binding->merchantAccountRef !== $review->merchant_account_ref
                 || $op->binding->merchantRevisionRef !== $review->revision_ref || $op->binding->executionProfile !== $review->source_authority
@@ -151,7 +152,7 @@ final readonly class ExecutionRepairs implements RepairCommands
         if ($action->actionKind === 'approve_linked_correction') {
             return new LinkedCorrectionApproval($this->store)->links($ctx, $db, $route, $action, $review, $facts);
         }
-        $observed = ExecutionCodec::map(ReconciliationJournal::string($review->observed));
+        $observed = ExecutionCodec::map(ExecutionRows::text($review->observed));
         $valid = match ($action->actionKind) {
             'attach_trusted_evidence' => $facts !== [],
             'adopt_external_effect' => $review->code === 'external_manual' && $review->provenance === 'original_provider_inventory' && $supplement === [],

@@ -571,11 +571,20 @@ final readonly class AccountingFactMapper implements AccountingMapper
             if ($money === null || $money->minor <= 0) {
                 return AccountingMappingResult::ignored('zero_or_missing_allocation_reversal_amount');
             }
+            // Ledger stores the negated original charge and re-places remainder_minor on the same receipt.
+            $remainderMinor = self::parseIntValue($payload['remainder_minor'] ?? $payload['remainderMinor'] ?? null);
+            if ($remainderMinor !== null && $remainderMinor > 0 && $remainderMinor < $money->minor) {
+                $money = new Money($money->minor - $remainderMinor, $money->currency);
+            }
 
             $sourceFactRef = $this->namedFactRef($record->sellerRef, $record->environment, AccountingFactKind::AllocationReversed, $reversalRef);
             $originalFactRef = self::nonEmptyString($payload['originalFactRef'] ?? null);
             if ($originalFactRef === null && $reversesRef !== null) {
-                $originalFactRef = $this->namedFactRef($record->sellerRef, $record->environment, AccountingFactKind::AllocationApplied, $reversesRef);
+                // Ledger retains a remainder under the receipt of the reversal that produced it.
+                $originalKind = str_starts_with($reversesRef, 'reversal:')
+                    ? AccountingFactKind::AllocationReversed
+                    : AccountingFactKind::AllocationApplied;
+                $originalFactRef = $this->namedFactRef($record->sellerRef, $record->environment, $originalKind, $reversesRef);
             }
 
             $metadata = self::filterNonNull([
@@ -743,7 +752,7 @@ final readonly class AccountingFactMapper implements AccountingMapper
             $money = self::parseMoneyWire($payload[$key] ?? null);
             if ($money !== null) {
                 if ($allowNegativeMagnitude && $money->minor < 0) {
-                    return new Money(abs($money->minor), $money->currency);
+                    return $money->minor === PHP_INT_MIN ? null : new Money(-$money->minor, $money->currency);
                 }
 
                 return $money;
@@ -758,6 +767,9 @@ final readonly class AccountingFactMapper implements AccountingMapper
         foreach ($minorKeys as $key) {
             $minor = self::parseIntValue($payload[$key] ?? null);
             if ($minor !== null) {
+                if ($allowNegativeMagnitude && $minor === PHP_INT_MIN) {
+                    return null;
+                }
                 $value = $allowNegativeMagnitude ? abs($minor) : $minor;
 
                 return new Money($value, Currency::of($currencyCode));
@@ -781,6 +793,9 @@ final readonly class AccountingFactMapper implements AccountingMapper
             $minor = self::parseIntValue($line['amount_minor'] ?? $line['amountMinor'] ?? null);
             if ($minor === null || $minor <= 0) {
                 continue;
+            }
+            if ($sum > PHP_INT_MAX - $minor) {
+                return null;
             }
             $sum += $minor;
             $counted++;
@@ -899,7 +914,13 @@ final readonly class AccountingFactMapper implements AccountingMapper
             return $value;
         }
         if (is_string($value) && preg_match('/^-?(0|[1-9][0-9]*)$/', $value) === 1) {
-            return (int) $value;
+            $minor = (int) $value;
+            // An out-of-range numeric string is cast through float and must not become money.
+            if ((string) $minor !== $value) {
+                return null;
+            }
+
+            return $minor;
         }
 
         return null;

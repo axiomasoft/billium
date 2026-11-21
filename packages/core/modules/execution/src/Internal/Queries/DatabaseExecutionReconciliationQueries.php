@@ -15,8 +15,8 @@ use Billium\Execution\Data\ExecutionReviewQueueRow;
 use Billium\Execution\Data\ExecutionScope;
 use Billium\Execution\Enums\AttemptState;
 use Billium\Execution\Internal\Identity\PaymentIdentity;
-use Billium\Execution\Internal\Reconciliation\ReconciliationJournal;
 use Billium\Execution\Internal\Storage\ExecutionCodec;
+use Billium\Execution\Internal\Storage\ExecutionRows;
 use DateTimeImmutable;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Contracts\Encryption\Encrypter;
@@ -73,9 +73,9 @@ final readonly class DatabaseExecutionReconciliationQueries implements Execution
                 $result[] = new ExecutionRecoveryQueueRow(ExecutionCodec::text($r->operation_ref), ExecutionCodec::text($r->root_operation_ref),
                     ExecutionCodec::text($r->attempt_ref), ExecutionCodec::text($r->state), ExecutionCodec::text($r->namespace_state), ExecutionCodec::text($r->intent_owner_namespace),
                     ExecutionCodec::text($r->merchant_account_ref), ExecutionCodec::text($r->merchant_revision_ref), ExecutionCodec::text($r->provider_id),
-                    ExecutionCodec::text($r->binding_digest), ExecutionCodec::text($r->currency), self::time($r->sort_at), self::nullableTime($r->last_reconciled_at),
-                    ReconciliationJournal::integer($r->attempt_count), max(0, $asOf->getTimestamp() - self::time($r->created_at)->getTimestamp()),
-                    self::nullableText($r->last_error_code), self::nullableTime($r->last_error_at), self::nullableText($r->finish_evidence_ref));
+                    ExecutionCodec::text($r->binding_digest), ExecutionCodec::text($r->currency), ExecutionRows::date($r->sort_at), ExecutionRows::nullableDate($r->last_reconciled_at),
+                    ExecutionRows::integer($r->attempt_count), max(0, $asOf->getTimestamp() - ExecutionRows::date($r->created_at)->getTimestamp()),
+                    ExecutionRows::nullableText($r->last_error_code), ExecutionRows::nullableDate($r->last_error_at), ExecutionRows::nullableText($r->finish_evidence_ref));
             }
 
             return new ExecutionRecoveryQueuePage($result, $next);
@@ -113,13 +113,13 @@ final readonly class DatabaseExecutionReconciliationQueries implements Execution
             [$rows, $next] = $this->page($query, $due ? 'r.next_review_at' : 'r.created_at', 'r.id', $asOf, $context, $limit, $cursor);
             $result = [];
             foreach ($rows as $r) {
-                $created = self::time($r->created_at);
+                $created = ExecutionRows::date($r->created_at);
                 $result[] = new ExecutionReviewQueueRow(ExecutionCodec::text($r->case_ref), ExecutionCodec::text($r->event_ref), ExecutionCodec::text($r->status),
                     ExecutionCodec::text($r->code), ExecutionCodec::text($r->severity), ExecutionCodec::text($r->owner_ref), ExecutionCodec::text($r->merchant_account_ref),
-                    ExecutionCodec::text($r->revision_ref), ExecutionCodec::text($r->currency), self::nullableText($r->root_ref), ExecutionCodec::text($r->evidence_ref),
+                    ExecutionCodec::text($r->revision_ref), ExecutionCodec::text($r->currency), ExecutionRows::nullableText($r->root_ref), ExecutionCodec::text($r->evidence_ref),
                     ExecutionCodec::text($r->source_digest), ExecutionCodec::text($r->basis_digest), ExecutionCodec::map(ExecutionCodec::text($r->expected)),
-                    ExecutionCodec::map(ExecutionCodec::text($r->observed)), ExecutionCodec::text($r->provenance), self::nullableText($r->receipt_ref),
-                    $created, self::nullableTime($r->next_review_at), max(0, $asOf->getTimestamp() - $created->getTimestamp()));
+                    ExecutionCodec::map(ExecutionCodec::text($r->observed)), ExecutionCodec::text($r->provenance), ExecutionRows::nullableText($r->receipt_ref),
+                    $created, ExecutionRows::nullableDate($r->next_review_at), max(0, $asOf->getTimestamp() - $created->getTimestamp()));
             }
 
             return new ExecutionReviewQueuePage($result, $next);
@@ -166,30 +166,15 @@ final readonly class DatabaseExecutionReconciliationQueries implements Execution
             }
             $query->whereRaw('('.$sort.','.$id.') > (?::timestamptz,?::bigint)', [$tuple[1], $tuple[2]]);
         }
-        $rows = $query->selectRaw($sort.' as sort_at')->whereRaw($sort.' <= ?::timestamptz', [ReconciliationJournal::stamp($until)])
+        $rows = $query->selectRaw($sort.' as sort_at')->whereRaw($sort.' <= ?::timestamptz', [ExecutionRows::stamp($until)])
             ->orderByRaw($sort.','.$id)->limit($limit + 1)->get()->values()->all();
         $next = null;
         if (count($rows) > $limit) {
             array_pop($rows);
             $last = $rows[$limit - 1];
-            $next = $this->encrypter->encrypt(json_encode([$context, ExecutionCodec::text($last->sort_at), ReconciliationJournal::integer($last->id)], JSON_THROW_ON_ERROR), false);
+            $next = $this->encrypter->encrypt(json_encode([$context, ExecutionCodec::text($last->sort_at), ExecutionRows::integer($last->id)], JSON_THROW_ON_ERROR), false);
         }
 
         return [array_values($rows), $next];
-    }
-
-    private static function time(mixed $value): DateTimeImmutable
-    {
-        return new DateTimeImmutable(ExecutionCodec::text($value));
-    }
-
-    private static function nullableTime(mixed $value): ?DateTimeImmutable
-    {
-        return $value === null ? null : self::time($value);
-    }
-
-    private static function nullableText(mixed $value): ?string
-    {
-        return $value === null ? null : ExecutionCodec::text($value);
     }
 }

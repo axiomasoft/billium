@@ -84,7 +84,7 @@ abstract class ModuleTestCase extends TestCase
     }
 
     /**
-     * Checkpoints of an installation that applied every packaged migration of these modules (P3.3+ ship SQL).
+     * Checkpoints of an installation that applied every packaged migration of these modules (each ships SQL).
      *
      * @return array<string, InstalledCheckpoint>
      */

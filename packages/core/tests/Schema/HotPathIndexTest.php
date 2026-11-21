@@ -28,6 +28,7 @@ final class HotPathIndexTest extends ExecutionTestCase
     public function test_hot_path_indexes_cover_the_query_columns(): void
     {
         $this->assertIndex('billium_outbox_event_scope_cursor', ['source_scope', 'jsonb', 'tx_id']);
+        $this->assertIndex('billium_outbox_event_seller_cursor', ['seller_ref', 'environment', 'tx_id']);
         $this->assertIndex('billium_outbox_event_cursor', ['tx_id']);
         $this->assertIndex('billium_inbox_message_pending_op_idx', ['installationRef', 'ready', 'parked_gap', 'parked_dependency']);
         $this->assertIndex('billium_obligation_account_due_idx', ['billing_account_ref', 'due_at', 'open']);

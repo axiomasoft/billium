@@ -25,7 +25,7 @@ use Packman\Attributes\Internal;
 #[Internal]
 final readonly class AllocateCommand
 {
-    /** Lineage of an explicit allocation; automatic allocation of observations uses pro_rata_open/1 (P3.9). */
+    /** Lineage of an explicit allocation; automatic allocation of observations uses pro_rata_open/1 (see ObservationApplier). */
     public const string POLICY = 'explicit/1';
 
     public function __construct(private DatabaseManager $databases, private OperationRunner $runner, private AllocationReceiptWriter $writer) {}

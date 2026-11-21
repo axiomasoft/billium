@@ -17,6 +17,10 @@ use Billium\Usage\Internal\Storage\EffectiveFactSource;
 use Billium\Usage\Internal\Window\WindowQualifier;
 use Packman\Attributes\Internal;
 
+/**
+ * @phpstan-import-type SnapshotView from AggregationQueries
+ * @phpstan-import-type WindowStatus from AggregationQueries
+ */
 #[Internal]
 final readonly class DatabaseAggregationQueries implements AggregationQueries
 {
@@ -25,7 +29,7 @@ final readonly class DatabaseAggregationQueries implements AggregationQueries
         private SnapshotBuilder $builder, private WindowQualifier $qualifier,
     ) {}
 
-    /** @return array<string, mixed> */
+    /** @return SnapshotView */
     public function snapshot(string $snapshotRef): array
     {
         $db = $this->store->database();
@@ -44,7 +48,7 @@ final readonly class DatabaseAggregationQueries implements AggregationQueries
         ];
     }
 
-    /** @return array<string, mixed> */
+    /** @return WindowStatus */
     public function windowStatus(WindowSelector $window): array
     {
         $this->store->authorize($window);
@@ -95,7 +99,7 @@ final readonly class DatabaseAggregationQueries implements AggregationQueries
             'aggregatedThroughIngestSeq' => $snapshot === null ? 0 : AggregationRows::integer($snapshot->ingest_frontier_seq),
             'ingestedThroughIngestSeq' => $revisions === [] ? 0 : max(array_map(static fn (FactRevision $f): int => $f->ingestSeq, $revisions)),
             'heldReasons' => $reasons, 'repairOrReplayRefs' => $qualification->repairRefs,
-            'finalSnapshotRef' => $snapshot?->snapshot_ref,
+            'finalSnapshotRef' => $snapshot === null ? null : AggregationRows::text($snapshot->snapshot_ref),
             'progress' => $snapshot === null || $lag > 0 ? 'pending' : 'aggregated',
         ];
         if ($snapshot !== null && $state === 'final' && $lag === 0) {
@@ -127,8 +131,7 @@ final readonly class DatabaseAggregationQueries implements AggregationQueries
                 $classification = LateClass::InGrace;
             }
         } else {
-            $members = $this->store->membership(db: $db, snapshot: $snapshot);
-            if (! array_any($members, static fn (array $m): bool => $m['factId'] === $factId && $m['factRevision'] === $factRevision)) {
+            if (! $this->store->hasMember(db: $db, snapshot: $snapshot, factId: $factId, factRevision: $factRevision)) {
                 $classification = LateClass::PostFinal;
             }
         }

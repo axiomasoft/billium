@@ -15,6 +15,7 @@ use Billium\Execution\Data\ExecutionScope;
 use Billium\Execution\Data\MerchantRevision;
 use Billium\Execution\Data\OriginDecision;
 use Packman\Attributes\Internal;
+use stdClass;
 
 #[Internal]
 final class PaymentIdentity
@@ -81,5 +82,28 @@ final class PaymentIdentity
     public static function digest(array $fields): string
     {
         return 'sha256:'.hash('sha256', (new Codec)->canonicalize($fields));
+    }
+
+    /**
+     * Command terms that define its meaning: the envelope minus its transport identity (key, timestamp, digest).
+     *
+     * @return array<mixed> JSON object members; numeric member names decode to integer keys
+     */
+    public static function terms(stdClass $raw): array
+    {
+        $terms = get_object_vars($raw);
+        unset($terms['commandKey'], $terms['requestedAt'], $terms['digest']);
+
+        return $terms;
+    }
+
+    /** Identities are stored as PostgreSQL text, which cannot carry a NUL byte. */
+    public static function assertText(string $refusal, string ...$fields): void
+    {
+        foreach ($fields as $field) {
+            if (str_contains($field, "\0")) {
+                throw new ProblemException(ProblemCode::ValidationInvalid, $refusal);
+            }
+        }
     }
 }

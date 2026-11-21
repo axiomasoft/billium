@@ -52,7 +52,8 @@ final class AbsenceScopeTest extends TestCase
         try {
             $verifier->certify($binding, 'never-sent', $this->clock->now, $this->clock->now);
             self::fail('Unfenced absence accepted');
-        } catch (RuntimeException) {
+        } catch (RuntimeException $error) {
+            self::assertSame('No complete simulated retirement fence', $error->getMessage());
         }
         $claims = HarnessFactory::dispatch(HarnessFactory::request($cap));
         $host = new DeterministicWriterHost($authority, $this->clock, static fn (): int => 0);
@@ -61,8 +62,16 @@ final class AbsenceScopeTest extends TestCase
         $certificate = $verifier->certify($binding, 'never-sent', $this->clock->now, $this->clock->now);
         $verifier->verify($certificate, $binding);
         self::assertCount(1, $certificates->records());
+        try {
+            $verifier->verify($certificate, HarnessFactory::binding($cap, 'foreign-seller'));
+            self::fail('Absence certificate accepted for a foreign seller');
+        } catch (RuntimeException $error) {
+            self::assertSame('No complete simulated retirement fence', $error->getMessage());
+        }
+        // Same scope, fence and manifest: only the certificate's frozen binding can refuse another source context.
         $this->expectException(RuntimeException::class);
-        $verifier->verify($certificate, HarnessFactory::binding($cap, 'foreign-seller'));
+        $this->expectExceptionMessage('Invalid or stale simulated absence certificate');
+        $verifier->verify($certificate, HarnessFactory::binding($cap, sourceContext: 'foreign-context'));
     }
 
     public function test_retained_provider_effect_never_becomes_absent_after_ttl(): void
@@ -79,6 +88,7 @@ final class AbsenceScopeTest extends TestCase
         $clock->advance(1000000);
         $verifier = new SimulatedAbsenceVerifier($provider, $authority, new DurableJournal($this->directory.'/certificates.log'), $clock, $cap, static fn (): int => 0);
         $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Provider has retained reference; absence is false');
         $verifier->certify(HarnessFactory::binding($cap), 'reference-a', new DateTimeImmutable('2026-11-17T00:00:00Z'), $clock->now);
     }
 
@@ -95,6 +105,7 @@ final class AbsenceScopeTest extends TestCase
         $verifier = new SimulatedAbsenceVerifier($provider, $authority, new DurableJournal($this->directory.'/certificates.log'), $this->clock, $cap, static fn (): int => 0);
         $certificate = new AbsenceCertificate('unissued', $binding, 'missing', 'namespace', 'watermark', $this->clock->now, $this->clock->now, 'manifest', 'retirement', 'fence', 'qualification', 'issuer', 'signature', $this->clock->now->modify('+30 seconds'));
         $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Invalid or stale simulated absence certificate');
         $verifier->verify($certificate, $binding);
     }
 }

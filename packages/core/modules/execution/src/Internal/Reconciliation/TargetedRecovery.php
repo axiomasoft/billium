@@ -17,6 +17,7 @@ use Billium\Execution\Enums\AttemptState;
 use Billium\Execution\Internal\Dispatch\TransportBoundary;
 use Billium\Execution\Internal\Disputes\InventoryComparison;
 use Billium\Execution\Internal\Storage\ExecutionCodec;
+use Billium\Execution\Internal\Storage\ExecutionRows;
 use DateTimeImmutable;
 use LogicException;
 use Packman\Attributes\Internal;
@@ -35,7 +36,7 @@ final readonly class TargetedRecovery
         $merchant = $this->store->merchantRevision($scope, $op->binding->merchantRevisionRef);
         $w = new RecoveryWindow($scope, $op->binding->executionProfile, $ref, $merchant, $op->requested->currency->code,
             $attempt->startedAt ?? $op->createdAt, $leaseUntil, $attemptRef);
-        $start = $this->journal->write($scope, $w->source, 'execution.begin_targeted_lookup', fn (TransactionContext $ctx): ExecutionReceipt => $w->receipt(ReconciliationJournal::string($this->journal->current($ctx, $w)->state)));
+        $start = $this->journal->write($scope, $w->source, 'execution.begin_targeted_lookup', fn (TransactionContext $ctx): ExecutionReceipt => $w->receipt(ExecutionRows::text($this->journal->current($ctx, $w)->state)));
         if ($start->body['status'] !== 'running') {
             return $start;
         }
@@ -45,7 +46,7 @@ final readonly class TargetedRecovery
         if (in_array($attempt->state, [AttemptState::Dispatching, AttemptState::Pending, AttemptState::Unknown], true)) {
             // Attempt states never reverse to admitted. Recovery of this set can only look up the original reference.
             $receipt = $this->worker->recover($scope, $attemptRef, $worker, $leaseUntil)->orThrow();
-            $transport = ReconciliationJournal::string($receipt->body['receiptRef'] ?? null);
+            $transport = ExecutionRows::text($receipt->body['receiptRef'] ?? null);
             $refs[] = $transport;
             $this->journal->write($scope, $w->source, 'execution.read_lookup_result', function (TransactionContext $ctx) use ($w, $transport, $op, &$refs, &$works, &$reason): ExecutionReceipt {
                 $this->journal->current($ctx, $w);
@@ -55,18 +56,18 @@ final readonly class TargetedRecovery
                 if ($row === null) {
                     throw new ProblemException(ProblemCode::RecoveryRequired, 'Missing immutable lookup custody');
                 }
-                $data = ExecutionCodec::map(ReconciliationJournal::string($row->sanitized_payload));
+                $data = ExecutionCodec::map(ExecutionRows::text($row->sanitized_payload));
                 if (($data['attemptRef'] ?? null) !== $w->attempt || ($data['operationRef'] ?? null) !== $op->operationRef
                     || ! in_array($data['source'] ?? null, ['lookup', 'verified_absence'], true)) {
                     throw new ProblemException(ProblemCode::RecoveryRequired, 'Unexpected lookup provenance');
                 }
-                $reason = ReconciliationJournal::string($data['lookupState'] ?? null);
+                $reason = ExecutionRows::text($data['lookupState'] ?? null);
                 $evidenceRef = $data['retainedProviderEvidenceRef'] ?? null;
                 if (is_string($evidenceRef)) {
                     $refs[] = $evidenceRef;
                 }
                 $works = $db->table('billium_execution_provider_work')->where($w->scopeFields())->whereIn('evidence_ref', $refs)
-                    ->where('operation_hint', $op->operationRef)->orderBy('id')->pluck('work_ref')->map(ReconciliationJournal::string(...))->all();
+                    ->where('operation_hint', $op->operationRef)->orderBy('id')->pluck('work_ref')->map(ExecutionRows::text(...))->all();
 
                 return $w->receipt('retained', $refs);
             });
@@ -78,7 +79,7 @@ final readonly class TargetedRecovery
         return $this->journal->write($scope, $w->source, 'execution.record_targeted_lookup', function (TransactionContext $ctx) use ($op, $w, $refs, $works, $reason): ExecutionReceipt {
             $row = $this->journal->current($ctx, $w);
             if ($row->state !== 'running') {
-                return $w->receipt(ReconciliationJournal::string($row->state));
+                return $w->receipt(ExecutionRows::text($row->state));
             }
             $db = $this->journal->db($ctx);
             $basis = $this->comparisons->basis($ctx, $w, $op->rootOperationRef);

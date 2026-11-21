@@ -130,17 +130,17 @@ final class LockSetTest extends TestCase
     public function test_requests_reject_claims_foreign_tables_and_mixed_keys(): void
     {
         foreach ([
-            static fn (): LockRequest => new LockRequest(LockRank::Claim, 'billium_idempotency_receipt', [1]),
-            static fn (): LockRequest => new LockRequest(LockRank::Obligation, 'users', [1]),
-            static fn (): LockRequest => new LockRequest(LockRank::Obligation, 'billium_obligation', []),
-            static fn (): LockRequest => new LockRequest(LockRank::Obligation, 'billium_obligation', [1, 'a']),
-            static fn (): LockRequest => new LockRequest(LockRank::Obligation, 'billium_obligation', [1], keyColumn: 'id; drop'),
-        ] as $build) {
+            ['The claim is an insert, not a row lock', static fn (): LockRequest => new LockRequest(LockRank::Claim, 'billium_idempotency_receipt', [1])],
+            ['Lock target must be a billium_ table', static fn (): LockRequest => new LockRequest(LockRank::Obligation, 'users', [1])],
+            ['A lock request names at least one key', static fn (): LockRequest => new LockRequest(LockRank::Obligation, 'billium_obligation', [])],
+            ['Lock keys are all ids or all nonempty strings', static fn (): LockRequest => new LockRequest(LockRank::Obligation, 'billium_obligation', [1, 'a'])],
+            ['and a plain column', static fn (): LockRequest => new LockRequest(LockRank::Obligation, 'billium_obligation', [1], keyColumn: 'id; drop')],
+        ] as [$reason, $build]) {
             try {
                 $build();
-                self::fail('Expected an invalid lock request');
-            } catch (InvalidArgumentException) {
-                $this->addToAssertionCount(1);
+                self::fail('Expected an invalid lock request: '.$reason);
+            } catch (InvalidArgumentException $error) {
+                self::assertStringContainsString($reason, $error->getMessage());
             }
         }
     }

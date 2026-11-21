@@ -13,6 +13,7 @@ use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Data\Runtime\Caller;
 use Billium\Ledger\Contracts\LedgerQueries;
 use Billium\Ledger\Data\Views\LedgerView as View;
+use Billium\Ledger\Internal\Commands\CreditNoteGroupRef;
 use Billium\Platform\Contracts\Feed\FeedRecoveryQueries;
 use Closure;
 use DateTimeImmutable;
@@ -53,21 +54,7 @@ final readonly class DatabaseLedgerQueries implements LedgerQueries
             if ($row !== null) {
                 return View::json($row->body);
             }
-            $marker = strrpos($receiptRef, ':group:');
-            if (! str_starts_with($receiptRef, 'credit-note:rating:') || $marker === false) {
-                throw LedgerReader::unknown();
-            }
-            $prefix = substr($receiptRef, 0, $marker).':';
-            $suffixes = explode('.', substr($receiptRef, $marker + strlen(':group:')));
-            if (count($suffixes) < 2 || count($suffixes) !== count(array_unique($suffixes))) {
-                throw LedgerReader::unknown();
-            }
-            foreach ($suffixes as $suffix) {
-                if (preg_match('/^[a-f0-9]{16}$/D', $suffix) !== 1) {
-                    throw LedgerReader::unknown();
-                }
-            }
-            $refs = array_map(static fn (string $suffix): string => $prefix.$suffix, $suffixes);
+            $refs = CreditNoteGroupRef::partReceipts($receiptRef) ?? throw LedgerReader::unknown();
             $parts = [];
             $scope = null;
             foreach ($reader->scoped('billium_allocation_receipt')->whereIn('receipt_ref', $refs)->orderBy('receipt_ref')->get() as $part) {
@@ -100,7 +87,7 @@ final readonly class DatabaseLedgerQueries implements LedgerQueries
         if ($billingAccountRef === '' || $limit < 1 || $limit > 9007199254740991) {
             throw self::invalid();
         }
-        $time = View::timestamp($asOf->format(DATE_RFC3339_EXTENDED));
+        $time = View::timestamp($asOf->format('Y-m-d\TH:i:s.uP'));
         $feedRecovery = $this->feedRecovery;
 
         return $this->reads->run(static function (Connection $db, Caller $caller) use ($billingAccountRef, $time, $limit, $cursor, $feedRecovery): array {

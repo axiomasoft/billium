@@ -20,7 +20,7 @@ final readonly class BootstrapItem
         public ?int $id = null,
         public ?int $sessionId = null,
     ) {
-        if ($operationRef === '' || strlen($operationRef) > 200 || $revision < 0 || preg_match('/^sha256:[0-9a-f]{64}$/', $materialDigest) !== 1) {
+        if ($operationRef === '' || strlen($operationRef) > 200 || $revision < 0 || preg_match('/^sha256:[0-9a-f]{64}$/D', $materialDigest) !== 1) {
             throw new InvalidArgumentException('Bootstrap item needs an operation, a revision and a sha256 material digest');
         }
     }

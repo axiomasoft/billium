@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Testkit\Tests;
 
+use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Execution\Data\LookupRequest;
 use Billium\Execution\Enums\CaptureMode;
@@ -72,7 +73,8 @@ final class CapabilityModesTest extends TestCase
             try {
                 $driver->capture(HarnessFactory::request($cap, 'partial', 'partial-reference', 50));
                 self::fail('Partial capture accepted');
-            } catch (ProblemException) {
+            } catch (ProblemException $error) {
+                self::assertSame(ProblemCode::CapabilityUnsupported, $error->problem);
             }
             self::assertSame(100, $driver->capture(HarnessFactory::request($cap, 'full', 'full-reference'))->snapshot?->capturedTotal->minor);
 
@@ -111,13 +113,15 @@ final class CapabilityModesTest extends TestCase
         try {
             $driver->voidAuthorization(HarnessFactory::request($cap, 'void', 'void', 50));
             self::fail('Partial void accepted');
-        } catch (ProblemException) {
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::CapabilityUnsupported, $error->problem);
         }
         $driver->capture(HarnessFactory::request($cap, 'capture', 'capture'));
         try {
             $driver->refund(HarnessFactory::request($cap, 'partial-refund', 'partial-refund', 50));
             self::fail('Partial refund accepted');
-        } catch (ProblemException) {
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::CapabilityUnsupported, $error->problem);
         }
         self::assertSame(100, $driver->refund(HarnessFactory::request($cap, 'refund', 'refund'))->snapshot?->refundedTotal->minor);
         $this->expectException(ProblemException::class);
@@ -132,12 +136,14 @@ final class CapabilityModesTest extends TestCase
         try {
             $driver->lookup(new LookupRequest($request->binding, 'op', 'ref', null, $request->credentials));
             self::fail('Unsupported lookup accepted');
-        } catch (ProblemException) {
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::CapabilityUnsupported, $error->problem);
         }
         try {
             $driver->inventory(HarnessFactory::merchant($cap), $request->credentials, $this->clock->now, null);
             self::fail('Unsupported inventory accepted');
-        } catch (ProblemException) {
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::CapabilityUnsupported, $error->problem);
         }
         self::assertSame([], $driver->journal->records());
     }

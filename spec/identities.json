@@ -4917,6 +4917,48 @@
     },
     {
       "kind": "migration",
+      "id": "2026_11_18_030001_refuse_missing_billium_refund_basis_totals",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/ledger/2026_11_18_030001_refuse_missing_billium_refund_basis_totals.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_030002_keep_cancelled_billium_obligation_on_credit_note",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/ledger/2026_11_18_030002_keep_cancelled_billium_obligation_on_credit_note.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_040001_index_billium_outbox_event_scope_cursor",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/platform/2026_11_18_040001_index_billium_outbox_event_scope_cursor.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_040002_index_billium_open_outbox_deliveries",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/platform/2026_11_18_040002_index_billium_open_outbox_deliveries.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_040003_index_billium_staged_bootstrap_items",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/platform/2026_11_18_040003_index_billium_staged_bootstrap_items.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_18_040004_index_billium_usage_reproducibility_snapshot",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/usage/2026_11_18_040004_index_billium_usage_reproducibility_snapshot.php"
+    },
+    {
+      "kind": "migration",
       "id": "2026_11_19_000001_create_billium_documents_profiles_and_finalization",
       "status": "new",
       "since": "2026-10",

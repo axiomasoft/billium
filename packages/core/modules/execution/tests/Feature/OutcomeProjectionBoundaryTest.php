@@ -270,7 +270,8 @@ final class OutcomeProjectionBoundaryTest extends ExecutionTestCase
             self::assertSame(0, Money::fromWire($queries->status($scope, 'root-a')->capacity->refundAvailable)->minor);
             $log = $reader->getQueryLog();
             $reader->disableQueryLog();
-            $this->assertIndexed($reader, $log, 'business_identity_digest =', 'billium_execution_business_identity_digest_unique');
+            $this->assertIndexed($reader, $log, 'business_identity_digest =',
+                'billium_execution_business_identity_digest_unique', 'billium_execution_binding_intent_idx');
             $this->assertIndexed($reader, $log, '"command_key" =', 'billium_idempotency_receipt_scope_key');
             $this->assertIndexed($reader, $log, "result#>>'{body,receiptRef}'", 'billium_idempotency_opaque_receipt_scope');
             $this->assertIndexed($reader, $log, 'from "billium_execution_admission_conflict"', 'billium_execution_admission_conflict_history');
@@ -322,7 +323,7 @@ final class OutcomeProjectionBoundaryTest extends ExecutionTestCase
     }
 
     /** @param array<array<string,mixed>> $log */
-    private function assertIndexed(Connection $db, array $log, string $needle, string $index): void
+    private function assertIndexed(Connection $db, array $log, string $needle, string ...$indexes): void
     {
         $execution = array_find($log, static fn (array $entry): bool => str_contains(self::text($entry['query']), $needle));
         self::assertNotNull($execution, 'Missing executed query '.$needle);
@@ -331,7 +332,7 @@ final class OutcomeProjectionBoundaryTest extends ExecutionTestCase
         $explain = $db->selectOne('EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) '.self::text($execution['query']), $bindings);
         self::assertInstanceOf(stdClass::class, $explain);
         $plan = self::text($explain->{'QUERY PLAN'});
-        self::assertStringContainsString($index, $plan);
+        self::assertTrue(array_any($indexes, static fn (string $index): bool => str_contains($plan, $index)), $plan);
         self::assertStringNotContainsString('"Node Type": "Seq Scan"', $plan);
         fwrite(STDOUT, "Authorized query EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)\n".$plan.PHP_EOL);
     }

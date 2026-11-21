@@ -106,10 +106,10 @@ final readonly class EventFeedReader implements EventFeed
             $scanLimit = $limit + 1;
             $rows = $this->db->select(<<<SQL
                 SELECT * FROM public.billium_outbox_event
-                WHERE source_scope::jsonb = ?::jsonb AND (tx_id,id) > (?::xid8,?::bigint)
+                WHERE seller_ref = ? AND environment = ? AND source_scope::jsonb = ?::jsonb AND (tx_id,id) > (?::xid8,?::bigint)
                   AND tx_id < pg_snapshot_xmin(pg_current_snapshot())
                 ORDER BY tx_id,id LIMIT {$scanLimit}
-                SQL, [$selection->scope->key(), $position->txId, $position->id]);
+                SQL, [...self::partition($selection), $selection->scope->key(), $position->txId, $position->id]);
             $hasMore = count($rows) > $limit;
             $rows = array_slice($rows, 0, $limit);
             $events = [];
@@ -173,7 +173,8 @@ final readonly class EventFeedReader implements EventFeed
         $snapshots = [];
         $cursor = $this->db->transaction(function () use ($selection, $contracts, $replay, $pin, $leaseRef, &$snapshots): FeedCursor {
             $this->db->statement('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY');
-            $row = $this->db->selectOne('SELECT tx_id,id FROM public.billium_outbox_event WHERE source_scope::jsonb = ?::jsonb AND tx_id < pg_snapshot_xmin(pg_current_snapshot()) ORDER BY tx_id DESC,id DESC LIMIT 1', [$selection->scope->key()]);
+            $row = $this->db->selectOne('SELECT tx_id,id FROM public.billium_outbox_event WHERE seller_ref = ? AND environment = ? AND source_scope::jsonb = ?::jsonb AND tx_id < pg_snapshot_xmin(pg_current_snapshot()) ORDER BY tx_id DESC,id DESC LIMIT 1',
+                [...self::partition($selection), $selection->scope->key()]);
             $position = $replay ? new FeedPosition : ($row === null ? $pin : self::position($row));
             $available = [];
             foreach (($this->sources)() as $source) {
@@ -278,10 +279,10 @@ final readonly class EventFeedReader implements EventFeed
             SELECT h.xmin::text AS horizon,
                 (SELECT floor(extract(epoch FROM (clock_timestamp() - min(xact_start))))::bigint
                  FROM pg_stat_activity WHERE backend_xmin::text::numeric = (h.xmin::text::numeric % 4294967296)) AS age,
-                (SELECT count(*) FROM public.billium_outbox_event WHERE source_scope::jsonb = ?::jsonb
+                (SELECT count(*) FROM public.billium_outbox_event WHERE seller_ref = ? AND environment = ? AND source_scope::jsonb = ?::jsonb
                  AND (tx_id,id) > (?::xid8,?::bigint) AND tx_id < h.xmin) AS pending
             FROM (SELECT pg_snapshot_xmin(pg_current_snapshot()) AS xmin) h
-            SQL, [$selection->scope->key(), $position->txId, $position->id]);
+            SQL, [...self::partition($selection), $selection->scope->key(), $position->txId, $position->id]);
         $age = Rows::field($row, 'age');
 
         return ['safeHorizonTxId' => Rows::string(Rows::field($row, 'horizon')),
@@ -340,6 +341,17 @@ final readonly class EventFeedReader implements EventFeed
             [$leaseRef, $selection->subscriptionRef, $selection->selectionDigest, $selection->scope->key()]);
 
         return is_object($row) ? $row : throw new ProblemException(ProblemCode::RecoveryRequired, 'Bootstrap lease missing or expired; rebootstrap required');
+    }
+
+    /**
+     * The seller and environment columns repeat the scope key, so the scope cursor index can serve a feed read
+     * without filtering the events of every other seller.
+     *
+     * @return array{string, string}
+     */
+    private static function partition(FeedSelection $selection): array
+    {
+        return [$selection->scope->sellerRef, $selection->scope->environment];
     }
 
     private static function position(mixed $row): FeedPosition

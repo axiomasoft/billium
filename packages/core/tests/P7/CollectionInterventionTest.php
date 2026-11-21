@@ -427,8 +427,9 @@ final class CollectionInterventionTest extends ExecutableCollectionTestCase
     public function test_offline_host_reads_stale_or_unknown_provenance_and_never_initiates_backup_local_charge(): void
     {
         $scope = $this->collectionScope();
-        $utc = new DateTimeZone('UTC');
-        $now = new DateTimeImmutable('2026-11-20T12:00:00Z', $utc);
+        $case = $this->dunningQueries()->findCase($scope, 'case-a');
+        self::assertNotNull($case);
+        $now = $case->updatedAt;
         $coordinator = new FakeProductCoordinator;
 
         // 1. Online read caches authoritative snapshot.
@@ -453,7 +454,9 @@ final class CollectionInterventionTest extends ExecutableCollectionTestCase
 
         // 4. Online read with exceeded maxStalenessSeconds also flags Stale provenance.
         $coordinator->setBilliumReachable(true);
-        $agedOut = $this->signalService()->readHostStatus($scope, 'case-a', $now->modify('+10 hours'), maxStalenessSeconds: 60);
+        $fresh = $this->signalService()->readHostStatus($scope, 'case-a', $now->modify('+60 seconds'), maxStalenessSeconds: 60);
+        self::assertSame(HostSnapshotFreshness::Authoritative, $fresh->freshness);
+        $agedOut = $this->signalService()->readHostStatus($scope, 'case-a', $now->modify('+61 seconds'), maxStalenessSeconds: 60);
         self::assertSame(HostSnapshotFreshness::Stale, $agedOut->freshness);
         self::assertSame('snapshot_age_exceeded', $agedOut->stalenessReason);
         self::assertFalse($agedOut->backupChargeAllowed);

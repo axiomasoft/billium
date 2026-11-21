@@ -9,7 +9,7 @@ use Packman\Attributes\Spi;
 use Packman\Attributes\SpiKind;
 
 /**
- * Implemented by P3.3 over billium_module_state. The implementation must read inside the caller's root Tx after the
+ * Implemented by the platform installation over billium_module_state. The implementation must read inside the caller's root Tx after the
  * idempotency claim and the installation lock, so disable against an accepted command has a serializable boundary.
  * Long-running workers re-read generation/fence before every dispatch.
  */

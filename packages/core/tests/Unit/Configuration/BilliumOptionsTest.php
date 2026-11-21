@@ -79,6 +79,7 @@ final class BilliumOptionsTest extends TestCase
         self::assertSame($secret, $options->feed->decodedSigningKey());
 
         $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('SecretRef must not be serialized.');
         serialize($options->feed->signingKey);
     }
 

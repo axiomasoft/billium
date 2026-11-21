@@ -2,7 +2,7 @@
 """Lint a spec revision: schema conventions 1–8, rule documents, problem codes and currencies.
 
 Usage: scripts/spec/lint.py [REV_DIR] [--repo-root DIR]
-Offline: every $ref resolves inside the revision (M-04); exits 1 with one line per finding.
+Offline: every $ref resolves inside the revision; exits 1 with one line per finding.
 """
 from __future__ import annotations
 

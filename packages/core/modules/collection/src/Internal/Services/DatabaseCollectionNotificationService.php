@@ -311,6 +311,8 @@ final readonly class DatabaseCollectionNotificationService implements Collection
         // The command key is claimed and committed before the port runs. A second caller with the
         // same key and another message conflicts in that claim. A replay returns the stored row
         // and does not deliver again. The port itself stays outside every database transaction.
+        // A retry can enter the body and still return the other claim's receipt, so delivery
+        // follows only an outcome that is not replayed.
         $this->assertOutsideTransaction();
         $selection = new FinancialScope($caller->installationRef, $caller->sellerRef, $caller->environment, null);
         $prior = $this->receipts->byCommandKey($selection, self::DISPATCH_KIND, $deliveryCommandKey);
@@ -342,8 +344,7 @@ final readonly class DatabaseCollectionNotificationService implements Collection
             'messageId' => $current->messageId,
             'notificationId' => $current->id,
         ]);
-        $won = false;
-        $this->runner->run(
+        $outcome = $this->runner->run(
             spec: new OperationSpec(
                 commandKind: self::DISPATCH_KIND,
                 sellerRef: $caller->sellerRef,
@@ -356,8 +357,7 @@ final readonly class DatabaseCollectionNotificationService implements Collection
                 commitKind: 'collection.notification.dispatch',
                 financialScope: $selection,
             ),
-            body: function (TransactionContext $context) use (&$won, $caller, $current): CollectionReceipt {
-                $won = true;
+            body: function (TransactionContext $context) use ($caller, $current): CollectionReceipt {
                 $this->runner->assertCurrent($context, 'collection');
                 $locked = $context->lock(new LockRequest(
                     LockRank::DunningCase,
@@ -381,7 +381,7 @@ final readonly class DatabaseCollectionNotificationService implements Collection
                 ]);
             },
         )->orThrow();
-        if (! $won) {
+        if ($outcome->replayed) {
             return $this->loadById($caller->sellerRef, $caller->environment, $current->id);
         }
 

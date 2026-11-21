@@ -85,6 +85,7 @@ final class DurableProviderEvidenceTest extends ExecutionTestCase
         $material['captured'] = ['amount' => '9999.00', 'currency' => 'RUB'];
         $body['material'] = $material;
         $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Invalid simulated evidence signature or delivery identity');
         $restarted->normalize($hydrate(ExecutionCodec::encode($body)), $cap);
     }
 

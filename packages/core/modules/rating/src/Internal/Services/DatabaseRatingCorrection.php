@@ -12,29 +12,25 @@ use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Data\Runner\OperationSpec;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Core\Enums\Runtime\FinancialMode;
-use Billium\Ledger\Contracts\CorrectionCreditParticipants;
-use Billium\Ledger\Contracts\CorrectionLocks;
-use Billium\Ledger\Contracts\LedgerParticipants;
 use Billium\Ledger\Data\Invoices\CreditNoteLine;
 use Billium\Ledger\Data\Invoices\CreditNoteMode;
-use Billium\Ledger\Data\Invoices\IssueCreditNote;
-use Billium\Ledger\Data\Obligations\CorrectionBasis;
-use Billium\Ledger\Data\Obligations\RecordObligation;
-use Billium\Ledger\Data\Runtime\BillingAccountScope;
-use Billium\Platform\Contracts\Outbox\CommandOutbox;
-use Billium\Platform\Data\EventContracts\PreparedInternalCommand;
+use Billium\Ledger\Data\Invoices\CreditNotePart;
+use Billium\Ledger\Data\Invoices\IssueCreditNoteGroup;
 use Billium\Rating\Contracts\RatingCorrection;
 use Billium\Rating\Data\Correction\ApplyCorrection;
 use Billium\Rating\Data\Correction\PrepareCorrection;
 use Billium\Rating\Data\Correction\PreparedCorrection;
 use Billium\Rating\Data\Correction\RatingCorrectionReceipt;
 use Billium\Rating\Data\Rating\FrozenAggregate;
-use Billium\Rating\Data\Rating\FrozenPrice;
 use Billium\Rating\Data\Rating\FrozenTax;
 use Billium\Rating\Data\Rating\RatingHold;
 use Billium\Rating\Data\Tax\TaxSnapshot;
 use Billium\Rating\Enums\CorrectionKind;
 use Billium\Rating\Enums\TaxSnapshotKind;
+use Billium\Rating\Internal\Adapters\LedgerAdapter;
+use Billium\Rating\Internal\Adapters\ObligationCommandMapper;
+use Billium\Rating\Internal\Adapters\OutboxAdapter;
+use Billium\Rating\Internal\Adapters\RatedCorrectionBasis;
 use Billium\Rating\Internal\Adapters\ScheduleOccurrenceAdapter;
 use Billium\Rating\Internal\Adapters\UsageAggregateAdapter;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
@@ -51,10 +47,9 @@ use Billium\Rating\Internal\Storage\CorrectionStore;
 use Billium\Rating\Internal\Storage\RatingRows;
 use Billium\Rating\Internal\Storage\RatingStore;
 use Billium\Rating\Internal\Storage\TaxPolicyFrontier;
-use Billium\Schedule\Contracts\CorrectionParticipants;
+use Billium\Rating\Internal\Time\Micros;
 use Billium\Schedule\Data\Commands\RegisterCorrectionChild;
-use DateTimeImmutable;
-use LogicException;
+use Billium\Schedule\Enums\OccurrenceState;
 use Packman\Attributes\Internal;
 
 #[Internal]
@@ -64,11 +59,8 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
         private CallerContext $callers, private RatingStore $store, private CorrectionStore $corrections,
         private CorrectionCalculator $calculator, private TaxPolicyFrontier $policyFrontier,
         private UsageAggregateAdapter $usage, private ScheduleOccurrenceAdapter $occurrences,
-        private CorrectionParticipants $schedule,
-        private CommandOutbox $outbox, private RatingComputation $rating, private ProrationCalculator $proration,
-        private AmendmentSupport $amendmentSupport,
-        private ?LedgerParticipants $ledger = null, private ?CorrectionLocks $ledgerLocks = null,
-        private ?CorrectionCreditParticipants $creditParticipants = null) {}
+        private LedgerAdapter $ledger, private ObligationCommandMapper $obligations, private OutboxAdapter $outbox,
+        private RatingComputation $rating, private ProrationCalculator $proration, private AmendmentSupport $amendmentSupport) {}
 
     public function prepare(PrepareCorrection $command): PreparedCorrection|RatingHold
     {
@@ -85,7 +77,11 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
             throw new ProblemException(ProblemCode::AuthDenied, 'billium.rating.scope_denied');
         }
         $semantic = CanonicalJson::digest($p);
-        $modules = ['platform', 'rating', 'schedule', 'ledger'];
+        $modules = ['platform', 'rating', 'schedule'];
+        // Only a non-zero delta books debt or credit; a zero correction must not depend on an optional ledger.
+        if (bccomp(RatingRows::decimal($c->deltaGrossMinor), '0', 0) !== 0) {
+            $modules[] = 'ledger';
+        }
         if (array_any($in->aggregates, static fn (FrozenAggregate $aggregate): bool => ! FixedOccurrenceInput::matches($aggregate))) {
             $modules[] = 'usage';
         }
@@ -128,11 +124,11 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
                     RatingComputation::refuse('correction_digest_mismatch');
                 }
                 $this->occurrences->lock(context: $context, ref: $in->occurrenceRef);
-                $basis = CorrectionBasis::derive(originalBasisRef: 'rating:'.$c->predecessorBasisRef,
-                    correctionRef: $in->occurrenceRef, revision: $c->correctionRevision);
-                $child = $this->schedule->registerCorrectionChild(context: $context, command: new RegisterCorrectionChild(
+                $basis = RatedCorrectionBasis::derive(predecessorBasisRef: $c->predecessorBasisRef,
+                    occurrenceRef: $in->occurrenceRef, correctionRevision: $c->correctionRevision);
+                $child = $this->occurrences->registerCorrectionChild(context: $context, command: new RegisterCorrectionChild(
                     sellerRef: $in->sellerRef, environment: $in->environment, parentOccurrenceRef: $in->occurrenceRef,
-                    originalPeriodStart: self::instant($in->periodStartMicros), originalPeriodEnd: self::instant($in->periodEndMicros),
+                    originalPeriodStart: Micros::instant($in->periodStartMicros), originalPeriodEnd: Micros::instant($in->periodEndMicros),
                     correctionRevision: $c->correctionRevision, predecessorRevision: $c->correctionRevision === 1 ? null : $c->correctionRevision - 1,
                     predecessorRatedBasisRef: $c->predecessorBasisRef, sourceFrontierDigest: $c->sourceFrontierDigest,
                     expectedHeadRevision: $p->expectedScheduleHeadRevision, expectedHeadFrontierDigest: $p->expectedScheduleHeadFrontierDigest,
@@ -142,28 +138,19 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
                 $branch = $sign > 0 ? 'obligation' : ($sign < 0 ? 'credit_note' : 'none');
                 $rows = $this->corrections->insert(context: $context, prepared: $p, childRef: $child->correctionRef, branch: $branch);
                 $obligationRef = $creditNoteRef = null;
-                $scope = new BillingAccountScope(sellerRef: $in->sellerRef, environment: $in->environment, billingAccountRef: $in->billingAccountRef);
                 if ($sign > 0) {
-                    if ($p->originalObligationRef !== null) {
-                        ($this->ledgerLocks ?? throw new LogicException('Ledger capability absent'))->acquireParent(context: $context, obligationRef: $p->originalObligationRef, accountRef: $in->billingAccountRef);
-                    }
-                    $attribution = RatingRows::map(json_decode($in->attribution, true, 32, JSON_THROW_ON_ERROR));
-                    $obligationRef = 'rating:'.$child->correctionRef;
-                    $price = $in->prices[0];
-                    ($this->ledger ?? throw new LogicException('Ledger capability absent'))->recordObligation(context: $context, command: new RecordObligation(commandKey: 'rating:'.$child->correctionRef,
-                        scope: $scope, obligationRef: $obligationRef, basisRef: $basis,
-                        customerRef: RatingRows::text($attribution['customerRef'] ?? null), componentRef: $price->componentRef,
-                        money: MoneyFactory::fromMinor(minor: $c->deltaGrossMinor, currency: $in->currency, exponent: $in->currencyExponent),
-                        termsDigest: count($in->prices) === 1 ? $price->termsDigest : CanonicalJson::digest(array_map(static fn (FrozenPrice $item): array => [$item->componentRef, $item->termsDigest], $in->prices)),
-                        priceVersionRef: count($in->prices) === 1 ? $price->priceRef.'@'.$price->priceVersion : 'rating:'.$c->correctedBasis->basisRef,
-                        taxSnapshotRef: $p->taxPolicy->selectedRate->snapshotRef));
+                    $command = $this->obligations->mapCorrection(in: $in, correctionRef: $child->correctionRef, basisRef: $basis,
+                        deltaGrossMinor: $c->deltaGrossMinor, correctedBasisRef: $c->correctedBasis->basisRef,
+                        taxSnapshotRef: $p->taxPolicy->selectedRate->snapshotRef);
+                    $obligationRef = $command->obligationRef;
+                    $this->ledger->recordCorrection(context: $context, command: $command, parentObligationRef: $p->originalObligationRef);
                 } elseif ($sign < 0) {
                     if ($p->releasePolicy === null) {
                         RatingComputation::refuse('release_policy_required');
                     }
                     $creditNoteRef = 'rating:'.$child->correctionRef;
                     $allowed = [$p->originalObligationRef, ...$this->corrections->childObligations($in->occurrenceRef, $context)];
-                    $groups = [];
+                    $groups = $invoices = [];
                     $total = '0';
                     $seen = [];
                     foreach ($p->creditParts as $part) {
@@ -173,26 +160,20 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
                         }
                         $seen[$part->obligationRef] = true;
                         $total = bcadd($total, RatingRows::decimal($part->amountMinor), 0);
+                        $invoices[$part->invoiceRef] = $part->invoiceRef;
                         $groups[$part->invoiceRef][] = new CreditNoteLine(obligationRef: $part->obligationRef,
                             money: MoneyFactory::fromMinor(minor: $part->amountMinor, currency: $in->currency, exponent: $in->currencyExponent));
                     }
                     if ($groups === [] || bccomp($total, bcsub('0', RatingRows::decimal($c->deltaGrossMinor), 0), 0) !== 0) {
                         RatingComputation::refuse('correction_digest_mismatch');
                     }
-                    ksort($groups, SORT_STRING);
-                    $commands = [];
-                    foreach ($groups as $invoice => $lines) {
-                        $ref = count($groups) === 1 ? $creditNoteRef : $creditNoteRef.':'.substr(hash('sha256', $invoice), 0, 16);
-                        $commands[] = new IssueCreditNote(commandKey: $ref, scope: $scope, creditNoteRef: $ref, invoiceRef: $invoice,
-                            mode: CreditNoteMode::from($p->releasePolicy->value), lines: $lines, reason: $p->command->reasonCode);
+                    $parts = [];
+                    foreach ($invoices as $key => $invoice) {
+                        $parts[] = new CreditNotePart(invoiceRef: $invoice, lines: $groups[$key]);
                     }
-                    if (count($commands) === 1) {
-                        ($this->ledger ?? throw new LogicException('Ledger capability absent'))->issueCreditNote(context: $context, command: $commands[0]);
-                    } else {
-                        ($this->creditParticipants ?? throw new LogicException('Ledger capability absent'))->issue(context: $context, commands: $commands);
-                        $suffixes = array_map(static fn (IssueCreditNote $item): string => substr($item->creditNoteRef, -16), $commands);
-                        $creditNoteRef .= ':group:'.implode('.', $suffixes);
-                    }
+                    $creditNoteRef = $this->ledger->issueCreditNotes(context: $context, group: new IssueCreditNoteGroup(
+                        scope: ObligationCommandMapper::scope($in), creditNoteRef: $creditNoteRef,
+                        mode: CreditNoteMode::from($p->releasePolicy->value), parts: $parts, reason: $p->command->reasonCode));
                 }
                 $this->corrections->book(context: $context, id: $rows['correctionId'], obligation: $obligationRef,
                     creditNote: $creditNoteRef, release: $sign < 0 ? $p->releasePolicy->value : null);
@@ -200,9 +181,7 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
                 $receipt = new RatingCorrectionReceipt(correctionRef: $child->correctionRef, correctionRevision: $c->correctionRevision,
                     outcome: $branch, deltaGrossMinor: $c->deltaGrossMinor, obligationRef: $obligationRef, creditNoteRef: $creditNoteRef,
                     currency: $in->currency, legalRequirementPending: $branch !== 'none');
-                $this->outbox->record(context: $context, command: new PreparedInternalCommand(commandRef: 'rating:'.$child->correctionRef,
-                    businessRef: $child->correctionRef, ownerModuleId: 'rating', commandType: 'rating.correction.applied.v1',
-                    commandSchema: 'billium.command.v1', payload: $receipt->body(), destinations: ['rating']));
+                $this->outbox->correctionApplied(context: $context, receipt: $receipt);
 
                 return $receipt;
             })->orThrow();
@@ -231,7 +210,7 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
         $originalDraft = $this->store->draft($original);
         $occurrence = $this->occurrences->occurrence($in->occurrenceRef);
         if ($booking === null
-            || ! ($occurrence['state'] === 'obligated' && $booking->outcome === 'booked' && is_string($booking->obligation_ref)) && ! ($occurrence['state'] === 'rated' && $booking->outcome === 'no_charge' && $booking->obligation_ref === null && $originalDraft->chargeKind->value === 'no_charge' && $originalDraft->grossMinor === '0')
+            || ! ($occurrence->state === OccurrenceState::Obligated && $booking->outcome === 'booked' && is_string($booking->obligation_ref)) && ! ($occurrence->state === OccurrenceState::Rated && $booking->outcome === 'no_charge' && $booking->obligation_ref === null && $originalDraft->chargeKind->value === 'no_charge' && $originalDraft->grossMinor === '0')
             || $booking->obligation_ref !== $p->originalObligationRef || $p->command->sellerRef !== $in->sellerRef
             || $p->command->environment !== $in->environment || $p->command->parentOccurrenceRef !== $in->occurrenceRef
             || $p->releasePolicy !== $p->command->releasePolicy
@@ -271,8 +250,8 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
                 $this->amendmentSupport->assertSupported(kind: $amendment->kind, price: $price->snapshot,
                     quantitySnapshot: $old->aggregates[$i]->quantitySnapshot);
             }
-            $fraction = $this->proration->fraction(policy: $amendment->prorationPolicy, start: self::instant($in->periodStartMicros),
-                end: self::instant($in->periodEndMicros), effectiveAt: $amendment->effectiveAt, timezone: $amendment->timezone);
+            $fraction = $this->proration->fraction(policy: $amendment->prorationPolicy, start: Micros::instant($in->periodStartMicros),
+                end: Micros::instant($in->periodEndMicros), effectiveAt: $amendment->effectiveAt, timezone: $amendment->timezone);
             $expectedProration = [...$fraction, 'amendmentRef' => $amendment->amendmentRef, 'revision' => $amendment->revision,
                 'effectiveAt' => $amendment->effectiveAt->format('Y-m-d\TH:i:s.uP'), 'policy' => $amendment->prorationPolicy->value,
                 'timezone' => $amendment->timezone];
@@ -318,15 +297,5 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
             || CanonicalJson::encode($in->correctionEvidence) !== CanonicalJson::encode(['request' => $request, 'policy' => $policy])) {
             RatingComputation::refuse('tax_policy_stale');
         }
-    }
-
-    private static function instant(int $micros): DateTimeImmutable
-    {
-        $seconds = intdiv($micros, 1000000);
-        $fraction = str_pad((string) ($micros % 1000000), 6, '0', STR_PAD_LEFT);
-
-        $instant = DateTimeImmutable::createFromFormat('U.u', $seconds.'.'.$fraction);
-
-        return $instant !== false ? $instant : throw new LogicException('Invalid commercial period instant');
     }
 }

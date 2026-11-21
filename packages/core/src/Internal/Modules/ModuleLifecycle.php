@@ -20,7 +20,7 @@ use Billium\Core\Enums\Modules\TransitionBlockerCode as Blocker;
 use Packman\Attributes\Internal;
 
 /**
- * Operation-class admission and disable/retire/uninstall preview rules (D55). No storage: P3.3 supplies the state and
+ * Operation-class admission and disable/retire/uninstall preview rules (D55). No storage: the platform installation supplies the state and
  * the facts inside the root Tx and applies the transition. Unknown effects are never cancelled by a rule here: they
  * only ever block retirement.
  */

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build docs/contracts/problem-codes.md from the problem-codes.json registry of a spec revision (M-46).
+"""Build docs/contracts/problem-codes.md from the problem-codes.json registry of a spec revision.
 
 Writes by default; --check compares without writing and exits 1 on drift.
 """

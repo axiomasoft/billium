@@ -49,6 +49,7 @@ use Billium\Execution\Contracts\RepairCommands;
 use Billium\Execution\Contracts\RootPaymentCommands;
 use Billium\Execution\Contracts\WriterAdmission;
 use Billium\Execution\Internal\Admission\AdmitRoot;
+use Billium\Execution\Internal\Admission\ChildAdmission;
 use Billium\Execution\Internal\Admission\CollectionChecks;
 use Billium\Execution\Internal\Admission\CommandInputReplay;
 use Billium\Execution\Internal\Admission\ExecutionReadinessGuard;
@@ -197,6 +198,7 @@ final class ExecutionRegistrar implements PackageRegistrar
             $app->make(TransportBoundary::class),
             $app->make(ExecutionReadinessGuard::class),
             $app->make(CommandInputReplay::class),
+            $app->make(ChildAdmission::class),
             $app->bound(CollectionCancellationParticipant::class) ? $app->make(CollectionCancellationParticipant::class) : null,
             $app->bound(CollectionOriginLookup::class) ? $app->make(CollectionOriginLookup::class) : null,
         ));

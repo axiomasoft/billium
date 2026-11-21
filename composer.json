@@ -90,12 +90,12 @@
         "test:pg": [
             "Composer\\Config::disableProcessTimeout",
             "@putenv PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1",
-            "vendor/bin/pest --group=pg"
+            "PACKMAN_TEST_DB_PER_PROCESS=1 vendor/bin/pest --group=pg --exclude-group=pg-serial --parallel",
+            "vendor/bin/pest --group=pg-serial"
         ],
         "gate": "@php vendor/bin/packman gate",
         "php-api": "@php vendor/bin/packman php-api --check",
         "error-codes": "@php vendor/bin/packman error-codes --check",
-        "config-schema": "@php vendor/bin/packman config-schema --check",
-        "ai:sync": "@php vendor/bin/packman ai:sync --dry-run"
+        "config-schema": "@php vendor/bin/packman config-schema --check"
     }
 }

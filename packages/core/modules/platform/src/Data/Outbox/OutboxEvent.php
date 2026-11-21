@@ -32,10 +32,10 @@ final readonly class OutboxEvent
                 throw new InvalidArgumentException("Outbox {$name} is a nonempty bounded string");
             }
         }
-        if (preg_match('/^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$/', $type) !== 1) {
+        if (preg_match('/^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$/D', $type) !== 1) {
             throw new InvalidArgumentException("Invalid outbox event type {$type}");
         }
-        if (preg_match('/^[a-z][a-z0-9_.-]*\.v[0-9]+$/', $schemaVersion) !== 1) {
+        if (preg_match('/^[a-z][a-z0-9_.-]*\.v[0-9]+$/D', $schemaVersion) !== 1) {
             throw new InvalidArgumentException("Invalid outbox schema version {$schemaVersion}");
         }
         if ($aggregateRevision < 0) {

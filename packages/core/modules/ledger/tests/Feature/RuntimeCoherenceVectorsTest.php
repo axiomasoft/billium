@@ -16,7 +16,7 @@ use PHPUnit\Framework\TestCase;
 use stdClass;
 use Symfony\Component\Process\Process;
 
-/** D60/M-15: execute the independent examples against guarded runtime writes, then check durable coherence. */
+/** D60: execute the independent examples against guarded runtime writes, then check durable coherence. */
 #[Group('D60')]
 #[Group('pg')]
 final class RuntimeCoherenceVectorsTest extends TestCase

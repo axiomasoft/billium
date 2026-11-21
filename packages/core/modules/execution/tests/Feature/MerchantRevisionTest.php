@@ -188,6 +188,11 @@ WORKER;
                 if ($count === 2) {
                     break;
                 }
+                foreach ($children as $child) {
+                    if (! proc_get_status($child['process'])['running']) {
+                        self::fail('Worker exited before the PostgreSQL barrier: '.stream_get_contents($child['err']));
+                    }
+                }
                 if (microtime(true) > $deadline) {
                     self::fail('Workers did not both reach the PostgreSQL barrier');
                 }

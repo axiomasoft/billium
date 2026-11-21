@@ -10,6 +10,7 @@ use Billium\Core\Enums\Runner\LockRank;
 use Billium\Core\Tests\Support\FixtureArguments;
 use Billium\Core\Tests\Support\FixtureValues;
 use Billium\Core\Tests\TestEnvironment;
+use Billium\Schedule\Contracts\CorrectionBasisPolicy;
 use Billium\Schedule\Contracts\CorrectionParticipants;
 use Billium\Schedule\Contracts\OccurrenceLocks;
 use Billium\Schedule\Contracts\ScheduleQueries;
@@ -81,6 +82,36 @@ final class OccurrenceCorrectionParticipantTest extends OccurrenceTestCase
         $this->refusal(fn () => $this->register($this->command(parent: $ref, overrides: ['obligationBasisRef' => 'arbitrary-basis'])), 'correction.conflict');
         self::assertSame(0, $this->rows('billium_schedule_billing_correction'));
         self::assertSame(0, $this->rows('billium_schedule_correction_head'));
+    }
+
+    public function test_legacy_ledger_basis_can_still_register_and_replay_with_rating_installed(): void
+    {
+        $this->createSchedule();
+        $ref = FixtureValues::text($this->occurrences()->ensureOccurrence($this->ensure())->body()['occurrenceRef']);
+        $this->advance($ref);
+        $basis = CorrectionBasis::deriveLedger('rated:original', $ref, 1);
+        $command = $this->command($ref, ['obligationBasisRef' => $basis]);
+
+        self::assertTrue($this->register($command)->created);
+        self::assertFalse($this->register($command)->created);
+        self::assertSame($basis, $this->value('SELECT obligation_basis_ref FROM billium_schedule_billing_correction'));
+    }
+
+    public function test_an_installed_basis_policy_replaces_the_canonical_derivation(): void
+    {
+        $this->application()->instance(CorrectionBasisPolicy::class, new class implements CorrectionBasisPolicy
+        {
+            public function accepts(RegisterCorrectionChild $command): bool
+            {
+                return $command->obligationBasisRef === 'booked:'.$command->predecessorRatedBasisRef;
+            }
+        });
+        $this->createSchedule();
+        $ref = self::text(FixtureValues::text($this->occurrences()->ensureOccurrence($this->ensure())->body()['occurrenceRef']));
+        $this->advance($ref);
+        $this->refusal(fn () => $this->register($this->command($ref)), 'correction.conflict');
+        self::assertTrue($this->register($this->command(parent: $ref, overrides: ['obligationBasisRef' => 'booked:rated:original']))->created);
+        self::assertSame(1, $this->rows('billium_schedule_billing_correction'));
     }
 
     public function test_missing_parent_lock_and_stale_context_refuse_before_any_child_write(): void

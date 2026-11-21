@@ -17,7 +17,7 @@ use Packman\Attributes\Internal;
 
 /**
  * draft → issued with the derived payment status in the same Tx. The public root passes no legal reference (D49);
- * P6 supplies it through LedgerParticipants::issueInvoice in the same root Tx.
+ * legal document numbering supplies it through LedgerParticipants::issueInvoice in the same root Tx.
  */
 #[Internal]
 final readonly class IssueInvoiceCommand

@@ -12,6 +12,7 @@ use Billium\Execution\Data\DispatchRequest;
 use Billium\Execution\Data\DispatchTicket;
 use Billium\Execution\Data\FrozenBinding;
 use Billium\Execution\Enums\EffectKind;
+use Billium\Execution\Internal\Identity\PaymentIdentity;
 use Packman\Attributes\Internal;
 
 /** Explicit canonical maps shared by local checks; no PHP object serialization is an identity. */
@@ -60,12 +61,12 @@ final class AuthorityClaims
             $map['sourceOrderRef'] = $binding->sourceOrderRef;
         }
 
-        return self::digest($map);
+        return PaymentIdentity::digest($map);
     }
 
     public static function immutableDriverRequestDigest(FrozenBinding $binding, string $operationRef, string $attemptRef, string $providerReference, EffectKind $kind, Money $amount): string
     {
-        return self::digest([
+        return PaymentIdentity::digest([
             'schema' => 'billium.execution.driver-request.v1', 'bindingDigest' => self::bindingDigest($binding),
             'operationRef' => $operationRef, 'attemptRef' => $attemptRef, 'providerReference' => $providerReference,
             'kind' => $kind->value, 'amount' => $amount->toWire(), 'merchantAccountRef' => $binding->merchantAccountRef,
@@ -89,7 +90,7 @@ final class AuthorityClaims
 
     public static function requestDigest(DispatchRequest $request): string
     {
-        return self::digest([
+        return PaymentIdentity::digest([
             'schema' => 'billium.execution.dispatch-request.v1',
             'scope' => get_object_vars($request->scope),
             'operationRef' => $request->operationRef, 'attemptRef' => $request->attemptRef,
@@ -104,7 +105,7 @@ final class AuthorityClaims
 
     public static function ticketDigest(DispatchTicket $ticket): string
     {
-        return self::digest([
+        return PaymentIdentity::digest([
             'requestDigest' => self::requestDigest($ticket->claims), 'ticketRef' => $ticket->ticketRef,
             'issuerRef' => $ticket->issuerRef, 'issuedAt' => $ticket->issuedAt->format('U.u'),
             'expiresAt' => $ticket->expiresAt->format('U.u'), 'nonce' => $ticket->nonce,
@@ -114,7 +115,7 @@ final class AuthorityClaims
 
     public static function tokenDigest(FinancialAdmissionToken $token): string
     {
-        return self::digest([
+        return PaymentIdentity::digest([
             'installationRef' => $token->installationRef,
             'ownerSessionRef' => $token->ownerSessionRef,
             'deploymentGeneration' => (string) $token->deploymentGeneration,
@@ -125,11 +126,5 @@ final class AuthorityClaims
             'permittedModes' => array_map(static fn (FinancialMode $mode): string => $mode->value, $token->permittedModes),
             'expiresAt' => $token->expiresAt->format('U.u'),
         ]);
-    }
-
-    /** @param array<string,mixed> $map */
-    private static function digest(array $map): string
-    {
-        return 'sha256:'.hash('sha256', (new Codec)->canonicalize($map));
     }
 }

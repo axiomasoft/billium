@@ -49,6 +49,7 @@ use Billium\Execution\Internal\Dispatch\AttemptLeases;
 use Billium\Execution\Internal\Dispatch\TransportBoundary;
 use Billium\Execution\Internal\Identity\PaymentIdentity;
 use Billium\Execution\Internal\Merchants\ContinuityMerchantCredentials;
+use Billium\Execution\Internal\Storage\ExecutionRows;
 use Billium\Platform\Contracts\Installation\Installation;
 use Closure;
 use DateTimeImmutable;
@@ -220,8 +221,8 @@ final readonly class OriginalRequestReplay
                 'installation_ref' => $scope->installationRef, 'seller_ref' => $scope->sellerRef, 'environment' => $scope->environment,
                 'intent_owner_namespace' => $scope->intentOwnerNamespace, 'approval_ref' => $approval->approvalRef, 'attempt_ref' => $claim->attemptRef,
                 'operation_ref' => $op->operationRef, 'writer_ticket_ref' => $ticket->ticketRef, 'original_request_digest' => $approval->requestDigest,
-                'original_started_at' => $claim->startedAt->format('Y-m-d H:i:s.uP'), 'window_ends_at' => $window->format('Y-m-d H:i:s.uP'),
-                'deadline' => $deadline->format('Y-m-d H:i:s.uP'), 'lease_fence' => $claim->leaseFence]);
+                'original_started_at' => ExecutionRows::stamp($claim->startedAt), 'window_ends_at' => ExecutionRows::stamp($window),
+                'deadline' => ExecutionRows::stamp($deadline), 'lease_fence' => $claim->leaseFence]);
             if ($inserted !== 1) {
                 throw self::refused('Replay authorization already committed');
             }

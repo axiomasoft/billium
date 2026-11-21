@@ -25,6 +25,7 @@ use Billium\Execution\Internal\Custody\VerifyDelivery;
 use Billium\Execution\Internal\Disputes\InventoryComparison;
 use Billium\Execution\Internal\Identity\PaymentIdentity;
 use Billium\Execution\Internal\Storage\ExecutionCodec;
+use Billium\Execution\Internal\Storage\ExecutionRows;
 use DateTimeImmutable;
 use LogicException;
 use Packman\Attributes\Internal;
@@ -56,7 +57,7 @@ final readonly class InventoryItems
             $currency = $item->amount->currency->code;
             $observedAt = $item->observedAt;
             $observed = ['factRef' => $fact, 'providerRevision' => $revision, 'kind' => $kind, 'currency' => $currency, 'minor' => $amount,
-                'observedAt' => ReconciliationJournal::stamp($observedAt), 'sourceDigest' => $source];
+                'observedAt' => ExecutionRows::stamp($observedAt), 'sourceDigest' => $source];
             $code = $kind === 'balance_comparison' ? 'balance_mismatch' : $kind;
             $disposition = 'exposure';
             if ($item->finalAfter !== null && $w->through < $item->finalAfter) {
@@ -81,7 +82,7 @@ final readonly class InventoryItems
             $source = $item->payloadDigest;
             $amount = $snapshot->operationAmount?->minor;
             $observed = ['factRef' => $fact, 'providerRevision' => $revision, 'kind' => $kind, 'currency' => $currency, 'minor' => $amount,
-                'observedAt' => ReconciliationJournal::stamp($observedAt), 'sourceDigest' => $source, 'normalizedStatus' => $snapshot->normalizedStatus, 'materialDigest' => $snapshot->materialDigest,
+                'observedAt' => ExecutionRows::stamp($observedAt), 'sourceDigest' => $source, 'normalizedStatus' => $snapshot->normalizedStatus, 'materialDigest' => $snapshot->materialDigest,
                 'authorizedMinor' => $snapshot->authorizedTotal->minor, 'capturedMinor' => $snapshot->capturedTotal->minor,
                 'refundedMinor' => $snapshot->refundedTotal->minor, 'voidedMinor' => $snapshot->voidedTotal->minor,
                 'providerOperationId' => $snapshot->providerOperationId, 'originalBindingDigest' => $snapshot->bindingDigest,
@@ -133,7 +134,7 @@ final readonly class InventoryItems
         $this->journal->write($w->scope, $w->source, 'execution.compare_inventory_item', function (TransactionContext $ctx) use ($w, $runId, $pageNo, $index,
             $fact, $revision, $root, $operation, $kind, $source, $evidence, $work, $code, $disposition, $observed, $amount): ExecutionReceipt {
             $run = $this->journal->current($ctx, $w);
-            if (ReconciliationJournal::integer($run->id) !== $runId) {
+            if (ExecutionRows::integer($run->id) !== $runId) {
                 throw new LogicException('Run identity changed');
             }
             $table = $this->journal->db($ctx)->table('billium_execution_recon_item');

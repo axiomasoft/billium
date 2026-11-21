@@ -8,7 +8,7 @@ use Billium\Core\Enums\Modules\ModuleLifecycleState;
 use Packman\Attributes\Api;
 
 /**
- * Persisted lifecycle state of one module in one installation (billium_module_state, owned by P3.3).
+ * Persisted lifecycle state of one module in one installation (billium_module_state, owned by the platform installation).
  * Only a value read inside the root Tx, after the idempotency claim and the installation lock, may gate money.
  */
 #[Api(since: '1.0')]

@@ -12,6 +12,7 @@ use Billium\Execution\Data\OperationRecord;
 use Billium\Execution\Internal\Reconciliation\ReconciliationJournal;
 use Billium\Execution\Internal\Reconciliation\RecoveryWindow;
 use Billium\Execution\Internal\Storage\ExecutionCodec;
+use Billium\Execution\Internal\Storage\ExecutionRows;
 use DateTimeImmutable;
 use Packman\Attributes\Internal;
 
@@ -63,10 +64,10 @@ final readonly class InventoryComparison
             return null;
         }
         if ($last !== null) {
-            $prev = ExecutionCodec::map(ReconciliationJournal::string($last->observed));
+            $prev = ExecutionCodec::map(ExecutionRows::text($last->observed));
             if (is_string($observed['observedAt'] ?? null) && is_string($prev['observedAt'] ?? null)
                 && new DateTimeImmutable($observed['observedAt']) < new DateTimeImmutable($prev['observedAt'])) {
-                return $last->status === 'open' ? ReconciliationJournal::string($last->event_ref) : null;
+                return $last->status === 'open' ? ExecutionRows::text($last->event_ref) : null;
             }
         }
         $basisDigest = ExecutionCodec::digest($basis);
@@ -78,7 +79,7 @@ final readonly class InventoryComparison
             'expected' => ExecutionCodec::encode($basis), 'observed' => ExecutionCodec::encode($observed), 'basis_digest' => $basisDigest,
             'provenance' => $consistent ? 'subsequent_consistent_comparison' : ($w->attempt === null ? 'original_provider_inventory' : 'original_attempt_recovery'), 'receipt_ref' => $consistent ? $w->ref : null,
             'severity' => $code === 'fee' || $code === 'settlement' ? 'review' : 'high', 'owner_ref' => $w->scope->intentOwnerNamespace,
-            'created_at' => ReconciliationJournal::stamp(new DateTimeImmutable), 'next_review_at' => $consistent ? null : ReconciliationJournal::stamp(new DateTimeImmutable),
+            'created_at' => ExecutionRows::stamp(new DateTimeImmutable), 'next_review_at' => $consistent ? null : ExecutionRows::stamp(new DateTimeImmutable),
         ]);
 
         return $consistent ? null : $event;

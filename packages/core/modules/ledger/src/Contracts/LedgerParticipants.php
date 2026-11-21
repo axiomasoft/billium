@@ -19,8 +19,8 @@ use Packman\Attributes\SpiKind;
  * Typed ledger participants of a root transaction owned by another module (D60, transaction-participants). Each method
  * receives the CURRENT TransactionContext, requires `ledger` in its admitted closure and the same runner/connection/
  * session, takes only predeclared locks through that context and never starts a runner; public Ledger mutations remain
- * root-only. No method exposes SQL, a connection or foreign tables. Record/adjust/declare implementation: P3.6; issueInvoice: P3.7; credit note and closure proof boundary: P3.8.
- * P4 corrections (D63/F01): a draft obligation is adjusted (adjustObligation refuses a frozen invoice); a finalized one
+ * root-only. No method exposes SQL, a connection or foreign tables.
+ * Corrections (D63/F01): a draft obligation is adjusted (adjustObligation refuses a frozen invoice); a finalized one
  * gets a positive delta as recordObligation with CorrectionBasis::derive(original basis, correction identity, revision)
  * and a negative delta as issueCreditNote. The original obligation is never overwritten.
  */
@@ -32,7 +32,7 @@ interface LedgerParticipants
 
     public function declareSettlementIntent(TransactionContext $context, DeclareSettlementIntent $command): Receipt;
 
-    /** Issues the draft and sets legal_document_ref once, in the same root Tx as the P6 numbering (D49); the locks must be planned by the root. */
+    /** Issues the draft and sets legal_document_ref once, in the same root Tx as legal document numbering (D49); the locks must be planned by the root. */
     public function issueInvoice(TransactionContext $context, IssueInvoice $command, string $legalDocumentRef): Receipt;
 
     public function issueCreditNote(TransactionContext $context, IssueCreditNote $command): Receipt;
