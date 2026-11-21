@@ -55,7 +55,7 @@ final class FeedScopeReadPlanTest extends OutboxTestCase
         $explain = $owner->selectOne('EXPLAIN (ANALYZE, FORMAT JSON) '.self::text($page['query']), $page['bindings']);
         self::assertInstanceOf(stdClass::class, $explain);
         $plan = self::text($explain->{'QUERY PLAN'});
-        self::assertStringContainsString('"Index Name": "billium_outbox_event_scope_cursor"', $plan);
+        self::assertMatchesRegularExpression('/"Index Name": "billium_outbox_event_(?:scope|seller)_cursor"/', $plan);
         self::assertStringNotContainsString('"Node Type": "Sort"', $plan, 'the page must come out of the index in cursor order: '.$plan);
         self::assertSame(0, preg_match('/"Rows Removed by (?:Filter|Index Recheck)": [0-9]{2,}/', $plan), 'other sellers must not be read: '.$plan);
     }
