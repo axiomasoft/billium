@@ -27,7 +27,7 @@ final class RelayCommand extends Command
             return self::FAILURE;
         }
         try {
-            $relay = $this->option('commands') ? app(CommandOutboxRelay::class) : app(OutboxRelay::class);
+            $relay = $this->option('commands') === true ? app(CommandOutboxRelay::class) : app(OutboxRelay::class);
             $report = $relay->relay((int) $limit);
             $this->line("claimed={$report->claimed} delivered={$report->delivered} failed={$report->failed} stale={$report->stale}");
 
