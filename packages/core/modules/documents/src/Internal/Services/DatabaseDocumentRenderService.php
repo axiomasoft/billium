@@ -517,6 +517,19 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
                     ]);
                 }
 
+                // Do not mark ready unless the blob row is already stored and still attachable.
+                $blobRow = $db->table('billium_document_render_blob')
+                    ->where('seller_ref', $caller->sellerRef)
+                    ->where('environment', $caller->environment)
+                    ->where('blob_ref', $command->blobRef)
+                    ->first();
+                if ($blobRow === null) {
+                    throw new ProblemException(ProblemCode::ReferenceUnknown, 'billium.documents.render_blob_not_stored');
+                }
+                if (in_array(RowCast::str($blobRow->status, 'status'), ['deleting', 'deleted'], true)) {
+                    throw new ProblemException(ProblemCode::RecoveryRequired, 'billium.documents.render_blob_deleted');
+                }
+
                 $mergedDiagnostics = array_merge(
                     RowCast::jsonObject($target->redacted_diagnostics, 'redacted_diagnostics'),
                     $redacted,
@@ -1049,7 +1062,22 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
     private static function redactString(string $value): string
     {
         $value = (string) preg_replace('/Bearer\s+[A-Za-z0-9\-._~+\/=]+/i', 'Bearer [REDACTED]', $value);
-        $value = (string) preg_replace('/([?&](?:token|sig|secret|key|auth|password)=)[^&#\s]+/i', '$1[REDACTED]', $value);
+        $value = (string) preg_replace_callback(
+            '/([?&])([^#&=\s]+)=([^&#\s]*)/',
+            static function (array $match): string {
+                $full = (string) $match[0];
+                $separator = (string) $match[1];
+                $rawName = (string) $match[2];
+                $name = strtolower($rawName);
+                $sensitive = array_any(
+                    self::SENSITIVE_DIAGNOSTIC_KEYS,
+                    static fn (string $needle): bool => str_contains($name, $needle),
+                ) || in_array($name, ['key', 'auth'], true);
+
+                return $sensitive ? $separator.$rawName.'=[REDACTED]' : $full;
+            },
+            $value,
+        );
         $value = (string) preg_replace('/\b(?:cvv|cvc|pan)\b\s*[:=]\s*\S+/i', '[REDACTED]', $value);
 
         return (string) preg_replace('/(?<!\d)\d{13,19}(?!\d)/', '[REDACTED]', $value);
