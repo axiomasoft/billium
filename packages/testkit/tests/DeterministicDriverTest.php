@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Testkit\Tests;
 
+use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Execution\Data\LookupRequest;
 use Billium\Execution\Enums\CaptureMode;
@@ -109,7 +110,8 @@ final class DeterministicDriverTest extends TestCase
                 'authorize' => $driver->authorize(HarnessFactory::request($cap)), 'capture' => $driver->capture(HarnessFactory::request($cap)), 'voidAuthorization' => $driver->voidAuthorization(HarnessFactory::request($cap)), 'refund' => $driver->refund(HarnessFactory::request($cap)), default => throw new RuntimeException('Unknown test method')
             };
             self::fail('Unsupported call accepted');
-        } catch (ProblemException) {
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::CapabilityUnsupported, $error->problem);
             self::assertSame([], $this->journal()->records());
         }
     }
@@ -156,13 +158,15 @@ final class DeterministicDriverTest extends TestCase
         try {
             $driver->execute(HarnessFactory::request($cap));
             self::fail('Tx accepted');
-        } catch (RuntimeException) {
+        } catch (RuntimeException $error) {
+            self::assertSame('Simulated external call inside transaction', $error->getMessage());
         }
         $driver = new DeterministicPaymentDriver($this->journal(), $this->clock, $cap, static fn (): int => 0);
         try {
             $driver->execute(HarnessFactory::request(SimulatedCapabilities::snapshot('account-b')));
             self::fail('Foreign account accepted');
-        } catch (RuntimeException) {
+        } catch (RuntimeException $error) {
+            self::assertSame('Foreign, changed or expired merchant binding', $error->getMessage());
             self::assertSame([], $this->journal()->records());
         }
     }
@@ -204,7 +208,8 @@ final class DeterministicDriverTest extends TestCase
         try {
             $driver->execute(HarnessFactory::request($cap, binding: HarnessFactory::binding($cap, 'seller-b')));
             self::fail('Seller collision accepted');
-        } catch (RuntimeException) {
+        } catch (RuntimeException $error) {
+            self::assertSame('Provider idempotency payload conflict', $error->getMessage());
         }
         $rotated = HarnessFactory::credentials('account-a', 'credentials-v2');
         $lookup = $driver->lookup(new LookupRequest($request->binding, 'operation-a', 'reference-a', $first->snapshot?->providerOperationId, $rotated));

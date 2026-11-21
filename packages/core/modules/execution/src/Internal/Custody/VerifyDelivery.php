@@ -48,7 +48,7 @@ final readonly class VerifyDelivery
         $driver = $drivers->resolve($merchant->driverId, $merchant->driverContractVersion);
         if ($driver->contractVersion() !== $merchant->driverContractVersion || $cap->driverContractVersion !== $driver->contractVersion()
             || $cap->driverId !== $merchant->driverId || $cap->digest !== $merchant->capabilityDigest || $cap->merchantAccountRef !== $merchant->merchantAccountRef
-            || ExecutionCodec::encode($cap) !== ExecutionCodec::encode($drivers->capabilities($merchant))) {
+            || ExecutionCodec::differs($cap, $drivers->capabilities($merchant))) {
             throw new ProblemException(ProblemCode::CapabilityUnsupported, 'Original evidence handler and capability are unavailable');
         }
         if ($callback) {

@@ -28,6 +28,8 @@ use PHPUnit\Framework\Attributes\Group;
 #[Group('EVT-02')]
 #[Group('EVT-06')]
 #[Group('pg')]
+// Feed reads stop at the cluster-wide snapshot xmin, which transactions in other databases hold back.
+#[Group('pg-serial')]
 final class FilteredFeedCompatibilityTest extends OutboxTestCase
 {
     #[Group('pg-serial')]

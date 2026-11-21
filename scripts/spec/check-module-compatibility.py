@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static schema-module compatibility gate (P3.13, D55, D63).
+"""Static schema-module compatibility gate (D55, D63).
 
 Checks spec/modules.json against the repository without a database: schema, module DAG, version and
 schema ranges, ports, compositions, owned tables, config keys, migration identities, event/command

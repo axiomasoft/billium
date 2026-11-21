@@ -10,7 +10,7 @@ use Billium\Core\Enums\Modules\ModuleTransitionKind;
 use Packman\Attributes\Api;
 
 /**
- * What a disable/retire/uninstall would do. Read-only: applying it is a P3.3 root-Tx operation that re-checks the
+ * What a disable/retire/uninstall would do. Read-only: applying it is a platform root-Tx operation that re-checks the
  * facts under the installation lock. A preview never purges data (`purgesData` is always false).
  */
 #[Api(since: '1.0')]

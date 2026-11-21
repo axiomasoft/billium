@@ -8,6 +8,7 @@ use Billium\Schedule\Contracts\AgreementRevisionCommit;
 use Billium\Schedule\Contracts\AgreementRevisionGuard;
 use Billium\Schedule\Contracts\Clock;
 use Billium\Schedule\Contracts\CommercialPeriods;
+use Billium\Schedule\Contracts\CorrectionBasisPolicy;
 use Billium\Schedule\Contracts\CorrectionParticipants;
 use Billium\Schedule\Contracts\IntervalResolver;
 use Billium\Schedule\Contracts\OccurrenceLocks;
@@ -19,6 +20,7 @@ use Billium\Schedule\Internal\CommercialPeriodExport;
 use Billium\Schedule\Internal\DatabaseAgreementRevisionCommit;
 use Billium\Schedule\Internal\Locks\ScheduleLockRequests;
 use Billium\Schedule\Internal\OccurrenceConformance;
+use Billium\Schedule\Internal\Participants\CanonicalCorrectionBasis;
 use Billium\Schedule\Internal\Participants\DatabaseCorrectionParticipants;
 use Billium\Schedule\Internal\Participants\DatabaseOccurrenceParticipants;
 use Billium\Schedule\Internal\Services\DatabaseOccurrenceService;
@@ -50,6 +52,7 @@ final class ScheduleServiceProvider extends ServiceProvider
         $this->app->bind(AgreementRevisionCommit::class, DatabaseAgreementRevisionCommit::class);
         $this->app->bind(CommercialPeriods::class, CommercialPeriodExport::class);
         $this->app->bindIf(AgreementRevisionGuard::class, UnboundAgreementRevisionGuard::class);
+        $this->app->bindIf(CorrectionBasisPolicy::class, CanonicalCorrectionBasis::class);
         $this->app->bindIf(Clock::class, SystemClock::class);
     }
 

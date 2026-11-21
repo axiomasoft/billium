@@ -7,6 +7,8 @@ namespace Billium\Schedule\Internal\Services;
 use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Schedule\Contracts\ScheduleQueries;
 use Billium\Schedule\Data\DueBatch;
+use Billium\Schedule\Data\OccurrenceView;
+use Billium\Schedule\Enums\OccurrenceState;
 use Billium\Schedule\Internal\Canonical;
 use Billium\Schedule\Internal\Errors\OccurrenceProblems;
 use Billium\Schedule\Internal\OccurrenceTime;
@@ -23,7 +25,7 @@ final readonly class DatabaseScheduleQueries implements ScheduleQueries
 {
     public function __construct(private OccurrenceStore $store, private CallerContext $callers) {}
 
-    public function occurrence(string $occurrenceRef): ?array
+    public function occurrence(string $occurrenceRef): ?OccurrenceView
     {
         $row = $this->store->occurrence(ref: $occurrenceRef, activeOnly: false);
         if ($row === null) {
@@ -39,11 +41,24 @@ final readonly class DatabaseScheduleQueries implements ScheduleQueries
         $confirmed = $applicable !== null && $created !== null && $applicable->terms_digest === $created->terms_digest
             && $this->store->query('occurrence_amendment')->where('occurrence_ref', $row->occurrence_ref)
                 ->where('schedule_revision', $applicable->revision)->where('kind', 'revision_confirmed')->exists();
+        $action = $applicable === null ? null : (Payload::decode($applicable->terms)['action'] ?? null);
 
-        return [...Payload::map(get_object_vars($row)), 'applicable_revision' => $applicable === null ? null : Payload::integer($applicable->revision),
-            'applicable_revision_confirmed' => $confirmed,
-            'applicable_inputs_digest' => $applicable?->inputs_digest,
-            'applicable_action' => $applicable === null ? null : (Payload::decode($applicable->terms)['action'] ?? null)];
+        return new OccurrenceView(
+            occurrenceRef: Payload::text($row->occurrence_ref),
+            sellerRef: Payload::text($row->seller_ref),
+            environment: Payload::text($row->environment),
+            componentRef: Payload::text($row->component_ref),
+            state: OccurrenceState::from(Payload::text($row->state)),
+            periodStart: new DateTimeImmutable(Payload::text($row->period_start)),
+            periodEnd: new DateTimeImmutable(Payload::text($row->period_end)),
+            inputsDigest: Payload::text($row->inputs_digest),
+            createdRevision: Payload::integer($row->created_revision),
+            ratedBasisRef: $row->rated_basis_ref === null ? null : Payload::text($row->rated_basis_ref),
+            applicableRevision: $applicable === null ? null : Payload::integer($applicable->revision),
+            applicableRevisionConfirmed: $confirmed,
+            applicableInputsDigest: $applicable === null ? null : Payload::text($applicable->inputs_digest),
+            applicableAction: $action === null ? null : Payload::text($action),
+        );
     }
 
     public function dueSchedules(string $sellerRef, DateTimeImmutable $asOf, int $limit = 100, ?string $cursor = null): DueBatch

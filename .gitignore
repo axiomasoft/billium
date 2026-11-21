@@ -52,8 +52,6 @@ __pycache__/
 .env
 .env.*
 !.env.example
-.swissknifeman/backups/
-.swissknifeman/config.toml.lock
 /plans
 /tasks
 

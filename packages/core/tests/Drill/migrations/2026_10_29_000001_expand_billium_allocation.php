@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
-// ACC-RST-10: fixture only, outside production migration identities (D21/M-28).
+// ACC-RST-10: fixture only, outside production migration identities (D21).
 return new class extends Migration
 {
     public function up(): void

@@ -24,6 +24,7 @@ use Billium\Execution\Contracts\AuthorizationCommands;
 use Billium\Execution\Contracts\CallbackCustody;
 use Billium\Execution\Contracts\DispatchEgress;
 use Billium\Execution\Contracts\EvidenceReducer;
+use Billium\Execution\Contracts\MerchantCredentials;
 use Billium\Execution\Contracts\MerchantRegistry;
 use Billium\Execution\Contracts\PaymentDrivers;
 use Billium\Execution\Contracts\RootPaymentCommands;
@@ -65,6 +66,7 @@ use Illuminate\Foundation\Application;
 use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
+use RuntimeException;
 
 #[Group('pg')]
 final class AuthorizationLifecycleTest extends ExecutionTestCase
@@ -514,6 +516,28 @@ final class AuthorizationLifecycleTest extends ExecutionTestCase
             self::assertSame(0, $this->rows('billium_execution_reservation', 'installation_ref=?', [$scope->installationRef]));
             self::assertSame(0, $this->rows('billium_execution_operation', "operation_ref='different-child'"));
             self::assertSame(1, UnknownResultTest::events($path, 'provider.call'));
+        } finally {
+            UnknownResultTest::clean($path);
+        }
+    }
+
+    public function test_unavailable_historical_credentials_refuse_capture_and_void_as_recovery_before_any_child_row(): void
+    {
+        $path = Fixture::tempPath();
+        $app = $this->application();
+        try {
+            self::authorize($app, $path);
+            $vault = $this->createStub(MerchantCredentials::class);
+            $vault->method('resolve')->willThrowException(new RuntimeException('Simulated vault unavailable'));
+            $app->instance(MerchantCredentials::class, $vault);
+            self::refuses(ProblemCode::RecoveryRequired, static fn () => $app->make(AuthorizationCommands::class)->admit(Fixture::scope(), self::child('capture-vault', 10))->orThrow());
+            $revoked = $this->createStub(MerchantCredentials::class);
+            $revoked->method('resolve')->willThrowException(new ProblemException(ProblemCode::ValidationInvalid, 'Simulated revoked permission'));
+            $app->instance(MerchantCredentials::class, $revoked);
+            self::refuses(ProblemCode::RecoveryRequired, static fn () => $app->make(AuthorizationCommands::class)->admit(Fixture::scope(), self::child('void-revoked', 10, true))->orThrow());
+            self::assertSame(1, $this->rows('billium_execution_operation'));
+            self::assertSame(0, $this->rows('billium_execution_reservation'));
+            self::assertSame(0, $this->rows('billium_execution_child_identity'));
         } finally {
             UnknownResultTest::clean($path);
         }

@@ -9,6 +9,7 @@ use Billium\Schedule\Contracts\AgreementRevisionCommit;
 use Billium\Schedule\Contracts\AgreementRevisionGuard;
 use Billium\Schedule\Contracts\Clock;
 use Billium\Schedule\Contracts\CommercialPeriods;
+use Billium\Schedule\Contracts\CorrectionBasisPolicy;
 use Billium\Schedule\Contracts\CorrectionParticipants;
 use Billium\Schedule\Contracts\IntervalResolver;
 use Billium\Schedule\Contracts\OccurrenceLocks;
@@ -99,6 +100,7 @@ final class SchedulePlugin implements ExtensionPlugin, WithCapabilities, WithSch
             AgreementRevisionCommit::class => Cardinality::OptionalSingle->value,
             CommercialPeriods::class => Cardinality::OptionalSingle->value,
             AgreementRevisionGuard::class => Cardinality::OptionalSingle->value,
+            CorrectionBasisPolicy::class => Cardinality::OptionalSingle->value,
             Clock::class => Cardinality::OptionalSingle->value,
         ];
     }

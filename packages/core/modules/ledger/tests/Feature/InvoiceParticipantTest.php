@@ -44,7 +44,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use RuntimeException;
 
-/** D49/D60: the composed issue (P6 supplies the legal reference) is the same guarded routine in the caller's root Tx. */
+/** D49/D60: the composed issue (document numbering supplies the legal reference) is the same guarded routine in the caller's root Tx. */
 #[Group('pg')]
 final class InvoiceParticipantTest extends LedgerTestCase
 {

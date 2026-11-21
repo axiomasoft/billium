@@ -9,10 +9,10 @@ use Billium\Contracts\Data\Envelopes\QuantitySnapshot;
 use Billium\Rating\Data\Pricing\PriceVersion;
 use Billium\Rating\Data\Rating\FrozenAggregate;
 use Billium\Rating\Data\Rating\FrozenRatingInputs;
-use Billium\Rating\Internal\Adapters\ScheduleOccurrenceAdapter;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
 use Billium\Rating\Internal\Pipeline\RatingComputation;
 use Billium\Rating\Internal\Storage\RatingRows;
+use Billium\Rating\Internal\Time\Micros;
 use DateTimeImmutable;
 use Packman\Attributes\Internal;
 use Throwable;
@@ -69,8 +69,8 @@ final class QuantitySnapshotScope
                 }
             }
             $identity = get_object_vars($snapshot->attribution);
-            $start = ScheduleOccurrenceAdapter::micros(new DateTimeImmutable(RatingRows::text($snapshot->effectiveInterval->start))->format('Y-m-d\TH:i:s.uP'));
-            $end = ScheduleOccurrenceAdapter::micros(new DateTimeImmutable(RatingRows::text($snapshot->effectiveInterval->end))->format('Y-m-d\TH:i:s.uP'));
+            $start = Micros::of(new DateTimeImmutable(RatingRows::text($snapshot->effectiveInterval->start)));
+            $end = Micros::of(new DateTimeImmutable(RatingRows::text($snapshot->effectiveInterval->end)));
             if ($snapshot->sellerRef !== $inputs->sellerRef || $snapshot->unit !== $price->unit
                 || $snapshot->effectiveRevision < 1 || $snapshot->prorationPolicy !== 'whole_interval/1'
                 || $start !== $inputs->periodStartMicros || $end !== $inputs->periodEndMicros

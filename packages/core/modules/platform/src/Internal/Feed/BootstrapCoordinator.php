@@ -160,8 +160,15 @@ final readonly class BootstrapCoordinator
             }
             throw new ProblemException(ProblemCode::RecoveryRequired, "Bootstrap is {$status}");
         }
-        $record = $db->selectOne("SELECT * FROM public.billium_feed_bootstrap_item WHERE session_id = ? AND state = 'staged' ORDER BY id LIMIT 1", [$sessionId]);
+        // One pass over this session's staged items yields both the next item in manifest order and how many remain.
+        // Counting forces the session key scan; a bare ORDER BY id LIMIT 1 walks the primary key past every older session.
+        $record = $db->selectOne(<<<'SQL'
+            SELECT *, count(*) OVER () AS staged FROM public.billium_feed_bootstrap_item
+            WHERE session_id = ? AND state = 'staged' ORDER BY id LIMIT 1
+            SQL, [$sessionId]);
+        $remaining = 0;
         if ($record !== null) {
+            $remaining = Rows::int(Rows::field($record, 'staged')) - 1;
             $payload = json_decode(Rows::string(Rows::field($record, 'payload')), false, 64, JSON_THROW_ON_ERROR);
             $item = new BootstrapItem(
                 Rows::string(Rows::field($record, 'operation_ref')), Rows::int(Rows::field($record, 'revision')), Rows::string(Rows::field($record, 'material_digest')),
@@ -192,7 +199,6 @@ final readonly class BootstrapCoordinator
             };
             $db->update('UPDATE public.billium_feed_bootstrap_item SET state = ?, result_ref = ?, disposed_at = now() WHERE id = ?', [$state, substr($ref, 0, 200), Rows::field($record, 'id')]);
         }
-        $remaining = Rows::int(Rows::field($db->selectOne("SELECT count(*) AS n FROM public.billium_feed_bootstrap_item WHERE session_id = ? AND state = 'staged'", [$sessionId]), 'n'));
         if ($remaining === 0) {
             $db->update("UPDATE public.billium_feed_bootstrap_session SET status = 'ready', updated_at = now() WHERE id = ?", [$sessionId]);
         }

@@ -63,7 +63,7 @@ final readonly class ExecutionCapacity implements CapacityParticipants
     {
         $reservation = $this->store->reservation($transactionContext, $reservationRef) ?? throw new LogicException('Original child reservation is missing');
         $fact = $this->store->factForEvidence($transactionContext, $materialSnapshot->evidenceRefs[0] ?? '', $reservation->operationRef);
-        if ($absenceCertificate !== null || $fact === null || ExecutionCodec::encode($fact->snapshot) !== ExecutionCodec::encode($materialSnapshot)
+        if ($absenceCertificate !== null || $fact === null || ExecutionCodec::differs($fact->snapshot, $materialSnapshot)
             || $reservation->kind !== $materialSnapshot->kind || $materialSnapshot->operationRef !== $reservation->operationRef) {
             throw new ProblemException(ProblemCode::RecoveryRequired, 'Reservation requires the original authenticated provider fact');
         }

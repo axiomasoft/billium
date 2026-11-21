@@ -102,7 +102,7 @@ final class CallbackCustodyTest extends ExecutionTestCase
                 $event = new ProviderEvidence($event->evidenceRef, $event->scope, $event->providerId, $event->merchantAccountRef, $event->providerEventId, $event->payloadDigest, $event->signatureVerdict, $event->handlerContractVersion, $event->receivedAt, [...$event->sanitizedPayload, 'password' => 'fixture-sensitive', 'api_key' => 'not-inline-api-key', 'note' => '4111111111111111', 'cvv2' => 'not-inline-cvv2'], $event->securePayloadRef);
             }
             $original = $app->make(AdapterQualification::class);
-            $verifier = $this->createMock(AdapterQualification::class);
+            $verifier = self::createStub(AdapterQualification::class);
             $verifier->method('verify')->willThrowException(new RuntimeException('Temporarily unavailable verification configuration'));
             $app->instance(AdapterQualification::class, $verifier);
             $vault = $this->createMock(CallbackPayloadArchive::class);

@@ -17,6 +17,8 @@ use LogicException;
 use PHPUnit\Framework\Attributes\Group;
 
 #[Group('pg')]
+// Feed reads stop at the cluster-wide snapshot xmin, which transactions in other databases hold back.
+#[Group('pg-serial')]
 final class LedgerSnapshotSourceTest extends QueryTestCase
 {
     public function test_snapshot_keeps_pending_actual_refund_children_and_discrepancy_evidence(): void

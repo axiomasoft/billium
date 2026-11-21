@@ -10,7 +10,7 @@ use Billium\Ledger\Tests\Schema\LedgerTestCase;
 use PDOException;
 use PHPUnit\Framework\Attributes\Group;
 
-/** FA02 storage proof only; the collection owner's typed proof validation belongs to P3.8. */
+/** FA02 storage proof only; the collection owner's typed proof validation is tested with the allocation routines. */
 #[Group('pg')]
 final class SettlementClosureSchemaTest extends LedgerTestCase
 {

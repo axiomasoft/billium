@@ -244,7 +244,7 @@ final class EvidenceReducerTest extends ExecutionTestCase
         $origins = new DurableJournal($path.'.origins');
         $codec = new Codec;
         $db = $app->make(DatabaseManager::class)->connection();
-        $auth = $this->createMock(IncomingCommandAuthenticator::class);
+        $auth = self::createStub(IncomingCommandAuthenticator::class);
         $auth->method('authenticate')->willReturnCallback(static function (string $dest, array $message) use ($origins, $selected, $db): SourceAuthorityGrant {
             self::assertSame(0, $db->transactionLevel());
             /** @var array<string,mixed> $message */

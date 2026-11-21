@@ -7,8 +7,8 @@ namespace Billium\Core\Data\Modules;
 use Packman\Attributes\Api;
 
 /**
- * Counted facts of an installation that a transition/uninstall preview weighs. The owning module (P3.3 persistence
- * and later phases) fills them; the preview rules in core only interpret them.
+ * Counted facts of an installation that a transition/uninstall preview weighs. The owning modules (platform
+ * installation persistence and the business modules) fill them; the preview rules in core only interpret them.
  */
 #[Api(since: '1.0')]
 final readonly class ModuleTransitionFacts

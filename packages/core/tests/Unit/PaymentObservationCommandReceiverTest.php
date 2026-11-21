@@ -43,7 +43,7 @@ final class PaymentObservationCommandReceiverTest extends TestCase
         foreach (['expired', 'seller', 'lineage', 'audience'] as $mismatch) {
             $grant = $this->grant($message, $mismatch);
             $auth = $this->createMock(IncomingCommandAuthenticator::class);
-            $auth->method('authenticate')->willReturn($grant);
+            $auth->expects(self::once())->method('authenticate')->willReturn($grant);
             $ledger = $this->createMock(ObservationApplier::class);
             $ledger->expects(self::never())->method('apply');
             $receiver = $this->receiver($auth, $ledger, $this->callers());
@@ -120,7 +120,7 @@ final class PaymentObservationCommandReceiverTest extends TestCase
 
     private function receiver(IncomingCommandAuthenticator $auth, ObservationApplier $ledger, ScopedCallerContext $callers): PaymentObservationCommandReceiver
     {
-        $databases = $this->createMock(DatabaseManager::class);
+        $databases = self::createStub(DatabaseManager::class);
         $databases->method('getConnections')->willReturn([]);
 
         return new PaymentObservationCommandReceiver(new Codec, $auth, $callers, $ledger, $databases, ModuleCatalog::packaged());

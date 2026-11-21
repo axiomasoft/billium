@@ -37,7 +37,7 @@ final readonly class QualifiedAdapter
         if ($driver->contractVersion() !== $merchant->driverContractVersion || $capability->digest !== $merchant->capabilityDigest
             || $capability->driverContractVersion !== $merchant->driverContractVersion || $capability->driverId !== $merchant->driverId
             || $capability->merchantAccountRef !== $merchant->merchantAccountRef || $capability->snapshotRef !== $merchant->capabilitySnapshotRef
-            || ! in_array($currency, $merchant->currencyCodes, true) || ExecutionCodec::encode($drivers->capabilities($merchant)) !== ExecutionCodec::encode($capability)) {
+            || ! in_array($currency, $merchant->currencyCodes, true) || ExecutionCodec::differs($drivers->capabilities($merchant), $capability)) {
             throw new ProblemException(ProblemCode::CapabilityUnsupported, 'No exact registered driver and immutable account capability match');
         }
         $capability->requireEffect($kind, $currency, $merchant->scope->environment === 'production');

@@ -37,6 +37,8 @@ See the [collection runbook](docs/operations/collection.md) for the PostgreSQL p
 alert metrics and the response to overdue work or unresolved outcomes (COV-AC-519, D59; owners
 Billium collection and host monitoring).
 
+- [Codebase map](docs/architecture/CODEBASE-MAP.md): where each responsibility lives, dependency rules, checks;
+  [source index](docs/source-index/README.md) of every PHP type
 - [Requirements and traceability](docs/requirements.md)
 - [Target architecture](docs/architecture/target-architecture.md) and
   [data model](docs/architecture/data-model.md)
@@ -82,15 +84,7 @@ then `vendor/bin/pest --group=pg-serial`; `scripts/ci.sh` sets `PACKMAN_TEST_DES
 CI for this gate runs from the private mirror https://github.com/corestructor/billium-mirror/ on a `refactor/wave-*` branch, not from a push to the canonical remote.
 Details: [development environment](docs/development-environment.md).
 
-## Agent environment
-
-The environment follows AgenTools: swissknifeman plugins use the **connect**
-channel, mAInd provides project-scoped memory and ecosystem links, and Serena
-provides code navigation for PHP and Dart. Claude Code, Codex, Cursor, and Grok
-are enabled in `.swissknife.json`.
-
-See [development environment](docs/development-environment.md) for setup and
-verification commands.
+## Planning and operations
 
 See [planning and design checks](docs/planning.md) for PLAN1, its execution state and validation commands.
 

@@ -38,12 +38,12 @@ final readonly class InboxEnvelope
     /** @throws ProblemException billium.validation.invalid */
     public static function from(string $channel, stdClass $envelope): self
     {
-        if (preg_match('/^[a-z][a-z0-9_.]*$/', $channel) !== 1 || strlen($channel) > 200) {
+        if (preg_match('/^[a-z][a-z0-9_.]*$/D', $channel) !== 1 || strlen($channel) > 200) {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'Custody channel is a lowercase dotted name');
         }
         $json = json_encode($envelope, JSON_THROW_ON_ERROR);
         $digest = self::text($envelope, 'contentDigest');
-        if (strlen($json) > self::MAX_BYTES || preg_match('/^sha256:[0-9a-f]{64}$/', $digest) !== 1) {
+        if (strlen($json) > self::MAX_BYTES || preg_match('/^sha256:[0-9a-f]{64}$/D', $digest) !== 1) {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'Envelope exceeds the custody bound or has no sha256 contentDigest');
         }
         $sequence = $envelope->sourceSequence ?? null;

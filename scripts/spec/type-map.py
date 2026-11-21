@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Maintain spec/type-map.json: the schema -> PHP class -> Dart class map (M-26) and check it against the code.
+"""Maintain spec/type-map.json: the schema -> PHP class -> Dart class map and check it against the code.
 
 The map is written by hand for the non-envelope types and derived for the envelopes; --check verifies that
 every mapped PHP class exists (reflection through `php`), that the set of mapped PHP types equals the public

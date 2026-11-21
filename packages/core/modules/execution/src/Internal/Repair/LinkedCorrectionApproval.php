@@ -14,8 +14,8 @@ use Billium\Execution\Data\RecoveryAction;
 use Billium\Execution\Enums\EffectKind;
 use Billium\Execution\Enums\ReservationState;
 use Billium\Execution\Internal\Disputes\ComparisonBasis;
-use Billium\Execution\Internal\Reconciliation\ReconciliationJournal;
 use Billium\Execution\Internal\Storage\ExecutionCodec;
+use Billium\Execution\Internal\Storage\ExecutionRows;
 use DateTimeImmutable;
 use Illuminate\Database\Connection;
 use Packman\Attributes\Internal;
@@ -51,8 +51,8 @@ final readonly class LinkedCorrectionApproval
             || $s->operationRef !== $child->operationRef || $s->currency !== $review->currency || $s->operationAmount === null || $s->operationAmount->minor <= 0) {
             $this->refuse();
         }
-        $basis = ExecutionCodec::map(ReconciliationJournal::string($review->expected));
-        $observed = ExecutionCodec::map(ReconciliationJournal::string($review->observed));
+        $basis = ExecutionCodec::map(ExecutionRows::text($review->expected));
+        $observed = ExecutionCodec::map(ExecutionRows::text($review->observed));
         $observedAt = $observed['observedAt'] ?? null;
         $priorRefund = $basis['refundedMinor'] ?? null;
         $total = $observed['minor'] ?? null;
@@ -97,7 +97,7 @@ final readonly class LinkedCorrectionApproval
         $contributors = ComparisonBasis::contributors($db, $root);
         foreach ($contributors as $row) {
             if ($row->operation_ref === $child->operationRef) {
-                $this->precedingRevision($db, $route, $row, $child, ReconciliationJournal::string($identity->semantic_digest));
+                $this->precedingRevision($db, $route, $row, $child, ExecutionRows::text($identity->semantic_digest));
             } elseif ($row->operation_ref === $root->operationRef && $rootRevision !== $root->revision) {
                 $this->precedingRevision($db, $route, $row, $root, $root->binding->semanticDigest);
             }
@@ -106,7 +106,7 @@ final readonly class LinkedCorrectionApproval
             $this->refuse();
         }
 
-        return [ReconciliationJournal::string($review->case_ref), $root->operationRef, $child->operationRef, ReconciliationJournal::string($identity->receipt_ref), $applied, $fact->factRef];
+        return [ExecutionRows::text($review->case_ref), $root->operationRef, $child->operationRef, ExecutionRows::text($identity->receipt_ref), $applied, $fact->factRef];
     }
 
     /** @param array<string,string> $route */

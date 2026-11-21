@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail when a Dart source of billium_contracts declares the `double` type (D19, REQ-CON-31, M-48).
+"""Fail when a Dart source of billium_contracts declares the `double` type (D19, REQ-CON-31).
 
 `is num` / `is double` checks stay allowed: they appear only in `is` expressions. Comments and
 string literals are ignored; any other use of the identifier `double` is an error.

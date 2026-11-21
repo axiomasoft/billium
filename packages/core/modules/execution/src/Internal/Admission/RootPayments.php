@@ -33,6 +33,7 @@ use Billium\Execution\Data\OriginDecision;
 use Billium\Execution\Enums\EffectKind;
 use Billium\Execution\Enums\ExecutionPhase;
 use Billium\Execution\Enums\NamespaceState;
+use Billium\Execution\Internal\Admission\ChildAdmission;
 use Billium\Execution\Internal\Dispatch\TransportBoundary;
 use Billium\Execution\Internal\Identity\PaymentIdentity;
 use Closure;
@@ -45,7 +46,8 @@ final readonly class RootPayments implements RootPaymentCommands
     public function __construct(private OperationRunner $runner, private CallerContext $callers, private ExecutionStore $store,
         private Closure $origins, private MerchantRegistry $merchants, private QualifiedAdapter $adapters,
         private CollectionChecks $collection, private AdmitRoot $admission, private TransportBoundary $boundary,
-        private ExecutionReadinessGuard $readiness, private CommandInputReplay $inputReplay, private ?CollectionCancellationParticipant $cancellation = null, private ?CollectionOriginLookup $collectionOrigins = null) {}
+        private ExecutionReadinessGuard $readiness, private CommandInputReplay $inputReplay, private ChildAdmission $children,
+        private ?CollectionCancellationParticipant $cancellation = null, private ?CollectionOriginLookup $collectionOrigins = null) {}
 
     public function admit(ExecutionScope $scope, ExecutePayment|AuthorizePayment $command): StoredOutcome
     {
@@ -56,12 +58,8 @@ final readonly class RootPayments implements RootPaymentCommands
             || ! is_string($wire->source->context ?? null) || ! is_string($wire->source->intentRef ?? null)) {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'Invalid root payment envelope');
         }
-        foreach ([$wire->source->context, $wire->source->intentRef, $wire->operationRef, $wire->bindingRevision, $wire->merchantAccountRef,
-            $scope->installationRef, $scope->sellerRef, $scope->environment, $scope->intentOwnerNamespace] as $identity) {
-            if (str_contains($identity, "\0")) {
-                throw new ProblemException(ProblemCode::ValidationInvalid, 'Payment identities must be representable as PostgreSQL text');
-            }
-        }
+        PaymentIdentity::assertText('Payment identities must be representable as PostgreSQL text', $wire->source->context, $wire->source->intentRef,
+            $wire->operationRef, $wire->bindingRevision, $wire->merchantAccountRef, $scope->installationRef, $scope->sellerRef, $scope->environment, $scope->intentOwnerNamespace);
         $this->assertAddress($scope, $wire);
         $selected = PaymentIdentity::select($this->callers->current(), $scope, $wire->executionProfile);
         try {
@@ -76,19 +74,11 @@ final readonly class RootPayments implements RootPaymentCommands
 
     private function auditConflict(ExecutionScope $scope, ExecutePayment|AuthorizePayment $wire, FinancialScope $selected): void
     {
-        $terms = get_object_vars($wire->raw);
-        unset($terms['commandKey'], $terms['digest'], $terms['requestedAt']);
-        $digest = PaymentIdentity::digest(['schema' => 'billium.execution.conflicting-terms.v1', 'scope' => get_object_vars($scope), 'terms' => $terms]);
+        $digest = PaymentIdentity::digest(['schema' => 'billium.execution.conflicting-terms.v1', 'scope' => get_object_vars($scope), 'terms' => PaymentIdentity::terms($wire->raw)]);
         $original = $this->store->operation($scope, $wire->operationRef);
         $authorized = $original?->binding->executionProfile === $selected->sourceAuthority ? $original?->operationRef : null;
         $record = new AdmissionConflict($scope, $wire::SCHEMA, PaymentIdentity::commandKey($scope, 'charge', $this->sourceContext($wire), $wire->commandKey), $digest, $authorized);
-        $this->runner->run(new OperationSpec('execution.admission_conflict', $scope->sellerRef, $scope->environment, FinancialMode::RawCustody,
-            ModuleOperationClass::CallbackCustody, ['execution', 'platform'], financialScope: $selected),
-            function (TransactionContext $ctx) use ($record, $wire, $digest): ExecutionReceipt {
-                $ref = $this->store->recordAdmissionConflict($ctx, $record);
-
-                return new ExecutionReceipt($ref, $wire->commandKey, $wire->operationRef, $digest, 'conflict_recorded', false, []);
-            })->orThrow();
+        $this->children->recordConflict($selected, $record, $wire->commandKey, $wire->operationRef);
     }
 
     private function sourceContext(ExecutePayment|AuthorizePayment $wire): string

@@ -23,6 +23,7 @@ use Billium\Execution\Data\ResolvedCredentials;
 use Billium\Execution\Data\SecretRef;
 use Billium\Execution\Internal\Storage\DatabaseExecutionStore;
 use Billium\Execution\Internal\Storage\ExecutionCodec;
+use Billium\Execution\Internal\Storage\ExecutionRows;
 use DateTimeImmutable;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
@@ -96,12 +97,12 @@ final readonly class DatabaseMerchantRegistry implements MerchantActionGate, Mer
         if ($credentials->merchantAccountRef !== $revision->merchantAccountRef || $credentials->purpose !== $purpose || $credentials->expiresAt <= $at) {
             $this->refuse('Credential identity, purpose or expiry differs from the original merchant action');
         }
-        $instant = $at->format('Y-m-d H:i:s.uP');
+        $instant = ExecutionRows::stamp($at);
         $query = $this->query('merchant_credential_revision', $revision->scope, $context)
             ->where('revision_ref', $revision->revisionRef)->where('merchant_account_ref', $revision->merchantAccountRef)->where('purpose', $purpose);
         $credential = (clone $query)->where('credential_version_ref', $credentials->credentialVersionRef)
             ->where('credential_ref', $credentials->secretRef->locator)->where('identity_continuity_evidence_ref', $credentials->continuityProofRef)
-            ->where('valid_from', '<=', $instant)->where('valid_until', '>=', $credentials->expiresAt->format('Y-m-d H:i:s.uP'))->value('credential_revision_ref');
+            ->where('valid_from', '<=', $instant)->where('valid_until', '>=', ExecutionRows::stamp($credentials->expiresAt))->value('credential_revision_ref');
         // Once a successor takes effect its predecessor stays retired, including after the successor expires.
         if (! is_string($credential) || $query->where('predecessor_ref', $credential)->where('valid_from', '<=', $instant)->exists()) {
             $this->refuse('Credential continuity is unavailable for this original account, action and horizon');
@@ -115,7 +116,7 @@ final readonly class DatabaseMerchantRegistry implements MerchantActionGate, Mer
             return false;
         }
         $event = $this->query('merchant_lifecycle_event', $revision->scope, $context)->where('revision_ref', $revision->revisionRef)
-            ->where('purpose', $purpose)->where('effective_at', '<=', $at->format('Y-m-d H:i:s.uP'))->orderByDesc('effective_at')->orderByDesc('id')->first();
+            ->where('purpose', $purpose)->where('effective_at', '<=', ExecutionRows::stamp($at))->orderByDesc('effective_at')->orderByDesc('id')->first();
         if ($event === null) {
             return false;
         }
@@ -157,17 +158,17 @@ final readonly class DatabaseMerchantRegistry implements MerchantActionGate, Mer
         if ($evidenceRef === '' || ($action === 'enable_recovery' && ($retentionUntil === null || $retentionUntil <= $effectiveAt))) {
             $this->refuse('Lifecycle permission needs explicit evidence and recovery horizon');
         }
-        $this->connection($context)->table('billium_execution_merchant_lifecycle_event')->insert(['installation_ref' => $scope->installationRef, 'seller_ref' => $scope->sellerRef, 'environment' => $scope->environment, 'event_ref' => $eventRef, 'revision_ref' => $revisionRef, 'action' => $action, 'purpose' => $purpose, 'effective_at' => $effectiveAt->format('Y-m-d H:i:s.uP'), 'retention_until' => $retentionUntil?->format('Y-m-d H:i:s.uP'), 'actor_ref' => $context->caller()->actorRef, 'reason' => $reason, 'evidence_ref' => $evidenceRef]);
+        $this->connection($context)->table('billium_execution_merchant_lifecycle_event')->insert(['installation_ref' => $scope->installationRef, 'seller_ref' => $scope->sellerRef, 'environment' => $scope->environment, 'event_ref' => $eventRef, 'revision_ref' => $revisionRef, 'action' => $action, 'purpose' => $purpose, 'effective_at' => ExecutionRows::stamp($effectiveAt), 'retention_until' => ExecutionRows::nullableStamp($retentionUntil), 'actor_ref' => $context->caller()->actorRef, 'reason' => $reason, 'evidence_ref' => $evidenceRef]);
     }
 
     public function appendCredential(TransactionContext $context, MerchantRevision $revision, string $credentialRevisionRef, string $credentialVersionRef, SecretRef $locator, string $purpose, DateTimeImmutable $validFrom, DateTimeImmutable $validUntil, string $continuityEvidenceRef, ?string $predecessorRef): void
     {
         $this->admin($context, $revision->scope);
         $original = $this->lockRevision($context, $revision->scope, $revision->revisionRef, shared: false);
-        if (ExecutionCodec::encode($original) !== ExecutionCodec::encode($revision) || $continuityEvidenceRef === '' || $validUntil <= $validFrom) {
+        if (ExecutionCodec::differs($original, $revision) || $continuityEvidenceRef === '' || $validUntil <= $validFrom) {
             $this->refuse('Credential rotation lacks immutable identity continuity');
         }
-        $this->connection($context)->table('billium_execution_merchant_credential_revision')->insert(['installation_ref' => $revision->scope->installationRef, 'seller_ref' => $revision->scope->sellerRef, 'environment' => $revision->scope->environment, 'credential_revision_ref' => $credentialRevisionRef, 'revision_ref' => $revision->revisionRef, 'merchant_account_ref' => $revision->merchantAccountRef, 'credential_ref' => $locator->locator, 'credential_version_ref' => $credentialVersionRef, 'purpose' => $purpose, 'valid_from' => $validFrom->format('Y-m-d H:i:s.uP'), 'valid_until' => $validUntil->format('Y-m-d H:i:s.uP'), 'identity_continuity_evidence_ref' => $continuityEvidenceRef, 'predecessor_ref' => $predecessorRef]);
+        $this->connection($context)->table('billium_execution_merchant_credential_revision')->insert(['installation_ref' => $revision->scope->installationRef, 'seller_ref' => $revision->scope->sellerRef, 'environment' => $revision->scope->environment, 'credential_revision_ref' => $credentialRevisionRef, 'revision_ref' => $revision->revisionRef, 'merchant_account_ref' => $revision->merchantAccountRef, 'credential_ref' => $locator->locator, 'credential_version_ref' => $credentialVersionRef, 'purpose' => $purpose, 'valid_from' => ExecutionRows::stamp($validFrom), 'valid_until' => ExecutionRows::stamp($validUntil), 'identity_continuity_evidence_ref' => $continuityEvidenceRef, 'predecessor_ref' => $predecessorRef]);
     }
 
     private function admin(TransactionContext $context, ExecutionScope $scope): void

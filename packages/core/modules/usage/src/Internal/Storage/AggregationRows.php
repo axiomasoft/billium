@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Billium\Usage\Internal\Storage;
 
+use Billium\Usage\Data\SourceCompleteness;
+use Billium\Usage\Enums\CompletenessStatus;
 use Billium\Usage\Internal\Errors\UsageProblems;
 use Packman\Attributes\Internal;
 
@@ -49,5 +51,31 @@ final class AggregationRows
     public static function group(mixed $value): array
     {
         return array_map(self::text(...), self::map($value));
+    }
+
+    /**
+     * A member that a stored document must carry; absence is corruption, not an implicit null.
+     *
+     * @param  array<string, mixed>  $map
+     */
+    public static function member(array $map, string $key): mixed
+    {
+        return array_key_exists($key, $map) ? $map[$key] : throw UsageProblems::error('stored_evidence_invalid');
+    }
+
+    /** Rebuilds one frozen completeness frontier entry, re-verifying its evidence digest. */
+    public static function completeness(mixed $value): SourceCompleteness
+    {
+        $item = self::map($value);
+        $repair = self::member($item, 'repairOrReplayRef');
+
+        return new SourceCompleteness(
+            sourceRef: self::text(self::member($item, 'sourceRef')), evidenceSeq: self::integer(self::member($item, 'evidenceSeq')),
+            status: CompletenessStatus::tryFrom(self::text(self::member($item, 'status'))) ?? throw UsageProblems::error('stored_evidence_invalid'),
+            rangeStartMicros: self::integer(self::member($item, 'rangeStartMicros')), rangeEndMicros: self::integer(self::member($item, 'rangeEndMicros')),
+            watermarkMicros: self::integer(self::member($item, 'watermarkMicros')),
+            repairOrReplayRef: $repair === null ? null : self::text($repair),
+            evidenceDigest: self::text(self::member($item, 'evidenceDigest')),
+        );
     }
 }

@@ -26,6 +26,7 @@ use Billium\Platform\Internal\Feed\PartitionStore;
 use Billium\Platform\Tests\Inbox\InboxTestCase;
 use Billium\Platform\Tests\Inbox\JournalHandler;
 use Illuminate\Container\Container;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Database\PostgresConnection;
@@ -482,20 +483,64 @@ final class BootstrapAtomicAdoptionTest extends InboxTestCase
         self::assertSame(0, $this->rows('billium_feed_bootstrap_item', 'session_id='.$loading));
     }
 
-    private function snapshot(int $cursor, string $ref = 'bs-1'): BootstrapPartition
+    public function test_each_item_application_reads_the_staged_items_once(): void
+    {
+        $session = $this->stage($this->snapshot(cursor: 20));
+        $reads = 0;
+        $this->application()->make(Dispatcher::class)->listen(QueryExecuted::class, static function (QueryExecuted $query) use (&$reads): void {
+            if (str_starts_with(ltrim($query->sql), 'SELECT') && str_contains($query->sql, 'billium_feed_bootstrap_item')) {
+                $reads++;
+            }
+        });
+        $handler = new JournalHandler;
+        $remaining = [];
+        for ($apply = 0; $apply < 4; $apply++) {
+            $remaining[] = $this->applyNext($session, $handler);
+        }
+
+        self::assertSame([2, 1, 0, 0], $remaining);
+        self::assertSame(3, $reads, 'one staged-item read per item; a ready session reads none');
+        self::assertSame(['op-1#1', 'op-2#1', 'op-3#1'], $this->journal('snapshot'));
+        self::assertSame('ready', $this->bootstrapState($session)->status);
+    }
+
+    public function test_the_next_staged_item_comes_from_its_session_staged_index_in_manifest_order(): void
+    {
+        $this->stage($this->snapshot(cursor: 10, ref: 'bs-0', count: 1500, partition: 'part-0'));
+        $session = $this->stage($this->snapshot(cursor: 20));
+        $this->owner()->statement('ANALYZE billium_feed_bootstrap_item');
+        $statement = null;
+        $this->application()->make(Dispatcher::class)->listen(QueryExecuted::class, static function (QueryExecuted $query) use (&$statement): void {
+            if (str_contains($query->sql, "state = 'staged' ORDER BY id")) {
+                $statement = $query;
+            }
+        });
+
+        self::assertSame(2, $this->applyNext($session, new JournalHandler));
+
+        self::assertInstanceOf(QueryExecuted::class, $statement);
+        $explain = $this->owner()->selectOne('EXPLAIN (FORMAT JSON) '.$statement->sql, $statement->bindings);
+        self::assertInstanceOf(stdClass::class, $explain);
+        $plan = $explain->{'QUERY PLAN'};
+        self::assertIsString($plan);
+        self::assertStringContainsString('"Index Name": "billium_feed_bootstrap_item_staged"', $plan);
+        self::assertStringNotContainsString('"Node Type": "Sort"', $plan, 'staged items must come out of the index in manifest order: '.$plan);
+    }
+
+    private function snapshot(int $cursor, string $ref = 'bs-1', int $count = 3, string $partition = 'part-1'): BootstrapPartition
     {
         $items = [];
-        foreach (['op-1', 'op-2', 'op-3'] as $operation) {
+        foreach (array_map(static fn (int $n): string => 'op-'.$n, range(1, $count)) as $operation) {
             $items[] = new BootstrapItem($operation, 1, 'sha256:'.hash('sha256', $operation), (object) [
                 'installationRef' => self::INSTALLATION, 'sourceAuthority' => self::AUTHORITY, 'sourceLineage' => 'L2',
-                'sellerRef' => 'seller-a', 'environment' => 'test', 'partitionRef' => 'part-1',
+                'sellerRef' => 'seller-a', 'environment' => 'test', 'partitionRef' => $partition,
                 'operationRef' => $operation, 'operationRevision' => 1, 'capturedTotal' => '10.00',
             ]);
         }
 
-        return new BootstrapPartition($ref, 'payment.observation', self::AUTHORITY, 'L2', 'seller-a', 'test', 'part-1', $cursor,
+        return new BootstrapPartition($ref, 'payment.observation', self::AUTHORITY, 'L2', 'seller-a', 'test', $partition, $cursor,
             BootstrapPartition::digestOf($cursor, $items, ['channel' => 'payment.observation', 'sourceAuthority' => self::AUTHORITY,
-                'sourceLineage' => 'L2', 'sellerRef' => 'seller-a', 'environment' => 'test', 'partitionRef' => 'part-1']), 'lease-1', count($items), $items);
+                'sourceLineage' => 'L2', 'sellerRef' => 'seller-a', 'environment' => 'test', 'partitionRef' => $partition]), 'lease-1', count($items), $items);
     }
 
     private function stage(BootstrapPartition $snapshot): int

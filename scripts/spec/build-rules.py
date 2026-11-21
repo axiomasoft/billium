@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build rules.json of a spec revision from the [BC-<AREA>-<NN>] markers of its rule documents (M-02, D7).
+"""Build rules.json of a spec revision from the [BC-<AREA>-<NN>] markers of its rule documents (D7).
 
 Writes by default; --check compares without writing and exits 1 on drift.
 """

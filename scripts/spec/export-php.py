@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export the data of a spec revision into the PHP package axiomasoft/billium-contracts (P2.5).
+"""Export the data of a spec revision into the PHP package axiomasoft/billium-contracts.
 
 Writes resources/ (currency table, schema bundle, envelope registry) and the generated PHP types
 (ProblemCode, envelope classes). The package reads nothing outside itself after installation.

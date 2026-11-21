@@ -24,6 +24,7 @@ use Billium\Execution\Internal\Disputes\InventoryComparison;
 use Billium\Execution\Internal\Identity\PaymentIdentity;
 use Billium\Execution\Internal\Merchants\ContinuityMerchantCredentials;
 use Billium\Execution\Internal\Storage\ExecutionCodec;
+use Billium\Execution\Internal\Storage\ExecutionRows;
 use Closure;
 use DateTimeImmutable;
 use Exception;
@@ -62,10 +63,10 @@ final readonly class ExecutionReconciliation implements ReconciliationCommands
         $start = $this->journal->write($scope, $sourceAuthority, 'execution.begin_reconciliation', function (TransactionContext $ctx) use ($window, &$cursor, &$previousReport, &$runId): ExecutionReceipt {
             $run = $this->journal->current($ctx, $window);
             $cursor = is_string($run->inventory_cursor) ? $run->inventory_cursor : null;
-            $runId = ReconciliationJournal::integer($run->id);
+            $runId = ExecutionRows::integer($run->id);
             $previousReport = $this->journal->db($ctx)->table('billium_execution_recon_page')->where('run_id', $runId)->orderBy('page_no')->value('report_ref');
 
-            return $window->receipt(ReconciliationJournal::string($run->state));
+            return $window->receipt(ExecutionRows::text($run->state));
         });
         if ($start->body['status'] === 'complete' || $start->body['status'] === 'parked') {
             return $start;
@@ -77,7 +78,7 @@ final readonly class ExecutionReconciliation implements ReconciliationCommands
             if (! $driver instanceof QualifiedInventoryDriver || $capability->digest !== $merchant->capabilityDigest
                 || $capability->driverContractVersion !== $driver->contractVersion() || $capability->driverId !== $merchant->driverId
                 || $capability->merchantAccountRef !== $merchant->merchantAccountRef
-                || ExecutionCodec::encode($capability) !== ExecutionCodec::encode($drivers->capabilities($merchant))) {
+                || ExecutionCodec::differs($capability, $drivers->capabilities($merchant))) {
                 throw new ProblemException(ProblemCode::CapabilityUnsupported, 'The frozen merchant lacks a qualified bounded inventory reader');
             }
             $capability->requireCapability(DriverCapability::InventoryComplete, $scope->environment === 'production');
@@ -104,7 +105,7 @@ final readonly class ExecutionReconciliation implements ReconciliationCommands
             }
 
             return $this->journal->finish($window, $cursor, $page->nextCursor === null ? 'complete' : 'running',
-                $page->nextCursor, $page->completeThrough === null ? null : ReconciliationJournal::stamp($through),
+                $page->nextCursor, $page->completeThrough === null ? null : ExecutionRows::stamp($through),
                 ExecutionCodec::digest([$page->reportRef, $page->sourceDigest, $page->cursor, $page->nextCursor, $page->items]));
         } catch (Exception $failure) {
             $unsupported = $failure instanceof ProblemException && $failure->problem === ProblemCode::CapabilityUnsupported;
@@ -140,15 +141,15 @@ final readonly class ExecutionReconciliation implements ReconciliationCommands
                     || (is_string($old->complete_through) && new DateTimeImmutable($old->complete_through)->format('U.u') !== $page->completeThrough?->format('U.u'))) {
                     throw new ProblemException(ProblemCode::RecoveryRequired, 'Provider replaced an immutable inventory page');
                 }
-                $number = ReconciliationJournal::integer($old->page_no);
+                $number = ExecutionRows::integer($old->page_no);
             } else {
                 if ($page->nextCursor !== null && ($page->nextCursor === $page->cursor || (clone $pages)->where('cursor_in', $page->nextCursor)->exists())) {
                     throw new ProblemException(ProblemCode::RecoveryRequired, 'Provider repeated a prior cursor');
                 }
-                $number = ReconciliationJournal::integer((clone $pages)->max('page_no') ?? 0) + 1;
+                $number = ExecutionRows::integer((clone $pages)->max('page_no') ?? 0) + 1;
                 $pages->insert(['run_id' => $runId, 'page_no' => $number, 'cursor_in' => $page->cursor, 'cursor_out' => $page->nextCursor,
                     'report_ref' => $page->reportRef, 'credential_version_ref' => $page->credentialVersionRef, 'source_digest' => $page->sourceDigest, 'items_digest' => $content,
-                    'complete_through' => $page->completeThrough === null ? null : ReconciliationJournal::stamp($page->completeThrough), 'item_count' => count($page->items)]);
+                    'complete_through' => $page->completeThrough === null ? null : ExecutionRows::stamp($page->completeThrough), 'item_count' => count($page->items)]);
             }
 
             return $w->receipt('staged');

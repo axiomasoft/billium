@@ -21,7 +21,7 @@ use Packman\Attributes\Internal;
 /**
  * Credit note on an issued invoice (COV-167, COV-174): open_only reduces open; reverse_allocations first releases live
  * allocations of the line (LIFO, full reversal plus remainder) and credits without exceeding due. It is the same
- * routine for the public root and for P4/P6 participants (negative late delta, legal reference) in their root Tx.
+ * routine for the public root and for correction and document-numbering participants (negative late delta, legal reference) in their root Tx.
  */
 #[Internal]
 final readonly class IssueCreditNoteCommand

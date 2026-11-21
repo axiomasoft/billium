@@ -7,12 +7,13 @@ namespace Billium\Usage\Data;
 use Billium\Usage\Internal\Canonical\CanonicalJson;
 use Packman\Attributes\Api;
 
+/** @phpstan-import-type FrontierEntry from SourceCompleteness */
 #[Api]
 final readonly class CompletenessFrontier
 {
     public string $digest;
 
-    /** @var list<array<string, mixed>> */
+    /** @var list<FrontierEntry> sorted by source, then evidence sequence */
     public array $evidence;
 
     /** @param list<SourceCompleteness> $evidence */

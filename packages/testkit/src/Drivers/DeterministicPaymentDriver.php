@@ -35,7 +35,11 @@ use DateTimeImmutable;
 use Packman\Attributes\Api;
 use RuntimeException;
 
-/** Deterministic test PSP. All external state and sends survive a Billium DB restore. */
+/**
+ * Deterministic test PSP. All external state and sends survive a Billium DB restore.
+ *
+ * @phpstan-type EffectTotals array{authorized: int, captured: int, refunded: int, voided: int}
+ */
 #[Api(since: '1.0')]
 final readonly class DeterministicPaymentDriver implements PaymentDriver
 {
@@ -208,7 +212,11 @@ final readonly class DeterministicPaymentDriver implements PaymentDriver
         return $record->providerOperationId ?? null;
     }
 
-    /** @param array<string,int> $totals */
+    /**
+     * @param  EffectTotals  $totals
+     *
+     * @param-out EffectTotals $totals
+     */
     private function addEffectAmounts(array &$totals, ProviderRecord $record): void
     {
         // Old journal rows retain their original protocol's single leg.
@@ -221,10 +229,15 @@ final readonly class DeterministicPaymentDriver implements PaymentDriver
             $amounts = [$field => $record->request->amount->minor];
         }
         foreach ($amounts as $field => $amount) {
-            if (! isset($totals[$field]) || $amount < 0 || $amount > PHP_INT_MAX - $totals[$field]) {
+            // Journal records are unserialized, so their leg names are checked rather than trusted.
+            $leg = match ($field) {
+                'authorized', 'captured', 'refunded', 'voided' => $field,
+                default => throw new RuntimeException('Invalid simulated provider journal amount'),
+            };
+            if ($amount < 0 || $amount > PHP_INT_MAX - $totals[$leg]) {
                 throw new RuntimeException('Invalid simulated provider journal amount');
             }
-            $totals[$field] += $amount;
+            $totals[$leg] += $amount;
         }
     }
 

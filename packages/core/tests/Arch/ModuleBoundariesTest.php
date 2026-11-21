@@ -146,7 +146,7 @@ final class ModuleBoundariesTest extends TestCase
 
     public function test_module_contracts_are_static_and_hold_no_persistence(): void
     {
-        // P3.13 contracts claim no race safety: persistence and the root-Tx seal are P3.3.
+        // Core module contracts claim no race safety: persistence and the root-Tx seal belong to the platform installation.
         $violations = [];
         foreach (['src/Internal/Modules', 'src/Contracts/Modules', 'src/Data/Modules', 'src/Enums/Modules'] as $directory) {
             foreach (self::phpFiles(dirname(__DIR__, 2).'/'.$directory) as $file) {

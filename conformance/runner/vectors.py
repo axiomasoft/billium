@@ -53,7 +53,7 @@ def load_vectors(root: Path, schemas: Schemas) -> list[Vector]:
 
 
 def read_golden(golden_root: Path, rel: str) -> str:
-    """Golden text: UTF-8 without BOM, exactly one trailing LF, which comparison drops (M-07)."""
+    """Golden text: UTF-8 without BOM, exactly one trailing LF, which comparison drops."""
     path = golden_root / rel
     try:
         raw = path.read_bytes()

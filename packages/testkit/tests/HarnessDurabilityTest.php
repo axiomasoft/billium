@@ -122,6 +122,7 @@ final class HarnessDurabilityTest extends TestCase
             self::assertEquals($receipt, (new DurableReceiver(new DurableJournal($receiverJournal->path)))->deliver($receipt));
             HarnessFactory::evidence('pg-dump-restore', ['parent_pid' => ProcessIdentity::current(), 'backend_ids' => [HarnessFactory::integerQuery($pdo, 'SELECT pg_backend_pid()'), HarnessFactory::integerQuery($other, 'SELECT pg_backend_pid()')], 'dump_sha256' => hash_file('sha256', $backup), 'external_journal_paths' => [$provider->journal->path, $receiverJournal->path, $hostJournal->path], 'before_restore_sha256' => $hashes, 'after_restore_sha256' => $restoredHashes, 'restored_rows' => 1, 'next_restored_sequence_value' => 2]);
             $this->expectException(RuntimeException::class);
+            $this->expectExceptionMessage('Retired simulated session');
             (new DeterministicWriterHost(new DurableJournal($hostJournal->path), $clock, static fn (): int => 0))->verify($ticket, $claims);
         } finally {
             $pdo->exec('DROP TABLE IF EXISTS billium_harness_restore_probe');

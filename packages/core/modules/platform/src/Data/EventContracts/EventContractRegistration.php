@@ -10,7 +10,7 @@ use InvalidArgumentException;
 use Packman\Attributes\Api;
 
 /**
- * One billium_event_contract row as P3.4 stores it: key (contractRevision, envelopeSchema, eventType) plus the
+ * One billium_event_contract row as the platform stores it: key (contractRevision, envelopeSchema, eventType) plus the
  * owner and the immutable contract. A `historical` row stays readable for replay after its module is disabled.
  */
 #[Api(since: '1.0')]

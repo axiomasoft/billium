@@ -19,13 +19,14 @@ use Billium\Rating\Data\Rating\RatingHold;
 use Billium\Rating\Data\Tax\TaxResolutionRequest;
 use Billium\Rating\Enums\HoldReason;
 use Billium\Rating\Internal\Adapters\ScheduleOccurrenceAdapter;
+use Billium\Rating\Internal\Adapters\UsageAggregateAdapter;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
 use Billium\Rating\Internal\Proration\QuantitySnapshotScope;
 use Billium\Rating\Internal\Storage\RatingRows;
 use Billium\Rating\Internal\Storage\RatingStore;
-use Billium\Usage\Contracts\AggregationQueries;
+use Billium\Rating\Internal\Time\Micros;
+use Billium\Schedule\Enums\OccurrenceState;
 use Billium\Usage\Data\WindowSelector;
-use DateTimeImmutable;
 use LogicException;
 use Packman\Attributes\Internal;
 use Throwable;
@@ -35,7 +36,7 @@ final readonly class FrozenInputsBuilder
 {
     public function __construct(private CallerContext $callers, private ScheduleOccurrenceAdapter $schedule,
         private PriceVersionStore $prices, private TaxSnapshotPort $tax,
-        private RatingStore $store, private ?AggregationQueries $usage = null) {}
+        private RatingStore $store, private UsageAggregateAdapter $usage) {}
 
     public function build(PrepareRating $command): FrozenRatingInputs|RatingHold
     {
@@ -43,13 +44,13 @@ final readonly class FrozenInputsBuilder
             throw new LogicException('Rating preparation must run outside the root transaction');
         }
         $occurrence = $this->schedule->occurrence($command->occurrenceRef);
-        if (! in_array($occurrence['state'], ['planned', 'rated'], true) || $occurrence['inputs_digest'] !== $command->occurrenceInputsDigest
+        if (! in_array($occurrence->state, [OccurrenceState::Planned, OccurrenceState::Rated], true) || $occurrence->inputsDigest !== $command->occurrenceInputsDigest
             || $command->components === [] || count($command->components) > 100) {
             RatingComputation::refuse('occurrence_not_bookable');
         }
         $caller = $this->callers->current();
-        if ($occurrence['state'] === 'rated') {
-            $existing = $this->store->basis(RatingRows::text($occurrence['rated_basis_ref'] ?? null));
+        if ($occurrence->state === OccurrenceState::Rated) {
+            $existing = $this->store->basis(RatingRows::text($occurrence->ratedBasisRef));
             if ($existing === null) {
                 return new RatingHold(reason: HoldReason::UnknownPolicy, repairOrReplayRefs: [$command->occurrenceRef], detail: 'rated occurrence has no retained basis');
             }
@@ -86,8 +87,8 @@ final readonly class FrozenInputsBuilder
 
             return $retained;
         }
-        $start = ScheduleOccurrenceAdapter::micros(RatingRows::text($occurrence['period_start']));
-        $end = ScheduleOccurrenceAdapter::micros(RatingRows::text($occurrence['period_end']));
+        $start = Micros::of($occurrence->periodStart);
+        $end = Micros::of($occurrence->periodEnd);
         $components = $command->components;
         usort($components, static fn (array $a, array $b): int => strcmp($a['componentRef'], $b['componentRef']));
         $aggregates = $prices = $taxes = [];
@@ -101,9 +102,9 @@ final readonly class FrozenInputsBuilder
             $quantitySnapshot = isset($component['quantitySnapshot'])
                 ? self::quantitySnapshot($component['quantitySnapshot']) : null;
             $fixed = $component['snapshotRef'] === 'fixed';
-            $approved = $quantitySnapshot !== null && ($fixed || $component['snapshotRef'] === ($quantitySnapshot['snapshotRef'] ?? null) || $this->usage === null);
+            $approved = $quantitySnapshot !== null && ($fixed || $component['snapshotRef'] === ($quantitySnapshot['snapshotRef'] ?? null) || ! $this->usage->available());
             if ($fixed || $approved) {
-                if ($component['componentRef'] !== $occurrence['component_ref']) {
+                if ($component['componentRef'] !== $occurrence->componentRef) {
                     RatingComputation::refuse('fixed_input_scope_mismatch');
                 }
                 $group = RatingRows::map(json_decode($command->attribution, true, 32, JSON_THROW_ON_ERROR));
@@ -117,11 +118,11 @@ final readonly class FrozenInputsBuilder
                         sourceDigest: $command->sourceDigest, occurrenceDigest: $command->occurrenceInputsDigest,
                         start: $start, end: $end, group: $group, price: $price);
             } else {
-                if ($this->usage === null) {
+                if (! $this->usage->available()) {
                     return new RatingHold(reason: HoldReason::IncompleteSource, repairOrReplayRefs: [$component['snapshotRef']], detail: 'usage capability absent');
                 }
                 try {
-                    $aggregate = RatingRows::map(json_decode(CanonicalJson::encode($this->usage->snapshot($component['snapshotRef'])), true, 128, JSON_THROW_ON_ERROR));
+                    $aggregate = $this->usage->snapshot($component['snapshotRef']);
                     $w = RatingRows::map($aggregate['window'] ?? null);
                     $window = new WindowSelector(sellerRef: RatingRows::text($w['sellerRef'] ?? null), environment: RatingRows::text($w['environment'] ?? null),
                         metricRef: RatingRows::text($w['metricRef'] ?? null), metricVersion: RatingRows::text($w['metricVersion'] ?? null), groupKey: RatingRows::map($w['group'] ?? null),
@@ -134,9 +135,9 @@ final readonly class FrozenInputsBuilder
                 if (($aggregate['reproducibility'] ?? null) !== 'reproducible') {
                     return new RatingHold(reason: HoldReason::AggregateNotReproducible, repairOrReplayRefs: [$component['snapshotRef']], detail: 'retained aggregate unavailable');
                 }
-                if (($status['state'] ?? null) !== 'final' || ($status['progress'] ?? null) !== 'aggregated'
-                    || ($status['finalSnapshotRef'] ?? null) !== $component['snapshotRef']) {
-                    return new RatingHold(reason: HoldReason::IncompleteSource, repairOrReplayRefs: RatingRows::texts($status['repairOrReplayRefs'] ?? []), detail: 'source window is not final');
+                if ($status['state'] !== 'final' || $status['progress'] !== 'aggregated'
+                    || $status['finalSnapshotRef'] !== $component['snapshotRef']) {
+                    return new RatingHold(reason: HoldReason::IncompleteSource, repairOrReplayRefs: $status['repairOrReplayRefs'], detail: 'source window is not final');
                 }
                 $group = $window->groupKey;
                 if ($window->sellerRef !== $caller->sellerRef || $window->environment !== $caller->environment
@@ -161,7 +162,7 @@ final readonly class FrozenInputsBuilder
             try {
                 $tax = $this->tax->resolve(new TaxResolutionRequest(sellerRef: $caller->sellerRef, environment: $caller->environment,
                     billingAccountRef: $command->billingAccountRef, jurisdictionHint: $command->jurisdictionHint,
-                    componentRef: $component['componentRef'], currency: $currency, taxPoint: new DateTimeImmutable(RatingRows::text($occurrence['period_end'])),
+                    componentRef: $component['componentRef'], currency: $currency, taxPoint: $occurrence->periodEnd,
                     inputDigest: $taxInputDigest));
                 if ($tax->inputDigest !== $taxInputDigest) {
                     RatingComputation::refuse('tax_input_mismatch');

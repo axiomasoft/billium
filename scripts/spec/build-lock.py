@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build revision.lock.json: sha256 of every file of a spec revision except the lock itself (M-03).
+"""Build revision.lock.json: sha256 of every file of a spec revision except the lock itself.
 
 The status comes from the "Статус: **<status>**" line of the revision README.
 Writes by default; --check compares without writing and exits 1 on drift.

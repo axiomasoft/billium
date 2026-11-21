@@ -15,6 +15,7 @@ use Billium\Rating\Contracts\RatingQuoter;
 use Billium\Rating\Contracts\TaxCorrectionPolicyFrontier;
 use Billium\Rating\Contracts\TaxSnapshotPort;
 use Billium\Rating\Contracts\TaxSnapshotStore;
+use Billium\Rating\Internal\Adapters\RatedCorrectionBasis;
 use Billium\Rating\Internal\Pipeline\RatingComputation;
 use Billium\Rating\Internal\Proration\ProrationPolicyCatalog;
 use Billium\Rating\Internal\Services\DatabaseRatingBooking;
@@ -25,6 +26,7 @@ use Billium\Rating\Internal\Storage\DatabasePriceVersionStore;
 use Billium\Rating\Internal\Storage\TaxPolicyFrontier;
 use Billium\Rating\Internal\Strategies\StrategyCatalog;
 use Billium\Rating\Internal\UnboundTaxSnapshotPort;
+use Billium\Schedule\Contracts\CorrectionBasisPolicy;
 use Packman\Attributes\Spi;
 use Packman\Attributes\SpiKind;
 
@@ -56,6 +58,7 @@ final class RatingCapabilities
             RatingPreparer::class => DatabaseRatingPreparer::class,
             RatingBooking::class => DatabaseRatingBooking::class,
             RatingCorrection::class => DatabaseRatingCorrection::class,
+            CorrectionBasisPolicy::class => RatedCorrectionBasis::class,
         ];
     }
 }

@@ -25,7 +25,7 @@ final readonly class ModuleTransitionRequest
         public ?string $evidenceRef = null,
         public ModuleTransitionFacts $facts = new ModuleTransitionFacts,
     ) {
-        if ($transitionRef === '' || strlen($transitionRef) > 150 || $reason === '' || preg_match('/^[a-z][a-z0-9_]*$/', $moduleId) !== 1) {
+        if ($transitionRef === '' || strlen($transitionRef) > 150 || $reason === '' || preg_match('/^[a-z][a-z0-9_]*$/D', $moduleId) !== 1) {
             throw new InvalidArgumentException('Module transition needs a bounded ref, a module id and a reason');
         }
         if ($evidenceRef === '') {

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Billium CI gate (M-33): the single carrier of the gate composition.
+# Billium CI gate: the single carrier of the gate composition.
 # Run inside the toolchain image:
 #   docker compose run --rm toolchain bash scripts/ci.sh [--layer X | --list | --affected RANGE]
 # A layer without a subject is red; a missing tool is red, never a skip.
@@ -59,6 +59,8 @@ layer_derived() {
         found=1
     done
     ((found == 1)) || fail "derived: no generator found under scripts/spec/"
+    need_path scripts/docs/source-index.py
+    python3 scripts/docs/source-index.py --check
 }
 
 layer_php() {
@@ -87,7 +89,8 @@ layer_php() {
     python3 -m unittest discover -s scripts/lint/tests -p test_test_discovery.py
     python3 scripts/lint/test-discovery.py
     vendor/bin/pest --exclude-group=pg
-    PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 vendor/bin/pest --group=pg --exclude-group=pg-serial --parallel --processes=8
+    # One database per worker; pg-serial tests depend on the cluster-wide transaction horizon and run alone.
+    PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 PACKMAN_TEST_DB_PER_PROCESS=1 vendor/bin/pest --group=pg --exclude-group=pg-serial --parallel --processes=8
     PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 vendor/bin/pest --group=pg-serial
     need_path scripts/smoke/consumer-install.sh
     bash scripts/smoke/consumer-install.sh php
