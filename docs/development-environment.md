@@ -36,11 +36,6 @@ A layer without its subject, or a missing tool, is red, never skipped. Regenerat
 script that `--check` names (for example `python3 scripts/spec/identities.py`).
 The php layer runs Packman as `php -d memory_limit=1G vendor/bin/packman gate`, and the same memory limit
 for `php-api --check`, `error-codes --check`, `config-schema --check`, and `ai:sync --dry-run`. There is no `bin/packman`.
-
-GitHub Actions checks out the product into `billium/` and the workspace repository
-`academici/swissknifeman-axioma-workspace` into `workspaces/axioma/`, then installs Composer
-dependencies before the gate. Configure the repository secret `SKM_WORKSPACE_TOKEN` with read
-access to that private workspace repository. The workspace checkout stays separate from the product.
 CI for this gate runs from the private mirror https://github.com/corestructor/billium-mirror/ on a `refactor/wave-*` branch, not from a push to the canonical remote.
 
 Identities (`spec/identities.json`, snapshots in `spec/identities/snapshots/`) and `spec/type-map.json` are
