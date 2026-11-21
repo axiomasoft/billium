@@ -14,6 +14,7 @@ final readonly class ProblemResponse
     public static function from(ProblemCode $code): JsonResponse
     {
         $status = match ($code) {
+            ProblemCode::AuthUnauthenticated => 401,
             ProblemCode::AuthDenied => 403,
             ProblemCode::ValidationInvalid, ProblemCode::MoneyScaleInvalid, ProblemCode::SchemaUnsupported => 400,
             ProblemCode::ReferenceUnknown => 404,

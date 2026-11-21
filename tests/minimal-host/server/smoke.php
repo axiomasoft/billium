@@ -53,7 +53,7 @@ try {
         'query' => 'obligation', 'selector' => ['obligationRef' => 'missing'],
     ], JSON_THROW_ON_ERROR);
     $found = $host->request($app, '/billium/v1/sellers/'.Host::SELLER.'/query', $query);
-    verify($found->getStatusCode() === 404 && str_contains((string) $found->getContent(), 'billium.reference.unknown'), 'Discovered query route did not reach core ledger');
+    verify($found->getStatusCode() === 403 && str_contains((string) $found->getContent(), 'billium.auth.denied'), 'Discovered query route did not enforce scoped lookup');
     foreach ([AttemptWorker::class, DunningCaseService::class, WriterAdmission::class, PaymentDrivers::class, DocumentRenderer::class] as $port) {
         verify(! $app->bound($port), 'Disabled module provided '.$port);
     }

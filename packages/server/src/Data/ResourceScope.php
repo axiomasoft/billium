@@ -15,5 +15,6 @@ final readonly class ResourceScope
         public string $environment,
         public string $sellerRef,
         public array $selectors,
+        public ?string $actorRef = null,
     ) {}
 }

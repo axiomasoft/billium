@@ -13,5 +13,6 @@ use Packman\Attributes\SpiKind;
 #[Spi(kind: SpiKind::Implement, since: '1.0')]
 interface AuthorizationVerdict
 {
+    /** Decide against current policy on every request, including a possible replay. */
     public function authorize(AuthenticatedPrincipal $principal, string $action, ResourceScope $resourceScope, string $payloadDigest): Verdict;
 }

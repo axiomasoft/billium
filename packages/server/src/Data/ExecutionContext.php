@@ -14,6 +14,7 @@ final readonly class ExecutionContext
      * @param  list<string>  $capabilities
      * @param  list<SourceAuthorityGrant>  $sourceAuthorities
      * @param  list<string>  $permissions  Core action grants issued by host policy.
+     * @param  list<string>  $executionAuthorities  Authenticated execution profiles, independent of observation intake grants.
      */
     public function __construct(
         public string $installationRef,
@@ -24,5 +25,11 @@ final readonly class ExecutionContext
         public array $sourceAuthorities = [],
         public array $permissions = [],
         public ?string $intentOwnerNamespace = null,
+        public array $executionAuthorities = [],
     ) {}
+
+    public function sellerScope(): SellerScope
+    {
+        return new SellerScope($this->installationRef, $this->environment, $this->sellerRef);
+    }
 }

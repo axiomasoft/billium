@@ -14,10 +14,13 @@ use Billium\Core\Data\Runtime\VerifiedSessionAuthorization;
 use Billium\Server\Contracts\Authenticator;
 use Billium\Server\Contracts\AuthorizationVerdict;
 use Billium\Server\Contracts\SellerContextResolver;
+use Billium\Server\Contracts\SellerEligibility;
 use Billium\Server\Data\AuthenticatedPrincipal;
 use Billium\Server\Data\ExecutionContext;
 use Billium\Server\Data\RequestMeta;
 use Billium\Server\Data\ResourceScope;
+use Billium\Server\Data\SellerAdmission;
+use Billium\Server\Data\SellerScope;
 use Billium\Server\Data\SourceAuthorityGrant;
 use Billium\Server\Enums\Verdict;
 use Illuminate\Contracts\Config\Repository;
@@ -30,7 +33,7 @@ use Packman\Schema\Contracts\Migration\SchemaMigrator;
 use Symfony\Component\HttpFoundation\Response;
 
 /** Throwaway test host. The fixture policy issues no process or deployment authority. */
-final class Host implements Authenticator, AuthorizationVerdict, FinancialAuthorityEvidence, FinancialSessionAdmission, SellerContextResolver
+final class Host implements Authenticator, AuthorizationVerdict, FinancialAuthorityEvidence, FinancialSessionAdmission, SellerContextResolver, SellerEligibility
 {
     public const string SELLER = 'seller-acme';
 
@@ -62,7 +65,7 @@ final class Host implements Authenticator, AuthorizationVerdict, FinancialAuthor
             }
         });
 
-        foreach ([Authenticator::class, SellerContextResolver::class, AuthorizationVerdict::class,
+        foreach ([Authenticator::class, SellerContextResolver::class, SellerEligibility::class, AuthorizationVerdict::class,
             FinancialSessionAdmission::class, FinancialAuthorityEvidence::class] as $contract) {
             $app->instance($contract, $this);
         }
@@ -95,7 +98,7 @@ final class Host implements Authenticator, AuthorizationVerdict, FinancialAuthor
     {
         $bearer = $headers['authorization'][0] ?? '';
         if (! hash_equals('Bearer '.$this->token, $bearer)) {
-            throw new ProblemException(ProblemCode::AuthDenied);
+            throw new ProblemException(ProblemCode::AuthUnauthenticated);
         }
 
         return new AuthenticatedPrincipal('host-fixture');
@@ -113,7 +116,13 @@ final class Host implements Authenticator, AuthorizationVerdict, FinancialAuthor
                 new SourceAuthorityGrant('payment.observation', 'embedded-commerz', self::INSTALLATION, 'test', self::SELLER, 'fixture-lineage', ['fixture-partition']),
                 new SourceAuthorityGrant('payment.observation', 'remote-billium', self::INSTALLATION, 'test', self::SELLER, 'fixture-lineage', ['fixture-partition']),
             ],
-            intentOwnerNamespace: 'fixture-intents');
+            intentOwnerNamespace: 'fixture-intents',
+            executionAuthorities: ['remote-billium']);
+    }
+
+    public function admission(SellerScope $scope): ?SellerAdmission
+    {
+        return $scope->matches(new SellerScope(self::INSTALLATION, 'test', self::SELLER)) ? new SellerAdmission($scope, true) : null;
     }
 
     public function authorize(AuthenticatedPrincipal $principal, string $action, ResourceScope $resourceScope, string $payloadDigest): Verdict

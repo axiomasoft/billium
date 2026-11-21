@@ -12,6 +12,6 @@ use Packman\Attributes\SpiKind;
 #[Spi(kind: SpiKind::Implement, since: '1.0')]
 interface SellerContextResolver
 {
-    /** Resolve seller, installation, environment and grants from host policy for this principal. */
+    /** Resolve seller, installation, environment, actor and grants from current policy for this principal. */
     public function resolve(AuthenticatedPrincipal $principal, string $routeSeller): ExecutionContext;
 }

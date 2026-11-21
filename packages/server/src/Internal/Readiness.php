@@ -12,6 +12,7 @@ use Billium\Execution\Contracts\RootPaymentCommands;
 use Billium\Server\Contracts\Authenticator;
 use Billium\Server\Contracts\AuthorizationVerdict;
 use Billium\Server\Contracts\SellerContextResolver;
+use Billium\Server\Contracts\SellerEligibility;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
@@ -42,12 +43,16 @@ final readonly class Readiness
         return $this->options->modules->composition === 'remote-billium' && $this->app->bound(RootPaymentCommands::class);
     }
 
+    public function hasAuthPorts(): bool
+    {
+        return $this->app->bound(Authenticator::class) && $this->app->bound(SellerContextResolver::class)
+            && $this->app->bound(SellerEligibility::class) && $this->app->bound(AuthorizationVerdict::class);
+    }
+
     public function ready(): bool
     {
         $composition = $this->modules->manifest()->composition($this->options->modules->composition);
-        if ($composition === null || $composition->server === ModulePresence::Forbidden
-            || ! $this->app->bound(Authenticator::class) || ! $this->app->bound(SellerContextResolver::class)
-            || ! $this->app->bound(AuthorizationVerdict::class)) {
+        if ($composition === null || $composition->server === ModulePresence::Forbidden || ! $this->hasAuthPorts()) {
             return false;
         }
 

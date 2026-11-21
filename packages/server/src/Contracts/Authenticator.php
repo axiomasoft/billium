@@ -13,7 +13,7 @@ use Packman\Attributes\SpiKind;
 interface Authenticator
 {
     /**
-     * Reject absent or invalid credentials with billium.auth.denied.
+     * Reject absent or invalid credentials with billium.auth.unauthenticated.
      *
      * @param  array<string, list<string|null>>  $headers
      */

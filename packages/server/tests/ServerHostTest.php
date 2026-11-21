@@ -79,8 +79,8 @@ final class ServerHostTest extends TestCase
         Host::migrate($app, ['ledger']);
         self::assertSame(200, $this->request($app, '/billium/ready')->getStatusCode());
         $response = $this->request($app, self::ROOT.'/query', $this->query());
-        self::assertSame(404, $response->getStatusCode());
-        self::assertStringContainsString('billium.reference.unknown', (string) $response->getContent());
+        self::assertSame(403, $response->getStatusCode());
+        self::assertStringContainsString('billium.auth.denied', (string) $response->getContent());
         self::assertFalse(self::owner($app)->getSchemaBuilder()->hasTable('billium_execution_operation'));
         self::assertFalse(self::owner($app)->getSchemaBuilder()->hasTable('billium_usage_fact'));
     }
@@ -109,7 +109,7 @@ final class ServerHostTest extends TestCase
         Host::migrate($app, ['platform', 'ledger']);
         $app->make(Installation::class)->init(Host::INSTALLATION);
 
-        self::assertSame(403, $this->host->request($app, self::ROOT.'/query', $this->query(), 'forged')->getStatusCode());
+        self::assertSame(401, $this->host->request($app, self::ROOT.'/query', $this->query(), 'forged')->getStatusCode());
         self::assertSame(403, $this->request($app, '/billium/v1/sellers/other/query', $this->query())->getStatusCode());
         foreach ([
             ['sellerRef' => 'other'], ['installationRef' => 'other'], ['environment' => 'live'],
