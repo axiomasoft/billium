@@ -272,7 +272,13 @@ final readonly class DatabaseOccurrenceService implements OccurrenceService
                     digest: Payload::text($revision->inputs_digest), ordinal: $ordinal);
                 $ref = $this->ref($ensure);
                 $this->locks->acquire(context: $context, occurrenceRefs: [$ref]);
-                $receipt = $this->store->ensure(context: $context, command: $ensure, ref: $ref, head: $head, evidence: $period->toArray());
+                $existing = $this->store->occurrence(ref: $ref, context: $context);
+                // Revision processing retains rated and obligated intervals for amendment.
+                $retained = $existing !== null && $existing->schedule_id === $head->id && $existing->ordinal === $ordinal
+                    && in_array($existing->state, ['rated', 'obligated'], true);
+                $receipt = $retained
+                    ? $this->store->receipt(row: $existing, created: false)
+                    : $this->store->ensure(context: $context, command: $ensure, ref: $ref, head: $head, evidence: $period->toArray());
                 $complete = $ordinal === 100000;
                 $paused = false;
                 $next = null;

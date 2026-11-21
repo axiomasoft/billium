@@ -56,6 +56,38 @@ final class HardeningOccurrenceServiceTest extends OccurrenceTestCase
         }
     }
 
+    public function test_resume_materializes_an_already_obligated_period_once_and_advances_the_cursor(): void
+    {
+        $this->createSchedule();
+        $april = $this->occurrences()->ensureOccurrence($this->ensure([
+            'periodStart' => new DateTimeImmutable('2024-04-30Z'), 'periodEnd' => new DateTimeImmutable('2024-05-31Z'),
+            'ordinal' => 3, 'commandKey' => 'issued-april',
+        ]))->body();
+        $this->advance(self::text($april['occurrenceRef']));
+        $this->occurrences()->applyScheduleRevision($this->revision([
+            'expectedRevision' => 1, 'expectedRowVersion' => 1, 'newRevision' => 2, 'commandKey' => 'pause-march',
+            'effectiveFrom' => new DateTimeImmutable('2024-03-31Z'), 'inputsDigest' => 'sha256:'.str_repeat('b', 64),
+            'terms' => Terms::make(['purpose' => 'recurring_charge', 'action' => 'pause']),
+        ]));
+        $this->occurrences()->materializeNext($this->materialize(key: 'january', version: 2));
+        $this->occurrences()->materializeNext($this->materialize(key: 'february', version: 3));
+
+        $this->occurrences()->applyScheduleRevision($this->revision([
+            'expectedRevision' => 2, 'expectedRowVersion' => 4, 'newRevision' => 3, 'commandKey' => 'resume-april',
+            'effectiveFrom' => new DateTimeImmutable('2024-04-30Z'), 'inputsDigest' => 'sha256:'.str_repeat('c', 64),
+            'terms' => Terms::make(['purpose' => 'recurring_charge', 'action' => 'resume']),
+        ]));
+        $materialized = $this->occurrences()->materializeNext($this->materialize(key: 'april', version: 5))->body();
+        self::assertFalse($materialized['created']);
+        self::assertSame($april['occurrenceRef'], $materialized['occurrenceRef']);
+        self::assertSame($april['inputsDigest'], $materialized['inputsDigest']);
+        self::assertSame('2024-05-31T00:00:00.000000Z', $materialized['nextOccurrenceAt']);
+        self::assertSame(4, $this->value('SELECT cursor_ordinal FROM billium_schedule_billing_schedule'));
+        self::assertSame(1, $this->rows('billium_schedule_billing_occurrence', 'occurrence_ref = ?', [$april['occurrenceRef']]));
+        self::assertSame(1, $this->rows('billium_schedule_billing_occurrence_amendment',
+            "occurrence_ref = ? AND schedule_revision = 3 AND kind = 'amendment_required'", [$april['occurrenceRef']]));
+    }
+
     public function test_resume_keeps_the_cursor_parked_across_an_intervening_calendar_change(): void
     {
         $this->createSchedule();
