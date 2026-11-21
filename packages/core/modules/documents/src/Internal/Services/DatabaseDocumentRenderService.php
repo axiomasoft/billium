@@ -1068,11 +1068,11 @@ final readonly class DatabaseDocumentRenderService implements DocumentRenderServ
                 $full = (string) $match[0];
                 $separator = (string) $match[1];
                 $rawName = (string) $match[2];
-                $name = strtolower($rawName);
-                $sensitive = array_any(
-                    self::SENSITIVE_DIAGNOSTIC_KEYS,
-                    static fn (string $needle): bool => str_contains($name, $needle),
-                ) || in_array($name, ['key', 'auth'], true);
+                $decodedName = rawurldecode($rawName);
+                $name = strtolower((string) preg_replace('/(?<=[a-z0-9])(?=[A-Z])/', '_', $decodedName));
+                $tokens = implode('|', self::SENSITIVE_DIAGNOSTIC_KEYS);
+                $sensitive = preg_match('/(?:^|[^a-z0-9])(?:'.$tokens.')(?:$|[^a-z0-9])/', $name) === 1
+                    || in_array($name, ['key', 'auth'], true);
 
                 return $sensitive ? $separator.$rawName.'=[REDACTED]' : $full;
             },

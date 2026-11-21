@@ -25,7 +25,8 @@ final class HardeningDocumentRenderTest extends DocumentsTestCase
         $this->application()->instance(DocumentRenderer::class, new InMemoryDocumentRenderer('in-memory-pdf', '1.0.0'));
         $this->application()->instance(DocumentStorage::class, new InMemoryDocumentStorage);
         $asset = 'https://cdn.example/logo.png?theme=plain&token=topsecret123&key=exactkeysecret&auth=exactauthsecret'
-            .'&signature=supersecretvalue&api_key=anothersecretvalue&access_token=thirdsecretvalue&authorization=authsecretvalue';
+            .'&signature=supersecretvalue&api_key=anothersecretvalue&access_token=thirdsecretvalue&authorization=authsecretvalue'
+            .'&monkey=capuchin&keystone=arch&design=clean&X-Amz-Signature=signedsecret&access%5Ftoken=encodedsecret';
 
         $this->renderService()->requestRender(new RequestDocumentRender(
             scope: $this->docScope(),
@@ -121,6 +122,7 @@ final class HardeningDocumentRenderTest extends DocumentsTestCase
         }
         self::assertStringContainsString('[REDACTED]', $diagnostics);
         self::assertStringContainsString('theme=plain', $diagnostics);
+        self::assertStringContainsString('monkey=capuchin&keystone=arch&design=clean', $diagnostics);
     }
 
     /** @return list<string> */
@@ -134,6 +136,8 @@ final class HardeningDocumentRenderTest extends DocumentsTestCase
             'anothersecretvalue',
             'thirdsecretvalue',
             'authsecretvalue',
+            'signedsecret',
+            'encodedsecret',
         ];
     }
 }
