@@ -424,6 +424,8 @@ lookup.unavailable, 5xx). Новый код объявляет Receipt при д
 | `billium.authorization.capacity_exceeded` | Void amount exceeds locked unconsumed authorization | нет | Inspect the typed refusal and resolve its stated capability, capacity, hold or evidence condition. | stored | D31, REQ-CON-05 |
 | `billium.operation.financial_hold` | New monetary intent refused under discrepancy hold | нет | Inspect the typed refusal and resolve its stated capability, capacity, hold or evidence condition. | stored | D31, REQ-CON-05 |
 | `billium.lookup.ambiguous` | Provider evidence cannot identify reliable actual effect; retain unknown and reconcile | нет | Inspect the typed refusal and resolve its stated capability, capacity, hold or evidence condition. | none | D31, REQ-CON-05 |
+| `billium.module.unavailable` | модуль не включён; отказ до custody и денежного эффекта | нет | не создавать новый ключ; исторический query может остаться | none | D55, D31, REQ-CON-05 |
+| `billium.auth.unauthenticated` | credential отсутствует или недействителен, до чтения ресурса | нет | исправить credential; тот же ключ допустим | none | REQ-CON-21, D31, M-45 |
 
 ## План fixtures
 

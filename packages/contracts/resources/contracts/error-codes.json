@@ -49,6 +49,17 @@
         {
             "package": "axiomasoft/billium-contracts",
             "enum": "Billium\\Contracts\\Errors\\BilliumErrorCode",
+            "case": "AuthUnauthenticated",
+            "code": "billium.auth_unauthenticated",
+            "type": "urn:packman:problem:billium.auth_unauthenticated",
+            "status": 401,
+            "title": "Authentication is missing or invalid.",
+            "retryable": false,
+            "category": "authentication"
+        },
+        {
+            "package": "axiomasoft/billium-contracts",
+            "enum": "Billium\\Contracts\\Errors\\BilliumErrorCode",
             "case": "AuthorizationCapacityExceeded",
             "code": "billium.authorization_capacity_exceeded",
             "type": "urn:packman:problem:billium.authorization_capacity_exceeded",
@@ -166,6 +177,17 @@
             "title": "Lookup read store is temporarily unavailable.",
             "retryable": true,
             "category": "unavailable"
+        },
+        {
+            "package": "axiomasoft/billium-contracts",
+            "enum": "Billium\\Contracts\\Errors\\BilliumErrorCode",
+            "case": "ModuleUnavailable",
+            "code": "billium.module_unavailable",
+            "type": "urn:packman:problem:billium.module_unavailable",
+            "status": 409,
+            "title": "Requested module is not enabled.",
+            "retryable": false,
+            "category": "conflict"
         },
         {
             "package": "axiomasoft/billium-contracts",

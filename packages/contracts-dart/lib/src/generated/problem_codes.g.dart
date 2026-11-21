@@ -31,7 +31,9 @@ enum ProblemCode {
   captureCapacityExceeded('billium.capture.capacity_exceeded', 'capture', false, false, 'stored'),
   authorizationCapacityExceeded('billium.authorization.capacity_exceeded', 'authorization', false, false, 'stored'),
   operationFinancialHold('billium.operation.financial_hold', 'operation', false, false, 'stored'),
-  lookupAmbiguous('billium.lookup.ambiguous', 'lookup', false, true, 'none');
+  lookupAmbiguous('billium.lookup.ambiguous', 'lookup', false, true, 'none'),
+  moduleUnavailable('billium.module.unavailable', 'module', false, true, 'none'),
+  authUnauthenticated('billium.auth.unauthenticated', 'auth', false, true, 'none');
 
   const ProblemCode(
     this.value,

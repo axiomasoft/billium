@@ -1,0 +1,5 @@
+{
+  "id": "http/shape/receipt-find-unknown-major",
+  "kind": "unknown-major",
+  "schema": "receipt.find.v2"
+}

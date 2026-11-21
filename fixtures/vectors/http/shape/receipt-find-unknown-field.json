@@ -1,0 +1,27 @@
+{
+  "id": "http/shape/receipt-find-unknown-field",
+  "spec_refs": [
+    "BC-ENV-04",
+    "REQ-CON-20"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"receipt.find.v1\",\"installationRef\":\"inst-1\",\"environment\":\"test\",\"sellerRef\":\"seller-1\",\"receiptRef\":\"allocation:a1\",\"future\":true}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

@@ -63,12 +63,28 @@ ENVELOPES = (
     ("EnsureBillingOccurrenceV2", "occurrence.ensure.v2", "occurrence/ensure.v2.json", None),
     ("PrepareObligationV2", "obligation.prepare.v2", "obligation/prepare.v2.json", None),
     ("NoChargeReceipt", "occurrence.no_charge.v1", "occurrence/no-charge.v1.json", None),
+    ("FindReceipt", "receipt.find.v1", "receipt/find.v1.json", "request"),
+    ("ReceiptResult", "receipt.find.v1", "receipt/find.v1.json", "response"),
+    ("Capabilities", "billium.capabilities.v1", "capabilities/capabilities.v1.json", None),
+    ("AllocationReceiptResult", "ledger.allocation_receipt.v1", "ledger/allocation-receipt.v1.json", None),
+    ("ObservationCustody", "ledger.observation_custody.v1", "ledger/observation-custody.v1.json", None),
+    ("CommandReceipt", "billium.command_receipt.v1", "command/receipt.v1.json", None),
+    ("FeedOpen", "billium.feed.open.v1", "feed/open.v1.json", None),
+    ("FeedRead", "billium.feed.read.v1", "feed/read.v1.json", None),
+    ("FeedBootstrapRequest", "billium.feed.bootstrap_request.v1", "feed/bootstrap-request.v1.json", None),
+    ("ObligationView", "ledger.obligation.v1", "query/obligation.v1.json", None),
+    ("InvoiceView", "ledger.invoice.v1", "query/invoice.v1.json", None),
+    ("AllocationQuery", "ledger.allocations.v1", "query/allocations.v1.json", None),
+    ("RefundAuthorization", "ledger.refund_authorization.v1", "query/refund-authorization.v1.json", None),
 )
 
 KINDS = {"integer": "int", "string": "string", "object": "object", "array": "list", "boolean": "bool"}
 
 # A oneOf schema picks its envelope class by the presence of this member.
-VARIANT_SELECTOR = {"payment.find.v1": ("status", "response")}
+VARIANT_SELECTOR = {
+    "payment.find.v1": ("status", "response"),
+    "receipt.find.v1": ("status", "response"),
+}
 
 
 @dataclass(frozen=True)

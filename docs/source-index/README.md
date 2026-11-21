@@ -6,7 +6,7 @@ One page per PHP package. Open the package page, find the directory, then read o
 
 | Package | Layer | Types | Imports from |
 |---|---|---|---|
-| [billium-contracts](billium-contracts.md) | L1 | 67 | — |
+| [billium-contracts](billium-contracts.md) | L1 | 80 | — |
 | [billium-core](billium-core.md) | L2 | 110 | billium-collection, billium-contracts, billium-documents, billium-execution, billium-ledger, billium-platform, billium-rating, billium-schedule, billium-usage |
 | [billium-server](billium-server.md) | L3 | 17 | billium-contracts, billium-core, billium-execution, billium-ledger |
 | [billium-platform](billium-platform.md) | L2 | 103 | billium-contracts, billium-core |

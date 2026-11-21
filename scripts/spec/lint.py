@@ -37,6 +37,10 @@ CLOSED = {
     ("collection.authorize.v1", ""),
     ("usage.fact.v1", ""),
     ("payment.observation.v1", ""),
+    ("receipt.find.v1", "/$defs/request"),
+    ("billium.feed.open.v1", ""),
+    ("billium.feed.read.v1", ""),
+    ("billium.feed.bootstrap_request.v1", ""),
 }
 OPEN = {
     ("payment.outcome.v1", ""),
@@ -44,6 +48,15 @@ OPEN = {
     ("payment.find.v1", "/$defs/response"),
     ("usage.receipt.v1", ""),
     ("billium.event.v1", ""),
+    ("receipt.find.v1", "/$defs/response"),
+    ("billium.capabilities.v1", ""),
+    ("ledger.allocation_receipt.v1", ""),
+    ("ledger.observation_custody.v1", ""),
+    ("billium.command_receipt.v1", ""),
+    ("ledger.obligation.v1", ""),
+    ("ledger.invoice.v1", ""),
+    ("ledger.allocations.v1", ""),
+    ("ledger.refund_authorization.v1", ""),
 }
 NON_ENVELOPE_DIRS = {"common", "problem", "conformance"}
 # D63: rating correction.applied is an internal event payload, not a public wire envelope.

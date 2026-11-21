@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-10:command/receipt.v1.json",
+  "title": "Синхронный receipt команды",
+  "type": "object",
+  "required": [
+    "schema",
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "commandSchema",
+    "commandKey",
+    "receiptRef",
+    "receipt",
+    "digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "billium.command_receipt.v1"
+    },
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "commandSchema": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/envelopeName"
+    },
+    "commandKey": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/commandKey"
+    },
+    "receiptRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "receipt": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/receiptKind"
+    },
+    "replayed": {
+      "type": "boolean"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    }
+  }
+}

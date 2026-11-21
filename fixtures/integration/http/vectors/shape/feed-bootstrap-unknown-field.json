@@ -1,0 +1,15 @@
+{
+  "id": "http/shape/feed-bootstrap-unknown-field",
+  "kind": "reject-unknown",
+  "schema": "billium.feed.bootstrap_request.v1",
+  "body": {
+    "schema": "billium.feed.bootstrap_request.v1",
+    "installationRef": "inst-1",
+    "environment": "test",
+    "sellerRef": "seller-1",
+    "commandKey": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+    "subscriptionRef": "sub-1",
+    "selectionDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "future": true
+  }
+}

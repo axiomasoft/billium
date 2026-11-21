@@ -45,6 +45,8 @@ enum BilliumErrorCode: string implements ErrorCode
     case AuthorizationCapacityExceeded = 'billium.authorization_capacity_exceeded';
     case OperationFinancialHold = 'billium.operation_financial_hold';
     case LookupAmbiguous = 'billium.lookup_ambiguous';
+    case ModuleUnavailable = 'billium.module_unavailable';
+    case AuthUnauthenticated = 'billium.auth_unauthenticated';
 
     #[Override]
     public function value(): string
@@ -84,6 +86,8 @@ enum BilliumErrorCode: string implements ErrorCode
             ProblemCode::AuthorizationCapacityExceeded => self::AuthorizationCapacityExceeded,
             ProblemCode::OperationFinancialHold => self::OperationFinancialHold,
             ProblemCode::LookupAmbiguous => self::LookupAmbiguous,
+            ProblemCode::ModuleUnavailable => self::ModuleUnavailable,
+            ProblemCode::AuthUnauthenticated => self::AuthUnauthenticated,
         };
     }
 
@@ -119,6 +123,8 @@ enum BilliumErrorCode: string implements ErrorCode
             self::AuthorizationCapacityExceeded => ProblemCode::AuthorizationCapacityExceeded,
             self::OperationFinancialHold => ProblemCode::OperationFinancialHold,
             self::LookupAmbiguous => ProblemCode::LookupAmbiguous,
+            self::ModuleUnavailable => ProblemCode::ModuleUnavailable,
+            self::AuthUnauthenticated => ProblemCode::AuthUnauthenticated,
         };
     }
 
@@ -132,6 +138,8 @@ enum BilliumErrorCode: string implements ErrorCode
             self::SchemaUnsupported,
             self::CapabilityUnsupported => ErrorCategory::Unsupported,
             self::AuthDenied => ErrorCategory::Authorization,
+            self::AuthUnauthenticated => ErrorCategory::Authentication,
+            self::ModuleUnavailable => ErrorCategory::Conflict,
             self::ReferenceUnknown => ErrorCategory::NotFound,
             self::RecoveryRequired,
             self::LookupAmbiguous,
@@ -160,6 +168,7 @@ enum BilliumErrorCode: string implements ErrorCode
     public function defaultStatus(): int
     {
         return match ($this) {
+            self::AuthUnauthenticated => 401,
             self::AuthDenied => 403,
             self::ReferenceUnknown => 404,
             self::KeyExpired => 410,
@@ -188,7 +197,8 @@ enum BilliumErrorCode: string implements ErrorCode
             self::AllocationReallocationRequired,
             self::AllocationExceedsOpen,
             self::AllocationExceedsAvailable,
-            self::InvoiceTransitionInvalid => 409,
+            self::InvoiceTransitionInvalid,
+            self::ModuleUnavailable => 409,
         };
     }
 
@@ -229,6 +239,8 @@ enum BilliumErrorCode: string implements ErrorCode
             self::AuthorizationCapacityExceeded => 'Void amount exceeds available authorization capacity.',
             self::OperationFinancialHold => 'Operation has an unresolved financial hold.',
             self::LookupAmbiguous => 'Provider lookup evidence is ambiguous.',
+            self::ModuleUnavailable => 'Requested module is not enabled.',
+            self::AuthUnauthenticated => 'Authentication is missing or invalid.',
         };
     }
 }

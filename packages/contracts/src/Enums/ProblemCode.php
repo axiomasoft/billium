@@ -41,6 +41,8 @@ enum ProblemCode: string
     case AuthorizationCapacityExceeded = 'billium.authorization.capacity_exceeded';
     case OperationFinancialHold = 'billium.operation.financial_hold';
     case LookupAmbiguous = 'billium.lookup.ambiguous';
+    case ModuleUnavailable = 'billium.module.unavailable';
+    case AuthUnauthenticated = 'billium.auth.unauthenticated';
 
     public function category(): string
     {
@@ -74,6 +76,8 @@ enum ProblemCode: string
             self::AuthorizationCapacityExceeded => 'authorization',
             self::OperationFinancialHold => 'operation',
             self::LookupAmbiguous => 'lookup',
+            self::ModuleUnavailable => 'module',
+            self::AuthUnauthenticated => 'auth',
         };
     }
 
@@ -109,6 +113,8 @@ enum ProblemCode: string
             self::AuthorizationCapacityExceeded => false,
             self::OperationFinancialHold => false,
             self::LookupAmbiguous => false,
+            self::ModuleUnavailable => false,
+            self::AuthUnauthenticated => false,
         };
     }
 
@@ -144,6 +150,8 @@ enum ProblemCode: string
             self::AuthorizationCapacityExceeded => false,
             self::OperationFinancialHold => false,
             self::LookupAmbiguous => true,
+            self::ModuleUnavailable => true,
+            self::AuthUnauthenticated => true,
         };
     }
 
@@ -179,6 +187,8 @@ enum ProblemCode: string
             self::AuthorizationCapacityExceeded => 'stored',
             self::OperationFinancialHold => 'stored',
             self::LookupAmbiguous => 'none',
+            self::ModuleUnavailable => 'none',
+            self::AuthUnauthenticated => 'none',
         };
     }
 }

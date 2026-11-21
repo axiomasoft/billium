@@ -10,6 +10,20 @@
     },
     {
       "kind": "envelope",
+      "id": "billium.capabilities.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/capabilities/capabilities.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "billium.command_receipt.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/command/receipt.v1.json"
+    },
+    {
+      "kind": "envelope",
       "id": "billium.event.catalog.v1",
       "status": "new",
       "since": "2026-10",
@@ -52,10 +66,31 @@
     },
     {
       "kind": "envelope",
+      "id": "billium.feed.bootstrap_request.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap-request.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "billium.feed.open.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/open.v1.json"
+    },
+    {
+      "kind": "envelope",
       "id": "billium.feed.page.v1",
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/feed/page.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "billium.feed.read.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/read.v1.json"
     },
     {
       "kind": "envelope",
@@ -80,6 +115,20 @@
     },
     {
       "kind": "envelope",
+      "id": "ledger.allocation_receipt.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/ledger/allocation-receipt.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "ledger.allocations.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/allocations.v1.json"
+    },
+    {
+      "kind": "envelope",
       "id": "ledger.due_obligations.v1",
       "status": "new",
       "since": "2026-10",
@@ -87,10 +136,38 @@
     },
     {
       "kind": "envelope",
+      "id": "ledger.invoice.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/invoice.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "ledger.obligation.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/obligation.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "ledger.observation_custody.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/ledger/observation-custody.v1.json"
+    },
+    {
+      "kind": "envelope",
       "id": "ledger.payment_status.v1",
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/query/payment-status.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "ledger.refund_authorization.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/refund-authorization.v1.json"
     },
     {
       "kind": "envelope",
@@ -234,6 +311,13 @@
     },
     {
       "kind": "envelope",
+      "id": "receipt.find.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/receipt/find.v1.json"
+    },
+    {
+      "kind": "envelope",
       "id": "usage.aggregate.v1",
       "status": "new",
       "since": "2026-10",
@@ -343,6 +427,202 @@
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/allocation/reallocate.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v1#/properties/acceptedCommandSchemas",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/capabilities/capabilities.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v1#/properties/catalogs",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/capabilities/capabilities.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/capabilities/capabilities.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v1#/properties/effects",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/capabilities/capabilities.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v1#/properties/enabledModules",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/capabilities/capabilities.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/capabilities/capabilities.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v1#/properties/eventSchemas",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/capabilities/capabilities.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v1#/properties/features",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/capabilities/capabilities.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/capabilities/capabilities.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v1#/properties/limits",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/capabilities/capabilities.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v1#/properties/lookupCompletenessPolicyRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/capabilities/capabilities.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v1#/properties/moduleApiVersions",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/capabilities/capabilities.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v1#/properties/producedResponseSchemas",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/capabilities/capabilities.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/capabilities/capabilities.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v1#/properties/selectionMode",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/capabilities/capabilities.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v1#/properties/serverApiVersion",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/capabilities/capabilities.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v1#/properties/specHash",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/capabilities/capabilities.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v1#/properties/specRevision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/capabilities/capabilities.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.command_receipt.v1#/properties/commandKey",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/command/receipt.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.command_receipt.v1#/properties/commandSchema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/command/receipt.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.command_receipt.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/command/receipt.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.command_receipt.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/command/receipt.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.command_receipt.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/command/receipt.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.command_receipt.v1#/properties/receipt",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/command/receipt.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.command_receipt.v1#/properties/receiptRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/command/receipt.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.command_receipt.v1#/properties/replayed",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/command/receipt.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.command_receipt.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/command/receipt.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.command_receipt.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/command/receipt.v1.json"
     },
     {
       "kind": "envelope-field",
@@ -745,6 +1025,132 @@
     },
     {
       "kind": "envelope-field",
+      "id": "billium.feed.bootstrap_request.v1#/properties/commandKey",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap-request.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap_request.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap-request.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap_request.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap-request.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap_request.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap-request.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap_request.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap-request.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap_request.v1#/properties/selectionDigest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap-request.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap_request.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap-request.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.bootstrap_request.v1#/properties/subscriptionRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/bootstrap-request.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.open.v1#/properties/commandKey",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/open.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.open.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/open.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.open.v1#/properties/envelopeSchemas",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/open.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.open.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/open.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.open.v1#/properties/eventContractRevision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/open.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.open.v1#/properties/eventTypes",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/open.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.open.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/open.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.open.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/open.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.open.v1#/properties/scope",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/open.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.open.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/open.v1.json"
+    },
+    {
+      "kind": "envelope-field",
       "id": "billium.feed.page.v1#/properties/digest",
       "status": "new",
       "since": "2026-10",
@@ -805,6 +1211,69 @@
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/feed/page.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.read.v1#/properties/cursor",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/read.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.read.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/read.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.read.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/read.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.read.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/read.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.read.v1#/properties/limit",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/read.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.read.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/read.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.read.v1#/properties/selectionDigest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/read.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.read.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/read.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.feed.read.v1#/properties/subscriptionRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/feed/read.v1.json"
     },
     {
       "kind": "envelope-field",
@@ -997,6 +1466,111 @@
     },
     {
       "kind": "envelope-field",
+      "id": "ledger.allocation_receipt.v1#/properties/body",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/ledger/allocation-receipt.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.allocation_receipt.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/ledger/allocation-receipt.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.allocation_receipt.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/ledger/allocation-receipt.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.allocation_receipt.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/ledger/allocation-receipt.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.allocation_receipt.v1#/properties/kind",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/ledger/allocation-receipt.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.allocation_receipt.v1#/properties/receiptRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/ledger/allocation-receipt.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.allocation_receipt.v1#/properties/replayed",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/ledger/allocation-receipt.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.allocation_receipt.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/ledger/allocation-receipt.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.allocation_receipt.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/ledger/allocation-receipt.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.allocations.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/allocations.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.allocations.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/allocations.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.allocations.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/allocations.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.allocations.v1#/properties/result",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/allocations.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.allocations.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/allocations.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.allocations.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/allocations.v1.json"
+    },
+    {
+      "kind": "envelope-field",
       "id": "ledger.due_obligations.v1#/properties/environment",
       "status": "new",
       "since": "2026-10",
@@ -1032,6 +1606,146 @@
     },
     {
       "kind": "envelope-field",
+      "id": "ledger.invoice.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/invoice.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.invoice.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/invoice.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.invoice.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/invoice.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.invoice.v1#/properties/result",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/invoice.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.invoice.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/invoice.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.invoice.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/invoice.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.obligation.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/obligation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.obligation.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/obligation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.obligation.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/obligation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.obligation.v1#/properties/result",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/obligation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.obligation.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/obligation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.obligation.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/obligation.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.observation_custody.v1#/properties/code",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/ledger/observation-custody.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.observation_custody.v1#/properties/custodyStatus",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/ledger/observation-custody.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.observation_custody.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/ledger/observation-custody.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.observation_custody.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/ledger/observation-custody.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.observation_custody.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/ledger/observation-custody.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.observation_custody.v1#/properties/receipt",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/ledger/observation-custody.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.observation_custody.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/ledger/observation-custody.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.observation_custody.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/ledger/observation-custody.v1.json"
+    },
+    {
+      "kind": "envelope-field",
       "id": "ledger.payment_status.v1#/properties/environment",
       "status": "new",
       "since": "2026-10",
@@ -1064,6 +1778,48 @@
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/query/payment-status.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.refund_authorization.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/refund-authorization.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.refund_authorization.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/refund-authorization.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.refund_authorization.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/refund-authorization.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.refund_authorization.v1#/properties/result",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/refund-authorization.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.refund_authorization.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/refund-authorization.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "ledger.refund_authorization.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/query/refund-authorization.v1.json"
     },
     {
       "kind": "envelope-field",
@@ -3069,6 +3825,118 @@
     },
     {
       "kind": "envelope-field",
+      "id": "receipt.find.v1#/$defs/request/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/receipt/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "receipt.find.v1#/$defs/request/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/receipt/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "receipt.find.v1#/$defs/request/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/receipt/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "receipt.find.v1#/$defs/request/properties/receiptRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/receipt/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "receipt.find.v1#/$defs/request/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/receipt/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "receipt.find.v1#/$defs/request/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/receipt/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "receipt.find.v1#/$defs/response/properties/absenceCertificate",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/receipt/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "receipt.find.v1#/$defs/response/properties/body",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/receipt/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "receipt.find.v1#/$defs/response/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/receipt/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "receipt.find.v1#/$defs/response/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/receipt/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "receipt.find.v1#/$defs/response/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/receipt/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "receipt.find.v1#/$defs/response/properties/receiptRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/receipt/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "receipt.find.v1#/$defs/response/properties/receiptSchema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/receipt/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "receipt.find.v1#/$defs/response/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/receipt/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "receipt.find.v1#/$defs/response/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/receipt/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "receipt.find.v1#/$defs/response/properties/status",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/receipt/find.v1.json"
+    },
+    {
+      "kind": "envelope-field",
       "id": "usage.aggregate.v1#/properties/attribution",
       "status": "new",
       "since": "2026-10",
@@ -3797,6 +4665,13 @@
     },
     {
       "kind": "problem-code",
+      "id": "billium.auth.unauthenticated",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
       "id": "billium.authorization.capacity_exceeded",
       "status": "new",
       "since": "2026-10",
@@ -3868,6 +4743,13 @@
     {
       "kind": "problem-code",
       "id": "billium.lookup.unavailable",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/problem-codes.json"
+    },
+    {
+      "kind": "problem-code",
+      "id": "billium.module.unavailable",
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/problem-codes.json"

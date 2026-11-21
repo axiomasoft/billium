@@ -1,0 +1,27 @@
+{
+  "id": "http/shape/feed-open-unknown-field",
+  "spec_refs": [
+    "BC-ENV-04",
+    "REQ-CON-20"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"billium.feed.open.v1\",\"installationRef\":\"inst-1\",\"environment\":\"test\",\"sellerRef\":\"seller-1\",\"commandKey\":\"9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d\",\"scope\":{\"installationRef\":\"inst-1\",\"channel\":\"payment.outcome\",\"sourceAuthority\":\"embedded-commerz\",\"sellerRef\":\"seller-1\",\"environment\":\"test\",\"lineage\":\"lineage-1\"},\"eventContractRevision\":\"events-2026-10-v1\",\"envelopeSchemas\":[\"billium.event.v1\"],\"eventTypes\":[\"payment.outcome.v1\"],\"future\":true}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

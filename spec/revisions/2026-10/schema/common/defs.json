@@ -18,6 +18,11 @@
       "type": "string",
       "pattern": "^[a-z][a-z_]*\\.[a-z][a-z_]*\\.v[1-9][0-9]*$"
     },
+    "envelopeName": {
+      "description": "Имя и major-версия envelope, включая составное имя.",
+      "type": "string",
+      "pattern": "^[a-z][a-z_]*(?:\\.[a-z][a-z_]*)+\\.v[1-9][0-9]*$"
+    },
     "timestamp": {
       "description": "Момент времени RFC 3339 в UTC.",
       "type": "string",
@@ -207,7 +212,9 @@
         "billium.capture.capacity_exceeded",
         "billium.authorization.capacity_exceeded",
         "billium.operation.financial_hold",
-        "billium.lookup.ambiguous"
+        "billium.lookup.ambiguous",
+        "billium.module.unavailable",
+        "billium.auth.unauthenticated"
       ]
     },
     "problemCategory": {
@@ -223,6 +230,7 @@
         "invoice",
         "key",
         "lookup",
+        "module",
         "money",
         "observation",
         "operation",
@@ -268,6 +276,20 @@
         "ready",
         "adopted",
         "failed"
+      ]
+    },
+    "receiptFindStatus": {
+      "description": "Результат поиска сохранённого receipt.",
+      "enum": [
+        "found",
+        "absent"
+      ]
+    },
+    "custodyStatus": {
+      "description": "Именованный статус custody наблюдения до бизнес-receipt.",
+      "enum": [
+        "parked_gap",
+        "parked_dependency"
       ]
     },
     "commandSource": {

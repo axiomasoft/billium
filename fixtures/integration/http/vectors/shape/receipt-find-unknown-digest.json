@@ -1,0 +1,19 @@
+{
+  "id": "http/shape/receipt-find-unknown-digest",
+  "kind": "preserve-unknown",
+  "schema": "receipt.find.v1",
+  "body": {
+    "schema": "receipt.find.v1",
+    "installationRef": "inst-1",
+    "environment": "test",
+    "sellerRef": "seller-1",
+    "receiptRef": "allocation:a1",
+    "status": "found",
+    "receiptSchema": "ledger.allocation_receipt.v1",
+    "body": {
+      "kind": "assign"
+    },
+    "trace": "span-1",
+    "digest": "sha256:92e59cc0e7bd9b7e66df1e8734ad55bf717e020a72047d27e3e09f9e00222e69"
+  }
+}

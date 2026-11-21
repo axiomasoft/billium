@@ -201,5 +201,19 @@
     "retryable": false,
     "sameKey": true,
     "receipt": "none"
+  },
+  {
+    "code": "billium.module.unavailable",
+    "category": "module",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none"
+  },
+  {
+    "code": "billium.auth.unauthenticated",
+    "category": "auth",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none"
   }
 ]

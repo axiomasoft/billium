@@ -287,6 +287,97 @@
     "category": "Data"
   },
   {
+    "schema": "receipt.find.v1",
+    "variant": "request",
+    "php": "Billium\\Contracts\\Data\\Envelopes\\FindReceipt",
+    "dart": "FindReceipt",
+    "category": "Data"
+  },
+  {
+    "schema": "receipt.find.v1",
+    "variant": "response",
+    "php": "Billium\\Contracts\\Data\\Envelopes\\ReceiptResult",
+    "dart": "ReceiptResult",
+    "category": "Data"
+  },
+  {
+    "schema": "billium.capabilities.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\Capabilities",
+    "dart": "Capabilities",
+    "category": "Data"
+  },
+  {
+    "schema": "ledger.allocation_receipt.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\AllocationReceiptResult",
+    "dart": "AllocationReceiptResult",
+    "category": "Data"
+  },
+  {
+    "schema": "ledger.observation_custody.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\ObservationCustody",
+    "dart": "ObservationCustody",
+    "category": "Data"
+  },
+  {
+    "schema": "billium.command_receipt.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\CommandReceipt",
+    "dart": "CommandReceipt",
+    "category": "Data"
+  },
+  {
+    "schema": "billium.feed.open.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\FeedOpen",
+    "dart": "FeedOpen",
+    "category": "Data"
+  },
+  {
+    "schema": "billium.feed.read.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\FeedRead",
+    "dart": "FeedRead",
+    "category": "Data"
+  },
+  {
+    "schema": "billium.feed.bootstrap_request.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\FeedBootstrapRequest",
+    "dart": "FeedBootstrapRequest",
+    "category": "Data"
+  },
+  {
+    "schema": "ledger.obligation.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\ObligationView",
+    "dart": "ObligationView",
+    "category": "Data"
+  },
+  {
+    "schema": "ledger.invoice.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\InvoiceView",
+    "dart": "InvoiceView",
+    "category": "Data"
+  },
+  {
+    "schema": "ledger.allocations.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\AllocationQuery",
+    "dart": "AllocationQuery",
+    "category": "Data"
+  },
+  {
+    "schema": "ledger.refund_authorization.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\RefundAuthorization",
+    "dart": "RefundAuthorization",
+    "category": "Data"
+  },
+  {
     "schema": null,
     "variant": null,
     "php": "Billium\\Contracts\\Data\\Money",

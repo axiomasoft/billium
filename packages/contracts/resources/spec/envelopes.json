@@ -404,5 +404,131 @@
         "verifyDigest": true
       }
     ]
+  },
+  "receipt.find.v1": {
+    "schemaId": "urn:billium:spec:2026-10:receipt/find.v1.json",
+    "variants": [
+      {
+        "class": "ReceiptResult",
+        "digestMember": "digest",
+        "verifyDigest": false,
+        "requires": "status"
+      },
+      {
+        "class": "FindReceipt",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "billium.capabilities.v1": {
+    "schemaId": "urn:billium:spec:2026-10:capabilities/capabilities.v1.json",
+    "variants": [
+      {
+        "class": "Capabilities",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "ledger.allocation_receipt.v1": {
+    "schemaId": "urn:billium:spec:2026-10:ledger/allocation-receipt.v1.json",
+    "variants": [
+      {
+        "class": "AllocationReceiptResult",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "ledger.observation_custody.v1": {
+    "schemaId": "urn:billium:spec:2026-10:ledger/observation-custody.v1.json",
+    "variants": [
+      {
+        "class": "ObservationCustody",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "billium.command_receipt.v1": {
+    "schemaId": "urn:billium:spec:2026-10:command/receipt.v1.json",
+    "variants": [
+      {
+        "class": "CommandReceipt",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "billium.feed.open.v1": {
+    "schemaId": "urn:billium:spec:2026-10:feed/open.v1.json",
+    "variants": [
+      {
+        "class": "FeedOpen",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "billium.feed.read.v1": {
+    "schemaId": "urn:billium:spec:2026-10:feed/read.v1.json",
+    "variants": [
+      {
+        "class": "FeedRead",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "billium.feed.bootstrap_request.v1": {
+    "schemaId": "urn:billium:spec:2026-10:feed/bootstrap-request.v1.json",
+    "variants": [
+      {
+        "class": "FeedBootstrapRequest",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "ledger.obligation.v1": {
+    "schemaId": "urn:billium:spec:2026-10:query/obligation.v1.json",
+    "variants": [
+      {
+        "class": "ObligationView",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "ledger.invoice.v1": {
+    "schemaId": "urn:billium:spec:2026-10:query/invoice.v1.json",
+    "variants": [
+      {
+        "class": "InvoiceView",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "ledger.allocations.v1": {
+    "schemaId": "urn:billium:spec:2026-10:query/allocations.v1.json",
+    "variants": [
+      {
+        "class": "AllocationQuery",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "ledger.refund_authorization.v1": {
+    "schemaId": "urn:billium:spec:2026-10:query/refund-authorization.v1.json",
+    "variants": [
+      {
+        "class": "RefundAuthorization",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
   }
 }

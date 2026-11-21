@@ -1,0 +1,13 @@
+{
+  "id": "http/shape/receipt-find-unknown-field",
+  "kind": "reject-unknown",
+  "schema": "receipt.find.v1",
+  "body": {
+    "schema": "receipt.find.v1",
+    "installationRef": "inst-1",
+    "environment": "test",
+    "sellerRef": "seller-1",
+    "receiptRef": "allocation:a1",
+    "future": true
+  }
+}

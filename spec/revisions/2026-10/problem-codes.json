@@ -423,5 +423,35 @@
       "D31",
       "REQ-CON-05"
     ]
+  },
+  {
+    "code": "billium.module.unavailable",
+    "category": "module",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none",
+    "producer": "platform",
+    "when": "модуль не включён; отказ до custody и денежного эффекта, исторический query может остаться",
+    "clientAction": "не создавать новый ключ и не повторять эффект; читать историю там, где она ещё доступна",
+    "basis": [
+      "D55",
+      "D31",
+      "REQ-CON-05"
+    ]
+  },
+  {
+    "code": "billium.auth.unauthenticated",
+    "category": "auth",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none",
+    "producer": "platform",
+    "when": "credential отсутствует или недействителен, до чтения ресурса и custody",
+    "clientAction": "исправить credential; тот же ключ допустим, receipt не сохранён",
+    "basis": [
+      "REQ-CON-21",
+      "D31",
+      "M-45"
+    ]
   }
 ]

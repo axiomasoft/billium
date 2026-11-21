@@ -7,6 +7,7 @@ use Billium\Contracts\Errors\BilliumErrorCode;
 use Billium\Contracts\Errors\BilliumProblemDefinitions;
 use Billium\Contracts\Exceptions\ProblemException;
 use Packman\Errors\Contracts\DescribesError;
+use Packman\Errors\Enums\ErrorCategory;
 use Packman\Errors\Exceptions\CodedException;
 
 it('maps every ProblemCode 1:1 to a single-dot BilliumErrorCode', function (): void {
@@ -32,6 +33,28 @@ it('provides complete RFC 9457 definitions for all BilliumErrorCode cases', func
             ->and($definition->defaultStatus)->toBeGreaterThanOrEqual(400)
             ->and($definition->defaultStatus)->toBeLessThanOrEqual(599)
             ->and(trim($definition->title))->not->toBe('');
+    }
+});
+
+it('keeps packman problem categories consistent with their HTTP status', function (): void {
+    foreach (BilliumErrorCode::cases() as $code) {
+        $expected = match ($code->defaultStatus()) {
+            401 => ErrorCategory::Authentication,
+            403 => ErrorCategory::Authorization,
+            404 => ErrorCategory::NotFound,
+            410 => in_array($code->category(), [ErrorCategory::Conflict, ErrorCategory::Validation], true)
+                ? $code->category()
+                : ErrorCategory::NotFound,
+            409 => ErrorCategory::Conflict,
+            422 => $code->category() === ErrorCategory::Unsupported
+                ? ErrorCategory::Unsupported
+                : ErrorCategory::Validation,
+            429 => ErrorCategory::RateLimit,
+            503 => ErrorCategory::Unavailable,
+            default => $code->defaultStatus() < 500 ? ErrorCategory::Validation : ErrorCategory::Internal,
+        };
+
+        expect($code->value().' '.$code->category()->value)->toBe($code->value().' '.$expected->value);
     }
 });
 

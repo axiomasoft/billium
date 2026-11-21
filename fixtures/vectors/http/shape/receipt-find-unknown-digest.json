@@ -1,0 +1,31 @@
+{
+  "id": "http/shape/receipt-find-unknown-digest",
+  "spec_refs": [
+    "BC-ENV-04",
+    "BC-ENV-06",
+    "BC-ID-12",
+    "D32",
+    "REQ-CON-20"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"receipt.find.v1\",\"installationRef\":\"inst-1\",\"environment\":\"test\",\"sellerRef\":\"seller-1\",\"receiptRef\":\"allocation:a1\",\"status\":\"found\",\"receiptSchema\":\"ledger.allocation_receipt.v1\",\"body\":{\"kind\":\"assign\"},\"trace\":\"span-1\",\"digest\":\"sha256:92e59cc0e7bd9b7e66df1e8734ad55bf717e020a72047d27e3e09f9e00222e69\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "receipt.find.v1",
+        "digest": "sha256:92e59cc0e7bd9b7e66df1e8734ad55bf717e020a72047d27e3e09f9e00222e69"
+      }
+    }
+  ]
+}

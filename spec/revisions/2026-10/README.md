@@ -68,6 +68,18 @@ envelopes, `ERR` — ошибки, `EVT` — события и receipts, `CNF` �
 | `occurrence.ensure.v2` | `schema/occurrence/ensure.v2.json` | frozen commercial period (D12, D56) |
 | `obligation.prepare.v2` | `schema/obligation/prepare.v2.json` | frozen RatedBasis (D56) |
 | `occurrence.no_charge.v1` | `schema/occurrence/no-charge.v1.json` | explicit no-charge receipt (D56) |
+| `receipt.find.v1` | `schema/receipt/find.v1.json` | запрос и ответ поиска receipt (D31, D58) |
+| `billium.capabilities.v1` | `schema/capabilities/capabilities.v1.json` | описание поддержанной семантики, не права (D57, D61, D63) |
+| `ledger.allocation_receipt.v1` | `schema/ledger/allocation-receipt.v1.json` | ответ AllocationReceipt (INV-08, D31) |
+| `ledger.observation_custody.v1` | `schema/ledger/observation-custody.v1.json` | именованный custody parked, не бизнес-receipt (INV-08, D63) |
+| `billium.command_receipt.v1` | `schema/command/receipt.v1.json` | синхронный receipt prepare/ensure/authorize (D31) |
+| `billium.feed.open.v1` | `schema/feed/open.v1.json` | запрос pinned подписки (D63) |
+| `billium.feed.read.v1` | `schema/feed/read.v1.json` | запрос страницы по cursor (D63) |
+| `billium.feed.bootstrap_request.v1` | `schema/feed/bootstrap-request.v1.json` | запрос snapshot с тем же selection (D63) |
+| `ledger.obligation.v1` | `schema/query/obligation.v1.json` | ответ query obligation (REQ-CON-14) |
+| `ledger.invoice.v1` | `schema/query/invoice.v1.json` | ответ query invoice (REQ-CON-14) |
+| `ledger.allocations.v1` | `schema/query/allocations.v1.json` | ответ query allocationByOperation (REQ-CON-14) |
+| `ledger.refund_authorization.v1` | `schema/query/refund-authorization.v1.json` | ответ query refundAuthorization (D35) |
 
 Общие узлы: `schema/common/defs.json` (идентификаторы, время, digest, все перечисления),
 `schema/common/money-wire.json`, `schema/problem/problem.json`. Формат conformance:

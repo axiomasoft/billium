@@ -48,6 +48,19 @@ const Map<String, Envelope Function(Map<String, Object?>)> envelopeBuilders = {
   'EnsureBillingOccurrenceV2': EnsureBillingOccurrenceV2.fromRaw,
   'PrepareObligationV2': PrepareObligationV2.fromRaw,
   'NoChargeReceipt': NoChargeReceipt.fromRaw,
+  'FindReceipt': FindReceipt.fromRaw,
+  'ReceiptResult': ReceiptResult.fromRaw,
+  'Capabilities': Capabilities.fromRaw,
+  'AllocationReceiptResult': AllocationReceiptResult.fromRaw,
+  'ObservationCustody': ObservationCustody.fromRaw,
+  'CommandReceipt': CommandReceipt.fromRaw,
+  'FeedOpen': FeedOpen.fromRaw,
+  'FeedRead': FeedRead.fromRaw,
+  'FeedBootstrapRequest': FeedBootstrapRequest.fromRaw,
+  'ObligationView': ObligationView.fromRaw,
+  'InvoiceView': InvoiceView.fromRaw,
+  'AllocationQuery': AllocationQuery.fromRaw,
+  'RefundAuthorization': RefundAuthorization.fromRaw,
 };
 
 /// `payment.execute.v1`.
@@ -2033,5 +2046,497 @@ final class NoChargeReceipt extends Envelope {
   final String reason;
   final String approvalRef;
   final String approvalDigest;
+  final String digest;
+}
+
+/// `receipt.find.v1`.
+final class FindReceipt extends Envelope {
+  static const String schemaName = 'receipt.find.v1';
+
+  FindReceipt({
+    required super.raw,
+    required this.installationRef,
+    required this.environment,
+    required this.sellerRef,
+    required this.receiptRef,
+    this.digest,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory FindReceipt.fromRaw(Map<String, Object?> raw) => FindReceipt(
+        raw: raw,
+        installationRef: requireString(raw, 'installationRef'),
+        environment: requireString(raw, 'environment'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        receiptRef: requireString(raw, 'receiptRef'),
+        digest: optionalString(raw, 'digest'),
+      );
+
+  final String installationRef;
+  final String environment;
+  final String sellerRef;
+  final String receiptRef;
+  final String? digest;
+}
+
+/// `receipt.find.v1`.
+final class ReceiptResult extends Envelope {
+  static const String schemaName = 'receipt.find.v1';
+
+  ReceiptResult({
+    required super.raw,
+    required this.installationRef,
+    required this.environment,
+    required this.sellerRef,
+    required this.receiptRef,
+    required this.status,
+    required this.digest,
+    this.receiptSchema,
+    this.body,
+    this.absenceCertificate,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory ReceiptResult.fromRaw(Map<String, Object?> raw) => ReceiptResult(
+        raw: raw,
+        installationRef: requireString(raw, 'installationRef'),
+        environment: requireString(raw, 'environment'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        receiptRef: requireString(raw, 'receiptRef'),
+        status: requireString(raw, 'status'),
+        digest: requireString(raw, 'digest'),
+        receiptSchema: optionalString(raw, 'receiptSchema'),
+        body: optionalObject(raw, 'body'),
+        absenceCertificate: optionalObject(raw, 'absenceCertificate'),
+      );
+
+  final String installationRef;
+  final String environment;
+  final String sellerRef;
+  final String receiptRef;
+  final String status;
+  final String digest;
+  final String? receiptSchema;
+  final Map<String, Object?>? body;
+  final Map<String, Object?>? absenceCertificate;
+}
+
+/// `billium.capabilities.v1`.
+final class Capabilities extends Envelope {
+  static const String schemaName = 'billium.capabilities.v1';
+
+  Capabilities({
+    required super.raw,
+    required this.installationRef,
+    required this.environment,
+    required this.specRevision,
+    required this.specHash,
+    required this.serverApiVersion,
+    required this.acceptedCommandSchemas,
+    required this.producedResponseSchemas,
+    required this.eventSchemas,
+    required this.enabledModules,
+    required this.moduleApiVersions,
+    required this.features,
+    required this.effects,
+    required this.limits,
+    required this.lookupCompletenessPolicyRef,
+    required this.catalogs,
+    required this.selectionMode,
+    required this.digest,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory Capabilities.fromRaw(Map<String, Object?> raw) => Capabilities(
+        raw: raw,
+        installationRef: requireString(raw, 'installationRef'),
+        environment: requireString(raw, 'environment'),
+        specRevision: requireString(raw, 'specRevision'),
+        specHash: requireString(raw, 'specHash'),
+        serverApiVersion: requireString(raw, 'serverApiVersion'),
+        acceptedCommandSchemas: requireList(raw, 'acceptedCommandSchemas'),
+        producedResponseSchemas: requireList(raw, 'producedResponseSchemas'),
+        eventSchemas: requireList(raw, 'eventSchemas'),
+        enabledModules: requireList(raw, 'enabledModules'),
+        moduleApiVersions: requireObject(raw, 'moduleApiVersions'),
+        features: requireObject(raw, 'features'),
+        effects: requireObject(raw, 'effects'),
+        limits: requireObject(raw, 'limits'),
+        lookupCompletenessPolicyRef: requireString(raw, 'lookupCompletenessPolicyRef'),
+        catalogs: requireList(raw, 'catalogs'),
+        selectionMode: requireString(raw, 'selectionMode'),
+        digest: requireString(raw, 'digest'),
+      );
+
+  final String installationRef;
+  final String environment;
+  final String specRevision;
+  final String specHash;
+  final String serverApiVersion;
+  final List<Object?> acceptedCommandSchemas;
+  final List<Object?> producedResponseSchemas;
+  final List<Object?> eventSchemas;
+  final List<Object?> enabledModules;
+  final Map<String, Object?> moduleApiVersions;
+  final Map<String, Object?> features;
+  final Map<String, Object?> effects;
+  final Map<String, Object?> limits;
+  final String lookupCompletenessPolicyRef;
+  final List<Object?> catalogs;
+  final String selectionMode;
+  final String digest;
+}
+
+/// `ledger.allocation_receipt.v1`.
+final class AllocationReceiptResult extends Envelope {
+  static const String schemaName = 'ledger.allocation_receipt.v1';
+
+  AllocationReceiptResult({
+    required super.raw,
+    required this.installationRef,
+    required this.environment,
+    required this.sellerRef,
+    required this.receiptRef,
+    required this.kind,
+    required this.replayed,
+    required this.body,
+    required this.digest,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory AllocationReceiptResult.fromRaw(Map<String, Object?> raw) => AllocationReceiptResult(
+        raw: raw,
+        installationRef: requireString(raw, 'installationRef'),
+        environment: requireString(raw, 'environment'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        receiptRef: requireString(raw, 'receiptRef'),
+        kind: requireString(raw, 'kind'),
+        replayed: requireBool(raw, 'replayed'),
+        body: requireObject(raw, 'body'),
+        digest: requireString(raw, 'digest'),
+      );
+
+  final String installationRef;
+  final String environment;
+  final String sellerRef;
+  final String receiptRef;
+  final String kind;
+  final bool replayed;
+  final Map<String, Object?> body;
+  final String digest;
+}
+
+/// `ledger.observation_custody.v1`.
+final class ObservationCustody extends Envelope {
+  static const String schemaName = 'ledger.observation_custody.v1';
+
+  ObservationCustody({
+    required super.raw,
+    required this.installationRef,
+    required this.environment,
+    required this.sellerRef,
+    required this.custodyStatus,
+    required this.code,
+    required this.receipt,
+    required this.digest,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory ObservationCustody.fromRaw(Map<String, Object?> raw) => ObservationCustody(
+        raw: raw,
+        installationRef: requireString(raw, 'installationRef'),
+        environment: requireString(raw, 'environment'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        custodyStatus: requireString(raw, 'custodyStatus'),
+        code: requireString(raw, 'code'),
+        receipt: requireString(raw, 'receipt'),
+        digest: requireString(raw, 'digest'),
+      );
+
+  final String installationRef;
+  final String environment;
+  final String sellerRef;
+  final String custodyStatus;
+  final String code;
+  final String receipt;
+  final String digest;
+}
+
+/// `billium.command_receipt.v1`.
+final class CommandReceipt extends Envelope {
+  static const String schemaName = 'billium.command_receipt.v1';
+
+  CommandReceipt({
+    required super.raw,
+    required this.installationRef,
+    required this.environment,
+    required this.sellerRef,
+    required this.commandSchema,
+    required this.commandKey,
+    required this.receiptRef,
+    required this.receipt,
+    required this.digest,
+    this.replayed,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory CommandReceipt.fromRaw(Map<String, Object?> raw) => CommandReceipt(
+        raw: raw,
+        installationRef: requireString(raw, 'installationRef'),
+        environment: requireString(raw, 'environment'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        commandSchema: requireString(raw, 'commandSchema'),
+        commandKey: requireString(raw, 'commandKey'),
+        receiptRef: requireString(raw, 'receiptRef'),
+        receipt: requireString(raw, 'receipt'),
+        digest: requireString(raw, 'digest'),
+        replayed: optionalBool(raw, 'replayed'),
+      );
+
+  final String installationRef;
+  final String environment;
+  final String sellerRef;
+  final String commandSchema;
+  final String commandKey;
+  final String receiptRef;
+  final String receipt;
+  final String digest;
+  final bool? replayed;
+}
+
+/// `billium.feed.open.v1`.
+final class FeedOpen extends Envelope {
+  static const String schemaName = 'billium.feed.open.v1';
+
+  FeedOpen({
+    required super.raw,
+    required this.commandKey,
+    required this.installationRef,
+    required this.environment,
+    required this.sellerRef,
+    required this.scope,
+    required this.eventContractRevision,
+    required this.envelopeSchemas,
+    required this.eventTypes,
+    this.digest,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory FeedOpen.fromRaw(Map<String, Object?> raw) => FeedOpen(
+        raw: raw,
+        commandKey: requireString(raw, 'commandKey'),
+        installationRef: requireString(raw, 'installationRef'),
+        environment: requireString(raw, 'environment'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        scope: requireObject(raw, 'scope'),
+        eventContractRevision: requireString(raw, 'eventContractRevision'),
+        envelopeSchemas: requireList(raw, 'envelopeSchemas'),
+        eventTypes: requireList(raw, 'eventTypes'),
+        digest: optionalString(raw, 'digest'),
+      );
+
+  final String commandKey;
+  final String installationRef;
+  final String environment;
+  final String sellerRef;
+  final Map<String, Object?> scope;
+  final String eventContractRevision;
+  final List<Object?> envelopeSchemas;
+  final List<Object?> eventTypes;
+  final String? digest;
+}
+
+/// `billium.feed.read.v1`.
+final class FeedRead extends Envelope {
+  static const String schemaName = 'billium.feed.read.v1';
+
+  FeedRead({
+    required super.raw,
+    required this.installationRef,
+    required this.environment,
+    required this.sellerRef,
+    required this.subscriptionRef,
+    required this.selectionDigest,
+    required this.cursor,
+    this.limit,
+    this.digest,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory FeedRead.fromRaw(Map<String, Object?> raw) => FeedRead(
+        raw: raw,
+        installationRef: requireString(raw, 'installationRef'),
+        environment: requireString(raw, 'environment'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        subscriptionRef: requireString(raw, 'subscriptionRef'),
+        selectionDigest: requireString(raw, 'selectionDigest'),
+        cursor: requireString(raw, 'cursor'),
+        limit: optionalInt(raw, 'limit'),
+        digest: optionalString(raw, 'digest'),
+      );
+
+  final String installationRef;
+  final String environment;
+  final String sellerRef;
+  final String subscriptionRef;
+  final String selectionDigest;
+  final String cursor;
+  final int? limit;
+  final String? digest;
+}
+
+/// `billium.feed.bootstrap_request.v1`.
+final class FeedBootstrapRequest extends Envelope {
+  static const String schemaName = 'billium.feed.bootstrap_request.v1';
+
+  FeedBootstrapRequest({
+    required super.raw,
+    required this.commandKey,
+    required this.installationRef,
+    required this.environment,
+    required this.sellerRef,
+    required this.subscriptionRef,
+    required this.selectionDigest,
+    this.digest,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory FeedBootstrapRequest.fromRaw(Map<String, Object?> raw) => FeedBootstrapRequest(
+        raw: raw,
+        commandKey: requireString(raw, 'commandKey'),
+        installationRef: requireString(raw, 'installationRef'),
+        environment: requireString(raw, 'environment'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        subscriptionRef: requireString(raw, 'subscriptionRef'),
+        selectionDigest: requireString(raw, 'selectionDigest'),
+        digest: optionalString(raw, 'digest'),
+      );
+
+  final String commandKey;
+  final String installationRef;
+  final String environment;
+  final String sellerRef;
+  final String subscriptionRef;
+  final String selectionDigest;
+  final String? digest;
+}
+
+/// `ledger.obligation.v1`.
+final class ObligationView extends Envelope {
+  static const String schemaName = 'ledger.obligation.v1';
+
+  ObligationView({
+    required super.raw,
+    required this.installationRef,
+    required this.environment,
+    required this.sellerRef,
+    required this.result,
+    required this.digest,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory ObligationView.fromRaw(Map<String, Object?> raw) => ObligationView(
+        raw: raw,
+        installationRef: requireString(raw, 'installationRef'),
+        environment: requireString(raw, 'environment'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        result: requireObject(raw, 'result'),
+        digest: requireString(raw, 'digest'),
+      );
+
+  final String installationRef;
+  final String environment;
+  final String sellerRef;
+  final Map<String, Object?> result;
+  final String digest;
+}
+
+/// `ledger.invoice.v1`.
+final class InvoiceView extends Envelope {
+  static const String schemaName = 'ledger.invoice.v1';
+
+  InvoiceView({
+    required super.raw,
+    required this.installationRef,
+    required this.environment,
+    required this.sellerRef,
+    required this.result,
+    required this.digest,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory InvoiceView.fromRaw(Map<String, Object?> raw) => InvoiceView(
+        raw: raw,
+        installationRef: requireString(raw, 'installationRef'),
+        environment: requireString(raw, 'environment'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        result: requireObject(raw, 'result'),
+        digest: requireString(raw, 'digest'),
+      );
+
+  final String installationRef;
+  final String environment;
+  final String sellerRef;
+  final Map<String, Object?> result;
+  final String digest;
+}
+
+/// `ledger.allocations.v1`.
+final class AllocationQuery extends Envelope {
+  static const String schemaName = 'ledger.allocations.v1';
+
+  AllocationQuery({
+    required super.raw,
+    required this.installationRef,
+    required this.environment,
+    required this.sellerRef,
+    required this.result,
+    required this.digest,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory AllocationQuery.fromRaw(Map<String, Object?> raw) => AllocationQuery(
+        raw: raw,
+        installationRef: requireString(raw, 'installationRef'),
+        environment: requireString(raw, 'environment'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        result: requireObject(raw, 'result'),
+        digest: requireString(raw, 'digest'),
+      );
+
+  final String installationRef;
+  final String environment;
+  final String sellerRef;
+  final Map<String, Object?> result;
+  final String digest;
+}
+
+/// `ledger.refund_authorization.v1`.
+final class RefundAuthorization extends Envelope {
+  static const String schemaName = 'ledger.refund_authorization.v1';
+
+  RefundAuthorization({
+    required super.raw,
+    required this.installationRef,
+    required this.environment,
+    required this.sellerRef,
+    required this.result,
+    required this.digest,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory RefundAuthorization.fromRaw(Map<String, Object?> raw) => RefundAuthorization(
+        raw: raw,
+        installationRef: requireString(raw, 'installationRef'),
+        environment: requireString(raw, 'environment'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        result: requireObject(raw, 'result'),
+        digest: requireString(raw, 'digest'),
+      );
+
+  final String installationRef;
+  final String environment;
+  final String sellerRef;
+  final Map<String, Object?> result;
   final String digest;
 }

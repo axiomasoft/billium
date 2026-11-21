@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-10:feed/open.v1.json",
+  "title": "Открытие pinned подписки feed",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "commandKey",
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "scope",
+    "eventContractRevision",
+    "envelopeSchemas",
+    "eventTypes"
+  ],
+  "properties": {
+    "schema": {
+      "const": "billium.feed.open.v1"
+    },
+    "commandKey": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/commandKey"
+    },
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "scope": {
+      "$ref": "urn:billium:spec:2026-10:feed/defs.json#/$defs/scope"
+    },
+    "eventContractRevision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "envelopeSchemas": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/envelopeName"
+      }
+    },
+    "eventTypes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    }
+  }
+}
