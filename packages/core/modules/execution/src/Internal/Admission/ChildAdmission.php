@@ -114,6 +114,7 @@ final readonly class ChildAdmission
     public static function receipt(AdmissionPlan $plan): ExecutionReceipt
     {
         return new ExecutionReceipt(PaymentIdentity::reference($plan->scope, $plan->operationRef, 'admission'), $plan->commandKey, $plan->operationRef,
-            $plan->semanticDigest, 'admitted', false, [PaymentIdentity::reference($plan->scope, $plan->operationRef, 'attempt')]);
+            $plan->semanticDigest, 'admitted', false, [PaymentIdentity::reference($plan->scope, $plan->operationRef, 'attempt')],
+            revision: 0, outcomeQueryRef: $plan->operationRef);
     }
 }

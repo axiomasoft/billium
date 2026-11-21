@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Billium\Rating\Internal\Services;
 
+use Billium\Contracts\Contracts\Codec;
+use Billium\Contracts\Data\Envelopes\CommandReceipt;
+use Billium\Contracts\Data\Envelopes\PrepareObligation;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Configuration\BilliumOptions;
@@ -11,13 +14,18 @@ use Billium\Core\Contracts\Runner\OperationRunner;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Data\Runner\OperationSpec;
+use Billium\Core\Data\Runner\StoredOutcome;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Exceptions\Modules\ModuleAdmissionRefused;
+use Billium\Platform\Contracts\Idempotency\IdempotencyReceiptQueries;
+use Billium\Platform\Data\Idempotency\PinnedCommand;
+use Billium\Rating\Contracts\PinnedRatingInputs;
 use Billium\Rating\Contracts\RatingBooking;
 use Billium\Rating\Data\Rating\BookingReceipt;
 use Billium\Rating\Data\Rating\BookRatedBasis;
 use Billium\Rating\Data\Rating\FrozenAggregate;
+use Billium\Rating\Data\Rating\FrozenPrice;
 use Billium\Rating\Enums\BookingOutcome;
 use Billium\Rating\Enums\ChargeKind;
 use Billium\Rating\Internal\Adapters\LedgerAdapter;
@@ -35,9 +43,35 @@ final readonly class DatabaseRatingBooking implements RatingBooking
 {
     public function __construct(private OperationRunner $runner, private CallerContext $callers, private RatingStore $store,
         private RatingComputation $computation, private UsageAggregateAdapter $usage, private ScheduleOccurrenceAdapter $schedule,
-        private LedgerAdapter $ledger, private BilliumOptions $options) {}
+        private LedgerAdapter $ledger, private BilliumOptions $options, private IdempotencyReceiptQueries $receipts) {}
 
     public function book(BookRatedBasis $command): BookingReceipt
+    {
+        return BookingReceipt::fromBody($this->runBooking($command)->orThrow()->body);
+    }
+
+    public function prepareObligation(PrepareObligation $command, PinnedRatingInputs $inputs): CommandReceipt
+    {
+        $codec = new Codec;
+        $command = $codec->decode($codec->encode($command));
+        assert($command instanceof PrepareObligation);
+        $wire = new PinnedCommand($this->callers->current(), $command, $command->installationRef, $command->sellerRef, $command->environment, $command->commandKey);
+        $stored = $this->receipts->replayCommand($wire->scope, $wire->kind(), $wire->key, $wire->inputDigest);
+        if ($stored !== null) {
+            return $wire->result($stored);
+        }
+        $prepared = $inputs->resolve($wire->scope, $command) ?? throw new ProblemException(ProblemCode::ReferenceUnknown);
+        $frozen = $prepared->inputs;
+        if ($frozen->sellerRef !== $command->sellerRef || $frozen->environment !== $command->environment
+            || $frozen->occurrenceRef !== $command->billingOccurrenceRef
+            || $frozen->prices === [] || array_any($frozen->prices, static fn (FrozenPrice $price): bool => $price->componentRef !== $command->componentRef)) {
+            throw new ProblemException(ProblemCode::AuthDenied);
+        }
+
+        return $wire->result($this->runBooking(new BookRatedBasis($prepared, $wire->key), $wire));
+    }
+
+    private function runBooking(BookRatedBasis $command, ?PinnedCommand $wire = null): StoredOutcome
     {
         $in = $command->prepared->inputs;
         $caller = $this->callers->current();
@@ -53,7 +87,7 @@ final readonly class DatabaseRatingBooking implements RatingBooking
             $modules[] = 'ledger';
         }
         try {
-            return $this->runRoot(command: $command, modules: $modules);
+            return $this->runRoot(command: $command, modules: $modules, wire: $wire);
         } catch (ModuleAdmissionRefused $error) {
             $disabled = array_map(static fn (string $state): string => $state.'_closes_'.ModuleOperationClass::NewIntent->value,
                 ['draining', 'recovery_only', 'retired']);
@@ -63,19 +97,21 @@ final readonly class DatabaseRatingBooking implements RatingBooking
 
             // Admission failed before the body and rolled back the claim. There was no commit or effect.
             // The only successful root now freezes an unposted basis; it cannot call a ledger participant.
-            return $this->runRoot(command: $command, modules: array_values(array_diff($modules, ['ledger'])));
+            return $this->runRoot(command: $command, modules: array_values(array_diff($modules, ['ledger'])), wire: $wire);
         }
     }
 
     /** @param list<string> $modules */
-    private function runRoot(BookRatedBasis $command, array $modules): BookingReceipt
+    private function runRoot(BookRatedBasis $command, array $modules, ?PinnedCommand $wire): StoredOutcome
     {
         $in = $command->prepared->inputs;
         $draft = $command->prepared->draft;
-        $outcome = $this->runner->run(spec: new OperationSpec(commandKind: 'rating.book.v1', sellerRef: $in->sellerRef, environment: $in->environment,
+
+        return $this->runner->run(spec: new OperationSpec(commandKind: $wire?->kind() ?? 'rating.book.v1', sellerRef: $in->sellerRef, environment: $in->environment,
             mode: FinancialMode::Active, operationClass: ModuleOperationClass::NewIntent, modules: $modules,
-            commandKey: $command->operationKey, digest: $in->digest(), commitKind: 'rating.book.v1'),
-            body: function (TransactionContext $context) use ($command, $in, $draft): BookingReceipt {
+            commandKey: $command->operationKey, digest: $in->digest(), commitKind: 'rating.book.v1',
+            financialScope: $wire?->scope, inputDigest: $wire?->inputDigest),
+            body: PinnedCommand::retaining($wire, function (TransactionContext $context) use ($command, $in, $draft): BookingReceipt {
                 // This must precede every adapter, lock-head insert and write (D60).
                 $this->runner->assertCurrent(context: $context, moduleId: 'rating');
                 if (CanonicalJson::encode($this->computation->compute($in)) !== CanonicalJson::encode($draft)) {
@@ -124,8 +160,6 @@ final readonly class DatabaseRatingBooking implements RatingBooking
                     kind: $obligation === null ? 'rating.basis.frozen.v1' : 'rating.basis.booked.v1', receipt: $receipt);
 
                 return $receipt;
-            })->orThrow();
-
-        return BookingReceipt::fromBody($outcome->body);
+            }));
     }
 }

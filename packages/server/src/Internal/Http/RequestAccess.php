@@ -11,9 +11,12 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Configuration\BilliumOptions;
 use Billium\Server\Contracts\Authenticator;
 use Billium\Server\Contracts\AuthorizationVerdict;
+use Billium\Server\Contracts\InstallationContextResolver;
 use Billium\Server\Contracts\SellerContextResolver;
 use Billium\Server\Contracts\SellerEligibility;
+use Billium\Server\Data\AuthenticatedPrincipal;
 use Billium\Server\Data\ExecutionContext;
+use Billium\Server\Data\InstallationContext;
 use Billium\Server\Data\RequestMeta;
 use Billium\Server\Enums\Verdict;
 use Billium\Server\Internal\Auth\RequestScope;
@@ -41,10 +44,7 @@ final readonly class RequestAccess
             if (! $this->readiness->hasAuthPorts()) {
                 throw new ProblemException(ProblemCode::TransportUnavailable);
             }
-            $principal = $this->app->make(Authenticator::class)->authenticate(
-                $request->headers->all(),
-                new RequestMeta($request->method(), $request->path(), $request->ip()),
-            );
+            $principal = $this->authenticate($request);
             $context = $this->app->make(SellerContextResolver::class)->resolve($principal, $seller);
             if ($context->sellerRef !== $seller
                 || ($this->options->installationRef !== null && $this->options->installationRef !== $context->installationRef)) {
@@ -76,5 +76,31 @@ final readonly class RequestAccess
         } catch (ProblemException $refusal) {
             return ProblemResponse::from($refusal->problem === ProblemCode::ReferenceUnknown ? ProblemCode::AuthDenied : $refusal->problem);
         }
+    }
+
+    public function installation(Request $request): InstallationContext
+    {
+        $principal = $this->authenticate($request);
+        if (! $this->app->bound(InstallationContextResolver::class)) {
+            throw new ProblemException(ProblemCode::TransportUnavailable);
+        }
+        $context = $this->app->make(InstallationContextResolver::class)->resolve($principal);
+        if ($context === null || ($this->options->installationRef !== null && $this->options->installationRef !== $context->installationRef)) {
+            throw new ProblemException(ProblemCode::AuthDenied);
+        }
+
+        return $context;
+    }
+
+    private function authenticate(Request $request): AuthenticatedPrincipal
+    {
+        if (! $this->app->bound(Authenticator::class)) {
+            throw new ProblemException(ProblemCode::TransportUnavailable);
+        }
+
+        return $this->app->make(Authenticator::class)->authenticate(
+            $request->headers->all(),
+            new RequestMeta($request->method(), $request->path(), $request->ip()),
+        );
     }
 }

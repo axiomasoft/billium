@@ -2,6 +2,54 @@
     "schema": "php-api/1",
     "package": "axiomasoft/billium-rating",
     "symbols": {
+        "Billium\\Rating\\Contracts\\PinnedRatingInputs": {
+            "kind": "interface",
+            "layer": "spi",
+            "since": "1.0",
+            "final": false,
+            "readonly": false,
+            "abstract": false,
+            "extends": [],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "resolve": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "scope",
+                            "type": "Billium\\Core\\Data\\Runtime\\FinancialScope",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "command",
+                            "type": "Billium\\Contracts\\Data\\Envelopes\\PrepareObligation",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "?Billium\\Rating\\Data\\Rating\\PreparedRating",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": [],
+            "spi_kind": "implement"
+        },
         "Billium\\Rating\\Contracts\\PriceVersionStore": {
             "kind": "interface",
             "layer": "spi",
@@ -274,6 +322,35 @@
                         }
                     ],
                     "return": "Billium\\Rating\\Data\\Rating\\BookingReceipt",
+                    "doc": []
+                },
+                "prepareObligation": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "command",
+                            "type": "Billium\\Contracts\\Data\\Envelopes\\PrepareObligation",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "inputs",
+                            "type": "Billium\\Rating\\Contracts\\PinnedRatingInputs",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "Billium\\Contracts\\Data\\Envelopes\\CommandReceipt",
                     "doc": []
                 }
             },

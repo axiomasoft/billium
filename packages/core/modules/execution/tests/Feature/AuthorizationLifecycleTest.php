@@ -31,6 +31,7 @@ use Billium\Execution\Contracts\RootPaymentCommands;
 use Billium\Execution\Data\CapabilitySnapshot;
 use Billium\Execution\Data\DispatchTicket;
 use Billium\Execution\Data\DriverRequest;
+use Billium\Execution\Data\ExecutionReceipt;
 use Billium\Execution\Data\ExecutionScope;
 use Billium\Execution\Data\OriginDecision;
 use Billium\Execution\Data\ProviderEvidence;
@@ -471,8 +472,14 @@ final class AuthorizationLifecycleTest extends ExecutionTestCase
             $sale = new OriginDecision($scope, 'sale', 'sale-intent', 'checkout', 'remote-billium', 1, null, 'sha256:'.str_repeat('b', 64), 'terms-v1', null);
             Fixture::host($app, $path, [Fixture::origin(), $sale]);
             $roots = $app->make(RootPaymentCommands::class);
-            $roots->admit($scope, Fixture::wire(['schema' => 'payment.authorize.v1']))->orThrow();
-            $roots->cancel($scope, DispatchCancelTest::command())->orThrow();
+            $wire = Fixture::wire(['schema' => 'payment.authorize.v1']);
+            $admission = ExecutionReceipt::admission($roots->admit($scope, $wire));
+            $cancel = ExecutionReceipt::admission($roots->cancel($scope, DispatchCancelTest::command()));
+            self::assertSame('known-terminal', $cancel->result);
+            self::assertSame(1, $cancel->revision);
+            $replay = ExecutionReceipt::admission($roots->admit($scope, $wire));
+            self::assertSame(0, $replay->revision);
+            self::assertSame((new Codec)->encode($admission), (new Codec)->encode($replay));
             self::assertSame(1, $this->rows('billium_execution_attempt', "operation_ref='root-a' AND state='cancelled'"));
             self::assertSame(0, UnknownResultTest::events($path, 'provider.call'));
             $roots->admit($scope, Fixture::wire(['operationRef' => 'sale', 'source' => ['context' => 'checkout', 'intentRef' => 'sale-intent'],

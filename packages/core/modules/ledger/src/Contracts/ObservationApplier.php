@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Ledger\Contracts;
 
+use Billium\Contracts\Data\Envelopes\ObservationCustody;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Ledger\Data\Allocations\AllocationReceipt;
 use Packman\Attributes\Spi;
@@ -28,4 +29,7 @@ interface ObservationApplier
      *                          after commit: billium.observation.parked, billium.recovery.required, billium.observation.conflict
      */
     public function apply(string $json): AllocationReceipt;
+
+    /** Return the durable parked disposition or the committed allocation receipt for this delivery. */
+    public function applyWithCustody(string $json): AllocationReceipt|ObservationCustody;
 }

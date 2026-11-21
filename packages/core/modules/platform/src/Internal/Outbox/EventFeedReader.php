@@ -5,9 +5,14 @@ declare(strict_types=1);
 namespace Billium\Platform\Internal\Outbox;
 
 use Billium\Contracts\Contracts\Codec;
+use Billium\Contracts\Data\Envelopes\FeedBootstrap as WireBootstrap;
+use Billium\Contracts\Data\Envelopes\FeedBootstrapRequest;
+use Billium\Contracts\Data\Envelopes\FeedOpen;
+use Billium\Contracts\Data\Envelopes\FeedSelection as WireSelection;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Data\Runtime\FinancialScope;
 use Billium\Platform\Contracts\Feed\EventFeed;
 use Billium\Platform\Contracts\Feed\SnapshotSource;
 use Billium\Platform\Data\Feed\FeedBootstrap;
@@ -16,6 +21,7 @@ use Billium\Platform\Data\Feed\FeedPage;
 use Billium\Platform\Data\Feed\FeedPosition;
 use Billium\Platform\Data\Feed\FeedScope;
 use Billium\Platform\Data\Feed\FeedSelection;
+use Billium\Platform\Data\Idempotency\PinnedCommand;
 use Billium\Platform\Internal\Installation\Rows;
 use Closure;
 use DateTimeImmutable;
@@ -24,6 +30,7 @@ use Illuminate\Database\Connection;
 use Illuminate\Support\Str;
 use LogicException;
 use Packman\Attributes\Internal;
+use stdClass;
 use Throwable;
 
 #[Internal]
@@ -35,7 +42,8 @@ final readonly class EventFeedReader implements EventFeed
      * @param  Closure(): CallerContext  $callers
      * @param  Closure(): iterable<SnapshotSource>  $sources
      */
-    public function __construct(private Connection $db, private FeedTokens $tokens, private Closure $callers, private Closure $sources, private int $leaseSeconds = 60)
+    public function __construct(private Connection $db, private FeedTokens $tokens, private Closure $callers, private Closure $sources,
+        private FeedCommandResults $results, private int $leaseSeconds = 60)
     {
         if ($leaseSeconds < 1) {
             throw new LogicException('Bootstrap lease must be positive');
@@ -43,6 +51,38 @@ final readonly class EventFeedReader implements EventFeed
     }
 
     public function openFeed(FeedScope $scope, string $eventContractRevision, array $envelopeSchemas, array $eventTypes, bool $required = false): FeedSelection
+    {
+        return $this->open($scope, $eventContractRevision, $envelopeSchemas, $eventTypes, $required);
+    }
+
+    public function openSelectedFeed(FeedOpen $command): WireSelection
+    {
+        $this->outsideTransaction();
+        $codec = new Codec;
+        $command = $codec->decode($codec->encode($command));
+        assert($command instanceof FeedOpen);
+        $wire = new PinnedCommand(($this->callers)()->current(), $command, $command->installationRef, $command->sellerRef, $command->environment, $command->commandKey);
+        $scope = self::scopeFrom($command->scope);
+        if ($scope->installationRef !== $command->installationRef || $scope->sellerRef !== $command->sellerRef || $scope->environment !== $command->environment) {
+            throw new ProblemException(ProblemCode::AuthDenied);
+        }
+        $result = $this->results->once($wire, function () use ($codec, $command, $scope, $wire): WireSelection {
+            $selection = $this->open($scope, $command->eventContractRevision, self::strings($command->envelopeSchemas), self::strings($command->eventTypes), false, $wire);
+            $result = $codec->decode($codec->canonicalize($selection->toArray()));
+            assert($result instanceof WireSelection);
+
+            return $result;
+        });
+        assert($result instanceof WireSelection);
+
+        return $result;
+    }
+
+    /**
+     * @param  list<string>  $envelopeSchemas
+     * @param  list<string>  $eventTypes
+     */
+    private function open(FeedScope $scope, string $eventContractRevision, array $envelopeSchemas, array $eventTypes, bool $required, ?PinnedCommand $wire = null): FeedSelection
     {
         $this->outsideTransaction();
         $this->authorize($scope);
@@ -71,7 +111,8 @@ final readonly class EventFeedReader implements EventFeed
         $codec = new Codec;
         $digest = $codec->digest($body);
         $ref = (string) Str::ulid();
-        $this->db->transaction(function () use ($ref, $scope, $digest, $body, $required, $codec): void {
+        $selection = new FeedSelection($ref, $scope, $eventContractRevision, $envelopeSchemas, $eventTypes, $digest, $this->tokens->issue($ref, $scope, $digest, new FeedPosition));
+        $this->db->transaction(function () use ($ref, $scope, $digest, $body, $required, $codec, $wire, $selection): void {
             self::barrier($this->db);
             // A required subscription pins prune for its scope; bound them so an abandoned or hostile caller cannot exhaust the scope.
             if ($required) {
@@ -82,9 +123,56 @@ final readonly class EventFeedReader implements EventFeed
             }
             $this->db->insert('INSERT INTO public.billium_feed_subscription(subscription_ref,source_scope,selection_digest,selection,required) VALUES (?,?,?,?::jsonb,?)',
                 [$ref, $scope->key(), $digest, $codec->canonicalize($body), $required]);
+            if ($wire !== null) {
+                $this->results->retain(($this->callers)()->current(), $wire, $selection->toArray());
+            }
         });
 
-        return new FeedSelection($ref, $scope, $eventContractRevision, $envelopeSchemas, $eventTypes, $digest, $this->tokens->issue($ref, $scope, $digest, new FeedPosition));
+        return $selection;
+    }
+
+    public function findSelection(FinancialScope $scope, string $subscriptionRef, string $selectionDigest): FeedSelection
+    {
+        $this->outsideTransaction();
+        $caller = ($this->callers)()->current();
+        if ($scope->installationRef !== $caller->installationRef || $scope->sellerRef !== $caller->sellerRef || $scope->environment !== $caller->environment) {
+            throw new ProblemException(ProblemCode::AuthDenied);
+        }
+        $row = $this->db->selectOne(<<<'SQL'
+            SELECT selection FROM public.billium_feed_subscription
+            WHERE subscription_ref = ? AND selection_digest = ? AND closed_at IS NULL
+              AND source_scope::jsonb->>'installationRef' = ? AND source_scope::jsonb->>'sellerRef' = ?
+              AND source_scope::jsonb->>'environment' = ?
+            SQL, [$subscriptionRef, $selectionDigest, $scope->installationRef, $scope->sellerRef, $scope->environment]);
+        if ($row === null) {
+            throw new ProblemException(ProblemCode::ReferenceUnknown);
+        }
+        $body = json_decode(Rows::string(Rows::field($row, 'selection')), false, 32, JSON_THROW_ON_ERROR);
+        if (! $body instanceof stdClass || ! ($body->scope ?? null) instanceof stdClass || (new Codec)->digest($body) !== $selectionDigest) {
+            throw new LogicException('Unreadable feed selection');
+        }
+        $feedScope = self::scopeFrom($body->scope);
+        $this->authorize($feedScope);
+
+        return new FeedSelection($subscriptionRef, $feedScope, Rows::string($body->eventContractRevision),
+            self::strings($body->envelopeSchemas), self::strings($body->eventTypes), $selectionDigest,
+            $this->tokens->issue($subscriptionRef, $feedScope, $selectionDigest, new FeedPosition));
+    }
+
+    private static function scopeFrom(stdClass $scope): FeedScope
+    {
+        return new FeedScope(Rows::string($scope->installationRef), Rows::string($scope->sellerRef), Rows::string($scope->environment),
+            Rows::string($scope->lineage), Rows::string($scope->channel), Rows::string($scope->sourceAuthority));
+    }
+
+    /** @return list<string> */
+    private static function strings(mixed $values): array
+    {
+        if (! is_array($values) || ! array_is_list($values)) {
+            throw new LogicException('Unreadable feed selection list');
+        }
+
+        return array_map(Rows::string(...), $values);
     }
 
     public function read(FeedSelection $selection, ?string $cursor = null, int $limit = 100): FeedPage
@@ -131,6 +219,30 @@ final readonly class EventFeedReader implements EventFeed
 
     public function bootstrap(FeedSelection $selection): FeedBootstrap
     {
+        return $this->createBootstrap($selection);
+    }
+
+    public function bootstrapSelectedFeed(FeedBootstrapRequest $command): WireBootstrap
+    {
+        $this->outsideTransaction();
+        $codec = new Codec;
+        $command = $codec->decode($codec->encode($command));
+        assert($command instanceof FeedBootstrapRequest);
+        $wire = new PinnedCommand(($this->callers)()->current(), $command, $command->installationRef, $command->sellerRef, $command->environment, $command->commandKey);
+        $result = $this->results->once($wire, function () use ($codec, $command, $wire): WireBootstrap {
+            $selection = $this->findSelection($wire->scope, $command->subscriptionRef, $command->selectionDigest);
+            $result = $codec->decode($codec->canonicalize($this->createBootstrap($selection, $wire)->toArray()));
+            assert($result instanceof WireBootstrap);
+
+            return $result;
+        });
+        assert($result instanceof WireBootstrap);
+
+        return $result;
+    }
+
+    private function createBootstrap(FeedSelection $selection, ?PinnedCommand $wire = null): FeedBootstrap
+    {
         $this->outsideTransaction();
         $this->validateSelection($selection);
         $contracts = [];
@@ -158,7 +270,7 @@ final readonly class EventFeedReader implements EventFeed
             return $floor;
         });
         try {
-            return $this->snapshot($selection, $contracts, $replay, $pin, $leaseRef, $snapshotRef);
+            return $this->snapshot($selection, $contracts, $replay, $pin, $leaseRef, $snapshotRef, $wire);
         } catch (Throwable $error) {
             // A failed snapshot must not keep the tail pinned until the lease runs out.
             $this->db->update("UPDATE public.billium_feed_bootstrap_lease SET state = 'expired' WHERE lease_ref = ? AND state = 'active'", [$leaseRef]);
@@ -168,7 +280,7 @@ final readonly class EventFeedReader implements EventFeed
     }
 
     /** @param list<mixed> $contracts */
-    private function snapshot(FeedSelection $selection, array $contracts, bool $replay, FeedPosition $pin, string $leaseRef, string $snapshotRef): FeedBootstrap
+    private function snapshot(FeedSelection $selection, array $contracts, bool $replay, FeedPosition $pin, string $leaseRef, string $snapshotRef, ?PinnedCommand $wire): FeedBootstrap
     {
         $snapshots = [];
         $cursor = $this->db->transaction(function () use ($selection, $contracts, $replay, $pin, $leaseRef, &$snapshots): FeedCursor {
@@ -201,7 +313,8 @@ final readonly class EventFeedReader implements EventFeed
         $digest = (new Codec)->digest(['subscriptionRef' => $selection->subscriptionRef, 'selectionDigest' => $selection->selectionDigest,
             'scope' => $selection->scope->toArray(), 'catalog' => $selection->eventContractRevision,
             'snapshotRef' => $snapshotRef, 'cursor' => $cursor->token, 'snapshots' => (object) $snapshots]);
-        $expires = $this->db->transaction(function () use ($selection, $leaseRef, $cursor, $digest): string {
+
+        return $this->db->transaction(function () use ($selection, $leaseRef, $cursor, $digest, $snapshotRef, $snapshots, $wire): FeedBootstrap {
             self::barrier($this->db);
             $this->lease($selection, $leaseRef);
             $this->retained($cursor->position, $this->floor());
@@ -210,10 +323,14 @@ final readonly class EventFeedReader implements EventFeed
                 throw new ProblemException(ProblemCode::RecoveryRequired, 'Bootstrap pin expired during snapshot');
             }
 
-            return new DateTimeImmutable(Rows::string(Rows::field($row, 'expires_at')))->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z');
-        });
+            $expires = new DateTimeImmutable(Rows::string(Rows::field($row, 'expires_at')))->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z');
+            $bootstrap = new FeedBootstrap($selection, $leaseRef, $snapshotRef, $digest, $snapshots, $cursor, $expires);
+            if ($wire !== null) {
+                $this->results->retain(($this->callers)()->current(), $wire, $bootstrap->toArray());
+            }
 
-        return new FeedBootstrap($selection, $leaseRef, $snapshotRef, $digest, $snapshots, $cursor, $expires);
+            return $bootstrap;
+        });
     }
 
     public function acknowledgeBootstrap(FeedSelection $selection, string $leaseRef, string $snapshotDigest): void

@@ -8,6 +8,7 @@ use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Data\Envelopes\CancelOperation;
 use Billium\Contracts\Data\Envelopes\ExecutePayment;
 use Billium\Contracts\Enums\ProblemCode;
+use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Data\Runner\StoredOutcome;
 use Billium\Execution\Contracts\AdapterQualification;
@@ -22,10 +23,12 @@ use Billium\Execution\Contracts\WriterAdmission;
 use Billium\Execution\Data\ExecutionReceipt;
 use Billium\Execution\Data\ExecutionScope;
 use Billium\Server\Contracts\AuthorizationVerdict;
+use Billium\Server\Contracts\InstallationContextResolver;
 use Billium\Server\Contracts\SellerContextResolver;
 use Billium\Server\Contracts\SellerEligibility;
 use Billium\Server\Data\AuthenticatedPrincipal;
 use Billium\Server\Data\ExecutionContext;
+use Billium\Server\Data\InstallationContext;
 use Billium\Server\Data\ResourceScope;
 use Billium\Server\Data\SellerAdmission;
 use Billium\Server\Data\SellerScope;
@@ -98,6 +101,27 @@ final class AuthContextTest extends TestCase
         $operationMismatch = $this->host->request($app, self::ROOT.'/operations/local-operation-a/cancel', $cancel);
         self::assertSame(403, $operationMismatch->getStatusCode());
         self::assertSame($routeMismatch->getContent(), $operationMismatch->getContent());
+    }
+
+    public function test_capabilities_context_is_resolved_from_the_authenticated_principal(): void
+    {
+        $app = MinimalHost::application($this->host, $this->database, 'ledger-only', ['platform', 'ledger']);
+        $resolver = $this->createMock(InstallationContextResolver::class);
+        $resolver->expects(self::once())->method('resolve')->with(new AuthenticatedPrincipal('host-fixture'))
+            ->willReturn(new InstallationContext(Host::INSTALLATION, 'test'));
+        $app->instance(InstallationContextResolver::class, $resolver);
+        $this->host->request($app, '/billium/live');
+        $access = $app->make(RequestAccess::class);
+        $path = '/billium/v1/capabilities?installationRef=foreign&environment=live';
+        try {
+            $access->installation(Request::create($path, 'GET', server: ['HTTP_AUTHORIZATION' => 'Bearer wrong-token']));
+            self::fail('An unauthenticated request reached the deployment selection');
+        } catch (ProblemException $problem) {
+            self::assertSame(ProblemCode::AuthUnauthenticated, $problem->problem);
+        }
+        $scope = $access->installation(Request::create($path, 'GET', server: ['HTTP_AUTHORIZATION' => 'Bearer fixture-auth']));
+        self::assertSame(Host::INSTALLATION, $scope->installationRef);
+        self::assertSame('test', $scope->environment);
     }
 
     public function test_current_eligibility_and_verdict_gate_replay_and_advertised_capabilities(): void

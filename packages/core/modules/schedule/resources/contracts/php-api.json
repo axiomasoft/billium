@@ -539,6 +539,35 @@
                     "return": "Billium\\Schedule\\Data\\OccurrenceReceipt",
                     "doc": []
                 },
+                "ensureBillingOccurrence": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "command",
+                            "type": "Billium\\Contracts\\Data\\Envelopes\\EnsureBillingOccurrence",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "inputs",
+                            "type": "Billium\\Schedule\\Contracts\\PinnedOccurrenceInputs",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "Billium\\Contracts\\Data\\Envelopes\\CommandReceipt",
+                    "doc": []
+                },
                 "ensureOccurrence": {
                     "visibility": "public",
                     "static": false,
@@ -605,6 +634,54 @@
             "enum_backing": null,
             "enum_cases": [],
             "spi_kind": "call"
+        },
+        "Billium\\Schedule\\Contracts\\PinnedOccurrenceInputs": {
+            "kind": "interface",
+            "layer": "spi",
+            "since": "1.0",
+            "final": false,
+            "readonly": false,
+            "abstract": false,
+            "extends": [],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "resolve": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "scope",
+                            "type": "Billium\\Core\\Data\\Runtime\\FinancialScope",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "command",
+                            "type": "Billium\\Contracts\\Data\\Envelopes\\EnsureBillingOccurrence",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "?Billium\\Schedule\\Data\\Commands\\EnsureOccurrence",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": [],
+            "spi_kind": "implement"
         },
         "Billium\\Schedule\\Contracts\\ScheduleQueries": {
             "kind": "interface",

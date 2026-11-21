@@ -4,11 +4,21 @@ declare(strict_types=1);
 
 namespace Billium\Schedule\Internal\Services;
 
+use Billium\Contracts\Contracts\Codec;
+use Billium\Contracts\Data\Envelopes\CommandReceipt;
+use Billium\Contracts\Data\Envelopes\EnsureBillingOccurrence;
+use Billium\Contracts\Enums\ProblemCode;
+use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runner\OperationRunner;
 use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Data\Runner\StoredOutcome;
 use Billium\Core\Exceptions\Runner\LockPlanChanged;
+use Billium\Platform\Contracts\Idempotency\IdempotencyReceiptQueries;
+use Billium\Platform\Data\Idempotency\PinnedCommand;
 use Billium\Schedule\Contracts\IntervalResolver;
 use Billium\Schedule\Contracts\OccurrenceService;
+use Billium\Schedule\Contracts\PinnedOccurrenceInputs;
 use Billium\Schedule\Data\Commands\ApplyScheduleRevision;
 use Billium\Schedule\Data\Commands\CancelSchedule;
 use Billium\Schedule\Data\Commands\EnsureOccurrence;
@@ -37,16 +47,45 @@ final readonly class DatabaseOccurrenceService implements OccurrenceService
     public function __construct(
         private OperationRunner $runner, private ScheduleOperations $operations,
         private ScheduleLockRequests $locks, private OccurrenceStore $store, private IntervalResolver $resolver,
+        private CallerContext $callers, private IdempotencyReceiptQueries $receipts,
     ) {}
 
     public function ensureOccurrence(EnsureOccurrence $command): OccurrenceReceipt
     {
+        return new OccurrenceReceipt($this->ensure($command)->orThrow()->body);
+    }
+
+    public function ensureBillingOccurrence(EnsureBillingOccurrence $command, PinnedOccurrenceInputs $inputs): CommandReceipt
+    {
+        $codec = new Codec;
+        $command = $codec->decode($codec->encode($command));
+        assert($command instanceof EnsureBillingOccurrence);
+        $wire = new PinnedCommand($this->callers->current(), $command, $command->installationRef, $command->sellerRef, $command->environment, $command->commandKey);
+        $stored = $this->receipts->replayCommand($wire->scope, $wire->kind(), $wire->key, $wire->inputDigest);
+        if ($stored !== null) {
+            return $wire->result($stored);
+        }
+        $pinned = $inputs->resolve($wire->scope, $command) ?? throw new ProblemException(ProblemCode::ReferenceUnknown);
+        if ($pinned->sellerRef !== $command->sellerRef || $pinned->environment !== $command->environment
+            || $pinned->componentRef !== $command->componentRef || $pinned->purpose->value !== $command->purpose
+            || $pinned->scheduleRevision !== $command->scheduleRevision
+            || OccurrenceTime::format($pinned->periodStart) !== OccurrenceTime::format(new DateTimeImmutable(Payload::text($command->interval->start)))
+            || OccurrenceTime::format($pinned->periodEnd) !== OccurrenceTime::format(new DateTimeImmutable(Payload::text($command->interval->end)))) {
+            throw new ProblemException(ProblemCode::AuthDenied);
+        }
+
+        return $wire->result($this->ensure($pinned, $wire));
+    }
+
+    private function ensure(EnsureOccurrence $command, ?PinnedCommand $wire = null): StoredOutcome
+    {
         $this->validate($command);
         $ref = $this->ref($command);
-        $outcome = $this->runner->run(
+
+        return $this->runner->run(
             spec: $this->operations->spec(kind: 'occurrence.ensure.v1', seller: $command->sellerRef,
-                environment: $command->environment, key: $command->commandKey, payload: $command),
-            body: function (TransactionContext $context) use ($command, $ref): OccurrenceReceipt {
+                environment: $command->environment, key: $wire->key ?? $command->commandKey, payload: $command, wire: $wire),
+            body: PinnedCommand::retaining($wire, function (TransactionContext $context) use ($command, $ref): OccurrenceReceipt {
                 $this->runner->assertCurrent(context: $context, moduleId: 'schedule');
                 $context->lock(ScheduleLockRequests::schedule($command->scheduleRef));
                 $head = $this->runnable(context: $context, ref: $command->scheduleRef);
@@ -68,10 +107,8 @@ final readonly class DatabaseOccurrenceService implements OccurrenceService
                 }
 
                 return $this->store->ensure(context: $context, command: $command, ref: $ref, head: $head);
-            },
-        )->orThrow();
-
-        return new OccurrenceReceipt($outcome->body);
+            }),
+        );
     }
 
     public function applyScheduleRevision(ApplyScheduleRevision $command): OccurrenceReceipt

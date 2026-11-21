@@ -64,7 +64,7 @@ final readonly class CollectionAdmission
     ) {}
 
     /** @return array{binding: ConsentBindingView, merchant: MerchantRevision, host: HostConsentAuthoritySnapshot, obligationRef: string, componentRef: string} */
-    public function prepare(Caller $caller, AuthorizeCollection $command): array
+    public function prepare(Caller $caller, AuthorizeCollection $command, ?string $obligationRef = null): array
     {
         $scope = $command->executionScope;
         if ($scope->installationRef !== $caller->installationRef || $scope->sellerRef !== $caller->sellerRef
@@ -77,6 +77,9 @@ final readonly class CollectionAdmission
             ?? throw new ProblemException(ProblemCode::ReferenceUnknown, 'Unknown collection consent binding');
         $case = $this->cases->findCase($step->scope, $step->caseRef)
             ?? throw new ProblemException(ProblemCode::ReferenceUnknown, 'billium.collection.dunning_case_not_found');
+        if ($obligationRef !== null && $case->obligationRef !== $obligationRef) {
+            throw new ProblemException(ProblemCode::AuthDenied, 'Collection case differs from the requested obligation');
+        }
         $obligation = $this->ledgerQueries->obligation($case->obligationRef);
 
         return [

@@ -11,6 +11,7 @@ use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Data\Runner\OperationSpec;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Core\Enums\Runtime\FinancialMode;
+use Billium\Platform\Data\Idempotency\PinnedCommand;
 use Billium\Schedule\Data\ScheduleRevisionTerms;
 use Billium\Schedule\Internal\Canonical;
 use Billium\Schedule\Internal\OccurrenceTime;
@@ -22,17 +23,18 @@ final readonly class ScheduleOperations
 {
     public function __construct(private CallerContext $callers) {}
 
-    public function spec(string $kind, string $seller, string $environment, ?string $key, mixed $payload): OperationSpec
+    public function spec(string $kind, string $seller, string $environment, ?string $key, mixed $payload, ?PinnedCommand $wire = null): OperationSpec
     {
         $caller = $this->callers->current();
         if ($caller->sellerRef !== $seller || $caller->environment !== $environment) {
             throw new ProblemException(ProblemCode::AuthDenied, 'billium.schedule.scope_denied');
         }
 
-        return new OperationSpec(commandKind: $kind, sellerRef: $seller, environment: $environment,
+        return new OperationSpec(commandKind: $wire?->kind() ?? $kind, sellerRef: $seller, environment: $environment,
             mode: FinancialMode::Active, operationClass: ModuleOperationClass::NewIntent,
             modules: ['platform', 'rating', 'schedule'], commandKey: $key,
-            digest: $key === null ? null : Canonical::digest(self::payload($payload)), commitKind: $kind);
+            digest: $key === null ? null : Canonical::digest(self::payload($payload)), commitKind: $kind,
+            financialScope: $wire?->scope, inputDigest: $wire?->inputDigest);
     }
 
     public static function payload(mixed $value): mixed

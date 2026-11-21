@@ -203,7 +203,8 @@ final readonly class RootPayments implements RootPaymentCommands
                 $evidence[] = $closure;
             }
 
-            return new ExecutionReceipt($ref, $wire->commandKey, $operation->operationRef, $digest, 'cancelled', false, $evidence);
+            return new ExecutionReceipt($ref, $wire->commandKey, $operation->operationRef, $digest, 'cancelled', false, $evidence,
+                revision: $operation->revision + 1, outcomeQueryRef: $operation->operationRef);
         });
     }
 

@@ -6,6 +6,8 @@ namespace Billium\Platform\Tests\Feature;
 
 use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Data\Envelopes\EventEnvelopeV2;
+use Billium\Contracts\Data\Envelopes\FeedBootstrapRequest;
+use Billium\Contracts\Data\Envelopes\FeedOpen;
 use Billium\Contracts\Data\Envelopes\FeedPage as WireFeedPage;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
@@ -13,6 +15,7 @@ use Billium\Core\Contracts\Modules\ModuleRegistry;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Data\Modules\PublicEventDeclaration;
 use Billium\Core\Data\Runner\Receipt;
+use Billium\Core\Data\Runtime\FinancialScope;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Platform\Contracts\Outbox\Outbox;
 use Billium\Platform\Data\EventContracts\EventContractRegistration;
@@ -32,6 +35,50 @@ use PHPUnit\Framework\Attributes\Group;
 #[Group('pg-serial')]
 final class FilteredFeedCompatibilityTest extends OutboxTestCase
 {
+    public function test_keyed_feed_commands_retain_original_results_and_scope_selection_lookup(): void
+    {
+        $scope = $this->selection()->scope;
+        $feed = $this->feed();
+        $codec = new Codec;
+        $selectors = ['installationRef' => $scope->installationRef, 'sellerRef' => $scope->sellerRef, 'environment' => $scope->environment];
+        $openBody = ['schema' => FeedOpen::SCHEMA, 'commandKey' => '98e68552-8fdb-4edb-8434-3b3bad0b56db', ...$selectors,
+            'scope' => $scope->toArray(), 'eventContractRevision' => 'events-2026-10-v1',
+            'envelopeSchemas' => ['billium.event.v1'], 'eventTypes' => ['obligation.created.v1']];
+        $open = $codec->decode($codec->canonicalize($openBody));
+        self::assertInstanceOf(FeedOpen::class, $open);
+        $first = $feed->openSelectedFeed($open);
+        self::assertSame($codec->encode($first), $codec->encode($feed->openSelectedFeed($open)));
+        $selected = $feed->findSelection(new FinancialScope($scope->installationRef, $scope->sellerRef, $scope->environment, null),
+            $first->subscriptionRef, $first->selectionDigest);
+        self::assertSame($codec->encode($first), $codec->canonicalize($selected->toArray()));
+
+        $bootstrapBody = ['schema' => FeedBootstrapRequest::SCHEMA, 'commandKey' => $open->commandKey, ...$selectors,
+            'subscriptionRef' => $first->subscriptionRef, 'selectionDigest' => $first->selectionDigest];
+        $bootstrap = $codec->decode($codec->canonicalize($bootstrapBody));
+        self::assertInstanceOf(FeedBootstrapRequest::class, $bootstrap);
+        $snapshot = $feed->bootstrapSelectedFeed($bootstrap);
+        self::assertSame($codec->encode($snapshot), $codec->encode($feed->bootstrapSelectedFeed($bootstrap)));
+        self::assertSame(1, $this->rows('billium_feed_bootstrap_lease'));
+        self::assertSame(2, $this->rows('billium_idempotency_receipt', "command_kind LIKE 'wire.billium.feed.%'"));
+
+        $changed = $codec->decode($codec->canonicalize(array_replace($openBody, ['eventTypes' => ['invoice.issued.v1']])));
+        self::assertInstanceOf(FeedOpen::class, $changed);
+        try {
+            $feed->openSelectedFeed($changed);
+            self::fail('A changed selection reused an existing feed command key');
+        } catch (ProblemException $problem) {
+            self::assertSame(ProblemCode::IdempotencyConflict, $problem->problem);
+        }
+        $this->callers->as('seller-b');
+        try {
+            $feed->findSelection(new FinancialScope($scope->installationRef, 'seller-b', $scope->environment, null),
+                $first->subscriptionRef, $first->selectionDigest);
+            self::fail('A different seller read the original selection');
+        } catch (ProblemException $problem) {
+            self::assertSame(ProblemCode::ReferenceUnknown, $problem->problem);
+        }
+    }
+
     #[Group('pg-serial')]
     public function test_original_v1_selection_does_not_grow_after_v2_registration(): void
     {

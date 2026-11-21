@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Core\Tests\P7;
 
+use Billium\Collection\Contracts\PinnedCollectionInputs;
 use Billium\Collection\Data\CollectionStepView;
 use Billium\Collection\Data\DunningCaseTransitionResult;
 use Billium\Collection\Data\OpenDunningCase;
@@ -14,6 +15,8 @@ use Billium\Collection\Enums\CollectionSignalKind;
 use Billium\Collection\Enums\CollectionStepStatus;
 use Billium\Collection\Enums\DunningCaseStatus;
 use Billium\Collection\Enums\RecurringOwnerMode;
+use Billium\Contracts\Contracts\Codec;
+use Billium\Contracts\Data\Envelopes\AuthorizeCollection as WireAuthorization;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runner\TransactionContext;
@@ -84,6 +87,28 @@ final class CollectionAdmissionTest extends ExecutableCollectionTestCase
         self::assertSame(1, $this->rows('billium_settlement_target'));
         self::assertSame(1, $this->rows('billium_outbox_command'));
         self::assertSame(0, $this->rows('billium_execution_operation'));
+    }
+
+    public function test_wire_authorization_replays_without_resolving_the_executor_binding_again(): void
+    {
+        $pinned = Scenario::command();
+        $scope = $pinned->executionScope;
+        $resolver = $this->createMock(PinnedCollectionInputs::class);
+        $resolver->expects(self::once())->method('resolve')->willReturn($pinned);
+        $codec = new Codec;
+        $raw = ['schema' => WireAuthorization::SCHEMA, 'commandKey' => '98e68552-8fdb-4edb-8434-3b3bad0b56db',
+            'installationRef' => $scope->installationRef, 'environment' => $scope->environment, 'sellerRef' => $scope->sellerRef,
+            'obligationRef' => 'obligation-a', 'executorBindingRef' => 'binding-a', 'businessPaymentIntentRef' => $pinned->step->businessPaymentIntentRef];
+        $command = $codec->decode($codec->canonicalize($raw));
+        self::assertInstanceOf(WireAuthorization::class, $command);
+        $service = $this->dunningCaseService();
+        $original = $service->authorizePinnedCollection($command, $resolver);
+        self::assertSame($codec->encode($original), $codec->encode($service->authorizePinnedCollection($command, $resolver)));
+        $changed = $codec->decode($codec->canonicalize(array_replace($raw, ['executorBindingRef' => 'binding-b'])));
+        self::assertInstanceOf(WireAuthorization::class, $changed);
+        $this->assertRefused(ProblemCode::IdempotencyConflict, fn () => $service->authorizePinnedCollection($changed, $resolver));
+        self::assertSame(1, $this->rows('billium_collection_authorization'));
+        self::assertSame(1, $this->rows('billium_outbox_command'));
     }
 
     public function test_success_without_an_explicit_balance_preserves_a_partially_collected_obligation(): void

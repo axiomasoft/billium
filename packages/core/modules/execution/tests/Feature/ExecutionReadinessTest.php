@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Execution\Tests\Feature;
 
+use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
@@ -20,6 +21,7 @@ use Billium\Execution\Contracts\MerchantCredentials;
 use Billium\Execution\Contracts\PaymentDrivers;
 use Billium\Execution\Contracts\RootPaymentCommands;
 use Billium\Execution\Contracts\WriterAdmission;
+use Billium\Execution\Data\ExecutionReceipt;
 use Billium\Execution\Data\FrozenBinding;
 use Billium\Execution\Enums\AttemptState;
 use Billium\Execution\Enums\EffectKind;
@@ -105,6 +107,11 @@ final class ExecutionReadinessTest extends ExecutionTestCase
             $replay = $app->make(RootPaymentCommands::class)->admit(Fixture::scope(), Fixture::wire())->orThrow();
             self::assertSame($original->receiptId, $replay->receiptId);
             self::assertSame($original->body, $replay->body);
+            $admission = ExecutionReceipt::admission($original);
+            self::assertSame('accepted', $admission->result);
+            self::assertSame(0, $admission->revision);
+            self::assertSame(Fixture::wire()->operationRef, $admission->outcomeQueryRef);
+            self::assertSame((new Codec)->encode($admission), (new Codec)->encode(ExecutionReceipt::admission($replay)));
             AuthorizationLifecycleTest::refuses(ProblemCode::IdempotencyConflict, static fn () => $app->make(RootPaymentCommands::class)
                 ->admit(Fixture::scope(), Fixture::wire(['money' => ['amount' => '2.00', 'currency' => 'RUB']]))->orThrow());
             self::assertSame(1, $this->rows('billium_execution_operation'));

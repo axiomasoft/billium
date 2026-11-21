@@ -17,6 +17,8 @@ use Billium\Platform\Contracts\Feed\EventFeed;
 use Billium\Platform\Contracts\Feed\FeedPartitions;
 use Billium\Platform\Contracts\Feed\FeedRecoveryQueries;
 use Billium\Platform\Contracts\Feed\SnapshotSource;
+use Billium\Platform\Contracts\Idempotency\IdempotencyReceiptQueries;
+use Billium\Platform\Contracts\Idempotency\IdempotencyStore;
 use Billium\Platform\Contracts\Inbox\AuthenticatedObservationBootstrap;
 use Billium\Platform\Contracts\Inbox\ObservationBootstrapAuthenticator;
 use Billium\Platform\Contracts\Outbox\CommandOutbox;
@@ -36,6 +38,7 @@ use Billium\Platform\Internal\Feed\PartitionStore;
 use Billium\Platform\Internal\Inbox\CustodyProcessor;
 use Billium\Platform\Internal\Outbox\DatabaseOutboxDeliveryQueries;
 use Billium\Platform\Internal\Outbox\EventFeedReader;
+use Billium\Platform\Internal\Outbox\FeedCommandResults;
 use Billium\Platform\Internal\Outbox\FeedTokens;
 use Billium\Platform\Internal\Outbox\OutboxPruner;
 use Billium\Platform\Internal\Outbox\OutboxRecorder;
@@ -108,12 +111,15 @@ final class PlatformOutboxRegistrar implements PackageRegistrar
             $databases = $app->make(DatabaseManager::class);
             $appKey = $app->bound(Repository::class) ? $app->make(Repository::class)->get('app.key') : null;
             $key = $options->feed->decodedSigningKey(is_string($appKey) ? $appKey : null);
+            $connection = $databases->connection($options->connection);
+            $claims = $app->make(IdempotencyStore::class);
 
             return new EventFeedReader(
-                $databases->connection($options->connection),
+                $connection,
                 new FeedTokens($key),
                 static fn (): CallerContext => $app->make(CallerContext::class),
                 static fn (): iterable => self::sources($app),
+                new FeedCommandResults($connection, $claims, $app->make(IdempotencyReceiptQueries::class)),
                 $options->feed->bootstrapLeaseSeconds,
             );
         });

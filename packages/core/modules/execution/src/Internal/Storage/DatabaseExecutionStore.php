@@ -245,7 +245,7 @@ final class DatabaseExecutionStore implements ExecutionStore, RootIdentityStore
         $digest = ExecutionCodec::digest($identity);
         $prior = (clone $imports)->where('operation_ref', $identity->operationRef)->first();
         $receipt = new ExecutionReceipt(PaymentIdentity::reference($scope, $identity->operationRef, 'admission'), $identity->commandKey,
-            $identity->operationRef, $identity->semanticDigest, 'admitted', false, [$identity->attemptRef]);
+            $identity->operationRef, $identity->semanticDigest, 'admitted', false, [$identity->attemptRef], revision: 0, outcomeQueryRef: $identity->operationRef);
         if ($prior !== null) {
             if ($prior->identity_digest !== $digest) {
                 throw new ProblemException(ProblemCode::IdempotencyConflict, 'Original dispatch archive conflicts with a retained import');

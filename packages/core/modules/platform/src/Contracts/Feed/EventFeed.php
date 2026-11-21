@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Contracts\Feed;
 
+use Billium\Contracts\Data\Envelopes\FeedBootstrap as WireBootstrap;
+use Billium\Contracts\Data\Envelopes\FeedBootstrapRequest;
+use Billium\Contracts\Data\Envelopes\FeedOpen;
+use Billium\Contracts\Data\Envelopes\FeedSelection as WireSelection;
+use Billium\Core\Data\Runtime\FinancialScope;
 use Billium\Platform\Data\Feed\FeedBootstrap;
 use Billium\Platform\Data\Feed\FeedPage;
 use Billium\Platform\Data\Feed\FeedScope;
@@ -21,9 +26,16 @@ interface EventFeed
      */
     public function openFeed(FeedScope $scope, string $eventContractRevision, array $envelopeSchemas, array $eventTypes, bool $required = false): FeedSelection;
 
+    public function openSelectedFeed(FeedOpen $command): WireSelection;
+
+    /** Get the complete pinned selection by scoped reference and digest without opening or advancing it. */
+    public function findSelection(FinancialScope $scope, string $subscriptionRef, string $selectionDigest): FeedSelection;
+
     public function read(FeedSelection $selection, ?string $cursor = null, int $limit = 100): FeedPage;
 
     public function bootstrap(FeedSelection $selection): FeedBootstrap;
+
+    public function bootstrapSelectedFeed(FeedBootstrapRequest $command): WireBootstrap;
 
     /** Receiver calls only after verified staged items have durable dispositions and atomic cursor adoption. */
     public function acknowledgeBootstrap(FeedSelection $selection, string $leaseRef, string $snapshotDigest): void;

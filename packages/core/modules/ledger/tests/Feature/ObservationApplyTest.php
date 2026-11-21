@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Billium\Ledger\Tests\Feature;
 
+use Billium\Contracts\Contracts\Codec;
+use Billium\Contracts\Data\Envelopes\ObservationCustody;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Core\Tests\Support\ObservationFactory;
 use Billium\Ledger\Data\Allocations\AllocationReceipt;
@@ -183,6 +185,11 @@ final class ObservationApplyTest extends ObservationTestCase
         $this->intent('intent-a', ['o1']);
         $refund = ObservationFactory::refund('op-r1', 'op-1', 1, 300, sequence: 1);
 
+        $parked = $this->applier()->applyWithCustody(ObservationFactory::json($refund));
+        self::assertInstanceOf(ObservationCustody::class, $parked);
+        self::assertSame('parked_dependency', $parked->custodyStatus);
+        self::assertSame('none', $parked->receipt);
+        self::assertSame($parked->digest, (new Codec)->digestOf($parked));
         self::assertSame(ProblemCode::ObservationParked->value, $this->tryObserve($refund));
         self::assertSame('parked_dependency', $this->inboxStatus(self::eventId($refund)));
         self::assertSame(300, self::integer($this->observedRow('op-r1')['captured_minor']), 'the refund fact is observed');

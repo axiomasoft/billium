@@ -6,6 +6,7 @@ namespace Billium\Server\Tests\Arch;
 
 use Billium\Server\Contracts\Authenticator;
 use Billium\Server\Contracts\AuthorizationVerdict;
+use Billium\Server\Contracts\InstallationContextResolver;
 use Billium\Server\Contracts\SellerConfiguration;
 use Billium\Server\Contracts\SellerContextResolver;
 use Billium\Server\Contracts\SellerEligibility;
@@ -29,7 +30,7 @@ final class PublicSurfaceTest extends TestCase
 {
     public function test_host_ports_are_implement_spis_and_data_is_immutable(): void
     {
-        foreach ([Authenticator::class, SellerContextResolver::class, AuthorizationVerdict::class,
+        foreach ([Authenticator::class, SellerContextResolver::class, AuthorizationVerdict::class, InstallationContextResolver::class,
             SellerEligibility::class, SellerConfiguration::class, UsageAttributionResolver::class] as $contract) {
             $attributes = (new ReflectionClass($contract))->getAttributes(Spi::class);
             self::assertCount(1, $attributes, $contract);

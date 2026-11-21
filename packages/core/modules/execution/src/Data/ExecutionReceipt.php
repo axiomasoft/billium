@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace Billium\Execution\Data;
 
+use Billium\Contracts\Contracts\Codec;
+use Billium\Contracts\Data\Envelopes\PaymentAdmission;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Data\Runner\Receipt;
+use Billium\Core\Data\Runner\StoredOutcome;
+use LogicException;
 use Packman\Attributes\Api;
 
 #[Api(since: '1.0')]
@@ -26,6 +30,8 @@ final readonly class ExecutionReceipt implements Receipt
         public string $status,
         public bool $replayed,
         array $evidenceRefs,
+        public ?int $revision = null,
+        public ?string $outcomeQueryRef = null,
     ) {
         if ($receiptRef === '') {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'receiptRef must not be empty');
@@ -63,7 +69,7 @@ final readonly class ExecutionReceipt implements Receipt
     /** @return array<string, mixed> */
     public function body(): array
     {
-        return [
+        $body = [
             'receiptRef' => $this->receiptRef,
             'commandKey' => $this->commandKey,
             'operationRef' => $this->operationRef,
@@ -72,5 +78,42 @@ final readonly class ExecutionReceipt implements Receipt
             'replayed' => $this->replayed,
             'evidenceRefs' => $this->evidenceRefs,
         ];
+        if ($this->revision !== null && $this->outcomeQueryRef !== null) {
+            $body['revision'] = $this->revision;
+            $body['outcomeQueryRef'] = $this->outcomeQueryRef;
+            $body['wireReceipt'] = self::wire($body);
+        }
+
+        return $body;
+    }
+
+    public static function admission(StoredOutcome $outcome): PaymentAdmission
+    {
+        $body = $outcome->orThrow()->body;
+        if ($outcome->receiptClass !== 'execution.operation' || ! in_array($body['status'] ?? null, ['admitted', 'cancelled'], true)) {
+            throw new LogicException('Expected a payment admission receipt');
+        }
+        $codec = new Codec;
+        // Before admission metadata was stored, root and child operations started at revision zero.
+        $record = $body['wireReceipt'] ?? self::wire($body + ['revision' => $body['status'] === 'cancelled' ? 1 : 0, 'outcomeQueryRef' => $body['operationRef'] ?? null]);
+        $wire = $codec->decode($codec->canonicalize($record));
+        assert($wire instanceof PaymentAdmission);
+
+        return $wire;
+    }
+
+    /**
+     * @param  array<string, mixed>  $admission
+     * @return array<string, mixed>
+     */
+    private static function wire(array $admission): array
+    {
+        $wire = ['schema' => PaymentAdmission::SCHEMA,
+            'result' => $admission['status'] === 'cancelled' ? 'known-terminal' : 'accepted',
+            'operationRef' => $admission['operationRef'], 'revision' => $admission['revision'],
+            'outcomeQueryRef' => $admission['outcomeQueryRef'], 'receipt' => 'CommandAccepted'];
+        $wire['digest'] = (new Codec)->digest($wire);
+
+        return $wire;
     }
 }

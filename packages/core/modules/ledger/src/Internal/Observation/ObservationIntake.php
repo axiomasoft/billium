@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Billium\Ledger\Internal\Observation;
 
 use Billium\Contracts\Contracts\Codec;
+use Billium\Contracts\Data\Envelopes\ObservationCustody;
 use Billium\Contracts\Data\Envelopes\PaymentObservation;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
@@ -37,6 +38,11 @@ final readonly class ObservationIntake implements QualifiedObservationApplier
 
     public function apply(string $json): AllocationReceipt
     {
+        return self::allocation($this->applyWithCustody($json));
+    }
+
+    public function applyWithCustody(string $json): AllocationReceipt|ObservationCustody
+    {
         return $this->intake($json, null, null);
     }
 
@@ -49,10 +55,10 @@ final readonly class ObservationIntake implements QualifiedObservationApplier
             throw new ProblemException(ProblemCode::AuthDenied, 'Qualified observation requires an isolated authenticated caller');
         }
 
-        return $this->intake($json, $scope, $proofDigest);
+        return self::allocation($this->intake($json, $scope, $proofDigest));
     }
 
-    private function intake(string $json, ?FinancialScope $scope, ?string $proof): AllocationReceipt
+    private function intake(string $json, ?FinancialScope $scope, ?string $proof): AllocationReceipt|ObservationCustody
     {
         $envelope = (new Codec)->decode($json);
         if (! $envelope instanceof PaymentObservation) {
@@ -95,8 +101,32 @@ final readonly class ObservationIntake implements QualifiedObservationApplier
                 }, commitKind: null, scope: $scope),
             'quarantined' => throw new ProblemException(ProblemCode::ObservationConflict, 'the observation is quarantined'),
             'held_recovery' => throw new ProblemException(ProblemCode::RecoveryRequired, 'the source partition requires recovery'),
+            'parked_gap', 'parked_dependency' => $this->parked($result->status),
             default => throw new ProblemException(ProblemCode::ObservationParked, 'the observation is in custody and waits ('.($result->status ?? 'unknown').')'),
         };
+    }
+
+    private static function allocation(AllocationReceipt|ObservationCustody $outcome): AllocationReceipt
+    {
+        if ($outcome instanceof ObservationCustody) {
+            throw new ProblemException(ProblemCode::ObservationParked, 'the observation is in custody and waits ('.$outcome->custodyStatus.')');
+        }
+
+        return $outcome;
+    }
+
+    private function parked(string $status): ObservationCustody
+    {
+        $caller = $this->callers->current();
+        $codec = new Codec;
+        $body = ['schema' => ObservationCustody::SCHEMA, 'installationRef' => $caller->installationRef,
+            'sellerRef' => $caller->sellerRef, 'environment' => $caller->environment,
+            'custodyStatus' => $status, 'code' => ProblemCode::ObservationParked->value, 'receipt' => 'none'];
+        $body['digest'] = $codec->digest($body);
+        $receipt = $codec->decode($codec->canonicalize($body));
+        assert($receipt instanceof ObservationCustody);
+
+        return $receipt;
     }
 
     private function receipt(string $ref, bool $replayed): AllocationReceipt

@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Internal\Idempotency;
 
+use Billium\Contracts\Contracts\Codec;
+use Billium\Contracts\Data\Envelopes\FindReceipt;
+use Billium\Contracts\Data\Envelopes\ReceiptResult;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Data\Runner\StoredOutcome;
 use Billium\Core\Data\Runtime\FinancialScope;
 use Billium\Platform\Contracts\Idempotency\IdempotencyReceiptQueries;
+use Billium\Platform\Contracts\Idempotency\ReceiptAbsenceAuthority;
 use Billium\Platform\Data\Idempotency\StoredCommandReceipt;
 use Billium\Platform\Internal\Installation\Rows;
 use Closure;
@@ -48,7 +52,98 @@ final readonly class DatabaseIdempotencyReceiptQueries implements IdempotencyRec
             ->whereRaw("result#>>'{body,receiptRef}' = ?", [$receiptRef])->orderBy('created_at')->orderBy('id')->first());
     }
 
+    public function replayCommand(FinancialScope $scope, string $schema, string $key, string $inputDigest): ?StoredOutcome
+    {
+        $lookup = $this->withinGrants($scope);
+        if ($schema === '' || $key === '' || strlen($schema) > 200 || strlen($key) > 200
+            || preg_match('/\Asha256:[0-9a-f]{64}\z/', $inputDigest) !== 1) {
+            throw new ProblemException(ProblemCode::ValidationInvalid);
+        }
+        $receipt = $this->receipt($lookup->where('command_kind', $schema)->where('command_key', $key)->first());
+        if ($receipt === null) {
+            return null;
+        }
+        if ($receipt->inputDigest === null || ! hash_equals($receipt->inputDigest, $inputDigest)) {
+            throw new ProblemException(ProblemCode::IdempotencyConflict, 'The retained claim has different command input');
+        }
+
+        return $receipt->outcome->asReplay();
+    }
+
+    public function byScopedReceiptRef(FinancialScope $scope, string $receiptRef): ?StoredCommandReceipt
+    {
+        $lookup = $this->withinGrants($scope);
+        if ($receiptRef === '' || strlen($receiptRef) > 200 || str_contains($receiptRef, "\0")) {
+            throw new ProblemException(ProblemCode::ValidationInvalid);
+        }
+        $matches = $lookup->where('outcome', 'accepted')->whereRaw("result#>>'{body,receiptRef}' = ?", [$receiptRef])
+            ->orderBy('id')->get();
+        $first = $matches->first();
+        if ($first !== null && $matches->contains(static fn (stdClass $row): bool => $row->financial_scope !== $first->financial_scope
+            || Rows::field($row, 'command_kind') !== Rows::field($first, 'command_kind'))) {
+            throw new ProblemException(ProblemCode::LookupUnavailable, 'Receipt reference is ambiguous in the authenticated selection');
+        }
+
+        return $this->receipt($first);
+    }
+
+    public function find(FinancialScope $scope, FindReceipt $query, ?ReceiptAbsenceAuthority $authority = null): ReceiptResult
+    {
+        $codec = new Codec;
+        $query = $codec->decode($codec->encode($query));
+        assert($query instanceof FindReceipt);
+        if ($query->installationRef !== $scope->installationRef || $query->sellerRef !== $scope->sellerRef
+            || $query->environment !== $scope->environment) {
+            throw new ProblemException(ProblemCode::AuthDenied);
+        }
+        $stored = $this->byScopedReceiptRef($scope, $query->receiptRef);
+        $body = ['schema' => FindReceipt::SCHEMA, 'installationRef' => $query->installationRef,
+            'sellerRef' => $query->sellerRef, 'environment' => $query->environment, 'receiptRef' => $query->receiptRef];
+        if ($stored === null) {
+            $certificate = $authority?->confirmAbsent(($this->callers)()->current(), $scope, $query->receiptRef);
+            if ($certificate === null || get_object_vars($certificate) === []) {
+                throw new ProblemException(ProblemCode::LookupUnavailable);
+            }
+            $body += ['status' => 'absent', 'absenceCertificate' => $certificate];
+        } else {
+            $original = $stored->outcome;
+            $payload = $original->body['wireReceipt'] ?? $original->body;
+            $schema = is_array($payload) ? ($payload['schema'] ?? null) : null;
+            if (! is_string($schema)) {
+                throw new ProblemException(ProblemCode::LookupUnavailable);
+            }
+            $body += ['status' => 'found', 'receiptSchema' => $schema, 'body' => (object) $payload];
+        }
+        $body['digest'] = $codec->digest($body);
+        $result = $codec->decode($codec->canonicalize($body));
+        assert($result instanceof ReceiptResult);
+
+        return $result;
+    }
+
+    private function withinGrants(FinancialScope $scope): Builder
+    {
+        $query = $this->authenticated($scope);
+        $caller = ($this->callers)()->current();
+        foreach (['intentOwnerNamespace' => $caller->intentOwnerNamespaces, 'sourceAuthority' => $caller->sourceAuthorities] as $field => $grants) {
+            $selector = $scope->{$field};
+            $column = "financial_scope->>'".$field."'";
+            if ($selector !== null) {
+                $query->whereRaw($column.' = ?', [$selector]);
+            } else {
+                $query->where(static fn (Builder $allowed): Builder => $allowed->whereRaw($column.' IS NULL')->orWhereIn($query->getConnection()->raw($column), $grants));
+            }
+        }
+
+        return $query;
+    }
+
     private function authorized(FinancialScope $scope): Builder
+    {
+        return $this->authenticated($scope)->whereRaw('financial_scope = ?::jsonb', [json_encode($scope, JSON_THROW_ON_ERROR)]);
+    }
+
+    private function authenticated(FinancialScope $scope): Builder
     {
         if ($this->connection->transactionLevel() !== 0 || $this->connection->getPdo()->inTransaction()) {
             throw new LogicException('Public receipt queries authenticate outside database transactions');
@@ -61,8 +156,8 @@ final readonly class DatabaseIdempotencyReceiptQueries implements IdempotencyRec
             throw new ProblemException(ProblemCode::AuthDenied, 'Receipt scope differs from the authenticated selection');
         }
 
-        return $this->connection->table('billium_idempotency_receipt')->where('seller_ref', $scope->sellerRef)
-            ->where('environment', $scope->environment)->whereRaw('financial_scope = ?::jsonb', [json_encode($scope, JSON_THROW_ON_ERROR)])
+        return $this->connection->table('billium_idempotency_receipt')->useWritePdo()->where('seller_ref', $scope->sellerRef)
+            ->where('environment', $scope->environment)->whereRaw("financial_scope->>'installationRef' = ?", [$scope->installationRef])
             ->whereIn('outcome', ['accepted', 'refused']);
     }
 

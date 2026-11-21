@@ -96,7 +96,9 @@ final readonly class DatabaseExecutionQueries implements ExecutionQueries
             }
 
             return new ExecutionReceipt($receiptRef, ExecutionCodec::text($body['commandKey'] ?? null), $ref,
-                ExecutionCodec::text($body['semanticDigest'] ?? null), ExecutionCodec::text($body['status'] ?? null), $replayed, $evidence);
+                ExecutionCodec::text($body['semanticDigest'] ?? null), ExecutionCodec::text($body['status'] ?? null), $replayed, $evidence,
+                is_int($body['revision'] ?? null) ? $body['revision'] : null,
+                is_string($body['outcomeQueryRef'] ?? null) ? $body['outcomeQueryRef'] : null);
         }
 
         throw ExecutionReads::unknown();

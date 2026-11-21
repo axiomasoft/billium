@@ -14,6 +14,8 @@ use Billium\Collection\Data\OpenDunningCase;
 use Billium\Collection\Data\PlanCollectionStep;
 use Billium\Collection\Data\RecordStepDeliveryRetry;
 use Billium\Collection\Data\TransitionCollectionStep;
+use Billium\Contracts\Data\Envelopes\AuthorizeCollection as WireAuthorization;
+use Billium\Contracts\Data\Envelopes\CommandReceipt;
 use Packman\Attributes\Api;
 
 /**
@@ -42,6 +44,8 @@ interface DunningCaseService
 
     /** D63/F04: commits the executable step, incoming reservation, settlement intent and command together. */
     public function authorizeCollection(AuthorizeCollection $command): CollectionStepView;
+
+    public function authorizePinnedCollection(WireAuthorization $command, PinnedCollectionInputs $inputs): CommandReceipt;
 
     /**
      * Records a transport/command delivery retry against the step's distinct delivery retry budget,

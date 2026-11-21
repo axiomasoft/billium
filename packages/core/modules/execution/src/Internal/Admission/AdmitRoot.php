@@ -71,6 +71,6 @@ final readonly class AdmitRoot
         }
 
         return new ExecutionReceipt(PaymentIdentity::reference($plan->scope, $plan->operationRef, 'admission'), $plan->commandKey,
-            $plan->operationRef, $plan->semanticDigest, 'admitted', false, [$attemptRef]);
+            $plan->operationRef, $plan->semanticDigest, 'admitted', false, [$attemptRef], revision: 0, outcomeQueryRef: $plan->operationRef);
     }
 }
