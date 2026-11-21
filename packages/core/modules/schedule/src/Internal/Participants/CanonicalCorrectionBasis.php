@@ -17,7 +17,10 @@ final readonly class CanonicalCorrectionBasis implements CorrectionBasisPolicy
     #[Override]
     public function accepts(RegisterCorrectionChild $command): bool
     {
-        return $command->obligationBasisRef === CorrectionBasis::derive(
-            parentOccurrenceRef: $command->parentOccurrenceRef, correctionRevision: $command->correctionRevision);
+        return in_array($command->obligationBasisRef, [
+            CorrectionBasis::derive($command->parentOccurrenceRef, $command->correctionRevision),
+            CorrectionBasis::deriveLedger($command->predecessorRatedBasisRef, $command->parentOccurrenceRef, $command->correctionRevision),
+            CorrectionBasis::deriveLedger('rating:'.$command->predecessorRatedBasisRef, $command->parentOccurrenceRef, $command->correctionRevision),
+        ], true);
     }
 }

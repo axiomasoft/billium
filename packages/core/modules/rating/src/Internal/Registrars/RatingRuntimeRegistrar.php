@@ -16,7 +16,6 @@ use Billium\Rating\Contracts\RatingQuoter;
 use Billium\Rating\Contracts\TaxCorrectionPolicyFrontier;
 use Billium\Rating\Contracts\TaxSnapshotPort;
 use Billium\Rating\Contracts\TaxSnapshotStore;
-use Billium\Rating\Internal\Adapters\RatedCorrectionBasis;
 use Billium\Rating\Internal\Pipeline\RatingComputation;
 use Billium\Rating\Internal\Proration\ProrationPolicyCatalog;
 use Billium\Rating\Internal\RatingConformance;
@@ -28,7 +27,6 @@ use Billium\Rating\Internal\Storage\DatabasePriceVersionStore;
 use Billium\Rating\Internal\Storage\TaxPolicyFrontier;
 use Billium\Rating\Internal\Strategies\StrategyCatalog;
 use Billium\Rating\Internal\UnboundTaxSnapshotPort;
-use Billium\Schedule\Contracts\CorrectionBasisPolicy;
 use Billium\Schedule\Contracts\ScheduleQueries;
 use Illuminate\Contracts\Foundation\Application;
 use LogicException;
@@ -70,8 +68,6 @@ final class RatingRuntimeRegistrar implements PackageRegistrar
         $app->bindIf(RatingPreparer::class, DatabaseRatingPreparer::class);
         $app->bindIf(RatingBooking::class, DatabaseRatingBooking::class);
         $app->bindIf(RatingCorrection::class, DatabaseRatingCorrection::class);
-        // Replaces schedule's canonical default: rating books the child under ledger's correction basis.
-        $app->bind(CorrectionBasisPolicy::class, RatedCorrectionBasis::class);
     }
 
     /** @return iterable<PricingStrategy> */
