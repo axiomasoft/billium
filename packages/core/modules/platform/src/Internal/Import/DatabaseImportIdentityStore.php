@@ -64,7 +64,7 @@ final readonly class DatabaseImportIdentityStore implements ImportIdentityStore
             return self::intField($existing, 'id');
         }
 
-        $payload = $manifest->rawPayload !== [] ? $manifest->rawPayload : $manifest->toWire();
+        $payload = array_merge($manifest->toWire(), $manifest->rawPayload);
         $row = $connection->selectOne(
             'INSERT INTO public.billium_import_batch ('
             .'installation_ref, environment, seller_ref, batch_id, source_system, source_installation, source_book, '
@@ -269,6 +269,12 @@ final readonly class DatabaseImportIdentityStore implements ImportIdentityStore
 
         $existingActive = $this->findMapping($identity);
         if ($existingActive !== null) {
+            if ($existingActive->sourceRecordRevision === $sourceRecordRevision) {
+                return $existingActive->payloadDigest === $payloadDigest
+                    ? new ImportMappingRegistrationResult(ImportMappingRegistrationResult::DUPLICATE, $existingActive)
+                    : new ImportMappingRegistrationResult(ImportMappingRegistrationResult::CONFLICT, $existingActive, 'payload_digest_mismatch');
+            }
+
             return new ImportMappingRegistrationResult(
                 outcome: ImportMappingRegistrationResult::CONFLICT,
                 mapping: $existingActive,
@@ -282,7 +288,7 @@ final readonly class DatabaseImportIdentityStore implements ImportIdentityStore
             .'mapping_ref, installation_ref, environment, seller_ref, source_system, source_installation, source_book, '
             .'source_record_id, record_kind, source_record_revision, source_identity_digest, payload_digest, '
             .'source_fact_ref, original_issuer, original_source_number, import_policy_version, status'
-            .') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *',
+            .') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING RETURNING *',
             [
                 $mappingRef,
                 $identity->installationRef,
@@ -303,6 +309,34 @@ final readonly class DatabaseImportIdentityStore implements ImportIdentityStore
                 ImportMappingStatus::Active->value,
             ],
         );
+
+        if (! is_object($row)) {
+            $racedSameRev = $this->findMapping($identity, $sourceRecordRevision);
+            if ($racedSameRev !== null) {
+                if ($racedSameRev->status === ImportMappingStatus::Tombstoned) {
+                    return new ImportMappingRegistrationResult(
+                        outcome: ImportMappingRegistrationResult::TOMBSTONED_CONFLICT,
+                        mapping: $racedSameRev,
+                        conflictReason: 'source_identity_tombstoned',
+                    );
+                }
+
+                return $racedSameRev->payloadDigest === $payloadDigest
+                    ? new ImportMappingRegistrationResult(ImportMappingRegistrationResult::DUPLICATE, $racedSameRev)
+                    : new ImportMappingRegistrationResult(ImportMappingRegistrationResult::CONFLICT, $racedSameRev, 'payload_digest_mismatch');
+            }
+
+            $racedActive = $this->findMapping($identity);
+            if ($racedActive !== null) {
+                return new ImportMappingRegistrationResult(
+                    outcome: ImportMappingRegistrationResult::CONFLICT,
+                    mapping: $racedActive,
+                    conflictReason: 'active_mapping_exists_use_supersede_for_correction',
+                );
+            }
+
+            throw new ProblemException(ProblemCode::IdempotencyConflict, 'Concurrent import mapping registration conflict');
+        }
 
         return new ImportMappingRegistrationResult(
             outcome: ImportMappingRegistrationResult::CREATED,
@@ -551,7 +585,7 @@ final readonly class DatabaseImportIdentityStore implements ImportIdentityStore
             .'receipt_ref, installation_ref, environment, seller_ref, batch_pk, record_pk, mapping_pk, '
             .'source_identity_digest, source_record_revision, payload_digest, source_fact_ref, '
             .'status, billium_receipt_ref, details'
-            .') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb) RETURNING *',
+            .') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb) ON CONFLICT DO NOTHING RETURNING *',
             [
                 $receiptRef,
                 $identity->installationRef,
@@ -569,6 +603,28 @@ final readonly class DatabaseImportIdentityStore implements ImportIdentityStore
                 json_encode($details === [] ? new stdClass : $details, JSON_THROW_ON_ERROR),
             ],
         );
+
+        if (! is_object($row)) {
+            $byRef = $this->connection()->selectOne(
+                'SELECT * FROM public.billium_import_receipt '
+                .'WHERE installation_ref = ? AND environment = ? AND seller_ref = ? AND receipt_ref = ?',
+                [$identity->installationRef, $identity->environment, $identity->sellerRef, $receiptRef],
+            );
+            if (is_object($byRef)) {
+                $existingByRef = self::hydrateReceipt($byRef);
+                if ($existingByRef->payloadDigest === $payloadDigest) {
+                    return $existingByRef;
+                }
+            }
+            if (in_array($status, [ImportReceiptStatus::Applied, ImportReceiptStatus::ObservationQueued], true)) {
+                $existingApplied = $this->findAppliedReceipt($identity, $sourceRecordRevision);
+                if ($existingApplied !== null && $existingApplied->payloadDigest === $payloadDigest) {
+                    return $existingApplied;
+                }
+            }
+
+            throw new ProblemException(ProblemCode::IdempotencyConflict, 'Concurrent import receipt conflict');
+        }
 
         return self::hydrateReceipt($row);
     }
