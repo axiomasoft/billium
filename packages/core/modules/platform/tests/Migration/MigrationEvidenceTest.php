@@ -29,9 +29,11 @@ use Billium\Platform\Data\Migration\TargetNoEffectsProof;
 use Billium\Platform\Data\Migration\TargetReconciliation;
 use Billium\Platform\Internal\Migration\HostAuthorityHandoff;
 use Billium\Platform\Internal\Outbox\FeedTokens;
+use Closure;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\TestWith;
 use PHPUnit\Framework\TestCase;
 
 #[Group('P9.4')]
@@ -112,6 +114,73 @@ final class MigrationEvidenceTest extends TestCase
         self::assertFalse($target->active);
     }
 
+    #[TestWith(['wrong freeze signature'], 'wrong-freeze')]
+    #[TestWith(['expired freeze'], 'expired-freeze')]
+    #[TestWith(['snapshot token'], 'snapshot-token')]
+    #[TestWith(['expired snapshot'], 'expired-snapshot')]
+    #[TestWith(['snapshot digest'], 'snapshot-digest')]
+    #[TestWith(['lease reference'], 'lease-reference')]
+    #[TestWith(['expired lease'], 'expired-lease')]
+    #[TestWith(['safe cursor'], 'safe-cursor')]
+    #[TestWith(['selection'], 'selection')]
+    #[TestWith(['catalog'], 'catalog')]
+    #[TestWith(['source lineage'], 'source-lineage')]
+    #[TestWith(['seller'], 'seller')]
+    #[TestWith(['currency'], 'currency')]
+    #[TestWith(['checksum'], 'checksum')]
+    public function test_mgate_11_mismatched_proof_cannot_apply_or_activate(string $case): void
+    {
+        [$handoff, $source, $target, $plan] = self::fixture();
+        $handoff->stage($plan);
+        $freeze = $handoff->freeze($plan);
+        $manifest = $handoff->snapshot($freeze);
+        $receipt = $handoff->verify($manifest);
+        $target->receipt = null;
+        $checksum = $manifest->checksums[0];
+        $differentLineage = new FeedScope('inst', 'seller', 'test', 'cloned-source');
+        $replacement = match ($case) {
+            'wrong freeze signature' => ['freeze' => new SourceFreezeCertificate($plan, $freeze->freezeGeneration, $freeze->sealReceiptRef,
+                $freeze->sealReceiptDigest, $freeze->closedMutators, hashFixture('wrong-signature'))],
+            'expired freeze', 'expired snapshot' => [],
+            'snapshot token' => ['snapshotToken' => 'wrong-snapshot'],
+            'snapshot digest' => ['snapshotDigest' => hashFixture('wrong-snapshot')],
+            'lease reference' => ['retentionLeaseRef' => 'wrong-lease'],
+            'expired lease' => ['retentionLeaseExpiresAt' => new DateTimeImmutable('-1 second')],
+            'safe cursor' => ['safeFeedCursor' => $source->cursor($manifest, new FeedPosition('18446744073709551605', '6'))],
+            'selection' => ['selection' => FixtureSourceHandoff::selection($plan->source->feed, ['payment.effect.outcome.v1'])],
+            'catalog' => ['selection' => FixtureSourceHandoff::selection($plan->source->feed, ['invoice.issued.v1'], 'events-other-v1')],
+            'source lineage' => ['selection' => FixtureSourceHandoff::selection($differentLineage, ['invoice.issued.v1'])],
+            'seller', 'currency', 'checksum' => ['checksums' => [new ReconciliationChecksum(
+                $case === 'seller' ? 'another-seller' : $checksum->sellerRef, $case === 'currency' ? 'EUR' : $checksum->currency,
+                $checksum->counts, $checksum->totals, $case === 'checksum' ? hashFixture('other-checksum') : $checksum->checksum,
+            )]],
+            default => self::fail('Unknown evidence case '.$case),
+        };
+        if ($case === 'expired freeze') {
+            $source->freezeExpiresAt = new DateTimeImmutable('-1 second');
+        }
+        if ($case === 'expired snapshot') {
+            $source->snapshotExpiresAt = new DateTimeImmutable('-1 second');
+        }
+        if (in_array($case, ['source lineage', 'seller'], true)) {
+            try {
+                self::replaceManifestFields($manifest, $replacement);
+                self::fail('The manifest crossed the certified scope');
+            } catch (InvalidArgumentException $error) {
+                self::assertStringContainsString('scope', $error->getMessage());
+            }
+            self::assertNull($target->receipt);
+        } else {
+            $candidate = self::replaceManifestFields($manifest, $replacement);
+            self::refused(fn () => $handoff->verify($candidate));
+            self::assertNull($target->receipt);
+            $target->allowedActivation = $auth = self::authorization($candidate, $receipt);
+            $target->receipt = $receipt;
+            self::refused(fn () => $handoff->activate($candidate, $auth));
+        }
+        self::assertTrue($target->isRecovering($plan));
+    }
+
     public function test_mgate_04_even_rehashed_mismatches_require_recovery(): void
     {
         [$handoff, $source, $target, $plan] = self::fixture();
@@ -134,7 +203,7 @@ final class MigrationEvidenceTest extends TestCase
             ['retentionLeaseExpiresAt' => new DateTimeImmutable('-1 second')],
             ['checksums' => [self::summary([['revision' => 'fact-1', 'amount' => 4]])]],
         ] as $replacement) {
-            $different = new MigrationManifest(...array_replace(get_object_vars($manifest), $replacement));
+            $different = self::replaceManifestFields($manifest, $replacement);
             self::refused(fn () => $handoff->activate($different, $auth));
         }
 
@@ -169,9 +238,11 @@ final class MigrationEvidenceTest extends TestCase
         } catch (InvalidArgumentException $error) {
             self::assertStringContainsString('freeze certificate', $error->getMessage());
         }
-        $selection = new FeedSelection(...array_replace(get_object_vars($manifest->selection), ['selectionDigest' => hashFixture('unbound')]));
+        $pinned = $manifest->selection;
+        $selection = new FeedSelection($pinned->subscriptionRef, $pinned->scope, $pinned->eventContractRevision,
+            $pinned->envelopeSchemas, $pinned->eventTypes, hashFixture('unbound'), $pinned->cursor);
         $this->expectException(InvalidArgumentException::class);
-        new MigrationManifest(...array_replace(get_object_vars($manifest), ['selection' => $selection]));
+        self::replaceManifestFields($manifest, ['selection' => $selection]);
     }
 
     public function test_mgate_05_only_current_lineage_and_separate_certificate_can_activate(): void
@@ -241,15 +312,16 @@ final class MigrationEvidenceTest extends TestCase
     }
 
     /** @return array{HostAuthorityHandoff,FixtureSourceHandoff,FixtureTargetHandoff,HandoffPlan} */
-    private static function fixture(?DateTimeImmutable $expiresAt = null): array
+    public static function fixture(?DateTimeImmutable $expiresAt = null, ?HandoffPlan $plan = null): array
     {
         $source = new FixtureSourceHandoff($expiresAt);
         $target = new FixtureTargetHandoff($source);
         $source->target = $target;
-        $src = new LedgerScope(new FeedScope('inst', 'seller', 'test', 'source-lineage'), new OwnerSessionIdentity('inst', 'source', 1, 1, 1), ['receivable'], ['ledger']);
-        $dst = new LedgerScope(new FeedScope('inst', 'seller', 'test', 'target-lineage'), new OwnerSessionIdentity('inst', 'target', 2, 2, 2), ['receivable'], ['ledger']);
+        $plan ??= new HandoffPlan('handoff',
+            new LedgerScope(new FeedScope('inst', 'seller', 'test', 'source-lineage'), new OwnerSessionIdentity('inst', 'source', 1, 1, 1), ['receivable'], ['ledger']),
+            new LedgerScope(new FeedScope('inst', 'seller', 'test', 'target-lineage'), new OwnerSessionIdentity('inst', 'target', 2, 2, 2), ['receivable'], ['ledger']));
 
-        return [new HostAuthorityHandoff($source, $target), $source, $target, new HandoffPlan('handoff', $src, $dst)];
+        return [new HostAuthorityHandoff($source, $target), $source, $target, $plan];
     }
 
     private static function authorization(MigrationManifest $manifest, TargetReconciliation $receipt, ?string $lineage = null, ?OwnerSessionIdentity $owner = null): HandoffActivation
@@ -260,7 +332,7 @@ final class MigrationEvidenceTest extends TestCase
     }
 
     /** @return array{RetirementProof,ActivationCertificate} */
-    private static function certificates(LedgerScope $source, LedgerScope $target, OwnerSessionIdentity $owner, ?string $lineage = null, ?DateTimeImmutable $expiresAt = null): array
+    public static function certificates(LedgerScope $source, LedgerScope $target, OwnerSessionIdentity $owner, ?string $lineage = null, ?DateTimeImmutable $expiresAt = null): array
     {
         $past = new DateTimeImmutable('2026-10-15T08:00:00Z');
         $digest = hashFixture('proof');
@@ -275,14 +347,31 @@ final class MigrationEvidenceTest extends TestCase
     }
 
     /** @param list<array{revision:string,amount:int}> $facts */
-    public static function summary(array $facts): ReconciliationChecksum
+    public static function summary(array $facts, string $seller = 'seller'): ReconciliationChecksum
     {
         $counts = array_fill_keys(ReconciliationChecksum::COUNTS, count($facts));
         $totals = array_fill_keys(ReconciliationChecksum::TOTALS, (string) array_sum(array_column($facts, 'amount')));
 
-        return new ReconciliationChecksum('seller', 'USD', $counts, $totals, (new Codec)->digest($facts));
+        return new ReconciliationChecksum($seller, 'USD', $counts, $totals, (new Codec)->digest($facts));
     }
 
+    /**
+     * @param array{
+     *     freeze?: SourceFreezeCertificate, snapshotToken?: string, snapshotDigest?: string, selection?: FeedSelection,
+     *     safeFeedCursor?: FeedCursor, retentionLeaseRef?: string, retentionLeaseExpiresAt?: DateTimeImmutable,
+     *     checksums?: non-empty-list<ReconciliationChecksum>
+     * } $fields
+     */
+    private static function replaceManifestFields(MigrationManifest $manifest, array $fields): MigrationManifest
+    {
+        return new MigrationManifest($manifest->plan, $fields['freeze'] ?? $manifest->freeze,
+            $fields['snapshotToken'] ?? $manifest->snapshotToken, $fields['snapshotDigest'] ?? $manifest->snapshotDigest,
+            $fields['selection'] ?? $manifest->selection, $fields['safeFeedCursor'] ?? $manifest->safeFeedCursor,
+            $fields['retentionLeaseRef'] ?? $manifest->retentionLeaseRef, $fields['retentionLeaseExpiresAt'] ?? $manifest->retentionLeaseExpiresAt,
+            $fields['checksums'] ?? $manifest->checksums);
+    }
+
+    /** @param callable(): mixed $operation */
     private static function refused(callable $operation): void
     {
         try {
@@ -307,6 +396,10 @@ final class FixtureSourceHandoff implements SourceHandoffHost
     public bool $tamperTransfer = false;
 
     public bool $continuity = true;
+
+    public ?DateTimeImmutable $freezeExpiresAt = null;
+
+    public ?DateTimeImmutable $snapshotExpiresAt = null;
 
     public bool $leaseLive = true;
 
@@ -355,7 +448,8 @@ final class FixtureSourceHandoff implements SourceHandoffHost
 
     public function isSealed(SourceFreezeCertificate $freeze): bool
     {
-        return $this->admissionClosed && $this->continuity && $this->freeze?->digest() === $freeze->digest();
+        return $this->admissionClosed && $this->continuity && $this->freeze?->digest() === $freeze->digest()
+            && ($this->freezeExpiresAt === null || $this->freezeExpiresAt > new DateTimeImmutable);
     }
 
     public function snapshot(SourceFreezeCertificate $freeze): MigrationManifest
@@ -365,12 +459,13 @@ final class FixtureSourceHandoff implements SourceHandoffHost
         $cursor = self::tokens()->issue($selection->subscriptionRef, $selection->scope, $selection->selectionDigest, new FeedPosition('18446744073709551604', '5'), $lease);
 
         return $this->manifest ??= new MigrationManifest($freeze->plan, $freeze, 'snapshot-token', (new Codec)->digest(self::SNAPSHOT), $selection, $cursor,
-            $lease, $this->expiresAt ?? new DateTimeImmutable('+1 hour'), [MigrationEvidenceTest::summary(self::SNAPSHOT)]);
+            $lease, $this->expiresAt ?? new DateTimeImmutable('+1 hour'), [MigrationEvidenceTest::summary(self::SNAPSHOT, $freeze->plan->source->feed->sellerRef)]);
     }
 
     public function sealedTail(MigrationManifest $manifest): ?SealedTail
     {
-        if (! $this->isSealed($manifest->freeze) || ! $this->leaseLive || ! $this->tailRetained || $this->manifest?->digest() !== $manifest->digest()) {
+        if (! $this->isSealed($manifest->freeze) || ! $this->leaseLive || ! $this->tailRetained || $this->manifest?->digest() !== $manifest->digest()
+            || ($this->snapshotExpiresAt !== null && $this->snapshotExpiresAt <= new DateTimeImmutable)) {
             return null;
         }
 
@@ -409,9 +504,8 @@ final class FixtureSourceHandoff implements SourceHandoffHost
     }
 
     /** @param list<string> $types */
-    public static function selection(FeedScope $feed, array $types): FeedSelection
+    public static function selection(FeedScope $feed, array $types, string $revision = 'events-2026-10-v1'): FeedSelection
     {
-        $revision = 'events-2026-10-v1';
         $schemas = ['billium.event.v1'];
         $digest = (new Codec)->digest(['scope' => $feed->toArray(), 'eventContractRevision' => $revision,
             'envelopeSchemas' => $schemas, 'eventTypes' => $types]);
@@ -428,6 +522,9 @@ final class FixtureSourceHandoff implements SourceHandoffHost
 
 final class FixtureTargetHandoff implements TargetHandoffHost
 {
+    /** @var (Closure(): bool)|null */
+    public ?Closure $fence = null;
+
     public bool $active = false;
 
     public bool $fenced = false;
@@ -471,7 +568,7 @@ final class FixtureTargetHandoff implements TargetHandoffHost
             }
             $facts[$fact['revision']] = $fact;
         }
-        $checksum = MigrationEvidenceTest::summary(array_values($facts));
+        $checksum = MigrationEvidenceTest::summary(array_values($facts), $manifest->plan->source->feed->sellerRef);
         if ($codec->canonicalize($checksum->toArray()) !== $codec->canonicalize($manifest->checksums[0]->toArray())) {
             return;
         }
@@ -497,7 +594,7 @@ final class FixtureTargetHandoff implements TargetHandoffHost
 
     public function fenceForRollback(HandoffPlan $plan): ?TargetNoEffectsProof
     {
-        if ($this->staged !== $plan->digest() || $this->wrote) {
+        if ($this->staged !== $plan->digest() || $this->wrote || ($this->fence !== null && ! ($this->fence)())) {
             return null;
         }
         $this->fenced = true;
