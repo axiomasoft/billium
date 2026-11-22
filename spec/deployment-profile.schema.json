@@ -1,0 +1,267 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "billium.deployment.profile.v1",
+  "title": "Billium Deployment Profile and Provider Qualification Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "profileId",
+    "profileType",
+    "environment",
+    "activationMode",
+    "generatedAt",
+    "modules",
+    "qualification"
+  ],
+  "properties": {
+    "schema": {
+      "const": "billium.deployment.profile.v1"
+    },
+    "profileId": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-zA-Z0-9._:-]+$"
+    },
+    "profileType": {
+      "type": "string",
+      "enum": ["contracts-only", "embedded", "standalone", "remote"]
+    },
+    "environment": {
+      "type": "string",
+      "enum": ["sandbox", "staging", "production"]
+    },
+    "activationMode": {
+      "type": "string",
+      "enum": ["contracts-only", "read-only", "simulated", "live"]
+    },
+    "generatedAt": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(Z|[+-]\\d{2}:\\d{2})$"
+    },
+    "seller": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sellerRef", "merchantAccountRef", "currencies", "jurisdiction"],
+      "properties": {
+        "sellerRef": { "type": "string", "minLength": 1 },
+        "merchantAccountRef": { "type": "string", "minLength": 1 },
+        "currencies": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "pattern": "^[A-Z]{3}$" }
+        },
+        "jurisdiction": { "type": "string", "pattern": "^[A-Z]{2}(-[A-Z0-9]{1,3})?$" }
+      }
+    },
+    "modules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["composition", "enabled", "executionEnabled"],
+      "properties": {
+        "composition": {
+          "type": "string",
+          "enum": ["contracts-only", "ledger-only", "standalone-billium", "remote-server"]
+        },
+        "enabled": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "contracts",
+              "platform",
+              "ledger",
+              "usage",
+              "rating",
+              "schedule",
+              "documents",
+              "execution",
+              "collection",
+              "server"
+            ]
+          }
+        },
+        "executionEnabled": { "type": "boolean" }
+      }
+    },
+    "driver": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "driverId",
+        "driverContractVersion",
+        "providerApiVersion",
+        "capabilityDigest",
+        "capabilities",
+        "historicalLookupSupported",
+        "historicalRefundSupported",
+        "credentialRotationBehavior"
+      ],
+      "properties": {
+        "driverId": { "type": "string", "minLength": 1 },
+        "driverContractVersion": { "type": "string", "minLength": 1 },
+        "providerApiVersion": { "type": "string", "minLength": 1 },
+        "capabilityDigest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "capabilities": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": [
+              "initiate_with_idempotency",
+              "initiate_without_idempotency",
+              "lookup_by_provider_id",
+              "lookup_by_reference",
+              "authorize",
+              "capture",
+              "partial_capture",
+              "multiple_capture",
+              "void_authorization",
+              "partial_void_authorization",
+              "authorization_expiry_evidence",
+              "partial_refund",
+              "multiple_refund",
+              "refund_lookup",
+              "saved_method",
+              "recurring_consent",
+              "webhook_authenticity",
+              "webhook_event_identity",
+              "webhook_event_lookup",
+              "asynchronous_states",
+              "settlement_listing",
+              "settlement_export",
+              "disputes",
+              "fiscal_passthrough",
+              "inventory_complete",
+              "absence_certification"
+            ]
+          }
+        },
+        "historicalLookupSupported": { "type": "boolean" },
+        "historicalRefundSupported": { "type": "boolean" },
+        "credentialRotationBehavior": { "type": "string", "minLength": 1 }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "owner",
+        "writerAuthorityKind",
+        "egressQuiesceSupported",
+        "egressQuiesceRunbookRef",
+        "fencingEpochRequired"
+      ],
+      "properties": {
+        "owner": { "type": "string", "minLength": 1 },
+        "writerAuthorityKind": {
+          "type": "string",
+          "enum": ["none", "embedded-host", "standalone-authority", "remote-authority"]
+        },
+        "egressQuiesceSupported": { "type": "boolean" },
+        "egressQuiesceRunbookRef": { "type": "string" },
+        "fencingEpochRequired": { "type": "boolean" }
+      }
+    },
+    "mandateAndFiscal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["recurringMandateEnabled", "mandatePolicyRef", "fiscalMode", "fiscalProfileRef"],
+      "properties": {
+        "recurringMandateEnabled": { "type": "boolean" },
+        "mandatePolicyRef": { "type": ["string", "null"] },
+        "fiscalMode": {
+          "type": "string",
+          "enum": ["none", "external", "passthrough", "direct"]
+        },
+        "fiscalProfileRef": { "type": ["string", "null"] }
+      }
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policyRef",
+        "outboxMinDays",
+        "receiptMinDays",
+        "auditEvidenceMinDays",
+        "legalHoldSupported"
+      ],
+      "properties": {
+        "policyRef": { "type": "string", "minLength": 1 },
+        "outboxMinDays": { "type": "integer", "minimum": 1 },
+        "receiptMinDays": { "type": "integer", "minimum": 1 },
+        "auditEvidenceMinDays": { "type": "integer", "minimum": 1 },
+        "legalHoldSupported": { "type": "boolean" }
+      }
+    },
+    "slo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "availabilityTargetPct",
+        "p95LatencyMs",
+        "rpoSeconds",
+        "rtoSeconds",
+        "escalationContact"
+      ],
+      "properties": {
+        "availabilityTargetPct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "p95LatencyMs": { "type": "integer", "minimum": 1 },
+        "rpoSeconds": { "type": "integer", "minimum": 0 },
+        "rtoSeconds": { "type": "integer", "minimum": 1 },
+        "escalationContact": { "type": "string", "minLength": 1 }
+      }
+    },
+    "qualification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "mode",
+        "manifestRef",
+        "checkedAt",
+        "officialSources",
+        "sandboxEvidenceRefs",
+        "liveEvidenceRefs",
+        "unresolvedGaps"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["unqualified", "simulated_only", "pending", "qualified", "not_applicable"]
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["none", "simulated", "provider_verified"]
+        },
+        "manifestRef": { "type": ["string", "null"] },
+        "checkedAt": { "type": ["string", "null"] },
+        "officialSources": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "sandboxEvidenceRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "liveEvidenceRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "unresolvedGaps": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "evidenceRefs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "releaseEvidenceRef",
+        "retentionPolicyRef",
+        "restoreDrillRef",
+        "securityGateRef",
+        "supplyChainRef",
+        "qualificationEvidenceRef"
+      ],
+      "properties": {
+        "releaseEvidenceRef": { "type": ["string", "null"] },
+        "retentionPolicyRef": { "type": ["string", "null"] },
+        "restoreDrillRef": { "type": ["string", "null"] },
+        "securityGateRef": { "type": ["string", "null"] },
+        "supplyChainRef": { "type": ["string", "null"] },
+        "qualificationEvidenceRef": { "type": ["string", "null"] }
+      }
+    }
+  }
+}
