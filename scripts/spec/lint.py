@@ -62,7 +62,7 @@ OPEN = {
     ("ledger.refund_authorization.v1", ""),
     ("external.import.preview.v1", ""),
 }
-NON_ENVELOPE_DIRS = {"common", "problem", "conformance"}
+NON_ENVELOPE_DIRS = {"common", "problem", "conformance", "migration"}
 # D63: rating correction.applied is an internal event payload, not a public wire envelope.
 NON_ENVELOPE_FILES = {"feed/defs.json", "import/defs.json", "rating/correction-applied.v1.json"}
 
@@ -182,6 +182,8 @@ class Lint:
     def envelope_nodes(self) -> dict[tuple[str, str], tuple[str, dict[str, Any]]]:
         nodes = {}
         for rel, document in self.schemas.items():
+            if rel.startswith("migration/"):
+                continue  # D58: offline migration evidence is not a negotiable wire envelope.
             for pointer, node in self.walk(document):
                 if not isinstance(node, dict) or not isinstance(node.get("properties"), dict):
                     continue

@@ -142,6 +142,8 @@ final class PlatformPlugin implements ExtensionPlugin, WithCapabilities, WithCon
             'feed_observation_root_scope',
             'feed_observation_scope_link',
             'feed_observation_command',
+            'authority_route',
+            'intent_binding',
         ];
     }
 

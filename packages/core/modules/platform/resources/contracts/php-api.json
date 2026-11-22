@@ -3577,6 +3577,657 @@
             "enum_cases": [],
             "spi_kind": "call"
         },
+        "Billium\\Platform\\Contracts\\Migration\\AuthorityHandoff": {
+            "kind": "interface",
+            "layer": "spi",
+            "since": "1.0",
+            "final": false,
+            "readonly": false,
+            "abstract": false,
+            "extends": [],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "activate": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "manifest",
+                            "type": "Billium\\Platform\\Data\\Migration\\MigrationManifest",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "authorization",
+                            "type": "Billium\\Platform\\Data\\Migration\\HandoffActivation",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "void",
+                    "doc": []
+                },
+                "freeze": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "plan",
+                            "type": "Billium\\Platform\\Data\\Migration\\HandoffPlan",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "Billium\\Platform\\Data\\Migration\\SourceFreezeCertificate",
+                    "doc": []
+                },
+                "rollback": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "freeze",
+                            "type": "Billium\\Platform\\Data\\Migration\\SourceFreezeCertificate",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "retirement",
+                            "type": "Billium\\Core\\Data\\Runtime\\RetirementProof",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "certificate",
+                            "type": "Billium\\Core\\Data\\Runtime\\ActivationCertificate",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "void",
+                    "doc": []
+                },
+                "snapshot": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "freeze",
+                            "type": "Billium\\Platform\\Data\\Migration\\SourceFreezeCertificate",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "Billium\\Platform\\Data\\Migration\\MigrationManifest",
+                    "doc": []
+                },
+                "stage": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "plan",
+                            "type": "Billium\\Platform\\Data\\Migration\\HandoffPlan",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "void",
+                    "doc": []
+                },
+                "verify": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "manifest",
+                            "type": "Billium\\Platform\\Data\\Migration\\MigrationManifest",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "Billium\\Platform\\Data\\Migration\\TargetReconciliation",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": [],
+            "spi_kind": "call"
+        },
+        "Billium\\Platform\\Contracts\\Migration\\AuthorityRouter": {
+            "kind": "interface",
+            "layer": "spi",
+            "since": "1.0",
+            "final": false,
+            "readonly": false,
+            "abstract": false,
+            "extends": [],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "advance": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "scope",
+                            "type": "Billium\\Platform\\Data\\Migration\\RoutingScope",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "expected",
+                            "type": "Billium\\Platform\\Data\\Migration\\ExecutionRoute",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "next",
+                            "type": "Billium\\Platform\\Data\\Migration\\ExecutionRoute",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "void",
+                    "doc": []
+                },
+                "current": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "scope",
+                            "type": "Billium\\Platform\\Data\\Migration\\RoutingScope",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "Billium\\Platform\\Data\\Migration\\ExecutionRoute",
+                    "doc": []
+                },
+                "initialize": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "scope",
+                            "type": "Billium\\Platform\\Data\\Migration\\RoutingScope",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "route",
+                            "type": "Billium\\Platform\\Data\\Migration\\ExecutionRoute",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "existing",
+                            "type": "array",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "void",
+                    "doc": []
+                },
+                "lookup": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "scope",
+                            "type": "Billium\\Platform\\Data\\Migration\\RoutingScope",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "operationRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "?Billium\\Platform\\Data\\Migration\\IntentBinding",
+                    "doc": []
+                },
+                "reserve": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "scope",
+                            "type": "Billium\\Platform\\Data\\Migration\\RoutingScope",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "intent",
+                            "type": "Billium\\Platform\\Data\\Migration\\IntentBinding",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "Billium\\Platform\\Data\\Migration\\IntentBinding",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": [],
+            "spi_kind": "call"
+        },
+        "Billium\\Platform\\Contracts\\Migration\\SourceHandoffHost": {
+            "kind": "interface",
+            "layer": "spi",
+            "since": "1.0",
+            "final": false,
+            "readonly": false,
+            "abstract": false,
+            "extends": [],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "freeze": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "plan",
+                            "type": "Billium\\Platform\\Data\\Migration\\HandoffPlan",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "Billium\\Platform\\Data\\Migration\\SourceFreezeCertificate",
+                    "doc": []
+                },
+                "isSealed": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "freeze",
+                            "type": "Billium\\Platform\\Data\\Migration\\SourceFreezeCertificate",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "bool",
+                    "doc": []
+                },
+                "resumeSource": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "freeze",
+                            "type": "Billium\\Platform\\Data\\Migration\\SourceFreezeCertificate",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "target",
+                            "type": "Billium\\Platform\\Data\\Migration\\TargetNoEffectsProof",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "retirement",
+                            "type": "Billium\\Core\\Data\\Runtime\\RetirementProof",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "certificate",
+                            "type": "Billium\\Core\\Data\\Runtime\\ActivationCertificate",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "bool",
+                    "doc": []
+                },
+                "sealedTail": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "manifest",
+                            "type": "Billium\\Platform\\Data\\Migration\\MigrationManifest",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "?Billium\\Platform\\Data\\Migration\\SealedTail",
+                    "doc": []
+                },
+                "snapshot": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "freeze",
+                            "type": "Billium\\Platform\\Data\\Migration\\SourceFreezeCertificate",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "Billium\\Platform\\Data\\Migration\\MigrationManifest",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": [],
+            "spi_kind": "implement"
+        },
+        "Billium\\Platform\\Contracts\\Migration\\TargetHandoffHost": {
+            "kind": "interface",
+            "layer": "spi",
+            "since": "1.0",
+            "final": false,
+            "readonly": false,
+            "abstract": false,
+            "extends": [],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "activate": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "manifest",
+                            "type": "Billium\\Platform\\Data\\Migration\\MigrationManifest",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "receipt",
+                            "type": "Billium\\Platform\\Data\\Migration\\TargetReconciliation",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "authorization",
+                            "type": "Billium\\Platform\\Data\\Migration\\HandoffActivation",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "bool",
+                    "doc": []
+                },
+                "applyAndVerify": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "manifest",
+                            "type": "Billium\\Platform\\Data\\Migration\\MigrationManifest",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "tail",
+                            "type": "Billium\\Platform\\Data\\Migration\\SealedTail",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "void",
+                    "doc": []
+                },
+                "fenceForRollback": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "plan",
+                            "type": "Billium\\Platform\\Data\\Migration\\HandoffPlan",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "?Billium\\Platform\\Data\\Migration\\TargetNoEffectsProof",
+                    "doc": []
+                },
+                "isRecovering": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "plan",
+                            "type": "Billium\\Platform\\Data\\Migration\\HandoffPlan",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "bool",
+                    "doc": []
+                },
+                "reconciliation": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "manifest",
+                            "type": "Billium\\Platform\\Data\\Migration\\MigrationManifest",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "?Billium\\Platform\\Data\\Migration\\TargetReconciliation",
+                    "doc": []
+                },
+                "stageRecovery": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "plan",
+                            "type": "Billium\\Platform\\Data\\Migration\\HandoffPlan",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "void",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": [],
+            "spi_kind": "implement"
+        },
         "Billium\\Platform\\Contracts\\Outbox\\CommandOutbox": {
             "kind": "interface",
             "layer": "spi",
@@ -11312,6 +11963,1117 @@
                     "by_reference": false,
                     "parameters": [],
                     "return": "string",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": []
+        },
+        "Billium\\Platform\\Data\\Migration\\ExecutionRoute": {
+            "kind": "class",
+            "layer": "api",
+            "since": "1.0",
+            "final": true,
+            "readonly": true,
+            "abstract": false,
+            "extends": [],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "__construct": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "executorRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "routingEpoch",
+                            "type": "int",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        }
+                    ],
+                    "return": null,
+                    "doc": []
+                },
+                "matches": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "other",
+                            "type": "self",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "bool",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": []
+        },
+        "Billium\\Platform\\Data\\Migration\\HandoffActivation": {
+            "kind": "class",
+            "layer": "api",
+            "since": "1.0",
+            "final": true,
+            "readonly": true,
+            "abstract": false,
+            "extends": [],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "__construct": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "manifestDigest",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "targetReceiptDigest",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "retirement",
+                            "type": "Billium\\Core\\Data\\Runtime\\RetirementProof",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "certificate",
+                            "type": "Billium\\Core\\Data\\Runtime\\ActivationCertificate",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        }
+                    ],
+                    "return": null,
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": []
+        },
+        "Billium\\Platform\\Data\\Migration\\HandoffPlan": {
+            "kind": "class",
+            "layer": "api",
+            "since": "1.0",
+            "final": true,
+            "readonly": true,
+            "abstract": false,
+            "extends": [],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "__construct": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "handoffRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "source",
+                            "type": "Billium\\Platform\\Data\\Migration\\LedgerScope",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "target",
+                            "type": "Billium\\Platform\\Data\\Migration\\LedgerScope",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        }
+                    ],
+                    "return": null,
+                    "doc": []
+                },
+                "digest": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [],
+                    "return": "string",
+                    "doc": []
+                },
+                "toArray": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [],
+                    "return": "array",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": []
+        },
+        "Billium\\Platform\\Data\\Migration\\HandoffRecoveryRequired": {
+            "kind": "class",
+            "layer": "api",
+            "since": "1.0",
+            "final": true,
+            "readonly": false,
+            "abstract": false,
+            "extends": [
+                "RuntimeException"
+            ],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {},
+            "properties": {},
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": []
+        },
+        "Billium\\Platform\\Data\\Migration\\IntentBinding": {
+            "kind": "class",
+            "layer": "api",
+            "since": "1.0",
+            "final": true,
+            "readonly": true,
+            "abstract": false,
+            "extends": [],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "__construct": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "sourceContext",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "businessIntentRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "operationRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "route",
+                            "type": "Billium\\Platform\\Data\\Migration\\ExecutionRoute",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "merchantAccountRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "bindingRevision",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "commandKey",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "payloadDigest",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "originalChargeRef",
+                            "type": "?string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": true,
+                            "default": "null",
+                            "flags": 1
+                        }
+                    ],
+                    "return": null,
+                    "doc": []
+                },
+                "matches": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "other",
+                            "type": "self",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": "bool",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": []
+        },
+        "Billium\\Platform\\Data\\Migration\\LedgerScope": {
+            "kind": "class",
+            "layer": "api",
+            "since": "1.0",
+            "final": true,
+            "readonly": true,
+            "abstract": false,
+            "extends": [],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "__construct": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "feed",
+                            "type": "Billium\\Platform\\Data\\Feed\\FeedScope",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "owner",
+                            "type": "Billium\\Core\\Data\\Runtime\\OwnerSessionIdentity",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "books",
+                            "type": "array",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "entityRefs",
+                            "type": "array",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        }
+                    ],
+                    "return": null,
+                    "doc": []
+                },
+                "toArray": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [],
+                    "return": "array",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": []
+        },
+        "Billium\\Platform\\Data\\Migration\\MigrationManifest": {
+            "kind": "class",
+            "layer": "api",
+            "since": "1.0",
+            "final": true,
+            "readonly": true,
+            "abstract": false,
+            "extends": [],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "__construct": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "plan",
+                            "type": "Billium\\Platform\\Data\\Migration\\HandoffPlan",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "freeze",
+                            "type": "Billium\\Platform\\Data\\Migration\\SourceFreezeCertificate",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "snapshotToken",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "snapshotDigest",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "selection",
+                            "type": "Billium\\Platform\\Data\\Feed\\FeedSelection",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "safeFeedCursor",
+                            "type": "Billium\\Platform\\Data\\Feed\\FeedCursor",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "retentionLeaseRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "retentionLeaseExpiresAt",
+                            "type": "DateTimeImmutable",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "checksums",
+                            "type": "array",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        }
+                    ],
+                    "return": null,
+                    "doc": []
+                },
+                "digest": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [],
+                    "return": "string",
+                    "doc": []
+                },
+                "toArray": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [],
+                    "return": "array",
+                    "doc": []
+                }
+            },
+            "properties": {
+                "checksums": {
+                    "flags": 1,
+                    "type": "array",
+                    "readonly": true,
+                    "visibility": "public",
+                    "static": false,
+                    "default": null,
+                    "doc": [],
+                    "hooks": []
+                }
+            },
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": []
+        },
+        "Billium\\Platform\\Data\\Migration\\ReconciliationChecksum": {
+            "kind": "class",
+            "layer": "api",
+            "since": "1.0",
+            "final": true,
+            "readonly": true,
+            "abstract": false,
+            "extends": [],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "__construct": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "sellerRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "currency",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "counts",
+                            "type": "array",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "totals",
+                            "type": "array",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "checksum",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        }
+                    ],
+                    "return": null,
+                    "doc": []
+                },
+                "toArray": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [],
+                    "return": "array",
+                    "doc": []
+                }
+            },
+            "properties": {
+                "counts": {
+                    "flags": 1,
+                    "type": "array",
+                    "readonly": true,
+                    "visibility": "public",
+                    "static": false,
+                    "default": null,
+                    "doc": [],
+                    "hooks": []
+                },
+                "totals": {
+                    "flags": 1,
+                    "type": "array",
+                    "readonly": true,
+                    "visibility": "public",
+                    "static": false,
+                    "default": null,
+                    "doc": [],
+                    "hooks": []
+                }
+            },
+            "constants": [
+                {
+                    "name": "COUNTS",
+                    "type": "array",
+                    "visibility": "public",
+                    "final": false
+                },
+                {
+                    "name": "TOTALS",
+                    "type": "array",
+                    "visibility": "public",
+                    "final": false
+                }
+            ],
+            "enum_backing": null,
+            "enum_cases": []
+        },
+        "Billium\\Platform\\Data\\Migration\\RoutingScope": {
+            "kind": "class",
+            "layer": "api",
+            "since": "1.0",
+            "final": true,
+            "readonly": true,
+            "abstract": false,
+            "extends": [],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "__construct": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "installationRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "environment",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "sellerRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "intentOwnerNamespace",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        }
+                    ],
+                    "return": null,
+                    "doc": []
+                },
+                "key": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [],
+                    "return": "string",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": []
+        },
+        "Billium\\Platform\\Data\\Migration\\SealedTail": {
+            "kind": "class",
+            "layer": "api",
+            "since": "1.0",
+            "final": true,
+            "readonly": true,
+            "abstract": false,
+            "extends": [],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "__construct": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "manifestDigest",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "terminalCursor",
+                            "type": "Billium\\Platform\\Data\\Feed\\FeedCursor",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "eventsDigest",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        }
+                    ],
+                    "return": null,
+                    "doc": []
+                },
+                "digest": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [],
+                    "return": "string",
+                    "doc": []
+                },
+                "toArray": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [],
+                    "return": "array",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": []
+        },
+        "Billium\\Platform\\Data\\Migration\\SourceFreezeCertificate": {
+            "kind": "class",
+            "layer": "api",
+            "since": "1.0",
+            "final": true,
+            "readonly": true,
+            "abstract": false,
+            "extends": [],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "__construct": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "plan",
+                            "type": "Billium\\Platform\\Data\\Migration\\HandoffPlan",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "freezeGeneration",
+                            "type": "int",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "sealReceiptRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "sealReceiptDigest",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "closedMutators",
+                            "type": "array",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "signatureDigest",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        }
+                    ],
+                    "return": null,
+                    "doc": []
+                },
+                "digest": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [],
+                    "return": "string",
+                    "doc": []
+                },
+                "toArray": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [],
+                    "return": "array",
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [
+                {
+                    "name": "MUTATORS",
+                    "type": "array",
+                    "visibility": "public",
+                    "final": false
+                }
+            ],
+            "enum_backing": null,
+            "enum_cases": []
+        },
+        "Billium\\Platform\\Data\\Migration\\TargetNoEffectsProof": {
+            "kind": "class",
+            "layer": "api",
+            "since": "1.0",
+            "final": true,
+            "readonly": true,
+            "abstract": false,
+            "extends": [],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "__construct": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "planDigest",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "targetSealReceiptRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "signatureDigest",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        }
+                    ],
+                    "return": null,
+                    "doc": []
+                }
+            },
+            "properties": {},
+            "constants": [],
+            "enum_backing": null,
+            "enum_cases": []
+        },
+        "Billium\\Platform\\Data\\Migration\\TargetReconciliation": {
+            "kind": "class",
+            "layer": "api",
+            "since": "1.0",
+            "final": true,
+            "readonly": true,
+            "abstract": false,
+            "extends": [],
+            "implements": [],
+            "uses": [],
+            "doc": [],
+            "methods": {
+                "__construct": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [
+                        {
+                            "name": "receiptRef",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "manifestDigest",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "tailDigest",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "adoptedCursor",
+                            "type": "Billium\\Platform\\Data\\Feed\\FeedCursor",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "checksums",
+                            "type": "array",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        },
+                        {
+                            "name": "dispositionsDigest",
+                            "type": "string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": false,
+                            "default": null,
+                            "flags": 1
+                        }
+                    ],
+                    "return": null,
+                    "doc": []
+                },
+                "digest": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [],
+                    "return": "string",
+                    "doc": []
+                },
+                "toArray": {
+                    "visibility": "public",
+                    "static": false,
+                    "final": false,
+                    "abstract": false,
+                    "by_reference": false,
+                    "parameters": [],
+                    "return": "array",
                     "doc": []
                 }
             },

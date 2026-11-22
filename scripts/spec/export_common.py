@@ -133,7 +133,7 @@ class Revision:
         self.documents: dict[str, dict[str, object]] = {}
         for path in sorted((directory / "schema").rglob("*.json")):
             relative = path.relative_to(directory / "schema").as_posix()
-            if relative.startswith("conformance/"):
+            if relative.startswith(("conformance/", "migration/")):
                 continue
             document = load(path)
             expected = SCHEMA_BASE.format(revision=self.name, path=relative)

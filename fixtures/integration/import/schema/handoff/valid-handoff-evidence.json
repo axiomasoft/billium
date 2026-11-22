@@ -1,49 +1,228 @@
 {
-  "usesCommitNoAsFreshnessProof": false,
-  "reliesOnLocalActiveFlag": false,
-  "sourceFreezeCertificate": {
-    "sourceOwnerSession": "session-src-1",
-    "freezeGeneration": 4,
-    "sealReceiptRef": "seal-rcpt-1",
-    "scope": {
-      "installationRef": "inst-1",
-      "environment": "test",
-      "sellerRef": "seller-1"
+    "schema": "billium.migration.handoff_evidence.v1",
+    "evidenceClass": "local_fixture",
+    "verifiedAt": "2026-11-22T10:00:00Z",
+    "usesCommitNoAsFreshnessProof": false,
+    "reliesOnLocalActiveFlag": false,
+    "sourceFreezeCertificate": {
+        "planDigest": "sha256:8272efecd1952fabb99272e6f8d7ac02bd8dc06b6bbd54b40392cd8638a7ffb1",
+        "freezeGeneration": 1,
+        "sealReceiptRef": "host-seal",
+        "sealReceiptDigest": "sha256:c9d0036bed6744bcdf692fc980d8717d7e5f5a4f4e8266b4a84982602fb1cd09",
+        "closedMutators": [
+            "admin",
+            "api",
+            "background",
+            "collection",
+            "cron",
+            "direct",
+            "import",
+            "ui"
+        ],
+        "signatureDigest": "sha256:84e432fda0e78e838cd21d800c9026982beaa02224a825cd5534570ce64e9541"
     },
-    "evidenceDigest": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
-  },
-  "migrationManifest": {
-    "snapshotToken": "snap-2026-10-15-001",
-    "snapshotDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
-    "safeFeedCursor": {
-      "txId": "1048576",
-      "id": "9001"
+    "migrationManifest": {
+        "schema": "billium.migration.manifest.v1",
+        "plan": {
+            "handoffRef": "handoff",
+            "source": {
+                "feed": {
+                    "installationRef": "inst",
+                    "channel": "events",
+                    "sourceAuthority": "billium",
+                    "sellerRef": "seller",
+                    "environment": "test",
+                    "lineage": "source-lineage"
+                },
+                "owner": {
+                    "installationRef": "inst",
+                    "ownerSessionRef": "source",
+                    "deploymentGeneration": 1,
+                    "attachmentGeneration": 1,
+                    "authorityEpoch": 1
+                },
+                "books": [
+                    "receivable"
+                ],
+                "entityRefs": [
+                    "ledger"
+                ]
+            },
+            "target": {
+                "feed": {
+                    "installationRef": "inst",
+                    "channel": "events",
+                    "sourceAuthority": "billium",
+                    "sellerRef": "seller",
+                    "environment": "test",
+                    "lineage": "target-lineage"
+                },
+                "owner": {
+                    "installationRef": "inst",
+                    "ownerSessionRef": "target",
+                    "deploymentGeneration": 2,
+                    "attachmentGeneration": 2,
+                    "authorityEpoch": 2
+                },
+                "books": [
+                    "receivable"
+                ],
+                "entityRefs": [
+                    "ledger"
+                ]
+            }
+        },
+        "sourceFreezeCertificate": {
+            "planDigest": "sha256:8272efecd1952fabb99272e6f8d7ac02bd8dc06b6bbd54b40392cd8638a7ffb1",
+            "freezeGeneration": 1,
+            "sealReceiptRef": "host-seal",
+            "sealReceiptDigest": "sha256:c9d0036bed6744bcdf692fc980d8717d7e5f5a4f4e8266b4a84982602fb1cd09",
+            "closedMutators": [
+                "admin",
+                "api",
+                "background",
+                "collection",
+                "cron",
+                "direct",
+                "import",
+                "ui"
+            ],
+            "signatureDigest": "sha256:84e432fda0e78e838cd21d800c9026982beaa02224a825cd5534570ce64e9541"
+        },
+        "snapshotToken": "snapshot-token",
+        "snapshotDigest": "sha256:8512c37f7882fc35667e46473167f4e37c3d43ad18b2e1b09c7aaa8fcfc17719",
+        "subscriptionRef": "selected-feed",
+        "eventContractRevision": "events-2026-10-v1",
+        "selectionDigest": "sha256:f79f62fc3c4908e2bba2f9cdfa7d0eddfa31281c206a935f3100f00dd72ae0a1",
+        "envelopeSchemas": [
+            "billium.event.v1"
+        ],
+        "eventTypes": [
+            "invoice.issued.v1"
+        ],
+        "safeFeedCursor": {
+            "token": "eyJsZWFzZVJlZiI6InBpbm5lZC1sZWFzZSIsInBvc2l0aW9uIjp7ImlkIjoiNSIsInR4SWQiOiIxODQ0Njc0NDA3MzcwOTU1MTYwNCJ9LCJzY29wZSI6eyJjaGFubmVsIjoiZXZlbnRzIiwiZW52aXJvbm1lbnQiOiJ0ZXN0IiwiaW5zdGFsbGF0aW9uUmVmIjoiaW5zdCIsImxpbmVhZ2UiOiJzb3VyY2UtbGluZWFnZSIsInNlbGxlclJlZiI6InNlbGxlciIsInNvdXJjZUF1dGhvcml0eSI6ImJpbGxpdW0ifSwic2VsZWN0aW9uRGlnZXN0Ijoic2hhMjU2OmY3OWY2MmZjM2M0OTA4ZTJiYmEyZjljZGZhN2QwZWRkZmEzMTI4MWMyMDZhOTM1ZjMxMDBmMDBkZDcyYWUwYTEiLCJzdWJzY3JpcHRpb25SZWYiOiJzZWxlY3RlZC1mZWVkIiwidiI6MX0.dcb989c7286adcb80929a71621ab207afc661eebbd65f9fae236addab7f272a2",
+            "txId": "18446744073709551604",
+            "id": "5"
+        },
+        "retentionLeaseRef": "pinned-lease",
+        "retentionLeaseExpiresAt": "2099-11-22T14:00:00.000000+00:00",
+        "perSellerCurrencyChecksums": [
+            {
+                "sellerRef": "seller",
+                "currency": "USD",
+                "counts": {
+                    "allocations": 1,
+                    "captured": 1,
+                    "corrections": 1,
+                    "obligations": 1,
+                    "receipts": 1,
+                    "refunded": 1,
+                    "reservations": 1,
+                    "sourceMaps": 1,
+                    "tombstones": 1
+                },
+                "totals": {
+                    "allocated": "5",
+                    "captured": "5",
+                    "obligated": "5",
+                    "open": "5",
+                    "refunded": "5",
+                    "reserved": "5"
+                },
+                "checksum": "sha256:8512c37f7882fc35667e46473167f4e37c3d43ad18b2e1b09c7aaa8fcfc17719"
+            }
+        ],
+        "manifestDigest": "sha256:9620103a3bc001c2aa0a7dfc04ccc2ca0fd4001e40cd274888132a856d6aea82"
     },
-    "selectionDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
-    "retentionLeaseRef": "lease-2026-10-15-001",
-    "retentionLeaseExpiresAt": "2026-10-16T00:00:00Z",
-    "perSellerCurrencyChecksums": [
-      {
-        "sellerRef": "seller-1",
-        "currency": "RUB",
-        "checksum": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
-      }
-    ],
-    "manifestDigest": "sha256:ee9ed5c7bbe8aa63b8393f70b5ce99a8fb171c96dac435aaab3325a6dbad63b0"
-  },
-  "activation": {
-    "requested": true,
-    "tailVerified": true,
-    "reconciliationEqual": true,
-    "unresolvedBlockers": [],
-    "retirementProof": {
-      "proofRef": "retire-1",
-      "digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    "sealedTail": {
+        "manifestDigest": "sha256:9620103a3bc001c2aa0a7dfc04ccc2ca0fd4001e40cd274888132a856d6aea82",
+        "eventsDigest": "sha256:8512c37f7882fc35667e46473167f4e37c3d43ad18b2e1b09c7aaa8fcfc17719",
+        "terminalCursor": {
+            "token": "eyJsZWFzZVJlZiI6InBpbm5lZC1sZWFzZSIsInBvc2l0aW9uIjp7ImlkIjoiNyIsInR4SWQiOiIxODQ0Njc0NDA3MzcwOTU1MTYwNCJ9LCJzY29wZSI6eyJjaGFubmVsIjoiZXZlbnRzIiwiZW52aXJvbm1lbnQiOiJ0ZXN0IiwiaW5zdGFsbGF0aW9uUmVmIjoiaW5zdCIsImxpbmVhZ2UiOiJzb3VyY2UtbGluZWFnZSIsInNlbGxlclJlZiI6InNlbGxlciIsInNvdXJjZUF1dGhvcml0eSI6ImJpbGxpdW0ifSwic2VsZWN0aW9uRGlnZXN0Ijoic2hhMjU2OmY3OWY2MmZjM2M0OTA4ZTJiYmEyZjljZGZhN2QwZWRkZmEzMTI4MWMyMDZhOTM1ZjMxMDBmMDBkZDcyYWUwYTEiLCJzdWJzY3JpcHRpb25SZWYiOiJzZWxlY3RlZC1mZWVkIiwidiI6MX0.4f9c4ee732ab2d01a7f8d4a7b40a2d9acf3a67ec497feb3902a9d253dd2c96d1",
+            "txId": "18446744073709551604",
+            "id": "7"
+        }
     },
-    "activationCertificate": {
-      "certificateRef": "act-cert-1",
-      "targetOwnerSession": "session-tgt-2",
-      "digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
-    }
-  }
+    "targetReceipt": {
+        "receiptRef": "target-receipt",
+        "manifestDigest": "sha256:9620103a3bc001c2aa0a7dfc04ccc2ca0fd4001e40cd274888132a856d6aea82",
+        "tailDigest": "sha256:de3c5f56ad95656374fa20859fa21860e5277ef6cbbccb96a4bdf9e6d9644628",
+        "adoptedCursor": {
+            "token": "eyJsZWFzZVJlZiI6InBpbm5lZC1sZWFzZSIsInBvc2l0aW9uIjp7ImlkIjoiNyIsInR4SWQiOiIxODQ0Njc0NDA3MzcwOTU1MTYwNCJ9LCJzY29wZSI6eyJjaGFubmVsIjoiZXZlbnRzIiwiZW52aXJvbm1lbnQiOiJ0ZXN0IiwiaW5zdGFsbGF0aW9uUmVmIjoiaW5zdCIsImxpbmVhZ2UiOiJzb3VyY2UtbGluZWFnZSIsInNlbGxlclJlZiI6InNlbGxlciIsInNvdXJjZUF1dGhvcml0eSI6ImJpbGxpdW0ifSwic2VsZWN0aW9uRGlnZXN0Ijoic2hhMjU2OmY3OWY2MmZjM2M0OTA4ZTJiYmEyZjljZGZhN2QwZWRkZmEzMTI4MWMyMDZhOTM1ZjMxMDBmMDBkZDcyYWUwYTEiLCJzdWJzY3JpcHRpb25SZWYiOiJzZWxlY3RlZC1mZWVkIiwidiI6MX0.4f9c4ee732ab2d01a7f8d4a7b40a2d9acf3a67ec497feb3902a9d253dd2c96d1",
+            "txId": "18446744073709551604",
+            "id": "7"
+        },
+        "perSellerCurrencyChecksums": [
+            {
+                "sellerRef": "seller",
+                "currency": "USD",
+                "counts": {
+                    "allocations": 1,
+                    "captured": 1,
+                    "corrections": 1,
+                    "obligations": 1,
+                    "receipts": 1,
+                    "refunded": 1,
+                    "reservations": 1,
+                    "sourceMaps": 1,
+                    "tombstones": 1
+                },
+                "totals": {
+                    "allocated": "5",
+                    "captured": "5",
+                    "obligated": "5",
+                    "open": "5",
+                    "refunded": "5",
+                    "reserved": "5"
+                },
+                "checksum": "sha256:8512c37f7882fc35667e46473167f4e37c3d43ad18b2e1b09c7aaa8fcfc17719"
+            }
+        ],
+        "dispositionsDigest": "sha256:df54b8c6974f65a0c37ed1a3fbfc15168727b59747588a751724b46b51a7346a"
+    },
+    "activation": {
+        "requested": true,
+        "tailVerified": true,
+        "reconciliationEqual": true,
+        "unresolvedBlockers": [],
+        "retirementProof": {
+            "proofRef": "retire",
+            "oldOwner": {
+                "installationRef": "inst",
+                "ownerSessionRef": "source",
+                "deploymentGeneration": 1,
+                "attachmentGeneration": 1,
+                "authorityEpoch": 1
+            },
+            "issuedAt": "2026-10-15T08:00:00+00:00",
+            "digest": "sha256:c1cda26362828b69266512052b97cb3729e3b052e4ade47c0a1e3383defe73c7",
+            "stoppedProducerManifestDigest": "sha256:c1cda26362828b69266512052b97cb3729e3b052e4ade47c0a1e3383defe73c7",
+            "terminatedWorkerManifestDigest": "sha256:c1cda26362828b69266512052b97cb3729e3b052e4ade47c0a1e3383defe73c7",
+            "revokedEgressProofDigest": "sha256:c1cda26362828b69266512052b97cb3729e3b052e4ade47c0a1e3383defe73c7",
+            "inFlightRequestManifestDigest": "sha256:c1cda26362828b69266512052b97cb3729e3b052e4ade47c0a1e3383defe73c7",
+            "issuerRef": "fixture"
+        },
+        "activationCertificate": {
+            "certificateRef": "activate",
+            "newOwner": {
+                "installationRef": "inst",
+                "ownerSessionRef": "target",
+                "deploymentGeneration": 2,
+                "attachmentGeneration": 2,
+                "authorityEpoch": 2
+            },
+            "localEpoch": 2,
+            "retirementProofDigest": "sha256:c1cda26362828b69266512052b97cb3729e3b052e4ade47c0a1e3383defe73c7",
+            "backupLineageRef": "source-lineage",
+            "actorRef": "operator",
+            "verdict": "activate",
+            "expiresAt": "2099-11-22T14:00:00+00:00",
+            "nonce": "once",
+            "digest": "sha256:c1cda26362828b69266512052b97cb3729e3b052e4ade47c0a1e3383defe73c7",
+            "manifestDigest": "sha256:9620103a3bc001c2aa0a7dfc04ccc2ca0fd4001e40cd274888132a856d6aea82",
+            "targetReceiptDigest": "sha256:49ee4f6d3433ac98cf1e7855fe9b27c44f64301d5ee02fdf53127bb04af885da"
+        }
+    },
+    "digest": "sha256:059acfab5a6e4811034002551a8d26e834a54f15bfd840f166d221a771991ea1"
 }

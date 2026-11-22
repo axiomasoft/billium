@@ -4,14 +4,20 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Laravel;
 
+use Billium\Platform\Contracts\Migration\AuthorityHandoff;
+use Billium\Platform\Contracts\Migration\AuthorityRouter;
 use Billium\Platform\Internal\Console\PruneCommand;
 use Billium\Platform\Internal\Console\RegisterEventContractsCommand;
 use Billium\Platform\Internal\Console\RelayCommand;
 use Billium\Platform\Internal\Installation\InitInstallationCommand;
+use Billium\Platform\Internal\Migration\DatabaseAuthorityRouter;
+use Billium\Platform\Internal\Migration\HostAuthorityHandoff;
 use Billium\Platform\Internal\Registrars\PlatformInstallationRegistrar;
 use Billium\Platform\Internal\Registrars\PlatformOutboxRegistrar;
 use Illuminate\Console\Events\ArtisanStarting;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\ServiceProvider;
 use Override;
 use Packman\Attributes\Spi;
@@ -40,6 +46,8 @@ final class PlatformServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->registerRegistrars();
+        $this->app->bind(AuthorityHandoff::class, HostAuthorityHandoff::class);
+        $this->app->bind(AuthorityRouter::class, static fn (Application $app): AuthorityRouter => new DatabaseAuthorityRouter($app->make(DatabaseManager::class)->connection('billium-routing')));
     }
 
     public function boot(): void

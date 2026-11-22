@@ -205,14 +205,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "platform",
-      "currentSchemaVersion": 30,
+      "currentSchemaVersion": 31,
       "supportedSchemaReadRange": {
         "min": 30,
-        "max": 30
+        "max": 31
       },
       "supportedSchemaWriteRange": {
         "min": 30,
-        "max": 30
+        "max": 31
       },
       "requiresModules": [],
       "requiresPorts": [
@@ -250,7 +250,9 @@
         "billium_import_batch",
         "billium_import_record",
         "billium_import_mapping",
-        "billium_import_receipt"
+        "billium_import_receipt",
+        "billium_authority_route",
+        "billium_intent_binding"
       ],
       "configKeys": [
         "billium.connection",
@@ -427,6 +429,11 @@
           "id": "2026_11_22_000001_create_billium_import_staging_tables",
           "version": 30,
           "checksum": "sha256:b705dd8d46b92dc1dcd48955676886abdd8e2cd103c1282f99ec02031221fa0c"
+        },
+        {
+          "id": "2026_11_22_000002_create_billium_authority_routing_tables",
+          "version": 31,
+          "checksum": "sha256:7aa84adce900ad3dd88ca68d9d46600ab19766ae14ede34bd5af7ff539aa07d8"
         }
       ],
       "disablePolicy": {

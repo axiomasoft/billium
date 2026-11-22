@@ -17,10 +17,11 @@ import hashlib
 import json
 import re
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from jsonschema import Draft202012Validator
+from jsonschema import Draft202012Validator, FormatChecker
 from referencing import Registry
 from referencing.jsonschema import DRAFT202012
 
@@ -589,70 +590,93 @@ def check_source_mappings(repo_root: Path = ROOT, manifest_path: Path | None = N
     return errors
 
 
-def validate_handoff_document(document: dict[str, Any]) -> list[str]:
-    """Validate D63/F06 handoff closure and authority evidence without commit_no freshness claims."""
-    errors: list[str] = []
-
+def validate_handoff_document(
+    document: dict[str, Any], validator: Draft202012Validator | None = None
+) -> list[str]:
+    """Check local fixture evidence shape and binding (D54/D63/F06). Live authentication is a host gate."""
+    if not isinstance(document, dict):
+        return ["Handoff evidence must be a JSON object"]
+    if validator is None:
+        validator = handoff_validator(REV)
+    errors = [
+        f"{error.json_path}: {error.message}"
+        for error in validator.iter_errors(document)
+    ]
     if document.get("usesCommitNoAsFreshnessProof") is True or document.get("reliesOnLocalActiveFlag") is True:
-        errors.append("D63/F06 forbids commit_no freshness/completeness proofs and local active flags")
+        errors.append("D63/F06 forbids commit_no freshness/completeness proofs and copied local active flags")
+    if errors:
+        return errors
 
-    freeze = document.get("sourceFreezeCertificate")
-    manifest = document.get("migrationManifest")
-    activation = document.get("activation")
+    freeze = document["sourceFreezeCertificate"]
+    manifest = document["migrationManifest"]
+    tail = document["sealedTail"]
+    target_receipt = document["targetReceipt"]
+    retirement = document["activation"]["retirementProof"]
+    certificate = document["activation"]["activationCertificate"]
+    plan = manifest["plan"]
+    source, target = plan["source"], plan["target"]
+    source_feed, target_feed = source["feed"], target["feed"]
 
-    if not isinstance(freeze, dict):
-        errors.append("missing sourceFreezeCertificate")
-    else:
-        for field in ("sourceOwnerSession", "freezeGeneration", "sealReceiptRef", "scope", "evidenceDigest"):
-            if not freeze.get(field):
-                errors.append(f"sourceFreezeCertificate missing {field}")
-        if isinstance(freeze.get("evidenceDigest"), str) and not DIGEST_RE.match(freeze["evidenceDigest"]):
-            errors.append("sourceFreezeCertificate.evidenceDigest must be a valid sha256 digest")
+    if document["digest"] != canonical_digest(document):
+        errors.append("Handoff evidence digest mismatch")
+    if freeze != manifest["sourceFreezeCertificate"] or freeze["planDigest"] != canonical_digest(plan, None):
+        errors.append("sourceFreezeCertificate scope or seal mismatch")
+    if ((source["owner"]["installationRef"] == target["owner"]["installationRef"]
+         and source["owner"]["authorityEpoch"] >= target["owner"]["authorityEpoch"])
+        or source_feed["installationRef"] != source["owner"]["installationRef"]
+        or target_feed["installationRef"] != target["owner"]["installationRef"]
+        or any(source_feed[field] != target_feed[field] for field in ("sellerRef", "environment"))
+        or any(scope[field] != sorted(scope[field]) for scope in (source, target) for field in ("books", "entityRefs"))):
+        errors.append("Handoff source/target owner or scope mismatch")
 
-    if not isinstance(manifest, dict):
-        errors.append("missing migrationManifest")
-    else:
-        for field in (
-            "snapshotToken",
-            "snapshotDigest",
-            "safeFeedCursor",
-            "selectionDigest",
-            "retentionLeaseRef",
-            "retentionLeaseExpiresAt",
-            "perSellerCurrencyChecksums",
-            "manifestDigest",
-        ):
-            if not manifest.get(field):
-                errors.append(f"migrationManifest missing {field}")
-        for digest_field in ("snapshotDigest", "selectionDigest", "manifestDigest"):
-            val = manifest.get(digest_field)
-            if isinstance(val, str) and not DIGEST_RE.match(val):
-                errors.append(f"migrationManifest.{digest_field} must be a valid sha256 digest")
-        cursor = manifest.get("safeFeedCursor")
-        if not isinstance(cursor, dict) or not cursor.get("txId") or not cursor.get("id"):
-            errors.append("migrationManifest.safeFeedCursor requires string txId and id")
-        if isinstance(manifest.get("manifestDigest"), str) and DIGEST_RE.match(manifest["manifestDigest"]):
-            expected = canonical_digest(manifest, "manifestDigest")
-            if manifest["manifestDigest"] != expected:
-                errors.append(f"migrationManifest.manifestDigest mismatch (expected {expected})")
+    selection = {key: manifest[key] for key in ("eventContractRevision", "envelopeSchemas", "eventTypes")}
+    if (any(selection[key] != sorted(selection[key]) for key in ("envelopeSchemas", "eventTypes"))
+        or manifest["selectionDigest"] != canonical_digest({"scope": source_feed, **selection}, None)):
+        errors.append("migrationManifest.selectionDigest scope or catalog mismatch")
+    manifest_digest = canonical_digest(manifest, "manifestDigest")
+    if manifest["manifestDigest"] != manifest_digest:
+        errors.append("migrationManifest.manifestDigest mismatch")
+    if tail["manifestDigest"] != manifest_digest or target_receipt["manifestDigest"] != manifest_digest:
+        errors.append("Snapshot token, freeze, selection or retention evidence differs from the verified transfer")
+    if cursor_position(tail["terminalCursor"]) < cursor_position(manifest["safeFeedCursor"]):
+        errors.append("Sealed tail cursor regresses below the D52 checkpoint")
+    if target_receipt["tailDigest"] != canonical_digest(tail, None) or target_receipt["adoptedCursor"] != tail["terminalCursor"]:
+        errors.append("Target receipt tail digest or adopted cursor mismatch")
 
-    if isinstance(activation, dict) and activation.get("requested") is True:
-        if not isinstance(freeze, dict):
-            errors.append("activation requested without SourceFreezeCertificate")
-        if not isinstance(manifest, dict):
-            errors.append("activation requested without MigrationManifest")
-        retirement = activation.get("retirementProof")
-        cert = activation.get("activationCertificate")
-        if not isinstance(retirement, dict) or not retirement.get("proofRef") or not retirement.get("digest"):
-            errors.append("activation requested without RetirementProof")
-        if not isinstance(cert, dict) or not cert.get("certificateRef") or not cert.get("targetOwnerSession") or not cert.get("digest"):
-            errors.append("activation requested without ActivationCertificate")
-        if activation.get("tailVerified") is not True or activation.get("reconciliationEqual") is not True:
-            errors.append("activation requires tailVerified=true and reconciliationEqual=true")
-        if activation.get("unresolvedBlockers"):
-            errors.append("activation cannot proceed with unresolvedBlockers")
+    checksums = manifest["perSellerCurrencyChecksums"]
+    currencies = [summary["currency"] for summary in checksums]
+    if (any(summary["sellerRef"] != source_feed["sellerRef"] for summary in checksums)
+        or currencies != sorted(set(currencies))
+        or checksums != target_receipt["perSellerCurrencyChecksums"]):
+        errors.append("Source/target per-seller currency counts, totals or checksum mismatch")
 
+    dates = (document["verifiedAt"], manifest["retentionLeaseExpiresAt"], retirement["issuedAt"], certificate["expiresAt"])
+    try:
+        verified_at, lease_expires_at, retired_at, certificate_expires_at = map(datetime.fromisoformat, dates)
+        if any(value.tzinfo is None for value in (verified_at, lease_expires_at, retired_at, certificate_expires_at)):
+            raise ValueError("missing UTC offset")
+    except ValueError:
+        return [*errors, "Invalid timezone-qualified handoff evidence timestamp"]
+    if lease_expires_at <= verified_at:
+        errors.append("D52 source retention lease expired at verification")
+    if (retirement["oldOwner"] != source["owner"] or certificate["newOwner"] != target["owner"]
+        or certificate["retirementProofDigest"] != retirement["digest"]
+        or certificate["backupLineageRef"] != source_feed["lineage"]
+        or retired_at > verified_at
+        or certificate_expires_at <= verified_at
+        or certificate["manifestDigest"] != manifest_digest
+        or certificate["targetReceiptDigest"] != canonical_digest(target_receipt, None)):
+        errors.append("RetirementProof or ActivationCertificate context/lineage mismatch")
     return errors
+
+
+def cursor_position(cursor: dict[str, str]) -> tuple[int, int]:
+    return int(cursor["txId"]), int(cursor["id"])
+
+
+def handoff_validator(revision: Path) -> Draft202012Validator:
+    registry, documents = build_registry(revision)
+    return Draft202012Validator(documents["migration/handoff-evidence.v1.json"], registry=registry, format_checker=FormatChecker())
 
 
 def check_handoff(repo_root: Path = ROOT) -> list[str]:
@@ -665,14 +689,15 @@ def check_handoff(repo_root: Path = ROOT) -> list[str]:
     if not negatives:
         errors.append("no negative-*.json handoff fixtures under fixtures/integration/import/schema/handoff/")
 
+    validator = handoff_validator(repo_root / "spec/revisions/2026-10")
     for path in positives:
         doc = json.loads(path.read_text(encoding="utf-8"))
-        for finding in validate_handoff_document(doc):
+        for finding in validate_handoff_document(doc, validator):
             errors.append(f"{path.name}: {finding}")
 
     for path in negatives:
         doc = json.loads(path.read_text(encoding="utf-8"))
-        findings = validate_handoff_document(doc)
+        findings = validate_handoff_document(doc, validator)
         if not findings:
             errors.append(f"{path.name}: negative handoff fixture unexpectedly passed")
 

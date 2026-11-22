@@ -101,6 +101,45 @@ class CheckImportContractTest(unittest.TestCase):
         commit_findings = self.checker.validate_handoff_document(commit_no)
         self.assertTrue(any("commit_no" in msg for msg in commit_findings))
 
+    def test_handoff_refuses_missing_and_rehashed_mismatched_evidence(self) -> None:
+        valid = json.loads((ROOT / "fixtures/integration/import/schema/handoff/valid-handoff-evidence.json").read_text(encoding="utf-8"))
+        validator = self.checker.handoff_validator(self.checker.REV)
+        self.assertEqual([], self.checker.validate_handoff_document(valid, validator))
+
+        for field in ("snapshotToken", "snapshotDigest", "safeFeedCursor", "retentionLeaseRef", "retentionLeaseExpiresAt",
+                      "selectionDigest", "eventContractRevision", "perSellerCurrencyChecksums"):
+            with self.subTest(missing=field):
+                changed = copy.deepcopy(valid)
+                del changed["migrationManifest"][field]
+                findings = self.checker.validate_handoff_document(changed, validator)
+                self.assertTrue(any(field in error for error in findings), findings)
+
+        for path, value, message in (
+            (("sourceFreezeCertificate", "sealReceiptRef"), "other-seal", "scope or seal mismatch"),
+            (("migrationManifest", "snapshotToken"), "other-snapshot", "differs from the verified transfer"),
+            (("migrationManifest", "safeFeedCursor", "token"), "another-subscription", "differs from the verified transfer"),
+            (("migrationManifest", "retentionLeaseRef"), "other-lease", "differs from the verified transfer"),
+            (("migrationManifest", "retentionLeaseExpiresAt"), "2020-01-01T00:00:00Z", "retention lease expired"),
+            (("migrationManifest", "eventContractRevision"), "other-catalog", "selectionDigest scope or catalog mismatch"),
+            (("migrationManifest", "plan", "source", "owner", "deploymentGeneration"), 9, "scope or seal mismatch"),
+            (("sealedTail", "terminalCursor", "txId"), "1", "tail cursor regresses"),
+            (("targetReceipt", "perSellerCurrencyChecksums", 0, "totals", "open"), "9", "counts, totals or checksum mismatch"),
+            (("targetReceipt", "perSellerCurrencyChecksums", 0, "checksum"), "sha256:" + "a" * 64, "counts, totals or checksum mismatch"),
+            (("activation", "activationCertificate", "backupLineageRef"), "other-lineage", "context/lineage mismatch"),
+            (("activation", "retirementProof", "oldOwner", "ownerSessionRef"), "copied-session", "context/lineage mismatch"),
+        ):
+            with self.subTest(tampered=path):
+                changed = copy.deepcopy(valid)
+                node = changed
+                for member in path[:-1]:
+                    node = node[member]
+                node[path[-1]] = value
+                manifest = changed["migrationManifest"]
+                manifest["manifestDigest"] = self.checker.canonical_digest(manifest, "manifestDigest")
+                changed["digest"] = self.checker.canonical_digest(changed)
+                findings = self.checker.validate_handoff_document(changed, validator)
+                self.assertTrue(any(message in error for error in findings), findings)
+
     def test_d71_isolation_rejects_external_product_and_legacy_terms(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             bad = Path(tmp) / "leak.json"

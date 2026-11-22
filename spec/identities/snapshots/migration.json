@@ -99,5 +99,6 @@
   "2026_11_21_000001_index_billium_feed_hot_paths",
   "2026_11_21_000002_index_billium_ledger_hot_paths",
   "2026_11_21_000003_index_billium_execution_admission",
-  "2026_11_22_000001_create_billium_import_staging_tables"
+  "2026_11_22_000001_create_billium_import_staging_tables",
+  "2026_11_22_000002_create_billium_authority_routing_tables"
 ]
