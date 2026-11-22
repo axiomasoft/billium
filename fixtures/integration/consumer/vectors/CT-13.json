@@ -1,0 +1,97 @@
+{
+  "protocol": "billium.consumer.bridge.case.v1",
+  "id": "CT-13",
+  "title": "Restored or cloned PostgreSQL attachment and retired host session fence stale workers before PSP dispatch",
+  "standProfile": "execution",
+  "authoritySource": "remote-billium",
+  "executionProfile": "remote-billium",
+  "packageDelivery": "php-contracts-current",
+  "sources": ["D54", "D62", "D63"],
+  "steps": [
+    {
+      "name": "admitBeforeClone",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "path": "/billium/v1/sellers/seller-a/payments/execute",
+        "body": {
+          "schema": "payment.execute.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "commandKey": "00000000-0000-4100-8800-000000001301",
+          "operationRef": "ct13-op-1",
+          "operationKind": "charge",
+          "source": { "context": "checkout", "intentRef": "intent-a", "orderRef": "ct13-order" },
+          "executionProfile": "remote-billium",
+          "routingEpoch": 1,
+          "merchantAccountRef": "account-a",
+          "money": { "amount": "10.00", "currency": "RUB" },
+          "bindingRevision": "merchant-a",
+          "requestedAt": "2026-11-22T10:00:00Z"
+        }
+      },
+      "expect": { "status": 202, "body.receipt": "CommandAccepted" }
+    },
+    {
+      "name": "checkpointDb",
+      "target": "stand",
+      "op": "checkpoint",
+      "expect": { "checkpoint": true }
+    },
+    {
+      "name": "restoreQuarantinedClone",
+      "target": "stand",
+      "op": "restore_quarantined",
+      "expect": { "restored": true, "admission": "quarantined" }
+    },
+    {
+      "name": "readyRefusesQuarantined",
+      "target": "consumer",
+      "op": "http_command",
+      "args": { "path": "/billium/ready" },
+      "expect": { "status": 503 }
+    },
+    {
+      "name": "executeRefusedOnClone",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "path": "/billium/v1/sellers/seller-a/payments/execute",
+        "body": {
+          "schema": "payment.execute.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "commandKey": "00000000-0000-4100-8800-000000001302",
+          "operationRef": "ct13-op-2",
+          "operationKind": "charge",
+          "source": { "context": "checkout", "intentRef": "intent-ct13-2", "orderRef": "ct13-order-2" },
+          "executionProfile": "remote-billium",
+          "routingEpoch": 1,
+          "merchantAccountRef": "account-a",
+          "money": { "amount": "10.00", "currency": "RUB" },
+          "bindingRevision": "merchant-a",
+          "requestedAt": "2026-11-22T10:01:00Z"
+        }
+      },
+      "expect": {
+        "status": 423,
+        "body.code": "billium.installation.quarantined"
+      }
+    },
+    {
+      "name": "clonedWorkerFenced",
+      "target": "stand",
+      "op": "fenced_worker_dispatch",
+      "args": { "operation": "ct13-op-1" },
+      "expect": { "fencedBeforeProviderSend": true }
+    },
+    {
+      "name": "zeroProviderCalls",
+      "target": "stand",
+      "op": "provider_evidence",
+      "expect": { "calls.#": 0, "lookups.#": 0 }
+    }
+  ]
+}

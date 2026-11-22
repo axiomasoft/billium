@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:conformance:consumer-bridge-report:v1",
+  "title": "Billium consumer/bridge contract report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol",
+    "evidence_class",
+    "boundary",
+    "status",
+    "suite",
+    "required",
+    "producer",
+    "consumer",
+    "runtime",
+    "results",
+    "evidence",
+    "hashes",
+    "paidPspTransactions",
+    "passed",
+    "localRequiredSuiteComplete",
+    "externalReady",
+    "rolloutGatePassed",
+    "reportDigest"
+  ],
+  "properties": {
+    "protocol": {
+      "const": "billium.consumer.contract.report.v1"
+    },
+    "evidence_class": {
+      "const": "consumer-contract"
+    },
+    "boundary": {
+      "enum": ["double", "loopback", "external-runtime"]
+    },
+    "status": {
+      "enum": ["passed", "failed", "pending"]
+    },
+    "pendingReason": {
+      "type": "string",
+      "minLength": 3
+    },
+    "suite": {
+      "type": "string",
+      "minLength": 1
+    },
+    "required": {
+      "const": [
+        "CT-01",
+        "CT-02",
+        "CT-03",
+        "CT-04",
+        "CT-05",
+        "CT-06",
+        "CT-07",
+        "CT-08",
+        "CT-09",
+        "CT-10",
+        "CT-11",
+        "CT-12",
+        "CT-13",
+        "CT-14",
+        "CT-15",
+        "CT-16",
+        "CT-17",
+        "CT-18",
+        "CT-19",
+        "CT-20"
+      ]
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "commitHash", "packageHash", "specRevision", "specHash"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "commitHash": { "type": "string", "pattern": "^[0-9a-f]{7,64}$" },
+        "packageHash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "specRevision": { "type": "string", "minLength": 1 },
+        "specHash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      }
+    },
+    "consumer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "available", "commitHash", "packageHash", "specRevision", "specHash", "deliveryProfile"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "available": { "type": "boolean" },
+        "commitHash": { "type": ["string", "null"], "pattern": "^[0-9a-f]{7,64}$" },
+        "packageHash": { "type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$" },
+        "specRevision": { "type": ["string", "null"], "minLength": 1 },
+        "specHash": { "type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$" },
+        "deliveryProfile": { "enum": ["loopback-http", "double-transport", "external-http"] }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "php": { "type": "string", "pattern": "^8\\.4\\." },
+        "postgres": { "type": "string", "pattern": "^PostgreSQL (1[6-9]|[2-9][0-9])\\." }
+      }
+    },
+    "results": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "status",
+          "standProfile",
+          "authoritySource",
+          "executionProfile",
+          "packageDelivery",
+          "sources",
+          "transcript"
+        ],
+        "properties": {
+          "id": { "type": "string", "pattern": "^CT-(0[1-9]|1[0-9]|20)$" },
+          "status": { "enum": ["pass", "fail", "pending"] },
+          "standProfile": { "enum": ["execution", "ledger-external-executor"] },
+          "authoritySource": { "enum": ["remote-billium", "standalone-billium", "billium"] },
+          "executionProfile": { "enum": ["remote-billium", "external-executor"] },
+          "packageDelivery": { "enum": ["php-contracts-current", "php-contracts-archive-matrix"] },
+          "sources": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "error": { "type": "string", "minLength": 1 },
+          "transcript": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["step", "target", "op", "evidence_class", "boundary", "observed"],
+              "properties": {
+                "step": { "type": "string", "minLength": 1 },
+                "target": { "enum": ["consumer", "stand"] },
+                "op": { "type": "string", "minLength": 1 },
+                "evidence_class": {
+                  "enum": ["consumer-contract", "transport-contract", "provider-double", "host-double"]
+                },
+                "boundary": {
+                  "enum": ["double", "loopback", "external-runtime"]
+                },
+                "observed": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["evidence_class", "boundary", "steps"],
+        "properties": {
+          "evidence_class": {
+            "enum": ["consumer-contract", "transport-contract", "provider-double", "host-double"]
+          },
+          "boundary": {
+            "enum": ["double", "loopback", "external-runtime"]
+          },
+          "steps": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "hashes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spec", "fixtures", "harness", "packages", "dependencies"],
+      "properties": {
+        "spec": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "fixtures": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "harness": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "packages": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "dependencies": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      }
+    },
+    "paidPspTransactions": {
+      "const": 0
+    },
+    "passed": { "type": "boolean" },
+    "localRequiredSuiteComplete": { "type": "boolean" },
+    "externalReady": { "type": "boolean" },
+    "rolloutGatePassed": { "type": "boolean" },
+    "reportDigest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}

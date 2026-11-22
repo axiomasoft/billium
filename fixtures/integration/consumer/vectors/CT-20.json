@@ -1,0 +1,56 @@
+{
+  "protocol": "billium.consumer.bridge.case.v1",
+  "id": "CT-20",
+  "title": "Authority routing cutover routes only new intents to new owner while old unknown and refunds stay with original owner",
+  "standProfile": "execution",
+  "authoritySource": "remote-billium",
+  "executionProfile": "remote-billium",
+  "packageDelivery": "php-contracts-current",
+  "sources": ["D58", "D63", "INV-07", "COV-AC-008", "COV-AC-010", "PB-12", "PB-21"],
+  "steps": [
+    {
+      "name": "cutoverBarrier",
+      "target": "stand",
+      "op": "authority_router_cutover",
+      "expect": {
+        "prematureEpoch2Refused": true,
+        "staleEpoch1NewRefused": true,
+        "unknownReKeyRefused": true,
+        "oldUnknownOwner": "external-executor-v1",
+        "newChargeOwner": "remote-billium",
+        "wrongOwnerRefundRefused": true,
+        "oldChargeRefundOwner": "external-executor-v1",
+        "remoteChargeRefundOwnerAfterRollbackRoute": "remote-billium"
+      }
+    },
+    {
+      "name": "executeNewEpochIntent",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "path": "/billium/v1/sellers/seller-a/payments/execute",
+        "body": {
+          "schema": "payment.execute.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "commandKey": "00000000-0000-4100-8800-000000002003",
+          "operationRef": "ct20-new-op",
+          "operationKind": "charge",
+          "source": { "context": "checkout", "intentRef": "ct20-new-intent", "orderRef": "ct20-order" },
+          "executionProfile": "remote-billium",
+          "routingEpoch": 2,
+          "merchantAccountRef": "account-a",
+          "money": { "amount": "10.00", "currency": "RUB" },
+          "bindingRevision": "merchant-a",
+          "requestedAt": "2026-11-22T10:00:00Z"
+        }
+      },
+      "expect": {
+        "status": 202,
+        "body.receipt": "CommandAccepted",
+        "body.operationRef": "ct20-new-op"
+      }
+    }
+  ]
+}

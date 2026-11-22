@@ -1,0 +1,101 @@
+{
+  "protocol": "billium.consumer.bridge.case.v1",
+  "id": "CT-16",
+  "title": "Execution stays disabled in external-executor profile with no hidden retry owner while observations allocate once",
+  "standProfile": "ledger-external-executor",
+  "authoritySource": "standalone-billium",
+  "executionProfile": "external-executor",
+  "packageDelivery": "php-contracts-current",
+  "sources": ["D17", "D55", "D58", "COV-AC-008", "COV-AC-010", "PB-01", "PB-14"],
+  "steps": [
+    {
+      "name": "capabilitiesExecutionOff",
+      "target": "consumer",
+      "op": "http_command",
+      "args": { "path": "/billium/v1/capabilities" },
+      "expect": {
+        "status": 200,
+        "body.features.execution": false
+      }
+    },
+    {
+      "name": "executeRouteAbsent",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "rawSend": true,
+        "path": "/billium/v1/sellers/seller-a/payments/execute",
+        "body": {
+          "schema": "payment.execute.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "commandKey": "00000000-0000-4100-8800-000000001601",
+          "operationRef": "ct16-blocked-exec"
+        }
+      },
+      "expect": { "status": 404 }
+    },
+    {
+      "name": "externalObserve",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "saveAs": "ct16Obs",
+        "actor": "external-source",
+        "seal": "contentDigest",
+        "path": "/billium/v1/sellers/seller-a/observations",
+        "body": {
+          "schema": "payment.observation.v1",
+          "eventId": "01JBX5Q0Z8M3N4P7R9S2001601",
+          "sourceAuthority": "standalone-billium",
+          "sourceLineage": "L1",
+          "partitionRef": "ct16-part",
+          "sourceSequence": 1,
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "operationRef": "ct16-ext-op-1",
+          "operationKind": "charge",
+          "businessIntentRef": "intent-a",
+          "operationRevision": 1,
+          "state": "succeeded",
+          "currency": "RUB",
+          "requested": { "amount": "10.00", "currency": "RUB" },
+          "authorizedTotal": { "amount": "10.00", "currency": "RUB" },
+          "capturedTotal": { "amount": "10.00", "currency": "RUB" },
+          "refundedTotal": { "amount": "0.00", "currency": "RUB" },
+          "providerAccountRef": "pa-ext-1",
+          "evidenceRef": "ev-ct16-1",
+          "observedAt": "2026-11-22T10:00:00Z",
+          "recordedAt": "2026-11-22T10:00:01Z"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body.schema": "ledger.allocation_receipt.v1",
+        "body.replayed": false
+      }
+    },
+    {
+      "name": "duplicateObserveSingleReceipt",
+      "target": "consumer",
+      "op": "replay_prepared",
+      "args": { "use": "ct16Obs", "actor": "external-source" },
+      "expect": {
+        "status": 200,
+        "body.replayed": true,
+        "body.receiptRef": { "$ref": "externalObserve.body.receiptRef" }
+      }
+    },
+    {
+      "name": "ledgerFootprintOnly",
+      "target": "stand",
+      "op": "snapshot",
+      "expect": {
+        "counts.allocation_receipt": 5,
+        "counts.payment": 1
+      }
+    }
+  ]
+}

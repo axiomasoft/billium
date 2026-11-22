@@ -1,0 +1,69 @@
+{
+  "protocol": "billium.consumer.bridge.case.v1",
+  "id": "CT-18",
+  "title": "Outbox retention floor gap returns 423 recovery-required instead of absent and recovers via feed bootstrap",
+  "standProfile": "execution",
+  "authoritySource": "billium",
+  "executionProfile": "remote-billium",
+  "packageDelivery": "php-contracts-current",
+  "sources": ["D25", "D52", "D60", "D63"],
+  "steps": [
+    {
+      "name": "openUnpinnedCursor",
+      "target": "consumer",
+      "op": "feed_bootstrap_and_ack",
+      "args": {
+        "stateKey": "ct18-stale",
+        "openKey": "00000000-0000-4100-8800-000000001801",
+        "acknowledge": false
+      },
+      "expect": { "acknowledged": false }
+    },
+    {
+      "name": "emitAdditionalEvent",
+      "target": "stand",
+      "op": "declare_settlement_intent",
+      "args": { "obligationRef": "ct18-ob-3", "intentRef": "ct18-intent-3", "amount": "12.00" },
+      "expect": { "declared": true }
+    },
+    {
+      "name": "prunePastCursor",
+      "target": "stand",
+      "op": "prune_outbox",
+      "expect": { "exitCode": 0, "remainingOutboxEvents": 0 }
+    },
+    {
+      "name": "staleCursorReturnsRecoveryRequired",
+      "target": "consumer",
+      "op": "feed_tail_sync",
+      "args": { "stateKey": "ct18-stale" },
+      "expect": {
+        "status": 423,
+        "code": "billium.recovery.required",
+        "cursorUnchanged": true
+      }
+    },
+    {
+      "name": "rebootstrapRecoversState",
+      "target": "consumer",
+      "op": "feed_bootstrap_and_ack",
+      "args": {
+        "stateKey": "ct18-recovered",
+        "openKey": "00000000-0000-4100-8800-000000001802",
+        "bootstrapKey": "00000000-0000-4100-8800-000000001803",
+        "acknowledge": true
+      },
+      "expect": {
+        "ackStatus": 204,
+        "snapshotItemCount": 9
+      }
+    },
+    {
+      "name": "postBootstrapTailReadable",
+      "target": "consumer",
+      "op": "feed_tail_sync",
+      "args": { "stateKey": "ct18-recovered" },
+      "expect": { "status": 200, "eventsRead": 0 }
+    }
+  ]
+}

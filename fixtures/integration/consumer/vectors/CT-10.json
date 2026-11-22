@@ -1,0 +1,136 @@
+{
+  "protocol": "billium.consumer.bridge.case.v1",
+  "id": "CT-10",
+  "title": "Two sellers sharing identical operation and business references stay strictly isolated without existence leaks",
+  "standProfile": "execution",
+  "authoritySource": "remote-billium",
+  "executionProfile": "remote-billium",
+  "packageDelivery": "php-contracts-current",
+  "sources": ["D23", "D31", "D58", "INV-14"],
+  "steps": [
+    {
+      "name": "seedSellerB",
+      "target": "stand",
+      "op": "seed_seller_b",
+      "args": { "obligationRef": "obligation-a", "intentRef": "intent-a", "amount": "25.00" },
+      "expect": { "seeded": true }
+    },
+    {
+      "name": "sellerAExecute",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "actor": "owner",
+        "path": "/billium/v1/sellers/seller-a/payments/execute",
+        "body": {
+          "schema": "payment.execute.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "commandKey": "00000000-0000-4100-8800-000000001001",
+          "operationRef": "ct10-shared-op",
+          "operationKind": "charge",
+          "source": { "context": "checkout", "intentRef": "intent-a", "orderRef": "shared-order" },
+          "executionProfile": "remote-billium",
+          "routingEpoch": 1,
+          "merchantAccountRef": "account-a",
+          "money": { "amount": "10.00", "currency": "RUB" },
+          "bindingRevision": "merchant-a",
+          "requestedAt": "2026-11-22T10:00:00Z"
+        }
+      },
+      "expect": { "status": 202, "body.operationRef": "ct10-shared-op" }
+    },
+    {
+      "name": "sellerBExecuteSameRef",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "actor": "other-seller",
+        "path": "/billium/v1/sellers/seller-b/payments/execute",
+        "body": {
+          "schema": "payment.execute.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-b",
+          "commandKey": "00000000-0000-4100-8800-000000001002",
+          "operationRef": "ct10-shared-op",
+          "operationKind": "charge",
+          "source": { "context": "checkout", "intentRef": "intent-a", "orderRef": "shared-order" },
+          "executionProfile": "remote-billium",
+          "routingEpoch": 1,
+          "merchantAccountRef": "account-b",
+          "money": { "amount": "25.00", "currency": "RUB" },
+          "bindingRevision": "merchant-a",
+          "requestedAt": "2026-11-22T10:00:00Z"
+        }
+      },
+      "expect": { "status": 202, "body.operationRef": "ct10-shared-op" }
+    },
+    {
+      "name": "crossSellerRouteDenied",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "actor": "other-seller",
+        "path": "/billium/v1/sellers/seller-a/operations/find",
+        "body": {
+          "schema": "payment.find.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "operationRef": "ct10-shared-op"
+        }
+      },
+      "expect": { "status": 403, "body.code": "billium.auth.denied", "body.receipt": "none" }
+    },
+    {
+      "name": "dispatchBoth",
+      "target": "stand",
+      "op": "worker_dispatch",
+      "args": { "operation": "ct10-shared-op", "seller": "seller-a", "account": "account-a" },
+      "expect": { "reductions.0": "applied" }
+    },
+    {
+      "name": "dispatchSellerB",
+      "target": "stand",
+      "op": "worker_dispatch",
+      "args": { "operation": "ct10-shared-op", "seller": "seller-b", "account": "account-b" },
+      "expect": { "reductions.0": "applied" }
+    },
+    {
+      "name": "sellerAFindSeesOwnAmount",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "actor": "owner",
+        "path": "/billium/v1/sellers/seller-a/operations/find",
+        "body": {
+          "schema": "payment.find.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "operationRef": "ct10-shared-op"
+        }
+      },
+      "expect": { "status": 200, "body.capturedTotal.amount": "10.00" }
+    },
+    {
+      "name": "sellerBFindSeesOwnAmount",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "actor": "other-seller",
+        "path": "/billium/v1/sellers/seller-b/operations/find",
+        "body": {
+          "schema": "payment.find.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-b",
+          "operationRef": "ct10-shared-op"
+        }
+      },
+      "expect": { "status": 200, "body.capturedTotal.amount": "25.00" }
+    }
+  ]
+}

@@ -1,0 +1,144 @@
+{
+  "protocol": "billium.consumer.bridge.case.v1",
+  "id": "CT-11",
+  "title": "Default route switch and credential rotation preserve original merchant account for lookup and refund",
+  "standProfile": "execution",
+  "authoritySource": "remote-billium",
+  "executionProfile": "remote-billium",
+  "packageDelivery": "php-contracts-current",
+  "sources": ["D23", "D57", "D58", "INV-07"],
+  "steps": [
+    {
+      "name": "initialCharge",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "path": "/billium/v1/sellers/seller-a/payments/execute",
+        "body": {
+          "schema": "payment.execute.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "commandKey": "00000000-0000-4100-8800-000000001101",
+          "operationRef": "ct11-charge-1",
+          "operationKind": "charge",
+          "source": { "context": "checkout", "intentRef": "intent-a", "orderRef": "ct11-order-1" },
+          "executionProfile": "remote-billium",
+          "routingEpoch": 1,
+          "merchantAccountRef": "account-a",
+          "money": { "amount": "1.00", "currency": "RUB" },
+          "bindingRevision": "merchant-a",
+          "requestedAt": "2026-11-22T10:00:00Z"
+        }
+      },
+      "expect": { "status": 202, "body.receipt": "CommandAccepted" }
+    },
+    {
+      "name": "dispatchInitial",
+      "target": "stand",
+      "op": "worker_dispatch",
+      "args": { "operation": "ct11-charge-1", "account": "account-a" },
+      "expect": { "reductions.0": "applied" }
+    },
+    {
+      "name": "rotateRouteAndCredentials",
+      "target": "stand",
+      "op": "rotate_merchant_and_credentials",
+      "expect": { "oldRouteStoppedForNew": true, "credentialsRotated": true }
+    },
+    {
+      "name": "newChargeUsesReplacement",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "path": "/billium/v1/sellers/seller-a/payments/execute",
+        "body": {
+          "schema": "payment.execute.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "commandKey": "00000000-0000-4100-8800-000000001102",
+          "operationRef": "ct11-charge-new",
+          "operationKind": "charge",
+          "source": { "context": "checkout", "intentRef": "intent-ct11-new", "orderRef": "ct11-order-2" },
+          "executionProfile": "remote-billium",
+          "routingEpoch": 1,
+          "merchantAccountRef": "replacement-account",
+          "money": { "amount": "2.00", "currency": "RUB" },
+          "bindingRevision": "replacement",
+          "requestedAt": "2026-11-22T10:01:00Z"
+        }
+      },
+      "expect": { "status": 202, "body.operationRef": "ct11-charge-new" }
+    },
+    {
+      "name": "dispatchNewCharge",
+      "target": "stand",
+      "op": "worker_dispatch",
+      "args": { "operation": "ct11-charge-new", "account": "replacement-account" },
+      "expect": { "reductions.0": "applied" }
+    },
+    {
+      "name": "refundOriginalCharge",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "path": "/billium/v1/sellers/seller-a/payments/refund",
+        "body": {
+          "schema": "payment.refund.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "commandKey": "00000000-0000-4100-8800-000000001103",
+          "operationRef": "ct11-refund-1",
+          "originalOperationRef": "ct11-charge-1",
+          "source": { "context": "checkout", "intentRef": "intent-ct11-ref" },
+          "money": { "amount": "0.40", "currency": "RUB" },
+          "requestedAt": "2026-11-22T10:02:00Z",
+          "reasonCode": "return",
+          "category": "customer_request"
+        }
+      },
+      "expect": { "status": 202, "body.receipt": "CommandAccepted" }
+    },
+    {
+      "name": "dispatchOriginalRefund",
+      "target": "stand",
+      "op": "worker_dispatch",
+      "args": { "operation": "ct11-refund-1", "rootOperation": "ct11-charge-1", "account": "account-a" },
+      "expect": { "reductions.0": "applied" }
+    },
+    {
+      "name": "lookupOriginal",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "path": "/billium/v1/sellers/seller-a/operations/find",
+        "body": {
+          "schema": "payment.find.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "operationRef": "ct11-charge-1"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body.capturedTotal.amount": "1.00",
+        "body.refundedTotal.amount": "0.40"
+      }
+    },
+    {
+      "name": "providerAccounts",
+      "target": "stand",
+      "op": "provider_evidence",
+      "expect": {
+        "calls.#": 3,
+        "calls.0.account": "account-a",
+        "calls.1.account": "replacement-account",
+        "calls.2.kind": "refund",
+        "calls.2.account": "account-a"
+      }
+    }
+  ]
+}

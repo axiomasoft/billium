@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-testkit
 
-Path `packages/testkit/src`, namespace `Billium\Testkit\`, layer L4. 33 types.
+Path `packages/testkit/src`, namespace `Billium\Testkit\`, layer L4. 35 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Accounting
@@ -32,6 +32,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
 | [`DeterministicPaymentDriver`](../../packages/testkit/src/Drivers/DeterministicPaymentDriver.php) | class | **Api** | Deterministic test PSP. |
+| [`FaultInjectingPaymentDrivers`](../../packages/testkit/src/Drivers/FaultInjectingPaymentDrivers.php) | class | **Api** | Dev-only PaymentDrivers and qualification fault adapter for consumer/bridge contract tests. |
 | [`ProviderRecord`](../../packages/testkit/src/Drivers/ProviderRecord.php) | class | **Api** |  |
 | [`ProviderSettlement`](../../packages/testkit/src/Drivers/ProviderSettlement.php) | class | **Api** |  |
 | [`ResponseMode`](../../packages/testkit/src/Drivers/ResponseMode.php) | enum | **Api** |  |
@@ -60,6 +61,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`ProcessBarrier`](../../packages/testkit/src/Fixtures/ProcessBarrier.php) | class | **Api** |  |
 | [`ProcessIdentity`](../../packages/testkit/src/Fixtures/ProcessIdentity.php) | class | **Api** |  |
 | [`ReceiverReceipt`](../../packages/testkit/src/Fixtures/ReceiverReceipt.php) | class | **Api** |  |
+| [`TransportFaultAdapter`](../../packages/testkit/src/Fixtures/TransportFaultAdapter.php) | class | **Api** | Dev-only transport fault and envelope preparation adapter for consumer/bridge contract tests. |
 
 ## Oracles
 

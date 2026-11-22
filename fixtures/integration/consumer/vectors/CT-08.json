@@ -1,0 +1,149 @@
+{
+  "protocol": "billium.consumer.bridge.case.v1",
+  "id": "CT-08",
+  "title": "Observation partition gap parks in custody and source lineage change transitions to recovery then restores via staged bootstrap",
+  "standProfile": "ledger-external-executor",
+  "authoritySource": "standalone-billium",
+  "executionProfile": "external-executor",
+  "packageDelivery": "php-contracts-current",
+  "sources": ["D60", "D63", "INV-08"],
+  "steps": [
+    {
+      "name": "gapSeq2",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "actor": "external-source",
+        "seal": "contentDigest",
+        "path": "/billium/v1/sellers/seller-a/observations",
+        "body": {
+          "schema": "payment.observation.v1",
+          "eventId": "01JBX5Q0Z8M3N4P7R9S2000802",
+          "sourceAuthority": "standalone-billium",
+          "sourceLineage": "L1",
+          "partitionRef": "ct08-part",
+          "sourceSequence": 2,
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "operationRef": "ct08-op-1",
+          "operationKind": "charge",
+          "businessIntentRef": "intent-100",
+          "operationRevision": 2,
+          "state": "succeeded",
+          "currency": "RUB",
+          "requested": { "amount": "100.00", "currency": "RUB" },
+          "authorizedTotal": { "amount": "60.00", "currency": "RUB" },
+          "capturedTotal": { "amount": "60.00", "currency": "RUB" },
+          "refundedTotal": { "amount": "0.00", "currency": "RUB" },
+          "providerAccountRef": "pa-ext-1",
+          "evidenceRef": "ev-ct08-2",
+          "observedAt": "2026-11-22T10:01:00Z",
+          "recordedAt": "2026-11-22T10:01:01Z"
+        }
+      },
+      "expect": {
+        "status": 202,
+        "body.schema": "ledger.observation_custody.v1",
+        "body.custodyStatus": "parked_gap"
+      }
+    },
+    {
+      "name": "fillGapSeq1",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "actor": "external-source",
+        "seal": "contentDigest",
+        "path": "/billium/v1/sellers/seller-a/observations",
+        "body": {
+          "schema": "payment.observation.v1",
+          "eventId": "01JBX5Q0Z8M3N4P7R9S2000801",
+          "sourceAuthority": "standalone-billium",
+          "sourceLineage": "L1",
+          "partitionRef": "ct08-part",
+          "sourceSequence": 1,
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "operationRef": "ct08-op-1",
+          "operationKind": "charge",
+          "businessIntentRef": "intent-100",
+          "operationRevision": 1,
+          "state": "succeeded",
+          "currency": "RUB",
+          "requested": { "amount": "100.00", "currency": "RUB" },
+          "authorizedTotal": { "amount": "20.00", "currency": "RUB" },
+          "capturedTotal": { "amount": "20.00", "currency": "RUB" },
+          "refundedTotal": { "amount": "0.00", "currency": "RUB" },
+          "providerAccountRef": "pa-ext-1",
+          "evidenceRef": "ev-ct08-1",
+          "observedAt": "2026-11-22T10:00:00Z",
+          "recordedAt": "2026-11-22T10:00:01Z"
+        }
+      },
+      "expect": { "status": 200, "body.schema": "ledger.allocation_receipt.v1" }
+    },
+    {
+      "name": "drainSeq2",
+      "target": "stand",
+      "op": "drain_observations",
+      "expect": { "appliedCount": 2 }
+    },
+    {
+      "name": "changedLineageTriggersRecovery",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "actor": "external-source",
+        "seal": "contentDigest",
+        "path": "/billium/v1/sellers/seller-a/observations",
+        "body": {
+          "schema": "payment.observation.v1",
+          "eventId": "01JBX5Q0Z8M3N4P7R9S2000803",
+          "sourceAuthority": "standalone-billium",
+          "sourceLineage": "L2",
+          "partitionRef": "ct08-part",
+          "sourceSequence": 1,
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "operationRef": "ct08-op-1",
+          "operationKind": "charge",
+          "businessIntentRef": "intent-100",
+          "operationRevision": 2,
+          "state": "succeeded",
+          "currency": "RUB",
+          "requested": { "amount": "100.00", "currency": "RUB" },
+          "authorizedTotal": { "amount": "60.00", "currency": "RUB" },
+          "capturedTotal": { "amount": "60.00", "currency": "RUB" },
+          "refundedTotal": { "amount": "0.00", "currency": "RUB" },
+          "providerAccountRef": "pa-ext-1",
+          "evidenceRef": "ev-ct08-l2",
+          "observedAt": "2026-11-22T10:03:00Z",
+          "recordedAt": "2026-11-22T10:03:01Z"
+        }
+      },
+      "expect": {
+        "status": 423,
+        "body.code": "billium.recovery.required"
+      }
+    },
+    {
+      "name": "recoverLineageViaBootstrap",
+      "target": "stand",
+      "op": "bootstrap_recover_partition",
+      "args": {
+        "partitionRef": "ct08-part",
+        "sourceLineage": "L2",
+        "operationRef": "ct08-op-1",
+        "cursorSequence": 2
+      },
+      "expect": {
+        "adopted": true,
+        "recoveryRequired": false,
+        "bootstrapStatus": "adopted"
+      }
+    }
+  ]
+}

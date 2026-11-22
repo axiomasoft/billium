@@ -1,0 +1,121 @@
+{
+  "protocol": "billium.consumer.bridge.case.v1",
+  "id": "CT-02",
+  "title": "Same key with altered semantic payload conflicts and existing receipt rechecks current authorization",
+  "standProfile": "execution",
+  "authoritySource": "remote-billium",
+  "executionProfile": "remote-billium",
+  "packageDelivery": "php-contracts-current",
+  "sources": ["D23", "D31", "D58", "INV-05"],
+  "steps": [
+    {
+      "name": "first",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "saveAs": "ct02Orig",
+        "path": "/billium/v1/sellers/seller-a/payments/execute",
+        "body": {
+          "schema": "payment.execute.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "commandKey": "00000000-0000-4100-8800-000000000201",
+          "operationRef": "ct02-op-1",
+          "operationKind": "charge",
+          "source": {
+            "context": "checkout",
+            "intentRef": "intent-a",
+            "orderRef": "ct02-order-1"
+          },
+          "executionProfile": "remote-billium",
+          "routingEpoch": 1,
+          "merchantAccountRef": "account-a",
+          "money": { "amount": "10.00", "currency": "RUB" },
+          "bindingRevision": "merchant-a",
+          "requestedAt": "2026-11-22T10:00:00Z"
+        }
+      },
+      "expect": {
+        "status": 202,
+        "body.receipt": "CommandAccepted",
+        "body.operationRef": "ct02-op-1"
+      }
+    },
+    {
+      "name": "changedPayloadSameKey",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "path": "/billium/v1/sellers/seller-a/payments/execute",
+        "body": {
+          "schema": "payment.execute.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "commandKey": "00000000-0000-4100-8800-000000000201",
+          "operationRef": "ct02-op-1",
+          "operationKind": "charge",
+          "source": {
+            "context": "checkout",
+            "intentRef": "intent-a",
+            "orderRef": "ct02-order-1"
+          },
+          "executionProfile": "remote-billium",
+          "routingEpoch": 1,
+          "merchantAccountRef": "account-a",
+          "money": { "amount": "20.00", "currency": "RUB" },
+          "bindingRevision": "merchant-a",
+          "requestedAt": "2026-11-22T10:00:00Z"
+        }
+      },
+      "expect": {
+        "status": 409,
+        "body.code": "billium.idempotency.conflict",
+        "body.receipt": "none"
+      }
+    },
+    {
+      "name": "revokedCallerReplay",
+      "target": "consumer",
+      "op": "replay_prepared",
+      "args": { "use": "ct02Orig", "actor": "revoked" },
+      "expect": {
+        "status": 403,
+        "body.code": "billium.auth.denied",
+        "body.receipt": "none"
+      }
+    },
+    {
+      "name": "foreignSellerReplay",
+      "target": "consumer",
+      "op": "replay_prepared",
+      "args": { "use": "ct02Orig", "actor": "other-seller" },
+      "expect": {
+        "status": 403,
+        "body.code": "billium.auth.denied",
+        "body.receipt": "none"
+      }
+    },
+    {
+      "name": "validOwnerReplay",
+      "target": "consumer",
+      "op": "replay_prepared",
+      "args": { "use": "ct02Orig", "actor": "owner" },
+      "expect": {
+        "status": 202,
+        "body.operationRef": "ct02-op-1",
+        "responseDigest": { "$ref": "first.responseDigest" }
+      }
+    },
+    {
+      "name": "afterSnapshot",
+      "target": "stand",
+      "op": "snapshot",
+      "expect": {
+        "counts.execution_operation": 1,
+        "counts.execution_attempt": 1
+      }
+    }
+  ]
+}

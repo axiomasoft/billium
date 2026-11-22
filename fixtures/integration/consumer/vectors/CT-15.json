@@ -1,0 +1,39 @@
+{
+  "protocol": "billium.consumer.bridge.case.v1",
+  "id": "CT-15",
+  "title": "Current and prior N-1 package archives decode responses with full RFC 8785 digest preserved over unknown fields",
+  "standProfile": "ledger-external-executor",
+  "authoritySource": "billium",
+  "executionProfile": "external-executor",
+  "packageDelivery": "php-contracts-archive-matrix",
+  "sources": ["D31", "D59", "D61", "REQ-CON-32"],
+  "steps": [
+    {
+      "name": "serverCapabilities",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "path": "/billium/v1/capabilities"
+      },
+      "expect": {
+        "status": 200,
+        "body.schema": "billium.capabilities.v1",
+        "body.specHash": { "$ref": "specHash" }
+      }
+    },
+    {
+      "name": "archiveMatrix",
+      "target": "consumer",
+      "op": "archive_decode_matrix",
+      "expect": {
+        "archiveShaVerified": true,
+        "currentAccepted": true,
+        "priorAccepted": true,
+        "digestCoversUnknownBothGenerations": true,
+        "fullDigestMatchesAcrossGenerations": true,
+        "tamperedRejectedBothGenerations": true,
+        "priorRefusesCurrentOnlySchema": true
+      }
+    }
+  ]
+}

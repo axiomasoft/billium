@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:conformance:consumer-bridge-protocol:v1",
+  "title": "Billium reusable external consumer/bridge adapter protocol v1",
+  "type": "object",
+  "oneOf": [
+    {
+      "title": "start",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "protocol", "boundary", "producerUrl"],
+      "properties": {
+        "type": { "const": "start" },
+        "protocol": { "const": "billium.consumer.bridge.protocol.v1" },
+        "boundary": { "enum": ["double", "loopback", "external-runtime"] },
+        "producerUrl": { "type": "string", "minLength": 1 },
+        "workDir": { "type": "string", "minLength": 1 }
+      }
+    },
+    {
+      "title": "ready",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "protocol",
+        "adapter",
+        "adapterVersion",
+        "commitHash",
+        "packageHash",
+        "specRevision",
+        "specHash",
+        "deliveryProfile",
+        "supportedOps",
+        "paidPspEffect"
+      ],
+      "properties": {
+        "type": { "const": "ready" },
+        "protocol": { "const": "billium.consumer.bridge.protocol.v1" },
+        "adapter": { "type": "string", "minLength": 1 },
+        "adapterVersion": { "type": "string", "minLength": 1 },
+        "commitHash": { "type": "string", "pattern": "^[0-9a-f]{7,64}$" },
+        "packageHash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "specRevision": { "type": "string", "minLength": 1 },
+        "specHash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "deliveryProfile": { "enum": ["loopback-http", "double-transport", "external-http"] },
+        "supportedOps": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "paidPspEffect": { "const": false }
+      }
+    },
+    {
+      "title": "step",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "caseId", "step", "op", "args"],
+      "properties": {
+        "type": { "const": "step" },
+        "caseId": { "type": "string", "pattern": "^CT-(0[1-9]|1[0-9]|20)$" },
+        "step": { "type": "string", "minLength": 1 },
+        "op": { "type": "string", "minLength": 1 },
+        "args": { "type": "object" }
+      }
+    },
+    {
+      "title": "result",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "caseId", "step", "observed"],
+      "properties": {
+        "type": { "const": "result" },
+        "caseId": { "type": "string", "pattern": "^CT-(0[1-9]|1[0-9]|20)$" },
+        "step": { "type": "string", "minLength": 1 },
+        "observed": { "type": "object" }
+      }
+    },
+    {
+      "title": "stop",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "const": "stop" }
+      }
+    }
+  ]
+}

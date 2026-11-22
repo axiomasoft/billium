@@ -1,0 +1,552 @@
+{
+  "protocol": "billium.consumer.contract.report.v1",
+  "evidence_class": "consumer-contract",
+  "boundary": "loopback",
+  "status": "passed",
+  "suite": "all",
+  "required": [
+    "CT-01",
+    "CT-02",
+    "CT-03",
+    "CT-04",
+    "CT-05",
+    "CT-06",
+    "CT-07",
+    "CT-08",
+    "CT-09",
+    "CT-10",
+    "CT-11",
+    "CT-12",
+    "CT-13",
+    "CT-14",
+    "CT-15",
+    "CT-16",
+    "CT-17",
+    "CT-18",
+    "CT-19",
+    "CT-20"
+  ],
+  "producer": {
+    "name": "billium-server-loopback-producer",
+    "commitHash": "abcdef1234567890abcdef1234567890abcdef12",
+    "packageHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "specRevision": "2026-10",
+    "specHash": "sha256:eb021eaa43885c32d8acdf0e0e7821ef03c177058e55567e45c33f652808b2a5"
+  },
+  "consumer": {
+    "name": "billium-reference-bridge-consumer",
+    "available": true,
+    "commitHash": "abcdef1234567890abcdef1234567890abcdef12",
+    "packageHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "specRevision": "2026-10",
+    "specHash": "sha256:eb021eaa43885c32d8acdf0e0e7821ef03c177058e55567e45c33f652808b2a5",
+    "deliveryProfile": "loopback-http"
+  },
+  "runtime": {
+    "php": "8.4.12",
+    "postgres": "PostgreSQL 17.2"
+  },
+  "results": [
+    {
+      "id": "CT-01",
+      "status": "pass",
+      "standProfile": "execution",
+      "authoritySource": "remote-billium",
+      "executionProfile": "remote-billium",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": [
+        {
+          "step": "verify",
+          "target": "consumer",
+          "op": "http_command",
+          "evidence_class": "consumer-contract",
+          "boundary": "loopback",
+          "observed": {
+            "status": 200
+          }
+        }
+      ]
+    },
+    {
+      "id": "CT-02",
+      "status": "pass",
+      "standProfile": "ledger-external-executor",
+      "authoritySource": "standalone-billium",
+      "executionProfile": "external-executor",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": [
+        {
+          "step": "verify",
+          "target": "consumer",
+          "op": "http_command",
+          "evidence_class": "consumer-contract",
+          "boundary": "loopback",
+          "observed": {
+            "status": 200
+          }
+        }
+      ]
+    },
+    {
+      "id": "CT-03",
+      "status": "pass",
+      "standProfile": "execution",
+      "authoritySource": "remote-billium",
+      "executionProfile": "remote-billium",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": [
+        {
+          "step": "verify",
+          "target": "consumer",
+          "op": "http_command",
+          "evidence_class": "consumer-contract",
+          "boundary": "loopback",
+          "observed": {
+            "status": 200
+          }
+        }
+      ]
+    },
+    {
+      "id": "CT-04",
+      "status": "pass",
+      "standProfile": "ledger-external-executor",
+      "authoritySource": "standalone-billium",
+      "executionProfile": "external-executor",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": [
+        {
+          "step": "verify",
+          "target": "consumer",
+          "op": "http_command",
+          "evidence_class": "consumer-contract",
+          "boundary": "loopback",
+          "observed": {
+            "status": 200
+          }
+        }
+      ]
+    },
+    {
+      "id": "CT-05",
+      "status": "pass",
+      "standProfile": "execution",
+      "authoritySource": "remote-billium",
+      "executionProfile": "remote-billium",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": [
+        {
+          "step": "verify",
+          "target": "consumer",
+          "op": "http_command",
+          "evidence_class": "consumer-contract",
+          "boundary": "loopback",
+          "observed": {
+            "status": 200
+          }
+        }
+      ]
+    },
+    {
+      "id": "CT-06",
+      "status": "pass",
+      "standProfile": "ledger-external-executor",
+      "authoritySource": "standalone-billium",
+      "executionProfile": "external-executor",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": [
+        {
+          "step": "verify",
+          "target": "consumer",
+          "op": "http_command",
+          "evidence_class": "consumer-contract",
+          "boundary": "loopback",
+          "observed": {
+            "status": 200
+          }
+        }
+      ]
+    },
+    {
+      "id": "CT-07",
+      "status": "pass",
+      "standProfile": "execution",
+      "authoritySource": "remote-billium",
+      "executionProfile": "remote-billium",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": [
+        {
+          "step": "verify",
+          "target": "consumer",
+          "op": "http_command",
+          "evidence_class": "consumer-contract",
+          "boundary": "loopback",
+          "observed": {
+            "status": 200
+          }
+        }
+      ]
+    },
+    {
+      "id": "CT-08",
+      "status": "pass",
+      "standProfile": "ledger-external-executor",
+      "authoritySource": "standalone-billium",
+      "executionProfile": "external-executor",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": [
+        {
+          "step": "verify",
+          "target": "consumer",
+          "op": "http_command",
+          "evidence_class": "consumer-contract",
+          "boundary": "loopback",
+          "observed": {
+            "status": 200
+          }
+        }
+      ]
+    },
+    {
+      "id": "CT-09",
+      "status": "pass",
+      "standProfile": "execution",
+      "authoritySource": "remote-billium",
+      "executionProfile": "remote-billium",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": [
+        {
+          "step": "verify",
+          "target": "consumer",
+          "op": "http_command",
+          "evidence_class": "consumer-contract",
+          "boundary": "loopback",
+          "observed": {
+            "status": 200
+          }
+        }
+      ]
+    },
+    {
+      "id": "CT-10",
+      "status": "pass",
+      "standProfile": "ledger-external-executor",
+      "authoritySource": "standalone-billium",
+      "executionProfile": "external-executor",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": [
+        {
+          "step": "verify",
+          "target": "consumer",
+          "op": "http_command",
+          "evidence_class": "consumer-contract",
+          "boundary": "loopback",
+          "observed": {
+            "status": 200
+          }
+        }
+      ]
+    },
+    {
+      "id": "CT-11",
+      "status": "pass",
+      "standProfile": "execution",
+      "authoritySource": "remote-billium",
+      "executionProfile": "remote-billium",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": [
+        {
+          "step": "verify",
+          "target": "consumer",
+          "op": "http_command",
+          "evidence_class": "consumer-contract",
+          "boundary": "loopback",
+          "observed": {
+            "status": 200
+          }
+        }
+      ]
+    },
+    {
+      "id": "CT-12",
+      "status": "pass",
+      "standProfile": "ledger-external-executor",
+      "authoritySource": "standalone-billium",
+      "executionProfile": "external-executor",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": [
+        {
+          "step": "verify",
+          "target": "consumer",
+          "op": "http_command",
+          "evidence_class": "consumer-contract",
+          "boundary": "loopback",
+          "observed": {
+            "status": 200
+          }
+        }
+      ]
+    },
+    {
+      "id": "CT-13",
+      "status": "pass",
+      "standProfile": "execution",
+      "authoritySource": "remote-billium",
+      "executionProfile": "remote-billium",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": [
+        {
+          "step": "verify",
+          "target": "consumer",
+          "op": "http_command",
+          "evidence_class": "consumer-contract",
+          "boundary": "loopback",
+          "observed": {
+            "status": 200
+          }
+        }
+      ]
+    },
+    {
+      "id": "CT-14",
+      "status": "pass",
+      "standProfile": "ledger-external-executor",
+      "authoritySource": "standalone-billium",
+      "executionProfile": "external-executor",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": [
+        {
+          "step": "verify",
+          "target": "consumer",
+          "op": "http_command",
+          "evidence_class": "consumer-contract",
+          "boundary": "loopback",
+          "observed": {
+            "status": 200
+          }
+        }
+      ]
+    },
+    {
+      "id": "CT-15",
+      "status": "pass",
+      "standProfile": "execution",
+      "authoritySource": "remote-billium",
+      "executionProfile": "remote-billium",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": [
+        {
+          "step": "verify",
+          "target": "consumer",
+          "op": "http_command",
+          "evidence_class": "consumer-contract",
+          "boundary": "loopback",
+          "observed": {
+            "status": 200
+          }
+        }
+      ]
+    },
+    {
+      "id": "CT-16",
+      "status": "pass",
+      "standProfile": "ledger-external-executor",
+      "authoritySource": "standalone-billium",
+      "executionProfile": "external-executor",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": [
+        {
+          "step": "verify",
+          "target": "consumer",
+          "op": "http_command",
+          "evidence_class": "consumer-contract",
+          "boundary": "loopback",
+          "observed": {
+            "status": 200
+          }
+        }
+      ]
+    },
+    {
+      "id": "CT-17",
+      "status": "pass",
+      "standProfile": "execution",
+      "authoritySource": "remote-billium",
+      "executionProfile": "remote-billium",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": [
+        {
+          "step": "verify",
+          "target": "consumer",
+          "op": "http_command",
+          "evidence_class": "consumer-contract",
+          "boundary": "loopback",
+          "observed": {
+            "status": 200
+          }
+        }
+      ]
+    },
+    {
+      "id": "CT-18",
+      "status": "pass",
+      "standProfile": "ledger-external-executor",
+      "authoritySource": "standalone-billium",
+      "executionProfile": "external-executor",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": [
+        {
+          "step": "verify",
+          "target": "consumer",
+          "op": "http_command",
+          "evidence_class": "consumer-contract",
+          "boundary": "loopback",
+          "observed": {
+            "status": 200
+          }
+        }
+      ]
+    },
+    {
+      "id": "CT-19",
+      "status": "pass",
+      "standProfile": "execution",
+      "authoritySource": "remote-billium",
+      "executionProfile": "remote-billium",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": [
+        {
+          "step": "verify",
+          "target": "consumer",
+          "op": "http_command",
+          "evidence_class": "consumer-contract",
+          "boundary": "loopback",
+          "observed": {
+            "status": 200
+          }
+        }
+      ]
+    },
+    {
+      "id": "CT-20",
+      "status": "pass",
+      "standProfile": "ledger-external-executor",
+      "authoritySource": "standalone-billium",
+      "executionProfile": "external-executor",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": [
+        {
+          "step": "verify",
+          "target": "consumer",
+          "op": "http_command",
+          "evidence_class": "consumer-contract",
+          "boundary": "loopback",
+          "observed": {
+            "status": 200
+          }
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_class": "consumer-contract",
+      "boundary": "loopback",
+      "steps": [
+        "CT-01/verify",
+        "CT-02/verify",
+        "CT-03/verify",
+        "CT-04/verify",
+        "CT-05/verify",
+        "CT-06/verify",
+        "CT-07/verify",
+        "CT-08/verify",
+        "CT-09/verify",
+        "CT-10/verify",
+        "CT-11/verify",
+        "CT-12/verify",
+        "CT-13/verify",
+        "CT-14/verify",
+        "CT-15/verify",
+        "CT-16/verify",
+        "CT-17/verify",
+        "CT-18/verify",
+        "CT-19/verify",
+        "CT-20/verify"
+      ]
+    }
+  ],
+  "hashes": {
+    "spec": "sha256:eb021eaa43885c32d8acdf0e0e7821ef03c177058e55567e45c33f652808b2a5",
+    "fixtures": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "harness": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "packages": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "dependencies": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+  },
+  "paidPspTransactions": 0,
+  "passed": true,
+  "localRequiredSuiteComplete": true,
+  "externalReady": false,
+  "rolloutGatePassed": false,
+  "reportDigest": "sha256:ed9e517283e3a6b09cb50cbe36f0be0f53bf3aa97f52734a8438c02da1889f45"
+}

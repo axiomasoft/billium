@@ -1,0 +1,126 @@
+{
+  "protocol": "billium.consumer.bridge.case.v1",
+  "id": "CT-04",
+  "title": "Monotonic cumulative outcomes assign totals rather than adding deltas and keep duplicate identity stable",
+  "standProfile": "ledger-external-executor",
+  "authoritySource": "standalone-billium",
+  "executionProfile": "external-executor",
+  "packageDelivery": "php-contracts-current",
+  "sources": ["D41", "D58", "INV-06", "PB-14"],
+  "steps": [
+    {
+      "name": "obs30",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "saveAs": "ct04Seq1",
+        "actor": "external-source",
+        "seal": "contentDigest",
+        "path": "/billium/v1/sellers/seller-a/observations",
+        "body": {
+          "schema": "payment.observation.v1",
+          "eventId": "01JBX5Q0Z8M3N4P7R9S2000401",
+          "sourceAuthority": "standalone-billium",
+          "sourceLineage": "L1",
+          "partitionRef": "ct04-part",
+          "sourceSequence": 1,
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "operationRef": "ct04-op-1",
+          "operationKind": "charge",
+          "businessIntentRef": "intent-100",
+          "operationRevision": 1,
+          "state": "succeeded",
+          "currency": "RUB",
+          "requested": { "amount": "100.00", "currency": "RUB" },
+          "authorizedTotal": { "amount": "100.00", "currency": "RUB" },
+          "capturedTotal": { "amount": "30.00", "currency": "RUB" },
+          "refundedTotal": { "amount": "0.00", "currency": "RUB" },
+          "providerAccountRef": "pa-ext-1",
+          "evidenceRef": "ev-ct04-1",
+          "observedAt": "2026-11-22T10:00:00Z",
+          "recordedAt": "2026-11-22T10:00:01Z"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body.schema": "ledger.allocation_receipt.v1",
+        "body.replayed": false
+      }
+    },
+    {
+      "name": "duplicateObs30",
+      "target": "consumer",
+      "op": "replay_prepared",
+      "args": { "use": "ct04Seq1", "actor": "external-source", "delivery": "retry-transport-2" },
+      "expect": {
+        "status": 200,
+        "body.replayed": true,
+        "body.receiptRef": { "$ref": "obs30.body.receiptRef" }
+      }
+    },
+    {
+      "name": "obs60",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "actor": "external-source",
+        "seal": "contentDigest",
+        "path": "/billium/v1/sellers/seller-a/observations",
+        "body": {
+          "schema": "payment.observation.v1",
+          "eventId": "01JBX5Q0Z8M3N4P7R9S2000402",
+          "sourceAuthority": "standalone-billium",
+          "sourceLineage": "L1",
+          "partitionRef": "ct04-part",
+          "sourceSequence": 2,
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "operationRef": "ct04-op-1",
+          "operationKind": "charge",
+          "businessIntentRef": "intent-100",
+          "operationRevision": 2,
+          "state": "succeeded",
+          "currency": "RUB",
+          "requested": { "amount": "100.00", "currency": "RUB" },
+          "authorizedTotal": { "amount": "100.00", "currency": "RUB" },
+          "capturedTotal": { "amount": "60.00", "currency": "RUB" },
+          "refundedTotal": { "amount": "0.00", "currency": "RUB" },
+          "providerAccountRef": "pa-ext-1",
+          "evidenceRef": "ev-ct04-2",
+          "observedAt": "2026-11-22T10:01:00Z",
+          "recordedAt": "2026-11-22T10:01:01Z"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body.schema": "ledger.allocation_receipt.v1",
+        "body.replayed": false
+      }
+    },
+    {
+      "name": "statusAfter60",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "path": "/billium/v1/sellers/seller-a/queries",
+        "body": {
+          "schema": "billium.query.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "query": "paymentStatus",
+          "selector": { "paymentRef": "ct04-op-1" }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body.result.applied.capturedTotal.amount": "60.00",
+        "body.result.applied.allocated.amount": "60.00",
+        "body.result.applied.refundedTotal.amount": "0.00"
+      }
+    }
+  ]
+}
