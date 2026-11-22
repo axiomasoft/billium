@@ -74,6 +74,30 @@ class CheckReportFixtureTest(unittest.TestCase):
             self.assertNotEqual(0, rc)
             self.assertFalse(out_report.exists())
 
+    def test_external_ready_rejects_loopback_boundaries_in_transcript_and_evidence(self) -> None:
+        valid_ext = json.loads((HERE / "reports/valid-external-runtime-passed.json").read_text(encoding="utf-8"))
+        spoofed = copy.deepcopy(valid_ext)
+        for result in spoofed.get("results", []):
+            for step in result.get("transcript", []):
+                step["boundary"] = "loopback"
+        for ev in spoofed.get("evidence", []):
+            ev["boundary"] = "loopback"
+        spoofed["reportDigest"] = check_report.canonical_digest(spoofed, "reportDigest")
+
+        findings = check_report.validate_report(spoofed, repo_root=ROOT)
+        self.assertTrue(
+            any(f.startswith("external_ready_non_external_evidence:") for f in findings),
+            findings,
+        )
+        self.assertTrue(
+            any(f.startswith("external_ready_missing_external_evidence:") for f in findings),
+            findings,
+        )
+        self.assertTrue(
+            any(f.startswith("external_ready_non_external_transcript:") for f in findings),
+            findings,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

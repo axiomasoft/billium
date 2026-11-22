@@ -7,6 +7,8 @@ namespace Billium\Platform\Internal\Import;
 use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Contracts\MoneyMath;
 use Billium\Contracts\Contracts\MoneyMathFactory;
+use Billium\Contracts\Data\Currency;
+use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Configuration\BilliumOptions;
@@ -70,6 +72,8 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
 
     private ImportObservationCoordinator $observationCoordinator;
 
+    private MoneyMath $math;
+
     /**
      * @param  Closure(): OperationRunner  $runner
      * @param  Closure(): CallerContext  $callers
@@ -90,6 +94,7 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
         ?MoneyMath $math = null,
     ) {
         $resolvedMath = $math ?? MoneyMathFactory::create();
+        $this->math = $resolvedMath;
         $envelopeBuilder = new ImportObservationEnvelopeBuilder($this->codec);
         $this->hydrator = new ImportStagedRecordHydrator(
             $databases,
@@ -1077,7 +1082,7 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
      * @param  list<object>  $stage4Allocations
      * @param  array<string, string>  $obligationRefBySourceId
      * @param  array<string, string>  $chargeOpRefByLookup
-     * @return array<string, array{obligationRefs: list<string>, requestedMinor: ?int}>
+     * @return array<string, array{obligationRefs: list<string>, requestedMinor: ?int, nonProRataMismatch: bool}>
      */
     private function buildAggregatedAllocationIntents(
         array $stage4Allocations,
@@ -1090,6 +1095,8 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
          *   currency: string,
          *   conflictedScope: bool,
          *   obligationRefs: list<string>,
+         *   expectedMinorByObligation: array<string, int>,
+         *   openMinorByObligation: array<string, int>,
          *   requestedMinor: ?int,
          *   hasNullMoney: bool
          * }> $groups
@@ -1122,6 +1129,9 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
             if (($inspectedObl['billingAccountRef'] ?? '') !== $billingAccountRef || ($inspectedObl['currency'] ?? '') !== $currency) {
                 continue;
             }
+            $openMinor = ($inspectedObl['status'] ?? '') === 'cancelled'
+                ? 0
+                : max(0, (int) ($inspectedObl['openMinor'] ?? 0));
 
             if (! isset($groups[$businessIntentRef])) {
                 $groups[$businessIntentRef] = [
@@ -1129,6 +1139,8 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
                     'currency' => $currency,
                     'conflictedScope' => false,
                     'obligationRefs' => [$targetObligationRef],
+                    'expectedMinorByObligation' => $record->money !== null ? [$targetObligationRef => $record->money->minor] : [],
+                    'openMinorByObligation' => [$targetObligationRef => $openMinor],
                     'requestedMinor' => $record->money?->minor,
                     'hasNullMoney' => $record->money === null,
                 ];
@@ -1144,10 +1156,12 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
                 if (! in_array($targetObligationRef, $groups[$businessIntentRef]['obligationRefs'], true)) {
                     $groups[$businessIntentRef]['obligationRefs'][] = $targetObligationRef;
                 }
+                $groups[$businessIntentRef]['openMinorByObligation'][$targetObligationRef] = $openMinor;
                 if ($record->money === null || $groups[$businessIntentRef]['hasNullMoney']) {
                     $groups[$businessIntentRef]['hasNullMoney'] = true;
                     $groups[$businessIntentRef]['requestedMinor'] = null;
                 } else {
+                    $groups[$businessIntentRef]['expectedMinorByObligation'][$targetObligationRef] = ($groups[$businessIntentRef]['expectedMinorByObligation'][$targetObligationRef] ?? 0) + $record->money->minor;
                     $groups[$businessIntentRef]['requestedMinor'] = ($groups[$businessIntentRef]['requestedMinor'] ?? 0) + $record->money->minor;
                 }
             }
@@ -1156,9 +1170,41 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
         $result = [];
         foreach ($groups as $intentRef => $group) {
             if (! $group['conflictedScope'] && $group['obligationRefs'] !== []) {
+                $nonProRataMismatch = false;
+                if (
+                    count($group['obligationRefs']) > 1
+                    && ! $group['hasNullMoney']
+                    && $group['requestedMinor'] !== null
+                    && $group['requestedMinor'] > 0
+                ) {
+                    $openValues = [];
+                    foreach ($group['obligationRefs'] as $oblRef) {
+                        $openValues[] = $group['openMinorByObligation'][$oblRef] ?? 0;
+                    }
+                    $totalOpen = array_sum($openValues);
+                    if ($totalOpen === 0) {
+                        $projectedMinor = array_fill(0, count($openValues), 0);
+                    } elseif ($group['requestedMinor'] >= $totalOpen) {
+                        $projectedMinor = $openValues;
+                    } else {
+                        $shares = $this->math->allocate(
+                            new Money($group['requestedMinor'], Currency::of($group['currency'])),
+                            array_map(static fn (int $value): string => (string) $value, $openValues),
+                        );
+                        $projectedMinor = array_map(static fn (Money $share): int => $share->minor, $shares);
+                    }
+                    foreach ($group['obligationRefs'] as $idx => $oblRef) {
+                        $expectedMinor = $group['expectedMinorByObligation'][$oblRef] ?? 0;
+                        if (($projectedMinor[$idx] ?? 0) !== $expectedMinor) {
+                            $nonProRataMismatch = true;
+                            break;
+                        }
+                    }
+                }
                 $result[$intentRef] = [
                     'obligationRefs' => $group['obligationRefs'],
                     'requestedMinor' => $group['requestedMinor'],
+                    'nonProRataMismatch' => $nonProRataMismatch,
                 ];
             }
         }
@@ -1169,7 +1215,7 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
     /**
      * @param  array<string, string>  $obligationRefBySourceId
      * @param  array<string, string>  $chargeOpRefByLookup
-     * @param  array<string, array{obligationRefs: list<string>, requestedMinor: ?int}>  $aggregatedIntents
+     * @param  array<string, array{obligationRefs: list<string>, requestedMinor: ?int, nonProRataMismatch: bool}>  $aggregatedIntents
      */
     private function applyProvenAllocationRow(
         int $batchPk,
@@ -1234,18 +1280,31 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
         $inspectedObl = ($this->monetaryPort)()->inspectObligation($targetObligationRef);
         if (! $inspectedObl['exists']) {
             // Target obligation is not yet proven in ledger: keep unresolved/quarantined without marking Applied.
-            $quarantined++;
+            $quarantined = true;
 
             return new ImportRecordApplyOutcome(
                 identity: $identity,
                 sourceRecordRevision: $revision,
                 sourceFactRef: $factRef,
-                status: ImportRecordApplyStatus::Quarantined,
+                status: ImportRecordApplyStatus::Conflict,
                 mappingRef: null,
                 importReceiptRef: null,
                 billiumTargetKind: null,
                 billiumTargetRef: null,
-                reasonCodes: ['import.target_obligation_not_yet_imported'],
+                detail: 'import.target_obligation_not_yet_imported',
+            );
+        }
+
+        if (($aggregatedIntents[$businessIntentRef]['nonProRataMismatch'] ?? false) === true) {
+            // Historical per-obligation allocation shares diverge from ledger pro_rata_open/1 projection: fail closed.
+            $quarantined = true;
+            $this->hydrator->markStagedRecordConflict($recordPk);
+
+            return $this->hydrator->recordTerminalValidationReceipt(
+                $batchPk,
+                $row,
+                ImportReceiptStatus::Conflict,
+                ImportRecordApplyStatus::Conflict,
             );
         }
 

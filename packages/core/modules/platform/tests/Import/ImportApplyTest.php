@@ -516,6 +516,139 @@ final class ImportApplyTest extends PlatformTestCase
     }
 
     /**
+     * P9.9 Round 2 F1 regression: Non-proportional historical split allocations (90/10 across 100/100 open obligations)
+     * diverge from ledger pro_rata_open/1 projection (50/50) and must fail closed (quarantined, reconciled=false)
+     * instead of silently applying 50/50 and reporting completed.
+     */
+    public function test_non_proportional_split_allocation_shares_fail_closed_and_quarantine_batch(): void
+    {
+        $seller = 'seller-split-nonprorata-1';
+        $this->asAuthorizedCaller($seller);
+
+        $reader = $this->buildGenericReader('batch-split-nonprorata-1', $seller, [
+            $this->rawObligationRecord('obl-npr-a', '100.00', 'RUB', 'pv-npr-a'),
+            $this->rawObligationRecord('obl-npr-b', '100.00', 'RUB', 'pv-npr-b'),
+            $this->rawAllocationRecord('alloc-npr-a', '90.00', 'RUB', 'src-obl-npr-a', 'src-pay-npr-1'),
+            $this->rawAllocationRecord('alloc-npr-b', '10.00', 'RUB', 'src-obl-npr-b', 'src-pay-npr-1'),
+            $this->rawPaymentRecord('pay-npr-1', '100.00', 'RUB', 'orig-pay-npr-1', 'src-pay-npr-1'),
+        ]);
+
+        $res = $this->applier()->apply(
+            $reader->manifest(),
+            $reader->records(),
+            new ImportApplyOptions(ImportApplyOptions::REQUIRED_SCOPE, $reader->manifest()->manifestDigest),
+        );
+
+        self::assertSame(ImportBatchStatus::Quarantined, $res->batchStatus);
+        self::assertGreaterThanOrEqual(1, $res->counts[ImportRecordApplyStatus::Conflict->value]);
+        self::assertSame(0, $this->rows('billium_allocation', 'seller_ref = ?', [$seller]));
+        self::assertSame(0, $this->rows('billium_payment', 'seller_ref = ?', [$seller]));
+
+        $reconcile = $this->reconciler()->reconcileBatch($reader->manifest()->batchId);
+        self::assertFalse($reconcile->reconciled);
+        self::assertNotSame([], $reconcile->discrepancies);
+    }
+
+    /**
+     * P9.9 Round 2 F2 regression: A proven_allocation imported before its target obligation remains unresolved/quarantined
+     * without being marked Applied; once the obligation is imported, retrying the allocation applies it cleanly.
+     */
+    public function test_proven_allocation_before_target_obligation_remains_unresolved_and_applies_on_retry(): void
+    {
+        $seller = 'seller-alloc-order-1';
+        $this->asAuthorizedCaller($seller);
+
+        $allocRecord = $this->rawAllocationRecord('alloc-early-1', '100.00', 'RUB', 'src-obl-late-1', 'src-pay-late-1');
+
+        // 1. Import allocation before its target obligation exists -> quarantined, unresolved, no Applied mapping.
+        $earlyBatch = $this->buildGenericReader('batch-alloc-early-1', $seller, [$allocRecord]);
+        $earlyRes = $this->applier()->apply(
+            $earlyBatch->manifest(),
+            $earlyBatch->records(),
+            new ImportApplyOptions(ImportApplyOptions::REQUIRED_SCOPE, $earlyBatch->manifest()->manifestDigest),
+        );
+
+        self::assertSame(ImportBatchStatus::Quarantined, $earlyRes->batchStatus);
+        self::assertSame(0, $this->rows('billium_import_mapping', "seller_ref = ? AND source_record_id = 'alloc-early-1'", [$seller]));
+        self::assertFalse($this->reconciler()->reconcileBatch($earlyBatch->manifest()->batchId)->reconciled);
+
+        // 2. Import the missing obligation.
+        $oblBatch = $this->buildGenericReader('batch-obl-late-1', $seller, [
+            $this->rawObligationRecord('obl-late-1', '100.00', 'RUB', 'pv-late-1'),
+        ]);
+        $oblRes = $this->applier()->apply(
+            $oblBatch->manifest(),
+            $oblBatch->records(),
+            new ImportApplyOptions(ImportApplyOptions::REQUIRED_SCOPE, $oblBatch->manifest()->manifestDigest),
+        );
+        self::assertSame(ImportBatchStatus::Completed, $oblRes->batchStatus);
+
+        // 3. Retry the exact same allocation record (same sourceRecordId & revision=1) -> applies cleanly!
+        $retryBatch = $this->buildGenericReader('batch-alloc-retry-1', $seller, [$allocRecord]);
+        $retryRes = $this->applier()->apply(
+            $retryBatch->manifest(),
+            $retryBatch->records(),
+            new ImportApplyOptions(ImportApplyOptions::REQUIRED_SCOPE, $retryBatch->manifest()->manifestDigest),
+        );
+
+        self::assertSame(ImportBatchStatus::Completed, $retryRes->batchStatus);
+        self::assertSame(1, $retryRes->counts[ImportRecordApplyStatus::SettlementIntentDeclared->value]);
+        self::assertSame(0, $retryRes->counts[ImportRecordApplyStatus::AlreadyApplied->value]);
+        self::assertTrue($this->reconciler()->reconcileBatch($retryBatch->manifest()->batchId)->reconciled);
+    }
+
+    /**
+     * P9.9 Round 2 F3 regression: Chained draft_obligation_adjustment linked corrections (rev 1->2 and 2->3)
+     * resolve the underlying obligation target through ancestor mappings instead of failing with ReferenceUnknown.
+     */
+    public function test_chained_draft_obligation_adjustments_from_revision_1_to_2_to_3_succeed(): void
+    {
+        $seller = 'seller-draft-chain-1';
+        $this->asAuthorizedCaller($seller);
+
+        $reader = $this->buildGenericReader('batch-draft-chain-1', $seller, [
+            $this->rawObligationRecord('obl-chain-1', '100.00', 'RUB', 'pv-chain-1'),
+        ]);
+        $applied = $this->applier()->apply(
+            $reader->manifest(),
+            $reader->records(),
+            new ImportApplyOptions(ImportApplyOptions::REQUIRED_SCOPE, $reader->manifest()->manifestDigest),
+        );
+        self::assertSame(ImportBatchStatus::Completed, $applied->batchStatus);
+
+        $oblIdentity = $reader->records()[0]->identity;
+
+        $adj1 = $this->applier()->applyLinkedCorrection(new ImportLinkedCorrection(
+            capabilityScope: ImportApplyOptions::REQUIRED_SCOPE,
+            correctionRef: 'corr-draft-chain-1',
+            originalIdentity: $oblIdentity,
+            originalRevision: 1,
+            newRevision: 2,
+            kind: ImportLinkedCorrection::KIND_DRAFT_ADJUSTMENT,
+            reason: 'first_draft_adjustment',
+            deltaMoney: Money::parse('15.00', 'RUB'),
+        ));
+        self::assertSame(ImportMappingStatus::Active, $adj1->mapping->status);
+        self::assertSame('obligation_adjustment', $adj1->mapping->billiumTargetKind);
+
+        $adj2 = $this->applier()->applyLinkedCorrection(new ImportLinkedCorrection(
+            capabilityScope: ImportApplyOptions::REQUIRED_SCOPE,
+            correctionRef: 'corr-draft-chain-2',
+            originalIdentity: $oblIdentity,
+            originalRevision: 2,
+            newRevision: 3,
+            kind: ImportLinkedCorrection::KIND_DRAFT_ADJUSTMENT,
+            reason: 'second_draft_adjustment',
+            deltaMoney: Money::parse('10.00', 'RUB'),
+        ));
+        self::assertSame(ImportMappingStatus::Active, $adj2->mapping->status);
+        self::assertSame('obligation_adjustment', $adj2->mapping->billiumTargetKind);
+
+        $queries = $this->application()->make(LedgerQueries::class);
+        self::assertSame('125.00', $queries->obligation('src-obl-chain-1')['open']['amount']);
+    }
+
+    /**
      * F5 regression: Refund capacity inspection sums only the latest cumulative revision per refund,
      * not every historical revision (100.00 charge + refund rev1=30.00, rev2=40.00 => 60.00 remaining, so 50.00 succeeds).
      */
