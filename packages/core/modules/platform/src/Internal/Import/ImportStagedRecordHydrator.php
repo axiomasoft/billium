@@ -11,10 +11,13 @@ use Billium\Core\Configuration\BilliumOptions;
 use Billium\Platform\Contracts\Import\ImportIdentityStore;
 use Billium\Platform\Contracts\Import\ImportMonetaryPort;
 use Billium\Platform\Data\Import\ImportApplyOptions;
+use Billium\Platform\Data\Import\ImportApplyResult;
+use Billium\Platform\Data\Import\ImportBatchStatus;
 use Billium\Platform\Data\Import\ImportEvidenceRef;
 use Billium\Platform\Data\Import\ImportManifest;
 use Billium\Platform\Data\Import\ImportObservationOutcome;
 use Billium\Platform\Data\Import\ImportReceiptStatus;
+use Billium\Platform\Data\Import\ImportReconciliationReport;
 use Billium\Platform\Data\Import\ImportRecordApplyOutcome;
 use Billium\Platform\Data\Import\ImportRecordApplyStatus;
 use Billium\Platform\Data\Import\ImportRecordInput;
@@ -540,5 +543,61 @@ final readonly class ImportStagedRecordHydrator
         }
 
         return ['countMatches' => $countMatches, 'checksumMatches' => $checksumMatches];
+    }
+
+    /**
+     * @param  list<ImportRecordApplyOutcome>  $outcomes
+     * @return list<ImportRecordApplyOutcome>
+     */
+    public static function replaceOrAppendOutcome(array $outcomes, ImportRecordApplyOutcome $replacement): array
+    {
+        foreach ($outcomes as $idx => $existing) {
+            if (
+                $existing->identity->sourceRecordId === $replacement->identity->sourceRecordId
+                && $existing->identity->recordKind === $replacement->identity->recordKind
+                && $existing->sourceRecordRevision === $replacement->sourceRecordRevision
+            ) {
+                $outcomes[$idx] = $replacement;
+
+                return $outcomes;
+            }
+        }
+        $outcomes[] = $replacement;
+
+        return $outcomes;
+    }
+
+    /**
+     * @param  list<ImportRecordApplyOutcome>  $outcomes
+     */
+    public static function summarizeResult(
+        int $batchPk,
+        string $batchId,
+        string $manifestDigest,
+        ImportBatchStatus $batchStatus,
+        int $processedSteps,
+        int $remainingSteps,
+        array $outcomes,
+        ?ImportReconciliationReport $reconciliation,
+    ): ImportApplyResult {
+        $counts = [];
+        foreach (ImportRecordApplyStatus::cases() as $case) {
+            $counts[$case->value] = 0;
+        }
+        foreach ($outcomes as $outcome) {
+            $counts[$outcome->status->value]++;
+        }
+
+        return new ImportApplyResult(
+            batchPk: $batchPk,
+            batchId: $batchId,
+            manifestDigest: $manifestDigest,
+            batchStatus: $batchStatus,
+            processedSteps: $processedSteps,
+            remainingSteps: $remainingSteps,
+            counts: $counts,
+            outcomes: $outcomes,
+            reconciliation: $reconciliation,
+        );
     }
 }

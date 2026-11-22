@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-testkit
 
-Path `packages/testkit/src`, namespace `Billium\Testkit\`, layer L4. 35 types.
+Path `packages/testkit/src`, namespace `Billium\Testkit\`, layer L4. 37 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Accounting
@@ -38,6 +38,13 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`ResponseMode`](../../packages/testkit/src/Drivers/ResponseMode.php) | enum | **Api** |  |
 | [`SimulatedAbsenceVerifier`](../../packages/testkit/src/Drivers/SimulatedAbsenceVerifier.php) | class | **Api** | Authenticates only explicitly simulated complete scopes against independent journals. |
 | [`SimulatedCapabilities`](../../packages/testkit/src/Drivers/SimulatedCapabilities.php) | class | **Api** | Every guarantee in this builder is explicitly simulated, never provider qualification. |
+
+## Faults
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`ConservationVerifier`](../../packages/testkit/src/Faults/ConservationVerifier.php) | class | **Api** | Independent monetary conservation and provider-receipt count verifier for PostgreSQL fault suites. |
+| [`SeededFaultPlan`](../../packages/testkit/src/Faults/SeededFaultPlan.php) | class | **Api** | Deterministic seeded fault-injection plan for repeatable failure and conservation scenarios. |
 
 ## Fiscal
 

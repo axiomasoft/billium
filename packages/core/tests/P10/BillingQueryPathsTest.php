@@ -42,6 +42,7 @@ use stdClass;
 use Throwable;
 
 #[Group('pg')]
+#[Group('pg-serial')]
 #[Group('P10.4')]
 #[Group('D71')]
 #[Group('D72')]

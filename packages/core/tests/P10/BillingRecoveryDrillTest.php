@@ -63,6 +63,7 @@ use ValueError;
  * - Mixed-version reader fail-closed & non-destructive expand-contract rollback preserve immutable facts
  */
 #[Group('pg')]
+#[Group('pg-serial')]
 #[Group('P10.5')]
 #[Group('D71')]
 #[Group('D72')]

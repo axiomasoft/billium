@@ -18,21 +18,17 @@ final class SeededFaultPlan
     private readonly Randomizer $randomizer;
 
     /** @var array<string, int> */
-    private array $remaining;
-
-    /** @var array<string, int> */
     private array $triggered = [];
 
     /**
-     * @param  array<string, int>  $failpoints
+     * @param  array<string, int>  $remaining
      */
     public function __construct(
         public readonly int $seed,
         public readonly string $scenarioId,
-        array $failpoints = [],
+        private array $remaining = [],
     ) {
         $this->randomizer = new Randomizer(new Mt19937($seed));
-        $this->remaining = $failpoints;
     }
 
     /**

@@ -35,7 +35,6 @@ use Billium\Platform\Data\Import\ImportMappingRegistrationResult;
 use Billium\Platform\Data\Import\ImportMappingStatus;
 use Billium\Platform\Data\Import\ImportObligationWrite;
 use Billium\Platform\Data\Import\ImportReceiptStatus;
-use Billium\Platform\Data\Import\ImportReconciliationReport;
 use Billium\Platform\Data\Import\ImportRecordApplyOutcome;
 use Billium\Platform\Data\Import\ImportRecordApplyStatus;
 use Billium\Platform\Data\Import\ImportRecordKind;
@@ -320,7 +319,7 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
                 ? $this->reconciler->reconcileBatch($batchId, $options->migrationSourceAuthority)
                 : null;
 
-            return $this->summarizeResult($batchPk, $batchId, $manifestDigest, $status, 0, 0, [], $reconciliation);
+            return ImportStagedRecordHydrator::summarizeResult($batchPk, $batchId, $manifestDigest, $status, 0, 0, [], $reconciliation);
         }
 
         $stagedRows = ImportStagedRecordHydrator::objectRows($db->select('SELECT * FROM public.billium_import_record WHERE batch_pk = ? ORDER BY id ASC', [$batchPk]));
@@ -335,7 +334,7 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
         if (! $inventoryCheck['countMatches'] || ! $inventoryCheck['checksumMatches']) {
             $reconciliation = $this->reconciler->reconcileBatch($batchId, $options->migrationSourceAuthority);
             if ($status === ImportBatchStatus::Staged && count($stagedRows) < $expectedRecordCount) {
-                return $this->summarizeResult(
+                return ImportStagedRecordHydrator::summarizeResult(
                     $batchPk,
                     $batchId,
                     $manifestDigest,
@@ -348,7 +347,7 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
             }
             $this->store->transitionBatch($batchPk, ImportBatchStatus::Quarantined);
 
-            return $this->summarizeResult($batchPk, $batchId, $manifestDigest, ImportBatchStatus::Quarantined, 0, 0, [], $reconciliation);
+            return ImportStagedRecordHydrator::summarizeResult($batchPk, $batchId, $manifestDigest, ImportBatchStatus::Quarantined, 0, 0, [], $reconciliation);
         }
 
         // Pre-apply lifecycle: staged -> validated -> approved -> applying (or rejected / quarantined).
@@ -369,12 +368,12 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
             if ($hasConflict) {
                 $this->store->transitionBatch($batchPk, ImportBatchStatus::Quarantined);
 
-                return $this->summarizeResult($batchPk, $batchId, $manifestDigest, ImportBatchStatus::Quarantined, 0, 0, $outcomes, null);
+                return ImportStagedRecordHydrator::summarizeResult($batchPk, $batchId, $manifestDigest, ImportBatchStatus::Quarantined, 0, 0, $outcomes, null);
             }
             if ($hasRejected) {
                 $this->store->transitionBatch($batchPk, ImportBatchStatus::Rejected);
 
-                return $this->summarizeResult($batchPk, $batchId, $manifestDigest, ImportBatchStatus::Rejected, 0, 0, $outcomes, null);
+                return ImportStagedRecordHydrator::summarizeResult($batchPk, $batchId, $manifestDigest, ImportBatchStatus::Rejected, 0, 0, $outcomes, null);
             }
             $this->store->transitionBatch($batchPk, ImportBatchStatus::Validated);
             $status = ImportBatchStatus::Validated;
@@ -396,7 +395,7 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
             $finalStatus = $reconciliation->reconciled ? ImportBatchStatus::Completed : ImportBatchStatus::Quarantined;
             $this->store->transitionBatch($batchPk, $finalStatus);
 
-            return $this->summarizeResult($batchPk, $batchId, $manifestDigest, $finalStatus, 0, 0, [], $reconciliation);
+            return ImportStagedRecordHydrator::summarizeResult($batchPk, $batchId, $manifestDigest, $finalStatus, 0, 0, [], $reconciliation);
         }
 
         // Build DAG-ordered execution worklist across chunks:
@@ -580,7 +579,7 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
         if ($quarantined) {
             $this->store->transitionBatch($batchPk, ImportBatchStatus::Quarantined);
 
-            return $this->summarizeResult($batchPk, $batchId, $manifestDigest, ImportBatchStatus::Quarantined, $processedSteps, 0, $outcomes, null);
+            return ImportStagedRecordHydrator::summarizeResult($batchPk, $batchId, $manifestDigest, ImportBatchStatus::Quarantined, $processedSteps, 0, $outcomes, null);
         }
 
         // Stage 6: Independent observation-owner root reduction (1 event per root Tx) + idempotent receipt adoption by query.
@@ -600,19 +599,19 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
                     $quarantined,
                 );
                 if ($adoptOutcome !== null) {
-                    $outcomes = $this->replaceOrAppendOutcome($outcomes, $adoptOutcome);
+                    $outcomes = ImportStagedRecordHydrator::replaceOrAppendOutcome($outcomes, $adoptOutcome);
                 }
                 if ($quarantined) {
                     $this->store->transitionBatch($batchPk, ImportBatchStatus::Quarantined);
 
-                    return $this->summarizeResult($batchPk, $batchId, $manifestDigest, ImportBatchStatus::Quarantined, $processedSteps, 0, $outcomes, null);
+                    return ImportStagedRecordHydrator::summarizeResult($batchPk, $batchId, $manifestDigest, ImportBatchStatus::Quarantined, $processedSteps, 0, $outcomes, null);
                 }
             }
         }
 
         $remainingSteps = $this->hydrator->countRemainingWork($batchPk, $options);
         if ($remainingSteps > 0 || ! $options->adoptReceipts) {
-            return $this->summarizeResult($batchPk, $batchId, $manifestDigest, ImportBatchStatus::Applying, $processedSteps, $remainingSteps, $outcomes, null);
+            return ImportStagedRecordHydrator::summarizeResult($batchPk, $batchId, $manifestDigest, ImportBatchStatus::Applying, $processedSteps, $remainingSteps, $outcomes, null);
         }
 
         // Stage 7: Reconcile per-(sellerRef, currency, recordKind) and transition applying -> reconciled -> completed (or quarantined).
@@ -620,18 +619,18 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
         if ($reconciliation->discrepancies !== []) {
             $this->store->transitionBatch($batchPk, ImportBatchStatus::Quarantined);
 
-            return $this->summarizeResult($batchPk, $batchId, $manifestDigest, ImportBatchStatus::Quarantined, $processedSteps, 0, $outcomes, $reconciliation);
+            return ImportStagedRecordHydrator::summarizeResult($batchPk, $batchId, $manifestDigest, ImportBatchStatus::Quarantined, $processedSteps, 0, $outcomes, $reconciliation);
         }
         if (! $reconciliation->reconciled) {
             // Parked observations awaiting external/account dependency stay in 'applying', never claiming completed/paid.
-            return $this->summarizeResult($batchPk, $batchId, $manifestDigest, ImportBatchStatus::Applying, $processedSteps, 0, $outcomes, $reconciliation);
+            return ImportStagedRecordHydrator::summarizeResult($batchPk, $batchId, $manifestDigest, ImportBatchStatus::Applying, $processedSteps, 0, $outcomes, $reconciliation);
         }
 
         $this->store->transitionBatch($batchPk, ImportBatchStatus::Reconciled);
         $this->store->transitionBatch($batchPk, ImportBatchStatus::Completed);
         $finalReconciliation = $this->reconciler->reconcileBatch($batchId, $options->migrationSourceAuthority);
 
-        return $this->summarizeResult($batchPk, $batchId, $manifestDigest, ImportBatchStatus::Completed, $processedSteps, 0, $outcomes, $finalReconciliation);
+        return ImportStagedRecordHydrator::summarizeResult($batchPk, $batchId, $manifestDigest, ImportBatchStatus::Completed, $processedSteps, 0, $outcomes, $finalReconciliation);
     }
 
     private function applyStage1Row(int $batchPk, object $row, int &$processedSteps, bool &$quarantined): ImportRecordApplyOutcome
@@ -1131,7 +1130,7 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
             }
             $openMinor = ($inspectedObl['status'] ?? '') === 'cancelled'
                 ? 0
-                : max(0, (int) ($inspectedObl['openMinor'] ?? 0));
+                : max(0, $inspectedObl['openMinor'] ?? 0);
 
             if (! isset($groups[$businessIntentRef])) {
                 $groups[$businessIntentRef] = [
@@ -1287,10 +1286,6 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
                 sourceRecordRevision: $revision,
                 sourceFactRef: $factRef,
                 status: ImportRecordApplyStatus::Conflict,
-                mappingRef: null,
-                importReceiptRef: null,
-                billiumTargetKind: null,
-                billiumTargetRef: null,
                 detail: 'import.target_obligation_not_yet_imported',
             );
         }
@@ -1433,62 +1428,6 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
             importReceiptRef: $committedReceipt?->receiptRef,
             billiumTargetKind: $committed->billiumTargetKind,
             billiumTargetRef: $committed->billiumTargetRef,
-        );
-    }
-
-    /**
-     * @param  list<ImportRecordApplyOutcome>  $outcomes
-     * @return list<ImportRecordApplyOutcome>
-     */
-    private function replaceOrAppendOutcome(array $outcomes, ImportRecordApplyOutcome $replacement): array
-    {
-        foreach ($outcomes as $idx => $existing) {
-            if (
-                $existing->identity->sourceRecordId === $replacement->identity->sourceRecordId
-                && $existing->identity->recordKind === $replacement->identity->recordKind
-                && $existing->sourceRecordRevision === $replacement->sourceRecordRevision
-            ) {
-                $outcomes[$idx] = $replacement;
-
-                return $outcomes;
-            }
-        }
-        $outcomes[] = $replacement;
-
-        return $outcomes;
-    }
-
-    /**
-     * @param  list<ImportRecordApplyOutcome>  $outcomes
-     */
-    private function summarizeResult(
-        int $batchPk,
-        string $batchId,
-        string $manifestDigest,
-        ImportBatchStatus $batchStatus,
-        int $processedSteps,
-        int $remainingSteps,
-        array $outcomes,
-        ?ImportReconciliationReport $reconciliation,
-    ): ImportApplyResult {
-        $counts = [];
-        foreach (ImportRecordApplyStatus::cases() as $case) {
-            $counts[$case->value] = 0;
-        }
-        foreach ($outcomes as $outcome) {
-            $counts[$outcome->status->value]++;
-        }
-
-        return new ImportApplyResult(
-            batchPk: $batchPk,
-            batchId: $batchId,
-            manifestDigest: $manifestDigest,
-            batchStatus: $batchStatus,
-            processedSteps: $processedSteps,
-            remainingSteps: $remainingSteps,
-            counts: $counts,
-            outcomes: $outcomes,
-            reconciliation: $reconciliation,
         );
     }
 

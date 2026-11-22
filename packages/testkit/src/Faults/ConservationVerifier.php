@@ -91,13 +91,13 @@ final readonly class ConservationVerifier
         }
 
         $capacity = [
-            'authorized' => (int) $capRow->authorized_limit_minor,
-            'captured' => (int) $capRow->confirmed_capture_minor,
-            'refunded' => (int) $capRow->confirmed_refund_minor,
-            'voided' => (int) $capRow->released_authorization_minor,
-            'heldCapture' => (int) $capRow->held_capture_minor,
-            'heldVoid' => (int) $capRow->held_void_minor,
-            'heldRefund' => (int) $capRow->held_refund_minor,
+            'authorized' => self::intCol($capRow, 'authorized_limit_minor'),
+            'captured' => self::intCol($capRow, 'confirmed_capture_minor'),
+            'refunded' => self::intCol($capRow, 'confirmed_refund_minor'),
+            'voided' => self::intCol($capRow, 'released_authorization_minor'),
+            'heldCapture' => self::intCol($capRow, 'held_capture_minor'),
+            'heldVoid' => self::intCol($capRow, 'held_void_minor'),
+            'heldRefund' => self::intCol($capRow, 'held_refund_minor'),
         ];
 
         // Core monetary conservation bounds on execution capacity.
@@ -122,9 +122,9 @@ final readonly class ConservationVerifier
             }
         }
 
-        $attempts = (int) $db->scalar('SELECT count(*) FROM billium_execution_attempt');
-        $providerFacts = (int) $db->scalar('SELECT count(*) FROM billium_execution_provider_fact');
-        $allocationReceipts = (int) $db->scalar("SELECT count(*) FROM billium_allocation_receipt WHERE kind = 'payment_observation'");
+        $attempts = self::asInt($db->scalar('SELECT count(*) FROM billium_execution_attempt'));
+        $providerFacts = self::asInt($db->scalar('SELECT count(*) FROM billium_execution_provider_fact'));
+        $allocationReceipts = self::asInt($db->scalar("SELECT count(*) FROM billium_allocation_receipt WHERE kind = 'payment_observation'"));
 
         if ($providerCalls > $attempts) {
             throw new RuntimeException('Provider calls exceed persisted attempts');
@@ -140,9 +140,9 @@ final readonly class ConservationVerifier
         );
         if (is_object($paymentRow)) {
             $payment = [
-                'captured' => (int) $paymentRow->captured_minor,
-                'refunded' => (int) $paymentRow->refunded_minor,
-                'allocated' => (int) $paymentRow->allocated_minor,
+                'captured' => self::intCol($paymentRow, 'captured_minor'),
+                'refunded' => self::intCol($paymentRow, 'refunded_minor'),
+                'allocated' => self::intCol($paymentRow, 'allocated_minor'),
             ];
             if ($payment['captured'] > $capacity['captured']
                 || $payment['refunded'] > $payment['captured']
@@ -150,10 +150,10 @@ final readonly class ConservationVerifier
                 || $payment['allocated'] > $payment['captured']) {
                 throw new RuntimeException('Ledger payment conservation violated');
             }
-            $sumAllocations = (int) $db->scalar(
+            $sumAllocations = self::asInt($db->scalar(
                 'SELECT COALESCE(SUM(amount_minor), 0) FROM billium_allocation WHERE payment_id = ?',
-                [(int) $paymentRow->id],
-            );
+                [self::intCol($paymentRow, 'id')],
+            ));
             if ($sumAllocations !== $payment['allocated']) {
                 throw new RuntimeException('Sum of billium_allocation rows diverges from billium_payment.allocated_minor');
             }
@@ -168,14 +168,16 @@ final readonly class ConservationVerifier
             if (! is_object($obRow)) {
                 throw new RuntimeException('Missing obligation row for '.$obligationRef);
             }
-            $expectedOpen = (int) $obRow->amount_due_minor + (int) $obRow->adjusted_minor - (int) $obRow->allocated_minor - (int) $obRow->credited_minor;
-            $open = (int) $obRow->open_minor;
+            $amountDue = self::intCol($obRow, 'amount_due_minor');
+            $allocated = self::intCol($obRow, 'allocated_minor');
+            $expectedOpen = $amountDue + self::intCol($obRow, 'adjusted_minor') - $allocated - self::intCol($obRow, 'credited_minor');
+            $open = self::intCol($obRow, 'open_minor');
             if ($open < 0 || $open !== $expectedOpen) {
                 throw new RuntimeException('Ledger obligation conservation violated');
             }
             $obligation = [
-                'amountDue' => (int) $obRow->amount_due_minor,
-                'allocated' => (int) $obRow->allocated_minor,
+                'amountDue' => $amountDue,
+                'allocated' => $allocated,
                 'open' => $open,
             ];
         }
@@ -193,5 +195,27 @@ final readonly class ConservationVerifier
             'obligation' => $obligation,
             'allocationReceipts' => $allocationReceipts,
         ];
+    }
+
+    private static function intCol(object $row, string $column): int
+    {
+        $vars = get_object_vars($row);
+        if (! array_key_exists($column, $vars)) {
+            throw new RuntimeException("Missing column '{$column}' in query result");
+        }
+
+        return self::asInt($vars[$column]);
+    }
+
+    private static function asInt(mixed $value): int
+    {
+        if (is_int($value)) {
+            return $value;
+        }
+        if (is_string($value) && is_numeric($value)) {
+            return (int) $value;
+        }
+
+        throw new RuntimeException('Expected integer value from database query');
     }
 }

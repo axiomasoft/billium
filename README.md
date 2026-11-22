@@ -1,107 +1,84 @@
 # Billium
 
-Billing for the software seller of the Axioma ecosystem, implemented in **PHP**.
-**Dart** is the contracts client and SDK: it builds commands and reads outcomes, but never writes
-money state.
+Billing engine and contracts for the Axioma ecosystem, implemented in **PHP 8.4+** (Laravel 13, PostgreSQL 16+).
+**Dart** (`billium_contracts`) is the shared contracts client and codec SDK: it builds commands and reads outcomes, and never writes money state.
 
-Plans live exclusively in the SwissKnifeman workspace `axioma`, under
-`projects/billium/plans/2026.10.14-№1-BILLIUM-V1/`; see [planning](docs/planning.md).
-The repository contains the P1 design, the contracts spec revision
-[`spec/revisions/2026-10`](spec/revisions/2026-10/README.md) (draft),
-language-neutral [`fixtures/`](fixtures/README.md), the `conformance/` runner with the JCS oracle,
-and the `billium-contracts` packages for PHP and Dart. Core implements the P3 platform and ledger:
-guarded PostgreSQL routines, financial-session admission, receipts, observations, outbox and feed (D60).
-The execution and documents modules have their own enablement and qualification requirements (D55/D59).
+Billium is strictly self-isolated and product-agnostic (D71): all monetary state is owned inside Billium's PostgreSQL schema via guarded routines, integer minor-unit arithmetic (`brick/money` / `BigInt`, zero floats), RFC 8785 JCS canonical digests, and explicit extension ports.
 
-The `axiomasoft/billium-core` distribution includes the platform, ledger, execution, usage, rating, schedule, documents and collection implementations. Enable modules with `billium.modules.enabled`. Usage, rating, schedule, documents and collection also have feature-specific configuration. The host can restrict the resulting plugin graph through the Packman activation gate. Billium's financial-session and operation admission rules continue to govern writes.
+## Profiles and Quickstart
 
-Usage, rating, schedule and documents are optional internal core modules. Fixed-price schedule booking can omit
-usage; pure quotes can omit ledger; obligation booking needs no legal renderer or payment executor;
-disabling `documents` (`billium.documents.enabled = false`) keeps obligations, invoices, allocations and
-payments operational without documents routes or workers.
-See the [module, provider and capability matrix](docs/architecture/optional-commercial-modules.md)
-for host enablement, migration ownership, trusted versioned extensions and A–D composition proofs (D55/D56).
-For P6 legal documents, fiscal orchestration and accounting export boundaries, see:
+Delivery (`server` HTTP/JSON vs in-process Laravel) and monetary authority (`execution` / `WriterAdmission`) are orthogonal (D61). Choose one of four profiles:
 
-- [Documents module architecture and operational runbook](docs/architecture/documents.md) (`billium-documents`: legal profiles, outside-Tx tax finalization, atomic seller-scoped numbering, async rendering, credit notes/corrections, and failure isolation)
-- [Fiscal orchestration boundary](docs/architecture/fiscal-boundary.md) (`execution`-owned independent fiscal receipt lifecycle, lookup recovery without duplicate registration, and projection-only `embedded-commerz` mode)
-- [Accounting facts and FinBridge export contract](docs/contracts/accounting-facts.md) (`platform`-owned replay-safe economic facts, explicit delivery ACK vs. applied receipt separation, schema quarantine, and zero GL ownership — independent of `documents`)
+| Profile | Packages | Required Modules | Optional Modules | `execution` / `WriterAdmission` | Use Case |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `contract-only` | `axiomasoft/billium-contracts` (PHP) or `billium_contracts` (Dart) | `contracts` | none | forbidden | Shared money types, JCS digests, envelopes, problem codes; no core, DB, or provider SDKs |
+| `embedded` (`ledger-only`) | `billium-contracts` + `billium-core` | `platform`, `ledger` | `usage`, `rating`, `schedule`, `documents` | forbidden (0 provider calls) | In-process host ledger, invoices, allocations, observations, and outbox/feed |
+| `standalone` | `billium-contracts` + `billium-core` | `platform`, `ledger` | `usage`, `rating`, `schedule`, `documents`, `execution`, `collection` | optional (when `execution` enabled) | Full in-process billing in a Laravel host without a separate HTTP server |
+| `remote` | `billium-contracts` + `billium-core` + `billium-server` | `platform`, `ledger`, `execution`, `server` | `usage`, `rating`, `schedule`, `documents`, `collection` | required (hard-fenced) | Dedicated HTTP/JSON billing service with fenced writer authority |
 
-The [P4 evidence guide](docs/architecture/p4-acceptance.md) and
-[acceptance manifest](docs/architecture/p4-acceptance.json) map exact amounts, restore/permutation,
-concurrency and unsupported combinations to executable tests. Implementation evidence and pending
-independent phase acceptance are recorded separately (D59/D64; owner PLAN1.P4.10).
+See [module composition matrix](docs/architecture/module-composition.md) and [optional commercial modules](docs/architecture/optional-commercial-modules.md) for DAG rules and lifecycle retirement (`accepting -> draining -> recovery_only -> retired`, preserving `historical_read` and `receipt_replay`).
 
-The optional `collection` module owns saved-method collection and dunning (REQ-OWN-06, D56).
-See the [collection runbook](docs/operations/collection.md) for the PostgreSQL pilot, aggregate
-alert metrics and the response to overdue work or unresolved outcomes (COV-AC-519, D59; owners
-Billium collection and host monitoring).
+### Quickstart Commands
 
-- [Codebase map](docs/architecture/CODEBASE-MAP.md): where each responsibility lives, dependency rules, checks;
-  [source index](docs/source-index/README.md) of every PHP type
-- [Requirements and traceability](docs/requirements.md)
-- [Target architecture](docs/architecture/target-architecture.md) and
-  [data model](docs/architecture/data-model.md)
-- [Design coverage and delivery boundaries](docs/architecture/design-coverage.md): module composition,
-  remaining implementation scope, recovery and production qualification
-- [Lock order, runtime privileges and invariant proofs](docs/architecture/lock-model.md) (D27/D60)
-- [billium-contracts v1](docs/contracts/billium-contracts-v1.md)
-- [Acceptance catalog](docs/acceptance-catalog.md)
-- [PHP contracts package](packages/contracts/README.md): `Codec`, `Money`, `MoneyMath`, envelopes
-- [Dart contracts package](packages/contracts-dart/README.md): the same contract for the client, `BigInt` money
-
-Stack: PHP 8.4+, Laravel 13, PostgreSQL 16+; packages `axiomasoft/billium-*` in `packages/<name>/`
-(embedded Laravel package and server profile from one codebase).
-
-## Development
-
-All checks run in the `toolchain` image (PHP 8.4, Composer, Dart SDK, Python tooling).
-Check out `axiomasoft/packman` at `v0.1.1` in `../packman` for the Composer path dependencies.
-The host needs Docker and the `axioma` workspace checkout. Compose mounts the workspace read-only;
-set `SKM_WORKSPACES` to its parent directory when it is outside the default SwissKnifeman machine home.
+All verification runs inside the `toolchain` Docker image (PHP 8.4, Composer, Dart SDK, Python 3) against PostgreSQL 16. Check out `axiomasoft/packman` at `v0.1.1` in `../packman` for Composer path dependencies.
 
 ```bash
+# 1. Build toolchain, install dependencies, start PostgreSQL
 docker compose build toolchain
 docker compose run --rm toolchain composer install --no-interaction
 docker compose up -d postgres
 docker compose run --rm toolchain php scripts/db/preflight.php
-docker compose run --rm toolchain vendor/bin/pest --group ACC-RST-10
-docker compose run --rm toolchain vendor/bin/pest packages/core/tests/P6
-docker compose run --rm toolchain bash scripts/ci.sh                 # full gate
-docker compose run --rm toolchain bash scripts/ci.sh --layer derived # one layer
-docker compose run --rm toolchain bash scripts/ci.sh --list          # layers and subjects
-docker compose run --rm toolchain bash scripts/smoke/consumer-install.sh
+
+# 2. Profile smoke & release-candidate verification (local-only, 0 network calls)
+docker compose run --rm -u 0:0 toolchain bash scripts/smoke/profile-matrix.sh
+docker compose run --rm -u 0:0 toolchain bash scripts/quality/release-candidate.sh --local-only
+docker compose run --rm -u 0:0 toolchain bash scripts/quality/release-supply-chain.sh
+docker compose run --rm -u 0:0 toolchain python3 scripts/quality/deployment-profile.py path/to/manifest.json --json
+
+# 3. Recovery, upgrade, and query-path drills
+docker compose run --rm -u 0:0 toolchain bash scripts/drills/billing-restore.sh --fake-provider
+docker compose run --rm -u 0:0 toolchain bash scripts/drills/billing-upgrade.sh
+docker compose run --rm -u 0:0 toolchain python3 scripts/bench/billing.py --profile acceptance --output -
+
+# 4. Full CI gate (lint, derived, php, dart, conformance)
+docker compose run --rm -u 0:0 toolchain bash scripts/ci.sh
+docker compose run --rm -u 0:0 toolchain bash scripts/ci.sh --layer php
+docker compose run --rm -u 0:0 toolchain bash scripts/ci.sh --list
 ```
 
-Gate layers, in order: `lint` (spec documents, schemas, vectors, migration/role rules, P3/P5 acceptance groups, and P9 import/source-mapping/handoff/fixture/consumer-report/readiness checks), `derived` (freshness of generated files,
-identities, type-map), `php` (Pint, PHPStan max with `NoFloatTypeRule`, Rector, Packman checks, Pest, install smoke), `dart`
-(format, analyze, test, `no-double`, install smoke), `conformance` (shared vectors and golden through both
-adapters, required PHP/Dart server HTTP suites, compatibility and archive installs, server restore drill, PHP/Dart import conformance, loopback consumer contract suite `CT-01…CT-20`, and `MGATE-01…MGATE-11` migration drills).
-The php layer runs Packman as `php -d memory_limit=1G vendor/bin/packman gate`,
-with the same memory limit for `php-api --check`, `error-codes --check`, `config-schema --check`, and `ai:sync --dry-run`.
-There is no `bin/packman`. PostgreSQL tests are `vendor/bin/pest --group=pg --exclude-group=pg-serial --parallel --processes=8`,
-then `vendor/bin/pest --group=pg-serial`; `scripts/ci.sh` sets `PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1` for both.
-`pg-serial` stays one process because a foreign transaction holds the cluster xmin and breaks feed horizon and prune counts.
-CI for this gate runs from the private mirror https://github.com/corestructor/billium-mirror/ on a `refactor/wave-*` branch, not from a push to the canonical remote.
-Details: [development environment](docs/development-environment.md).
+Host Laravel Artisan commands: `billium:installation:init` (does not activate a financial session), `billium:outbox:relay`, `billium:outbox:prune` (requires explicit RET-01 floor), `billium:ledger:drain-parked`, and `billium:ledger:reconcile-refunds`.
 
-## Planning and operations
+## Extension Ports
 
-See [planning and design checks](docs/planning.md) for PLAN1, its execution state and validation commands.
+Hosts integrate with Billium through typed, versioned ports rather than direct table writes:
 
-Platform outbox delivery, feed subscriptions and retention setup: [operations guide](docs/operations/outbox-feed.md) (D52/D60/D63).
+- **Execution & Authority**: `PaymentDrivers` (PSP adapter with declared capabilities and qualification manifest), `WriterAdmission` (fenced lease/epoch authority for outgoing dispatch).
+- **Documents & Tax**: `TaxSnapshotPort` (called outside root Tx with CAS `input_digest`), `DocumentRenderer`, `DocumentStorage` (async rendering and blob custody). Disabling `documents` (`billium.documents.enabled = false`) keeps `ledger` operational with zero document ports required.
+- **Collection**: `CollectionConsentGuard` (out-of-Tx host consent verification), `CollectionNotificationPort` (durable outbox notifications; transport ACK never alters payment state).
+- **Accounting & External Import**: `AccountingExportExtension` (replay-safe economic facts, zero GL ownership), `external.import.v1` / `source.export.v1` (`scripts/import/billium-import.php` for product-agnostic historical import and authority handoff).
 
-Server readiness, doctor, metrics, and restore drill commands are in the [server runbook](docs/server/operations.md).
-The [profile evidence manifest](artifacts/server-readiness.json) records the SDK disposition and the outstanding deployment inputs for execution activation (D59/D61/D62).
+## Error Codes and `unknown` Outcome Recovery
 
-External import, authority handoff, universal consumer contracts and rollout gates (D58/D59/D63/D71):
-- [Integration readiness runbook](docs/operations/integration-readiness.md) and machine-readable [integration readiness manifest](artifacts/integration-readiness.json) (`passed`/`pending`/`failed`/`not-applicable` gates, `unanchored_evidence` limits, and no automatic fallback after target write)
-- [External import contract (`external.import.v1`)](docs/contracts/external-import-v1.md), [source-side export contract (`source.export.v1`)](docs/migrations/source-export-contract.md), and [import operations guide](docs/migrations/import-operations.md)
-- [Authority routing and ledger handoff](docs/migrations/authority-handoff.md), [migration and restore drills](docs/migrations/restore-upgrade-drills.md), and [universal consumer/bridge contract kit](docs/contracts/consumer-contract-kit.md)
+Billium never treats an uncertain provider call as a terminal failure:
 
-Authenticated ledger queries, receipt recovery and ledger bootstrap streams: [query guide](docs/contracts/ledger-queries.md) (REQ-CON-14, D35, D60).
+- **`unknown` outcome**: On network timeout or crash after provider submission, the operation stays `unknown` (never auto-retried as a second charge). Capacity remains reserved until `lookup` or an authenticated callback resolves the terminal outcome.
+- **Conflicting or forged callbacks**: Duplicate callbacks are idempotent; conflicting digests or unverified signatures are quarantined (`discrepancy`) while protecting any already confirmed terminal state.
+- **Key problem codes**:
+  - `billium.idempotency.conflict` — same `commandKey` with a different canonical digest (deterministic reject).
+  - `billium.key.expired` — replay of a key whose namespace/tombstone horizon has closed.
+  - `billium.recovery.required` — missing readiness evidence, restore clone detected, or feed cursor behind applied state.
+  - `billium.installation.quarantined` — writer lease lost or clone attempted dispatch; outgoing sends stay blocked (`0` calls) until explicit operator reconciliation and certified session activation (`openSession` -> `activateSession`).
+  - `billium.auth.denied` — cross-seller or unauthorized command/query rejected without existence oracle.
 
-Host Laravel commands: `billium:installation:init`, `billium:outbox:relay`, `billium:outbox:prune`,
-`billium:ledger:drain-parked`, `billium:ledger:reconcile-refunds`. Prune requires an explicitly configured
-RET-01 retention floor; init does not activate a financial session (D54/D60/D62).
-See the [development environment](docs/development-environment.md) for setup and proof boundaries.
+## Module Support and Deployment Gates
+
+- **Optional modules**: `usage`, `rating`, `schedule`, `documents`, `execution`, and `collection` are independently enabled via `billium.modules.enabled` and feature flags. Omitting `execution` guarantees zero outbound provider calls.
+- **Simulated vs Live qualification**: Automated test suites use deterministic test doubles (`QualificationMode::Simulated`). Live production activation (`remote-live` / `--require-live`) is fail-closed in both `scripts/quality/deployment-profile.py` and runtime `ExecutionReadinessGuard` until a `provider_verified` qualification dossier, historical lookup/refund support, egress quiesce runbook, retention/legal-hold policy, SLO/RPO/RTO, and all six `evidenceRefs` are supplied with zero unresolved holds or gaps.
+- **MECH-02 zero-test enforcement**: Both `scripts/ci.sh` (`scripts/lint/test-discovery.py`) and `scripts/quality/release-candidate.sh` reject empty test selections and zero-test acceptance evidence.
+
+## Documentation Map
+
+- Architecture & data model: [CODEBASE-MAP](docs/architecture/CODEBASE-MAP.md), [target-architecture](docs/architecture/target-architecture.md), [data-model](docs/architecture/data-model.md), [lock-model](docs/architecture/lock-model.md), [module-composition](docs/architecture/module-composition.md), [documents](docs/architecture/documents.md), [fiscal-boundary](docs/architecture/fiscal-boundary.md)
+- Contracts & SDKs: [billium-contracts-v1](docs/contracts/billium-contracts-v1.md), [accounting-facts](docs/contracts/accounting-facts.md), [ledger-queries](docs/contracts/ledger-queries.md), [external-import-v1](docs/contracts/external-import-v1.md), [consumer-contract-kit](docs/contracts/consumer-contract-kit.md), [PHP contracts](packages/contracts/README.md), [Dart contracts](packages/contracts-dart/README.md)
+- Operations & readiness: [server operations](docs/server/operations.md), [outbox-feed](docs/operations/outbox-feed.md), [collection](docs/operations/collection.md), [performance](docs/operations/performance.md), [restore](docs/operations/restore.md), [retention](docs/operations/retention.md), [security](docs/operations/security.md), [deployment-profile](docs/operations/deployment-profile.md), [integration-readiness](docs/operations/integration-readiness.md), [third-party-notices](docs/third-party-notices.md)
+- Acceptance & traceability: [acceptance-catalog](docs/acceptance-catalog.md), [requirements](docs/requirements.md), [development-environment](docs/development-environment.md), [CHANGELOG](CHANGELOG.md)
