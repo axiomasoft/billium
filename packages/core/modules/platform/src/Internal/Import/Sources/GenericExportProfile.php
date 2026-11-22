@@ -9,6 +9,7 @@ use Billium\Platform\Data\Import\ImportEvidenceRef;
 use Billium\Platform\Data\Import\ImportManifest;
 use Billium\Platform\Data\Import\ImportRecordInput;
 use Billium\Platform\Data\Import\ImportRecordKind;
+use DateTimeImmutable;
 use Override;
 use Packman\Attributes\Internal;
 
@@ -132,7 +133,7 @@ final readonly class GenericExportProfile implements SourceExportProfile
         Codec $codec,
         string $recordId,
         int $revision,
-        \DateTimeImmutable $eventDate,
+        DateTimeImmutable $eventDate,
         array $origRefs,
         array $evidenceRefs,
         array $partyRoles,
@@ -207,7 +208,7 @@ final readonly class GenericExportProfile implements SourceExportProfile
         Codec $codec,
         string $recordId,
         int $revision,
-        \DateTimeImmutable $eventDate,
+        DateTimeImmutable $eventDate,
         array $origRefs,
         array $evidenceRefs,
         array $partyRoles,
@@ -284,7 +285,7 @@ final readonly class GenericExportProfile implements SourceExportProfile
         Codec $codec,
         string $recordId,
         int $revision,
-        \DateTimeImmutable $eventDate,
+        DateTimeImmutable $eventDate,
         array $origRefs,
         array $evidenceRefs,
         array $partyRoles,
@@ -363,7 +364,7 @@ final readonly class GenericExportProfile implements SourceExportProfile
         Codec $codec,
         string $recordId,
         int $revision,
-        \DateTimeImmutable $eventDate,
+        DateTimeImmutable $eventDate,
         array $origRefs,
         array $evidenceRefs,
         array $partyRoles,
@@ -436,7 +437,7 @@ final readonly class GenericExportProfile implements SourceExportProfile
         Codec $codec,
         string $recordId,
         int $revision,
-        \DateTimeImmutable $eventDate,
+        DateTimeImmutable $eventDate,
         array $origRefs,
         array $evidenceRefs,
         array $partyRoles,

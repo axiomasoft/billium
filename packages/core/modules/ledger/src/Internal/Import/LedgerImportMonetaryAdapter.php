@@ -341,20 +341,18 @@ final readonly class LedgerImportMonetaryAdapter implements ImportMonetaryPort
         /** @var array<string, array<string, int>> $stats */
         $stats = [];
         $ensure = static function (string $currency) use (&$stats): void {
-            if (! isset($stats[$currency])) {
-                $stats[$currency] = [
-                    'due' => 0,
-                    'adjusted' => 0,
-                    'credited' => 0,
-                    'settled' => 0,
-                    'writtenOff' => 0,
-                    'open' => 0,
-                    'captured' => 0,
-                    'refunded' => 0,
-                    'allocated' => 0,
-                    'liveAllocations' => 0,
-                ];
-            }
+            $stats[$currency] ??= [
+                'due' => 0,
+                'adjusted' => 0,
+                'credited' => 0,
+                'settled' => 0,
+                'writtenOff' => 0,
+                'open' => 0,
+                'captured' => 0,
+                'refunded' => 0,
+                'allocated' => 0,
+                'liveAllocations' => 0,
+            ];
         };
 
         $obligations = $db->select(

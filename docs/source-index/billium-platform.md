@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-platform
 
-Path `packages/core/modules/platform/src`, namespace `Billium\Platform\`, layer L2. 152 types.
+Path `packages/core/modules/platform/src`, namespace `Billium\Platform\`, layer L2. 175 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts/Accounting
@@ -62,6 +62,15 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 |---|---|---|---|
 | [`Installation`](../../packages/core/modules/platform/src/Contracts/Installation/Installation.php) | interface | **Spi** | Installation administration of the platform module: explicit bootstrap, the local financial-session barrier (D54/D62) and module lifecycle transitions (D55). |
 | [`RootAdmission`](../../packages/core/modules/platform/src/Contracts/Installation/RootAdmission.php) | interface | **Spi** | Platform barriers the root runner applies after the idempotency claim, inside the same root Tx and through the root LockSet. |
+
+## Contracts/Migration
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`AuthorityHandoff`](../../packages/core/modules/platform/src/Contracts/Migration/AuthorityHandoff.php) | interface | **Spi** | Privileged D58 handoff commands. |
+| [`AuthorityRouter`](../../packages/core/modules/platform/src/Contracts/Migration/AuthorityRouter.php) | interface | **Spi** | D58. |
+| [`SourceHandoffHost`](../../packages/core/modules/platform/src/Contracts/Migration/SourceHandoffHost.php) | interface | **Spi** | D54/D58/D62/D63. |
+| [`TargetHandoffHost`](../../packages/core/modules/platform/src/Contracts/Migration/TargetHandoffHost.php) | interface | **Spi** | D54/D58/D62/D63. |
 
 ## Contracts/Outbox
 
@@ -174,6 +183,24 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`ModuleTransitionRequest`](../../packages/core/modules/platform/src/Data/Installation/ModuleTransitionRequest.php) | class | **Api** | One lifecycle step of a module (D55). |
 | [`PlatformReceipt`](../../packages/core/modules/platform/src/Data/Installation/PlatformReceipt.php) | class | **Api** | Receipt of a platform administrative operation (session or module transition). |
 
+## Data/Migration
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`ExecutionRoute`](../../packages/core/modules/platform/src/Data/Migration/ExecutionRoute.php) | class | **Api** |  |
+| [`HandoffActivation`](../../packages/core/modules/platform/src/Data/Migration/HandoffActivation.php) | class | **Api** | Claim shape. |
+| [`HandoffPlan`](../../packages/core/modules/platform/src/Data/Migration/HandoffPlan.php) | class | **Api** |  |
+| [`HandoffRecoveryRequired`](../../packages/core/modules/platform/src/Data/Migration/HandoffRecoveryRequired.php) | class | **Api** | D54/D63: the caller must recover or rebootstrap with current evidence. |
+| [`IntentBinding`](../../packages/core/modules/platform/src/Data/Migration/IntentBinding.php) | class | **Api** | D26/D58: persisted before dispatch. |
+| [`LedgerScope`](../../packages/core/modules/platform/src/Data/Migration/LedgerScope.php) | class | **Api** |  |
+| [`MigrationManifest`](../../packages/core/modules/platform/src/Data/Migration/MigrationManifest.php) | class | **Api** | D52/D63: immutable source snapshot and pinned public feed checkpoint. |
+| [`ReconciliationChecksum`](../../packages/core/modules/platform/src/Data/Migration/ReconciliationChecksum.php) | class | **Api** | D63/F06: totals are signed decimal minor-unit strings, and the checksum covers the selected facts and retained identities. |
+| [`RoutingScope`](../../packages/core/modules/platform/src/Data/Migration/RoutingScope.php) | class | **Api** | D58: the consumer's origin scope stays fixed across changes of destination executor or installation. |
+| [`SealedTail`](../../packages/core/modules/platform/src/Data/Migration/SealedTail.php) | class | **Api** | D52/D63: source-attested retained scan from the manifest checkpoint to the sealed terminal cursor. |
+| [`SourceFreezeCertificate`](../../packages/core/modules/platform/src/Data/Migration/SourceFreezeCertificate.php) | class | **Api** | D58/D63: authenticated by the source host against its own authority journal. |
+| [`TargetNoEffectsProof`](../../packages/core/modules/platform/src/Data/Migration/TargetNoEffectsProof.php) | class | **Api** | D54: claim that the exact target has no monetary commits or effects and can no longer acquire write admission. |
+| [`TargetReconciliation`](../../packages/core/modules/platform/src/Data/Migration/TargetReconciliation.php) | class | **Api** | D63/F06: durable target receipt recorded with the adopted cursor and resolved dispositions. |
+
 ## Data/Outbox
 
 | Type | Kind | Visibility | Summary |
@@ -246,7 +273,10 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`DatabaseImportIdentityStore`](../../packages/core/modules/platform/src/Internal/Import/DatabaseImportIdentityStore.php) | class | *Internal* | PostgreSQL-backed staging, source identity mapping, tombstone and append-only receipt store for external.import.v1. |
 | [`DatabaseImportReconciler`](../../packages/core/modules/platform/src/Internal/Import/DatabaseImportReconciler.php) | class | *Internal* | Read-only per-(sellerRef, currency, recordKind) reconciler producing a canonical hashed ImportReconciliationReport. |
 | [`DefaultImportPreviewEvaluator`](../../packages/core/modules/platform/src/Internal/Import/DefaultImportPreviewEvaluator.php) | class | *Internal* | Pure read-only preview evaluator for external.import.v1 records. |
+| [`ImportLinkedCorrectionApplier`](../../packages/core/modules/platform/src/Internal/Import/ImportLinkedCorrectionApplier.php) | class | *Internal* | Post-apply linked corrections over imported records using positive obligations, credit notes, draft adjustments, or tombstones (P9.3, D71). |
+| [`ImportObservationCoordinator`](../../packages/core/modules/platform/src/Internal/Import/ImportObservationCoordinator.php) | class | *Internal* | Coordinates inline settlement intents, two-root observation custody queueing, partition reduction, and pure-query receipt adoption (P9.3, D60, D71). |
 | [`ImportObservationEnvelopeBuilder`](../../packages/core/modules/platform/src/Internal/Import/ImportObservationEnvelopeBuilder.php) | class | *Internal* | Deterministic builder for payment.observation.v1 envelopes from proven external import records. |
+| [`ImportStagedRecordHydrator`](../../packages/core/modules/platform/src/Internal/Import/ImportStagedRecordHydrator.php) | class | *Internal* | Staged import row hydration, receipt checkpointing, and bounded row helpers (P9.3, D71). |
 
 ## Internal/Import/Sources
 
@@ -279,6 +309,14 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`Rows`](../../packages/core/modules/platform/src/Internal/Installation/Rows.php) | class | *Internal* | Narrowing of database row values. |
 | [`RuntimeGrants`](../../packages/core/modules/platform/src/Internal/Installation/RuntimeGrants.php) | class | *Internal* | Grants of platform migrations to the restricted runtime role (D60). |
 | [`Sessions`](../../packages/core/modules/platform/src/Internal/Installation/Sessions.php) | class | *Internal* | Plain reads of billium_financial_session; locking happens only through the root LockSet. |
+
+## Internal/Migration
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`DatabaseAuthorityRouter`](../../packages/core/modules/platform/src/Internal/Migration/DatabaseAuthorityRouter.php) | class | *Internal* | D58: an independent host routing journal. |
+| [`HostAuthorityHandoff`](../../packages/core/modules/platform/src/Internal/Migration/HostAuthorityHandoff.php) | class | *Internal* |  |
+| [`MigrationDigest`](../../packages/core/modules/platform/src/Internal/Migration/MigrationDigest.php) | class | *Internal* |  |
 
 ## Internal/Outbox
 

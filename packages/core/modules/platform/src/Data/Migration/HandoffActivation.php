@@ -6,6 +6,7 @@ namespace Billium\Platform\Data\Migration;
 
 use Billium\Core\Data\Runtime\ActivationCertificate;
 use Billium\Core\Data\Runtime\RetirementProof;
+use Billium\Platform\Internal\Migration\MigrationDigest;
 use InvalidArgumentException;
 use Packman\Attributes\Api;
 

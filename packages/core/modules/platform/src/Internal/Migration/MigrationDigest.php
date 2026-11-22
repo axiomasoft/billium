@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Billium\Platform\Data\Migration;
+namespace Billium\Platform\Internal\Migration;
 
 use Packman\Attributes\Internal;
 

@@ -147,6 +147,13 @@ class CheckImportContractTest(unittest.TestCase):
             findings = self.checker.check_d71_isolation([bad], Path(tmp))
             self.assertGreaterEqual(len(findings), 2)
 
+        mig_targets = {p.relative_to(ROOT).as_posix() for p in self.checker.migration_php_targets(ROOT)}
+        self.assertIn("packages/core/modules/platform/src/Internal/Migration/DatabaseAuthorityRouter.php", mig_targets)
+        self.assertIn("packages/core/modules/platform/tests/Migration/AuthorityCutoverTest.php", mig_targets)
+        self.assertTrue((ROOT / "packages/core/modules/ledger/src/Internal/Import/LedgerImportMonetaryAdapter.php").is_file())
+        self.assertTrue((ROOT / "scripts/import/billium-import.php").is_file())
+        self.assertTrue(list((ROOT / "spec/revisions/2026-10/schema/migration").glob("*.json")))
+
 
 if __name__ == "__main__":
     unittest.main()

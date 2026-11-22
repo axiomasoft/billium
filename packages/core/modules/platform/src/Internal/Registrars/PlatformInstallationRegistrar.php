@@ -19,12 +19,16 @@ use Billium\Platform\Contracts\Idempotency\IdempotencyReceiptQueries;
 use Billium\Platform\Contracts\Idempotency\IdempotencyStore;
 use Billium\Platform\Contracts\Installation\Installation;
 use Billium\Platform\Contracts\Installation\RootAdmission;
+use Billium\Platform\Contracts\Migration\AuthorityHandoff;
+use Billium\Platform\Contracts\Migration\AuthorityRouter;
 use Billium\Platform\Internal\EventContracts\DatabaseEventContractRegistrar;
 use Billium\Platform\Internal\Idempotency\DatabaseIdempotencyReceiptQueries;
 use Billium\Platform\Internal\Idempotency\DatabaseIdempotencyStore;
 use Billium\Platform\Internal\Installation\DatabaseInstallation;
 use Billium\Platform\Internal\Installation\PlatformRootAdmission;
 use Billium\Platform\Internal\Installation\RuntimeGrants;
+use Billium\Platform\Internal\Migration\DatabaseAuthorityRouter;
+use Billium\Platform\Internal\Migration\HostAuthorityHandoff;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\DatabaseManager;
@@ -101,6 +105,9 @@ final class PlatformInstallationRegistrar implements PackageRegistrar
 
         $app->alias(DatabaseInstallation::class, Installation::class);
         $app->alias(DatabaseInstallation::class, ModuleStateReader::class);
+
+        $app->bind(AuthorityHandoff::class, HostAuthorityHandoff::class);
+        $app->bind(AuthorityRouter::class, static fn (Application $app): AuthorityRouter => new DatabaseAuthorityRouter($app->make(DatabaseManager::class)->connection('billium-routing')));
     }
 
     #[Override]

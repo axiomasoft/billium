@@ -216,25 +216,23 @@ final readonly class DatabaseImportReconciler implements ImportReconciler
                 }
             }
 
-            if ($currencyCode !== null && $amountMinor !== null && ! in_array($validationStatus, ['rejected'], true)) {
+            if ($currencyCode !== null && $amountMinor !== null && $validationStatus !== 'rejected') {
                 $money = new Money($amountMinor, Currency::of($currencyCode));
                 $zero = new Money(0, Currency::of($currencyCode));
                 $key = $identity->sellerRef.'|'.$currencyCode.'|'.$recordKind->value;
-                if (! isset($buckets[$key])) {
-                    $buckets[$key] = [
-                        'sellerRef' => $identity->sellerRef,
-                        'currency' => $currencyCode,
-                        'recordKind' => $recordKind,
-                        'expectedCount' => 0,
-                        'expectedTotal' => $zero,
-                        'appliedCount' => 0,
-                        'appliedTotal' => $zero,
-                        'queuedCount' => 0,
-                        'queuedTotal' => $zero,
-                        'unanchoredCount' => 0,
-                        'unanchoredTotal' => $zero,
-                    ];
-                }
+                $buckets[$key] ??= [
+                    'sellerRef' => $identity->sellerRef,
+                    'currency' => $currencyCode,
+                    'recordKind' => $recordKind,
+                    'expectedCount' => 0,
+                    'expectedTotal' => $zero,
+                    'appliedCount' => 0,
+                    'appliedTotal' => $zero,
+                    'queuedCount' => 0,
+                    'queuedTotal' => $zero,
+                    'unanchoredCount' => 0,
+                    'unanchoredTotal' => $zero,
+                ];
                 $buckets[$key]['expectedCount']++;
                 $buckets[$key]['expectedTotal'] = $this->math->add($buckets[$key]['expectedTotal'], $money);
 

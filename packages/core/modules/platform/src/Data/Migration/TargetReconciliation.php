@@ -6,6 +6,7 @@ namespace Billium\Platform\Data\Migration;
 
 use Billium\Contracts\Contracts\Codec;
 use Billium\Platform\Data\Feed\FeedCursor;
+use Billium\Platform\Internal\Migration\MigrationDigest;
 use InvalidArgumentException;
 use Packman\Attributes\Api;
 

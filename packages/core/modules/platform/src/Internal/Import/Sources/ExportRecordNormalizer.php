@@ -674,12 +674,6 @@ final readonly class ExportRecordNormalizer
      */
     public function hasEvidenceKind(array $evidenceRefs, array $kinds): bool
     {
-        foreach ($evidenceRefs as $ref) {
-            if (in_array($ref->kind, $kinds, true)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($evidenceRefs, fn (ImportEvidenceRef $ref): bool => in_array($ref->kind, $kinds, true));
     }
 }

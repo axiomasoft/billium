@@ -148,16 +148,14 @@ final class PlatformOutboxRegistrar implements PackageRegistrar
             );
         });
 
-        $app->singleton(FeedPartitions::class, static function (Application $app): DatabaseFeedPartitions {
-            return new DatabaseFeedPartitions(
-                $app->make(CustodyProcessor::class),
-                new BootstrapCoordinator(
-                    $app->make(PartitionStore::class),
-                    static fn (): OperationRunner => $app->make(OperationRunner::class),
-                    $app->make(AuthenticatedObservationBootstrap::class),
-                ),
-            );
-        });
+        $app->singleton(FeedPartitions::class, static fn (Application $app): DatabaseFeedPartitions => new DatabaseFeedPartitions(
+            $app->make(CustodyProcessor::class),
+            new BootstrapCoordinator(
+                $app->make(PartitionStore::class),
+                static fn (): OperationRunner => $app->make(OperationRunner::class),
+                $app->make(AuthenticatedObservationBootstrap::class),
+            ),
+        ));
 
         $app->singleton(OutboxPruner::class, static function (Application $app): OutboxPruner {
             $options = $app->make(BilliumOptions::class);

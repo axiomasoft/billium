@@ -7,6 +7,7 @@ namespace Billium\Platform\Data\Migration;
 use Billium\Contracts\Contracts\Codec;
 use Billium\Platform\Data\Feed\FeedCursor;
 use Billium\Platform\Data\Feed\FeedSelection;
+use Billium\Platform\Internal\Migration\MigrationDigest;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use Packman\Attributes\Api;

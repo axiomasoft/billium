@@ -52,7 +52,7 @@ final readonly class DatabaseAuthorityRouter implements AuthorityRouter
             self::conflict('A routing barrier requires the next epoch');
         }
         $this->db->transaction(function () use ($scope, $expected, $next): void {
-            $row = $this->routes($scope)->lockForUpdate()->first();
+            $row = $this->lockRoute($scope);
             $current = $this->route($row);
             if ($current->matches($next) && $row?->previous_executor_ref === $expected->executorRef) {
                 return;
@@ -83,10 +83,21 @@ final readonly class DatabaseAuthorityRouter implements AuthorityRouter
         $this->outsideTransaction();
 
         return $this->db->transaction(function () use ($scope, $intent): IntentBinding {
-            $current = $this->route($this->routes($scope)->lockForUpdate()->first());
+            $current = $this->route($this->lockRoute($scope));
 
             return $this->store($scope, $intent, $current);
         });
+    }
+
+    private function lockRoute(RoutingScope $scope): ?stdClass
+    {
+        $row = $this->db->selectOne(
+            'UPDATE public.billium_authority_route SET routing_epoch = routing_epoch WHERE scope_key = ? RETURNING *',
+            [$scope->key()],
+            false,
+        );
+
+        return $row instanceof stdClass ? $row : null;
     }
 
     private function store(RoutingScope $scope, IntentBinding $intent, ?ExecutionRoute $current): IntentBinding

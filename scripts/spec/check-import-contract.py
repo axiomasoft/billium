@@ -127,6 +127,20 @@ def validate_envelope_document(
     return errors
 
 
+def migration_php_targets(repo_root: Path = ROOT) -> list[Path]:
+    targets: list[Path] = []
+    for base in (
+        repo_root / "packages/core/modules/platform/src",
+        repo_root / "packages/core/modules/platform/tests",
+    ):
+        if not base.is_dir():
+            continue
+        for mig_dir in sorted(base.rglob("Migration")):
+            if mig_dir.is_dir():
+                targets.extend(sorted(mig_dir.rglob("*.php")))
+    return targets
+
+
 def check_d71_isolation(paths: list[Path], repo_root: Path = ROOT) -> list[str]:
     errors: list[str] = []
     for path in paths:
@@ -254,17 +268,22 @@ def check_import_contract(repo_root: Path = ROOT) -> list[str]:
         if not {"php", "dart"}.issubset(profiles):
             errors.append(f"{vector_path.name}: import codec vector must run on both php and dart profiles")
 
-    # 7. D71 isolation scan across all P9.1 / P9.2 surfaces.
+    # 7. D71 isolation scan across all P9.1–P9.4 surfaces.
+    migration_schema_dir = rev / "schema/migration"
     isolation_targets: list[Path] = [
         doc_path,
         *sorted(schema_dir.glob("*.json")),
+        *sorted(migration_schema_dir.glob("*.json")),
         *sorted((repo_root / "fixtures/integration/import").rglob("*.json")),
         *vectors,
         *(sorted((repo_root / "docs/migrations").rglob("*")) if (repo_root / "docs/migrations").is_dir() else []),
+        repo_root / "scripts/import/billium-import.php",
         *sorted((repo_root / "packages/core/modules/platform/src/Contracts/Import").rglob("*.php")),
         *sorted((repo_root / "packages/core/modules/platform/src/Data/Import").rglob("*.php")),
         *sorted((repo_root / "packages/core/modules/platform/src/Internal/Import").rglob("*.php")),
         *sorted((repo_root / "packages/core/modules/platform/tests/Import").rglob("*.php")),
+        *sorted((repo_root / "packages/core/modules/ledger/src/Internal/Import").rglob("*.php")),
+        *migration_php_targets(repo_root),
     ]
     errors.extend(check_d71_isolation(isolation_targets, repo_root))
     return errors
@@ -701,7 +720,13 @@ def check_handoff(repo_root: Path = ROOT) -> list[str]:
         if not findings:
             errors.append(f"{path.name}: negative handoff fixture unexpectedly passed")
 
-    errors.extend(check_d71_isolation([*positives, *negatives], repo_root))
+    isolation_targets: list[Path] = [
+        *positives,
+        *negatives,
+        *sorted((repo_root / "spec/revisions/2026-10/schema/migration").glob("*.json")),
+        *migration_php_targets(repo_root),
+    ]
+    errors.extend(check_d71_isolation(isolation_targets, repo_root))
     return errors
 
 

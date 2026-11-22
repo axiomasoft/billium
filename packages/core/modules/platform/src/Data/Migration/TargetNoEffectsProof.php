@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Data\Migration;
 
+use Billium\Platform\Internal\Migration\MigrationDigest;
 use InvalidArgumentException;
 use Packman\Attributes\Api;
 
