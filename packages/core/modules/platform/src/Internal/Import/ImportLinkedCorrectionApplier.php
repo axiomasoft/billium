@@ -127,6 +127,16 @@ final readonly class ImportLinkedCorrectionApplier
             );
         }
 
+        if ($existingMapping->billiumTargetKind !== 'obligation') {
+            for ($rev = $correction->originalRevision - 1; $rev >= 1; $rev--) {
+                $ancestor = $this->store->findMapping($identity, $rev);
+                if ($ancestor !== null && $ancestor->billiumTargetKind === 'obligation' && is_string($ancestor->billiumTargetRef) && $ancestor->billiumTargetRef !== '') {
+                    $originalTargetRef = $ancestor->billiumTargetRef;
+                    break;
+                }
+            }
+        }
+
         $inspected = $monetary->inspectObligation($originalTargetRef);
         if (! $inspected['exists']) {
             throw new ProblemException(ProblemCode::ReferenceUnknown, "Original obligation '{$originalTargetRef}' not found in ledger");

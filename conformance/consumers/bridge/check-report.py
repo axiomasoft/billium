@@ -226,6 +226,35 @@ def validate_report(
             errors.append(
                 "external_ready_bundled_reference_forbidden: bundled reference adapter cannot set externalReady=true or rolloutGatePassed=true"
             )
+        has_external_consumer_evidence = False
+        for ev in evidence_summary:
+            if not isinstance(ev, dict) or ev.get("evidence_class") != "consumer-contract":
+                continue
+            steps = ev.get("steps") if isinstance(ev.get("steps"), list) else []
+            if not steps:
+                continue
+            if ev.get("boundary") == "external-runtime":
+                has_external_consumer_evidence = True
+            else:
+                errors.append(
+                    f"external_ready_non_external_evidence: consumer-contract evidence summary has boundary={ev.get('boundary')!r}"
+                )
+        if not has_external_consumer_evidence:
+            errors.append(
+                "external_ready_missing_external_evidence: external-runtime readiness requires consumer-contract evidence with boundary='external-runtime'"
+            )
+        for result in results:
+            if not isinstance(result, dict):
+                continue
+            cid = result.get("caseId")
+            transcript = result.get("transcript") if isinstance(result.get("transcript"), list) else []
+            for step in transcript:
+                if not isinstance(step, dict):
+                    continue
+                if step.get("evidence_class") == "consumer-contract" and step.get("boundary") != "external-runtime":
+                    errors.append(
+                        f"external_ready_non_external_transcript: {cid} consumer-contract step has boundary={step.get('boundary')!r}"
+                    )
 
     # 7. Canonical JCS reportDigest check.
     declared_digest = report.get("reportDigest")

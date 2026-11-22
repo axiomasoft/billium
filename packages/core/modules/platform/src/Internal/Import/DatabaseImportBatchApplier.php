@@ -1233,8 +1233,20 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
 
         $inspectedObl = ($this->monetaryPort)()->inspectObligation($targetObligationRef);
         if (! $inspectedObl['exists']) {
-            // Target obligation is not proven in ledger: keep parked/unanchored without fabricating targets.
-            return $this->applyStage1Row($batchPk, $row, $processedSteps, $quarantined);
+            // Target obligation is not yet proven in ledger: keep unresolved/quarantined without marking Applied.
+            $quarantined++;
+
+            return new ImportRecordApplyOutcome(
+                identity: $identity,
+                sourceRecordRevision: $revision,
+                sourceFactRef: $factRef,
+                status: ImportRecordApplyStatus::Quarantined,
+                mappingRef: null,
+                importReceiptRef: null,
+                billiumTargetKind: null,
+                billiumTargetRef: null,
+                reasonCodes: ['import.target_obligation_not_yet_imported'],
+            );
         }
 
         $intentTargetRefs = $aggregatedIntents[$businessIntentRef]['obligationRefs'] ?? [$targetObligationRef];
