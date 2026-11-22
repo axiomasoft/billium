@@ -32,6 +32,23 @@ class CheckImportContractTest(unittest.TestCase):
     def test_cli_source_mappings_mode_passes_on_repository(self) -> None:
         self.assertEqual(0, self.checker.main(["--source-mappings"]))
 
+    def test_cli_source_mappings_manifest_passes_and_rejects_implicit_missing_evidence(self) -> None:
+        self.assertEqual(0, self.checker.main(["--source-mappings", "docs/migrations/source-mapping.json"]))
+
+        manifest = json.loads((ROOT / "docs/migrations/source-mapping.json").read_text(encoding="utf-8"))
+        self.assertEqual([], self.checker.validate_source_mapping_manifest(manifest, ROOT))
+
+        bad_decision = copy.deepcopy(manifest)
+        for profile in bad_decision["profiles"]:
+            for dec in profile["missingEvidenceDecisions"]:
+                if dec["targetRecordKind"] == "unanchored_evidence":
+                    dec["reasonCodes"] = []
+                    dec["collectionAllowed"] = True
+                    break
+        findings = self.checker.validate_source_mapping_manifest(bad_decision, ROOT)
+        self.assertTrue(any("reasonCodes" in msg for msg in findings))
+        self.assertTrue(any("collectionAllowed" in msg for msg in findings))
+
     def test_cli_handoff_mode_passes_on_repository(self) -> None:
         self.assertEqual(0, self.checker.main(["--handoff"]))
 

@@ -306,6 +306,17 @@ final readonly class DefaultImportPreviewEvaluator implements ImportPreviewEvalu
 
         if ($identity->recordKind === ImportRecordKind::UnanchoredEvidence) {
             $missing = $record->missingEvidence !== [] ? $record->missingEvidence : ['authoritative_monetary_evidence'];
+            $reasons = [];
+            if (is_array($record->payload['unanchoredReasonCodes'] ?? null)) {
+                foreach ($record->payload['unanchoredReasonCodes'] as $code) {
+                    if (is_string($code) && trim($code) !== '') {
+                        $reasons[] = $code;
+                    }
+                }
+            }
+            if ($reasons === []) {
+                $reasons = ['import.unanchored_evidence'];
+            }
 
             return new ImportRecordValidationResult(
                 identity: $identity,
@@ -313,7 +324,7 @@ final readonly class DefaultImportPreviewEvaluator implements ImportPreviewEvalu
                 sourceIdentityDigest: $identityDigest,
                 payloadDigest: $record->payloadDigest,
                 status: ImportValidationStatus::UnanchoredEvidence,
-                reasonCodes: ['import.unanchored_evidence'],
+                reasonCodes: array_values(array_unique($reasons)),
                 missingEvidence: $missing,
                 sourceFactRef: $sourceFactRef,
             );

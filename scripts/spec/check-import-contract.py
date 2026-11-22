@@ -253,12 +253,13 @@ def check_import_contract(repo_root: Path = ROOT) -> list[str]:
         if not {"php", "dart"}.issubset(profiles):
             errors.append(f"{vector_path.name}: import codec vector must run on both php and dart profiles")
 
-    # 7. D71 isolation scan across all P9.1 surfaces.
+    # 7. D71 isolation scan across all P9.1 / P9.2 surfaces.
     isolation_targets: list[Path] = [
         doc_path,
         *sorted(schema_dir.glob("*.json")),
-        *sorted(fixtures_dir.rglob("*.json")),
+        *sorted((repo_root / "fixtures/integration/import").rglob("*.json")),
         *vectors,
+        *(sorted((repo_root / "docs/migrations").rglob("*")) if (repo_root / "docs/migrations").is_dir() else []),
         *sorted((repo_root / "packages/core/modules/platform/src/Contracts/Import").rglob("*.php")),
         *sorted((repo_root / "packages/core/modules/platform/src/Data/Import").rglob("*.php")),
         *sorted((repo_root / "packages/core/modules/platform/src/Internal/Import").rglob("*.php")),
@@ -343,7 +344,206 @@ def validate_source_mapping_document(document: dict[str, Any]) -> list[str]:
     return errors
 
 
-def check_source_mappings(repo_root: Path = ROOT) -> list[str]:
+REQUIRED_MISSING_EVIDENCE_CONDITIONS = (
+    "missing_price_or_currency",
+    "missing_funding_or_provider_refs",
+    "mutable_subscription_without_frozen_occurrences",
+    "current_plan_only_without_frozen_price",
+    "nonmonetary_credit_claimed_as_money",
+    "noncurrency_reward_quantity",
+    "missing_historical_invoice_number",
+    "annual_funding_with_periodic_grants",
+    "unconfirmed_legal_ownership",
+    "exported_source_credential_detected",
+)
+REQUIRED_PARTY_ROLES = (
+    "subjectRef",
+    "payerRef",
+    "actorRef",
+    "customerRef",
+    "sellerRef",
+)
+VALID_DECISION_TARGET_KINDS = {
+    "proven_obligation",
+    "proven_invoice_history",
+    "proven_payment_evidence",
+    "proven_refund_evidence",
+    "proven_allocation",
+    "nonfinancial_agreement_reference",
+    "unanchored_evidence",
+    "reject_artifact",
+}
+
+
+def validate_source_mapping_manifest(document: dict[str, Any], repo_root: Path = ROOT) -> list[str]:
+    """Validate versioned source export mapping manifest (P9.2 / V922 / D71)."""
+    errors: list[str] = []
+
+    if document.get("schema") != "external.import.source-mapping.v1":
+        errors.append("schema must equal 'external.import.source-mapping.v1'")
+    if not isinstance(document.get("mappingVersion"), str) or not document["mappingVersion"].strip():
+        errors.append("mappingVersion must be a nonempty string")
+    if document.get("contractTarget") != "external.import.v1":
+        errors.append("contractTarget must equal 'external.import.v1'")
+
+    # 1. Core deterministic source mapping invariants & checksums.
+    errors.extend(validate_source_mapping_document(document))
+
+    # 2. Artifact integrity rules (cutoff, checksum, sanitization, no direct external DB, no credential-as-authority).
+    integrity = document.get("artifactIntegrity")
+    if not isinstance(integrity, dict):
+        errors.append("missing artifactIntegrity section")
+    else:
+        for flag in (
+            "requireExportCutoff",
+            "requireRecordsChecksum",
+            "requireSanitizationPolicy",
+            "forbidDirectExternalDbAccess",
+            "forbidExportedCredentialsAsAuthority",
+        ):
+            if integrity.get(flag) is not True:
+                errors.append(f"artifactIntegrity.{flag} must be true")
+        if integrity.get("cutoffFormat") != "rfc3339-utc":
+            errors.append("artifactIntegrity.cutoffFormat must be 'rfc3339-utc'")
+        if integrity.get("checksumAlgorithm") != "sha256-jcs":
+            errors.append("artifactIntegrity.checksumAlgorithm must be 'sha256-jcs'")
+
+    # 3. Provenance & explicit separation of local runtime evidence vs external activation inputs.
+    provenance = document.get("provenance")
+    if not isinstance(provenance, dict):
+        errors.append("missing provenance section")
+    else:
+        if provenance.get("sourceExporterResponsibility") != "external_host_process":
+            errors.append("provenance.sourceExporterResponsibility must be 'external_host_process'")
+        if provenance.get("billiumReaderBoundary") != "immutable_artifact_or_stream_only":
+            errors.append("provenance.billiumReaderBoundary must be 'immutable_artifact_or_stream_only'")
+        if provenance.get("externalActivationInputsSeparated") is not True:
+            errors.append("provenance.externalActivationInputsSeparated must be true")
+        ext_inputs = provenance.get("externalActivationInputs")
+        if not isinstance(ext_inputs, list) or not ext_inputs:
+            errors.append("provenance.externalActivationInputs must declare deferred external activation inputs")
+        else:
+            for idx, item in enumerate(ext_inputs):
+                if not isinstance(item, dict) or not item.get("inputId") or item.get("status") != "external_owner_supplied":
+                    errors.append(f"provenance.externalActivationInputs[{idx}] must have inputId and status='external_owner_supplied'")
+
+    # 4. Versioned product-agnostic profiles, required/optional fields, forbidden fabrications, missing-evidence decisions.
+    profiles = document.get("profiles")
+    if not isinstance(profiles, list) or not profiles:
+        errors.append("profiles must be a non-empty list")
+    else:
+        seen_profile_ids: set[str] = set()
+        seen_conditions: set[str] = set()
+        for idx, profile in enumerate(profiles):
+            where = f"profiles[{idx}]"
+            if not isinstance(profile, dict):
+                errors.append(f"{where}: must be an object")
+                continue
+            pid = profile.get("profileId")
+            if not isinstance(pid, str) or not SOURCE_NAMESPACE_RE.match(pid):
+                errors.append(f"{where}: invalid profileId {pid!r}")
+            else:
+                seen_profile_ids.add(pid)
+            if not isinstance(profile.get("profileVersion"), str) or not profile["profileVersion"].strip():
+                errors.append(f"{where}: missing profileVersion")
+            ns = profile.get("sourceSystemNamespace")
+            if not isinstance(ns, str) or not SOURCE_NAMESPACE_RE.match(ns):
+                errors.append(f"{where}: invalid sourceSystemNamespace {ns!r}")
+
+            req_fields = profile.get("requiredFields")
+            opt_fields = profile.get("optionalFields")
+            if not isinstance(req_fields, list) or not req_fields or not all(isinstance(f, str) and f for f in req_fields):
+                errors.append(f"{where}: requiredFields must be a non-empty list of strings")
+            if not isinstance(opt_fields, list) or not opt_fields or not all(isinstance(f, str) and f for f in opt_fields):
+                errors.append(f"{where}: optionalFields must be a non-empty list of strings")
+            if isinstance(req_fields, list) and isinstance(opt_fields, list):
+                overlap = set(req_fields) & set(opt_fields)
+                if overlap:
+                    errors.append(f"{where}: fields cannot be both required and optional: {sorted(overlap)}")
+
+            party_roles = profile.get("partyRoleSeparation")
+            if not isinstance(party_roles, list) or not set(REQUIRED_PARTY_ROLES).issubset(set(party_roles)):
+                errors.append(f"{where}: partyRoleSeparation must include all of {list(REQUIRED_PARTY_ROLES)}")
+
+            forbidden = profile.get("forbiddenFabrications")
+            if not isinstance(forbidden, list) or len(forbidden) < 6:
+                errors.append(f"{where}: forbiddenFabrications must explicitly enumerate prohibited synthetic defaults")
+
+            decisions = profile.get("missingEvidenceDecisions")
+            if not isinstance(decisions, list) or not decisions:
+                errors.append(f"{where}: missingEvidenceDecisions must be a non-empty list")
+            else:
+                for d_idx, dec in enumerate(decisions):
+                    d_where = f"{where}.missingEvidenceDecisions[{d_idx}]"
+                    if not isinstance(dec, dict):
+                        errors.append(f"{d_where}: must be an object")
+                        continue
+                    cond = dec.get("condition")
+                    if not isinstance(cond, str) or not cond:
+                        errors.append(f"{d_where}: missing condition")
+                    else:
+                        seen_conditions.add(cond)
+                    target = dec.get("targetRecordKind")
+                    if target not in VALID_DECISION_TARGET_KINDS:
+                        errors.append(f"{d_where}: invalid targetRecordKind {target!r}")
+                    if dec.get("collectionAllowed") is not False:
+                        errors.append(f"{d_where}: collectionAllowed must be false for missing/incomplete evidence")
+                    if dec.get("syntheticObligationsAllowed") is not False:
+                        errors.append(f"{d_where}: syntheticObligationsAllowed must be false")
+                    if target == "unanchored_evidence":
+                        rc = dec.get("reasonCodes")
+                        me = dec.get("missingEvidence")
+                        if not isinstance(rc, list) or not rc:
+                            errors.append(f"{d_where}: unanchored_evidence decision requires non-empty reasonCodes")
+                        if not isinstance(me, list) or not me:
+                            errors.append(f"{d_where}: unanchored_evidence decision requires non-empty missingEvidence")
+
+            fixture_rel = profile.get("fixturePath")
+            if fixture_rel is not None:
+                if not isinstance(fixture_rel, str) or not fixture_rel:
+                    errors.append(f"{where}: fixturePath must be a nonempty relative string")
+                else:
+                    fixture_path = repo_root / fixture_rel
+                    if not fixture_path.is_file():
+                        errors.append(f"{where}: referenced fixture does not exist: {fixture_rel}")
+                    else:
+                        fixture_doc = json.loads(fixture_path.read_text(encoding="utf-8"))
+                        records = fixture_doc.get("records")
+                        if not isinstance(records, list):
+                            errors.append(f"{where}: fixture {fixture_rel} missing records list")
+                        else:
+                            if fixture_doc.get("recordCount") != len(records):
+                                errors.append(f"{where}: fixture {fixture_rel} recordCount mismatch")
+                            expected_rec_cs = "sha256:" + hashlib.sha256(
+                                oracle.canonicalize(json.dumps(records, ensure_ascii=False))
+                            ).hexdigest()
+                            if fixture_doc.get("recordsChecksum") != expected_rec_cs:
+                                errors.append(f"{where}: fixture {fixture_rel} recordsChecksum mismatch")
+                            if isinstance(fixture_doc.get("artifactDigest"), str):
+                                expected_art = canonical_digest(fixture_doc, "artifactDigest")
+                                if fixture_doc["artifactDigest"] != expected_art:
+                                    errors.append(f"{where}: fixture {fixture_rel} artifactDigest mismatch")
+
+        for required_profile in ("generic", "reference-recurring", "reference-credits"):
+            if required_profile not in seen_profile_ids:
+                errors.append(f"profiles missing required product-agnostic profile '{required_profile}'")
+        missing_conditions = [c for c in REQUIRED_MISSING_EVIDENCE_CONDITIONS if c not in seen_conditions]
+        if missing_conditions:
+            errors.append(f"missingEvidenceDecisions missing explicit coverage for: {missing_conditions}")
+
+    # 5. Manifest canonical digest verification.
+    declared_digest = document.get("manifestDigest")
+    if not isinstance(declared_digest, str) or not DIGEST_RE.match(declared_digest):
+        errors.append("manifestDigest must be a valid sha256 digest")
+    else:
+        expected_digest = canonical_digest(document, "manifestDigest")
+        if declared_digest != expected_digest:
+            errors.append(f"manifestDigest mismatch (expected {expected_digest}, got {declared_digest})")
+
+    return errors
+
+
+def check_source_mappings(repo_root: Path = ROOT, manifest_path: Path | None = None) -> list[str]:
     errors: list[str] = []
     mappings_dir = repo_root / "fixtures/integration/import/schema/mappings"
     positives = sorted(mappings_dir.glob("valid-*.json")) if mappings_dir.is_dir() else []
@@ -364,7 +564,28 @@ def check_source_mappings(repo_root: Path = ROOT) -> list[str]:
         if not findings:
             errors.append(f"{path.name}: negative source mapping fixture unexpectedly passed")
 
-    errors.extend(check_d71_isolation([*positives, *negatives], repo_root))
+    isolation_targets: list[Path] = [*positives, *negatives]
+
+    if manifest_path is not None:
+        resolved = manifest_path if manifest_path.is_absolute() else (repo_root / manifest_path)
+        if not resolved.is_file():
+            errors.append(f"source mapping manifest not found: {manifest_path}")
+        else:
+            doc = json.loads(resolved.read_text(encoding="utf-8"))
+            for finding in validate_source_mapping_manifest(doc, repo_root):
+                errors.append(f"{resolved.relative_to(repo_root) if resolved.is_relative_to(repo_root) else resolved}: {finding}")
+            isolation_targets.append(resolved)
+            contract_doc = repo_root / "docs/migrations/source-export-contract.md"
+            if contract_doc.is_file():
+                isolation_targets.append(contract_doc)
+            for ref_dir in (
+                repo_root / "fixtures/integration/import/reference-recurring",
+                repo_root / "fixtures/integration/import/reference-credits",
+            ):
+                if ref_dir.is_dir():
+                    isolation_targets.extend(sorted(ref_dir.rglob("*.json")))
+
+    errors.extend(check_d71_isolation(isolation_targets, repo_root))
     return errors
 
 
@@ -463,7 +684,14 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--check", action="store_true", help="validate schemas, type-map, source identity and D71 isolation")
-    group.add_argument("--source-mappings", action="store_true", help="validate deterministic mapping namespaces and checksums")
+    group.add_argument(
+        "--source-mappings",
+        nargs="?",
+        const="__default__",
+        default=None,
+        metavar="PATH",
+        help="validate deterministic mapping namespaces, checksums and optional versioned source-mapping manifest",
+    )
     group.add_argument("--handoff", action="store_true", help="validate handoff closure and authority evidence")
     parser.add_argument("--repo-root", type=Path, default=ROOT, help="repository root directory")
     args = parser.parse_args(argv)
@@ -472,9 +700,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.check:
         mode = "check"
         errors = check_import_contract(repo)
-    elif args.source_mappings:
+    elif args.source_mappings is not None:
         mode = "source-mappings"
-        errors = check_source_mappings(repo)
+        manifest_path = None if args.source_mappings == "__default__" else Path(args.source_mappings)
+        errors = check_source_mappings(repo, manifest_path=manifest_path)
     else:
         mode = "handoff"
         errors = check_handoff(repo)
