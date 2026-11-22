@@ -15,7 +15,7 @@ declare -A SUBJECTS=(
     [derived]="freshness of derived files"
     [php]="PHP packages"
     [dart]="Dart package"
-    [conformance]="cross-language vectors, server HTTP, archive compatibility and restore"
+    [conformance]="cross-language vectors, server HTTP, archive compatibility, restore, import, consumer contracts and migration drills"
 )
 
 fail() {
@@ -46,6 +46,19 @@ layer_lint() {
     python3 scripts/lint/acceptance-groups.py --phase P3
     python3 scripts/lint/acceptance-groups.py --phase P5
     python3 -m unittest discover -s scripts/lint/tests -p 'test_product_identities.py'
+    need_path scripts/spec/check-import-contract.py
+    need_path scripts/spec/check-import-fixtures.py
+    need_path scripts/spec/check-integration-readiness.py
+    need_path conformance/consumers/bridge/check-report.py
+    need_path docs/migrations/source-mapping.json
+    need_path artifacts/integration-readiness.json
+    python3 scripts/spec/check-import-contract.py --check
+    python3 scripts/spec/check-import-contract.py --source-mappings docs/migrations/source-mapping.json
+    python3 scripts/spec/check-import-contract.py --handoff
+    python3 scripts/spec/check-import-fixtures.py
+    python3 -m unittest discover -s conformance/consumers/bridge/tests -p 'test_*.py'
+    python3 conformance/consumers/bridge/check-report.py --fixture conformance/consumers/bridge/tests/reports
+    python3 scripts/spec/check-integration-readiness.py --check artifacts/integration-readiness.json
 }
 
 layer_derived() {
@@ -137,6 +150,15 @@ layer_conformance() {
     python3 conformance/compatibility/run.py --matrix conformance/compatibility/matrix.json
     bash scripts/smoke/server-consumers.sh
     bash scripts/drills/server-restore.sh
+    need_path conformance/import/run.py
+    need_path scripts/test/consumer-contract.sh
+    need_path scripts/drills/integration-migration.sh
+    need_path artifacts/migration-drill-manifest.json
+    PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 python3 conformance/import/run.py --adapter php --suite all --report build/integration-readiness/import-php-all.json
+    python3 conformance/import/run.py --adapter dart --suite codec --report build/integration-readiness/import-dart-codec.json
+    PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 bash scripts/test/consumer-contract.sh --boundary loopback --suite all --report build/integration-readiness/consumer-loopback.json
+    python3 conformance/consumers/bridge/check-report.py --report build/integration-readiness/consumer-loopback.json
+    bash scripts/drills/integration-migration.sh --suite all --report build/integration-readiness/migration-drills.json
 }
 
 list_layers() {

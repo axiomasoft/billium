@@ -230,6 +230,7 @@ final class FaultInjectingPaymentDrivers implements AdapterQualification, Paymen
         if (! is_array($material)) {
             throw new RuntimeException('Expected simulated provider material payload');
         }
+        /** @var array<string, mixed> $merged */
         $merged = array_replace($material, $materialChanges);
 
         return $this->sealMaterial($original->scope, $original->merchantAccountRef, $merged);

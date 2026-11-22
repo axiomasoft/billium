@@ -73,10 +73,10 @@ docker compose run --rm toolchain bash scripts/ci.sh --list          # layers an
 docker compose run --rm toolchain bash scripts/smoke/consumer-install.sh
 ```
 
-Gate layers, in order: `lint` (spec documents, schemas, vectors, migration/role rules and P3 acceptance groups), `derived` (freshness of generated files,
+Gate layers, in order: `lint` (spec documents, schemas, vectors, migration/role rules, P3/P5 acceptance groups, and P9 import/source-mapping/handoff/fixture/consumer-report/readiness checks), `derived` (freshness of generated files,
 identities, type-map), `php` (Pint, PHPStan max with `NoFloatTypeRule`, Rector, Packman checks, Pest, install smoke), `dart`
 (format, analyze, test, `no-double`, install smoke), `conformance` (shared vectors and golden through both
-adapters, required PHP/Dart server HTTP suites, compatibility and archive installs, and the server restore drill).
+adapters, required PHP/Dart server HTTP suites, compatibility and archive installs, server restore drill, PHP/Dart import conformance, loopback consumer contract suite `CT-01…CT-20`, and `MGATE-01…MGATE-11` migration drills).
 The php layer runs Packman as `php -d memory_limit=1G vendor/bin/packman gate`,
 with the same memory limit for `php-api --check`, `error-codes --check`, `config-schema --check`, and `ai:sync --dry-run`.
 There is no `bin/packman`. PostgreSQL tests are `vendor/bin/pest --group=pg --exclude-group=pg-serial --parallel --processes=8`,
@@ -93,6 +93,11 @@ Platform outbox delivery, feed subscriptions and retention setup: [operations gu
 
 Server readiness, doctor, metrics, and restore drill commands are in the [server runbook](docs/server/operations.md).
 The [profile evidence manifest](artifacts/server-readiness.json) records the SDK disposition and the outstanding deployment inputs for execution activation (D59/D61/D62).
+
+External import, authority handoff, universal consumer contracts and rollout gates (D58/D59/D63/D71):
+- [Integration readiness runbook](docs/operations/integration-readiness.md) and machine-readable [integration readiness manifest](artifacts/integration-readiness.json) (`passed`/`pending`/`failed`/`not-applicable` gates, `unanchored_evidence` limits, and no automatic fallback after target write)
+- [External import contract (`external.import.v1`)](docs/contracts/external-import-v1.md), [source-side export contract (`source.export.v1`)](docs/migrations/source-export-contract.md), and [import operations guide](docs/migrations/import-operations.md)
+- [Authority routing and ledger handoff](docs/migrations/authority-handoff.md), [migration and restore drills](docs/migrations/restore-upgrade-drills.md), and [universal consumer/bridge contract kit](docs/contracts/consumer-contract-kit.md)
 
 Authenticated ledger queries, receipt recovery and ledger bootstrap streams: [query guide](docs/contracts/ledger-queries.md) (REQ-CON-14, D35, D60).
 

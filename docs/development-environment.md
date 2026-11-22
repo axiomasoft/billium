@@ -103,3 +103,26 @@ the consistency window; dependency draining opens a fresh economic root per even
 P3 committed-data tests use PostgreSQL and TRUNCATE isolation (D50).
 See [outbox-feed operations](operations/outbox-feed.md), [data model](architecture/data-model.md)
 and [lock/invariant proofs](architecture/lock-model.md).
+
+## Integration, import and migration checks (P9 / D58/D59/D63/D71)
+
+Billium is strictly self-isolated: PHP is the sole monetary writer, Dart covers only the shared codec/contracts slice, and external product databases are never accessed directly. `scripts/ci.sh` runs each P9 static check once in `lint` and each runtime conformance/drill suite once in `conformance`; `tests/zones.json` maps P9 docs, manifests, import CLI, consumer contract runner, and migration drills (`p9-integration`) to `lint`, `php`, and `conformance`.
+
+```bash
+# Static contract, source mapping, handoff, golden fixture, report validator and readiness manifest checks (lint layer)
+docker compose run --rm toolchain python3 scripts/spec/check-import-contract.py --check
+docker compose run --rm toolchain python3 scripts/spec/check-import-contract.py --source-mappings docs/migrations/source-mapping.json
+docker compose run --rm toolchain python3 scripts/spec/check-import-contract.py --handoff
+docker compose run --rm toolchain python3 scripts/spec/check-import-fixtures.py
+docker compose run --rm toolchain python3 conformance/consumers/bridge/check-report.py --fixture conformance/consumers/bridge/tests/reports
+docker compose run --rm toolchain python3 scripts/spec/check-integration-readiness.py --check artifacts/integration-readiness.json
+
+# Local runtime conformance, loopback consumer suite (CT-01..20) and migration drills (MGATE-01..11) (conformance layer)
+docker compose run --rm toolchain env PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 python3 conformance/import/run.py --adapter php --suite all --report build/integration-readiness/import-php-all.json
+docker compose run --rm toolchain python3 conformance/import/run.py --adapter dart --suite codec --report build/integration-readiness/import-dart-codec.json
+docker compose run --rm toolchain env PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 bash scripts/test/consumer-contract.sh --boundary loopback --suite all --report build/integration-readiness/consumer-loopback.json
+docker compose run --rm toolchain python3 conformance/consumers/bridge/check-report.py --report build/integration-readiness/consumer-loopback.json
+docker compose run --rm toolchain bash scripts/drills/integration-migration.sh --suite all --report build/integration-readiness/migration-drills.json
+```
+
+Local suites prove `sanitized-fixture-postgresql`, `codec-slice`, `loopback`, and `postgresql-worker-restore-fixture` boundaries with `paidPspTransactions = 0`. They never promote test doubles or loopback runs to `external-runtime` or `provider-live`. See the [integration readiness runbook](operations/integration-readiness.md) and [readiness manifest](../artifacts/integration-readiness.json) for external operator gates, `unanchored_evidence` rules, and the no-automatic-fallback invariant after target write.

@@ -41,6 +41,21 @@
       "layers": ["derived"]
     },
     {
+      "id": "p9-integration",
+      "paths": [
+        "docs/migrations/**",
+        "docs/operations/integration-readiness.md",
+        "docs/contracts/external-import-v1.md",
+        "docs/contracts/consumer-contract-kit.md",
+        "artifacts/integration-readiness.json",
+        "artifacts/migration-drill-manifest.json",
+        "scripts/import/**",
+        "scripts/test/consumer-contract.sh",
+        "scripts/drills/integration-migration.sh"
+      ],
+      "layers": ["lint", "php", "conformance"]
+    },
+    {
       "id": "toolchain",
       "paths": ["docker/**", "compose.yaml", "scripts/ci.sh", ".github/**"],
       "layers": ["lint", "derived", "php", "dart", "conformance"]

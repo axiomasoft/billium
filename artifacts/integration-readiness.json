@@ -1,0 +1,757 @@
+{
+  "schema": "billium.integration.readiness.v1",
+  "item": "PLAN1.P9.8",
+  "spec_revision": "2026-10",
+  "spec_lock_path": "spec/revisions/2026-10/revision.lock.json",
+  "spec_lock_sha256": "sha256:eb021eaa43885c32d8acdf0e0e7821ef03c177058e55567e45c33f652808b2a5",
+  "decision_ids": [
+    "D17",
+    "D21",
+    "D23",
+    "D25",
+    "D26",
+    "D31",
+    "D55",
+    "D58",
+    "D59",
+    "D60",
+    "D61",
+    "D62",
+    "D63",
+    "D64",
+    "D71"
+  ],
+  "policy": {
+    "self_isolated_product_agnostic": true,
+    "php_sole_writer": true,
+    "dart_codec_slice_only": true,
+    "direct_external_db_access_forbidden": true,
+    "double_promotion_forbidden": true,
+    "automatic_fallback_after_target_write_forbidden": true,
+    "diagnostic_commit_counter_authority_forbidden": true,
+    "minimal_embedded_release_permitted_when_remote_pending": true,
+    "paid_psp_transactions_in_local_evidence": 0
+  },
+  "workspace_evidence_policy": {
+    "plan_artifact_path": "@plan/artifacts/P9/integration-readiness.json",
+    "required_report_fields": [
+      "author",
+      "runtime",
+      "command",
+      "exit",
+      "timestamp",
+      "checksum"
+    ],
+    "host_export_only_forbidden": true
+  },
+  "tracked_artifacts": [
+    {
+      "path": "spec/revisions/2026-10/revision.lock.json",
+      "role": "spec-lock",
+      "sha256": "sha256:eb021eaa43885c32d8acdf0e0e7821ef03c177058e55567e45c33f652808b2a5"
+    },
+    {
+      "path": "docs/migrations/source-mapping.json",
+      "role": "source-mapping-manifest",
+      "sha256": "sha256:4b96cba6fed62d803ef938aaa68a659fbb6201f4f5cad033363e11837ec45490"
+    },
+    {
+      "path": "fixtures/integration/import/golden/golden-matrix.json",
+      "role": "import-golden-matrix",
+      "sha256": "sha256:cee0204e2142dbc84daad8c93da008f940337a73dfeba1044cd28c08a24fd533"
+    },
+    {
+      "path": "fixtures/integration/import/schema/handoff/valid-handoff-evidence.json",
+      "role": "handoff-evidence-fixture",
+      "sha256": "sha256:5935651cc975fd752d7b0da4af15c9affa911d228f02ae3ca5aef476beda5c93"
+    },
+    {
+      "path": "artifacts/migration-drill-manifest.json",
+      "role": "migration-drill-manifest",
+      "sha256": "sha256:3a7aedb380cd2dc176ed7598578456d6b410ee37252d4d3a142fe4d9b9c62eb8"
+    },
+    {
+      "path": "artifacts/server-readiness.json",
+      "role": "server-readiness-manifest",
+      "sha256": "sha256:3106202332213a646705d0c07b40d3441c8c052aba79b823f6a499fb2db80444"
+    },
+    {
+      "path": "docs/operations/integration-readiness.md",
+      "role": "integration-readiness-runbook",
+      "sha256": "sha256:742a51d8c925ad108b4bea6db74ffe7341ecf9c2bd7e11a3e8f5e4beb173b7df"
+    },
+    {
+      "path": "conformance/consumers/bridge/tests/reports/valid-loopback-complete.json",
+      "role": "consumer-loopback-report-fixture",
+      "sha256": "sha256:1bb824872aee1c809919366c0382670945de013638cd417c06b27ec26b699f6b"
+    },
+    {
+      "path": "conformance/consumers/bridge/tests/reports/valid-external-pending.json",
+      "role": "consumer-pending-report-fixture",
+      "sha256": "sha256:91f15dcfbf9f2d50fcf2b00d0e85d1ffa100b89bac15ffcf8b786234db0880a0"
+    }
+  ],
+  "local_runtime_reports": [
+    {
+      "id": "import-php-all",
+      "path": "conformance/reports/import-php-all.json",
+      "ci_report_path": "build/integration-readiness/import-php-all.json",
+      "command": "python3 conformance/import/run.py --adapter php --suite all",
+      "evidence_class": "import-behavior-conformance",
+      "boundary": "sanitized-fixture-postgresql",
+      "author": "PLAN1.P9.6",
+      "runtime": {
+        "php": "8.4.27",
+        "postgresql": "16.15"
+      },
+      "timestamp": "2026-11-22T14:19:43+00:00",
+      "exit": 0,
+      "paid_psp_transactions": 0,
+      "recorded_sha256": "sha256:7e8308628327c6cd829a993b0dd59004a9a2c8847da382e87770820911628f1d",
+      "recorded_report_digest": "sha256:b38823ce179902c2d5608bbce4ab57dd653abbd39f35126965cf704b80997575",
+      "acceptance_ids": [
+        "IM-01",
+        "IM-02",
+        "IM-03",
+        "IM-04",
+        "IM-05",
+        "IM-06",
+        "IM-07",
+        "IM-08",
+        "IM-09",
+        "IM-10",
+        "IM-11",
+        "IM-12",
+        "IM-13",
+        "IM-14",
+        "IM-15",
+        "IM-16",
+        "IM-17"
+      ]
+    },
+    {
+      "id": "import-dart-codec",
+      "path": "conformance/reports/import-dart-codec.json",
+      "ci_report_path": "build/integration-readiness/import-dart-codec.json",
+      "command": "python3 conformance/import/run.py --adapter dart --suite codec",
+      "evidence_class": "import-codec-conformance",
+      "boundary": "codec-slice",
+      "author": "PLAN1.P9.6",
+      "runtime": {
+        "dart": "3.13.5",
+        "writer_authority": "none_codec_slice_only"
+      },
+      "timestamp": "2026-11-22T14:19:43+00:00",
+      "exit": 0,
+      "paid_psp_transactions": 0,
+      "recorded_sha256": "sha256:892322126ff5471840eabf417188a99522c687dd5a0b396380f0199fdac17375",
+      "recorded_report_digest": "sha256:18e04d71f2723c24d5eb9270a8df5f52c3ed43057413f95c44fe76dbe3b8eb9d",
+      "acceptance_ids": [
+        "IM-07",
+        "IM-08",
+        "IM-10"
+      ]
+    },
+    {
+      "id": "consumer-loopback",
+      "path": "conformance/reports/consumer-loopback.json",
+      "ci_report_path": "build/integration-readiness/consumer-loopback.json",
+      "command": "bash scripts/test/consumer-contract.sh --boundary loopback --suite all --report conformance/reports/consumer-loopback.json",
+      "evidence_class": "consumer-contract",
+      "boundary": "loopback",
+      "author": "PLAN1.P9.5",
+      "runtime": {
+        "php": "8.4.27",
+        "postgres": "PostgreSQL 16.15 (Debian 16.15-1.pgdg12+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit"
+      },
+      "timestamp": "2026-11-22T13:02:00+00:00",
+      "exit": 0,
+      "paid_psp_transactions": 0,
+      "recorded_sha256": "sha256:e40fb86d454af1da04baa9f1050e2da7076a3f5921a779b52ada1bb9746a5846",
+      "recorded_report_digest": "sha256:365e7f9cd6ba830a21fff5d5e5c47af20080f5a9fd8e601418bddfe393a4d843",
+      "acceptance_ids": [
+        "CT-01",
+        "CT-02",
+        "CT-03",
+        "CT-04",
+        "CT-05",
+        "CT-06",
+        "CT-07",
+        "CT-08",
+        "CT-09",
+        "CT-10",
+        "CT-11",
+        "CT-12",
+        "CT-13",
+        "CT-14",
+        "CT-15",
+        "CT-16",
+        "CT-17",
+        "CT-18",
+        "CT-19",
+        "CT-20"
+      ]
+    },
+    {
+      "id": "migration-drills",
+      "path": "conformance/reports/migration-drills.json",
+      "ci_report_path": "build/integration-readiness/migration-drills.json",
+      "command": "scripts/drills/integration-migration.sh --suite all --report conformance/reports/migration-drills.json",
+      "evidence_class": "migration-drill",
+      "boundary": "postgresql-worker-restore-fixture",
+      "author": "uid:1000",
+      "runtime": {
+        "php": "8.4.27",
+        "postgresql": "16.15 (Debian 16.15-1.pgdg12+2)"
+      },
+      "timestamp": "2026-11-22T14:54:55.613191+00:00",
+      "exit": 0,
+      "paid_psp_transactions": 0,
+      "recorded_sha256": "sha256:7052908766344338a182076de7645f068f20e483f946a4d00264fae5e5ff0528",
+      "acceptance_ids": [
+        "MGATE-01",
+        "MGATE-02",
+        "MGATE-03",
+        "MGATE-04",
+        "MGATE-05",
+        "MGATE-06",
+        "MGATE-07",
+        "MGATE-08",
+        "MGATE-09",
+        "MGATE-10",
+        "MGATE-11"
+      ]
+    }
+  ],
+  "acceptance_coverage": {
+    "import_matrix": {
+      "ids": [
+        "IM-01",
+        "IM-02",
+        "IM-03",
+        "IM-04",
+        "IM-05",
+        "IM-06",
+        "IM-07",
+        "IM-08",
+        "IM-09",
+        "IM-10",
+        "IM-11",
+        "IM-12",
+        "IM-13",
+        "IM-14",
+        "IM-15",
+        "IM-16",
+        "IM-17"
+      ],
+      "state": "passed",
+      "evidence_class": "import-behavior-conformance",
+      "boundary": "sanitized-fixture-postgresql",
+      "report_id": "import-php-all",
+      "manifest_ref": "fixtures/integration/import/golden/golden-matrix.json"
+    },
+    "consumer_contract": {
+      "ids": [
+        "CT-01",
+        "CT-02",
+        "CT-03",
+        "CT-04",
+        "CT-05",
+        "CT-06",
+        "CT-07",
+        "CT-08",
+        "CT-09",
+        "CT-10",
+        "CT-11",
+        "CT-12",
+        "CT-13",
+        "CT-14",
+        "CT-15",
+        "CT-16",
+        "CT-17",
+        "CT-18",
+        "CT-19",
+        "CT-20"
+      ],
+      "state": "passed",
+      "evidence_class": "consumer-contract",
+      "boundary": "loopback",
+      "report_id": "consumer-loopback",
+      "external_runtime_state": "pending"
+    },
+    "migration_gates": {
+      "ids": [
+        "MGATE-01",
+        "MGATE-02",
+        "MGATE-03",
+        "MGATE-04",
+        "MGATE-05",
+        "MGATE-06",
+        "MGATE-07",
+        "MGATE-08",
+        "MGATE-09",
+        "MGATE-10",
+        "MGATE-11"
+      ],
+      "state": "passed",
+      "evidence_class": "migration-drill",
+      "boundary": "postgresql-worker-restore-fixture",
+      "report_id": "migration-drills",
+      "manifest_ref": "artifacts/migration-drill-manifest.json"
+    },
+    "catalog_p9_scenarios": {
+      "ids": [
+        "PB-12",
+        "PB-21",
+        "PF-09",
+        "PF-13",
+        "PF-14",
+        "MG-11",
+        "ACC-CON-16",
+        "ACC-RST-07"
+      ],
+      "state": "passed",
+      "evidence_class": "migration-drill",
+      "boundary": "postgresql-worker-restore-fixture",
+      "suites": [
+        "packages/core/modules/platform/tests/Import",
+        "packages/core/modules/platform/tests/Migration",
+        "scripts/test/consumer-contract.sh",
+        "scripts/drills/integration-migration.sh"
+      ]
+    }
+  },
+  "gates": [
+    {
+      "id": "GATE-LOCAL-IMPORT-CONTRACT",
+      "category": "local-mandatory",
+      "state": "passed",
+      "active": true,
+      "owner": "PLAN1.P9.1/P9.2/P9.4",
+      "scope": "external.import.v1 schemas, source.export.v1 source mappings, and D63/F06 handoff evidence validation",
+      "affected_activation": [],
+      "isolates_embedded_ledger": false,
+      "evidence_class": "static-contract",
+      "boundary": "static",
+      "evidence_refs": [
+        {
+          "path": "spec/revisions/2026-10/revision.lock.json",
+          "sha256": "sha256:eb021eaa43885c32d8acdf0e0e7821ef03c177058e55567e45c33f652808b2a5"
+        },
+        {
+          "path": "docs/migrations/source-mapping.json",
+          "sha256": "sha256:4b96cba6fed62d803ef938aaa68a659fbb6201f4f5cad033363e11837ec45490"
+        },
+        {
+          "path": "fixtures/integration/import/schema/handoff/valid-handoff-evidence.json",
+          "sha256": "sha256:5935651cc975fd752d7b0da4af15c9affa911d228f02ae3ca5aef476beda5c93"
+        }
+      ],
+      "reason": "Verified by scripts/spec/check-import-contract.py (--check, --source-mappings, --handoff)."
+    },
+    {
+      "id": "GATE-LOCAL-IMPORT-FIXTURES",
+      "category": "local-mandatory",
+      "state": "passed",
+      "active": true,
+      "owner": "PLAN1.P9.6",
+      "scope": "IM-01..IM-17 golden matrix coverage, RFC 8785 JCS checksums, PII/secret sanitization, and D71 isolation",
+      "affected_activation": [],
+      "isolates_embedded_ledger": false,
+      "evidence_class": "static-contract",
+      "boundary": "static",
+      "evidence_refs": [
+        {
+          "path": "fixtures/integration/import/golden/golden-matrix.json",
+          "sha256": "sha256:cee0204e2142dbc84daad8c93da008f940337a73dfeba1044cd28c08a24fd533"
+        }
+      ],
+      "reason": "Verified by scripts/spec/check-import-fixtures.py and ImportBoundaryTest."
+    },
+    {
+      "id": "GATE-LOCAL-IMPORT-PHP",
+      "category": "local-mandatory",
+      "state": "passed",
+      "active": true,
+      "owner": "PLAN1.P9.3/P9.6",
+      "scope": "PHP sole-writer behavioral conformance IM-01..IM-17 on PostgreSQL 16 with paidPspTransactions=0",
+      "affected_activation": [],
+      "isolates_embedded_ledger": false,
+      "evidence_class": "import-behavior-conformance",
+      "boundary": "sanitized-fixture-postgresql",
+      "evidence_refs": [
+        {
+          "path": "conformance/reports/import-php-all.json",
+          "sha256": "sha256:7e8308628327c6cd829a993b0dd59004a9a2c8847da382e87770820911628f1d"
+        },
+        {
+          "path": "fixtures/integration/import/golden/golden-matrix.json",
+          "sha256": "sha256:cee0204e2142dbc84daad8c93da008f940337a73dfeba1044cd28c08a24fd533"
+        }
+      ],
+      "reason": "All 17 IM behavior cases and codec vectors passed against PostgreSQL 16 and independent JCS oracle; control must-fail failed as expected."
+    },
+    {
+      "id": "GATE-LOCAL-IMPORT-DART-CODEC",
+      "category": "local-mandatory",
+      "state": "passed",
+      "active": true,
+      "owner": "PLAN1.P9.1/P9.6",
+      "scope": "Dart shared codec/error slice only (--suite codec); behavioral writer suite refused fail-closed",
+      "affected_activation": [],
+      "isolates_embedded_ledger": false,
+      "evidence_class": "import-codec-conformance",
+      "boundary": "codec-slice",
+      "evidence_refs": [
+        {
+          "path": "conformance/reports/import-dart-codec.json",
+          "sha256": "sha256:892322126ff5471840eabf417188a99522c687dd5a0b396380f0199fdac17375"
+        }
+      ],
+      "reason": "Dart codec conformance passed with control must-fail negative check and zero writer authority."
+    },
+    {
+      "id": "GATE-LOCAL-CONSUMER-LOOPBACK",
+      "category": "local-mandatory",
+      "state": "passed",
+      "active": true,
+      "owner": "PLAN1.P9.5",
+      "scope": "Universal external consumer/bridge contract suite CT-01..CT-20 on local PostgreSQL 16 HTTP loopback",
+      "affected_activation": [],
+      "isolates_embedded_ledger": false,
+      "evidence_class": "consumer-contract",
+      "boundary": "loopback",
+      "evidence_refs": [
+        {
+          "path": "conformance/reports/consumer-loopback.json",
+          "sha256": "sha256:e40fb86d454af1da04baa9f1050e2da7076a3f5921a779b52ada1bb9746a5846"
+        },
+        {
+          "path": "conformance/consumers/bridge/tests/reports/valid-loopback-complete.json",
+          "sha256": "sha256:1bb824872aee1c809919366c0382670945de013638cd417c06b27ec26b699f6b"
+        }
+      ],
+      "reason": "CT-01..CT-20 passed on local loopback with externalReady=false and rolloutGatePassed=false; double/loopback promotion blocked by check-report.py."
+    },
+    {
+      "id": "GATE-LOCAL-MIGRATION-DRILLS",
+      "category": "local-mandatory",
+      "state": "passed",
+      "active": true,
+      "owner": "PLAN1.P9.7",
+      "scope": "MGATE-01..MGATE-11 source freeze, snapshot/tail, abort/no-fallback, counter-independent recovery (lower/equal/greater), rolling upgrade, and module retirement drills",
+      "affected_activation": [],
+      "isolates_embedded_ledger": false,
+      "evidence_class": "migration-drill",
+      "boundary": "postgresql-worker-restore-fixture",
+      "evidence_refs": [
+        {
+          "path": "artifacts/migration-drill-manifest.json",
+          "sha256": "sha256:3a7aedb380cd2dc176ed7598578456d6b410ee37252d4d3a142fe4d9b9c62eb8"
+        },
+        {
+          "path": "conformance/reports/migration-drills.json",
+          "sha256": "sha256:7052908766344338a182076de7645f068f20e483f946a4d00264fae5e5ff0528"
+        }
+      ],
+      "reason": "All 11 MGATE drills passed via scripts/drills/integration-migration.sh with real pg_dump/pg_restore and multi-process workers."
+    },
+    {
+      "id": "GATE-EXT-SOURCE-EXPORT-APPROVAL",
+      "category": "migration-activation",
+      "state": "pending",
+      "active": false,
+      "owner": "product-owner",
+      "scope": "Approved live migration scope, seller/currency list, frozen commercial price/source mapping, cutoff, and reconciliation inventory",
+      "affected_activation": [
+        "live-migration-cutover"
+      ],
+      "isolates_embedded_ledger": false,
+      "evidence_class": "external-activation-input",
+      "boundary": "external-owner-supplied",
+      "evidence_refs": [],
+      "reason": "External product owner approval and live source export manifest are activation inputs supplied outside local fixtures (D58/D59)."
+    },
+    {
+      "id": "GATE-EXT-SOURCE-HOST-FREEZE",
+      "category": "migration-activation",
+      "state": "pending",
+      "active": false,
+      "owner": "source-deployment-operator",
+      "scope": "Authenticated closure of all source mutators, financial session seal, SourceFreezeCertificate, D52 retention lease, immutable snapshot, and MigrationManifest",
+      "affected_activation": [
+        "live-migration-cutover"
+      ],
+      "isolates_embedded_ledger": false,
+      "evidence_class": "external-activation-input",
+      "boundary": "external-owner-supplied",
+      "evidence_refs": [],
+      "reason": "Requires live source host operator execution and certified freeze/snapshot/lease proof (D58/D62/D63)."
+    },
+    {
+      "id": "GATE-EXT-TARGET-RECONCILE",
+      "category": "migration-activation",
+      "state": "pending",
+      "active": false,
+      "owner": "target-deployment-operator",
+      "scope": "Target recovery replay, durable item dispositions, per-seller/currency count/minor-unit/digest equality, and atomic cursor adoption",
+      "affected_activation": [
+        "live-migration-cutover"
+      ],
+      "isolates_embedded_ledger": false,
+      "evidence_class": "external-activation-input",
+      "boundary": "external-owner-supplied",
+      "evidence_refs": [],
+      "reason": "Requires target deployment reconciliation receipt bound to the live MigrationManifest (D63)."
+    },
+    {
+      "id": "GATE-EXT-AUTHORITY-ACTIVATION",
+      "category": "migration-activation",
+      "state": "pending",
+      "active": false,
+      "owner": "deployment-authority",
+      "scope": "Separate privileged activate with RetirementProof, unexpired current-lineage ActivationCertificate, and unresolved effect/namespace/feed dispositions",
+      "affected_activation": [
+        "live-migration-cutover",
+        "remote-billium-execution"
+      ],
+      "isolates_embedded_ledger": false,
+      "evidence_class": "external-activation-input",
+      "boundary": "external-owner-supplied",
+      "evidence_refs": [],
+      "reason": "External deployment authority activation certificate is required before opening live target writer admission (D54/D62)."
+    },
+    {
+      "id": "GATE-EXT-CONSUMER-RUNTIME",
+      "category": "remote-execution-activation",
+      "state": "pending",
+      "active": false,
+      "owner": "external-consumer-owner",
+      "scope": "Independent external consumer conformance report (CT-01..CT-20, boundary=external-runtime, deliveryProfile=external-http, externalReady=true, rolloutGatePassed=true)",
+      "affected_activation": [
+        "remote-billium-execution"
+      ],
+      "isolates_embedded_ledger": false,
+      "evidence_class": "consumer-contract",
+      "boundary": "external-runtime",
+      "evidence_refs": [
+        {
+          "path": "conformance/consumers/bridge/tests/reports/valid-external-pending.json",
+          "sha256": "sha256:91f15dcfbf9f2d50fcf2b00d0e85d1ffa100b89bac15ffcf8b786234db0880a0"
+        }
+      ],
+      "reason": "No authorized external consumer deployment is attached; remote rollout stays disabled while local loopback suite is green (D59/D71)."
+    },
+    {
+      "id": "GATE-EXT-PSP-QUALIFICATION",
+      "category": "remote-execution-activation",
+      "state": "pending",
+      "active": false,
+      "owner": "payment-provider-owner",
+      "scope": "Selected live PaymentDrivers capability qualification, credentials rotation, refund lookup horizon, and provider inventory checks",
+      "affected_activation": [
+        "remote-billium-execution"
+      ],
+      "isolates_embedded_ledger": false,
+      "evidence_class": "provider-live",
+      "boundary": "provider-live",
+      "evidence_refs": [],
+      "reason": "Local suites use simulated drivers only; live payment provider qualification is pending owner selection and dossier approval (D59)."
+    },
+    {
+      "id": "GATE-EXT-OPS-RETENTION-POLICY",
+      "category": "remote-execution-activation",
+      "state": "pending",
+      "active": false,
+      "owner": "operations-owner",
+      "scope": "Named operational on-call owner, SLO/escalation policy, RET-01 retention floor numbers, and production backup/restore/PITR verification",
+      "affected_activation": [
+        "live-migration-cutover",
+        "remote-billium-execution"
+      ],
+      "isolates_embedded_ledger": false,
+      "evidence_class": "external-activation-input",
+      "boundary": "external-owner-supplied",
+      "evidence_refs": [],
+      "reason": "Operational ownership, SLO targets, retention numbers, and PITR restore policy are not fabricated in repository artifacts (D59/D62)."
+    },
+    {
+      "id": "GATE-COMP-DART-SERVER-SDK",
+      "category": "composition-disposition",
+      "state": "not-applicable",
+      "active": false,
+      "owner": "PLAN1.P8.7",
+      "scope": "Production Dart server SDK extraction",
+      "affected_activation": [
+        "dart-server-sdk"
+      ],
+      "isolates_embedded_ledger": false,
+      "evidence_class": "composition-decision",
+      "boundary": "decision-record",
+      "decision_ref": "D61",
+      "evidence_refs": [
+        {
+          "path": "artifacts/server-readiness.json",
+          "sha256": "sha256:3106202332213a646705d0c07b40d3441c8c052aba79b823f6a499fb2db80444"
+        }
+      ],
+      "reason": "Accepted D61 composition decision defers production Dart server SDK extraction while no named Dart server consumer exists; Dart codec slice remains mandatory."
+    },
+    {
+      "id": "GATE-PHASE-P9-INDEPENDENT-REVIEW",
+      "category": "phase-closure",
+      "state": "pending",
+      "active": false,
+      "owner": "PLAN1.P9.9",
+      "scope": "Independent read-only P9 phase review and closing gate on frozen candidate",
+      "affected_activation": [
+        "p9-phase-acceptance"
+      ],
+      "isolates_embedded_ledger": false,
+      "evidence_class": "independent-phase-review",
+      "boundary": "independent-review",
+      "evidence_refs": [],
+      "reason": "PLAN1.P9.8 completes implementation closure evidence only; independent acceptance runs in PLAN1.P9.9 (D64/D71)."
+    }
+  ],
+  "activation_status": {
+    "minimal_embedded_ledger_releasable": true,
+    "execution_enabled": false,
+    "outgoing_default": false,
+    "remote_routes_effect_capable": false,
+    "live_migration_cutover_active": false,
+    "remote_execution_active": false,
+    "production_provider_qualified": false,
+    "external_consumer_ready": false
+  },
+  "external_inputs": {
+    "named_operational_owner": {
+      "owner": "operations-owner",
+      "status": "pending_owner_input",
+      "value": null
+    },
+    "slo_and_escalation_policy": {
+      "owner": "operations-owner",
+      "status": "pending_owner_input",
+      "value": null
+    },
+    "retention_floor_policy": {
+      "owner": "operations-owner",
+      "status": "pending_owner_input",
+      "value": null
+    },
+    "backup_and_pitr_restore_policy": {
+      "owner": "operations-owner",
+      "status": "pending_owner_input",
+      "value": null
+    },
+    "selected_psp_and_driver_qualification": {
+      "owner": "payment-provider-owner",
+      "status": "pending_owner_input",
+      "value": null
+    },
+    "approved_seller_and_currency_scope": {
+      "owner": "product-owner",
+      "status": "pending_owner_input",
+      "value": null
+    },
+    "owner_approved_source_price_mapping": {
+      "owner": "product-owner",
+      "status": "pending_owner_input",
+      "value": null
+    },
+    "source_freeze_and_seal_certificate": {
+      "owner": "source-deployment-operator",
+      "status": "pending_owner_input",
+      "value": null
+    },
+    "target_reconciliation_and_cursor_proof": {
+      "owner": "target-deployment-operator",
+      "status": "pending_owner_input",
+      "value": null
+    },
+    "retirement_and_activation_certificates": {
+      "owner": "deployment-authority",
+      "status": "pending_owner_input",
+      "value": null
+    },
+    "external_consumer_runtime_report": {
+      "owner": "external-consumer-owner",
+      "status": "pending_owner_input",
+      "value": null
+    }
+  },
+  "external_consumer_evidence_contract": {
+    "protocol": "billium.consumer.contract.report.v1",
+    "schema": "fixtures/integration/consumer/schema/report.json",
+    "validator": "conformance/consumers/bridge/check-report.py",
+    "validator_flags": [
+      "--report",
+      "<path>",
+      "--require-external-ready"
+    ],
+    "required_boundary": "external-runtime",
+    "required_evidence_class": "consumer-contract",
+    "required_delivery_profile": "external-http",
+    "required_cases": [
+      "CT-01",
+      "CT-02",
+      "CT-03",
+      "CT-04",
+      "CT-05",
+      "CT-06",
+      "CT-07",
+      "CT-08",
+      "CT-09",
+      "CT-10",
+      "CT-11",
+      "CT-12",
+      "CT-13",
+      "CT-14",
+      "CT-15",
+      "CT-16",
+      "CT-17",
+      "CT-18",
+      "CT-19",
+      "CT-20"
+    ],
+    "required_paid_psp_transactions": 0,
+    "require_distinct_consumer_package_hash": true,
+    "require_workspace_spec_hash_match": true,
+    "forbid_double_or_loopback_promotion": true
+  },
+  "limitations": {
+    "unanchored_evidence": {
+      "can_store_and_read": true,
+      "can_create_paid_price_version": false,
+      "can_cover_occurrence": false,
+      "can_create_payment_fact": false,
+      "can_create_synthetic_obligation": false,
+      "collection_allowed": false,
+      "partial_refund_without_proven_original_owner_allowed": false,
+      "remediation": "prospective_host_terms_only_or_explicit_operator_intervention"
+    },
+    "rollback_and_fallback": {
+      "pre_target_write_resume_requires_target_fence_and_new_epoch": true,
+      "automatic_fallback_after_target_write_allowed": false,
+      "post_target_write_paths": [
+        "continue_target_recovery",
+        "separately_certified_reverse_handoff"
+      ],
+      "original_execution_bindings_mutable": false
+    },
+    "retention": {
+      "preserve_separate_from_outbox_queue": [
+        "source_identity_mappings",
+        "tombstones",
+        "import_receipts",
+        "operation_revisions",
+        "provider_evidence",
+        "original_execution_bindings"
+      ],
+      "broad_truncation_on_import_complete_or_sdk_disconnect_allowed": false,
+      "schema_rollback_authorizes_fact_deletion_or_replay": false
+    }
+  },
+  "manifestDigest": "sha256:fbe6f7b7dd1133d77548af95fc5d7c0ac9ba1f0e19a4495a81cb3d8a2a1a754a"
+}
