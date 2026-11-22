@@ -81,6 +81,9 @@ envelopes, `ERR` — ошибки, `EVT` — события и receipts, `CNF` �
 | `ledger.invoice.v1` | `schema/query/invoice.v1.json` | ответ query invoice (REQ-CON-14) |
 | `ledger.allocations.v1` | `schema/query/allocations.v1.json` | ответ query allocationByOperation (REQ-CON-14) |
 | `ledger.refund_authorization.v1` | `schema/query/refund-authorization.v1.json` | ответ query refundAuthorization (D35) |
+| `external.import.v1` | `schema/import/external.v1.json` | входящая запись external import (D71) |
+| `external.import.manifest.v1` | `schema/import/manifest.v1.json` | иммутабельный manifest экспорта источника (D71) |
+| `external.import.preview.v1` | `schema/import/preview.v1.json` | типизированный отчёт preview валидации import (D71) |
 
 Общие узлы: `schema/common/defs.json` (идентификаторы, время, digest, все перечисления),
 `schema/common/money-wire.json`, `schema/problem/problem.json`. Формат conformance:

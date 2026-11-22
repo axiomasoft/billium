@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-platform
 
-Path `packages/core/modules/platform/src`, namespace `Billium\Platform\`, layer L2. 106 types.
+Path `packages/core/modules/platform/src`, namespace `Billium\Platform\`, layer L2. 126 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts/Accounting
@@ -35,6 +35,14 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`IdempotencyReceiptQueries`](../../packages/core/modules/platform/src/Contracts/Idempotency/IdempotencyReceiptQueries.php) | interface | **Spi** | Authenticated, exact-scope reads; an unqualified historical receipt supplies no scope proof. |
 | [`IdempotencyStore`](../../packages/core/modules/platform/src/Contracts/Idempotency/IdempotencyStore.php) | interface | **Spi** | Atomic first-write claim of (environment, seller, command kind, key) with its semantic digest (INV-05, D51). |
 | [`ReceiptAbsenceAuthority`](../../packages/core/modules/platform/src/Contracts/Idempotency/ReceiptAbsenceAuthority.php) | interface | **Spi** |  |
+
+## Contracts/Import
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`ExternalImportSourceAdapter`](../../packages/core/modules/platform/src/Contracts/Import/ExternalImportSourceAdapter.php) | interface | **Spi** | Host-implemented adapter that reads a product-agnostic external export artifact or stream (never a foreign host DB connection). |
+| [`ImportIdentityStore`](../../packages/core/modules/platform/src/Contracts/Import/ImportIdentityStore.php) | interface | **Api** | Platform-owned staging, source identity mapping, tombstone and append-only audit receipt store for external.import.v1. |
+| [`ImportPreviewEvaluator`](../../packages/core/modules/platform/src/Contracts/Import/ImportPreviewEvaluator.php) | interface | **Api** | Evaluates external.import.v1 records into a typed preview report without mutating financial state. |
 
 ## Contracts/Inbox
 
@@ -107,6 +115,26 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`IdempotencyClaim`](../../packages/core/modules/platform/src/Data/Idempotency/IdempotencyClaim.php) | class | **Api** | Either a new in-progress claim row of this root Tx or the replay of a completed one (INV-05). |
 | [`PinnedCommand`](../../packages/core/modules/platform/src/Data/Idempotency/PinnedCommand.php) | class | **Api** |  |
 | [`StoredCommandReceipt`](../../packages/core/modules/platform/src/Data/Idempotency/StoredCommandReceipt.php) | class | **Api** | The optional command input fingerprint is separate from the qualified key, claim digest and economic identity. |
+
+## Data/Import
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`ImportBatchStatus`](../../packages/core/modules/platform/src/Data/Import/ImportBatchStatus.php) | enum | **Api** | Lifecycle state of a platform-owned external import batch. |
+| [`ImportCurrencyTotal`](../../packages/core/modules/platform/src/Data/Import/ImportCurrencyTotal.php) | class | **Api** | Historical import total isolated per seller, currency and record kind; never an authoritative current balance. |
+| [`ImportEvidenceRef`](../../packages/core/modules/platform/src/Data/Import/ImportEvidenceRef.php) | class | **Api** | Immutable reference to one sanitized evidence item attached to an external import record. |
+| [`ImportManifest`](../../packages/core/modules/platform/src/Data/Import/ImportManifest.php) | class | **Api** | Immutable evidence manifest describing one external export batch with seller/environment scope. |
+| [`ImportMappingRecord`](../../packages/core/modules/platform/src/Data/Import/ImportMappingRecord.php) | class | **Api** | Durable platform-owned mapping from external source identity to Billium economic fact lineage. |
+| [`ImportMappingRegistrationResult`](../../packages/core/modules/platform/src/Data/Import/ImportMappingRegistrationResult.php) | class | **Api** | Outcome of registering a source identity mapping revision in the platform store. |
+| [`ImportMappingStatus`](../../packages/core/modules/platform/src/Data/Import/ImportMappingStatus.php) | enum | **Api** | State of a durable source identity mapping entry. |
+| [`ImportPreviewReport`](../../packages/core/modules/platform/src/Data/Import/ImportPreviewReport.php) | class | **Api** | Typed external.import.preview.v1 validation report with isolated per-currency totals and explicit gaps. |
+| [`ImportReceiptRecord`](../../packages/core/modules/platform/src/Data/Import/ImportReceiptRecord.php) | class | **Api** | Immutable append-only audit receipt recorded for an external import record. |
+| [`ImportReceiptStatus`](../../packages/core/modules/platform/src/Data/Import/ImportReceiptStatus.php) | enum | **Api** | Audit status recorded on an append-only import receipt. |
+| [`ImportRecordInput`](../../packages/core/modules/platform/src/Data/Import/ImportRecordInput.php) | class | **Api** | Normalized input record conforming to external.import.v1 without fabricated monetary defaults. |
+| [`ImportRecordKind`](../../packages/core/modules/platform/src/Data/Import/ImportRecordKind.php) | enum | **Api** | Normalized product-agnostic classification of an external import record. |
+| [`ImportRecordValidationResult`](../../packages/core/modules/platform/src/Data/Import/ImportRecordValidationResult.php) | class | **Api** | Typed validation outcome for one external.import.v1 record during preview evaluation. |
+| [`ImportSourceIdentity`](../../packages/core/modules/platform/src/Data/Import/ImportSourceIdentity.php) | class | **Api** | Canonical seller/environment-scoped source identity independent of batch ID, filename or mapper policy version. |
+| [`ImportValidationStatus`](../../packages/core/modules/platform/src/Data/Import/ImportValidationStatus.php) | enum | **Api** | Typed validation disposition of a single external import record in preview. |
 
 ## Data/Inbox
 
@@ -193,6 +221,13 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 |---|---|---|---|
 | [`DatabaseIdempotencyReceiptQueries`](../../packages/core/modules/platform/src/Internal/Idempotency/DatabaseIdempotencyReceiptQueries.php) | class | *Internal* |  |
 | [`DatabaseIdempotencyStore`](../../packages/core/modules/platform/src/Internal/Idempotency/DatabaseIdempotencyStore.php) | class | *Internal* | INSERT … ON CONFLICT DO NOTHING with a bounded wait (D51): a concurrent claim of the same scope blocks on the unique index until the first root Tx commits or r… |
+
+## Internal/Import
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`DatabaseImportIdentityStore`](../../packages/core/modules/platform/src/Internal/Import/DatabaseImportIdentityStore.php) | class | *Internal* | PostgreSQL-backed staging, source identity mapping, tombstone and append-only receipt store for external.import.v1. |
+| [`DefaultImportPreviewEvaluator`](../../packages/core/modules/platform/src/Internal/Import/DefaultImportPreviewEvaluator.php) | class | *Internal* | Pure read-only preview evaluator for external.import.v1 records. |
 
 ## Internal/Inbox
 

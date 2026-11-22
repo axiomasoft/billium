@@ -122,6 +122,27 @@
     },
     {
       "kind": "envelope",
+      "id": "external.import.manifest.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/manifest.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "external.import.preview.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/preview.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "external.import.v1",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/external.v1.json"
+    },
+    {
+      "kind": "envelope",
       "id": "ledger.allocation_receipt.v1",
       "status": "new",
       "since": "2026-10",
@@ -1533,6 +1554,461 @@
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/collection/authorize.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.manifest.v1#/properties/batchId",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/manifest.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.manifest.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/manifest.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.manifest.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/manifest.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.manifest.v1#/properties/exportCutoff",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/manifest.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.manifest.v1#/properties/importPolicyVersion",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/manifest.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.manifest.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/manifest.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.manifest.v1#/properties/recordCount",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/manifest.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.manifest.v1#/properties/recordsChecksum",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/manifest.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.manifest.v1#/properties/sanitizationPolicy",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/manifest.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.manifest.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/manifest.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.manifest.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/manifest.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.manifest.v1#/properties/sourceBook",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/manifest.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.manifest.v1#/properties/sourceExportRevision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/manifest.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.manifest.v1#/properties/sourceFreezeCertificateRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/manifest.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.manifest.v1#/properties/sourceInstallation",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/manifest.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.manifest.v1#/properties/sourceLineage",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/manifest.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.manifest.v1#/properties/sourceSystem",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/manifest.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.manifest.v1#/properties/totalsByCurrency",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/manifest.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.preview.v1#/properties/batchId",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/preview.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.preview.v1#/properties/batchStatus",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/preview.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.preview.v1#/properties/counts",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/preview.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.preview.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/preview.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.preview.v1#/properties/duplicateMappings",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/preview.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.preview.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/preview.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.preview.v1#/properties/exportCutoff",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/preview.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.preview.v1#/properties/generatedAt",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/preview.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.preview.v1#/properties/importPolicyVersion",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/preview.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.preview.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/preview.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.preview.v1#/properties/manifestDigest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/preview.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.preview.v1#/properties/planPriceMismatches",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/preview.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.preview.v1#/properties/records",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/preview.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.preview.v1#/properties/referencesWithoutEvidence",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/preview.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.preview.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/preview.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.preview.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/preview.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.preview.v1#/properties/sourceBook",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/preview.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.preview.v1#/properties/sourceExportRevision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/preview.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.preview.v1#/properties/sourceInstallation",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/preview.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.preview.v1#/properties/sourceSystem",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/preview.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.preview.v1#/properties/totalsByCurrency",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/preview.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.preview.v1#/properties/unexplainedDeltas",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/preview.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.v1#/properties/batchId",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/external.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.v1#/properties/digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/external.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.v1#/properties/environment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/external.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.v1#/properties/eventBusinessDate",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/external.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.v1#/properties/evidenceRefs",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/external.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.v1#/properties/exportCutoff",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/external.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.v1#/properties/frozenPriceSnapshot",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/external.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.v1#/properties/fundingRefs",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/external.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.v1#/properties/importPolicyVersion",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/external.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.v1#/properties/installationRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/external.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.v1#/properties/legalDocument",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/external.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.v1#/properties/manifestDigest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/external.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.v1#/properties/missingEvidence",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/external.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.v1#/properties/money",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/external.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.v1#/properties/originalBusinessRefs",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/external.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.v1#/properties/recordKind",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/external.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.v1#/properties/schema",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/external.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.v1#/properties/sellerRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/external.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.v1#/properties/sourceBook",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/external.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.v1#/properties/sourceExportRevision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/external.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.v1#/properties/sourceFactRef",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/external.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.v1#/properties/sourceInstallation",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/external.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.v1#/properties/sourceRecordId",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/external.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.v1#/properties/sourceRecordRevision",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/external.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "external.import.v1#/properties/sourceSystem",
+      "status": "new",
+      "since": "2026-10",
+      "source": "spec/revisions/2026-10/schema/import/external.v1.json"
     },
     {
       "kind": "envelope-field",
@@ -6027,6 +6503,13 @@
       "status": "new",
       "since": "2026-10",
       "source": "packages/core/database/migrations/execution/2026_11_21_000003_index_billium_execution_admission.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_22_000001_create_billium_import_staging_tables",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/platform/2026_11_22_000001_create_billium_import_staging_tables.php"
     },
     {
       "kind": "route",

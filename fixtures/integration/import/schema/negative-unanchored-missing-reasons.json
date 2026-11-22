@@ -1,0 +1,88 @@
+{
+  "targetSchema": "external.import.preview.v1",
+  "reason": "unanchored_evidence preview outcome requires reasonCodes and missingEvidence",
+  "payload": {
+    "schema": "external.import.preview.v1",
+    "installationRef": "inst-1",
+    "environment": "test",
+    "sellerRef": "seller-1",
+    "batchId": "batch-2026-10-001",
+    "sourceSystem": "host-commerce/billing-export",
+    "sourceInstallation": "src-inst-eu-1",
+    "sourceBook": "book-primary",
+    "sourceExportRevision": 1,
+    "exportCutoff": "2026-10-15T00:00:00Z",
+    "manifestDigest": "sha256:edea31f96db07766db26f97bd9c7a2f52d1f8f597ded7ab4155546a925ff5ff7",
+    "batchStatus": "validated",
+    "counts": {
+      "total": 3,
+      "ready": 2,
+      "unanchored_evidence": 1,
+      "rejected": 0,
+      "conflict": 0,
+      "already_applied": 0
+    },
+    "totalsByCurrency": [
+      {
+        "sellerRef": "seller-1",
+        "currency": "RUB",
+        "recordKind": "proven_obligation",
+        "count": 1,
+        "totalAmount": {
+          "amount": "1490.00",
+          "currency": "RUB"
+        },
+        "authoritativeCurrentBalance": false
+      },
+      {
+        "sellerRef": "seller-1",
+        "currency": "USD",
+        "recordKind": "proven_invoice_history",
+        "count": 1,
+        "totalAmount": {
+          "amount": "25.00",
+          "currency": "USD"
+        },
+        "authoritativeCurrentBalance": false
+      }
+    ],
+    "records": [
+      {
+        "sourceRecordId": "obl-1001",
+        "sourceRecordRevision": 1,
+        "recordKind": "proven_obligation",
+        "sourceIdentityDigest": "sha256:ab222febee305f31e43ed20eaec3c6b623f454d53b83cf0e45f66dadb4a31785",
+        "payloadDigest": "sha256:ca86192d65ab77d958d98792b9346fea402dcdd0d228ed8e569bfe40144fe3a8",
+        "status": "ready",
+        "sourceFactRef": "import:df2a788b0301e990576fa4a90393fb32a82fceeb49f237f4b4bdf108c1658d43"
+      },
+      {
+        "sourceRecordId": "ent-2001",
+        "sourceRecordRevision": 1,
+        "recordKind": "unanchored_evidence",
+        "sourceIdentityDigest": "sha256:51d9cc31c4477214fb40debee392e936b3adfd605599186a8ec41c85d1d319a3",
+        "payloadDigest": "sha256:484c3ab93fbedca1ccc07728ccb816120e213aa59c69f03d6c0da00d8163cd00",
+        "status": "unanchored_evidence",
+        "sourceFactRef": "import:c53986f33157184d525a839466eabb80d6e2614aa24658c9762b9442ab533506"
+      },
+      {
+        "sourceRecordId": "inv-3001",
+        "sourceRecordRevision": 1,
+        "recordKind": "proven_invoice_history",
+        "sourceIdentityDigest": "sha256:931c1a071dc0c2ee03ca39701663d78e04aaa9077edf87adba5f0629f6829e72",
+        "payloadDigest": "sha256:2e32ed7d13efea98aa5130ebc728074ba7031d57e52f1db5a1cf460c87fd6770",
+        "status": "ready",
+        "sourceFactRef": "import:ed9d7dd20ad492b45343474894ea68f23b073dda2e2494b12b224ffe2cfb0cb4"
+      }
+    ],
+    "unexplainedDeltas": [],
+    "referencesWithoutEvidence": [
+      "ent-2001"
+    ],
+    "duplicateMappings": [],
+    "planPriceMismatches": [],
+    "importPolicyVersion": "import-policy-v1",
+    "generatedAt": "2026-10-15T00:05:00Z",
+    "digest": "sha256:813cc145d40626c7e3ac75426b7a143fb79c7235b9b0f35a02cfc875942c3e2c"
+  }
+}

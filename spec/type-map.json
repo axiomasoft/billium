@@ -385,6 +385,27 @@
     "category": "Data"
   },
   {
+    "schema": "external.import.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\ExternalImport",
+    "dart": "ExternalImport",
+    "category": "Data"
+  },
+  {
+    "schema": "external.import.manifest.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\ExternalImportManifest",
+    "dart": "ExternalImportManifest",
+    "category": "Data"
+  },
+  {
+    "schema": "external.import.preview.v1",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\ExternalImportPreview",
+    "dart": "ExternalImportPreview",
+    "category": "Data"
+  },
+  {
     "schema": null,
     "variant": null,
     "php": "Billium\\Contracts\\Data\\Money",

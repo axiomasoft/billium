@@ -205,14 +205,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "platform",
-      "currentSchemaVersion": 29,
+      "currentSchemaVersion": 30,
       "supportedSchemaReadRange": {
-        "min": 29,
-        "max": 29
+        "min": 30,
+        "max": 30
       },
       "supportedSchemaWriteRange": {
-        "min": 29,
-        "max": 29
+        "min": 30,
+        "max": 30
       },
       "requiresModules": [],
       "requiresPorts": [
@@ -246,7 +246,11 @@
         "billium_inbox_conflict",
         "billium_feed_observation_root_scope",
         "billium_feed_observation_scope_link",
-        "billium_feed_observation_command"
+        "billium_feed_observation_command",
+        "billium_import_batch",
+        "billium_import_record",
+        "billium_import_mapping",
+        "billium_import_receipt"
       ],
       "configKeys": [
         "billium.connection",
@@ -418,6 +422,11 @@
           "id": "2026_11_21_000001_index_billium_feed_hot_paths",
           "version": 29,
           "checksum": "sha256:376f099f163738bef1301c206438f9bfba534d12da5ce5d7b123bf2bb79fdd59"
+        },
+        {
+          "id": "2026_11_22_000001_create_billium_import_staging_tables",
+          "version": 30,
+          "checksum": "sha256:b705dd8d46b92dc1dcd48955676886abdd8e2cd103c1282f99ec02031221fa0c"
         }
       ],
       "disablePolicy": {

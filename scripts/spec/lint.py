@@ -42,6 +42,8 @@ CLOSED = {
     ("billium.feed.read.v1", ""),
     ("billium.feed.bootstrap_request.v1", ""),
     ("billium.feed.bootstrap_ack.v1", ""),
+    ("external.import.v1", ""),
+    ("external.import.manifest.v1", ""),
 }
 OPEN = {
     ("payment.outcome.v1", ""),
@@ -58,10 +60,11 @@ OPEN = {
     ("ledger.invoice.v1", ""),
     ("ledger.allocations.v1", ""),
     ("ledger.refund_authorization.v1", ""),
+    ("external.import.preview.v1", ""),
 }
 NON_ENVELOPE_DIRS = {"common", "problem", "conformance"}
 # D63: rating correction.applied is an internal event payload, not a public wire envelope.
-NON_ENVELOPE_FILES = {"feed/defs.json", "rating/correction-applied.v1.json"}
+NON_ENVELOPE_FILES = {"feed/defs.json", "import/defs.json", "rating/correction-applied.v1.json"}
 
 NORMATIVE = re.compile(r"\b(MUST|SHALL|SHOULD)\b|\b(долж(ен|на|но|ны)|обязан(а|о|ы)?)\b", re.IGNORECASE)
 AMOUNT_KEY = re.compile(r"^(amount|quantity|money|requested)$|Total$")

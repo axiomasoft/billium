@@ -540,5 +540,35 @@
         "verifyDigest": false
       }
     ]
+  },
+  "external.import.v1": {
+    "schemaId": "urn:billium:spec:2026-10:import/external.v1.json",
+    "variants": [
+      {
+        "class": "ExternalImport",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "external.import.manifest.v1": {
+    "schemaId": "urn:billium:spec:2026-10:import/manifest.v1.json",
+    "variants": [
+      {
+        "class": "ExternalImportManifest",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "external.import.preview.v1": {
+    "schemaId": "urn:billium:spec:2026-10:import/preview.v1.json",
+    "variants": [
+      {
+        "class": "ExternalImportPreview",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
   }
 }

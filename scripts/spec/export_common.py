@@ -77,6 +77,9 @@ ENVELOPES = (
     ("InvoiceView", "ledger.invoice.v1", "query/invoice.v1.json", None),
     ("AllocationQuery", "ledger.allocations.v1", "query/allocations.v1.json", None),
     ("RefundAuthorization", "ledger.refund_authorization.v1", "query/refund-authorization.v1.json", None),
+    ("ExternalImport", "external.import.v1", "import/external.v1.json", None),
+    ("ExternalImportManifest", "external.import.manifest.v1", "import/manifest.v1.json", None),
+    ("ExternalImportPreview", "external.import.preview.v1", "import/preview.v1.json", None),
 )
 
 KINDS = {"integer": "int", "string": "string", "object": "object", "array": "list", "boolean": "bool"}

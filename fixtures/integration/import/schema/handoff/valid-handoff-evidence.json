@@ -1,0 +1,49 @@
+{
+  "usesCommitNoAsFreshnessProof": false,
+  "reliesOnLocalActiveFlag": false,
+  "sourceFreezeCertificate": {
+    "sourceOwnerSession": "session-src-1",
+    "freezeGeneration": 4,
+    "sealReceiptRef": "seal-rcpt-1",
+    "scope": {
+      "installationRef": "inst-1",
+      "environment": "test",
+      "sellerRef": "seller-1"
+    },
+    "evidenceDigest": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+  },
+  "migrationManifest": {
+    "snapshotToken": "snap-2026-10-15-001",
+    "snapshotDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "safeFeedCursor": {
+      "txId": "1048576",
+      "id": "9001"
+    },
+    "selectionDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "retentionLeaseRef": "lease-2026-10-15-001",
+    "retentionLeaseExpiresAt": "2026-10-16T00:00:00Z",
+    "perSellerCurrencyChecksums": [
+      {
+        "sellerRef": "seller-1",
+        "currency": "RUB",
+        "checksum": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+      }
+    ],
+    "manifestDigest": "sha256:ee9ed5c7bbe8aa63b8393f70b5ce99a8fb171c96dac435aaab3325a6dbad63b0"
+  },
+  "activation": {
+    "requested": true,
+    "tailVerified": true,
+    "reconciliationEqual": true,
+    "unresolvedBlockers": [],
+    "retirementProof": {
+      "proofRef": "retire-1",
+      "digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    "activationCertificate": {
+      "certificateRef": "act-cert-1",
+      "targetOwnerSession": "session-tgt-2",
+      "digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+    }
+  }
+}

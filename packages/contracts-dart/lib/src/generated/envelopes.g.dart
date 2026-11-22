@@ -62,6 +62,9 @@ const Map<String, Envelope Function(Map<String, Object?>)> envelopeBuilders = {
   'InvoiceView': InvoiceView.fromRaw,
   'AllocationQuery': AllocationQuery.fromRaw,
   'RefundAuthorization': RefundAuthorization.fromRaw,
+  'ExternalImport': ExternalImport.fromRaw,
+  'ExternalImportManifest': ExternalImportManifest.fromRaw,
+  'ExternalImportPreview': ExternalImportPreview.fromRaw,
 };
 
 /// `payment.execute.v1`.
@@ -2579,4 +2582,235 @@ final class RefundAuthorization extends Envelope {
   final String sellerRef;
   final Map<String, Object?> result;
   final String digest;
+}
+
+/// `external.import.v1`.
+final class ExternalImport extends Envelope {
+  static const String schemaName = 'external.import.v1';
+
+  ExternalImport({
+    required super.raw,
+    required this.batchId,
+    required this.sourceSystem,
+    required this.sourceInstallation,
+    required this.sourceBook,
+    required this.sourceExportRevision,
+    required this.exportCutoff,
+    required this.manifestDigest,
+    required this.installationRef,
+    required this.environment,
+    required this.sellerRef,
+    required this.sourceRecordId,
+    required this.sourceRecordRevision,
+    required this.recordKind,
+    required this.originalBusinessRefs,
+    required this.eventBusinessDate,
+    required this.evidenceRefs,
+    required this.digest,
+    this.money,
+    this.frozenPriceSnapshot,
+    this.fundingRefs,
+    this.legalDocument,
+    this.importPolicyVersion,
+    this.sourceFactRef,
+    this.missingEvidence,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory ExternalImport.fromRaw(Map<String, Object?> raw) => ExternalImport(
+        raw: raw,
+        batchId: requireString(raw, 'batchId'),
+        sourceSystem: requireString(raw, 'sourceSystem'),
+        sourceInstallation: requireString(raw, 'sourceInstallation'),
+        sourceBook: requireString(raw, 'sourceBook'),
+        sourceExportRevision: requireInt(raw, 'sourceExportRevision'),
+        exportCutoff: requireString(raw, 'exportCutoff'),
+        manifestDigest: requireString(raw, 'manifestDigest'),
+        installationRef: requireString(raw, 'installationRef'),
+        environment: requireString(raw, 'environment'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        sourceRecordId: requireString(raw, 'sourceRecordId'),
+        sourceRecordRevision: requireInt(raw, 'sourceRecordRevision'),
+        recordKind: requireString(raw, 'recordKind'),
+        originalBusinessRefs: requireObject(raw, 'originalBusinessRefs'),
+        eventBusinessDate: requireString(raw, 'eventBusinessDate'),
+        evidenceRefs: requireList(raw, 'evidenceRefs'),
+        digest: requireString(raw, 'digest'),
+        money: optionalMoney(raw, 'money'),
+        frozenPriceSnapshot: optionalObject(raw, 'frozenPriceSnapshot'),
+        fundingRefs: optionalObject(raw, 'fundingRefs'),
+        legalDocument: optionalObject(raw, 'legalDocument'),
+        importPolicyVersion: optionalString(raw, 'importPolicyVersion'),
+        sourceFactRef: optionalString(raw, 'sourceFactRef'),
+        missingEvidence: optionalList(raw, 'missingEvidence'),
+      );
+
+  final String batchId;
+  final String sourceSystem;
+  final String sourceInstallation;
+  final String sourceBook;
+  final int sourceExportRevision;
+  final String exportCutoff;
+  final String manifestDigest;
+  final String installationRef;
+  final String environment;
+  final String sellerRef;
+  final String sourceRecordId;
+  final int sourceRecordRevision;
+  final String recordKind;
+  final Map<String, Object?> originalBusinessRefs;
+  final String eventBusinessDate;
+  final List<Object?> evidenceRefs;
+  final String digest;
+  final Money? money;
+  final Map<String, Object?>? frozenPriceSnapshot;
+  final Map<String, Object?>? fundingRefs;
+  final Map<String, Object?>? legalDocument;
+  final String? importPolicyVersion;
+  final String? sourceFactRef;
+  final List<Object?>? missingEvidence;
+}
+
+/// `external.import.manifest.v1`.
+final class ExternalImportManifest extends Envelope {
+  static const String schemaName = 'external.import.manifest.v1';
+
+  ExternalImportManifest({
+    required super.raw,
+    required this.batchId,
+    required this.sourceSystem,
+    required this.sourceInstallation,
+    required this.sourceBook,
+    required this.sourceExportRevision,
+    required this.exportCutoff,
+    required this.installationRef,
+    required this.environment,
+    required this.sellerRef,
+    required this.recordCount,
+    required this.recordsChecksum,
+    required this.totalsByCurrency,
+    required this.sanitizationPolicy,
+    required this.digest,
+    this.sourceLineage,
+    this.importPolicyVersion,
+    this.sourceFreezeCertificateRef,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory ExternalImportManifest.fromRaw(Map<String, Object?> raw) => ExternalImportManifest(
+        raw: raw,
+        batchId: requireString(raw, 'batchId'),
+        sourceSystem: requireString(raw, 'sourceSystem'),
+        sourceInstallation: requireString(raw, 'sourceInstallation'),
+        sourceBook: requireString(raw, 'sourceBook'),
+        sourceExportRevision: requireInt(raw, 'sourceExportRevision'),
+        exportCutoff: requireString(raw, 'exportCutoff'),
+        installationRef: requireString(raw, 'installationRef'),
+        environment: requireString(raw, 'environment'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        recordCount: requireInt(raw, 'recordCount'),
+        recordsChecksum: requireString(raw, 'recordsChecksum'),
+        totalsByCurrency: requireList(raw, 'totalsByCurrency'),
+        sanitizationPolicy: requireObject(raw, 'sanitizationPolicy'),
+        digest: requireString(raw, 'digest'),
+        sourceLineage: optionalString(raw, 'sourceLineage'),
+        importPolicyVersion: optionalString(raw, 'importPolicyVersion'),
+        sourceFreezeCertificateRef: optionalString(raw, 'sourceFreezeCertificateRef'),
+      );
+
+  final String batchId;
+  final String sourceSystem;
+  final String sourceInstallation;
+  final String sourceBook;
+  final int sourceExportRevision;
+  final String exportCutoff;
+  final String installationRef;
+  final String environment;
+  final String sellerRef;
+  final int recordCount;
+  final String recordsChecksum;
+  final List<Object?> totalsByCurrency;
+  final Map<String, Object?> sanitizationPolicy;
+  final String digest;
+  final String? sourceLineage;
+  final String? importPolicyVersion;
+  final String? sourceFreezeCertificateRef;
+}
+
+/// `external.import.preview.v1`.
+final class ExternalImportPreview extends Envelope {
+  static const String schemaName = 'external.import.preview.v1';
+
+  ExternalImportPreview({
+    required super.raw,
+    required this.installationRef,
+    required this.environment,
+    required this.sellerRef,
+    required this.batchId,
+    required this.sourceSystem,
+    required this.sourceInstallation,
+    required this.sourceBook,
+    required this.sourceExportRevision,
+    required this.exportCutoff,
+    required this.manifestDigest,
+    required this.batchStatus,
+    required this.counts,
+    required this.totalsByCurrency,
+    required this.records,
+    required this.unexplainedDeltas,
+    required this.referencesWithoutEvidence,
+    required this.duplicateMappings,
+    required this.planPriceMismatches,
+    required this.digest,
+    this.importPolicyVersion,
+    this.generatedAt,
+  }) : super(schema: schemaName);
+
+  /// Builds the typed envelope from an object that passed the schema of the revision.
+  factory ExternalImportPreview.fromRaw(Map<String, Object?> raw) => ExternalImportPreview(
+        raw: raw,
+        installationRef: requireString(raw, 'installationRef'),
+        environment: requireString(raw, 'environment'),
+        sellerRef: requireString(raw, 'sellerRef'),
+        batchId: requireString(raw, 'batchId'),
+        sourceSystem: requireString(raw, 'sourceSystem'),
+        sourceInstallation: requireString(raw, 'sourceInstallation'),
+        sourceBook: requireString(raw, 'sourceBook'),
+        sourceExportRevision: requireInt(raw, 'sourceExportRevision'),
+        exportCutoff: requireString(raw, 'exportCutoff'),
+        manifestDigest: requireString(raw, 'manifestDigest'),
+        batchStatus: requireString(raw, 'batchStatus'),
+        counts: requireObject(raw, 'counts'),
+        totalsByCurrency: requireList(raw, 'totalsByCurrency'),
+        records: requireList(raw, 'records'),
+        unexplainedDeltas: requireList(raw, 'unexplainedDeltas'),
+        referencesWithoutEvidence: requireList(raw, 'referencesWithoutEvidence'),
+        duplicateMappings: requireList(raw, 'duplicateMappings'),
+        planPriceMismatches: requireList(raw, 'planPriceMismatches'),
+        digest: requireString(raw, 'digest'),
+        importPolicyVersion: optionalString(raw, 'importPolicyVersion'),
+        generatedAt: optionalString(raw, 'generatedAt'),
+      );
+
+  final String installationRef;
+  final String environment;
+  final String sellerRef;
+  final String batchId;
+  final String sourceSystem;
+  final String sourceInstallation;
+  final String sourceBook;
+  final int sourceExportRevision;
+  final String exportCutoff;
+  final String manifestDigest;
+  final String batchStatus;
+  final Map<String, Object?> counts;
+  final List<Object?> totalsByCurrency;
+  final List<Object?> records;
+  final List<Object?> unexplainedDeltas;
+  final List<Object?> referencesWithoutEvidence;
+  final List<Object?> duplicateMappings;
+  final List<Object?> planPriceMismatches;
+  final String digest;
+  final String? importPolicyVersion;
+  final String? generatedAt;
 }

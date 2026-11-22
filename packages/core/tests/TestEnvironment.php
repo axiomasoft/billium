@@ -87,7 +87,11 @@ final class TestEnvironment
         public.billium_collection_recurring_owner_guard(),
         public.billium_collection_dunning_case_guard(),
         public.billium_collection_step_guard(),
-        public.billium_collection_notification_guard()
+        public.billium_collection_notification_guard(),
+        public.billium_import_batch_guard(),
+        public.billium_import_record_guard(),
+        public.billium_import_mapping_insert_guard(),
+        public.billium_import_mapping_guard()
         SQL.', '.self::COLLECTION_WORK_ROUTINES;
 
     public static function prepareFreshRebuild(Application $app): void

@@ -19,6 +19,8 @@ use Billium\Platform\Contracts\Feed\FeedRecoveryQueries;
 use Billium\Platform\Contracts\Feed\SnapshotSource;
 use Billium\Platform\Contracts\Idempotency\IdempotencyReceiptQueries;
 use Billium\Platform\Contracts\Idempotency\IdempotencyStore;
+use Billium\Platform\Contracts\Import\ImportIdentityStore;
+use Billium\Platform\Contracts\Import\ImportPreviewEvaluator;
 use Billium\Platform\Contracts\Inbox\AuthenticatedObservationBootstrap;
 use Billium\Platform\Contracts\Inbox\ObservationBootstrapAuthenticator;
 use Billium\Platform\Contracts\Outbox\CommandOutbox;
@@ -35,6 +37,8 @@ use Billium\Platform\Internal\Feed\BootstrapCoordinator;
 use Billium\Platform\Internal\Feed\DatabaseFeedPartitions;
 use Billium\Platform\Internal\Feed\DatabaseFeedRecoveryQueries;
 use Billium\Platform\Internal\Feed\PartitionStore;
+use Billium\Platform\Internal\Import\DatabaseImportIdentityStore;
+use Billium\Platform\Internal\Import\DefaultImportPreviewEvaluator;
 use Billium\Platform\Internal\Inbox\CustodyProcessor;
 use Billium\Platform\Internal\Outbox\DatabaseOutboxDeliveryQueries;
 use Billium\Platform\Internal\Outbox\EventFeedReader;
@@ -164,6 +168,15 @@ final class PlatformOutboxRegistrar implements PackageRegistrar
         ));
 
         $app->singleton(AccountingMapper::class, static fn (): AccountingFactMapper => new AccountingFactMapper);
+        $app->singleton(ImportIdentityStore::class, static fn (Application $app): DatabaseImportIdentityStore => new DatabaseImportIdentityStore(
+            $app->make(DatabaseManager::class),
+            $app->make(BilliumOptions::class),
+            new Codec,
+        ));
+        $app->singleton(ImportPreviewEvaluator::class, static fn (Application $app): DefaultImportPreviewEvaluator => new DefaultImportPreviewEvaluator(
+            $app->make(ImportIdentityStore::class),
+            new Codec,
+        ));
     }
 
     #[Override]

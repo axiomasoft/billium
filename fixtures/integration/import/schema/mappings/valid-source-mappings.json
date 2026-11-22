@@ -1,0 +1,54 @@
+{
+  "namespace": "host-commerce/billing-export",
+  "batchIdInEconomicIdentity": false,
+  "renamesSourceBookOnMapperUpdate": false,
+  "mappingsChecksum": "sha256:0f3af073ab08a788dfb69d1e9c5f2b2d57c5af2e47339f3e4ad4c8345481a8dd",
+  "mappings": [
+    {
+      "installationRef": "inst-1",
+      "environment": "test",
+      "sellerRef": "seller-1",
+      "sourceSystem": "host-commerce/billing-export",
+      "sourceInstallation": "src-inst-eu-1",
+      "sourceBook": "book-primary",
+      "sourceRecordId": "obl-1001",
+      "recordKind": "proven_obligation",
+      "sourceRecordRevision": 1,
+      "sourceIdentityDigest": "sha256:ab222febee305f31e43ed20eaec3c6b623f454d53b83cf0e45f66dadb4a31785",
+      "payloadDigest": "sha256:ca86192d65ab77d958d98792b9346fea402dcdd0d228ed8e569bfe40144fe3a8",
+      "sourceFactRef": "import:df2a788b0301e990576fa4a90393fb32a82fceeb49f237f4b4bdf108c1658d43",
+      "status": "active"
+    },
+    {
+      "installationRef": "inst-1",
+      "environment": "test",
+      "sellerRef": "seller-2",
+      "sourceSystem": "host-commerce/billing-export",
+      "sourceInstallation": "src-inst-eu-1",
+      "sourceBook": "book-primary",
+      "sourceRecordId": "obl-1001",
+      "recordKind": "proven_obligation",
+      "sourceRecordRevision": 1,
+      "sourceIdentityDigest": "sha256:f241484b5b31016fa07e6da764cfe044306f42b69f11fab5dc9ab3c5906fde5c",
+      "payloadDigest": "sha256:ca86192d65ab77d958d98792b9346fea402dcdd0d228ed8e569bfe40144fe3a8",
+      "sourceFactRef": "import:6e15e4735e1c6843ad3f6c7e650d846f852cd2566e23b8f6d02b88cf21b2e9ed",
+      "status": "active"
+    },
+    {
+      "installationRef": "inst-1",
+      "environment": "test",
+      "sellerRef": "seller-1",
+      "sourceSystem": "host-commerce/billing-export",
+      "sourceInstallation": "src-inst-eu-1",
+      "sourceBook": "book-primary",
+      "sourceRecordId": "obl-retired-9",
+      "recordKind": "proven_obligation",
+      "sourceRecordRevision": 1,
+      "sourceIdentityDigest": "sha256:90be2ac0525394cd667529eb03abf6db3f6bcb6ba333d3280126b2ede3c1f7ff",
+      "payloadDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "sourceFactRef": "import:86c51f55d8dc3201a0fa7159ac20c6afbffc619f95736ed367c41ada3bf9451d",
+      "status": "tombstoned",
+      "tombstoneReason": "remediated_via_credit_note"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "usesCommitNoAsFreshnessProof": true,
+  "reliesOnLocalActiveFlag": true,
+  "activation": {
+    "requested": true,
+    "tailVerified": false,
+    "reconciliationEqual": false,
+    "unresolvedBlockers": [
+      "missing_source_freeze_certificate"
+    ]
+  }
+}
