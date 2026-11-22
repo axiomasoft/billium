@@ -131,8 +131,12 @@ class ProducerStand:
         runtime_info = self.cli("create", None, stand_profile)
         try:
             port = reserve_port()
-            env = {**os.environ, "BILLIUM_BRIDGE_WORK": str(self.directory)}
-            env.pop("PHP_CLI_SERVER_WORKERS", None)
+            workers = max(8, int(os.environ.get("PHP_CLI_SERVER_WORKERS", "8") or "8"))
+            env = {
+                **os.environ,
+                "BILLIUM_BRIDGE_WORK": str(self.directory),
+                "PHP_CLI_SERVER_WORKERS": str(workers),
+            }
             server = subprocess.Popen(
                 php_command("-S", f"127.0.0.1:{port}", HERE / "host.php"),
                 cwd=self.directory,
@@ -227,6 +231,16 @@ def build_pending_external_report(suite: str, cases: dict[str, dict[str, Any]], 
     return report
 
 
+def is_bundled_reference_command(adapter_cmd: list[str]) -> bool:
+    bundled_adapter = (HERE / "adapter.php").resolve()
+    for token in adapter_cmd:
+        candidate = Path(token)
+        resolved = (candidate if candidate.is_absolute() else (ROOT / candidate)).resolve()
+        if resolved == bundled_adapter:
+            return True
+    return False
+
+
 def execute_suite(args: argparse.Namespace) -> int:
     cases = load_corpus()
     selected = REQUIRED_CASES if args.suite in {"all", "required"} else (args.suite,)
@@ -254,6 +268,12 @@ def execute_suite(args: argparse.Namespace) -> int:
         return 0 if args.allow_pending_external else 1
 
     adapter_cmd = shlex.split(external_cmd_str) if external_cmd_str.strip() else php_command(HERE / "adapter.php")
+    if args.boundary == "external-runtime" and is_bundled_reference_command(adapter_cmd):
+        print(
+            "conformance/consumers/bridge: bundled reference adapter cannot be promoted to --boundary external-runtime (D59/D71)",
+            file=sys.stderr,
+        )
+        return 1
 
     results: list[dict[str, Any]] = []
     runtime_meta: dict[str, Any] = {}
@@ -329,13 +349,34 @@ def execute_suite(args: argparse.Namespace) -> int:
     all_passed = all(r["status"] == "pass" for r in results)
     full_suite = set(selected) == set(REQUIRED_CASES)
     producer_info = producer_identity(ROOT)
+    is_bundled_ref = bool(
+        ready_meta.get("isBundledReference") is True
+        or ready_meta.get("adapter") == check_report.BUNDLED_REFERENCE_ADAPTER_NAME
+        or ready_meta.get("packageHash") == check_report.bundled_reference_package_hash(ROOT)
+    )
     is_external_ready = (
         args.boundary == "external-runtime"
         and all_passed
         and full_suite
+        and not is_bundled_ref
         and ready_meta.get("deliveryProfile") == "external-http"
         and ready_meta.get("packageHash") != producer_info["packageHash"]
     )
+
+    consumer_block: dict[str, Any] = {
+        "name": ready_meta.get("adapter", "unknown-consumer"),
+        "available": True,
+        "commitHash": ready_meta.get("commitHash"),
+        "packageHash": ready_meta.get("packageHash"),
+        "specRevision": ready_meta.get("specRevision"),
+        "specHash": ready_meta.get("specHash"),
+        "deliveryProfile": ready_meta.get(
+            "deliveryProfile",
+            "double-transport" if args.boundary == "double" else "loopback-http",
+        ),
+    }
+    if "isBundledReference" in ready_meta:
+        consumer_block["isBundledReference"] = bool(ready_meta["isBundledReference"])
 
     report = {
         "protocol": REPORT_PROTOCOL_ID,
@@ -345,18 +386,7 @@ def execute_suite(args: argparse.Namespace) -> int:
         "suite": args.suite,
         "required": list(REQUIRED_CASES),
         "producer": producer_info,
-        "consumer": {
-            "name": ready_meta.get("adapter", "unknown-consumer"),
-            "available": True,
-            "commitHash": ready_meta.get("commitHash"),
-            "packageHash": ready_meta.get("packageHash"),
-            "specRevision": ready_meta.get("specRevision"),
-            "specHash": ready_meta.get("specHash"),
-            "deliveryProfile": ready_meta.get(
-                "deliveryProfile",
-                "double-transport" if args.boundary == "double" else "loopback-http",
-            ),
-        },
+        "consumer": consumer_block,
         "runtime": runtime_meta,
         "results": results,
         "evidence": evidence,

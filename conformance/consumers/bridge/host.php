@@ -10,6 +10,8 @@ use Billium\Testkit\Fixtures\ProcessBarrier;
 use Billium\Testkit\Fixtures\ProcessIdentity;
 use BilliumMinimalHost\Database;
 use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Database\Events\TransactionCommitted;
+use Illuminate\Database\Events\TransactionRolledBack;
 use Illuminate\Http\Request;
 
 require __DIR__.'/bootstrap.php';
@@ -154,9 +156,71 @@ if (PHP_SAPI === 'cli-server') {
         return;
     }
     $host->admitProcess($app);
+    $raceConfigFile = $directory.'/ct06-server-race.json';
+    $requestPath = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
+    /** @var array<string, int>|null $activeTxMeta */
+    $activeTxMeta = null;
+    $raceJournal = null;
+
+    if (is_file($raceConfigFile) && $requestPath === '/billium/v1/sellers/seller-a/payments/refund') {
+        /** @var array{expectedWorkers?: int} $raceCfg */
+        $raceCfg = json_decode((string) file_get_contents($raceConfigFile), true, flags: JSON_THROW_ON_ERROR);
+        $expectedServerWorkers = (int) ($raceCfg['expectedWorkers'] ?? 6);
+        $raceJournal = new DurableJournal($directory.'/ct06-race.journal');
+        $raceBarrier = new ProcessBarrier($raceJournal);
+        $syncedOnce = false;
+
+        $runtimeDb = BridgeHost::database($app);
+        if ($app->bound('events')) {
+            $runtimeDb->setEventDispatcher($app->make('events'));
+        }
+
+        $host->setProcessAdmissionTxHook(static function () use (
+            $runtimeDb,
+            &$syncedOnce,
+            &$activeTxMeta,
+            $expectedServerWorkers,
+            $raceBarrier,
+        ): void {
+            if ($syncedOnce || $runtimeDb->transactionLevel() < 1) {
+                return;
+            }
+            $syncedOnce = true;
+            $row = $runtimeDb->selectOne('SELECT pg_backend_pid() AS backend_pid, txid_current() AS xid');
+            $activeTxMeta = [
+                'serverPid' => (int) getmypid(),
+                'pgBackendPid' => is_object($row) ? (int) $row->backend_pid : 0,
+                'xid' => is_object($row) ? (int) $row->xid : 0,
+                'enteredNs' => (int) hrtime(true),
+            ];
+            $raceBarrier->arrive('server_tx_open');
+            $raceBarrier->await('server_tx_open', $expectedServerWorkers, 20_000);
+        });
+
+        if ($app->bound('events')) {
+            $recordTxClose = static function (mixed $event) use (&$activeTxMeta, $raceJournal): void {
+                if ($activeTxMeta === null || $event->connection->transactionLevel() !== 0) {
+                    return;
+                }
+                $meta = $activeTxMeta;
+                $activeTxMeta = null;
+                $meta['exitedNs'] = (int) hrtime(true);
+                $raceJournal->append(new JournalEvent('server_refund_tx', $meta, ProcessIdentity::current()));
+            };
+            $app->make('events')->listen(TransactionCommitted::class, $recordTxClose);
+            $app->make('events')->listen(TransactionRolledBack::class, $recordTxClose);
+        }
+    }
+
     $kernel = $app->make(Kernel::class);
     $request = Request::capture();
     $response = $kernel->handle($request);
+    if ($activeTxMeta !== null && $raceJournal !== null) {
+        $meta = $activeTxMeta;
+        $activeTxMeta = null;
+        $meta['exitedNs'] = (int) hrtime(true);
+        $raceJournal->append(new JournalEvent('server_refund_tx', $meta, ProcessIdentity::current()));
+    }
     $kernel->terminate($request, $response);
     $response->send();
 

@@ -165,12 +165,32 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
                 "Caller lacks authenticated grant for migration sourceAuthority '{$options->migrationSourceAuthority}'",
             );
         }
+        if (count($records) !== $manifest->recordCount) {
+            throw new ProblemException(
+                ProblemCode::ValidationInvalid,
+                sprintf(
+                    'Import apply rejected before mutation: supplied record count (%d) does not match manifest recordCount (%d)',
+                    count($records),
+                    $manifest->recordCount,
+                ),
+            );
+        }
+        if (! ImportStagedRecordHydrator::matchesInputInventory($manifest, $records, $this->codec)) {
+            throw new ProblemException(
+                ProblemCode::ValidationInvalid,
+                'Import apply rejected before mutation: supplied records inventory does not match manifest recordsChecksum',
+            );
+        }
 
         $preview = $this->previewEvaluator->evaluate($manifest, $records);
-        $batchPk = $this->store->stageBatch($manifest);
-        foreach ($records as $idx => $record) {
-            $this->store->stageRecord($batchPk, $record, $preview->records[$idx]);
-        }
+        $batchPk = $this->connection()->transaction(function () use ($manifest, $records, $preview): int {
+            $stagedBatchPk = $this->store->stageBatch($manifest);
+            foreach ($records as $idx => $record) {
+                $this->store->stageRecord($stagedBatchPk, $record, $preview->records[$idx]);
+            }
+
+            return $stagedBatchPk;
+        });
 
         return $this->driveBatch($batchPk, $manifest->batchId, $manifest->manifestDigest, $options, $caller);
     }
@@ -299,6 +319,32 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
         }
 
         $stagedRows = ImportStagedRecordHydrator::objectRows($db->select('SELECT * FROM public.billium_import_record WHERE batch_pk = ? ORDER BY id ASC', [$batchPk]));
+        $expectedRecordCount = ImportStagedRecordHydrator::intField($batchRow, 'record_count');
+        $expectedRecordsChecksum = ImportStagedRecordHydrator::strField($batchRow, 'records_checksum');
+        $inventoryCheck = ImportStagedRecordHydrator::verifyStagedRowsInventory(
+            $stagedRows,
+            $expectedRecordCount,
+            $expectedRecordsChecksum,
+            $this->codec,
+        );
+        if (! $inventoryCheck['countMatches'] || ! $inventoryCheck['checksumMatches']) {
+            $reconciliation = $this->reconciler->reconcileBatch($batchId, $options->migrationSourceAuthority);
+            if ($status === ImportBatchStatus::Staged && count($stagedRows) < $expectedRecordCount) {
+                return $this->summarizeResult(
+                    $batchPk,
+                    $batchId,
+                    $manifestDigest,
+                    ImportBatchStatus::Staged,
+                    0,
+                    $expectedRecordCount - count($stagedRows),
+                    [],
+                    $reconciliation,
+                );
+            }
+            $this->store->transitionBatch($batchPk, ImportBatchStatus::Quarantined);
+
+            return $this->summarizeResult($batchPk, $batchId, $manifestDigest, ImportBatchStatus::Quarantined, 0, 0, [], $reconciliation);
+        }
 
         // Pre-apply lifecycle: staged -> validated -> approved -> applying (or rejected / quarantined).
         if ($status === ImportBatchStatus::Staged) {
@@ -460,6 +506,11 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
 
         // Stage 4: Proven settlement intents via LedgerParticipants::declareSettlementIntent BEFORE observation reduction.
         if (! $quarantined && ! $this->budgetReached($processedSteps, $maxSteps)) {
+            $aggregatedIntents = $this->buildAggregatedAllocationIntents(
+                $stage4Allocations,
+                $obligationRefBySourceId,
+                $chargeOpRefByLookup,
+            );
             foreach (array_chunk($stage4Allocations, $chunkSize) as $chunk) {
                 foreach ($chunk as $row) {
                     if ($this->budgetReached($processedSteps, $maxSteps)) {
@@ -471,6 +522,7 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
                         $caller,
                         $obligationRefBySourceId,
                         $chargeOpRefByLookup,
+                        $aggregatedIntents,
                         $processedSteps,
                         $quarantined,
                     );
@@ -1020,8 +1072,104 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
     }
 
     /**
+     * Pre-aggregates proven allocation targets sharing the same settlement intent (e.g. split payment across obligations A and B).
+     *
+     * @param  list<object>  $stage4Allocations
      * @param  array<string, string>  $obligationRefBySourceId
      * @param  array<string, string>  $chargeOpRefByLookup
+     * @return array<string, array{obligationRefs: list<string>, requestedMinor: ?int}>
+     */
+    private function buildAggregatedAllocationIntents(
+        array $stage4Allocations,
+        array $obligationRefBySourceId,
+        array $chargeOpRefByLookup,
+    ): array {
+        /**
+         * @var array<string, array{
+         *   billingAccountRef: string,
+         *   currency: string,
+         *   conflictedScope: bool,
+         *   obligationRefs: list<string>,
+         *   requestedMinor: ?int,
+         *   hasNullMoney: bool
+         * }> $groups
+         */
+        $groups = [];
+        foreach ($stage4Allocations as $row) {
+            $record = $this->hydrator->hydrateInputFromStagedRow($row);
+            $origRefs = $record->originalBusinessRefs;
+            $billingAccountRef = ImportStagedRecordHydrator::nonEmptyString($origRefs['billingAccountRef'] ?? null);
+            $paymentLookup = ImportStagedRecordHydrator::nonEmptyString($origRefs['paymentRecordId'] ?? null)
+                ?? ImportStagedRecordHydrator::nonEmptyString($origRefs['paymentRef'] ?? null)
+                ?? ImportStagedRecordHydrator::nonEmptyString($origRefs['originalOperationRef'] ?? null);
+            $obligationLookup = ImportStagedRecordHydrator::nonEmptyString($origRefs['obligationRecordId'] ?? null)
+                ?? ImportStagedRecordHydrator::nonEmptyString($origRefs['obligationRef'] ?? null);
+            $currency = $record->money?->currency->code ?? ImportStagedRecordHydrator::nonEmptyString($record->payload['currency'] ?? null);
+
+            if ($billingAccountRef === null || $paymentLookup === null || $obligationLookup === null || $currency === null) {
+                continue;
+            }
+
+            $targetObligationRef = $obligationRefBySourceId[$obligationLookup] ?? $obligationLookup;
+            $chargeOpRef = $chargeOpRefByLookup[$paymentLookup] ?? $paymentLookup;
+            $businessIntentRef = ImportStagedRecordHydrator::nonEmptyString($origRefs['settlementIntentRef'] ?? null)
+                ?? ImportStagedRecordHydrator::boundedRef('imp-intent:'.$chargeOpRef, 'imp-int');
+
+            $inspectedObl = ($this->monetaryPort)()->inspectObligation($targetObligationRef);
+            if (! $inspectedObl['exists']) {
+                continue;
+            }
+            if (($inspectedObl['billingAccountRef'] ?? '') !== $billingAccountRef || ($inspectedObl['currency'] ?? '') !== $currency) {
+                continue;
+            }
+
+            if (! isset($groups[$businessIntentRef])) {
+                $groups[$businessIntentRef] = [
+                    'billingAccountRef' => $billingAccountRef,
+                    'currency' => $currency,
+                    'conflictedScope' => false,
+                    'obligationRefs' => [$targetObligationRef],
+                    'requestedMinor' => $record->money?->minor,
+                    'hasNullMoney' => $record->money === null,
+                ];
+            } else {
+                if (
+                    $groups[$businessIntentRef]['billingAccountRef'] !== $billingAccountRef
+                    || $groups[$businessIntentRef]['currency'] !== $currency
+                ) {
+                    $groups[$businessIntentRef]['conflictedScope'] = true;
+
+                    continue;
+                }
+                if (! in_array($targetObligationRef, $groups[$businessIntentRef]['obligationRefs'], true)) {
+                    $groups[$businessIntentRef]['obligationRefs'][] = $targetObligationRef;
+                }
+                if ($record->money === null || $groups[$businessIntentRef]['hasNullMoney']) {
+                    $groups[$businessIntentRef]['hasNullMoney'] = true;
+                    $groups[$businessIntentRef]['requestedMinor'] = null;
+                } else {
+                    $groups[$businessIntentRef]['requestedMinor'] = ($groups[$businessIntentRef]['requestedMinor'] ?? 0) + $record->money->minor;
+                }
+            }
+        }
+
+        $result = [];
+        foreach ($groups as $intentRef => $group) {
+            if (! $group['conflictedScope'] && $group['obligationRefs'] !== []) {
+                $result[$intentRef] = [
+                    'obligationRefs' => $group['obligationRefs'],
+                    'requestedMinor' => $group['requestedMinor'],
+                ];
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param  array<string, string>  $obligationRefBySourceId
+     * @param  array<string, string>  $chargeOpRefByLookup
+     * @param  array<string, array{obligationRefs: list<string>, requestedMinor: ?int}>  $aggregatedIntents
      */
     private function applyProvenAllocationRow(
         int $batchPk,
@@ -1029,6 +1177,7 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
         Caller $caller,
         array $obligationRefBySourceId,
         array $chargeOpRefByLookup,
+        array $aggregatedIntents,
         int &$processedSteps,
         bool &$quarantined,
     ): ImportRecordApplyOutcome {
@@ -1088,6 +1237,11 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
             return $this->applyStage1Row($batchPk, $row, $processedSteps, $quarantined);
         }
 
+        $intentTargetRefs = $aggregatedIntents[$businessIntentRef]['obligationRefs'] ?? [$targetObligationRef];
+        $intentRequestedMinor = array_key_exists($businessIntentRef, $aggregatedIntents)
+            ? $aggregatedIntents[$businessIntentRef]['requestedMinor']
+            : $record->money?->minor;
+
         $processedSteps++;
         $spec = new OperationSpec(
             commandKind: 'platform.import.settlement_intent.v1',
@@ -1114,7 +1268,8 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
             $billingAccountRef,
             $businessIntentRef,
             $currency,
-            $targetObligationRef,
+            $intentTargetRefs,
+            $intentRequestedMinor,
             &$captured,
         ): Receipt {
             ($this->runner)()->assertCurrent($context, 'platform');
@@ -1137,8 +1292,8 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
                 billingAccountRef: $billingAccountRef,
                 businessIntentRef: $businessIntentRef,
                 currency: $currency,
-                obligationRefs: [$targetObligationRef],
-                requestedMinor: $record->money?->minor,
+                obligationRefs: $intentTargetRefs,
+                requestedMinor: $intentRequestedMinor,
             ));
 
             $billiumReceiptRef = is_string($intentReceipt->body()['receipt_ref'] ?? null)
@@ -1159,7 +1314,7 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
                     billiumReceiptRef: $billiumReceiptRef,
                     details: [
                         'businessIntentRef' => $businessIntentRef,
-                        'obligationRefs' => [$targetObligationRef],
+                        'obligationRefs' => $intentTargetRefs,
                     ],
                 );
             $this->hydrator->markStagedRecordAlreadyApplied($recordPk, $bound->sourceFactRef);

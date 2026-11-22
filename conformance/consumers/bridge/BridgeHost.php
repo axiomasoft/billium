@@ -131,6 +131,11 @@ final class BridgeHost implements Authenticator, AuthorizationVerdict, Financial
 
     private ?DeterministicWriterHost $writerHost = null;
 
+    /** @var (Closure(Application): void)|null */
+    private ?Closure $onProcessAdmittedInTx = null;
+
+    private ?Application $boundApp = null;
+
     public function __construct(
         public readonly string $directory,
         public readonly string $standProfile,
@@ -255,7 +260,15 @@ final class BridgeHost implements Authenticator, AuthorizationVerdict, Financial
             }
         }
 
+        $this->boundApp = $app;
+
         return $app;
+    }
+
+    /** @param Closure(Application): void $hook */
+    public function setProcessAdmissionTxHook(Closure $hook): void
+    {
+        $this->onProcessAdmittedInTx = $hook;
     }
 
     /** @return list<string> */
@@ -309,7 +322,12 @@ final class BridgeHost implements Authenticator, AuthorizationVerdict, Financial
 
     public function process(string $installationRef, string $processRef, string $nonce): ?VerifiedProcessAdmission
     {
-        return $this->processes[$installationRef.'|'.$processRef.'|'.$nonce] ?? null;
+        $verified = $this->processes[$installationRef.'|'.$processRef.'|'.$nonce] ?? null;
+        if ($verified !== null && $this->onProcessAdmittedInTx !== null && $this->boundApp !== null) {
+            ($this->onProcessAdmittedInTx)($this->boundApp);
+        }
+
+        return $verified;
     }
 
     public function transition(string $installationRef, string $transitionRef): ?VerifiedSessionAuthorization

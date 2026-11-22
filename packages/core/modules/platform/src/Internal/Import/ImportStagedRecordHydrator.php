@@ -12,6 +12,7 @@ use Billium\Platform\Contracts\Import\ImportIdentityStore;
 use Billium\Platform\Contracts\Import\ImportMonetaryPort;
 use Billium\Platform\Data\Import\ImportApplyOptions;
 use Billium\Platform\Data\Import\ImportEvidenceRef;
+use Billium\Platform\Data\Import\ImportManifest;
 use Billium\Platform\Data\Import\ImportObservationOutcome;
 use Billium\Platform\Data\Import\ImportReceiptStatus;
 use Billium\Platform\Data\Import\ImportRecordApplyOutcome;
@@ -26,6 +27,7 @@ use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use LogicException;
 use Packman\Attributes\Internal;
+use stdClass;
 
 /**
  * Staged import row hydration, receipt checkpointing, and bounded row helpers (P9.3, D71).
@@ -405,5 +407,138 @@ final readonly class ImportStagedRecordHydrator
         }
 
         return self::intField($row, $column);
+    }
+
+    /**
+     * Verifies supplied in-memory records against manifest.recordCount and manifest.recordsChecksum.
+     *
+     * @param  list<ImportRecordInput>  $records
+     */
+    public static function matchesInputInventory(ImportManifest $manifest, array $records, Codec $codec): bool
+    {
+        if (count($records) !== $manifest->recordCount) {
+            return false;
+        }
+        if ($records === []) {
+            return hash_equals($manifest->recordsChecksum, 'sha256:'.hash('sha256', '[]'));
+        }
+
+        $canonicals = [];
+        $hasExportCanonical = false;
+        foreach ($records as $idx => $record) {
+            $meta = is_array($record->payload['mapperMetadata'] ?? null) ? $record->payload['mapperMetadata'] : [];
+            if (array_key_exists('sourceRecordCanonical', $meta)) {
+                $hasExportCanonical = true;
+                if (($meta['sourceRecordIndex'] ?? null) !== $idx || ! is_string($meta['sourceRecordCanonical'])) {
+                    return false;
+                }
+                $canonicals[] = $meta['sourceRecordCanonical'];
+            }
+        }
+        if ($hasExportCanonical) {
+            return count($canonicals) === count($records)
+                && hash_equals($manifest->recordsChecksum, 'sha256:'.hash('sha256', '['.implode(',', $canonicals).']'));
+        }
+
+        $payloadDigests = array_map(static fn (ImportRecordInput $r): string => $r->payloadDigest, $records);
+        $payloadObjects = array_map(static fn (ImportRecordInput $r): mixed => $r->payload === [] ? new stdClass : $r->payload, $records);
+        $descriptors = array_map(
+            static fn (ImportRecordInput $r): array => [
+                'payloadDigest' => $r->payloadDigest,
+                'sourceIdentityDigest' => $r->identity->identityDigest($codec),
+                'sourceRecordRevision' => $r->sourceRecordRevision,
+            ],
+            $records,
+        );
+
+        foreach ([$payloadDigests, $payloadObjects, $descriptors] as $candidate) {
+            $candidateHash = 'sha256:'.hash('sha256', $codec->canonicalize($candidate));
+            if (hash_equals($manifest->recordsChecksum, $candidateHash)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Verifies persisted staged rows against manifest record_count and records_checksum.
+     *
+     * @param  list<object>  $stagedRows
+     * @return array{countMatches: bool, checksumMatches: bool}
+     */
+    public static function verifyStagedRowsInventory(
+        array $stagedRows,
+        int $expectedRecordCount,
+        string $expectedRecordsChecksum,
+        Codec $codec,
+    ): array {
+        $countMatches = count($stagedRows) === $expectedRecordCount;
+        if ($stagedRows === []) {
+            $emptyMatches = hash_equals($expectedRecordsChecksum, 'sha256:'.hash('sha256', '[]'));
+
+            return ['countMatches' => $countMatches, 'checksumMatches' => $emptyMatches];
+        }
+
+        /** @var array<int, string> $canonicalsByIndex */
+        $canonicalsByIndex = [];
+        $hasExportCanonical = false;
+        $payloadDigests = [];
+        $payloadObjects = [];
+        $descriptors = [];
+
+        foreach ($stagedRows as $row) {
+            $payload = self::decodeArray(self::strField($row, 'payload'));
+            $meta = is_array($payload['mapperMetadata'] ?? null) ? $payload['mapperMetadata'] : [];
+            if (array_key_exists('sourceRecordCanonical', $meta)) {
+                $hasExportCanonical = true;
+                $recIdx = $meta['sourceRecordIndex'] ?? null;
+                $recCan = $meta['sourceRecordCanonical'] ?? null;
+                if (! is_int($recIdx) || ! is_string($recCan) || isset($canonicalsByIndex[$recIdx])) {
+                    return ['countMatches' => $countMatches, 'checksumMatches' => false];
+                }
+                $canonicalsByIndex[$recIdx] = $recCan;
+            }
+
+            $rowDigest = self::strField($row, 'payload_digest');
+            $payloadDigests[] = $rowDigest;
+            $payloadObjects[] = $payload === [] ? new stdClass : $payload;
+            $descriptors[] = [
+                'payloadDigest' => $rowDigest,
+                'sourceIdentityDigest' => self::strField($row, 'source_identity_digest'),
+                'sourceRecordRevision' => self::intField($row, 'source_record_revision'),
+            ];
+        }
+
+        if ($hasExportCanonical) {
+            if (count($canonicalsByIndex) !== count($stagedRows)) {
+                return ['countMatches' => $countMatches, 'checksumMatches' => false];
+            }
+            ksort($canonicalsByIndex, SORT_NUMERIC);
+            $orderedCanonicals = [];
+            for ($i = 0, $total = count($stagedRows); $i < $total; $i++) {
+                if (! isset($canonicalsByIndex[$i])) {
+                    return ['countMatches' => $countMatches, 'checksumMatches' => false];
+                }
+                $orderedCanonicals[] = $canonicalsByIndex[$i];
+            }
+            $actualChecksum = 'sha256:'.hash('sha256', '['.implode(',', $orderedCanonicals).']');
+
+            return [
+                'countMatches' => $countMatches,
+                'checksumMatches' => hash_equals($expectedRecordsChecksum, $actualChecksum),
+            ];
+        }
+
+        $checksumMatches = false;
+        foreach ([$payloadDigests, $payloadObjects, $descriptors] as $candidate) {
+            $candidateHash = 'sha256:'.hash('sha256', $codec->canonicalize($candidate));
+            if (hash_equals($expectedRecordsChecksum, $candidateHash)) {
+                $checksumMatches = true;
+                break;
+            }
+        }
+
+        return ['countMatches' => $countMatches, 'checksumMatches' => $checksumMatches];
     }
 }

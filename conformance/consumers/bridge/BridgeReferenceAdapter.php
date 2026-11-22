@@ -58,6 +58,9 @@ final class BridgeReferenceAdapter
         if ($type === 'start') {
             $this->producerUrl = rtrim((string) $message['producerUrl'], '/');
             $this->boundary = (string) $message['boundary'];
+            if ($this->boundary === 'external-runtime') {
+                throw new RuntimeException('Bundled reference adapter cannot satisfy external-runtime boundary; attach an independent external consumer');
+            }
             $this->workDir = (string) ($message['workDir'] ?? sys_get_temp_dir());
 
             return [
@@ -66,7 +69,8 @@ final class BridgeReferenceAdapter
                 'commitHash' => $this->gitCommit(), 'packageHash' => $this->packageHash(),
                 'specRevision' => '2026-10',
                 'specHash' => 'sha256:'.hash_file('sha256', $this->repoRoot.'/spec/revisions/2026-10/revision.lock.json'),
-                'deliveryProfile' => $this->boundary === 'double' ? 'double-transport' : ($this->boundary === 'external-runtime' ? 'external-http' : 'loopback-http'),
+                'deliveryProfile' => $this->boundary === 'double' ? 'double-transport' : 'loopback-http',
+                'isBundledReference' => true,
                 'supportedOps' => self::SUPPORTED_OPS, 'paidPspEffect' => false,
             ];
         }

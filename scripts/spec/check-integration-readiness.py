@@ -148,8 +148,15 @@ def validate_runtime_report_file(report_entry: dict[str, Any], repo_root: Path, 
     if not isinstance(report_entry.get("runtime"), dict) or not report_entry["runtime"]:
         errors.append(f"missing_report_provenance: runtime report {rid} missing runtime object")
     recorded_sha = report_entry.get("recorded_sha256")
-    if not isinstance(recorded_sha, str) or not DIGEST_RE.match(recorded_sha):
+    recorded_sha_valid = isinstance(recorded_sha, str) and bool(DIGEST_RE.match(recorded_sha))
+    if not recorded_sha_valid:
         errors.append(f"missing_artifact_hash: runtime report {rid} has missing/invalid recorded_sha256")
+
+    recorded_digest = report_entry.get("recorded_report_digest")
+    has_recorded_digest = "recorded_report_digest" in report_entry
+    recorded_digest_valid = isinstance(recorded_digest, str) and bool(DIGEST_RE.match(recorded_digest))
+    if has_recorded_digest and not recorded_digest_valid:
+        errors.append(f"missing_artifact_hash: runtime report {rid} has invalid recorded_report_digest")
 
     boundary = report_entry.get("boundary")
     ev_class = report_entry.get("evidence_class")
@@ -167,21 +174,108 @@ def validate_runtime_report_file(report_entry: dict[str, Any], repo_root: Path, 
         return errors
 
     try:
-        doc = json.loads(report_path.read_text(encoding="utf-8"))
-    except ValueError as exc:
+        raw_bytes = report_path.read_bytes()
+    except OSError as exc:
+        if require_present:
+            return errors + [f"unreadable_runtime_report: {rel_path}: {exc}"]
+        return errors
+
+    actual_sha = "sha256:" + hashlib.sha256(raw_bytes).hexdigest()
+    if recorded_sha_valid and actual_sha != recorded_sha:
+        errors.append(
+            f"artifact_hash_mismatch: runtime report {rel_path} declared {recorded_sha}, actual {actual_sha}"
+        )
+
+    try:
+        doc = json.loads(raw_bytes.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError) as exc:
         return errors + [f"invalid_runtime_report_json: {rel_path}: {exc}"]
 
-    if not isinstance(doc, dict):
-        return errors + [f"invalid_runtime_report_json: {rel_path} must be a JSON object"]
+    if not isinstance(doc, dict) or not doc:
+        return errors + [f"runtime_report_failed: {rel_path} must be a non-empty JSON report object"]
 
-    if "paidPspTransactions" in doc and doc["paidPspTransactions"] != 0:
-        errors.append(f"paid_psp_forbidden: {rel_path} paidPspTransactions != 0")
-    if "exit" in doc and doc["exit"] != 0:
-        errors.append(f"runtime_report_failed: {rel_path} exit={doc['exit']!r}")
-    if "passed" in doc and doc["passed"] is not True:
-        errors.append(f"runtime_report_failed: {rel_path} passed={doc['passed']!r}")
-    if "violations" in doc and doc["violations"]:
-        errors.append(f"runtime_report_failed: {rel_path} has non-empty violations")
+    if has_recorded_digest and recorded_digest_valid:
+        doc_digest = doc.get("reportDigest")
+        if doc_digest != recorded_digest:
+            errors.append(
+                f"artifact_hash_mismatch: runtime report {rel_path} reportDigest {doc_digest!r} != recorded_report_digest {recorded_digest}"
+            )
+        elif canonical_digest(doc, "reportDigest") != recorded_digest:
+            errors.append(
+                f"artifact_hash_mismatch: runtime report {rel_path} canonical JCS digest differs from recorded_report_digest"
+            )
+
+    declared_acceptance = [
+        aid for aid in report_entry.get("acceptance_ids", [])
+        if isinstance(aid, str) and aid.strip()
+    ]
+
+    if ev_class in {"import-behavior-conformance", "import-codec-conformance"}:
+        if doc.get("protocol") != "billium.import.conformance.report.v1":
+            errors.append(f"runtime_report_failed: {rel_path} missing/invalid import conformance protocol")
+        if doc.get("evidence_class") != ev_class:
+            errors.append(f"runtime_report_failed: {rel_path} evidence_class {doc.get('evidence_class')!r} != {ev_class!r}")
+        if doc.get("paidPspTransactions") != 0:
+            errors.append(f"paid_psp_forbidden: {rel_path} paidPspTransactions != 0")
+        counts = doc.get("counts")
+        if not isinstance(counts, dict) or counts.get("error") != 0 or int(counts.get("pass", 0)) <= 0:
+            errors.append(f"runtime_report_failed: {rel_path} missing passing counts or has errors")
+        violations = doc.get("violations")
+        if not isinstance(violations, list) or len(violations) > 0:
+            errors.append(f"runtime_report_failed: {rel_path} missing or non-empty violations list")
+        results = doc.get("results")
+        if not isinstance(results, list) or not results:
+            errors.append(f"runtime_report_failed: {rel_path} missing results array")
+        elif ev_class == "import-behavior-conformance":
+            passed_ids = {r.get("id") for r in results if isinstance(r, dict) and r.get("status") == "pass"}
+            missing_ids = [aid for aid in declared_acceptance if aid not in passed_ids]
+            if missing_ids:
+                errors.append(f"runtime_report_failed: {rel_path} missing passed acceptance IDs {missing_ids}")
+        doc_digest = doc.get("reportDigest")
+        if not isinstance(doc_digest, str) or not DIGEST_RE.match(doc_digest) or canonical_digest(doc, "reportDigest") != doc_digest:
+            errors.append(f"artifact_hash_mismatch: {rel_path} missing or invalid canonical reportDigest")
+    elif ev_class == "consumer-contract":
+        if doc.get("protocol") != "billium.consumer.contract.report.v1":
+            errors.append(f"runtime_report_failed: {rel_path} missing/invalid consumer contract protocol")
+        if doc.get("evidence_class") != "consumer-contract" or doc.get("boundary") != boundary:
+            errors.append(f"runtime_report_failed: {rel_path} mismatched evidence_class or boundary")
+        if doc.get("paidPspTransactions") != 0:
+            errors.append(f"paid_psp_forbidden: {rel_path} paidPspTransactions != 0")
+        if doc.get("status") != "passed" or doc.get("passed") is not True or doc.get("localRequiredSuiteComplete") is not True:
+            errors.append(f"runtime_report_failed: {rel_path} consumer suite did not pass completely")
+        results = doc.get("results")
+        if not isinstance(results, list) or not results:
+            errors.append(f"runtime_report_failed: {rel_path} missing results array")
+        else:
+            passed_ids = {r.get("id") for r in results if isinstance(r, dict) and r.get("status") == "pass"}
+            missing_ids = [aid for aid in declared_acceptance if aid not in passed_ids]
+            if missing_ids:
+                errors.append(f"runtime_report_failed: {rel_path} missing passed consumer cases {missing_ids}")
+        doc_digest = doc.get("reportDigest")
+        if not isinstance(doc_digest, str) or not DIGEST_RE.match(doc_digest) or canonical_digest(doc, "reportDigest") != doc_digest:
+            errors.append(f"artifact_hash_mismatch: {rel_path} missing or invalid canonical reportDigest")
+    elif ev_class == "migration-drill":
+        if doc.get("schema") != "billium.migration.drill_report.v1":
+            errors.append(f"runtime_report_failed: {rel_path} missing/invalid migration drill schema")
+        if doc.get("exit") != 0:
+            errors.append(f"runtime_report_failed: {rel_path} exit={doc.get('exit')!r}")
+        steps = doc.get("steps")
+        if not isinstance(steps, list) or not steps or not all(isinstance(s, dict) and s.get("passed") is True for s in steps):
+            errors.append(f"runtime_report_failed: {rel_path} missing or failing drill steps")
+        gates_map = doc.get("gates")
+        if not isinstance(gates_map, dict):
+            errors.append(f"runtime_report_failed: {rel_path} missing gates map")
+        else:
+            missing_gates = [
+                aid for aid in declared_acceptance
+                if not isinstance(gates_map.get(aid), dict) or gates_map[aid].get("status") != "passed"
+            ]
+            if missing_gates:
+                errors.append(f"runtime_report_failed: {rel_path} missing passed drill gates {missing_gates}")
+    else:
+        if doc.get("passed") is not True and doc.get("exit") != 0:
+            errors.append(f"runtime_report_failed: {rel_path} lacks explicit pass/exit=0 indicator")
+
     if doc.get("externalReady") is True or doc.get("rolloutGatePassed") is True:
         if doc.get("boundary") in {"double", "loopback"}:
             errors.append(f"double_promotion_forbidden: {rel_path} promotes {doc.get('boundary')} to externalReady/rolloutGatePassed")
@@ -284,6 +378,7 @@ def validate_manifest(
     # 5. Local runtime reports.
     runtime_reports = manifest.get("local_runtime_reports")
     report_ids: set[str] = set()
+    runtime_reports_by_path: dict[str, dict[str, Any]] = {}
     if not isinstance(runtime_reports, list) or len(runtime_reports) < 4:
         errors.append("missing_runtime_reports: local_runtime_reports must record all 4 P9 local runtime suites")
     else:
@@ -292,6 +387,8 @@ def validate_manifest(
                 errors.append("invalid_runtime_report: each entry requires a non-empty id")
                 continue
             report_ids.add(entry["id"])
+            if _non_empty_str(entry.get("path")):
+                runtime_reports_by_path[entry["path"]] = entry
             errors.extend(validate_runtime_report_file(entry, repo_root, require_runtime_reports))
 
     # 6. Mandatory acceptance ID coverage (IM-01..17, CT-01..20, MGATE-01..11, P9 catalog IDs).
@@ -398,12 +495,49 @@ def validate_manifest(
                         errors.append(f"missing_artifact_hash: gate {gid} evidence_refs[{eidx}] missing path")
                         continue
                     rsha = ref.get("sha256")
+                    rpath = ref["path"]
                     if not isinstance(rsha, str) or not DIGEST_RE.match(rsha):
                         errors.append(f"missing_artifact_hash: gate {gid} evidence_refs[{eidx}] missing/malformed sha256")
-                    elif ref["path"] in tracked_by_path and tracked_by_path[ref["path"]] != rsha:
-                        errors.append(
-                            f"artifact_hash_mismatch: gate {gid} ref {ref['path']} hash differs from tracked_artifacts"
-                        )
+                        continue
+                    if rpath in tracked_by_path:
+                        if tracked_by_path[rpath] != rsha:
+                            errors.append(
+                                f"artifact_hash_mismatch: gate {gid} ref {rpath} hash differs from tracked_artifacts"
+                            )
+                    elif rpath in runtime_reports_by_path:
+                        expected_rep_sha = runtime_reports_by_path[rpath].get("recorded_sha256")
+                        if expected_rep_sha != rsha:
+                            errors.append(
+                                f"artifact_hash_mismatch: gate {gid} ref {rpath} hash differs from local_runtime_reports.recorded_sha256"
+                            )
+                        disk_rep = repo_root / rpath
+                        if disk_rep.is_file():
+                            try:
+                                actual_rep_sha = file_sha256(disk_rep)
+                            except OSError as exc:
+                                if require_runtime_reports:
+                                    errors.append(
+                                        f"unreadable_runtime_report: passed gate {gid} evidence_ref {rpath}: {exc}"
+                                    )
+                            else:
+                                if actual_rep_sha != rsha:
+                                    errors.append(
+                                        f"artifact_hash_mismatch: gate {gid} ref {rpath} declared {rsha}, actual {actual_rep_sha}"
+                                    )
+                        elif require_runtime_reports:
+                            errors.append(
+                                f"missing_runtime_report: passed gate {gid} evidence_ref {rpath} not found on disk"
+                            )
+                    else:
+                        disk_other = repo_root / rpath
+                        if not disk_other.is_file():
+                            errors.append(f"missing_artifact: passed gate {gid} evidence_ref {rpath} does not exist")
+                        else:
+                            actual_other_sha = file_sha256(disk_other)
+                            if actual_other_sha != rsha:
+                                errors.append(
+                                    f"artifact_hash_mismatch: gate {gid} ref {rpath} declared {rsha}, actual {actual_other_sha}"
+                                )
 
         missing_local_gates = sorted(REQUIRED_LOCAL_GATE_IDS - set(gates_by_id))
         if missing_local_gates:

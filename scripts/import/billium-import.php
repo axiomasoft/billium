@@ -6,8 +6,18 @@ declare(strict_types=1);
 use Billium\Contracts\Contracts\Codec;
 use Billium\Core\BilliumCoreServiceProvider;
 use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Contracts\Runtime\FinancialAuthorityEvidence;
 use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
+use Billium\Core\Data\Runtime\ActivationCertificate;
 use Billium\Core\Data\Runtime\Caller;
+use Billium\Core\Data\Runtime\FinancialScope;
+use Billium\Core\Data\Runtime\NamespaceDisposition;
+use Billium\Core\Data\Runtime\OwnerSessionIdentity;
+use Billium\Core\Data\Runtime\RecoveryCoverage;
+use Billium\Core\Data\Runtime\RetirementProof;
+use Billium\Core\Data\Runtime\VerifiedProcessAdmission;
+use Billium\Core\Data\Runtime\VerifiedSessionAuthorization;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Tests\Support\FixedCallerContext;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
 use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
@@ -153,7 +163,7 @@ function readOnlyEmptyStore(): ImportIdentityStore
 /**
  * Boots an isolated Billium runtime application against the configured PostgreSQL database.
  */
-function bootBilliumApp(Caller $caller, bool $openActiveSession = false): Application
+function bootBilliumApp(Caller $caller, bool $openActiveSession = false, bool $admitExistingActiveSession = false): Application
 {
     $app = Testbench::create(options: [
         'extra' => ['providers' => [BilliumCoreServiceProvider::class]],
@@ -164,7 +174,7 @@ function bootBilliumApp(Caller $caller, bool $openActiveSession = false): Applic
     $tokens = new FixedSessionAdmission;
     $app->instance(CallerContext::class, $callers);
     $app->instance(FinancialSessionAdmission::class, $tokens);
-    SimulatedFinancialAuthorityEvidence::install($app);
+    $authority = SimulatedFinancialAuthorityEvidence::install($app);
 
     if ($openActiveSession) {
         $migrator = $app->make(SchemaMigrator::class);
@@ -176,15 +186,176 @@ function bootBilliumApp(Caller $caller, bool $openActiveSession = false): Applic
 
         $installation = $app->make(Installation::class);
         $installation->init($caller->installationRef);
-        SimulatedFinancialAuthorityEvidence::install($app)->issueTransition('open', 'open-1', ['owner-1', 1, 1, 1, 'evidence:open-1']);
+        $authority->issueTransition('open', 'open-1', ['owner-1', 1, 1, 1, 'evidence:open-1']);
         $installation->openSession('open-1', 'owner-1', 1, 1, 1, 'evidence:open-1');
-        SimulatedFinancialAuthorityEvidence::install($app)->issueTransition('activate', 'activate-1', [1, 'certificate:1', 'admission:1', 'evidence:activate-1']);
+        $authority->issueTransition('activate', 'activate-1', [1, 'certificate:1', 'admission:1', 'evidence:activate-1']);
         $installation->activateSession('activate-1', 1, 'certificate:1', 'admission:1', 'evidence:activate-1');
         $tokens->set(FixedSessionAdmission::token($caller->installationRef));
         SimulatedFinancialAuthorityEvidence::admitCurrent($app);
+    } elseif ($admitExistingActiveSession) {
+        admitActiveInstallationSession($app, $caller, $tokens, $authority);
     }
 
     return $app;
+}
+
+/**
+ * Admits the current CLI process against an already-initialized active installation in PostgreSQL at Tx0.
+ * Never fabricates a session or token when the installation is uninitialized, closed, sealed or in recovery.
+ */
+function admitActiveInstallationSession(
+    Application $app,
+    Caller $caller,
+    FixedSessionAdmission $tokens,
+    SimulatedFinancialAuthorityEvidence $authority,
+): void {
+    $db = $app->make(DatabaseManager::class)->connection('pgsql');
+    $tableExists = $db->scalar("SELECT to_regclass('public.billium_financial_session') IS NOT NULL");
+    if ($tableExists !== true) {
+        return;
+    }
+
+    $session = $db->selectOne(
+        'SELECT id, epoch, external_owner_session_ref, deployment_generation, '
+        .'external_attachment_generation, authority_epoch, state, activation_certificate_ref, sealed_at '
+        .'FROM public.billium_financial_session WHERE installation_ref = ? ORDER BY epoch DESC LIMIT 1',
+        [$caller->installationRef],
+    );
+    if (! is_object($session)
+        || ($session->state ?? null) !== 'active'
+        || ($session->sealed_at ?? null) !== null
+        || ! is_string($session->activation_certificate_ref ?? null)
+        || $session->activation_certificate_ref === ''
+    ) {
+        return;
+    }
+
+    $sessionId = (int) $session->id;
+    $epoch = (int) $session->epoch;
+    $ownerSessionRef = (string) $session->external_owner_session_ref;
+    $deploymentGen = (int) $session->deployment_generation;
+    $attachmentGen = (int) $session->external_attachment_generation;
+    $authorityEpoch = (int) $session->authority_epoch;
+    $certificateRef = (string) $session->activation_certificate_ref;
+
+    $activatedEvent = $db->selectOne(
+        "SELECT transition_ref FROM public.billium_financial_session_event WHERE session_id = ? AND transition = 'activated' ORDER BY id DESC LIMIT 1",
+        [$sessionId],
+    );
+    $transitionRef = is_object($activatedEvent) && is_string($activatedEvent->transition_ref ?? null)
+        ? $activatedEvent->transition_ref
+        : '';
+    if ($transitionRef === '') {
+        return;
+    }
+
+    $token = FixedSessionAdmission::token(
+        installationRef: $caller->installationRef,
+        ownerSessionRef: $ownerSessionRef,
+        deploymentGeneration: $deploymentGen,
+        attachmentGeneration: $attachmentGen,
+        authorityEpoch: $authorityEpoch,
+        modes: [FinancialMode::Active],
+        processRef: 'cli-import-'.getmypid(),
+    );
+    $tokens->set($token);
+    $authority->issueProcess($token);
+
+    if ($authority->transition($caller->installationRef, $transitionRef) !== null) {
+        return;
+    }
+
+    $owner = new OwnerSessionIdentity(
+        $caller->installationRef,
+        $ownerSessionRef,
+        $deploymentGen,
+        $attachmentGen,
+        $authorityEpoch,
+    );
+    $key = bin2hex(random_bytes(32));
+    $sign = static fn (string $val): string => 'sha256:'.hash_hmac('sha256', $val, $key);
+    $retirement = new RetirementProof(
+        'cli-retire:'.$transitionRef,
+        $owner,
+        $sign('producers-stopped'),
+        $sign('workers-terminated'),
+        $sign('egress-revoked'),
+        $sign('inflight-empty'),
+        'cli-host-authority',
+        new DateTimeImmutable('-1 minute'),
+        $sign($transitionRef.'|retirement'),
+    );
+    $expires = new DateTimeImmutable('+1 hour');
+    $nonce = bin2hex(random_bytes(16));
+    $coverage = new RecoveryCoverage(
+        'cli-adopted-session',
+        new DateTimeImmutable('-1 day'),
+        [],
+        $sign('dispatch-coverage'),
+        $sign('source-journal'),
+        $sign('tombstones'),
+        ['projection-validation'],
+        ['downstream-validation'],
+        [],
+        [new NamespaceDisposition(new FinancialScope($caller->installationRef, null, null, null), 'active', $sign('ns-active'))],
+    );
+    $certificate = new ActivationCertificate(
+        $certificateRef,
+        $owner,
+        $epoch,
+        $retirement->signatureDigest,
+        $coverage,
+        $caller->actorRef,
+        'activate',
+        'adopted active installation session',
+        $expires,
+        $nonce,
+        $sign($transitionRef.'|certificate'),
+    );
+    $digest = $sign($transitionRef.'|request');
+    $adoptedAuth = new VerifiedSessionAuthorization(
+        $transitionRef,
+        'activate',
+        $owner,
+        $epoch,
+        $digest,
+        'adopted:'.$transitionRef,
+        $certificate,
+        $retirement,
+        'adopted-admission:'.$transitionRef,
+        'cli-host-authority',
+        'billium.financial_session_control.v1',
+        $expires,
+        $nonce,
+        $sign($digest),
+    );
+
+    $app->instance(FinancialAuthorityEvidence::class, new readonly class($authority, $caller->installationRef, $transitionRef, $adoptedAuth) implements FinancialAuthorityEvidence
+    {
+        public function __construct(
+            private SimulatedFinancialAuthorityEvidence $inner,
+            private string $installationRef,
+            private string $transitionRef,
+            private VerifiedSessionAuthorization $adoptedAuth,
+        ) {}
+
+        public function process(string $installationRef, string $processRef, string $nonce): ?VerifiedProcessAdmission
+        {
+            return $this->inner->process($installationRef, $processRef, $nonce);
+        }
+
+        public function transition(string $installationRef, string $transitionRef): ?VerifiedSessionAuthorization
+        {
+            $found = $this->inner->transition($installationRef, $transitionRef);
+            if ($found !== null) {
+                return $found;
+            }
+
+            return ($installationRef === $this->installationRef && $transitionRef === $this->transitionRef)
+                ? $this->adoptedAuth
+                : null;
+        }
+    });
 }
 
 /**
@@ -358,10 +529,13 @@ function runVerify(array $opts): int
         $paymentsBeforeReplay = (int) $owner->scalar('SELECT count(*) FROM public.billium_payment');
         $allocationsBeforeReplay = (int) $owner->scalar('SELECT count(*) FROM public.billium_allocation');
 
-        $rawFixture = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
-        $rawFixture['batchId'] = $manifest->batchId.'-replay';
-        $rawFixture['importPolicyVersion'] = 'import-policy-v2';
-        unset($rawFixture['artifactDigest']);
+        $rawFixture = json_decode((string) file_get_contents($path), false, 512, JSON_THROW_ON_ERROR);
+        if (! $rawFixture instanceof stdClass) {
+            throw new RuntimeException('Expected export fixture root JSON object');
+        }
+        $rawFixture->batchId = $manifest->batchId.'-replay';
+        $rawFixture->importPolicyVersion = 'import-policy-v2';
+        unset($rawFixture->artifactDigest);
         $replayReader = GenericExportReader::fromJson(json_encode($rawFixture, JSON_THROW_ON_ERROR), $profile, 'import-policy-v2', $codec);
         $replayResult = $applier->apply(
             $replayReader->manifest(),
@@ -441,7 +615,7 @@ function runApply(array $opts): int
         actorRef: 'cli-import-operator',
         sourceAuthorities: [$sourceAuthority],
     );
-    $app = bootBilliumApp($caller, openActiveSession: false);
+    $app = bootBilliumApp($caller, openActiveSession: false, admitExistingActiveSession: true);
     $result = $app->make(ImportBatchApplier::class)->apply(
         $manifest,
         $reader->records(),
@@ -497,7 +671,7 @@ function runResume(array $opts): int
         return 1;
     }
     $caller = new Caller($sellerRef, (string) $environment, (string) $installationRef, 'cli-import-operator', [(string) $sourceAuthority]);
-    $app = bootBilliumApp($caller, openActiveSession: false);
+    $app = bootBilliumApp($caller, openActiveSession: false, admitExistingActiveSession: true);
     $result = $app->make(ImportBatchApplier::class)->resume(
         $batchId,
         new ImportApplyOptions(

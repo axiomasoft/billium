@@ -92,7 +92,8 @@
         "packageHash": { "type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$" },
         "specRevision": { "type": ["string", "null"], "minLength": 1 },
         "specHash": { "type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$" },
-        "deliveryProfile": { "enum": ["loopback-http", "double-transport", "external-http"] }
+        "deliveryProfile": { "enum": ["loopback-http", "double-transport", "external-http"] },
+        "isBundledReference": { "type": "boolean" }
       }
     },
     "runtime": {

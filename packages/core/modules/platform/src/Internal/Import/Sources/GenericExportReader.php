@@ -16,6 +16,7 @@ use DateTimeImmutable;
 use JsonException;
 use Override;
 use Packman\Attributes\Internal;
+use stdClass;
 
 /**
  * Product-agnostic reader over immutable external export artifacts or readable local streams.
@@ -125,11 +126,12 @@ final readonly class GenericExportReader implements ExternalImportSourceAdapter
         $normalizer = new ExportRecordNormalizer;
 
         try {
+            $rawObject = json_decode($json, false, 512, JSON_THROW_ON_ERROR);
             $rawDecoded = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $exception) {
             throw new ExportArtifactException('export.invalid_json', 'Export artifact is not valid JSON: '.$exception->getMessage());
         }
-        if (! is_array($rawDecoded) || array_is_list($rawDecoded)) {
+        if (! $rawObject instanceof stdClass || ! is_array($rawDecoded)) {
             throw new ExportArtifactException('export.invalid_root', 'Export artifact root must be a JSON object');
         }
         /** @var array<string, mixed> $decoded */
@@ -157,14 +159,12 @@ final readonly class GenericExportReader implements ExternalImportSourceAdapter
             );
         }
 
-        // Verify artifactDigest if declared.
+        // Verify artifactDigest if declared (preserving nested JSON objects such as {} via stdClass tree).
         if (isset($decoded['artifactDigest'])) {
             if (! is_string($decoded['artifactDigest']) || preg_match('/^sha256:[0-9a-f]{64}$/', $decoded['artifactDigest']) !== 1) {
                 throw new ExportArtifactException('export.invalid_artifact_digest', 'artifactDigest must be a valid sha256 digest');
             }
-            $bodyWithoutDigest = $decoded;
-            unset($bodyWithoutDigest['artifactDigest']);
-            $expectedArtifactDigest = $codec->digest($bodyWithoutDigest);
+            $expectedArtifactDigest = $codec->digest($rawObject, 'artifactDigest');
             if ($decoded['artifactDigest'] !== $expectedArtifactDigest) {
                 throw new ExportArtifactException(
                     'export.artifact_digest_mismatch',
@@ -190,7 +190,8 @@ final readonly class GenericExportReader implements ExternalImportSourceAdapter
 
         $sanitization = self::requireSanitizationPolicy($decoded);
         $rawRecords = $decoded['records'] ?? null;
-        if (! is_array($rawRecords) || ! array_is_list($rawRecords)) {
+        $rawRecordObjects = $rawObject->records ?? null;
+        if (! is_array($rawRecords) || ! array_is_list($rawRecords) || ! is_array($rawRecordObjects) || ! array_is_list($rawRecordObjects)) {
             throw new ExportArtifactException('export.invalid_records', 'Export artifact requires a list of records');
         }
 
@@ -206,7 +207,7 @@ final readonly class GenericExportReader implements ExternalImportSourceAdapter
         if (! is_string($declaredChecksum) || preg_match('/^sha256:[0-9a-f]{64}$/', $declaredChecksum) !== 1) {
             throw new ExportArtifactException('export.missing_records_checksum', 'Export artifact requires a valid sha256 recordsChecksum');
         }
-        $actualChecksum = 'sha256:'.hash('sha256', $codec->canonicalize($rawRecords));
+        $actualChecksum = 'sha256:'.hash('sha256', $codec->canonicalize($rawRecordObjects));
         if ($declaredChecksum !== $actualChecksum) {
             throw new ExportArtifactException(
                 'export.records_checksum_mismatch',
@@ -278,12 +279,38 @@ final readonly class GenericExportReader implements ExternalImportSourceAdapter
 
         $normalized = [];
         foreach ($rawRecords as $idx => $rawRecord) {
-            if (! is_array($rawRecord) || array_is_list($rawRecord)) {
+            $rawRecordObject = $rawRecordObjects[$idx] ?? null;
+            if (! $rawRecordObject instanceof stdClass || ! is_array($rawRecord)) {
                 throw new ExportArtifactException('export.invalid_record', "Record at index {$idx} must be a JSON object");
             }
             /** @var array<string, mixed> $typedRecord */
             $typedRecord = $rawRecord;
-            $normalized[] = $profile->normalizeRecord($typedRecord, $manifest, $codec);
+            $normalizedItem = $profile->normalizeRecord($typedRecord, $manifest, $codec);
+            $payloadWithMeta = $normalizedItem->payload;
+            $existingMeta = is_array($payloadWithMeta['mapperMetadata'] ?? null) ? $payloadWithMeta['mapperMetadata'] : [];
+            $existingMeta['sourceRecordIndex'] = $idx;
+            $existingMeta['sourceRecordCanonical'] = $codec->canonicalize($rawRecordObject);
+            $payloadWithMeta['mapperMetadata'] = $existingMeta;
+            $normalized[] = new ImportRecordInput(
+                identity: $normalizedItem->identity,
+                batchId: $normalizedItem->batchId,
+                sourceExportRevision: $normalizedItem->sourceExportRevision,
+                exportCutoff: $normalizedItem->exportCutoff,
+                manifestDigest: $normalizedItem->manifestDigest,
+                sourceRecordRevision: $normalizedItem->sourceRecordRevision,
+                eventBusinessDate: $normalizedItem->eventBusinessDate,
+                payloadDigest: $normalizedItem->payloadDigest,
+                originalBusinessRefs: $normalizedItem->originalBusinessRefs,
+                evidenceRefs: $normalizedItem->evidenceRefs,
+                money: $normalizedItem->money,
+                frozenPriceSnapshot: $normalizedItem->frozenPriceSnapshot,
+                fundingRefs: $normalizedItem->fundingRefs,
+                legalDocument: $normalizedItem->legalDocument,
+                importPolicyVersion: $normalizedItem->importPolicyVersion,
+                sourceFactRef: $normalizedItem->sourceFactRef,
+                missingEvidence: $normalizedItem->missingEvidence,
+                payload: $payloadWithMeta,
+            );
         }
 
         return new self(

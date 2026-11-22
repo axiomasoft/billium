@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -30,6 +31,18 @@ DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 COMMIT_RE = re.compile(r"^[0-9a-f]{7,64}$")
 ALLOWED_EVIDENCE_CLASSES = {"consumer-contract", "transport-contract", "provider-double", "host-double"}
 ALLOWED_BOUNDARIES = {"double", "loopback", "external-runtime"}
+BUNDLED_REFERENCE_ADAPTER_NAME = "billium-reference-bridge-consumer"
+
+
+def bundled_reference_package_hash(repo_root: Path = ROOT) -> str | None:
+    files = (
+        repo_root / "packages/contracts/composer.json",
+        repo_root / "conformance/consumers/bridge/BridgeReferenceAdapter.php",
+    )
+    if not all(f.is_file() for f in files):
+        return None
+    acc = "".join(hashlib.sha256(f.read_bytes()).hexdigest() for f in files)
+    return "sha256:" + hashlib.sha256(acc.encode("ascii")).hexdigest()
 
 
 def validate_report(
@@ -204,6 +217,15 @@ def validate_report(
             errors.append("external_ready_wrong_delivery_profile: external-runtime readiness requires deliveryProfile='external-http'")
         if consumer.get("packageHash") == producer.get("packageHash"):
             errors.append("external_ready_self_loopback: external-runtime consumer packageHash must come from an independent external consumer")
+        bundled_pkg_hash = bundled_reference_package_hash(repo_root)
+        if (
+            consumer.get("isBundledReference") is True
+            or consumer.get("name") == BUNDLED_REFERENCE_ADAPTER_NAME
+            or (bundled_pkg_hash is not None and consumer.get("packageHash") == bundled_pkg_hash)
+        ):
+            errors.append(
+                "external_ready_bundled_reference_forbidden: bundled reference adapter cannot set externalReady=true or rolloutGatePassed=true"
+            )
 
     # 7. Canonical JCS reportDigest check.
     declared_digest = report.get("reportDigest")

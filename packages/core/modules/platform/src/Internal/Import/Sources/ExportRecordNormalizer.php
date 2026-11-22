@@ -16,6 +16,7 @@ use Billium\Platform\Data\Import\ImportSourceIdentity;
 use DateTimeImmutable;
 use DateTimeZone;
 use Packman\Attributes\Internal;
+use stdClass;
 use Throwable;
 
 /**
@@ -610,7 +611,7 @@ final readonly class ExportRecordNormalizer
             'sourceRecordRevision' => $sourceRecordRevision,
             'recordKind' => $recordKind->value,
             'eventBusinessDate' => $eventBusinessDate->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s\Z'),
-            'originalBusinessRefs' => $originalBusinessRefs,
+            'originalBusinessRefs' => $originalBusinessRefs === [] ? new stdClass : $originalBusinessRefs,
             'evidenceRefs' => array_map(static fn (ImportEvidenceRef $e): array => $e->toWire(), $evidenceRefs),
             'partyRoles' => $partyRoles,
         ];
@@ -640,6 +641,7 @@ final readonly class ExportRecordNormalizer
         $sourceFactRef = $identity->stableSourceFactRef($sourceRecordRevision, $codec);
 
         $fullPayload = $semanticPayload;
+        $fullPayload['originalBusinessRefs'] = $originalBusinessRefs;
         if ($metadataExtra !== []) {
             $fullPayload['mapperMetadata'] = $metadataExtra;
         }

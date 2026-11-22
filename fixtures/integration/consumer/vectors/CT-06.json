@@ -75,6 +75,8 @@
       },
       "expect": {
         "distinctWorkerProcesses": 6,
+        "distinctPgBackendPids": 6,
+        "overlappingServerTransactions": true,
         "accepted": 2,
         "capacityExceeded": 4,
         "confirmedCaptureMinor": 100,

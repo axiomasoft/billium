@@ -9,8 +9,14 @@ use Billium\Contracts\Data\Currency;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Data\Runner\OperationSpec;
 use Billium\Core\Data\Runtime\Caller;
+use Billium\Core\Data\Runtime\FinancialScope;
+use Billium\Core\Enums\Modules\ModuleOperationClass;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Ledger\Contracts\Ledger;
 use Billium\Ledger\Contracts\LedgerQueries;
 use Billium\Ledger\Data\Invoices\CreateInvoice;
@@ -19,20 +25,32 @@ use Billium\Ledger\Data\Invoices\IssueInvoice;
 use Billium\Ledger\Data\Runtime\BillingAccountScope;
 use Billium\Platform\Contracts\Import\ImportBatchApplier;
 use Billium\Platform\Contracts\Import\ImportIdentityStore;
+use Billium\Platform\Contracts\Import\ImportMonetaryPort;
 use Billium\Platform\Contracts\Import\ImportPreviewEvaluator;
 use Billium\Platform\Contracts\Import\ImportReconciler;
+use Billium\Platform\Contracts\Inbox\CustodyHandler;
 use Billium\Platform\Data\Import\ImportApplyOptions;
 use Billium\Platform\Data\Import\ImportBatchStatus;
 use Billium\Platform\Data\Import\ImportLinkedCorrection;
 use Billium\Platform\Data\Import\ImportMappingStatus;
 use Billium\Platform\Data\Import\ImportRecordApplyStatus;
+use Billium\Platform\Data\Import\ImportRecordInput;
 use Billium\Platform\Data\Import\ImportRecordKind;
 use Billium\Platform\Data\Import\ImportValidationStatus;
+use Billium\Platform\Data\Inbox\HandlerOutcome;
+use Billium\Platform\Data\Inbox\InboxRow;
+use Billium\Platform\Data\Installation\PlatformReceipt;
+use Billium\Platform\Internal\Import\ImportObservationEnvelopeBuilder;
 use Billium\Platform\Internal\Import\Sources\GenericExportProfile;
 use Billium\Platform\Internal\Import\Sources\GenericExportReader;
 use Billium\Platform\Internal\Import\Sources\RecurringExportProfile;
+use Billium\Platform\Internal\Inbox\CustodyProcessor;
 use Billium\Platform\Tests\PlatformTestCase;
+use DateTimeImmutable;
+use LogicException;
 use PHPUnit\Framework\Attributes\Group;
+use stdClass;
+use Symfony\Component\Process\Process;
 
 #[Group('P9.3')]
 #[Group('D71')]
@@ -460,6 +478,282 @@ final class ImportApplyTest extends PlatformTestCase
         ));
         self::assertSame(ImportMappingStatus::Tombstoned, $tombResult->mapping->status);
         self::assertGreaterThanOrEqual(3, $this->rows('billium_import_mapping'));
+    }
+
+    /**
+     * F4 regression: Two proven allocation records splitting one payment between obligations A and B
+     * without an explicit settlementIntentRef aggregate into a unified settlement intent and complete cleanly.
+     */
+    public function test_split_allocation_across_two_obligations_without_explicit_intent_ref_completes_cleanly(): void
+    {
+        $seller = 'seller-split-alloc-1';
+        $this->asAuthorizedCaller($seller);
+
+        $reader = $this->buildGenericReader('batch-split-alloc-1', $seller, [
+            $this->rawObligationRecord('obl-split-a', '60.00', 'RUB', 'pv-split-a'),
+            $this->rawObligationRecord('obl-split-b', '40.00', 'RUB', 'pv-split-b'),
+            $this->rawAllocationRecord('alloc-split-a', '60.00', 'RUB', 'src-obl-split-a', 'src-pay-split-1'),
+            $this->rawAllocationRecord('alloc-split-b', '40.00', 'RUB', 'src-obl-split-b', 'src-pay-split-1'),
+            $this->rawPaymentRecord('pay-split-1', '100.00', 'RUB', 'orig-pay-split-1', 'src-pay-split-1'),
+        ]);
+
+        $res = $this->applier()->apply(
+            $reader->manifest(),
+            $reader->records(),
+            new ImportApplyOptions(ImportApplyOptions::REQUIRED_SCOPE, $reader->manifest()->manifestDigest),
+        );
+
+        self::assertSame(ImportBatchStatus::Completed, $res->batchStatus);
+        self::assertNotNull($res->reconciliation);
+        self::assertTrue($res->reconciliation->reconciled);
+
+        $queries = $this->application()->make(LedgerQueries::class);
+        self::assertSame('0.00', $queries->obligation('src-obl-split-a')['open']['amount']);
+        self::assertSame('60.00', $queries->obligation('src-obl-split-a')['allocated']['amount']);
+        self::assertSame('0.00', $queries->obligation('src-obl-split-b')['open']['amount']);
+        self::assertSame('40.00', $queries->obligation('src-obl-split-b')['allocated']['amount']);
+        self::assertSame(2, $this->rows('billium_allocation', 'seller_ref = ?', [$seller]));
+    }
+
+    /**
+     * F5 regression: Refund capacity inspection sums only the latest cumulative revision per refund,
+     * not every historical revision (100.00 charge + refund rev1=30.00, rev2=40.00 => 60.00 remaining, so 50.00 succeeds).
+     */
+    public function test_refund_capacity_uses_latest_cumulative_revision_per_refund_instead_of_summing_revisions(): void
+    {
+        $seller = 'seller-rfnd-rev-1';
+        $this->asAuthorizedCaller($seller);
+
+        // 1. Import 100.00 RUB charge + first refund at revision 1 = 30.00 RUB.
+        $batch1 = $this->buildGenericReader('batch-rfnd-rev-1', $seller, [
+            $this->rawObligationRecord('obl-rfnd-rev-1', '100.00', 'RUB', 'pv-rfnd-rev-1'),
+            $this->rawAllocationRecord('alloc-rfnd-rev-1', '100.00', 'RUB', 'src-obl-rfnd-rev-1', 'src-pay-rfnd-rev-1'),
+            $this->rawPaymentRecord('pay-rfnd-rev-1', '100.00', 'RUB', 'orig-pay-rfnd-rev-1', 'src-pay-rfnd-rev-1'),
+            $this->rawRefundRecord('rfnd-cum-1', '30.00', 'RUB', 'orig-pay-rfnd-rev-1'),
+        ]);
+        $res1 = $this->applier()->apply(
+            $batch1->manifest(),
+            $batch1->records(),
+            new ImportApplyOptions(ImportApplyOptions::REQUIRED_SCOPE, $batch1->manifest()->manifestDigest),
+        );
+        self::assertSame(ImportBatchStatus::Completed, $res1->batchStatus);
+
+        // 2. Deliver cumulative revision 2 = 40.00 RUB for the SAME refund operation (psp-rfnd-rfnd-cum-1).
+        $rfndRev1 = $batch1->records()[3];
+        $rfndRev2Input = new ImportRecordInput(
+            identity: $rfndRev1->identity,
+            batchId: $rfndRev1->batchId,
+            sourceExportRevision: 2,
+            exportCutoff: $rfndRev1->exportCutoff,
+            manifestDigest: $rfndRev1->manifestDigest,
+            sourceRecordRevision: 2,
+            eventBusinessDate: new DateTimeImmutable('2025-11-05T12:10:00Z'),
+            payloadDigest: self::DIGEST_2,
+            originalBusinessRefs: $rfndRev1->originalBusinessRefs,
+            evidenceRefs: $rfndRev1->evidenceRefs,
+            money: Money::parse('40.00', 'RUB'),
+            fundingRefs: $rfndRev1->fundingRefs,
+        );
+        $builder = new ImportObservationEnvelopeBuilder(new Codec);
+        $envelopeRev2 = $builder->build(
+            record: $rfndRev2Input,
+            sourceAuthority: ImportApplyOptions::DEFAULT_MIGRATION_SOURCE_AUTHORITY,
+            sourceFactRef: $rfndRev1->identity->stableSourceFactRef(2),
+            sourceSequence: 3,
+            resolvedOriginalPaymentRef: 'orig-pay-rfnd-rev-1',
+        );
+        $custody = $this->application()->make(CustodyProcessor::class);
+        $runner = $this->application()->make(OperationRunner::class);
+        $finScope = new FinancialScope(self::INSTALLATION, $seller, 'test', null, ImportApplyOptions::DEFAULT_MIGRATION_SOURCE_AUTHORITY);
+        $noopHandler = new class implements CustodyHandler
+        {
+            public function handle(TransactionContext $context, InboxRow $row, stdClass $payload): HandlerOutcome
+            {
+                throw new LogicException('Not invoked inline');
+            }
+        };
+        $drainPid = null;
+        $runner->run(
+            new OperationSpec(
+                'test.seed_refund_rev2',
+                $seller,
+                'test',
+                FinancialMode::Active,
+                ModuleOperationClass::ObservedFactRecording,
+                ['platform'],
+                financialScope: $finScope,
+            ),
+            static function (TransactionContext $ctx) use ($custody, $envelopeRev2, $noopHandler, &$drainPid): PlatformReceipt {
+                $queued = $custody->enqueueCustody($ctx, 'payment.observation', $envelopeRev2, $noopHandler);
+                $drainPid = $queued->drainPartitionId;
+
+                return new PlatformReceipt('test.seed_refund_rev2', ['inbox_id' => $queued->inboxId]);
+            },
+        )->orThrow();
+        $this->application()->make(ImportMonetaryPort::class)->reduceObservationPartition($drainPid);
+
+        // Confirm 2 cumulative revisions exist in DB (3000 and 4000) for that single refund.
+        self::assertSame(2, $this->rows('billium_observed_payment_revision', 'seller_ref = ? AND captured_minor IN (3000, 4000)', [$seller]));
+
+        // 3. Importing a second valid 50.00 RUB refund (40.00 + 50.00 = 90.00 <= 100.00) MUST succeed!
+        $batch2 = $this->buildGenericReader('batch-rfnd-rev-2', $seller, [
+            $this->rawRefundRecord('rfnd-cum-2', '50.00', 'RUB', 'orig-pay-rfnd-rev-1'),
+        ]);
+        $res2 = $this->applier()->apply(
+            $batch2->manifest(),
+            $batch2->records(),
+            new ImportApplyOptions(ImportApplyOptions::REQUIRED_SCOPE, $batch2->manifest()->manifestDigest),
+        );
+        self::assertSame(ImportBatchStatus::Completed, $res2->batchStatus);
+
+        // 4. A third 20.00 RUB refund (40.00 + 50.00 + 20.00 = 110.00 > 100.00) still exceeds remaining 10.00 capacity -> quarantined!
+        $batch3 = $this->buildGenericReader('batch-rfnd-rev-3', $seller, [
+            $this->rawRefundRecord('rfnd-cum-3', '20.00', 'RUB', 'orig-pay-rfnd-rev-1'),
+        ]);
+        $res3 = $this->applier()->apply(
+            $batch3->manifest(),
+            $batch3->records(),
+            new ImportApplyOptions(ImportApplyOptions::REQUIRED_SCOPE, $batch3->manifest()->manifestDigest),
+        );
+        self::assertSame(ImportBatchStatus::Quarantined, $res3->batchStatus);
+    }
+
+    /**
+     * F6 regression: Replaying an applied linked correction with altered componentWeights (or account/pricing/creditNote fields)
+     * throws IdempotencyConflict instead of silently returning the prior result.
+     */
+    public function test_replaying_linked_correction_with_altered_component_weights_throws_idempotency_conflict(): void
+    {
+        $seller = 'seller-corr-digest-1';
+        $this->asAuthorizedCaller($seller);
+
+        $reader = $this->buildGenericReader('batch-corr-digest-1', $seller, [
+            $this->rawObligationRecord('obl-cdig-1', '100.00', 'RUB', 'pv-cdig-1'),
+        ]);
+        $applied = $this->applier()->apply(
+            $reader->manifest(),
+            $reader->records(),
+            new ImportApplyOptions(ImportApplyOptions::REQUIRED_SCOPE, $reader->manifest()->manifestDigest),
+        );
+        self::assertSame(ImportBatchStatus::Completed, $applied->batchStatus);
+
+        $oblIdentity = $reader->records()[0]->identity;
+        $first = $this->applier()->applyLinkedCorrection(new ImportLinkedCorrection(
+            capabilityScope: ImportApplyOptions::REQUIRED_SCOPE,
+            correctionRef: 'corr-weights-001',
+            originalIdentity: $oblIdentity,
+            originalRevision: 1,
+            newRevision: 2,
+            kind: ImportLinkedCorrection::KIND_POSITIVE_OBLIGATION,
+            reason: 'component_split_adjustment',
+            deltaMoney: Money::parse('10.00', 'RUB'),
+            componentWeights: [
+                ['componentRef' => 'comp-a', 'weightMinor' => 1],
+                ['componentRef' => 'comp-b', 'weightMinor' => 1],
+            ],
+        ));
+        self::assertSame('5.00', $first->allocatedComponents[0]['amount']['amount']);
+        self::assertSame('5.00', $first->allocatedComponents[1]['amount']['amount']);
+
+        // Identical replay is idempotent.
+        $sameReplay = $this->applier()->applyLinkedCorrection(new ImportLinkedCorrection(
+            capabilityScope: ImportApplyOptions::REQUIRED_SCOPE,
+            correctionRef: 'corr-weights-001',
+            originalIdentity: $oblIdentity,
+            originalRevision: 1,
+            newRevision: 2,
+            kind: ImportLinkedCorrection::KIND_POSITIVE_OBLIGATION,
+            reason: 'component_split_adjustment',
+            deltaMoney: Money::parse('10.00', 'RUB'),
+            componentWeights: [
+                ['componentRef' => 'comp-a', 'weightMinor' => 1],
+                ['componentRef' => 'comp-b', 'weightMinor' => 1],
+            ],
+        ));
+        self::assertSame($first->mapping->mappingRef, $sameReplay->mapping->mappingRef);
+
+        // Replay with modified weights (1:3 instead of 1:1) MUST fail with IdempotencyConflict!
+        try {
+            $this->applier()->applyLinkedCorrection(new ImportLinkedCorrection(
+                capabilityScope: ImportApplyOptions::REQUIRED_SCOPE,
+                correctionRef: 'corr-weights-001',
+                originalIdentity: $oblIdentity,
+                originalRevision: 1,
+                newRevision: 2,
+                kind: ImportLinkedCorrection::KIND_POSITIVE_OBLIGATION,
+                reason: 'component_split_adjustment',
+                deltaMoney: Money::parse('10.00', 'RUB'),
+                componentWeights: [
+                    ['componentRef' => 'comp-a', 'weightMinor' => 1],
+                    ['componentRef' => 'comp-b', 'weightMinor' => 3],
+                ],
+            ));
+            self::fail('Expected IdempotencyConflict when replaying correction with modified componentWeights');
+        } catch (ProblemException $e) {
+            self::assertSame(ProblemCode::IdempotencyConflict, $e->problem);
+        }
+    }
+
+    /**
+     * F3 regression: CLI billium-import.php apply and resume commands admit the process against an initialized
+     * active installation in a separate subprocess without failing with InstallationQuarantined.
+     */
+    public function test_cli_apply_and_resume_commands_succeed_against_active_initialized_installation(): void
+    {
+        $repoRoot = dirname(__DIR__, 6);
+        $fixturePath = $repoRoot.'/fixtures/integration/import/reference-recurring/complete-manifest.json';
+        $reader = GenericExportReader::fromFile($fixturePath, new RecurringExportProfile);
+        $digest = $reader->manifest()->manifestDigest;
+        $batchId = $reader->manifest()->batchId;
+
+        $dbConfig = $this->application()['config']->get('database.connections.pgsql');
+        $childEnv = array_merge($_ENV, getenv(), [
+            'DB_HOST' => (string) ($dbConfig['host'] ?? '127.0.0.1'),
+            'DB_PORT' => (string) ($dbConfig['port'] ?? '5432'),
+            'DB_DATABASE' => (string) ($dbConfig['database'] ?? ''),
+            'DB_USERNAME' => (string) ($dbConfig['username'] ?? ''),
+            'DB_PASSWORD' => (string) ($dbConfig['password'] ?? ''),
+            'BILLIUM_SIMULATED_AUTHORITY_JOURNAL' => '',
+            'BILLIUM_SIMULATED_AUTHORITY_KEY' => '',
+        ]);
+
+        $applyProc = new Process([
+            PHP_BINARY,
+            $repoRoot.'/scripts/import/billium-import.php',
+            'apply',
+            '--manifest',
+            'fixtures/integration/import/reference-recurring/complete-manifest.json',
+            '--manifest-digest',
+            $digest,
+            '--scope',
+            ImportApplyOptions::REQUIRED_SCOPE,
+        ], $repoRoot, $childEnv, null, 60);
+        $applyProc->run();
+        self::assertSame(0, $applyProc->getExitCode(), 'CLI apply failed: '.$applyProc->getErrorOutput().' '.$applyProc->getOutput());
+        $applyOut = json_decode($applyProc->getOutput(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('completed', $applyOut['batchStatus'] ?? null);
+
+        $resumeProc = new Process([
+            PHP_BINARY,
+            $repoRoot.'/scripts/import/billium-import.php',
+            'resume',
+            '--batch',
+            $batchId,
+            '--seller',
+            'seller-recurring-1',
+            '--installation',
+            self::INSTALLATION,
+            '--environment',
+            'test',
+            '--manifest-digest',
+            $digest,
+            '--scope',
+            ImportApplyOptions::REQUIRED_SCOPE,
+        ], $repoRoot, $childEnv, null, 60);
+        $resumeProc->run();
+        self::assertSame(0, $resumeProc->getExitCode(), 'CLI resume failed: '.$resumeProc->getErrorOutput().' '.$resumeProc->getOutput());
+        $resumeOut = json_decode($resumeProc->getOutput(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('completed', $resumeOut['batchStatus'] ?? null);
     }
 
     private function asAuthorizedCaller(string $sellerRef): void

@@ -19,9 +19,12 @@ use Billium\Ledger\Data\Obligations\RecordObligation;
 use Billium\Ledger\Data\Settlements\CloseSettlementIntentNoEffect;
 use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
 use Billium\Platform\Contracts\Import\ImportBatchApplier;
+use Billium\Platform\Contracts\Import\ImportIdentityStore;
+use Billium\Platform\Contracts\Import\ImportPreviewEvaluator;
 use Billium\Platform\Contracts\Import\ImportReconciler;
 use Billium\Platform\Data\Import\ImportApplyOptions;
 use Billium\Platform\Data\Import\ImportBatchStatus;
+use Billium\Platform\Internal\Import\Sources\GenericExportProfile;
 use Billium\Platform\Internal\Import\Sources\GenericExportReader;
 use Billium\Platform\Internal\Import\Sources\RecurringExportProfile;
 use Billium\Platform\Tests\Import\Support\ConcurrentImportScenario;
@@ -345,6 +348,109 @@ final class ImportResumeTest extends PlatformTestCase
         self::assertSame(1, $this->rows('billium_allocation', 'seller_ref = ?', [$sellerRef]));
         self::assertSame(3, $this->rows('billium_import_mapping', 'seller_ref = ?', [$sellerRef]));
         self::assertSame(1, $this->rows('billium_outbox_event', "seller_ref = ? AND type = 'obligation.created.v1'", [$sellerRef]));
+    }
+
+    /**
+     * F1 regression: A crash between stageBatch/stageRecord leaving only 1 of 2 nonfinancial records staged
+     * must NOT mark the batch completed on resume or reconciled on reconcileBatch; re-running apply with
+     * the full manifest stages the missing second record and completes both records cleanly.
+     */
+    public function test_incomplete_staged_batch_between_stage_record_calls_never_completes_until_restaged(): void
+    {
+        $sellerRef = 'seller-incomplete-stage-1';
+        $this->asAuthorizedCaller($sellerRef);
+        $codec = new Codec;
+
+        $rawRecords = [
+            [
+                'sourceRecordId' => 'agr-ref-001',
+                'sourceRecordRevision' => 1,
+                'recordType' => 'agreement_reference',
+                'eventBusinessDate' => '2025-11-01T09:00:00Z',
+                'originalBusinessRefs' => ['agreementRef' => 'agr-101', 'customerRef' => 'cust-1'],
+                'evidenceRefs' => [[
+                    'evidenceRef' => 'ev-agr-001',
+                    'kind' => 'agreement_reference',
+                    'digest' => self::DIGEST_1,
+                    'sanitized' => true,
+                ]],
+            ],
+            [
+                'sourceRecordId' => 'agr-ref-002',
+                'sourceRecordRevision' => 1,
+                'recordType' => 'agreement_reference',
+                'eventBusinessDate' => '2025-11-01T09:05:00Z',
+                'originalBusinessRefs' => ['agreementRef' => 'agr-102', 'customerRef' => 'cust-1'],
+                'evidenceRefs' => [[
+                    'evidenceRef' => 'ev-agr-002',
+                    'kind' => 'agreement_reference',
+                    'digest' => self::DIGEST_2,
+                    'sanitized' => true,
+                ]],
+            ],
+        ];
+        $artifact = [
+            'exportSchema' => 'source.export.v1',
+            'profile' => 'generic',
+            'exportVersion' => '1.0.0',
+            'batchId' => 'batch-incomplete-stage-001',
+            'sourceSystem' => 'host-billing/export',
+            'sourceInstallation' => 'src-inst-inc',
+            'sourceBook' => 'book-inc',
+            'sourceExportRevision' => 1,
+            'exportCutoff' => '2026-10-20T00:00:00Z',
+            'installationRef' => self::INSTALLATION,
+            'environment' => 'test',
+            'sellerRef' => $sellerRef,
+            'sanitizationPolicy' => ['piiRedacted' => true, 'secretsStripped' => true, 'policyVersion' => 'v1'],
+            'totalsByCurrency' => [],
+            'records' => $rawRecords,
+            'recordCount' => 2,
+            'recordsChecksum' => 'sha256:'.hash('sha256', $codec->canonicalize($rawRecords)),
+        ];
+        $reader = GenericExportReader::fromJson(json_encode($artifact, JSON_THROW_ON_ERROR), new GenericExportProfile, 'import-policy-v1', $codec);
+        $manifest = $reader->manifest();
+        $records = $reader->records();
+
+        // Simulate crash after staging the batch and ONLY its first record.
+        $preview = $this->application()->make(ImportPreviewEvaluator::class)->evaluate($manifest, $records);
+        $store = $this->application()->make(ImportIdentityStore::class);
+        $batchPk = $store->stageBatch($manifest);
+        $store->stageRecord($batchPk, $records[0], $preview->records[0]);
+
+        // Reconcile reports incomplete staged inventory + checksum mismatch and reconciled=false.
+        $reconciler = $this->application()->make(ImportReconciler::class);
+        $partialReconcile = $reconciler->reconcileBatch($manifest->batchId);
+        self::assertFalse($partialReconcile->reconciled);
+        $codes = array_column($partialReconcile->discrepancies, 'code');
+        self::assertContains('import.incomplete_staged_inventory', $codes);
+        self::assertContains('import.records_checksum_mismatch', $codes);
+
+        // Resume must NOT mark the incomplete batch completed or omit the second record.
+        $resumedIncomplete = $this->applier()->resume(
+            $manifest->batchId,
+            new ImportApplyOptions(
+                capabilityScope: ImportApplyOptions::REQUIRED_SCOPE,
+                expectedManifestDigest: $manifest->manifestDigest,
+            ),
+        );
+        self::assertSame(ImportBatchStatus::Staged, $resumedIncomplete->batchStatus);
+        self::assertSame(1, $resumedIncomplete->remainingSteps);
+        self::assertSame(0, $this->rows('billium_import_mapping', 'seller_ref = ?', [$sellerRef]));
+
+        // Subsequent apply with the full manifest stages the missing second record and completes both!
+        $completed = $this->applier()->apply(
+            $manifest,
+            $records,
+            new ImportApplyOptions(
+                capabilityScope: ImportApplyOptions::REQUIRED_SCOPE,
+                expectedManifestDigest: $manifest->manifestDigest,
+            ),
+        );
+        self::assertSame(ImportBatchStatus::Completed, $completed->batchStatus);
+        self::assertSame(2, $this->rows('billium_import_record', 'batch_pk = ?', [$batchPk]));
+        self::assertSame(2, $this->rows('billium_import_mapping', 'seller_ref = ?', [$sellerRef]));
+        self::assertTrue($reconciler->reconcileBatch($manifest->batchId)->reconciled);
     }
 
     private function asAuthorizedCaller(string $sellerRef): void

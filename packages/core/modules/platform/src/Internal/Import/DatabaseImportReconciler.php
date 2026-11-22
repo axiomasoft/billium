@@ -83,15 +83,23 @@ final readonly class DatabaseImportReconciler implements ImportReconciler
 
         $batchPk = self::intField($batch, 'id');
         $manifestDigest = self::strField($batch, 'manifest_digest');
+        $expectedRecordCount = self::intField($batch, 'record_count');
+        $expectedRecordsChecksum = self::strField($batch, 'records_checksum');
         $batchStatus = ImportBatchStatus::from(self::strField($batch, 'status'));
         $rawManifestPayload = json_decode(self::strField($batch, 'manifest_payload'), true, 512, JSON_THROW_ON_ERROR);
         $declaredTotals = is_array($rawManifestPayload) && is_array($rawManifestPayload['totalsByCurrency'] ?? null)
             ? $rawManifestPayload['totalsByCurrency']
             : [];
 
-        $records = $db->select(
+        $records = ImportStagedRecordHydrator::objectRows($db->select(
             'SELECT * FROM public.billium_import_record WHERE batch_pk = ? ORDER BY id ASC',
             [$batchPk],
+        ));
+        $inventoryCheck = ImportStagedRecordHydrator::verifyStagedRowsInventory(
+            $records,
+            $expectedRecordCount,
+            $expectedRecordsChecksum,
+            $this->codec,
         );
 
         /**
@@ -112,6 +120,25 @@ final readonly class DatabaseImportReconciler implements ImportReconciler
         $buckets = [];
         /** @var list<array{code: string, detail: string, currency?: string, recordKind?: string, sourceRecordId?: string}> $discrepancies */
         $discrepancies = [];
+        if (! $inventoryCheck['countMatches']) {
+            $discrepancies[] = [
+                'code' => 'import.incomplete_staged_inventory',
+                'detail' => sprintf(
+                    'Manifest declared %d record(s), staged batch contains %d record(s)',
+                    $expectedRecordCount,
+                    count($records),
+                ),
+            ];
+        }
+        if (! $inventoryCheck['checksumMatches']) {
+            $discrepancies[] = [
+                'code' => 'import.records_checksum_mismatch',
+                'detail' => sprintf(
+                    'Staged records inventory checksum does not match manifest recordsChecksum (%s)',
+                    $expectedRecordsChecksum,
+                ),
+            ];
+        }
         /** @var list<array{sourceRecordId: string, sourceFactRef: string, factKind: string, currency: string, amountMinor: int, exportDigest: string}> $accountingFacts */
         $accountingFacts = [];
         /** @var array<string, true> $seenAccountingFactRefs */

@@ -82,15 +82,30 @@ final readonly class ImportLinkedCorrectionApplier
             throw new ProblemException(ProblemCode::ValidationInvalid, 'Cannot correct an imported record without an applied Billium target');
         }
 
+        $normalizedWeights = array_map(
+            static fn (array $w): array => [
+                'componentRef' => $w['componentRef'],
+                'weightMinor' => $w['weightMinor'],
+            ],
+            $correction->componentWeights,
+        );
         $correctionFactRef = $identity->stableSourceFactRef($correction->newRevision, $this->codec);
         $correctionPayloadDigest = $this->codec->digest([
+            'billingAccountRef' => $correction->billingAccountRef,
+            'componentWeights' => $normalizedWeights,
             'correctionRef' => $correction->correctionRef,
+            'creditNoteMode' => $correction->creditNoteMode,
+            'customerRef' => $correction->customerRef,
             'deltaMoney' => $correction->deltaMoney->toWire(),
+            'invoiceRef' => $correction->invoiceRef,
             'kind' => $correction->kind,
             'newRevision' => $correction->newRevision,
             'originalRevision' => $correction->originalRevision,
             'originalSourceFactRef' => $existingMapping->sourceFactRef,
+            'priceVersionRef' => $correction->priceVersionRef,
             'reason' => $correction->reason,
+            'taxSnapshotRef' => $correction->taxSnapshotRef,
+            'termsDigest' => $correction->termsDigest,
         ]);
 
         // Replay check: if newRevision mapping already superseded originalRevision with identical payloadDigest, return it idempotently.

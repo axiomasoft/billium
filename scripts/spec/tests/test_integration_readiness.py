@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
+import shutil
 import sys
+import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -89,6 +92,61 @@ class IntegrationReadinessCheckerTest(unittest.TestCase):
         findings = checker.validate_manifest(manifest, repo_root=ROOT)
         self.assertTrue(any(f.startswith("fallback_rule_violated:") for f in findings), findings)
         self.assertTrue(any(f.startswith("unanchored_limitation_violated:") for f in findings), findings)
+
+    def test_rejects_empty_object_runtime_report_and_tampered_runtime_evidence_ref(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            isolated = Path(tmp)
+            # Copy tracked files + runtime reports referenced by manifest into isolated repo copy.
+            manifest = copy.deepcopy(load_manifest())
+            paths_to_copy = {
+                manifest["spec_lock_path"],
+                "docs/operations/integration-readiness.md",
+                "scripts/spec/check-integration-readiness.py",
+                "artifacts/migration-drill-manifest.json",
+                *(item["path"] for item in manifest["tracked_artifacts"]),
+                *(rep["path"] for rep in manifest["local_runtime_reports"]),
+            }
+            for rel in paths_to_copy:
+                src = ROOT / rel
+                if src.is_file():
+                    dst = isolated / rel
+                    dst.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(src, dst)
+
+            # Replace conformance/reports/import-php-all.json with "{}" (exact F8 reproduction).
+            target_report = isolated / "conformance/reports/import-php-all.json"
+            target_report.parent.mkdir(parents=True, exist_ok=True)
+            target_report.write_text("{}\n", encoding="utf-8")
+
+            findings = checker.validate_manifest(
+                manifest,
+                repo_root=isolated,
+                require_runtime_reports=True,
+            )
+            self.assertTrue(any(f.startswith("artifact_hash_mismatch:") for f in findings), findings)
+            self.assertTrue(any(f.startswith("runtime_report_failed:") for f in findings), findings)
+
+            # Even if hashes are recomputed around "{}", empty report object MUST still be rejected!
+            empty_sha = "sha256:" + hashlib.sha256(target_report.read_bytes()).hexdigest()
+            rehashed = copy.deepcopy(manifest)
+            for rep in rehashed["local_runtime_reports"]:
+                if rep["path"] == "conformance/reports/import-php-all.json":
+                    rep["recorded_sha256"] = empty_sha
+                    rep.pop("recorded_report_digest", None)
+            for gate in rehashed["gates"]:
+                for ref in gate.get("evidence_refs", []):
+                    if ref["path"] == "conformance/reports/import-php-all.json":
+                        ref["sha256"] = empty_sha
+            rehashed["manifestDigest"] = checker.canonical_digest(rehashed, "manifestDigest")
+            findings_rehashed = checker.validate_manifest(
+                rehashed,
+                repo_root=isolated,
+                require_runtime_reports=True,
+            )
+            self.assertTrue(
+                any(f.startswith("runtime_report_failed:") for f in findings_rehashed),
+                findings_rehashed,
+            )
 
 
 if __name__ == "__main__":

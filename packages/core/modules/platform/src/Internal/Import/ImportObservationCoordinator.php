@@ -109,6 +109,13 @@ final readonly class ImportObservationCoordinator
         }
 
         $businessIntentRef = $this->envelopeBuilder->businessIntentRef($record);
+        $existingIntent = $this->hydrator->connection()->selectOne(
+            "SELECT 1 FROM public.billium_import_mapping WHERE installation_ref = ? AND seller_ref = ? AND environment = ? AND billium_target_kind = 'settlement_intent' AND billium_target_ref = ? LIMIT 1",
+            [$caller->installationRef, $caller->sellerRef, $caller->environment, $businessIntentRef],
+        ) !== null;
+        if ($existingIntent) {
+            return;
+        }
         $factRef = $record->sourceFactRef ?? $record->identity->stableSourceFactRef($record->sourceRecordRevision, $this->codec);
         $intentKey = ImportStagedRecordHydrator::boundedRef('imp-pay-sint:'.$factRef, 'imp-psint');
         $digest = $this->codec->digest([

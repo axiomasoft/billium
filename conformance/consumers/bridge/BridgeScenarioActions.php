@@ -376,48 +376,88 @@ final readonly class BridgeScenarioActions
         $workersCount = (int) ($args['workers'] ?? 6);
         $amount = (string) ($args['amount'] ?? '0.25');
         $controlFile = $this->host->directory.'/ct06-race.journal';
+        $raceConfigFile = $this->host->directory.'/ct06-server-race.json';
         if (is_file($controlFile)) {
             unlink($controlFile);
         }
+        file_put_contents($raceConfigFile, json_encode(['expectedWorkers' => $workersCount], JSON_THROW_ON_ERROR), LOCK_EX);
         $journal = new DurableJournal($controlFile);
         $barrier = new ProcessBarrier($journal);
-        $children = [];
-        for ($i = 0; $i < $workersCount; $i++) {
-            $children[] = new ChildProcess([
-                PHP_BINARY,
-                __DIR__.'/host.php',
-                'refund_contender',
-                $this->host->directory,
-                (string) $port,
-                (string) $i,
-                $originalRef,
-                $amount,
-            ]);
-        }
-        $barrier->await('ready', $workersCount, 30_000);
-        $barrier->arrive('go');
-        foreach ($children as $child) {
-            if ($child->wait() !== 0) {
-                throw new LogicException('Concurrent refund contender process failed: '.$child->stderr());
+        try {
+            $children = [];
+            for ($i = 0; $i < $workersCount; $i++) {
+                $children[] = new ChildProcess([
+                    PHP_BINARY,
+                    __DIR__.'/host.php',
+                    'refund_contender',
+                    $this->host->directory,
+                    (string) $port,
+                    (string) $i,
+                    $originalRef,
+                    $amount,
+                ]);
+            }
+            $barrier->await('ready', $workersCount, 30_000);
+            $barrier->arrive('go');
+            foreach ($children as $child) {
+                if ($child->wait() !== 0) {
+                    throw new LogicException('Concurrent refund contender process failed: '.$child->stderr());
+                }
+            }
+        } finally {
+            if (is_file($raceConfigFile)) {
+                unlink($raceConfigFile);
             }
         }
 
         $accepted = 0;
         $capacityExceeded = 0;
-        $pids = [];
+        $clientPids = [];
+        $serverPids = [];
+        $pgBackendPids = [];
+        /** @var list<array{0: int, 1: int}> $txEvents */
+        $txEvents = [];
         foreach ($journal->records() as $entry) {
-            if (! $entry instanceof JournalEvent || $entry->kind !== 'refund_result') {
+            if (! $entry instanceof JournalEvent) {
                 continue;
             }
-            $pids[$entry->pid] = true;
-            $status = (int) ($entry->data['status'] ?? 0);
-            $code = (string) ($entry->data['code'] ?? '');
-            if ($status === 202) {
-                $accepted++;
-            } elseif ($status === 409 && $code === 'billium.refund.capacity_exceeded') {
-                $capacityExceeded++;
+            if ($entry->kind === 'refund_result') {
+                $clientPids[$entry->pid] = true;
+                $status = (int) ($entry->data['status'] ?? 0);
+                $code = (string) ($entry->data['code'] ?? '');
+                if ($status === 202) {
+                    $accepted++;
+                } elseif ($status === 409 && $code === 'billium.refund.capacity_exceeded') {
+                    $capacityExceeded++;
+                }
+            } elseif ($entry->kind === 'server_refund_tx') {
+                $serverPid = (int) ($entry->data['serverPid'] ?? 0);
+                $pgPid = (int) ($entry->data['pgBackendPid'] ?? 0);
+                $enteredNs = (int) ($entry->data['enteredNs'] ?? 0);
+                $exitedNs = (int) ($entry->data['exitedNs'] ?? 0);
+                if ($serverPid > 0) {
+                    $serverPids[$serverPid] = true;
+                }
+                if ($pgPid > 0) {
+                    $pgBackendPids[$pgPid] = true;
+                }
+                if ($enteredNs > 0 && $exitedNs >= $enteredNs) {
+                    $txEvents[] = [$enteredNs, 1];
+                    $txEvents[] = [$exitedNs, -1];
+                }
             }
         }
+
+        usort($txEvents, static fn (array $a, array $b): int => $a[0] <=> $b[0] ?: ($b[1] <=> $a[1]));
+        $activeOverlap = 0;
+        $maxOverlap = 0;
+        foreach ($txEvents as [, $delta]) {
+            $activeOverlap += $delta;
+            if ($activeOverlap > $maxOverlap) {
+                $maxOverlap = $activeOverlap;
+            }
+        }
+
         $cap = BridgeHost::database($this->app, true)->table('billium_execution_capacity')
             ->where('root_operation_ref', $originalRef)
             ->first();
@@ -426,7 +466,11 @@ final readonly class BridgeScenarioActions
         $heldRefund = (int) ($cap->held_refund_minor ?? 0);
 
         return [
-            'distinctWorkerProcesses' => count($pids),
+            'distinctWorkerProcesses' => count($serverPids),
+            'distinctClientProcesses' => count($clientPids),
+            'distinctPgBackendPids' => count($pgBackendPids),
+            'maxConcurrentServerTransactions' => $maxOverlap,
+            'overlappingServerTransactions' => $maxOverlap >= $workersCount && count($serverPids) >= $workersCount,
             'accepted' => $accepted,
             'capacityExceeded' => $capacityExceeded,
             'confirmedCaptureMinor' => $confirmedCapture,

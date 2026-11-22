@@ -341,6 +341,53 @@ final class SourceReadersTest extends PlatformTestCase
     }
 
     /**
+     * F9 regression: Valid source.export.v1 artifacts containing nested empty JSON objects (e.g. originalBusinessRefs:{})
+     * and RFC 8785 JCS checksums computed over {} (not []) are accepted cleanly by GenericExportReader and preview.
+     */
+    public function test_export_reader_preserves_empty_json_objects_when_verifying_jcs_checksums(): void
+    {
+        $codec = new Codec;
+        $recordJson = '{"sourceRecordId":"agr-empty-obj-001","sourceRecordRevision":1,"recordType":"agreement_reference",'
+            .'"eventBusinessDate":"2025-11-01T09:00:00Z","originalBusinessRefs":{},'
+            .'"evidenceRefs":[{"evidenceRef":"ev-empty-1","kind":"agreement_reference",'
+            .'"digest":"sha256:1111111111111111111111111111111111111111111111111111111111111111","sanitized":true}]}';
+        $recordsJson = '['.$recordJson.']';
+        $recordsChecksum = 'sha256:'.hash('sha256', $codec->canonicalize($recordsJson));
+
+        $artifactWithoutDigestJson = '{'
+            .'"exportSchema":"source.export.v1",'
+            .'"profile":"generic",'
+            .'"exportVersion":"1.0.0",'
+            .'"batchId":"batch-empty-obj-001",'
+            .'"sourceSystem":"host-billing/export",'
+            .'"sourceInstallation":"src-inst-empty",'
+            .'"sourceBook":"book-empty",'
+            .'"sourceExportRevision":1,'
+            .'"exportCutoff":"2026-10-20T00:00:00Z",'
+            .'"installationRef":"'.self::INSTALLATION.'",'
+            .'"environment":"test",'
+            .'"sellerRef":"seller-empty-obj-1",'
+            .'"sanitizationPolicy":{"piiRedacted":true,"secretsStripped":true,"policyVersion":"v1"},'
+            .'"provenance":{},'
+            .'"totalsByCurrency":[],'
+            .'"records":'.$recordsJson.','
+            .'"recordCount":1,'
+            .'"recordsChecksum":"'.$recordsChecksum.'"'
+            .'}';
+        $artifactDigest = $codec->digest($artifactWithoutDigestJson, 'artifactDigest');
+        $fullArtifactJson = substr($artifactWithoutDigestJson, 0, -1).',"artifactDigest":"'.$artifactDigest.'"}';
+
+        $reader = GenericExportReader::fromJson($fullArtifactJson, new GenericExportProfile, null, $codec);
+        self::assertSame(1, $reader->manifest()->recordCount);
+        self::assertSame($recordsChecksum, $reader->manifest()->recordsChecksum);
+        self::assertSame([], $reader->records()[0]->originalBusinessRefs);
+
+        $preview = $this->application()->make(ImportPreviewEvaluator::class)->evaluate($reader->manifest(), $reader->records());
+        self::assertSame(ImportBatchStatus::Validated, $preview->batchStatus);
+        self::assertInstanceOf(ExternalImportPreview::class, $codec->decode($codec->canonicalize($preview->toWire())));
+    }
+
+    /**
      * @param  list<ImportRecordInput>  $records
      * @return array<string, ImportRecordInput>
      */

@@ -508,51 +508,6 @@ final class ImportParticipantAtomicityTest extends PlatformTestCase
             ),
         ];
 
-        $manifestBody = [
-            'schema' => 'external.import.manifest.v1',
-            'batchId' => $batchId,
-            'sourceSystem' => 'host-billing/export',
-            'sourceInstallation' => 'src-inst-1',
-            'sourceBook' => 'book-main',
-            'sourceExportRevision' => 1,
-            'exportCutoff' => '2026-10-20T00:00:00Z',
-            'installationRef' => self::INSTALLATION,
-            'environment' => 'test',
-            'sellerRef' => 'seller-a',
-            'recordCount' => 1,
-            'recordsChecksum' => self::DIGEST_PRICE,
-            'totalsByCurrency' => [$totals[0]->toWire()],
-            'sanitizationPolicy' => ['piiRedacted' => true, 'secretsStripped' => true, 'policyVersion' => 'v1'],
-        ];
-        $manifestDigest = $codec->digest($manifestBody);
-
-        $manifest = new ImportManifest(
-            batchId: $batchId,
-            installationRef: self::INSTALLATION,
-            environment: 'test',
-            sellerRef: 'seller-a',
-            sourceSystem: 'host-billing/export',
-            sourceInstallation: 'src-inst-1',
-            sourceBook: 'book-main',
-            sourceExportRevision: 1,
-            exportCutoff: $cutoff,
-            recordCount: 1,
-            recordsChecksum: self::DIGEST_PRICE,
-            manifestDigest: $manifestDigest,
-            sanitizationPolicy: ['piiRedacted' => true, 'secretsStripped' => true, 'policyVersion' => 'v1'],
-            totalsByCurrency: $totals,
-        );
-
-        $identity = new ImportSourceIdentity(
-            installationRef: self::INSTALLATION,
-            environment: 'test',
-            sellerRef: 'seller-a',
-            sourceSystem: 'host-billing/export',
-            sourceInstallation: 'src-inst-1',
-            sourceBook: 'book-main',
-            sourceRecordId: $sourceRecordId,
-            recordKind: ImportRecordKind::ProvenObligation,
-        );
         $frozen = [
             'priceVersionRef' => 'pv-hist-rub-1',
             'priceDigest' => self::DIGEST_PRICE,
@@ -575,6 +530,54 @@ final class ImportParticipantAtomicityTest extends PlatformTestCase
                 'sanitized' => true,
             ]],
         ];
+        $payloadDigest = $codec->digest($payload);
+        $recordsChecksum = 'sha256:'.hash('sha256', $codec->canonicalize([$payloadDigest]));
+
+        $manifestBody = [
+            'schema' => 'external.import.manifest.v1',
+            'batchId' => $batchId,
+            'sourceSystem' => 'host-billing/export',
+            'sourceInstallation' => 'src-inst-1',
+            'sourceBook' => 'book-main',
+            'sourceExportRevision' => 1,
+            'exportCutoff' => '2026-10-20T00:00:00Z',
+            'installationRef' => self::INSTALLATION,
+            'environment' => 'test',
+            'sellerRef' => 'seller-a',
+            'recordCount' => 1,
+            'recordsChecksum' => $recordsChecksum,
+            'totalsByCurrency' => [$totals[0]->toWire()],
+            'sanitizationPolicy' => ['piiRedacted' => true, 'secretsStripped' => true, 'policyVersion' => 'v1'],
+        ];
+        $manifestDigest = $codec->digest($manifestBody);
+
+        $manifest = new ImportManifest(
+            batchId: $batchId,
+            installationRef: self::INSTALLATION,
+            environment: 'test',
+            sellerRef: 'seller-a',
+            sourceSystem: 'host-billing/export',
+            sourceInstallation: 'src-inst-1',
+            sourceBook: 'book-main',
+            sourceExportRevision: 1,
+            exportCutoff: $cutoff,
+            recordCount: 1,
+            recordsChecksum: $recordsChecksum,
+            manifestDigest: $manifestDigest,
+            sanitizationPolicy: ['piiRedacted' => true, 'secretsStripped' => true, 'policyVersion' => 'v1'],
+            totalsByCurrency: $totals,
+        );
+
+        $identity = new ImportSourceIdentity(
+            installationRef: self::INSTALLATION,
+            environment: 'test',
+            sellerRef: 'seller-a',
+            sourceSystem: 'host-billing/export',
+            sourceInstallation: 'src-inst-1',
+            sourceBook: 'book-main',
+            sourceRecordId: $sourceRecordId,
+            recordKind: ImportRecordKind::ProvenObligation,
+        );
 
         $record = new ImportRecordInput(
             identity: $identity,
@@ -584,7 +587,7 @@ final class ImportParticipantAtomicityTest extends PlatformTestCase
             manifestDigest: $manifestDigest,
             sourceRecordRevision: 1,
             eventBusinessDate: new DateTimeImmutable('2025-11-01T00:00:00Z'),
-            payloadDigest: $codec->digest($payload),
+            payloadDigest: $payloadDigest,
             originalBusinessRefs: $origRefs,
             evidenceRefs: [new ImportEvidenceRef('ev-1', 'price_snapshot', self::DIGEST_PRICE, true)],
             money: $money,
@@ -614,6 +617,38 @@ final class ImportParticipantAtomicityTest extends PlatformTestCase
             new ImportCurrencyTotal('seller-a', 'RUB', ImportRecordKind::ProvenPaymentEvidence, 1, $money, false),
         ];
 
+        $frozen = ['priceVersionRef' => 'pv-rub-1', 'priceDigest' => self::DIGEST_PRICE, 'currency' => 'RUB'];
+        $oblRefs = ['customerRef' => 'cust-1', 'billingAccountRef' => 'acct-1', 'obligationRef' => 'src-'.$oblRecordId];
+        $oblPayload = ['originalBusinessRefs' => $oblRefs, 'frozenPriceSnapshot' => $frozen];
+        $oblPayloadDigest = $codec->digest($oblPayload);
+
+        $allocRefs = [
+            'customerRef' => 'cust-1',
+            'billingAccountRef' => 'acct-1',
+            'obligationRef' => 'src-'.$oblRecordId,
+            'paymentRef' => 'src-'.$payRecordId,
+        ];
+        $allocPayload = ['originalBusinessRefs' => $allocRefs];
+        $allocPayloadDigest = $codec->digest($allocPayload);
+
+        $funding = [
+            'sourceAuthority' => 'source-gateway',
+            'fundingStatus' => 'captured',
+            'providerAccountRef' => 'pa-acct-1',
+            'providerOperationRef' => 'psp-op-'.$payRecordId,
+            'originalOperationRef' => 'orig-'.$payRecordId,
+            'observedAt' => '2025-11-01T09:02:00Z',
+        ];
+        $payRefs = ['customerRef' => 'cust-1', 'billingAccountRef' => 'acct-1', 'paymentRef' => 'src-'.$payRecordId];
+        $payPayload = ['originalBusinessRefs' => $payRefs, 'fundingRefs' => $funding];
+        $payPayloadDigest = $codec->digest($payPayload);
+
+        $recordsChecksum = 'sha256:'.hash('sha256', $codec->canonicalize([
+            $oblPayloadDigest,
+            $allocPayloadDigest,
+            $payPayloadDigest,
+        ]));
+
         $manifestBody = [
             'schema' => 'external.import.manifest.v1',
             'batchId' => $batchId,
@@ -626,7 +661,7 @@ final class ImportParticipantAtomicityTest extends PlatformTestCase
             'environment' => 'test',
             'sellerRef' => 'seller-a',
             'recordCount' => 3,
-            'recordsChecksum' => self::DIGEST_PAY,
+            'recordsChecksum' => $recordsChecksum,
             'totalsByCurrency' => array_map(static fn (ImportCurrencyTotal $t): array => $t->toWire(), $totals),
             'sanitizationPolicy' => ['piiRedacted' => true, 'secretsStripped' => true, 'policyVersion' => 'v1'],
         ];
@@ -643,7 +678,7 @@ final class ImportParticipantAtomicityTest extends PlatformTestCase
             sourceExportRevision: 1,
             exportCutoff: $cutoff,
             recordCount: 3,
-            recordsChecksum: self::DIGEST_PAY,
+            recordsChecksum: $recordsChecksum,
             manifestDigest: $manifestDigest,
             sanitizationPolicy: ['piiRedacted' => true, 'secretsStripped' => true, 'policyVersion' => 'v1'],
             totalsByCurrency: $totals,
@@ -659,9 +694,6 @@ final class ImportParticipantAtomicityTest extends PlatformTestCase
             $oblRecordId,
             ImportRecordKind::ProvenObligation,
         );
-        $frozen = ['priceVersionRef' => 'pv-rub-1', 'priceDigest' => self::DIGEST_PRICE, 'currency' => 'RUB'];
-        $oblRefs = ['customerRef' => 'cust-1', 'billingAccountRef' => 'acct-1', 'obligationRef' => 'src-'.$oblRecordId];
-        $oblPayload = ['originalBusinessRefs' => $oblRefs, 'frozenPriceSnapshot' => $frozen];
         $oblRecord = new ImportRecordInput(
             identity: $oblIdentity,
             batchId: $batchId,
@@ -670,7 +702,7 @@ final class ImportParticipantAtomicityTest extends PlatformTestCase
             manifestDigest: $manifestDigest,
             sourceRecordRevision: 1,
             eventBusinessDate: new DateTimeImmutable('2025-11-01T09:00:00Z'),
-            payloadDigest: $codec->digest($oblPayload),
+            payloadDigest: $oblPayloadDigest,
             originalBusinessRefs: $oblRefs,
             evidenceRefs: [new ImportEvidenceRef('ev-obl', 'price_snapshot', self::DIGEST_PRICE, true)],
             money: $money,
@@ -689,13 +721,6 @@ final class ImportParticipantAtomicityTest extends PlatformTestCase
             'alloc-'.$payRecordId,
             ImportRecordKind::ProvenAllocation,
         );
-        $allocRefs = [
-            'customerRef' => 'cust-1',
-            'billingAccountRef' => 'acct-1',
-            'obligationRef' => 'src-'.$oblRecordId,
-            'paymentRef' => 'src-'.$payRecordId,
-        ];
-        $allocPayload = ['originalBusinessRefs' => $allocRefs];
         $allocRecord = new ImportRecordInput(
             identity: $allocIdentity,
             batchId: $batchId,
@@ -704,7 +729,7 @@ final class ImportParticipantAtomicityTest extends PlatformTestCase
             manifestDigest: $manifestDigest,
             sourceRecordRevision: 1,
             eventBusinessDate: new DateTimeImmutable('2025-11-01T09:01:00Z'),
-            payloadDigest: $codec->digest($allocPayload),
+            payloadDigest: $allocPayloadDigest,
             originalBusinessRefs: $allocRefs,
             evidenceRefs: [new ImportEvidenceRef('ev-alloc', 'allocation_lineage', self::DIGEST_ALLOC, true)],
             money: $money,
@@ -722,16 +747,6 @@ final class ImportParticipantAtomicityTest extends PlatformTestCase
             $payRecordId,
             ImportRecordKind::ProvenPaymentEvidence,
         );
-        $funding = [
-            'sourceAuthority' => 'source-gateway',
-            'fundingStatus' => 'captured',
-            'providerAccountRef' => 'pa-acct-1',
-            'providerOperationRef' => 'psp-op-'.$payRecordId,
-            'originalOperationRef' => 'orig-'.$payRecordId,
-            'observedAt' => '2025-11-01T09:02:00Z',
-        ];
-        $payRefs = ['customerRef' => 'cust-1', 'billingAccountRef' => 'acct-1', 'paymentRef' => 'src-'.$payRecordId];
-        $payPayload = ['originalBusinessRefs' => $payRefs, 'fundingRefs' => $funding];
         $payRecord = new ImportRecordInput(
             identity: $payIdentity,
             batchId: $batchId,
@@ -740,7 +755,7 @@ final class ImportParticipantAtomicityTest extends PlatformTestCase
             manifestDigest: $manifestDigest,
             sourceRecordRevision: 1,
             eventBusinessDate: new DateTimeImmutable('2025-11-01T09:02:00Z'),
-            payloadDigest: $codec->digest($payPayload),
+            payloadDigest: $payPayloadDigest,
             originalBusinessRefs: $payRefs,
             evidenceRefs: [new ImportEvidenceRef('ev-pay', 'payment_provider_fact', self::DIGEST_PAY, true)],
             money: $money,

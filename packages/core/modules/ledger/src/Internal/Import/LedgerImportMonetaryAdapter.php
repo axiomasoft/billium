@@ -271,11 +271,15 @@ final readonly class LedgerImportMonetaryAdapter implements ImportMonetaryPort
         $hold = ($payment->financial_hold ?? false) === true;
         $providerAccountRef = is_string($payment->provider_account_ref ?? null) ? $payment->provider_account_ref : '';
         $rawExistingDetails = $db->scalar(
-            'SELECT COALESCE(SUM(r.captured_minor), 0) '
+            'SELECT COALESCE(SUM(latest.captured_minor), 0) FROM ('
+            .'SELECT DISTINCT ON (o.id) r.captured_minor '
             .'FROM public.billium_observed_payment o '
-            .'JOIN public.billium_observed_payment_revision r ON r.observed_payment_id = o.id AND r.seller_ref = o.seller_ref AND r.environment = o.environment '
+            .'JOIN public.billium_observed_payment_revision r '
+            .'ON r.observed_payment_id = o.id AND r.seller_ref = o.seller_ref AND r.environment = o.environment '
             .'WHERE o.installation_ref = ? AND o.seller_ref = ? AND o.environment = ? '
-            ."AND o.source_authority = ? AND o.original_ref = ? AND o.kind = 'refund'",
+            ."AND o.source_authority = ? AND o.original_ref = ? AND o.kind = 'refund' "
+            .'ORDER BY o.id, r.revision DESC'
+            .') latest',
             [$caller->installationRef, $caller->sellerRef, $caller->environment, $sourceAuthority, $originalPaymentRef],
         );
         $existingDetailsMinor = is_int($rawExistingDetails)
