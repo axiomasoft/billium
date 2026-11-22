@@ -100,7 +100,12 @@ final readonly class CustodyProcessor
         }
     }
 
-    public function process(TransactionContext $context, string $channel, stdClass $envelope, CustodyHandler $handler, ?string $rootOperationRef = null, ?string $proofDigest = null): CustodyResult
+    public function enqueueCustody(TransactionContext $context, string $channel, stdClass $envelope, CustodyHandler $handler): CustodyResult
+    {
+        return $this->process($context, $channel, $envelope, $handler, custodyOnly: true);
+    }
+
+    public function process(TransactionContext $context, string $channel, stdClass $envelope, CustodyHandler $handler, ?string $rootOperationRef = null, ?string $proofDigest = null, bool $custodyOnly = false): CustodyResult
     {
         ($this->runner)()->assertCurrent($context, 'platform');
         $e = InboxEnvelope::from($channel, $envelope);
@@ -223,8 +228,8 @@ final readonly class CustodyProcessor
         if ($status === 'parked_gap') {
             return new CustodyResult(CustodyDisposition::ParkedGap, $id, $status);
         }
-        if (! $context->spec()->mode->financial()) {
-            // Raw custody commits even while the financial session is sealed; a financial root applies it later.
+        if (! $context->spec()->mode->financial() || $custodyOnly) {
+            // Raw custody or explicit import custody queueing commits durable inbox state; a separate observation owner root applies it.
             return new CustodyResult(CustodyDisposition::Received, $id, $status, null, $partition->id);
         }
 

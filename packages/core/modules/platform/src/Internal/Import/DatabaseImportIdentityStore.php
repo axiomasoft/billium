@@ -355,6 +355,56 @@ final readonly class DatabaseImportIdentityStore implements ImportIdentityStore
     }
 
     #[Override]
+    public function assignMappingTarget(
+        ImportSourceIdentity $identity,
+        int $sourceRecordRevision,
+        string $targetKind,
+        string $targetRef,
+    ): ImportMappingRecord {
+        if (trim($targetKind) === '' || strlen($targetKind) > 100 || str_contains($targetKind, "\0")) {
+            throw new InvalidArgumentException('targetKind must be a bounded nonempty string');
+        }
+        if (trim($targetRef) === '' || strlen($targetRef) > 200 || str_contains($targetRef, "\0")) {
+            throw new InvalidArgumentException('targetRef must be a bounded nonempty string');
+        }
+
+        $existing = $this->findMapping($identity, $sourceRecordRevision);
+        if ($existing === null) {
+            throw new ProblemException(ProblemCode::ReferenceUnknown, 'Import mapping not found for target assignment');
+        }
+        if ($existing->billiumTargetRef !== null) {
+            if ($existing->billiumTargetKind === $targetKind && $existing->billiumTargetRef === $targetRef) {
+                return $existing;
+            }
+
+            throw new ProblemException(
+                ProblemCode::IdempotencyConflict,
+                'Import mapping target binding is immutable once assigned',
+            );
+        }
+
+        $row = $this->connection()->selectOne(
+            'UPDATE public.billium_import_mapping '
+            .'SET billium_target_kind = ?, billium_target_ref = ? '
+            .'WHERE id = ? AND installation_ref = ? AND environment = ? AND seller_ref = ? '
+            .'RETURNING *',
+            [
+                $targetKind,
+                $targetRef,
+                $existing->id,
+                $identity->installationRef,
+                $identity->environment,
+                $identity->sellerRef,
+            ],
+        );
+        if (! is_object($row)) {
+            throw new ProblemException(ProblemCode::ReferenceUnknown, 'Import mapping vanished during target assignment');
+        }
+
+        return self::hydrateMapping($row);
+    }
+
+    #[Override]
     public function supersedeMapping(
         ImportSourceIdentity $identity,
         int $previousRevision,

@@ -16,6 +16,7 @@ use Billium\Platform\Data\Import\ImportCurrencyTotal;
 use Billium\Platform\Data\Import\ImportManifest;
 use Billium\Platform\Data\Import\ImportMappingStatus;
 use Billium\Platform\Data\Import\ImportPreviewReport;
+use Billium\Platform\Data\Import\ImportReceiptStatus;
 use Billium\Platform\Data\Import\ImportRecordInput;
 use Billium\Platform\Data\Import\ImportRecordKind;
 use Billium\Platform\Data\Import\ImportRecordValidationResult;
@@ -270,12 +271,27 @@ final readonly class DefaultImportPreviewEvaluator implements ImportPreviewEvalu
             }
             $applied = $this->store->findAppliedReceipt($identity, $record->sourceRecordRevision);
             if ($applied !== null) {
+                $isAdoptedObservation = $applied->status === ImportReceiptStatus::ObservationQueued
+                    && $existingSameRev->billiumTargetRef !== null;
+                if ($applied->status === ImportReceiptStatus::Applied || $isAdoptedObservation) {
+                    return new ImportRecordValidationResult(
+                        identity: $identity,
+                        sourceRecordRevision: $record->sourceRecordRevision,
+                        sourceIdentityDigest: $identityDigest,
+                        payloadDigest: $record->payloadDigest,
+                        status: ImportValidationStatus::AlreadyApplied,
+                        receiptRef: $existingSameRev->billiumTargetRef ?? $applied->billiumReceiptRef ?? $applied->receiptRef,
+                        sourceFactRef: $existingSameRev->sourceFactRef,
+                    );
+                }
+
                 return new ImportRecordValidationResult(
                     identity: $identity,
                     sourceRecordRevision: $record->sourceRecordRevision,
                     sourceIdentityDigest: $identityDigest,
                     payloadDigest: $record->payloadDigest,
-                    status: ImportValidationStatus::AlreadyApplied,
+                    status: ImportValidationStatus::Ready,
+                    reasonCodes: ['import.observation_queued_pending_adoption'],
                     receiptRef: $applied->receiptRef,
                     sourceFactRef: $existingSameRev->sourceFactRef,
                 );
@@ -392,6 +408,19 @@ final readonly class DefaultImportPreviewEvaluator implements ImportPreviewEvalu
                     status: ImportValidationStatus::UnanchoredEvidence,
                     reasonCodes: ['import.missing_authoritative_funding_evidence'],
                     missingEvidence: $missing,
+                    sourceFactRef: $sourceFactRef,
+                );
+            }
+            $fundingStatus = $record->fundingRefs['fundingStatus'] ?? null;
+            if (is_string($fundingStatus) && in_array(strtolower(trim($fundingStatus)), ['unknown', 'accepted-unknown', 'pending_unknown', 'unverified'], true)) {
+                return new ImportRecordValidationResult(
+                    identity: $identity,
+                    sourceRecordRevision: $record->sourceRecordRevision,
+                    sourceIdentityDigest: $identityDigest,
+                    payloadDigest: $record->payloadDigest,
+                    status: ImportValidationStatus::UnanchoredEvidence,
+                    reasonCodes: ['import.unresolved_remote_funding_status'],
+                    missingEvidence: ['fundingRefs.verifiedTerminalOutcome'],
                     sourceFactRef: $sourceFactRef,
                 );
             }

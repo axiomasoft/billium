@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-ledger
 
-Path `packages/core/modules/ledger/src`, namespace `Billium\Ledger\`, layer L2. 98 types.
+Path `packages/core/modules/ledger/src`, namespace `Billium\Ledger\`, layer L2. 99 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -117,6 +117,12 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 |---|---|---|---|
 | [`DrainParkedCommand`](../../packages/core/modules/ledger/src/Internal/Console/DrainParkedCommand.php) | class | *Internal* | Drain worker of the observation path: one economic event per root Tx (inbox-feed), for the host's current caller. |
 | [`ReconcileRefundsCommand`](../../packages/core/modules/ledger/src/Internal/Console/ReconcileRefundsCommand.php) | class | *Internal* | D48 reconcile job: compares the D41 charge refund basis with refund details after the consistency window. |
+
+## Internal/Import
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`LedgerImportMonetaryAdapter`](../../packages/core/modules/ledger/src/Internal/Import/LedgerImportMonetaryAdapter.php) | class | *Internal* | Ledger-owned adapter implementing Platform's ImportMonetaryPort over typed LedgerParticipants, ParkedDrainer and LedgerQueries. |
 
 ## Internal
 

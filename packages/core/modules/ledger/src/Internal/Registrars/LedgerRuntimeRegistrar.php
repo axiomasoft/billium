@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Billium\Ledger\Internal\Registrars;
 
+use Billium\Core\Configuration\BilliumOptions;
+use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Ledger\Contracts\CollectionObligation;
 use Billium\Ledger\Contracts\CorrectionCreditParticipants;
 use Billium\Ledger\Contracts\CorrectionLocks;
@@ -15,9 +17,11 @@ use Billium\Ledger\Contracts\ObservationApplier;
 use Billium\Ledger\Contracts\ObservationCheckpointQueries;
 use Billium\Ledger\Contracts\QualifiedObservationApplier;
 use Billium\Ledger\Contracts\SettlementIntentLocks;
+use Billium\Ledger\Internal\Import\LedgerImportMonetaryAdapter;
 use Billium\Ledger\Internal\LedgerFacade;
 use Billium\Ledger\Internal\Observation\ObservationHandler;
 use Billium\Ledger\Internal\Observation\ObservationIntake;
+use Billium\Ledger\Internal\Observation\ParkedDrainer;
 use Billium\Ledger\Internal\Participants\DatabaseCorrectionCreditParticipants;
 use Billium\Ledger\Internal\Participants\DatabaseCorrectionLocks;
 use Billium\Ledger\Internal\Participants\DatabaseLedgerParticipants;
@@ -31,9 +35,11 @@ use Billium\Ledger\Internal\Snapshot\DiscrepanciesSnapshotSource;
 use Billium\Ledger\Internal\Snapshot\InvoicesSnapshotSource;
 use Billium\Ledger\Internal\Snapshot\ObligationsSnapshotSource;
 use Billium\Ledger\Internal\Snapshot\PaymentsSnapshotSource;
+use Billium\Platform\Contracts\Import\ImportMonetaryPort;
 use Billium\Platform\Contracts\Inbox\CustodyHandler;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Database\DatabaseManager;
 use Override;
 use Packman\Attributes\Internal;
 use Packman\Foundation\Contracts\PackageRegistrar;
@@ -71,6 +77,15 @@ final class LedgerRuntimeRegistrar implements PackageRegistrar
         }
 
         $app->when(ObservationIntake::class)->needs(CustodyHandler::class)->give(ObservationHandler::class);
+
+        $app->singleton(ImportMonetaryPort::class, static fn (Application $app): LedgerImportMonetaryAdapter => new LedgerImportMonetaryAdapter(
+            static fn (): LedgerParticipants => $app->make(LedgerParticipants::class),
+            static fn (): ParkedDrainer => $app->make(ParkedDrainer::class),
+            static fn (): LedgerQueries => $app->make(LedgerQueries::class),
+            static fn (): CallerContext => $app->make(CallerContext::class),
+            $app->make(DatabaseManager::class),
+            $app->make(BilliumOptions::class),
+        ));
 
         $app->singleton(LedgerPrivileges::class, static function (Application $app): LedgerPrivileges {
             $config = $app->bound(Repository::class) ? $app->make(Repository::class) : null;

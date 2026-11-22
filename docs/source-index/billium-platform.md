@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-platform
 
-Path `packages/core/modules/platform/src`, namespace `Billium\Platform\`, layer L2. 126 types.
+Path `packages/core/modules/platform/src`, namespace `Billium\Platform\`, layer L2. 152 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts/Accounting
@@ -41,8 +41,11 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
 | [`ExternalImportSourceAdapter`](../../packages/core/modules/platform/src/Contracts/Import/ExternalImportSourceAdapter.php) | interface | **Spi** | Host-implemented adapter that reads a product-agnostic external export artifact or stream (never a foreign host DB connection). |
+| [`ImportBatchApplier`](../../packages/core/modules/platform/src/Contracts/Import/ImportBatchApplier.php) | interface | **Api** | Dependency-ordered, resumable import applier and post-apply linked correction service over existing monetary APIs. |
 | [`ImportIdentityStore`](../../packages/core/modules/platform/src/Contracts/Import/ImportIdentityStore.php) | interface | **Api** | Platform-owned staging, source identity mapping, tombstone and append-only audit receipt store for external.import.v1. |
+| [`ImportMonetaryPort`](../../packages/core/modules/platform/src/Contracts/Import/ImportMonetaryPort.php) | interface | **Spi** | SPI port bridging platform-owned import orchestration to ledger participants, observation reduction and read-only queries. |
 | [`ImportPreviewEvaluator`](../../packages/core/modules/platform/src/Contracts/Import/ImportPreviewEvaluator.php) | interface | **Api** | Evaluates external.import.v1 records into a typed preview report without mutating financial state. |
+| [`ImportReconciler`](../../packages/core/modules/platform/src/Contracts/Import/ImportReconciler.php) | interface | **Api** | Strictly read-only per-(sellerRef, currency, recordKind) import batch reconciler producing a canonical hashed report. |
 
 ## Contracts/Inbox
 
@@ -120,19 +123,32 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
+| [`ImportApplyOptions`](../../packages/core/modules/platform/src/Data/Import/ImportApplyOptions.php) | class | **Api** | Explicit capability scope, frozen manifest digest and chunking controls for import batch application. |
+| [`ImportApplyResult`](../../packages/core/modules/platform/src/Data/Import/ImportApplyResult.php) | class | **Api** | Summary returned by ImportBatchApplier::apply or ImportBatchApplier::resume. |
 | [`ImportBatchStatus`](../../packages/core/modules/platform/src/Data/Import/ImportBatchStatus.php) | enum | **Api** | Lifecycle state of a platform-owned external import batch. |
+| [`ImportCorrectionResult`](../../packages/core/modules/platform/src/Data/Import/ImportCorrectionResult.php) | class | **Api** | Result of applying a post-import linked correction without overwriting original records or triggering PSP side effects. |
+| [`ImportCreditNoteWrite`](../../packages/core/modules/platform/src/Data/Import/ImportCreditNoteWrite.php) | class | **Api** | Typed participant payload for issuing a linked credit note on an issued invoice without PSP dispatch. |
+| [`ImportCurrencyConservation`](../../packages/core/modules/platform/src/Data/Import/ImportCurrencyConservation.php) | class | **Api** | Read-only per-currency ledger conservation snapshot for import reconciliation. |
+| [`ImportCurrencyReconciliation`](../../packages/core/modules/platform/src/Data/Import/ImportCurrencyReconciliation.php) | class | **Api** | Per-(sellerRef, currency, recordKind) reconciliation bucket comparing manifest/staged records against Billium state. |
 | [`ImportCurrencyTotal`](../../packages/core/modules/platform/src/Data/Import/ImportCurrencyTotal.php) | class | **Api** | Historical import total isolated per seller, currency and record kind; never an authoritative current balance. |
 | [`ImportEvidenceRef`](../../packages/core/modules/platform/src/Data/Import/ImportEvidenceRef.php) | class | **Api** | Immutable reference to one sanitized evidence item attached to an external import record. |
+| [`ImportLinkedCorrection`](../../packages/core/modules/platform/src/Data/Import/ImportLinkedCorrection.php) | class | **Api** | Post-apply linked correction request (D63/F01, D71, IM-10) without destructive rollback or automatic PSP dispatch. |
 | [`ImportManifest`](../../packages/core/modules/platform/src/Data/Import/ImportManifest.php) | class | **Api** | Immutable evidence manifest describing one external export batch with seller/environment scope. |
 | [`ImportMappingRecord`](../../packages/core/modules/platform/src/Data/Import/ImportMappingRecord.php) | class | **Api** | Durable platform-owned mapping from external source identity to Billium economic fact lineage. |
 | [`ImportMappingRegistrationResult`](../../packages/core/modules/platform/src/Data/Import/ImportMappingRegistrationResult.php) | class | **Api** | Outcome of registering a source identity mapping revision in the platform store. |
 | [`ImportMappingStatus`](../../packages/core/modules/platform/src/Data/Import/ImportMappingStatus.php) | enum | **Api** | State of a durable source identity mapping entry. |
+| [`ImportObligationWrite`](../../packages/core/modules/platform/src/Data/Import/ImportObligationWrite.php) | class | **Api** | Typed participant payload for recording a proven imported obligation or positive linked correction. |
+| [`ImportObservationOutcome`](../../packages/core/modules/platform/src/Data/Import/ImportObservationOutcome.php) | class | **Api** | Read-only lookup result of an observed payment/refund reduction and its AllocationReceipt for receipt adoption. |
 | [`ImportPreviewReport`](../../packages/core/modules/platform/src/Data/Import/ImportPreviewReport.php) | class | **Api** | Typed external.import.preview.v1 validation report with isolated per-currency totals and explicit gaps. |
 | [`ImportReceiptRecord`](../../packages/core/modules/platform/src/Data/Import/ImportReceiptRecord.php) | class | **Api** | Immutable append-only audit receipt recorded for an external import record. |
 | [`ImportReceiptStatus`](../../packages/core/modules/platform/src/Data/Import/ImportReceiptStatus.php) | enum | **Api** | Audit status recorded on an append-only import receipt. |
+| [`ImportReconciliationReport`](../../packages/core/modules/platform/src/Data/Import/ImportReconciliationReport.php) | class | **Api** | Hashed read-only reconciliation report for an import batch, keeping local runtime evidence separated from external activation inputs. |
+| [`ImportRecordApplyOutcome`](../../packages/core/modules/platform/src/Data/Import/ImportRecordApplyOutcome.php) | class | **Api** | Outcome recorded for a single staged import record during apply or resume. |
+| [`ImportRecordApplyStatus`](../../packages/core/modules/platform/src/Data/Import/ImportRecordApplyStatus.php) | enum | **Api** | Per-record application status across the dependency-ordered import DAG. |
 | [`ImportRecordInput`](../../packages/core/modules/platform/src/Data/Import/ImportRecordInput.php) | class | **Api** | Normalized input record conforming to external.import.v1 without fabricated monetary defaults. |
 | [`ImportRecordKind`](../../packages/core/modules/platform/src/Data/Import/ImportRecordKind.php) | enum | **Api** | Normalized product-agnostic classification of an external import record. |
 | [`ImportRecordValidationResult`](../../packages/core/modules/platform/src/Data/Import/ImportRecordValidationResult.php) | class | **Api** | Typed validation outcome for one external.import.v1 record during preview evaluation. |
+| [`ImportSettlementIntentWrite`](../../packages/core/modules/platform/src/Data/Import/ImportSettlementIntentWrite.php) | class | **Api** | Typed participant payload for declaring a proven settlement intent before observation reduction. |
 | [`ImportSourceIdentity`](../../packages/core/modules/platform/src/Data/Import/ImportSourceIdentity.php) | class | **Api** | Canonical seller/environment-scoped source identity independent of batch ID, filename or mapper policy version. |
 | [`ImportValidationStatus`](../../packages/core/modules/platform/src/Data/Import/ImportValidationStatus.php) | enum | **Api** | Typed validation disposition of a single external import record in preview. |
 
@@ -226,8 +242,23 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
+| [`DatabaseImportBatchApplier`](../../packages/core/modules/platform/src/Internal/Import/DatabaseImportBatchApplier.php) | class | *Internal* | Dependency-ordered, chunked and crash-resumable external import applier over existing Billium monetary APIs (P9.3, D60, D71). |
 | [`DatabaseImportIdentityStore`](../../packages/core/modules/platform/src/Internal/Import/DatabaseImportIdentityStore.php) | class | *Internal* | PostgreSQL-backed staging, source identity mapping, tombstone and append-only receipt store for external.import.v1. |
+| [`DatabaseImportReconciler`](../../packages/core/modules/platform/src/Internal/Import/DatabaseImportReconciler.php) | class | *Internal* | Read-only per-(sellerRef, currency, recordKind) reconciler producing a canonical hashed ImportReconciliationReport. |
 | [`DefaultImportPreviewEvaluator`](../../packages/core/modules/platform/src/Internal/Import/DefaultImportPreviewEvaluator.php) | class | *Internal* | Pure read-only preview evaluator for external.import.v1 records. |
+| [`ImportObservationEnvelopeBuilder`](../../packages/core/modules/platform/src/Internal/Import/ImportObservationEnvelopeBuilder.php) | class | *Internal* | Deterministic builder for payment.observation.v1 envelopes from proven external import records. |
+
+## Internal/Import/Sources
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`CreditsExportProfile`](../../packages/core/modules/platform/src/Internal/Import/Sources/CreditsExportProfile.php) | class | *Internal* | Product-agnostic export mapping profile for host non-monetary credits, rewards and hybrid billing artifacts. |
+| [`ExportArtifactException`](../../packages/core/modules/platform/src/Internal/Import/Sources/ExportArtifactException.php) | class | *Internal* | Thrown when an external export artifact or stream fails fail-closed integrity, boundary or sanitization checks. |
+| [`ExportRecordNormalizer`](../../packages/core/modules/platform/src/Internal/Import/Sources/ExportRecordNormalizer.php) | class | *Internal* | Shared fail-closed normalizer for product-agnostic source export records. |
+| [`GenericExportProfile`](../../packages/core/modules/platform/src/Internal/Import/Sources/GenericExportProfile.php) | class | *Internal* | Default product-agnostic export mapping profile for source.export.v1 records. |
+| [`GenericExportReader`](../../packages/core/modules/platform/src/Internal/Import/Sources/GenericExportReader.php) | class | *Internal* | Product-agnostic reader over immutable external export artifacts or readable local streams. |
+| [`RecurringExportProfile`](../../packages/core/modules/platform/src/Internal/Import/Sources/RecurringExportProfile.php) | class | *Internal* | Product-agnostic export mapping profile for recurring/subscription/annual-funding + periodic-grant artifacts. |
+| [`SourceExportProfile`](../../packages/core/modules/platform/src/Internal/Import/Sources/SourceExportProfile.php) | interface | *Internal* | Product-agnostic export mapping profile translating one sanitized raw export record into a normalized external.import.v1 input. |
 
 ## Internal/Inbox
 

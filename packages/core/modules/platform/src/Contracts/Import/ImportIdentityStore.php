@@ -44,6 +44,13 @@ interface ImportIdentityStore
 
     public function findMapping(ImportSourceIdentity $identity, ?int $sourceRecordRevision = null): ?ImportMappingRecord;
 
+    public function assignMappingTarget(
+        ImportSourceIdentity $identity,
+        int $sourceRecordRevision,
+        string $targetKind,
+        string $targetRef,
+    ): ImportMappingRecord;
+
     public function supersedeMapping(
         ImportSourceIdentity $identity,
         int $previousRevision,
