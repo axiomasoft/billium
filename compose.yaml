@@ -53,17 +53,10 @@ services:
       - type: bind
         source: ${BILLIUM_PUB_CACHE:-${PWD}/.ci-cache/pub}
         target: /tmp/pub-cache
-      - type: bind
-        source: ${SKM_WORKSPACES_ROOT:-${SKM_WORKSPACES:-${SKM_HOME:-${HOME}/.local/share/swissknifeman}/workspaces}}
-        target: /skm-workspaces
-        read_only: true
-        bind:
-          create_host_path: false
     environment:
       HOME: /tmp/home
       COMPOSER_HOME: /tmp/composer
       PUB_CACHE: /tmp/pub-cache
-      SKM_WORKSPACES: /skm-workspaces
       DB_CONNECTION: pgsql
       DB_HOST: postgres
       DB_PORT: 5432

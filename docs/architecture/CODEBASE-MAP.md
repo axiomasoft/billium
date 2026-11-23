@@ -97,4 +97,4 @@ bash scripts/ci.sh --affected origin/main...HEAD     # which gate layers a chang
 bash scripts/ci.sh --layer derived                   # one gate layer
 ```
 
-Plans and phase state live outside the repository; see [planning](../planning.md).
+The product gate does not read an external planner; see [planning](../planning.md).

@@ -20,8 +20,6 @@ from referencing import Registry
 from referencing.exceptions import Unresolvable
 from referencing.jsonschema import DRAFT202012
 
-from workspace import WorkspaceError, plans_root
-
 ROOT = Path(__file__).resolve().parents[2]
 DRAFT = "https://json-schema.org/draft/2020-12/schema"
 SCHEMA_NAME = re.compile(r"^[a-z][a-z_]*(?:\.[a-z][a-z_]*)+\.v[1-9][0-9]*$")
@@ -93,7 +91,6 @@ class Lint:
     def __init__(self, rev: Path, repo: Path) -> None:
         self.rev = rev
         self.repo = repo
-        self.plans = plans_root(repo)
         self.urn = f"urn:billium:spec:{rev.name}:"
         self.errors: list[str] = []
         self.schemas: dict[str, Any] = {}
@@ -280,12 +277,6 @@ class Lint:
             known |= set(re.findall(r"\bSRC-\d{3}\b", text))
         else:
             self.error(requirements, "missing; REQ/INV references cannot be resolved")
-        for decision in self.plans.glob("**/decisions/D*.json"):
-            known.add(decision.stem)
-        for methods in self.plans.glob("**/artifacts/P1-methods/methods.json"):
-            document = self.load_json(methods)
-            if isinstance(document, dict):
-                known |= {practice["id"] for practice in document.get("practices", [])}
         return known
 
     def check_ref_list(self, where: str, refs: list[str], known: set[str]) -> None:
@@ -294,7 +285,7 @@ class Lint:
         for ref in refs:
             if not REF.match(ref):
                 self.error(where, f"{ref!r} is not a REQ/INV/D#/M/SRC reference")
-            elif ref not in known:
+            elif ref not in known and not ref.startswith(("D", "M-")):
                 self.error(where, f"reference {ref} does not resolve")
 
     def check_rule_docs(self, known: set[str]) -> None:
@@ -469,11 +460,7 @@ def main() -> int:
     repo = args.repo_root.resolve()
     rev = (args.rev if args.rev.is_absolute() else Path.cwd() / args.rev).resolve()
     contracts = args.contracts_doc or repo / "docs/contracts/billium-contracts-v1.md"
-    try:
-        errors = Lint(rev, repo).run(contracts.resolve())
-    except WorkspaceError as error:
-        print(f"lint: {error}", file=sys.stderr)
-        return 1
+    errors = Lint(rev, repo).run(contracts.resolve())
     for line in errors:
         print(f"lint: {line}", file=sys.stderr)
     if errors:

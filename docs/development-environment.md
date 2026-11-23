@@ -12,13 +12,7 @@ Composer, Dart SDK 3.13.5 and the pinned Python tooling. `compose.yaml` runs it 
 so files created in the container stay owned by you. Compose includes PostgreSQL 16 with distinct
 fixture/migration owner and unprivileged runtime roles (D50/D60); its credentials are throwaway test values.
 
-Plans exist only in the SwissKnifeman workspace `axioma` (see [planning](planning.md)).
-Before running the gate, clone or sync that workspace. Compose mounts the directory containing
-workspaces at `/skm-workspaces` read-only and sets `SKM_WORKSPACES` inside the container.
-On the host it honors `SKM_WORKSPACES_ROOT`, then `SKM_WORKSPACES`, then
-`$SKM_HOME/workspaces`, otherwise `~/.local/share/swissknifeman/workspaces`.
-For example, if the workspace checkout is `/srv/workspaces/axioma`, export
-`SKM_WORKSPACES=/srv/workspaces`. Missing workspace directories fail instead of being created.
+The product gate does not check out or mount an external planner. See [planning](planning.md).
 
 ```bash
 mkdir -p .ci-cache/composer .ci-cache/pub
@@ -39,13 +33,12 @@ Inside `php`, non-`pg` Pest runs first, then parallel `pg` with one database per
 A layer without its subject, or a missing tool, is red, never skipped. Regenerate derived files with the
 script that `--check` names (for example `python3 scripts/spec/identities.py`).
 GitHub Actions runs that same gate once per update: pull requests, and pushes to `main` only.
-The job checks Packman and the SwissKnifeman workspace out under the runner workspace and bind-mounts
-that checkout (`SKM_WORKSPACES=${{ github.workspace }}/workspaces`). It does not read
-`~/.local/share/swissknifeman/workspaces`. Composer and Dart downloads land in `.ci-cache/`
+The job checks Packman out beside the product and runs `bash scripts/ci.sh`.
+Composer and Dart downloads land in `.ci-cache/`
 (gitignored) and the toolchain image is restored from the Actions cache on the next run.
 The php layer runs Packman as `php -d memory_limit=1G vendor/bin/packman gate`, and the same memory limit
 for `php-api --check`, `error-codes --check`, `config-schema --check`, and `ai:sync --dry-run`. There is no `bin/packman`.
-CI for this gate runs from the private mirror https://github.com/corestructor/billium-mirror/. A pull request runs the gate once; a push runs it only when the branch is `main`.
+CI for this gate runs on https://github.com/axiomasoft/billium. A pull request runs the gate once; a push runs it only when the branch is `main`.
 
 Identities (`spec/identities.json`, snapshots in `spec/identities/snapshots/`) and `spec/type-map.json` are
 frozen to 1.0 by major versions only: an entry that disappears must be kept with status `retired`.

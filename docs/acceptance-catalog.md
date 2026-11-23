@@ -1,7 +1,7 @@
 # Billium — каталог приёмки
 
 Статус: PLAN1.P1.7 (2026-10-17), корректировки PLAN1.P1.11 и PLAN1.P1.13 по review P1.9.
-Источник ID — `research/P1-acceptance-inventory.md` плана `2026.10.14-№1-BILLIUM-V1` в [workspace](planning.md)
+Источник ID — инвентарь приёмки PLAN1.P1.7
 (82 сценария: PB 24, PF 14, MG 12, FD 10, SB 10, EC 12); ID не переименованы. Одна строка — один сценарий.
 Фаза — провизорная фаза реализации по roadmap (D1); контракт/модель — `docs/contracts/billium-contracts-v1.md`
 и `docs/architecture/data-model.md`.

@@ -20,10 +20,10 @@
   documents, execution, collection. The host owns agreements, grants,
   provisioning, tax profiles and PSP credentials. Billium owns the monetary
   schedule, obligations and, when enabled, execution.
-- Plans live only in the SwissKnifeman workspace named by
-  `.swissknifeman/project.json`. Resolve them with
-  `python3 scripts/spec/workspace.py`. Never read or create a repository
-  `plans/` store. See `docs/planning.md`. A missing workspace fails the run.
+- This repository does not check out or read an external planner.
+  Decision and method ids in the spec are citations. `REQ`, `INV`, and
+  `SRC` resolve from `docs/requirements.md`. See `docs/planning.md`.
+  Never create a repository `plans/` store.
 - Product checks are `bash scripts/ci.sh` inside the toolchain image.
   Layers, in order, are `lint`, `derived`, `php`, `dart`, `conformance`.
   `lint`, `derived` and `dart` may run together. `php` then `conformance`
@@ -32,17 +32,16 @@
   `_test`. Destructive resets need `PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1`.
   A missing tool or subject is a failure, never a skip.
 - `.github/workflows/ci.yml` only calls `bash scripts/ci.sh`. It runs on
-  pull requests and on pushes to `main`. The plans bind is the checked-out
-  workspace, not the runner home directory.
+  pull requests and on pushes to `main` of the public repository. It does
+  not check out another repository for plans.
 - Packman generates `.claude/rules/`, `.claude/agents/`, `.codex/agents/`,
   `.gemini/rules/`, `.claude/settings.json`, `.claude/agent-pack.lock.json`
   and `AGENTS.md`. Do not edit those. `vendor/bin/packman ai:sync --dry-run`
   fails if they drift. Billium-specific agent rules are this file.
 - Edit this file, then run `bash scripts/build-agent-docs.sh` to refresh
-  `CLAUDE.md`. Do not commit `.agents/`, editor hooks, `.ci-cache/`, or
-  `.swissknifeman/config.toml.lock`.
+  `CLAUDE.md`. Do not commit `.agents/`, editor hooks, or `.ci-cache/`.
 - Code navigation uses Serena (PHP and Dart). Temporary memory is mAInd
-  scope `project:billium` only. Skills come from the swissknifeman connect
-  channel, not from copies under `.agents/skills/` or `.claude/skills/`.
+  scope `project:billium` only. Do not copy skills into `.agents/skills/`
+  or `.claude/skills/`.
 - Preserve unrelated worktree changes. Keep credentials and machine-specific
   agent settings out of Git.

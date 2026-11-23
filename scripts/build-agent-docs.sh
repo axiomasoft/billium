@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Refresh CLAUDE.md from .ai/guidelines/agent-entrypoint.md.
 # Packman owns AGENTS.md via `vendor/bin/packman ai:sync`.
-# The swissknifeman hub block and the maind healthcheck block are preserved.
+# The maind healthcheck block is preserved.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -21,7 +21,7 @@ import pathlib
 import sys
 
 text = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
-start = text.find("<!-- swissknifeman:hub:start -->")
+start = text.find("<!-- maind:healthcheck")
 if start == -1:
     raise SystemExit(0)
 sys.stdout.write(text[start:])

@@ -70,7 +70,7 @@ class GateSelectorTest(unittest.TestCase):
             LAYERS,
         )
 
-    def test_workflow_runs_one_gate_against_the_checked_out_workspace(self) -> None:
+    def test_workflow_runs_one_gate_on_the_public_repository(self) -> None:
         text = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("bash scripts/ci.sh", text)
         self.assertNotIn("--no-build", text)
@@ -79,9 +79,10 @@ class GateSelectorTest(unittest.TestCase):
         self.assertIn("branches: [main]", text)
         self.assertIn("pull_request:", text)
         self.assertNotIn("push:\n  pull_request:", text)
-        self.assertIn("SKM_WORKSPACES: ${{ github.workspace }}/workspaces", text)
-        self.assertIn("path: workspaces/axioma", text)
-        self.assertNotIn(".local/share/swissknifeman", text)
+        self.assertNotIn("WORKSPACE_READ", text)
+        self.assertNotIn("SKM_", text)
+        self.assertNotIn("swissknifeman", text)
+        self.assertNotIn("workspaces/axioma", text)
 
     def test_non_final_command_failure_aborts_single_layer_and_parallel_run(self) -> None:
         with tempfile.TemporaryDirectory(prefix="billium-ci-stub-") as directory:

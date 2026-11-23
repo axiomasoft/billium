@@ -16,8 +16,6 @@ concurrency:
 jobs:
   gate:
     runs-on: ubuntu-latest
-    env:
-      SKM_WORKSPACES: ${{ github.workspace }}/workspaces
     defaults:
       run:
         working-directory: billium
@@ -30,12 +28,6 @@ jobs:
           repository: axiomasoft/packman
           ref: v0.1.1
           path: packman
-          persist-credentials: false
-      - uses: actions/checkout@v7
-        with:
-          repository: academici/swissknifeman-axioma-workspace
-          path: workspaces/axioma
-          token: ${{ secrets.WORKSPACE_READ }}
           persist-credentials: false
       - name: Match toolchain user to the checkout owner
         run: |
