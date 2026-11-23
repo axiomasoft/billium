@@ -57,7 +57,7 @@
     },
     {
       "id": "toolchain",
-      "paths": ["docker/**", "compose.yaml", "scripts/ci.sh", ".github/**"],
+      "paths": ["docker/**", "compose.yaml", "scripts/ci.sh", "scripts/ci/**", ".github/**"],
       "layers": ["lint", "derived", "php", "dart", "conformance"]
     }
   ]

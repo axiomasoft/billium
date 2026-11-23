@@ -20,6 +20,7 @@
 .claude/scheduled_tasks.lock
 .serena/cache/
 .serena/memories/
+.swissknifeman/config.toml.lock
 .swissknifeman/task-terminal/
 .swissknifeman/terminal-admission/
 .swissknifeman/state/

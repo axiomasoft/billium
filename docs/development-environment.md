@@ -21,6 +21,7 @@ For example, if the workspace checkout is `/srv/workspaces/axioma`, export
 `SKM_WORKSPACES=/srv/workspaces`. Missing workspace directories fail instead of being created.
 
 ```bash
+mkdir -p .ci-cache/composer .ci-cache/pub
 docker compose build toolchain
 docker compose run --rm toolchain composer install --no-interaction
 docker compose up -d postgres

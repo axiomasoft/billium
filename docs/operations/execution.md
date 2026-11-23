@@ -19,14 +19,14 @@ stateDiagram-v2
   admitted --> cancelled: cancel before send
   dispatching --> pending: matched provider response
   dispatching --> unknown: timeout or unmatched response
-  dispatching --> cancelled: terminal cancel
+  dispatching --> succeeded: terminal fact
+  dispatching --> failed: terminal fact or certified absence
   pending --> succeeded: terminal fact
-  pending --> failed: terminal fact
+  pending --> failed: terminal fact or certified absence
   pending --> unknown: lookup still ambiguous
   unknown --> pending: lookup matched
-  unknown --> succeeded: lookup
-  unknown --> failed: lookup
-  unknown --> cancelled: lookup
+  unknown --> succeeded: lookup or callback fact
+  unknown --> failed: lookup fact or certified absence
 ```
 
 Configure `billium.modules.composition` and the explicit `billium.modules.enabled` list before starting workers. `embedded-commerz` with `platform` and `ledger` is the default. `WriterAdmission` belongs to the outgoing execution path. Every financial profile still needs `FinancialSessionAdmission` and `FinancialAuthorityEvidence` from an independent host issuer. Scope the process and activation evidence to the exact installation, seller, environment, authenticated `intentOwnerNamespace` and `sourceAuthority`. The two grants are independent. A source claim in an envelope alone grants no authority.

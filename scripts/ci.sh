@@ -82,6 +82,8 @@ layer_derived() {
 
 layer_php() {
     need_tool composer
+    need_tool php
+    need_tool python3
     need_path vendor/bin/pest
     need_path vendor/bin/packman
     local manifest
@@ -116,6 +118,7 @@ layer_php() {
 
 layer_dart() {
     need_tool dart
+    need_tool python3
     need_path packages/contracts-dart/pubspec.yaml
     (
         cd packages/contracts-dart
@@ -133,6 +136,7 @@ layer_dart() {
 layer_conformance() {
     need_tool python3
     need_tool php
+    need_tool dart
     need_path conformance/runner/run.py
     need_path conformance/adapters.json
     need_path conformance/oracles/jcs/oracle.py
@@ -174,7 +178,7 @@ affected_layers() {
     local range="$1" zones changed
     need_tool python3
     need_path tests/zones.json
-    changed="$(git diff --name-only "$range")"
+    changed="$(git -c safe.directory='*' diff --name-only "$range")"
     ZONES_CHANGED="$changed" python3 - <<'PY'
 import fnmatch
 import json
@@ -205,6 +209,7 @@ run_layer() {
 # lint, derived and dart do not take the PostgreSQL suite lease. php and conformance do,
 # and pg-serial stays inside php after the parallel pg workers.
 declare -gA LAYER_RESULT=()
+GATE_STATUS=0
 
 record_layer() {
     local layer="$1" rc="$2"
@@ -217,28 +222,29 @@ record_layer() {
 
 run_layer_captured() {
     local layer="$1" logfile="$2" rc
+    # errexit is ignored inside an `if`/`||` context, so the subshell runs as a plain statement.
     set +e
     (
         set -e
         run_layer "$layer"
-    ) >"$logfile" 2>&1
+    ) </dev/null >"$logfile" 2>&1
     rc=$?
     set -e
     cat "$logfile"
     record_layer "$layer" "$rc"
-    return "$rc"
+    ((rc == 0)) || GATE_STATUS=1
 }
 
 run_parallel() {
     local logdir="$1"
     shift
-    local layer rc failed=0 i
+    local layer rc i
     local -a layers=("$@") pids=()
     for layer in "${layers[@]}"; do
         (
             set -e
             run_layer "$layer"
-        ) >"$logdir/$layer.log" 2>&1 &
+        ) </dev/null >"$logdir/$layer.log" 2>&1 &
         pids+=("$!")
     done
     for i in "${!layers[@]}"; do
@@ -249,11 +255,8 @@ run_parallel() {
         set -e
         cat "$logdir/$layer.log"
         record_layer "$layer" "$rc"
-        if ((rc != 0)); then
-            failed=1
-        fi
+        ((rc == 0)) || GATE_STATUS=1
     done
-    return "$failed"
 }
 
 print_summary() {
@@ -270,9 +273,19 @@ main() {
     local mode=all arg=""
     while (($# > 0)); do
         case "$1" in
-            --layer) mode=layer; arg="${2:-}"; shift 2 ;;
+            --layer)
+                (($# >= 2)) || fail "unknown layer: <empty>"
+                mode=layer
+                arg="$2"
+                shift 2
+                ;;
             --list) mode=list; shift ;;
-            --affected) mode=affected; arg="${2:-}"; shift 2 ;;
+            --affected)
+                (($# >= 2)) || fail "missing range for --affected"
+                mode=affected
+                arg="$2"
+                shift 2
+                ;;
             *) fail "unknown argument: $1" ;;
         esac
     done
@@ -282,7 +295,8 @@ main() {
         affected) affected_layers "$arg"; return 0 ;;
     esac
 
-    local status=0 logdir
+    GATE_STATUS=0
+    local logdir
     if [[ "$mode" == layer ]]; then
         local known=0 layer
         for layer in "${LAYERS[@]}"; do
@@ -290,23 +304,23 @@ main() {
         done
         ((known == 1)) || fail "unknown layer: ${arg:-<empty>}"
         logdir="$(mktemp -d)"
-        run_layer_captured "$arg" "$logdir/$arg.log" || status=1
+        run_layer_captured "$arg" "$logdir/$arg.log"
         rm -rf "$logdir"
         print_summary
-        return "$status"
+        return "$GATE_STATUS"
     fi
 
     logdir="$(mktemp -d)"
-    run_parallel "$logdir" lint derived dart || status=1
-    if ((status == 0)); then
-        run_layer_captured php "$logdir/php.log" || status=1
+    run_parallel "$logdir" lint derived dart
+    if ((GATE_STATUS == 0)); then
+        run_layer_captured php "$logdir/php.log"
     fi
-    if ((status == 0)); then
-        run_layer_captured conformance "$logdir/conformance.log" || status=1
+    if ((GATE_STATUS == 0)); then
+        run_layer_captured conformance "$logdir/conformance.log"
     fi
     rm -rf "$logdir"
     print_summary
-    return "$status"
+    return "$GATE_STATUS"
 }
 
 main "$@"

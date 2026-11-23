@@ -13,6 +13,7 @@ CI = ROOT / "scripts" / "ci.sh"
 ZONES = ROOT / "tests" / "zones.json"
 WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
 LAYERS = ["lint", "derived", "php", "dart", "conformance"]
+GIT = ["git", "-c", "safe.directory=*"]
 GIT_ENV = {
     **os.environ,
     "GIT_AUTHOR_NAME": "billium-ci-test",
@@ -82,60 +83,100 @@ class GateSelectorTest(unittest.TestCase):
         self.assertIn("path: workspaces/axioma", text)
         self.assertNotIn(".local/share/swissknifeman", text)
 
-    def affected_for(self, relative: str, suffix: str) -> list[str]:
-        with tempfile.TemporaryDirectory(prefix="billium-ci-wt-") as directory:
-            worktree = Path(directory) / "wt"
-            subprocess.run(
-                ["git", "worktree", "add", "--detach", str(worktree), "HEAD"],
+    def test_non_final_command_failure_aborts_single_layer_and_parallel_run(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="billium-ci-stub-") as directory:
+            stub_bin = Path(directory)
+            python_stub = stub_bin / "python3"
+            python_stub.write_text(
+                "#!/usr/bin/env bash\n"
+                'if [[ "${1:-}" == "scripts/spec/build-rules.py" ]]; then\n'
+                "  echo 'stub-fail-build-rules' >&2\n"
+                "  exit 7\n"
+                "fi\n"
+                "exit 0\n",
+                encoding="utf-8",
+            )
+            python_stub.chmod(0o755)
+            dart_stub = stub_bin / "dart"
+            dart_stub.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+            dart_stub.chmod(0o755)
+
+            env = {**os.environ, "PATH": f"{stub_bin}:{os.environ.get('PATH', '')}"}
+
+            single = subprocess.run(
+                ["bash", str(CI), "--layer", "derived"],
                 cwd=ROOT,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertNotEqual(single.returncode, 0, single.stdout + single.stderr)
+            self.assertIn("derived: FAIL", single.stdout)
+
+            full = subprocess.run(
+                ["bash", str(CI)],
+                cwd=ROOT,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertNotEqual(full.returncode, 0, full.stdout + full.stderr)
+            self.assertIn("derived: FAIL", full.stdout)
+            self.assertNotIn("php:", full.stdout)
+            self.assertNotIn("conformance:", full.stdout)
+
+    def affected_for(self, relative: str, suffix: str) -> list[str]:
+        with tempfile.TemporaryDirectory(prefix="billium-ci-git-") as directory:
+            repo = Path(directory) / "repo"
+            repo.mkdir()
+            subprocess.run([*GIT, "init", "-q"], cwd=repo, env=GIT_ENV, check=True)
+            (repo / ".gitkeep").write_text("", encoding="utf-8")
+            subprocess.run([*GIT, "add", ".gitkeep"], cwd=repo, env=GIT_ENV, check=True)
+            subprocess.run(
+                [*GIT, "commit", "--no-verify", "-q", "-m", "base"],
+                cwd=repo,
+                env=GIT_ENV,
+                check=True,
+            )
+            parent = subprocess.run(
+                [*GIT, "rev-parse", "HEAD"],
+                cwd=repo,
+                env=GIT_ENV,
                 check=True,
                 capture_output=True,
                 text=True,
+            ).stdout.strip()
+
+            target = repo / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(suffix, encoding="utf-8")
+            subprocess.run([*GIT, "add", "--", relative], cwd=repo, env=GIT_ENV, check=True)
+            subprocess.run(
+                [*GIT, "commit", "--no-verify", "-q", "-m", "ci-selector fixture"],
+                cwd=repo,
+                env=GIT_ENV,
+                check=True,
             )
-            try:
-                target = worktree / relative
-                target.parent.mkdir(parents=True, exist_ok=True)
-                existing = target.read_text(encoding="utf-8") if target.exists() else ""
-                target.write_text(existing + suffix, encoding="utf-8")
-                subprocess.run(["git", "add", "--", relative], cwd=worktree, check=True, env=GIT_ENV)
-                subprocess.run(
-                    ["git", "commit", "--no-verify", "-m", "ci-selector fixture"],
-                    cwd=worktree,
-                    check=True,
-                    env=GIT_ENV,
-                    capture_output=True,
-                    text=True,
-                )
-                sha = subprocess.run(
-                    ["git", "rev-parse", "HEAD"],
-                    cwd=worktree,
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                ).stdout.strip()
-                parent = subprocess.run(
-                    ["git", "rev-parse", "HEAD^"],
-                    cwd=worktree,
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                ).stdout.strip()
-            finally:
-                subprocess.run(
-                    ["git", "worktree", "remove", "--force", str(worktree)],
-                    cwd=ROOT,
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                )
-        result = subprocess.run(
-            ["bash", str(CI), "--affected", f"{parent}..{sha}"],
-            cwd=ROOT,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        return [line for line in result.stdout.splitlines() if line]
+            sha = subprocess.run(
+                [*GIT, "rev-parse", "HEAD"],
+                cwd=repo,
+                env=GIT_ENV,
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+
+            result = subprocess.run(
+                ["bash", str(CI), "--affected", f"{parent}..{sha}"],
+                cwd=ROOT,
+                env={**GIT_ENV, "GIT_DIR": str(repo / ".git"), "GIT_WORK_TREE": str(repo)},
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            return [line for line in result.stdout.splitlines() if line]
 
 
 if __name__ == "__main__":

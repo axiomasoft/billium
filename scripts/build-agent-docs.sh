@@ -35,7 +35,7 @@ fi
     printf '%s\n\n' '<!-- generated from .ai/guidelines/agent-entrypoint.md by scripts/build-agent-docs.sh -->'
     cat "$source"
     if [[ -n "$preserve" ]]; then
-        printf '\n%s' "$preserve"
+        printf '\n%s\n' "$preserve"
     fi
 } >"$dest"
 
