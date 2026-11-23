@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,7 @@ from typing import Any
 from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[2]
+CITATION = re.compile(r"^(?:D\d+|M-\d{2})$")
 sys.path.insert(0, str(ROOT / "scripts/spec"))
 sys.path.insert(0, str(ROOT / "conformance/runner"))
 sys.path.insert(0, str(ROOT / "conformance/oracles/jcs"))
@@ -79,6 +81,8 @@ class CorpusLint:
             for ref in vector.document["spec_refs"]:
                 if ref.startswith("BC-"):
                     resolvable = ref in rules
+                elif CITATION.match(ref):
+                    resolvable = True
                 else:
                     resolvable = ref in known
                 if not resolvable:
