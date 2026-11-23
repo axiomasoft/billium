@@ -12,6 +12,7 @@ use Billium\Core\Data\Runner\StoredOutcome;
 use Billium\Core\Data\Runtime\Caller;
 use Billium\Platform\Contracts\Idempotency\FinancialIdempotencyStore;
 use Billium\Platform\Contracts\Idempotency\IdempotencyReceiptQueries;
+use Billium\Platform\Contracts\Idempotency\IdempotencyStore;
 use Billium\Platform\Data\Idempotency\PinnedCommand;
 use Billium\Platform\Data\Installation\PlatformReceipt;
 use Closure;
@@ -24,7 +25,7 @@ final readonly class FeedCommandResults
 {
     public function __construct(
         private Connection $db,
-        private FinancialIdempotencyStore $store,
+        private IdempotencyStore $store,
         private IdempotencyReceiptQueries $receipts,
     ) {}
 
@@ -52,6 +53,9 @@ final readonly class FeedCommandResults
     /** @param array<string, mixed> $result */
     public function retain(Caller $caller, PinnedCommand $command, array $result): void
     {
+        if (! $this->store instanceof FinancialIdempotencyStore) {
+            throw new LogicException('The feed command store must persist a financial claim.');
+        }
         $claim = $this->store->claimScoped($caller, $command->scope, $command->kind(), $command->key, $command->inputDigest, $command->inputDigest);
         if ($claim->claimId === null) {
             throw new LogicException('Feed command already completed while holding its key lock');
