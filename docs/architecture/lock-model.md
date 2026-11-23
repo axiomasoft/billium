@@ -1,30 +1,63 @@
 # Lock model P3
 
 Владелец модели — platform OperationRunner/LockSet; доменные rows принадлежат своим модулям
-(INV-01, D27/D60). Реализация рангов: `packages/core/src/Enums/LockRank.php`.
+(INV-01, D27/D60). Источник порядка — `packages/core/src/Enums/Runner/LockRank.php`.
+Корневая транзакция берёт ранги строго по возрастанию; внутри ранга id только растут.
+Claim — первая запись корневой Tx (insert, не row lock). Funds сначала payment ids
+(сегмент 0), затем customer-credit ids (сегмент 1).
+
+```mermaid
+flowchart TD
+  claim["10 Claim"] --> session["15 FinancialSession"]
+  session --> installation["20 InstallationState"]
+  installation --> admission["25 ModuleAdmission"]
+  admission --> intent["27 IntentNamespace"]
+  intent --> merchant["28 MerchantRevision"]
+  merchant --> feed["30 FeedPartition"]
+  feed --> usage["35 UsageSeries"]
+  usage --> schedule["40 BillingSchedule"]
+  schedule --> price["44 RatingPriceVersion"]
+  price --> frontier["45 RatingFrontier"]
+  frontier --> occurrence["50 BillingOccurrence"]
+  occurrence --> dunning["60 DunningCase"]
+  dunning --> settlement["65 SettlementIntent"]
+  settlement --> obligation["70 Obligation"]
+  obligation --> invoice["80 Invoice"]
+  invoice --> funds["90 Funds"]
+  funds --> charge["100 RootCharge"]
+  charge --> child["110 ChildEffect"]
+  child --> capacity["115 Capacity"]
+  capacity --> attempt["120 Attempt"]
+  attempt --> series["130 DocumentSeries"]
+```
 
 | Rank | LockRank |
 |:--|:--|
 | 10 | Claim |
 | 15 | FinancialSession |
-| 20 | InstallationState (явные admin transitions) |
+| 20 | InstallationState |
 | 25 | ModuleAdmission |
+| 27 | IntentNamespace |
+| 28 | MerchantRevision |
 | 30 | FeedPartition |
+| 35 | UsageSeries |
 | 40 | BillingSchedule |
+| 44 | RatingPriceVersion |
+| 45 | RatingFrontier |
 | 50 | BillingOccurrence |
 | 60 | DunningCase |
 | 65 | SettlementIntent |
 | 70 | Obligation |
 | 80 | Invoice |
-| 90 | Funds: payment ids, затем customer-credit ids; каждая группа ascending |
+| 90 | Funds: payment ids, затем customer-credit ids |
 | 100 | RootCharge |
 | 110 | ChildEffect |
 | 115 | Capacity |
 | 120 | Attempt |
-| 130 | DocumentSeries (будущий P6 participant) |
+| 130 | DocumentSeries |
 
 Порядок един для application prelocks и guarded routines (D27/D60).
-P3 использует 10/15/25/30/65/70/80/90; будущий legal participant добавляет 130.
+Участник берёт только свои ранги и не переставляет их.
 Полный pre-read lock plan объявляет все row sets **до** domain locks. После locking делается re-read;
 изменившийся набор вызывает `LockPlanChanged` и новый DB-only attempt. LockSet проверяет rank,
 seller/environment и возрастающие ids. Новый id в уже взятом ранге может только увеличиваться;

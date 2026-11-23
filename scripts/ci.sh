@@ -20,7 +20,7 @@ declare -A SUBJECTS=(
 
 fail() {
     echo "ci: $*" >&2
-    return 1
+    exit 1
 }
 
 need_path() {
@@ -33,6 +33,8 @@ need_tool() {
 
 layer_lint() {
     need_tool python3
+    need_path scripts/ci/tests
+    python3 -m unittest discover -s scripts/ci/tests -p 'test_*.py'
     need_path "$SPEC_REV_DIR/schema"
     python3 scripts/spec/lint.py "$SPEC_REV_DIR"
     need_path scripts/spec/lint-vectors.py
@@ -200,6 +202,70 @@ run_layer() {
     "layer_$layer"
 }
 
+# lint, derived and dart do not take the PostgreSQL suite lease. php and conformance do,
+# and pg-serial stays inside php after the parallel pg workers.
+declare -gA LAYER_RESULT=()
+
+record_layer() {
+    local layer="$1" rc="$2"
+    if ((rc == 0)); then
+        LAYER_RESULT[$layer]=PASS
+    else
+        LAYER_RESULT[$layer]=FAIL
+    fi
+}
+
+run_layer_captured() {
+    local layer="$1" logfile="$2" rc
+    set +e
+    (
+        set -e
+        run_layer "$layer"
+    ) >"$logfile" 2>&1
+    rc=$?
+    set -e
+    cat "$logfile"
+    record_layer "$layer" "$rc"
+    return "$rc"
+}
+
+run_parallel() {
+    local logdir="$1"
+    shift
+    local layer rc failed=0 i
+    local -a layers=("$@") pids=()
+    for layer in "${layers[@]}"; do
+        (
+            set -e
+            run_layer "$layer"
+        ) >"$logdir/$layer.log" 2>&1 &
+        pids+=("$!")
+    done
+    for i in "${!layers[@]}"; do
+        layer="${layers[$i]}"
+        set +e
+        wait "${pids[$i]}"
+        rc=$?
+        set -e
+        cat "$logdir/$layer.log"
+        record_layer "$layer" "$rc"
+        if ((rc != 0)); then
+            failed=1
+        fi
+    done
+    return "$failed"
+}
+
+print_summary() {
+    local layer
+    echo "== summary =="
+    for layer in "${LAYERS[@]}"; do
+        if [[ -v "LAYER_RESULT[$layer]" ]]; then
+            echo "$layer: ${LAYER_RESULT[$layer]}"
+        fi
+    done
+}
+
 main() {
     local mode=all arg=""
     while (($# > 0)); do
@@ -216,38 +282,30 @@ main() {
         affected) affected_layers "$arg"; return 0 ;;
     esac
 
-    local selected=("${LAYERS[@]}") layer known
+    local status=0 logdir
     if [[ "$mode" == layer ]]; then
-        known=0
+        local known=0 layer
         for layer in "${LAYERS[@]}"; do
             [[ "$layer" == "$arg" ]] && known=1
         done
         ((known == 1)) || fail "unknown layer: ${arg:-<empty>}"
-        selected=("$arg")
+        logdir="$(mktemp -d)"
+        run_layer_captured "$arg" "$logdir/$arg.log" || status=1
+        rm -rf "$logdir"
+        print_summary
+        return "$status"
     fi
 
-    local status=0 rc
-    local -a summary=()
-    for layer in "${selected[@]}"; do
-        # errexit is ignored inside an `if`/`||` context, so the layer runs as a plain statement.
-        set +e
-        (
-            set -e
-            run_layer "$layer"
-        )
-        rc=$?
-        set -e
-        if ((rc == 0)); then
-            summary+=("$layer: PASS")
-        else
-            summary+=("$layer: FAIL")
-            status=1
-            break
-        fi
-    done
-
-    echo "== summary =="
-    printf '%s\n' "${summary[@]}"
+    logdir="$(mktemp -d)"
+    run_parallel "$logdir" lint derived dart || status=1
+    if ((status == 0)); then
+        run_layer_captured php "$logdir/php.log" || status=1
+    fi
+    if ((status == 0)); then
+        run_layer_captured conformance "$logdir/conformance.log" || status=1
+    fi
+    rm -rf "$logdir"
+    print_summary
     return "$status"
 }
 

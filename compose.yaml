@@ -36,6 +36,7 @@ services:
       timeout: 5s
       retries: 30
   toolchain:
+    image: billium-toolchain:local
     build: docker/toolchain
     user: "${UID:-1000}:${GID:-1000}"
     working_dir: /workspace
@@ -46,8 +47,12 @@ services:
       - .:/workspace
       # Composer path dependency used by the Packman integration.
       - ../packman:/packman:ro
-      - composer-cache:/tmp/composer
-      - pub-cache:/tmp/pub-cache
+      - type: bind
+        source: ${BILLIUM_COMPOSER_CACHE:-${PWD}/.ci-cache/composer}
+        target: /tmp/composer
+      - type: bind
+        source: ${BILLIUM_PUB_CACHE:-${PWD}/.ci-cache/pub}
+        target: /tmp/pub-cache
       - type: bind
         source: ${SKM_WORKSPACES_ROOT:-${SKM_WORKSPACES:-${SKM_HOME:-${HOME}/.local/share/swissknifeman}/workspaces}}
         target: /skm-workspaces
@@ -83,7 +88,3 @@ configs:
         GRANT SELECT ON TABLES TO billium_runtime;
       ALTER DEFAULT PRIVILEGES FOR ROLE billium IN SCHEMA public
         REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
-
-volumes:
-  composer-cache:
-  pub-cache:

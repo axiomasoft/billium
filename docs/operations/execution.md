@@ -10,6 +10,25 @@
 | `standalone-billium` | Billium PHP when execution is enabled | Optional execution module alongside platform and ledger. An installation without execution still supports the ledger. |
 | `remote-billium` | Billium PHP server process | Execution, platform and ledger. The host supplies the HTTP/authentication boundary and seller routing. |
 
+Attempt states live in `Billium\Execution\Enums\AttemptState`. A new attempt is stored `admitted`. The worker claims a lease and moves it to `dispatching` before the provider call. A matched response becomes `pending`; a lost or ambiguous response becomes `unknown`. `unknown` and `pending` are resolved by lookup of that same attempt. `succeeded`, `failed` and `cancelled` are terminal. Lookup does not open a second charge.
+
+```mermaid
+stateDiagram-v2
+  [*] --> admitted: store the attempt
+  admitted --> dispatching: claim the lease
+  admitted --> cancelled: cancel before send
+  dispatching --> pending: matched provider response
+  dispatching --> unknown: timeout or unmatched response
+  dispatching --> cancelled: terminal cancel
+  pending --> succeeded: terminal fact
+  pending --> failed: terminal fact
+  pending --> unknown: lookup still ambiguous
+  unknown --> pending: lookup matched
+  unknown --> succeeded: lookup
+  unknown --> failed: lookup
+  unknown --> cancelled: lookup
+```
+
 Configure `billium.modules.composition` and the explicit `billium.modules.enabled` list before starting workers. `embedded-commerz` with `platform` and `ledger` is the default. `WriterAdmission` belongs to the outgoing execution path. Every financial profile still needs `FinancialSessionAdmission` and `FinancialAuthorityEvidence` from an independent host issuer. Scope the process and activation evidence to the exact installation, seller, environment, authenticated `intentOwnerNamespace` and `sourceAuthority`. The two grants are independent. A source claim in an envelope alone grants no authority.
 
 `billium.execution.outgoing_enabled` defaults to `false`. A passive execution module can read retained outcomes, replay receipts and receive custody while new outgoing effects remain disabled. Enabling outgoing execution requires `billium.execution.release_evidence_ref`, `billium.execution.retention_policy_ref` and a host-bound `ExecutionReadiness`. Its `assertConfigured()` verifies the selected dossiers, adapter qualification, independent authority and the hard egress fence before the execution provider registers. Missing or rejected evidence raises a configuration error at startup.

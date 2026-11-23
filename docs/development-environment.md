@@ -32,11 +32,19 @@ docker compose run --rm toolchain bash scripts/smoke/consumer-install.sh [php|da
 ```
 
 `scripts/ci.sh` is the single carrier of the gate composition and `.github/workflows/ci.yml` calls it unchanged.
+A full run executes `lint`, `derived` and `dart` concurrently, then `php`, then `conformance`.
+Those three do not take the PostgreSQL suite lease. `php` and `conformance` share the cluster, so they stay ordered.
+Inside `php`, non-`pg` Pest runs first, then parallel `pg` with one database per worker, then `pg-serial` alone.
 A layer without its subject, or a missing tool, is red, never skipped. Regenerate derived files with the
 script that `--check` names (for example `python3 scripts/spec/identities.py`).
+GitHub Actions runs that same gate once per update: pull requests, and pushes to `main` only.
+The job checks Packman and the SwissKnifeman workspace out under the runner workspace and bind-mounts
+that checkout (`SKM_WORKSPACES=${{ github.workspace }}/workspaces`). It does not read
+`~/.local/share/swissknifeman/workspaces`. Composer and Dart downloads land in `.ci-cache/`
+(gitignored) and the toolchain image is restored from the Actions cache on the next run.
 The php layer runs Packman as `php -d memory_limit=1G vendor/bin/packman gate`, and the same memory limit
 for `php-api --check`, `error-codes --check`, `config-schema --check`, and `ai:sync --dry-run`. There is no `bin/packman`.
-CI for this gate runs from the private mirror https://github.com/corestructor/billium-mirror/ on a `refactor/wave-*` branch, not from a push to the canonical remote.
+CI for this gate runs from the private mirror https://github.com/corestructor/billium-mirror/. A pull request runs the gate once; a push runs it only when the branch is `main`.
 
 Identities (`spec/identities.json`, snapshots in `spec/identities/snapshots/`) and `spec/type-map.json` are
 frozen to 1.0 by major versions only: an entry that disappears must be kept with status `retired`.

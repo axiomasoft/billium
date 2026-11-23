@@ -1,23 +1,48 @@
 # Billium
 
-- Billium is a PHP billing system; Dart is the contracts client and SDK,
-  never a second money writer.
-- Keep PHP and Dart contracts consistent through the shared spec and
-  fixtures, not shared code.
-- Requirements: `docs/requirements.md`; architecture and data model:
-  `docs/architecture/`; contracts v1: `docs/contracts/`; acceptance:
+- Billium is a PHP billing system. PHP is the only money writer. Dart
+  (`packages/contracts-dart`) is the contracts client and SDK and never
+  persists or executes money.
+- Keep PHP and Dart contracts consistent through `spec/`, `fixtures/` and
+  `conformance/`, not through shared code.
+- Read these before editing money code: `docs/requirements.md`,
+  `docs/architecture/` (composition, lock order, data model),
+  `docs/contracts/`, `docs/operations/execution.md`, and
   `docs/acceptance-catalog.md`.
-- Stack (PLAN1 D16): PHP 8.4+, Laravel 13, PostgreSQL 16+. No production
-  code before P2; layout follows the PLAN1 target structure.
-- Document implemented behavior and development commands in `README.md` and
-  `docs/`; run the relevant PHP/Dart checks once their tooling exists.
+- Stack (PLAN1 D16): PHP 8.4+, Laravel 13, PostgreSQL 16+. The tree
+  implements PLAN1 through P10. Do not open a new phase unless asked.
+  SQLite is not a money writer.
+- One execution owner per money operation. `unknown` is resolved by lookup
+  of the same attempt, not by a second charge. Refunds go to the original
+  executor. Dart must not grow a second journal.
+- Modules in `packages/core` keep separate tables and writers: platform
+  (idempotency, outbox, installation), usage, rating, schedule, ledger,
+  documents, execution, collection. The host owns agreements, grants,
+  provisioning, tax profiles and PSP credentials. Billium owns the monetary
+  schedule, obligations and, when enabled, execution.
+- Plans live only in the SwissKnifeman workspace named by
+  `.swissknifeman/project.json`. Resolve them with
+  `python3 scripts/spec/workspace.py`. Never read or create a repository
+  `plans/` store. See `docs/planning.md`. A missing workspace fails the run.
+- Product checks are `bash scripts/ci.sh` inside the toolchain image.
+  Layers, in order, are `lint`, `derived`, `php`, `dart`, `conformance`.
+  `lint`, `derived` and `dart` may run together. `php` then `conformance`
+  share PostgreSQL and stay ordered. `pg-serial` runs alone after parallel
+  `pg` workers (`PACKMAN_TEST_DB_PER_PROCESS=1`). Database names end in
+  `_test`. Destructive resets need `PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1`.
+  A missing tool or subject is a failure, never a skip.
+- `.github/workflows/ci.yml` only calls `bash scripts/ci.sh`. It runs on
+  pull requests and on pushes to `main`. The plans bind is the checked-out
+  workspace, not the runner home directory.
+- Packman generates `.claude/rules/`, `.claude/agents/`, `.codex/agents/`,
+  `.gemini/rules/`, `.claude/settings.json`, `.claude/agent-pack.lock.json`
+  and `AGENTS.md`. Do not edit those. `vendor/bin/packman ai:sync --dry-run`
+  fails if they drift. Billium-specific agent rules are this file.
+- Edit this file, then run `bash scripts/build-agent-docs.sh` to refresh
+  `CLAUDE.md`. Do not commit `.agents/`, editor hooks, `.ci-cache/`, or
+  `.swissknifeman/config.toml.lock`.
+- Code navigation uses Serena (PHP and Dart). Temporary memory is mAInd
+  scope `project:billium` only. Skills come from the swissknifeman connect
+  channel, not from copies under `.agents/skills/` or `.claude/skills/`.
 - Preserve unrelated worktree changes. Keep credentials and machine-specific
   agent settings out of Git.
-- Plans exist only in the SwissKnifeman workspace named by
-  `.swissknifeman/project.json`; resolve them with `python3 scripts/spec/workspace.py`.
-  Never read or create a repository-local plan store. See `docs/planning.md`.
-- Skills use the swissknifeman connect channel. Project memory is accessed
-  explicitly through mAInd in scope `project:billium`; code navigation uses
-  Serena with PHP and Dart language servers.
-- Edit this context in `.ai/guidelines/agent-entrypoint.md`, then run
-  `bash scripts/build-agent-docs.sh` to update `AGENTS.md` and `CLAUDE.md`.

@@ -2,9 +2,14 @@
 .mcp.json
 .mcp.json.bak
 .codex/*
-!.codex/hooks/
 !.codex/agents/
 !.codex/agents/**
+.agents/
+.claude/skills/
+.claude/output-styles/
+.cursor/
+.grok/hooks/
+.ci-cache/
 .grok/config.toml
 .cursor/mcp.json
 .cursor/memory.env.ini
