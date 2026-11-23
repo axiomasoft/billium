@@ -285,10 +285,11 @@ final class BillingQueryPathsTest extends ExecutionTestCase
                 [self::INSTALLATION, 'test', $providerId, 'account-a', 'prov-ref-plan-op-40'],
                 ['billium_execution_provider_reference'],
             );
+            $digest = self::text($this->value("SELECT business_identity_digest FROM public.billium_execution_business_binding WHERE business_intent_ref = 'intent-a' LIMIT 1"));
             $this->assertIndexedPlan(
-                'SELECT id, operation_ref FROM public.billium_execution_business_binding WHERE installation_ref = ? AND seller_ref = ? AND environment = ? AND business_intent_ref = ? LIMIT 1',
-                [self::INSTALLATION, 'seller-a', 'test', 'intent-a'],
-                ['billium_execution_binding_intent_idx'],
+                'SELECT id, operation_ref FROM public.billium_execution_business_binding WHERE business_identity_digest = ? LIMIT 1',
+                [$digest],
+                ['billium_execution_business_identity_digest_unique'],
             );
             $this->assertIndexedPlan(
                 'SELECT id, operation_ref, state FROM public.billium_execution_operation WHERE installation_ref = ? AND seller_ref = ? AND environment = ? AND intent_owner_namespace = ? AND root_operation_ref = ? LIMIT 50',

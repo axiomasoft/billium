@@ -271,7 +271,7 @@ final class OutcomeProjectionBoundaryTest extends ExecutionTestCase
             $log = $reader->getQueryLog();
             $reader->disableQueryLog();
             $this->assertIndexed($reader, $log, 'business_identity_digest =',
-                'billium_execution_business_identity_digest_unique', 'billium_execution_binding_intent_idx');
+                'billium_execution_business_identity_digest_unique');
             $this->assertIndexed($reader, $log, '"command_key" =', 'billium_idempotency_receipt_scope_key');
             $this->assertIndexed($reader, $log, "result#>>'{body,receiptRef}'", 'billium_idempotency_opaque_receipt_scope');
             $this->assertIndexed($reader, $log, 'from "billium_execution_admission_conflict"', 'billium_execution_admission_conflict_history');

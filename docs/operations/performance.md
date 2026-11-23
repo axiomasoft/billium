@@ -19,7 +19,7 @@ Billium verifies hot-path PostgreSQL query plans, bounded batching, seller-scope
 | Execution | `billium_execution_dispatch_work` | `billium_execution_dispatch_work_lookup` | `(installation_ref, seller_ref, environment, state, due_at, id)` | Due dispatch work batch scan |
 | Execution | `billium_execution_provider_work` | `billium_execution_provider_work_lookup` | `(installation_ref, seller_ref, environment, state, due_at, id)` | Due callback/evidence reducer work scan |
 | Execution | `billium_execution_attempt` | `billium_execution_provider_reference` | `UNIQUE (installation_ref, environment, provider_id, merchant_account_ref, provider_reference)` | Provider callback & lookup correlation |
-| Execution | `billium_execution_business_binding` | `billium_execution_binding_intent_idx` | `(installation_ref, seller_ref, environment, business_intent_ref)` | Business intent binding lookup |
+| Execution | `billium_execution_business_binding` | `billium_execution_business_identity_digest_unique` | `UNIQUE (business_identity_digest)` | Business identity lookup |
 | Execution | `billium_execution_operation` | `billium_execution_operation_root_idx` | `(installation_ref, seller_ref, environment, intent_owner_namespace, root_operation_ref)` | Root + child operation tree reads |
 | Collection | `billium_collection_work` | `billium_collection_work_due_idx` | `(seller_ref, status, next_attempt_at, step_id) WHERE next_attempt_at IS NOT NULL` | Due collection step scheduling |
 

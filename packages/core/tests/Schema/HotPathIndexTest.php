@@ -37,7 +37,6 @@ final class HotPathIndexTest extends ExecutionTestCase
         $this->assertIndex('billium_execution_operation_root_idx', ['intent_owner_namespace', 'root_operation_ref']);
         $this->assertIndex('billium_execution_reservation_root_idx', ['root_operation_ref']);
         $this->assertIndex('billium_execution_partition_root_idx', ['root_operation_ref']);
-        $this->assertIndex('billium_execution_binding_intent_idx', ['business_intent_ref']);
     }
 
     public function test_outbox_scope_cursor_explains_the_event_feed_predicate(): void
