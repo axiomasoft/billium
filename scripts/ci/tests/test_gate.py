@@ -72,6 +72,7 @@ class GateSelectorTest(unittest.TestCase):
     def test_workflow_runs_one_gate_against_the_checked_out_workspace(self) -> None:
         text = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("bash scripts/ci.sh", text)
+        self.assertNotIn("--no-build", text)
         self.assertNotIn("vendor/bin/pest", text)
         self.assertNotIn("dart test", text)
         self.assertIn("branches: [main]", text)

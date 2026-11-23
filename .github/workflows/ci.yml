@@ -56,5 +56,5 @@ jobs:
           cache-to: type=gha,mode=max
       - name: Prepare dependency caches
         run: mkdir -p .ci-cache/composer .ci-cache/pub
-      - run: docker compose run --no-build --rm toolchain composer install --no-interaction --prefer-dist
-      - run: docker compose run --no-build --rm toolchain bash scripts/ci.sh
+      - run: docker compose run --rm toolchain composer install --no-interaction --prefer-dist
+      - run: docker compose run --rm toolchain bash scripts/ci.sh
