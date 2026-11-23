@@ -100,7 +100,6 @@ layer_php() {
     php -d memory_limit=1G vendor/bin/packman php-api --check
     php -d memory_limit=1G vendor/bin/packman error-codes --check
     php -d memory_limit=1G vendor/bin/packman config-schema --check
-    php -d memory_limit=1G vendor/bin/packman ai:sync --dry-run
     need_path scripts/db/preflight.php
     PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 php scripts/db/preflight.php
     PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 php scripts/db/prepare-worker-template.php

@@ -37,7 +37,7 @@ The job checks Packman out beside the product and runs `bash scripts/ci.sh`.
 Composer and Dart downloads land in `.ci-cache/`
 (gitignored) and the toolchain image is restored from the Actions cache on the next run.
 The php layer runs Packman as `php -d memory_limit=1G vendor/bin/packman gate`, and the same memory limit
-for `php-api --check`, `error-codes --check`, `config-schema --check`, and `ai:sync --dry-run`. There is no `bin/packman`.
+for `php-api --check`, `error-codes --check`, and `config-schema --check`. There is no `bin/packman`.
 CI for this gate runs on https://github.com/axiomasoft/billium. A pull request runs the gate once; a push runs it only when the branch is `main`.
 
 Identities (`spec/identities.json`, snapshots in `spec/identities/snapshots/`) and `spec/type-map.json` are

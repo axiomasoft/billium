@@ -1,11 +1,15 @@
 # Local agent settings and runtime state
 .mcp.json
 .mcp.json.bak
-.codex/*
-!.codex/agents/
-!.codex/agents/**
+.mcp.json.example
+.ai/
+.codex/
+.gemini/
 .agents/
-.claude/skills/
+AGENTS.md
+CLAUDE.md
+.claude/
+.serena/
 .claude/output-styles/
 .cursor/
 .grok/hooks/
