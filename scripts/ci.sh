@@ -1,13 +1,19 @@
 #!/usr/bin/env bash
 # Billium CI gate: the single carrier of the gate composition.
 # Run inside the toolchain image:
-#   docker compose run --rm toolchain bash scripts/ci.sh [--layer X | --list | --affected RANGE]
+#   docker compose run --rm toolchain bash scripts/ci.sh [--layer X | --step X | --list | --list-steps | --affected RANGE]
 # A layer without a subject is red; a missing tool is red, never a skip.
+# --step runs one slice of a layer; GitHub Actions runs each slice as its own parallel job.
 set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 LAYERS=(lint derived php dart conformance)
+STEPS=(
+    php-validate php-pint php-phpstan php-rector php-contracts
+    php-unit php-pg php-pg-serial php-smoke-consumer php-smoke-server
+    conformance-vectors conformance-server conformance-integration
+)
 SPEC_REV_DIR=spec/revisions/2026-10
 
 declare -A SUBJECTS=(
@@ -80,39 +86,124 @@ layer_derived() {
     python3 scripts/spec/check-server-api.py --check
 }
 
-layer_php() {
+# PHP steps. layer_php runs them in order; CI runs each one as its own job via --step.
+step_php_validate() {
     need_tool composer
-    need_tool php
-    need_tool python3
-    need_path vendor/bin/pest
-    need_path vendor/bin/packman
     local manifest
     composer validate --strict
     for manifest in packages/*/composer.json packages/core/modules/*/composer.json; do
         [[ -f "$manifest" ]] || fail "php: missing manifest $manifest"
         composer validate --strict "$manifest"
     done
-    mkdir -p build/phpstan build/rector .phpunit.cache
-    vendor/bin/pint --test
+}
+
+step_php_pint() {
+    need_path vendor/bin/pint
+    mkdir -p build
+    vendor/bin/pint --test --parallel --cache-file=build/pint.cache
+}
+
+step_php_phpstan() {
+    need_path vendor/bin/phpstan
+    mkdir -p build/phpstan
     vendor/bin/phpstan analyse --memory-limit=1G
+}
+
+step_php_rector() {
+    need_path vendor/bin/rector
+    mkdir -p build/rector
     vendor/bin/rector process --dry-run
+}
+
+step_php_contracts() {
+    need_tool php
+    need_tool python3
+    need_path vendor/bin/packman
     php -d memory_limit=1G vendor/bin/packman gate
     php -d memory_limit=1G vendor/bin/packman php-api --check
     php -d memory_limit=1G vendor/bin/packman error-codes --check
     php -d memory_limit=1G vendor/bin/packman config-schema --check
+    python3 -m unittest discover -s scripts/lint/tests -p test_test_discovery.py
+    python3 scripts/lint/test-discovery.py
+}
+
+# Optional Pest reporting, set by CI: BILLIUM_TEST_REPORTS=<dir> writes JUnit (and PHP
+# coverage when BILLIUM_TEST_COVERAGE=1) as <dir>/<name>.{xml,cov}.
+pest_report_args() {
+    local name="$1"
+    [[ -n "${BILLIUM_TEST_REPORTS:-}" ]] || return 0
+    mkdir -p "$BILLIUM_TEST_REPORTS"
+    printf '%s\n' "--log-junit=$BILLIUM_TEST_REPORTS/$name.xml"
+    if [[ "${BILLIUM_TEST_COVERAGE:-0}" == 1 ]]; then
+        printf '%s\n' "--coverage-php=$BILLIUM_TEST_REPORTS/$name.cov"
+    fi
+}
+
+prepare_test_database() {
+    need_tool php
     need_path scripts/db/preflight.php
     PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 php scripts/db/preflight.php
     PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 php scripts/db/prepare-worker-template.php
-    python3 -m unittest discover -s scripts/lint/tests -p test_test_discovery.py
-    python3 scripts/lint/test-discovery.py
-    vendor/bin/pest --exclude-group=pg
+}
+
+step_php_unit() {
+    need_path vendor/bin/pest
+    local -a report
+    mapfile -t report < <(pest_report_args unit)
+    vendor/bin/pest --exclude-group=pg "${report[@]}"
+}
+
+# BILLIUM_TEST_SHARD=<index>/<total> runs one time-balanced slice (tests/.pest/shards.json).
+step_php_pg() {
+    need_path vendor/bin/pest
+    local name=pg
+    local -a shard=() report
+    if [[ -n "${BILLIUM_TEST_SHARD:-}" ]]; then
+        [[ "$BILLIUM_TEST_SHARD" =~ ^[1-9][0-9]*/[1-9][0-9]*$ ]] || fail "php-pg: BILLIUM_TEST_SHARD must be <index>/<total>"
+        shard=("--shard=$BILLIUM_TEST_SHARD")
+        name="pg-${BILLIUM_TEST_SHARD%/*}"
+    fi
+    mapfile -t report < <(pest_report_args "$name")
+    prepare_test_database
     # One database per worker; pg-serial tests depend on the cluster-wide transaction horizon and run alone.
-    PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 PACKMAN_TEST_DB_PER_PROCESS=1 vendor/bin/pest --group=pg --exclude-group=pg-serial --parallel --processes=8
-    PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 vendor/bin/pest --group=pg-serial
+    PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 PACKMAN_TEST_DB_PER_PROCESS=1 vendor/bin/pest --group=pg --exclude-group=pg-serial \
+        --parallel --processes="${BILLIUM_TEST_PROCESSES:-8}" "${shard[@]}" "${report[@]}"
+}
+
+step_php_pg_serial() {
+    need_path vendor/bin/pest
+    local -a report
+    mapfile -t report < <(pest_report_args pg-serial)
+    prepare_test_database
+    PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 vendor/bin/pest --group=pg-serial "${report[@]}"
+}
+
+step_php_smoke_consumer() {
     need_path scripts/smoke/consumer-install.sh
     bash scripts/smoke/consumer-install.sh php
+}
+
+step_php_smoke_server() {
     need_path scripts/smoke/server-install.sh
     bash scripts/smoke/server-install.sh --profile ledger-only
+}
+
+layer_php() {
+    need_tool composer
+    need_tool php
+    need_tool python3
+    need_path vendor/bin/pest
+    need_path vendor/bin/packman
+    step_php_validate
+    step_php_pint
+    step_php_phpstan
+    step_php_rector
+    step_php_contracts
+    step_php_unit
+    step_php_pg
+    step_php_pg_serial
+    step_php_smoke_consumer
+    step_php_smoke_server
 }
 
 layer_dart() {
@@ -132,7 +223,8 @@ layer_dart() {
     bash scripts/smoke/consumer-install.sh dart
 }
 
-layer_conformance() {
+# Conformance steps: three independent groups that share no build output.
+step_conformance_vectors() {
     need_tool python3
     need_tool php
     need_tool dart
@@ -144,6 +236,12 @@ layer_conformance() {
     PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 php conformance/adapters/php/bin/with-database-lease.php python3 conformance/runner/run.py --adapter php
     (cd conformance/adapters/dart && dart pub get)
     python3 conformance/runner/run.py --adapter dart
+}
+
+step_conformance_server() {
+    need_tool python3
+    need_tool php
+    need_tool dart
     need_path scripts/test/server-http.sh
     need_path scripts/drills/server-restore.sh
     need_path conformance/compatibility/matrix.json
@@ -155,6 +253,12 @@ layer_conformance() {
     python3 conformance/compatibility/run.py --matrix conformance/compatibility/matrix.json
     bash scripts/smoke/server-consumers.sh
     bash scripts/drills/server-restore.sh
+}
+
+step_conformance_integration() {
+    need_tool python3
+    need_tool php
+    need_tool dart
     need_path conformance/import/run.py
     need_path scripts/test/consumer-contract.sh
     need_path scripts/drills/integration-migration.sh
@@ -164,6 +268,12 @@ layer_conformance() {
     PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 bash scripts/test/consumer-contract.sh --boundary loopback --suite all --report build/integration-readiness/consumer-loopback.json
     python3 conformance/consumers/bridge/check-report.py --report build/integration-readiness/consumer-loopback.json
     bash scripts/drills/integration-migration.sh --suite all --report build/integration-readiness/migration-drills.json
+}
+
+layer_conformance() {
+    step_conformance_vectors
+    step_conformance_server
+    step_conformance_integration
 }
 
 list_layers() {
@@ -278,7 +388,14 @@ main() {
                 arg="$2"
                 shift 2
                 ;;
+            --step)
+                (($# >= 2)) || fail "unknown step: <empty>"
+                mode=step
+                arg="$2"
+                shift 2
+                ;;
             --list) mode=list; shift ;;
+            --list-steps) mode=list-steps; shift ;;
             --affected)
                 (($# >= 2)) || fail "missing range for --affected"
                 mode=affected
@@ -291,8 +408,20 @@ main() {
 
     case "$mode" in
         list) list_layers; return 0 ;;
+        list-steps) printf '%s\n' "${STEPS[@]}"; return 0 ;;
         affected) affected_layers "$arg"; return 0 ;;
     esac
+
+    if [[ "$mode" == step ]]; then
+        local known_step=0 step
+        for step in "${STEPS[@]}"; do
+            [[ "$step" == "$arg" ]] && known_step=1
+        done
+        ((known_step == 1)) || fail "unknown step: ${arg:-<empty>}"
+        echo "== $arg =="
+        "step_${arg//-/_}"
+        return 0
+    fi
 
     GATE_STATUS=0
     local logdir
