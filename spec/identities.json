@@ -6526,6 +6526,13 @@
       "source": "packages/core/database/migrations/schedule/2026_11_25_000001_index_billium_schedule_occurrence_amendment.php"
     },
     {
+      "kind": "migration",
+      "id": "2026_11_25_000002_index_billium_observed_refunds_by_original",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/ledger/2026_11_25_000002_index_billium_observed_refunds_by_original.php"
+    },
+    {
       "kind": "route",
       "id": "billium.server.capabilities",
       "status": "new",

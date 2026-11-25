@@ -477,14 +477,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "ledger",
-      "currentSchemaVersion": 15,
+      "currentSchemaVersion": 16,
       "supportedSchemaReadRange": {
-        "min": 15,
-        "max": 15
+        "min": 16,
+        "max": 16
       },
       "supportedSchemaWriteRange": {
-        "min": 15,
-        "max": 15
+        "min": 16,
+        "max": 16
       },
       "requiresModules": [
         {
@@ -611,6 +611,11 @@
           "id": "2026_11_21_000002_index_billium_ledger_hot_paths",
           "version": 15,
           "checksum": "sha256:48bc187a6f2720aea9e8a5c9964760abd3f9e6b17483b1cf8329beed9736b5e3"
+        },
+        {
+          "id": "2026_11_25_000002_index_billium_observed_refunds_by_original",
+          "version": 16,
+          "checksum": "sha256:a9b0d4f9b9ae83ac437a0e7bfcee8ccb8301873b039a4e44a6dfab7f418fed80"
         }
       ],
       "disablePolicy": {
