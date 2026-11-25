@@ -103,6 +103,28 @@ final class AuthContextTest extends TestCase
         self::assertSame($routeMismatch->getContent(), $operationMismatch->getContent());
     }
 
+    public function test_host_policy_can_refuse_one_query_kind_under_the_shared_action(): void
+    {
+        $app = MinimalHost::application($this->host, $this->database, 'ledger-only', ['platform', 'ledger']);
+        $kinds = [];
+        $policy = $this->createStub(AuthorizationVerdict::class);
+        $policy->method('authorize')->willReturnCallback(static function (AuthenticatedPrincipal $principal, string $action, ResourceScope $scope) use (&$kinds): Verdict {
+            $kinds[] = $action.':'.(is_string($scope->selectors['query'] ?? null) ? $scope->selectors['query'] : '');
+
+            return $action === 'ledger.query' && ($scope->selectors['query'] ?? null) !== 'refundAuthorization' ? Verdict::Allow : Verdict::Deny;
+        });
+        $app->instance(AuthorizationVerdict::class, $policy);
+        $app->instance(SellerContextResolver::class, $this->createConfiguredStub(SellerContextResolver::class, ['resolve' => new ExecutionContext(Host::INSTALLATION, 'test', Host::SELLER, 'actor-a')]));
+        $base = ['schema' => 'billium.query.v1', 'installationRef' => Host::INSTALLATION, 'environment' => 'test', 'sellerRef' => Host::SELLER];
+
+        $denied = $this->host->request($app, self::ROOT.'/queries', json_encode([...$base, 'query' => 'refundAuthorization', 'selector' => ['paymentRef' => 'payment-a']], JSON_THROW_ON_ERROR));
+        self::assertSame(403, $denied->getStatusCode());
+        self::assertSame('billium.auth.denied', (new Codec)->decodeProblem((string) $denied->getContent())->code->value);
+        $allowed = $this->host->request($app, self::ROOT.'/queries', json_encode([...$base, 'query' => 'obligation', 'selector' => ['obligationRef' => 'obligation-a']], JSON_THROW_ON_ERROR));
+        self::assertNotSame(403, $allowed->getStatusCode());
+        self::assertSame(['ledger.query:refundAuthorization', 'ledger.query:obligation'], $kinds);
+    }
+
     public function test_capabilities_context_is_resolved_from_the_authenticated_principal(): void
     {
         $app = MinimalHost::application($this->host, $this->database, 'ledger-only', ['platform', 'ledger']);
