@@ -24,6 +24,7 @@ use Billium\Execution\Internal\Admission\QualifiedAdapter;
 use Billium\Execution\Internal\Dispatch\TransportBoundary;
 use DateTimeImmutable;
 use Illuminate\Database\DatabaseManager;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 
@@ -171,11 +172,21 @@ final class SbpWorkflowSelectionTest extends TestCase
         );
     }
 
-    public function test_a_merchant_revision_without_capability_snapshot_is_refused(): void
+    /** @return iterable<string, array{array<string, mixed>}> */
+    public static function incompleteMerchantRevisions(): iterable
+    {
+        yield 'no capability snapshot' => [['capabilitySnapshotRef' => '']];
+        yield 'no capability digest' => [['capabilityDigest' => '']];
+        yield 'keyed currencies' => [['currencyCodes' => [1 => 'RUB']]];
+    }
+
+    /** @param array<string, mixed> $overrides */
+    #[DataProvider('incompleteMerchantRevisions')]
+    public function test_an_incomplete_merchant_revision_is_refused(array $overrides): void
     {
         $merchant = self::merchant('bank-a', self::snapshot('bank-a', refunds: false));
         $this->expectException(ProblemException::class);
-        new MerchantRevision(...array_replace(get_object_vars($merchant), ['capabilitySnapshotRef' => '']));
+        new MerchantRevision(...array_replace(get_object_vars($merchant), $overrides));
     }
 
     private static function merchant(string $revision, CapabilitySnapshot $capability, string $environment = 'test', ?string $account = null, ?string $driverVersion = null): MerchantRevision
