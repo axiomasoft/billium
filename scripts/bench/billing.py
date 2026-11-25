@@ -22,6 +22,11 @@ EXPECTED_INDEXES: list[str] = [
     "billium_obligation_due_idx",
     "billium_payment_ref_idx",
     "billium_allocation_obligation_idx",
+    "billium_observed_payment_refund_original_idx",
+    "billium_ledger_discrepancy_observed_idx",
+    "billium_discrepancy_event_discrepancy_idx",
+    "billium_allocation_receipt_digest_idx",
+    "billium_observation_owner_binding_pkey",
     "billium_idempotency_receipt_scope_key",
     "billium_idempotency_opaque_receipt_scope",
     "billium_outbox_event_scope_cursor",
@@ -32,9 +37,11 @@ EXPECTED_INDEXES: list[str] = [
     "billium_execution_dispatch_work_lookup",
     "billium_execution_provider_work_lookup",
     "billium_execution_provider_reference",
-    "billium_execution_binding_intent_idx",
+    "billium_execution_business_identity_digest_unique",
+    "billium_execution_recon_item_review_idx",
     "billium_execution_operation_root_idx",
     "billium_collection_work_due_idx",
+    "billium_schedule_occurrence_amendment_lookup",
 ]
 
 
@@ -102,6 +109,69 @@ def build_query_specs() -> list[dict[str, Any]]:
                 "SELECT id, amount_minor, receipt_ref FROM public.billium_allocation "
                 "WHERE seller_ref = 'bench-seller-a' AND environment = 'test' "
                 "AND obligation_id = 42 ORDER BY id LIMIT 50"
+            ),
+        },
+        {
+            "id": "ledger.refunds_of_charge",
+            "category": "ledger",
+            "table": "billium_observed_payment",
+            "expectedIndexes": ["billium_observed_payment_refund_original_idx"],
+            "forbidSort": False,
+            "boundedLimit": 50,
+            "sql": (
+                "SELECT id FROM public.billium_observed_payment "
+                "WHERE seller_ref = 'bench-seller-a' AND environment = 'test' "
+                "AND source_authority = 'provider-a' AND original_ref = 'pay-a-1' AND kind = 'refund' LIMIT 50"
+            ),
+        },
+        {
+            "id": "ledger.discrepancies_of_observed_payment",
+            "category": "ledger",
+            "table": "billium_ledger_discrepancy",
+            "expectedIndexes": ["billium_ledger_discrepancy_observed_idx"],
+            "forbidSort": False,
+            "boundedLimit": 50,
+            "sql": (
+                "SELECT id FROM public.billium_ledger_discrepancy "
+                "WHERE seller_ref = 'bench-seller-a' AND environment = 'test' AND observed_payment_id = 42 LIMIT 50"
+            ),
+        },
+        {
+            "id": "ledger.discrepancy_resolution",
+            "category": "ledger",
+            "table": "billium_discrepancy_event",
+            "expectedIndexes": ["billium_discrepancy_event_discrepancy_idx"],
+            "forbidSort": False,
+            "boundedLimit": 1,
+            "sql": (
+                "SELECT 1 FROM public.billium_discrepancy_event "
+                "WHERE discrepancy_id = 42 AND kind = 'resolved' LIMIT 1"
+            ),
+        },
+        {
+            "id": "ledger.refund_detail_by_digest",
+            "category": "ledger",
+            "table": "billium_allocation_receipt",
+            "expectedIndexes": ["billium_allocation_receipt_digest_idx"],
+            "forbidSort": False,
+            "boundedLimit": 1,
+            "sql": (
+                "SELECT receipt_ref FROM public.billium_allocation_receipt "
+                "WHERE seller_ref = 'bench-seller-a' AND environment = 'test' "
+                "AND semantic_digest = 'sha256:bench-digest' AND kind = 'refund_detail' LIMIT 1"
+            ),
+        },
+        {
+            "id": "ledger.observation_owner_binding",
+            "category": "ledger",
+            "table": "billium_observation_owner_binding",
+            "expectedIndexes": ["billium_observation_owner_binding_pkey"],
+            "forbidSort": False,
+            "boundedLimit": 1,
+            "sql": (
+                "SELECT 1 FROM public.billium_observation_owner_binding WHERE operation_key = "
+                "encode(sha256(convert_to(jsonb_build_array('bench-seller-a', 'test', 'provider-a', 'op-a-1')::text, 'UTF8')), 'hex') "
+                "LIMIT 1"
             ),
         },
         {
@@ -197,6 +267,19 @@ def build_query_specs() -> list[dict[str, Any]]:
             ),
         },
         {
+            "id": "schedule.occurrence_amendment",
+            "category": "schedule",
+            "table": "billium_schedule_occurrence_amendment",
+            "expectedIndexes": ["billium_schedule_occurrence_amendment_lookup"],
+            "forbidSort": False,
+            "boundedLimit": 1,
+            "sql": (
+                "SELECT 1 FROM public.billium_schedule_occurrence_amendment "
+                "WHERE seller_ref = 'bench-seller-a' AND environment = 'test' "
+                "AND occurrence_ref = 'occurrence-a-1' AND schedule_revision = 2 LIMIT 1"
+            ),
+        },
+        {
             "id": "execution.dispatch_work_due",
             "category": "execution",
             "table": "billium_execution_dispatch_work",
@@ -239,16 +322,27 @@ def build_query_specs() -> list[dict[str, Any]]:
             ),
         },
         {
-            "id": "execution.binding_by_intent",
+            "id": "execution.binding_by_identity_digest",
             "category": "execution",
             "table": "billium_execution_business_binding",
-            "expectedIndexes": ["billium_execution_binding_intent_idx"],
+            "expectedIndexes": ["billium_execution_business_identity_digest_unique"],
             "forbidSort": False,
             "boundedLimit": 1,
             "sql": (
                 "SELECT id, operation_ref FROM public.billium_execution_business_binding "
-                "WHERE installation_ref = 'inst-bench' AND seller_ref = 'bench-seller-a' "
-                "AND environment = 'test' AND business_intent_ref = 'intent-a-1' LIMIT 1"
+                "WHERE business_identity_digest = 'sha256:bench-identity' LIMIT 1"
+            ),
+        },
+        {
+            "id": "execution.recon_item_by_review",
+            "category": "execution",
+            "table": "billium_execution_recon_item",
+            "expectedIndexes": ["billium_execution_recon_item_review_idx"],
+            "forbidSort": False,
+            "boundedLimit": 1,
+            "sql": (
+                "SELECT work_ref FROM public.billium_execution_recon_item "
+                "WHERE review_ref = 'review-bench' AND evidence_ref = 'evidence-bench' LIMIT 1"
             ),
         },
         {

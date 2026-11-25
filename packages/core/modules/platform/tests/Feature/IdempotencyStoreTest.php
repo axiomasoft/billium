@@ -11,7 +11,9 @@ use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Data\Runner\Receipt;
 use Billium\Core\Data\Runner\StoredOutcome;
 use Billium\Core\Data\Runtime\Caller;
+use Billium\Core\Data\Runtime\FinancialScope;
 use Billium\Core\Tests\TestEnvironment;
+use Billium\Platform\Contracts\Idempotency\FinancialIdempotencyStore;
 use Billium\Platform\Contracts\Idempotency\IdempotencyStore;
 use Billium\Platform\Tests\PlatformTestCase;
 use Illuminate\Database\DatabaseManager;
@@ -104,6 +106,51 @@ final class IdempotencyStoreTest extends PlatformTestCase
         $this->callers->set(new Caller('seller-c', 'test', self::INSTALLATION, 'actor-1'));
         $other = $this->runner()->run($this->spec(kind: 'ledger.record', key: 'k', digest: 'sha256:'.str_repeat('9', 64), modules: ['platform']), static fn (): Receipt => self::receipt());
         self::assertFalse($other->replayed);
+    }
+
+    public function test_a_retained_key_never_replays_into_another_financial_scope_of_the_same_seller(): void
+    {
+        // The receipt key is (environment, seller, kind, key); the financial scope is checked on replay, so the same
+        // seller's other intent owner cannot read or reuse a receipt it did not create.
+        $this->callers->set(new Caller('seller-a', 'test', self::INSTALLATION, 'actor-1', intentOwnerNamespaces: ['shop-a', 'shop-b']));
+        $scope = static fn (string $namespace): FinancialScope => new FinancialScope(self::INSTALLATION, 'seller-a', 'test', $namespace);
+        $first = $this->runner()->run($this->spec(key: 'k-scoped', financialScope: $scope('shop-a')), static fn (TransactionContext $context): Receipt => self::receipt(['effect' => self::effect($context, 'shop-a')]));
+        self::assertTrue($first->accepted);
+
+        try {
+            $this->runner()->run($this->spec(key: 'k-scoped', financialScope: $scope('shop-b')), static fn (): Receipt => throw new LogicException('body must not run'));
+            self::fail('another financial scope under the same key conflicts');
+        } catch (ProblemException $problem) {
+            self::assertSame(ProblemCode::IdempotencyConflict, $problem->problem);
+            self::assertStringNotContainsString('shop-a', $problem->getMessage());
+        }
+        try {
+            $this->runner()->run($this->spec(key: 'k-unselected', financialScope: $scope('shop-c')), static fn (): Receipt => throw new LogicException('body must not run'));
+            self::fail('a scope outside the authenticated selection is refused');
+        } catch (ProblemException $problem) {
+            self::assertSame(ProblemCode::AuthDenied, $problem->problem);
+        }
+
+        // The runner's digest already differs per scope; the store refuses a matching digest from another scope as well.
+        $digest = self::text($this->value("SELECT digest FROM billium_idempotency_receipt WHERE command_key = 'k-scoped'"));
+        $store = $this->application()->make(IdempotencyStore::class);
+        self::assertInstanceOf(FinancialIdempotencyStore::class, $store);
+        $db = $this->application()->make(DatabaseManager::class)->connection();
+        $db->beginTransaction();
+        try {
+            $store->claimScoped($this->callers->current(), $scope('shop-b'), 'ledger.test_effect', 'k-scoped', $digest);
+            self::fail('a retained claim of another financial scope conflicts even with the same digest');
+        } catch (ProblemException $problem) {
+            self::assertSame(ProblemCode::IdempotencyConflict, $problem->problem);
+        } finally {
+            $db->rollBack();
+        }
+
+        $replay = $this->runner()->run($this->spec(key: 'k-scoped', financialScope: $scope('shop-a')), static fn (): Receipt => throw new LogicException('body must not run'));
+        self::assertTrue($replay->replayed);
+        self::assertSame($first->receiptId, $replay->receiptId);
+        self::assertSame(1, $this->rows('billium_test_effect'));
+        self::assertSame(1, $this->rows('billium_idempotency_receipt', self::LEDGER));
     }
 
     public function test_replay_after_restart_returns_the_original_receipt(): void

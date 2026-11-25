@@ -40,7 +40,7 @@ final class ObservationConnectionTest extends ObservationTestCase
         self::assertSame(500, $this->allocated('o2'));
 
         $this->observe(ObservationFactory::charge('op-1', 2, 1000, 300, sequence: 3));
-        self::assertSame(1, $this->reconciler()->reconcile(0)['compared']);
+        self::assertSame(1, $this->reconciler()->reconcile(0)->compared);
 
         $databases = $this->application()->make(DatabaseManager::class);
         self::assertSame('host', $databases->getDefaultConnection());
