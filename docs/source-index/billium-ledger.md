@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-ledger
 
-Path `packages/core/modules/ledger/src`, namespace `Billium\Ledger\`, layer L2. 99 types.
+Path `packages/core/modules/ledger/src`, namespace `Billium\Ledger\`, layer L2. 100 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -141,6 +141,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`ObservationOwnership`](../../packages/core/modules/ledger/src/Internal/Observation/ObservationOwnership.php) | class | *Internal* |  |
 | [`ParkedDrainer`](../../packages/core/modules/ledger/src/Internal/Observation/ParkedDrainer.php) | class | *Internal* | Drives observation work one economic event per NEW root Tx (inbox-feed): the next accounted sequence of a partition, the later parked revision of an operation… |
 | [`PaymentProjection`](../../packages/core/modules/ledger/src/Internal/Observation/PaymentProjection.php) | class | *Internal* | Economic apply of ONE observed revision inside its root Tx (observation-apply, D41, D46, D57, D60). |
+| [`RefundReconcileReport`](../../packages/core/modules/ledger/src/Internal/Observation/RefundReconcileReport.php) | class | *Internal* | Counts of one refund reconcile pass: charges compared, mismatches recorded and earlier mismatches resolved. |
 | [`RefundReconciler`](../../packages/core/modules/ledger/src/Internal/Observation/RefundReconciler.php) | class | *Internal* | D48 reconcile job of the D41 refund basis: after the configured consistency window the ordinary charge basis (payment.refunded_minor, assigned only from the ch… |
 
 ## Internal/Participants

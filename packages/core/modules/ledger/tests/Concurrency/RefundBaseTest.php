@@ -7,6 +7,7 @@ namespace Billium\Ledger\Tests\Concurrency;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Core\Tests\Support\Concurrency\ConcurrencyStand;
 use Billium\Core\Tests\Support\ObservationFactory;
+use Billium\Ledger\Internal\Observation\RefundReconcileReport;
 use Billium\Ledger\Tests\Observation\ObservationScenario;
 use Billium\Ledger\Tests\Observation\ObservationTestCase;
 use PHPUnit\Framework\Attributes\Group;
@@ -25,7 +26,7 @@ final class RefundBaseTest extends ObservationTestCase
     {
         $this->race(3000);
 
-        self::assertSame(['compared' => 1, 'recorded' => 0, 'resolved' => 0], $this->reconciler()->reconcile(0));
+        self::assertEquals(new RefundReconcileReport(1, 0, 0), $this->reconciler()->reconcile(0));
         self::assertSame(0, $this->rows('billium_ledger_discrepancy'));
     }
 
@@ -33,8 +34,8 @@ final class RefundBaseTest extends ObservationTestCase
     {
         $this->race(4000);
 
-        self::assertSame(1, $this->reconciler()->reconcile(0)['recorded']);
-        self::assertSame(0, $this->reconciler()->reconcile(0)['recorded']);
+        self::assertSame(1, $this->reconciler()->reconcile(0)->recorded);
+        self::assertSame(0, $this->reconciler()->reconcile(0)->recorded);
         self::assertSame(1, $this->rows('billium_ledger_discrepancy', "reason = 'refund_basis_mismatch' AND expected_minor = 3000 AND actual_minor = 4000 AND NOT hold"));
         self::assertSame(1, $this->rows('billium_outbox_event', "type = 'discrepancy.recorded.v1'"));
         self::assertSame(3000, self::integer($this->paymentRow()['refunded_minor']), 'the ledger is not changed by the reconcile');

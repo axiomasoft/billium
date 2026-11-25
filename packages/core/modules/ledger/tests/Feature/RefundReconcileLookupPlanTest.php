@@ -28,7 +28,7 @@ final class RefundReconcileLookupPlanTest extends ObservationTestCase
             }
         });
 
-        self::assertSame(1, $this->reconciler()->reconcile(0)['compared']);
+        self::assertSame(1, $this->reconciler()->reconcile(0)->compared);
 
         self::assertInstanceOf(QueryExecuted::class, $lookup);
         $owner = $this->owner();
