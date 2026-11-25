@@ -106,11 +106,11 @@ final readonly class RequestAccess
 
     private function decode(Request $request): Envelope
     {
-        $body = $request->getContent();
         $type = strtolower(trim(explode(';', $request->headers->get('Content-Type') ?? '', 2)[0]));
-        if ($type !== 'application/json' || strlen($body) > $this->limits->maxBodyBytes) {
+        if ($type !== 'application/json') {
             throw new ProblemException(ProblemCode::ValidationInvalid);
         }
+        $body = BoundedRequestBody::read($request, $this->limits->maxBodyBytes);
         try {
             json_decode($body, false, $this->limits->maxDepth + 1, JSON_THROW_ON_ERROR);
         } catch (JsonException) {
