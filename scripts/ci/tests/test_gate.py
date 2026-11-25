@@ -3,7 +3,6 @@
 import fnmatch
 import json
 import os
-import re
 import subprocess
 import tempfile
 import unittest
@@ -13,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[3]
 CI = ROOT / "scripts" / "ci.sh"
 ZONES = ROOT / "tests" / "zones.json"
 WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
+SELECT = ROOT / "scripts" / "ci" / "select-jobs.py"
 LAYERS = ["lint", "derived", "php", "dart", "conformance"]
 GIT = ["git", "-c", "safe.directory=*"]
 GIT_ENV = {
@@ -91,9 +91,20 @@ class GateSelectorTest(unittest.TestCase):
 
     def test_workflow_runs_every_step_and_layer_through_the_gate_script(self) -> None:
         text = WORKFLOW.read_text(encoding="utf-8")
-        # Each job calls ci.sh, so a new step or layer that is not wired into a job fails here.
-        for step in self.steps():
-            self.assertRegex(text, rf"\b{re.escape(step)}\b", f"step {step} has no CI job")
+        # Jobs come from select-jobs.py, so a new ci.sh step it does not schedule fails here.
+        selected = self.select("--layers", " ".join(LAYERS))
+        scheduled: set[str] = set()
+        for key in ("analyse", "quality", "smoke", "conformance"):
+            scheduled.update(json.loads(selected[key]))
+        if selected["unit"] == "true":
+            scheduled.add("php-unit")
+        if selected["pg-serial"] == "true":
+            scheduled.add("php-pg-serial")
+        if json.loads(selected["shards"]):
+            scheduled.add("php-pg")
+        self.assertEqual(sorted(scheduled), sorted(self.steps()))
+        for output in ("analyse", "quality", "smoke", "conformance", "shards"):
+            self.assertIn(f"fromJSON(needs.changes.outputs.{output})", text)
         for layer in ("lint", "derived", "dart"):
             self.assertIn(f"bash scripts/ci.sh --layer {layer}", text)
         self.assertIn('bash scripts/ci.sh --step "$STEP"', text)
@@ -152,6 +163,45 @@ class GateSelectorTest(unittest.TestCase):
             self.assertIn("derived: FAIL", full.stdout)
             self.assertNotIn("php:", full.stdout)
             self.assertNotIn("conformance:", full.stdout)
+
+    def test_select_jobs_narrows_a_manual_run_to_named_cells(self) -> None:
+        selected = self.select("--layers", " ".join(LAYERS), "--only", "php-pg:3 conformance-integration derived")
+        self.assertEqual(selected["shards"], "[3]")
+        self.assertEqual(selected["shard-total"], "8")
+        self.assertEqual(selected["conformance"], '["conformance-integration"]')
+        self.assertEqual(selected["derived"], "true")
+        self.assertEqual(selected["analyse"], "[]")
+        self.assertEqual(selected["unit"], "false")
+        self.assertEqual(selected["workflows"], "false")
+
+    def test_select_jobs_follows_layers_and_skips_coverage_on_pull_requests(self) -> None:
+        selected = self.select("--event", "pull_request", "--layers", "dart")
+        self.assertEqual(selected["dart"], "true")
+        self.assertEqual(selected["shards"], "[]")
+        self.assertEqual(selected["conformance"], "[]")
+        self.assertEqual(selected["workflows"], "true")
+        self.assertEqual(selected["coverage"], "false")
+
+    def test_select_jobs_rejects_unknown_names(self) -> None:
+        for extra in (["--layers", "php typo"], ["--layers", "php", "--only", "php-pg:99"]):
+            result = subprocess.run(
+                ["python3", str(SELECT), "--event", "workflow_dispatch", *extra],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 2, extra)
+
+    def select(self, *args: str) -> dict[str, str]:
+        if "--event" not in args:
+            args = ("--event", "workflow_dispatch", *args)
+        result = subprocess.run(
+            ["python3", str(SELECT), *args],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return dict(line.split("=", 1) for line in result.stdout.splitlines() if line)
 
     def steps(self) -> list[str]:
         result = subprocess.run(
