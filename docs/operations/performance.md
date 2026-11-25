@@ -13,7 +13,7 @@ Billium verifies hot-path PostgreSQL query plans, bounded batching, seller-scope
 | Ledger | `billium_ledger_discrepancy` | `billium_ledger_discrepancy_observed_idx` | `(seller_ref, environment, observed_payment_id)` | Unresolved discrepancies of a charge and its refunds in payment status |
 | Ledger | `billium_discrepancy_event` | `billium_discrepancy_event_discrepancy_idx` | `(discrepancy_id, kind)` | Resolution check in payment status and refund reconcile |
 | Ledger | `billium_allocation_receipt` | `billium_allocation_receipt_digest_idx` | `(seller_ref, environment, semantic_digest)` | Refund detail replay probe, refund reconcile basis, payment status and checkpoint receipt lookups |
-| Execution | `billium_execution_recon_item` | `billium_execution_recon_item_review_idx` | `(review_ref) WHERE review_ref IS NOT NULL` | Manual repair lookup of a reviewed inventory item (75 ms → 0.09 ms at 1M retained items) |
+| Execution | `billium_execution_recon_item` | `billium_execution_recon_item_review_idx` | `(review_ref) WHERE review_ref IS NOT NULL` | Manual repair lookup of a reviewed inventory item (late refund adjudication, linked correction approval) |
 | Ledger | `billium_allocation` | `billium_allocation_obligation_idx` | `(seller_ref, environment, obligation_id, id)` | Allocations by obligation in deterministic ID order |
 | Idempotency | `billium_idempotency_receipt` | `billium_idempotency_receipt_scope_key` | `UNIQUE (environment, seller_ref, command_kind, command_key)` | Command replay / conflict check |
 | Idempotency | `billium_idempotency_receipt` | `billium_idempotency_opaque_receipt_scope` | `(financial_scope, result->>'class', result#>>'{body,receiptRef}', created_at, id) WHERE outcome = 'accepted' AND financial_scope IS NOT NULL` | Opaque receipt lookup without scanning rejected rows |
@@ -29,6 +29,22 @@ Billium verifies hot-path PostgreSQL query plans, bounded batching, seller-scope
 | Execution | `billium_execution_operation` | `billium_execution_operation_root_idx` | `(installation_ref, seller_ref, environment, intent_owner_namespace, root_operation_ref)` | Root + child operation tree reads |
 | Schedule | `billium_schedule_occurrence_amendment` | `billium_schedule_occurrence_amendment_lookup` | `(seller_ref, environment, occurrence_ref, schedule_revision)` | Revision-confirmation check in `ScheduleQueries::occurrence` |
 | Collection | `billium_collection_work` | `billium_collection_work_due_idx` | `(seller_ref, status, next_attempt_at, step_id) WHERE next_attempt_at IS NOT NULL` | Due collection step scheduling |
+
+## Measured Index Additions
+
+Each change below has a plan test that fails without it, except the replay probe, which runs inside a routine; `scripts/bench/billing.py` checks its index instead. Timings are single-seller `EXPLAIN ANALYZE` runs on PostgreSQL 18 before and after the change, on synthetic tables at the stated scale:
+
+| Query path | Scale | Before | After | Plan test |
+| :--- | :--- | ---: | ---: | :--- |
+| Revision-confirmation check in `ScheduleQueries::occurrence` | 200k amendments | 28 ms | 0.05 ms | `OccurrenceAmendmentLookupPlanTest` |
+| Legacy-revision probe on observation intake (owner binding by primary key) | 200k bindings | 28 ms | 0.07 ms | `ObservationOwnerBindingLookupTest` |
+| Refunds of one charge in payment status | 100k observed payments | 35 ms | 0.07 ms | `PaymentStatusLookupPlanTest` |
+| Unresolved discrepancies of a charge in `LedgerReader` | 100k discrepancies, 150k events | 20 ms | 0.12 ms | `PaymentStatusLookupPlanTest` |
+| Refund reconcile basis in `RefundReconciler::compare` | 250k observations, 500k revisions, 700k receipts | 159 ms | 0.15 ms | `RefundReconcileLookupPlanTest` |
+| Refund detail replay probe in `billium_record_refund_detail()` | 700k receipts | 50 ms | 0.07 ms | `scripts/bench/billing.py` (`ledger.refund_detail_by_digest`) |
+| Reviewed inventory item lookup in manual repair | 1M retained items | 75 ms | 0.09 ms | `HotPathIndexTest` |
+
+Left without an index on purpose: `billium_feed_bootstrap_session.new_partition_id` is read only during gap recovery and bootstrap proof (9 ms even at 100k sessions), and foreign keys of append-only tables are not indexed by default: their parent rows are never deleted, so such an index would only serve a join. Add one only for a measured hot path.
 
 ## Bounded Batching & Cursor Pagination
 
@@ -51,7 +67,7 @@ Run both targeted checks inside the repository `toolchain` container against Pos
 
 ```bash
 # 1. Pest runtime + EXPLAIN verification (indexes, bounded limits, seller isolation, dispatch lock check)
-docker compose run --rm -u 0:0 toolchain vendor/bin/pest --filter=BillingQueryPaths
+docker compose run --rm -u 0:0 toolchain vendor/bin/pest --filter='BillingQueryPaths|HotPathIndex|LookupPlan|OwnerBindingLookup'
 
 # 2. Standalone CLI EXPLAIN (FORMAT JSON) report on stdout (runs in a rolled-back transaction)
 docker compose run --rm -u 0:0 toolchain python3 scripts/bench/billing.py --profile acceptance --output -
