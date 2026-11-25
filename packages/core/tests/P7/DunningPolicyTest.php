@@ -206,6 +206,99 @@ final class DunningPolicyTest extends CollectionTestCase
         self::assertCount(1, $this->dunningQueries()->listCasePolicyMigrations($this->collectionScope(), 'case-1'));
     }
 
+    public function test_a_step_above_the_open_amount_is_refused_and_changes_nothing(): void
+    {
+        $this->dunningPolicyService()->registerPolicyVersion($this->policyCommand(commandKey: 'reg-open-cap', policyRef: 'pol-open-cap'));
+        $t0 = new DateTimeImmutable('2026-11-20T00:00:00Z', new DateTimeZone('UTC'));
+        $this->dunningCaseService()->openCase(new OpenDunningCase(
+            commandKey: 'open-open-cap',
+            scope: $this->collectionScope(),
+            caseRef: 'case-open-cap',
+            billingAccountRef: 'account-a',
+            obligationRef: 'obl-open-cap',
+            collectionGeneration: 1,
+            policyRef: 'pol-open-cap',
+            policyVersion: 1,
+            currency: 'RUB',
+            openAmountMinor: 8000,
+            openedAt: $t0,
+        ));
+
+        try {
+            $this->dunningCaseService()->planStep(new PlanCollectionStep(
+                commandKey: 'plan-open-cap',
+                scope: $this->collectionScope(),
+                caseRef: 'case-open-cap',
+                stepRef: 'step-open-cap',
+                stepNo: 1,
+                businessPaymentIntentRef: 'bpi-open-cap',
+                operationRef: 'op-open-cap',
+                amountMinor: 8001,
+                scheduledAt: $t0->modify('+60 seconds'),
+                expectedCaseRevision: 1,
+            ));
+            self::fail('A step above the open amount must be refused');
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::ValidationInvalid, $error->problem);
+            self::assertSame('billium.collection.amount_exceeds_open', $error->detail);
+        }
+
+        self::assertSame(0, $this->rows('billium_collection_step'));
+        $case = $this->dunningQueries()->findCase($this->collectionScope(), 'case-open-cap');
+        self::assertNotNull($case);
+        self::assertSame(1, $case->caseRevision);
+        self::assertSame(8000, $case->currentOpenMinor);
+    }
+
+    public function test_a_policy_migration_to_a_threshold_in_another_currency_is_refused_and_changes_nothing(): void
+    {
+        $this->dunningPolicyService()->registerPolicyVersion($this->policyCommand(commandKey: 'reg-threshold-1', policyRef: 'pol-threshold'));
+        $this->dunningPolicyService()->registerPolicyVersion($this->policyCommand(
+            commandKey: 'reg-threshold-2',
+            policyRef: 'pol-threshold',
+            policyVersion: 2,
+            minOutstandingMinor: 500,
+            thresholdCurrency: 'USD',
+            supersedesPolicyVersion: 1,
+        ));
+        $this->dunningCaseService()->openCase(new OpenDunningCase(
+            commandKey: 'open-threshold',
+            scope: $this->collectionScope(),
+            caseRef: 'case-threshold',
+            billingAccountRef: 'account-a',
+            obligationRef: 'obl-threshold',
+            collectionGeneration: 1,
+            policyRef: 'pol-threshold',
+            policyVersion: 1,
+            currency: 'RUB',
+            openAmountMinor: 10000,
+            openedAt: new DateTimeImmutable('2026-11-20T00:00:00Z', new DateTimeZone('UTC')),
+        ));
+
+        try {
+            $this->dunningCaseService()->migrateCasePolicy(new MigrateDunningCasePolicy(
+                commandKey: 'mig-threshold',
+                scope: $this->collectionScope(),
+                migrationRef: 'mig-threshold-ref',
+                caseRef: 'case-threshold',
+                targetPolicyRef: 'pol-threshold',
+                targetPolicyVersion: 2,
+                expectedCaseRevision: 1,
+                reason: 'threshold_in_another_currency',
+            ));
+            self::fail('A threshold in another currency than the case must be refused');
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::MoneyCurrencyMismatch, $error->problem);
+            self::assertSame('billium.collection.policy_threshold_currency_mismatch', $error->detail);
+        }
+
+        self::assertSame(0, $this->rows('billium_collection_case_policy_migration'));
+        $case = $this->dunningQueries()->findCase($this->collectionScope(), 'case-threshold');
+        self::assertNotNull($case);
+        self::assertSame(1, $case->policyVersion);
+        self::assertSame(1, $case->caseRevision);
+    }
+
     public function test_distinct_budgets_for_delivery_retries_vs_business_decline_attempts(): void
     {
         $this->dunningPolicyService()->registerPolicyVersion($this->policyCommand(
