@@ -33,14 +33,19 @@ These checks cannot fail on their own: another check on the same path refuses ev
 | collection | Currency comparison in the ledger's collection obligation lock at admission | `openCase` refuses a case whose currency differs from its obligation, and a case's currency never changes; the same lock still checks customer and component |
 | rating | `is_numeric` after the decimal patterns in `Dec` and `MoneyFactory` | The patterns |
 | rating | Currency exponent bounds in `StrategyCatalog` | The exponent must equal the ISO scale of the currency |
+| execution | Non-dispatchable fiscal route in `prepareIntent` | `configurePolicy` refuses projection-only routes for remote profiles, and embedded profiles are refused earlier in `prepareIntent` |
+| execution | Embedded fiscal dispatch | Unreachable: an embedded intent is never prepared |
+| execution | `initiateWithIdempotency` in `OriginalRequestReplay` | `CapabilityDetails` allows idempotent initiation only together with a retention period, which is checked next to it |
+| execution | Namespace state under the lock in `importOriginalIdentity` | Concurrency recheck: recovery holds the namespace before it imports |
+| execution | Archived currency against the merchant currencies, and child currency against the parent, in `DatabaseExecutionStore` | The original dispatch passed the same checks, the merchant revision is immutable, and the archive must authenticate |
+| usage | Correction pin and predecessor checks in the v1 `normalize` step | `validateCorrection` refuses the same facts |
+| rating | Terms digest beside the price digest on republication | The price digest covers the terms digest |
+| rating | Disabled reopening in `UsageAggregateAdapter::latePolicyHold` | Freezing a second snapshot refuses with the same `late_rejected` code |
 
 ## Real but untested
 
 These checks guard reachable inputs but need a database fixture larger than a minimal test. They are the next candidates for coverage.
 
-- execution: capability lineage rechecks in `VerifyDelivery` and `ExecutionReconciliation` (the same comparisons as `QualifiedAdapter`, which is tested); `ExecutionCapacity` reserve and settle amount checks; financial hold in `CommitDispatch`; the fiscal orchestrator (correction currency, route and trust-strategy support, lookup page bounds), which has no feature test; repair review currency.
-- execution, no test reaches the code at all: `ArchivedExecutionIdentity`, `OriginalIdentityRecoveryService`, `OriginalRequestReplay` and the archive checks in `DatabaseExecutionStore`.
+- execution: `ExecutionCapacity` reserve and settle amount checks; financial hold in `CommitDispatch`; repair review currency; the fiscal insert-race idempotency branch; the merchant-field checks next to the full capability comparison in `VerifyDelivery` and `ExecutionReconciliation`; lookup capability checks in `OriginalIdentityRecoveryService` and the refund-lookup check in `OriginalRequestReplay`, which need a merchant frozen without lookup through the full restore drill.
 - documents: per-line arithmetic checks that only fail with two or more lines; renderer and storage binding checks.
 - ledger: refund rows sharing a charge operation reference in `PaymentProjection`.
-- usage: snapshot-reference and pinned-fact checks in `DatabaseUsage` and `DatabaseAggregationParticipants`.
-- rating: booking, price store and occurrence checks (`DatabaseRatingBooking`, `DatabasePriceVersionStore`, `DatabaseOccurrenceService`, `UsageAggregateAdapter` reopen policy).

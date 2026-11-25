@@ -12,7 +12,10 @@ use Billium\Rating\Contracts\PinnedRatingInputs;
 use Billium\Rating\Contracts\PriceVersionStore;
 use Billium\Rating\Contracts\RatingBooking;
 use Billium\Rating\Contracts\RatingQueries;
+use Billium\Rating\Data\Rating\FrozenRatingInputs;
+use Billium\Rating\Data\Rating\PreparedRating;
 use Billium\Rating\Tests\RatingTestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 
 #[Group('pg')]
@@ -42,6 +45,37 @@ final class RatingPipelineTaxTest extends RatingTestCase
             self::assertSame(ProblemCode::IdempotencyConflict, $problem->problem);
         }
         self::assertSame(1, $this->rows('billium_obligation'));
+    }
+
+    /** @return iterable<string, array{string, bool}> */
+    public static function divergentPins(): iterable
+    {
+        yield 'another billing occurrence' => ['another-occurrence', false];
+        yield 'a pin without prices' => ['', true];
+    }
+
+    #[DataProvider('divergentPins')]
+    public function test_wire_booking_refuses_a_pin_for_another_occurrence_or_without_prices(string $occurrence, bool $withoutPrices): void
+    {
+        $prepared = $this->prepared();
+        $pinned = $withoutPrices ? new PreparedRating(...array_replace(get_object_vars($prepared),
+            ['inputs' => new FrozenRatingInputs(...array_replace(get_object_vars($prepared->inputs), ['prices' => []]))])) : $prepared;
+        $resolver = $this->createMock(PinnedRatingInputs::class);
+        $resolver->method('resolve')->willReturn($pinned);
+        $codec = new Codec;
+        $command = $codec->decode($codec->canonicalize(['schema' => PrepareObligation::SCHEMA, 'commandKey' => '3f1c2b9e-7d4a-4e0b-8c55-2a9d6e1f0b47',
+            'installationRef' => self::INSTALLATION, 'environment' => $prepared->inputs->environment, 'sellerRef' => $prepared->inputs->sellerRef,
+            'billingOccurrenceRef' => $occurrence === '' ? $prepared->inputs->occurrenceRef : $occurrence, 'agreementRef' => 'agreement-a', 'agreementRevision' => 1,
+            'componentRef' => $prepared->inputs->prices[0]->componentRef, 'priceVersionRef' => 'price-a-1', 'snapshotDigest' => $prepared->inputs->digest()]));
+        self::assertInstanceOf(PrepareObligation::class, $command);
+        try {
+            $this->application()->make(RatingBooking::class)->prepareObligation($command, $resolver);
+            self::fail('A divergent rating pin was booked');
+        } catch (ProblemException $problem) {
+            self::assertSame(ProblemCode::AuthDenied, $problem->problem);
+            self::assertSame('', $problem->detail);
+        }
+        self::assertSame(0, $this->rows('billium_obligation'));
     }
 
     public function test_tax_residual_and_exact_intermediates_survive_booking_and_replay(): void
