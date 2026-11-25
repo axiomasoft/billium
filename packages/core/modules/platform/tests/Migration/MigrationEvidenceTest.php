@@ -245,6 +245,62 @@ final class MigrationEvidenceTest extends TestCase
         self::replaceManifestFields($manifest, ['selection' => $selection]);
     }
 
+    public function test_incomplete_manifest_checksums_and_cursor_are_invalid(): void
+    {
+        [$handoff, , , $plan] = self::fixture();
+        $handoff->stage($plan);
+        $manifest = $handoff->snapshot($handoff->freeze($plan));
+        $usd = $manifest->checksums[0];
+        $eur = new ReconciliationChecksum($usd->sellerRef, 'EUR', $usd->counts, $usd->totals, $usd->checksum);
+        $cursor = $manifest->safeFeedCursor;
+        foreach ([
+            'empty cursor token' => [new FeedCursor(' ', $cursor->position), [$usd]],
+            'no checksums' => [$cursor, []],
+            'keyed checksums' => [$cursor, [1 => $usd]],
+            'unordered currencies' => [$cursor, [$usd, $eur]],
+        ] as $case => [$safeCursor, $checksums]) {
+            try {
+                new MigrationManifest($manifest->plan, $manifest->freeze, $manifest->snapshotToken, $manifest->snapshotDigest, $manifest->selection,
+                    $safeCursor, $manifest->retentionLeaseRef, $manifest->retentionLeaseExpiresAt, $checksums);
+                self::fail($case);
+            } catch (InvalidArgumentException $error) {
+                self::assertNotSame('', $error->getMessage(), $case);
+            }
+        }
+        $totals = $usd->totals;
+        foreach ([
+            'lowercase currency' => static fn (): ReconciliationChecksum => new ReconciliationChecksum('seller', 'usd', $usd->counts, $totals, $usd->checksum),
+            'malformed digest' => static fn (): ReconciliationChecksum => new ReconciliationChecksum('seller', 'USD', $usd->counts, $totals, 'sha256:x'),
+            'missing total' => static fn (): ReconciliationChecksum => new ReconciliationChecksum('seller', 'USD', $usd->counts, array_slice($totals, 1), $usd->checksum),
+            'integer total' => static fn (): ReconciliationChecksum => new ReconciliationChecksum('seller', 'USD', $usd->counts, ['open' => 0] + $totals, $usd->checksum),
+        ] as $case => $make) {
+            try {
+                $make();
+                self::fail($case);
+            } catch (InvalidArgumentException $error) {
+                self::assertNotSame('', $error->getMessage(), $case);
+            }
+        }
+    }
+
+    public function test_verify_refuses_a_tail_behind_the_safe_cursor_or_a_receipt_with_other_checksums(): void
+    {
+        [$handoff, $source, , $plan] = self::fixture();
+        $handoff->stage($plan);
+        $manifest = $handoff->snapshot($handoff->freeze($plan));
+        $source->terminalPosition = new FeedPosition('18446744073709551603', '6');
+        self::refused(fn () => $handoff->verify($manifest));
+
+        [$handoff, , $target, $plan] = self::fixture();
+        $handoff->stage($plan);
+        $manifest = $handoff->snapshot($handoff->freeze($plan));
+        $receipt = $handoff->verify($manifest);
+        // Verification without an activation authorization relies on the checksum comparison alone.
+        $target->receipt = new TargetReconciliation($receipt->receiptRef, $receipt->manifestDigest, $receipt->tailDigest, $receipt->adoptedCursor,
+            [self::summary([['revision' => 'fact-1', 'amount' => 4]])], $receipt->dispositionsDigest);
+        self::refused(fn () => $handoff->verify($manifest));
+    }
+
     public function test_mgate_05_only_current_lineage_and_separate_certificate_can_activate(): void
     {
         [$handoff, $source, $target, $plan] = self::fixture();
