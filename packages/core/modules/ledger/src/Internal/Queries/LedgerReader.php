@@ -127,11 +127,11 @@ final readonly class LedgerReader
             }
         }
         $payload = View::json($current->payload ?? '{}');
-        $discrepancies = $this->scoped('billium_ledger_discrepancy')->where(function (Builder $q) use ($observed, $ref): void {
-            $q->where('observed_payment_id', $observed->id)->orWhereIn('observed_payment_id',
-                $this->scoped('billium_observed_payment')->select('id')->where('source_authority', $observed->source_authority)
-                    ->where('kind', 'refund')->where('original_ref', $ref));
-        })
+        // One id list (the charge and its refunds) instead of an OR lets the discrepancy lookup use its index.
+        $observedIds = $this->db->query()->selectRaw('?::bigint AS id', [$observed->id])->unionAll(
+            $this->scoped('billium_observed_payment')->select('id')->where('source_authority', $observed->source_authority)
+                ->where('kind', 'refund')->where('original_ref', $ref));
+        $discrepancies = $this->scoped('billium_ledger_discrepancy')->whereIn('observed_payment_id', $observedIds)
             ->whereNotExists(function (Builder $q): void {
                 $q->selectRaw('1')->from('billium_discrepancy_event as e')->whereColumn('e.discrepancy_id', 'billium_ledger_discrepancy.id')->where('e.kind', 'resolved');
             })->orderBy('id')->get();

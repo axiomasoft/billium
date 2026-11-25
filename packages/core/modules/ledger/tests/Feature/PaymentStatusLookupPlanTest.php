@@ -22,6 +22,16 @@ final class PaymentStatusLookupPlanTest extends QueryTestCase
         self::assertStringContainsString('"Index Name": "billium_observed_payment_refund_original_idx"', $plan);
     }
 
+    public function test_unresolved_discrepancies_are_read_through_their_indexes(): void
+    {
+        $plan = $this->planOf('"billium_ledger_discrepancy"');
+
+        // On fixture-sized tables the planner may walk the seller's discrepancies in id order; at volume the
+        // observed-payment index serves the id list. The resolution check must never hash every seller's events.
+        self::assertStringContainsString('"Index Name": "billium_discrepancy_event_discrepancy_idx"', $plan);
+        self::assertStringNotContainsString('"Node Type": "Seq Scan"', $plan);
+    }
+
     private function planOf(string $marker): string
     {
         $this->debt('o1', 10000);
