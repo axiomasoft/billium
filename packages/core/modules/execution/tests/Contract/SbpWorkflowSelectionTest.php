@@ -87,6 +87,7 @@ final class SbpWorkflowSelectionTest extends TestCase
             [self::merchant('bank-a', $bankA, account: $bankB->merchantAccountRef), EffectKind::Charge, 'RUB'],
             [self::merchant('bank-a', $bankA, driverVersion: $bankB->driverContractVersion), EffectKind::Charge, 'RUB'],
             [self::merchant('bank-a-changed-capability', $bankA), EffectKind::Charge, 'RUB'],
+            [self::merchant('bank-a', $bankA, capabilityDigest: hash('sha256', 'stale-capability')), EffectKind::Charge, 'RUB'],
             [self::merchant('bank-b', $bankB, environment: 'production'), EffectKind::Refund, 'RUB'],
         ] as [$merchant, $kind, $currency]) {
             try {
@@ -189,13 +190,13 @@ final class SbpWorkflowSelectionTest extends TestCase
         new MerchantRevision(...array_replace(get_object_vars($merchant), $overrides));
     }
 
-    private static function merchant(string $revision, CapabilitySnapshot $capability, string $environment = 'test', ?string $account = null, ?string $driverVersion = null): MerchantRevision
+    private static function merchant(string $revision, CapabilitySnapshot $capability, string $environment = 'test', ?string $account = null, ?string $driverVersion = null, ?string $capabilityDigest = null): MerchantRevision
     {
         $time = new DateTimeImmutable('2026-11-17T00:00:00Z');
 
         return new MerchantRevision($revision, new ExecutionScope('test-installation', 'seller-a', $environment, 'sbp-owner'),
             $account ?? $capability->merchantAccountRef, $capability->driverId.'-provider', $capability->driverId, $driverVersion ?? $capability->driverContractVersion,
-            $capability->snapshotRef, $capability->digest, new SecretRef('secret://fixture/sbp'), 'credential-v1', ['RUB'],
+            $capability->snapshotRef, $capabilityDigest ?? $capability->digest, new SecretRef('secret://fixture/sbp'), 'credential-v1', ['RUB'],
             hash('sha256', $revision), $time, new MerchantRevisionPolicy($time, null, null, 'fixture-sbp.v1', $revision.'-webhook',
                 $revision.'-continuity', $revision.'-settlement', $revision.'-mandate'));
     }
