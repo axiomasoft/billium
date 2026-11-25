@@ -34,10 +34,15 @@ final class RatingGuardTest extends TestCase
     /** @return iterable<string, array{Closure(): mixed, string}> */
     public static function refused(): iterable
     {
-        $validate = static fn (array $overrides): mixed => (new StrategyCatalog)->validate(self::price($overrides));
+        $validate = /** @param array<string, mixed> $overrides */ static function (array $overrides): PriceVersion {
+            $price = self::price($overrides);
+            (new StrategyCatalog)->validate($price);
+
+            return $price;
+        };
         $rules = static fn (int $scale, string $increment = '1', IncrementMode $mode = IncrementMode::None): QuantityRules => new QuantityRules(quantityScale: $scale, conversionNumerator: '1', conversionDenominator: '1', billingIncrement: $increment, incrementMode: $mode);
-        $commitment = static fn (array $overrides): CommitmentTerms => new CommitmentTerms(...[...['sellerRef' => 'seller-a', 'billingAccountRef' => 'customer',
-            'componentRef' => 'api', 'currency' => 'USD', 'periodRef' => 'p1', 'minimumMinor' => 100, 'maximumMinor' => 500, 'consumedByAlreadyBilled' => true, 'appliesAt' => 'period_final'], ...$overrides]);
+        $commitment = static fn (?int $minimum = 100, ?int $maximum = 500, string $currency = 'USD', bool $consumed = true): CommitmentTerms => new CommitmentTerms(sellerRef: 'seller-a',
+            billingAccountRef: 'customer', componentRef: 'api', currency: $currency, periodRef: 'p1', minimumMinor: $minimum, maximumMinor: $maximum, consumedByAlreadyBilled: $consumed, appliesAt: 'period_final');
         $priced = static fn (PriceVersion $price, string $quantity, ?CommitmentBasis $basis = null, StrategyId $strategy = StrategyId::PerUnit): mixed => (new StrategyCatalog)->resolve(id: $strategy, version: 1)->price(new PricingInput(price: $price, quantity: $quantity, commitmentBasis: $basis));
         $invalid = 'billium.rating.terms_invalid';
 
@@ -50,14 +55,14 @@ final class RatingGuardTest extends TestCase
         yield 'increment finer than the quantity scale' => [static fn (): mixed => $validate(['quantityRules' => $rules(0, '0.5', IncrementMode::Ceil)]), $invalid.': invalid billing increment'];
         yield 'fixed price outside one occurrence' => [static fn (): mixed => $validate(['strategyId' => StrategyId::Fixed, 'terms' => new FixedTerms(amount: '1', scope: 'per_invoice')]), 'billium.rating.unsupported_combination: fixed scope'];
         yield 'unit price beyond twelve decimals' => [static fn (): mixed => $validate(['terms' => new PerUnitTerms(unitPrice: '0.0000000000001')]), $invalid.': invalid non-negative amount'];
-        yield 'commitment without bounds' => [static fn (): mixed => $validate(['commitment' => $commitment(['minimumMinor' => null, 'maximumMinor' => null])]), $invalid.': invalid monetary bounds'];
-        yield 'negative commitment minimum' => [static fn (): mixed => $validate(['commitment' => $commitment(['minimumMinor' => -1])]), $invalid.': invalid monetary bounds'];
-        yield 'negative commitment maximum' => [static fn (): mixed => $validate(['commitment' => $commitment(['minimumMinor' => null, 'maximumMinor' => -1])]), $invalid.': invalid monetary bounds'];
-        yield 'commitment in another currency' => [static fn (): mixed => $validate(['commitment' => $commitment(['currency' => 'EUR'])]), 'billium.rating.unsupported_combination: commitment scope or currency'];
-        yield 'commitment not consumed by billed usage' => [static fn (): mixed => $validate(['commitment' => $commitment(['consumedByAlreadyBilled' => false])]), 'billium.rating.unsupported_combination: commitment scope or currency'];
+        yield 'commitment without bounds' => [static fn (): mixed => $validate(['commitment' => $commitment(null, null)]), $invalid.': invalid monetary bounds'];
+        yield 'negative commitment minimum' => [static fn (): mixed => $validate(['commitment' => $commitment(-1)]), $invalid.': invalid monetary bounds'];
+        yield 'negative commitment maximum' => [static fn (): mixed => $validate(['commitment' => $commitment(null, -1)]), $invalid.': invalid monetary bounds'];
+        yield 'commitment in another currency' => [static fn (): mixed => $validate(['commitment' => $commitment(currency: 'EUR')]), 'billium.rating.unsupported_combination: commitment scope or currency'];
+        yield 'commitment not consumed by billed usage' => [static fn (): mixed => $validate(['commitment' => $commitment(consumed: false)]), 'billium.rating.unsupported_combination: commitment scope or currency'];
         yield 'price of another strategy' => [static fn (): mixed => $priced(self::price([]), '1', strategy: StrategyId::Fixed), $invalid.': strategy mismatch'];
         yield 'quantity finer than the quantity scale' => [static fn (): mixed => $priced(self::price([]), '1.0001'), $invalid.': quantity scale exceeded'];
-        yield 'negative billed commitment basis' => [static fn (): mixed => $priced(self::price(['commitment' => $commitment([])]), '1', new CommitmentBasis(alreadyBilledNetMinor: '-1', basisDigest: 'frozen')), $invalid.': frozen commitment basis required'];
+        yield 'negative billed commitment basis' => [static fn (): mixed => $priced(self::price(['commitment' => $commitment()]), '1', new CommitmentBasis(alreadyBilledNetMinor: '-1', basisDigest: 'frozen')), $invalid.': frozen commitment basis required'];
         yield 'minor amount in a foreign exponent' => [static fn (): mixed => MoneyFactory::fromMinor('100', 'USD', 3), $invalid.': invalid money'];
         yield 'fractional minor amount' => [static fn (): mixed => MoneyFactory::fromMinor('1.5', 'USD', 2), $invalid.': invalid money'];
         yield 'negative zero minor amount' => [static fn (): mixed => MoneyFactory::fromMinor('-0', 'USD', 2), $invalid.': invalid money'];
