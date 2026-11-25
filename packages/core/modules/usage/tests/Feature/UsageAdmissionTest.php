@@ -17,6 +17,7 @@ use Billium\Usage\Internal\UsageQueries;
 use Billium\Usage\Tests\Support\UsageFixtures;
 use Billium\Usage\Tests\UsageTestCase;
 use Illuminate\Database\QueryException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use stdClass;
 
@@ -61,6 +62,44 @@ final class UsageAdmissionTest extends UsageTestCase
         self::assertSame($originalDigest, $this->value("SELECT body::jsonb#>>'{correction,originalFactDigest}' FROM billium_usage_fact WHERE revision = 2"));
         self::assertSame(2, $this->rows('billium_usage_fact', "mapping_ref = 'mapping-1'"));
         self::assertSame(0, $this->rows('billium_money_commit_log'));
+    }
+
+    /** @return iterable<string, array{array<string, mixed>, string}> */
+    public static function pinDivergences(): iterable
+    {
+        yield 'semantics differ from the metric model' => [['semantics' => 'gauge'], '10'];
+        yield 'subject differs from the pinned attribution' => [['subjectRef' => 'another-subject'], '10'];
+        yield 'quantity differs from the pinned value' => [[], '11'];
+    }
+
+    /** @param array<string, mixed> $changes */
+    #[DataProvider('pinDivergences')]
+    public function test_v1_fact_that_differs_from_its_pinned_input_is_refused(array $changes, string $pinnedQuantity): void
+    {
+        $v2 = UsageFixtures::fact();
+        $caller = new Caller('seller-a', 'test', self::INSTALLATION, 'courier', ['tariffler']);
+        $this->callers->set($caller);
+        $snapshot = $this->mappings->resolve($caller, $v2);
+        self::assertNotNull($snapshot);
+        $inputs = $this->createMock(UsageFactV1Attribution::class);
+        $inputs->method('resolve')->willReturn(new UsageFactV1Inputs($snapshot, $v2->provenance->sourceDigest,
+            (object) ['kind' => 'decimal', 'quantity' => $pinnedQuantity], $v2->grouping, $v2->billableStream));
+        $codec = new Codec;
+        $raw = array_replace(['schema' => UsageFact::SCHEMA, 'source' => $v2->source, 'factId' => $v2->factId, 'revision' => $v2->revision,
+            'sellerRef' => $v2->sellerRef, 'subjectRef' => $v2->attribution->subjectRef, 'metricRef' => $v2->metricRef,
+            'metricVersion' => $v2->metricVersion, 'semantics' => 'additive', 'unit' => $v2->unit, 'quantity' => '10',
+            'interval' => $v2->interval, 'eventAt' => $v2->eventAt, 'observedAt' => $v2->eventAt,
+            'provenance' => (object) ['collector' => $v2->provenance->collector, 'version' => $v2->provenance->version, 'sourceRef' => $v2->provenance->sourceRef]], $changes);
+        $fact = $codec->decode($codec->canonicalize($raw + ['digest' => $codec->digest($raw)]));
+        self::assertInstanceOf(UsageFact::class, $fact);
+        try {
+            $this->usage()->acceptUsageFact($fact, $inputs);
+            self::fail('A v1 fact that differs from its pinned input was accepted');
+        } catch (ProblemException $problem) {
+            self::assertSame(ProblemCode::ValidationInvalid, $problem->problem);
+            self::assertSame('Usage fact differs from the pinned commercial input', $problem->detail);
+        }
+        self::assertSame(0, $this->rows('billium_usage_fact'));
     }
 
     public function test_same_fact_from_ten_couriers_returns_one_stored_receipt_and_no_money(): void
