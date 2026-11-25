@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-ledger
 
-Path `packages/core/modules/ledger/src`, namespace `Billium\Ledger\`, layer L2. 100 types.
+Path `packages/core/modules/ledger/src`, namespace `Billium\Ledger\`, layer L2. 101 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -99,6 +99,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`BootstrapPartitionCommand`](../../packages/core/modules/ledger/src/Internal/Commands/BootstrapPartitionCommand.php) | class | *Internal* | ledger.feed.bootstrap (PF-13, PF-14, ACC-RST-07): staged bootstrap of one observation partition over FeedPartitions with the ledger ObservationHandler. |
 | [`CreateInvoiceCommand`](../../packages/core/modules/ledger/src/Internal/Commands/CreateInvoiceCommand.php) | class | *Internal* | Draft over unbilled obligations; no event, no number (D49). |
 | [`CreditNoteGroupRef`](../../packages/core/modules/ledger/src/Internal/Commands/CreditNoteGroupRef.php) | class | *Internal* | The only place that knows how a multi-invoice credit names its parts and how the group reference lists them. |
+| [`CreditNotePlan`](../../packages/core/modules/ledger/src/Internal/Commands/CreditNotePlan.php) | class | *Internal* | The rows a credit note touches, read before and again after its lock plan is taken (COV-167): the invoice and its currency, the credited obligations by ref, an… |
 | [`DeclareSettlementIntentCommand`](../../packages/core/modules/ledger/src/Internal/Commands/DeclareSettlementIntentCommand.php) | class | *Internal* |  |
 | [`DiscardInvoiceCommand`](../../packages/core/modules/ledger/src/Internal/Commands/DiscardInvoiceCommand.php) | class | *Internal* | draft → discarded; the obligations are released. |
 | [`IssueCreditNoteCommand`](../../packages/core/modules/ledger/src/Internal/Commands/IssueCreditNoteCommand.php) | class | *Internal* | Credit note on an issued invoice (COV-167, COV-174): open_only reduces open; reverse_allocations first releases live allocations of the line (LIFO, full revers… |

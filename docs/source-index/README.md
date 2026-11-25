@@ -10,7 +10,7 @@ One page per PHP package. Open the package page, find the directory, then read o
 | [billium-core](billium-core.md) | L2 | 110 | billium-collection, billium-contracts, billium-documents, billium-execution, billium-ledger, billium-platform, billium-rating, billium-schedule, billium-usage |
 | [billium-server](billium-server.md) | L3 | 38 | billium-collection, billium-contracts, billium-core, billium-execution, billium-ledger, billium-platform, billium-rating, billium-schedule, billium-usage |
 | [billium-platform](billium-platform.md) | L2 | 175 | billium-contracts, billium-core |
-| [billium-ledger](billium-ledger.md) | L2 | 100 | billium-contracts, billium-core, billium-platform |
+| [billium-ledger](billium-ledger.md) | L2 | 101 | billium-contracts, billium-core, billium-platform |
 | [billium-usage](billium-usage.md) | L2 | 64 | billium-contracts, billium-core, billium-platform |
 | [billium-schedule](billium-schedule.md) | L2 | 56 | billium-contracts, billium-core, billium-platform |
 | [billium-rating](billium-rating.md) | L2 | 119 | billium-contracts, billium-core, billium-ledger, billium-platform, billium-schedule, billium-usage |
