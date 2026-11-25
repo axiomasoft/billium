@@ -59,6 +59,12 @@ if (PHP_SAPI === 'cli' && ($argv[1] ?? '') === 'refund_contender') {
     $barrier = new ProcessBarrier($journal);
     $barrier->arrive('ready');
     $barrier->await('go', 1, 30_000);
+    // Connect one at a time: contender N waits until N server workers are parked inside their
+    // refund transaction. A `php -S` worker that is still polling can accept two simultaneous
+    // connections and then serve them one after the other, so a burst left only five workers in
+    // the race and the server barrier timed out. Parked workers do not accept, so each new
+    // connection reaches an idle worker; all six transactions still overlap at the server barrier.
+    $barrier->await('server_tx_open', $idx, 20_000);
 
     $cmdKey = sprintf('00000000-0000-4100-8800-0000000006%02d', $idx + 10);
     $opRef = sprintf('ct06-race-ref-%d', $idx + 1);
