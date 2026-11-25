@@ -83,6 +83,14 @@ final class AssignedProviderIdRecoveryTest extends ExecutionTestCase
             })->orThrow();
     }
 
+    private static function sleepUntilPast(DateTimeImmutable $due): void
+    {
+        $remaining = (float) $due->format('U.u') - microtime(true) + 0.1;
+        if ($remaining > 0) {
+            usleep((int) round($remaining * 1_000_000));
+        }
+    }
+
     /** @return list<array{bool,bool}> */
     public static function selections(): array
     {
@@ -117,7 +125,10 @@ final class AssignedProviderIdRecoveryTest extends ExecutionTestCase
                 self::assertSame(1, $this->rows('billium_execution_dispatch_work', "state='parked' AND last_error_code='original_lookup_requires_manual_recovery'"));
                 self::assertSame(0, UnknownResultTest::events($path, 'provider.lookup'));
             }
-            $this->seedPendingFact($capability, $snapshot, new DateTimeImmutable('+1 second'));
+            // The early recovery below must run before the lookup is due; two seconds leave room for a
+            // loaded runner (coverage, parallel workers) where one second was observed to run out.
+            $due = new DateTimeImmutable('+2 seconds');
+            $this->seedPendingFact($capability, $snapshot, $due);
             self::assertSame($snapshot->providerOperationId, $store->providerOperationId($scope, $attemptRef));
             self::assertSame('root-a', $store->operationByProviderId($scope, $event->providerId, $event->merchantAccountRef, $capability->details->lookupNamespace, $snapshot->providerOperationId)?->operationRef);
             self::assertNull($store->operationByProviderId($scope, $event->providerId, 'other-account', $capability->details->lookupNamespace, $snapshot->providerOperationId));
@@ -129,7 +140,7 @@ final class AssignedProviderIdRecoveryTest extends ExecutionTestCase
             } catch (ProblemException $exception) {
                 self::assertSame(ProblemCode::RecoveryRequired, $exception->problem);
             }
-            usleep(1_100_000);
+            self::sleepUntilPast($due);
             $child = new ChildProcess([PHP_BINARY, '-r', 'require "vendor/autoload.php"; Billium\\Execution\\Tests\\Drill\\AssignedProviderIdRecoveryTest::restartedWorker($argv[1],$argv[2]==="ref",$argv[3]==="id");',
                 $path, $reference ? 'ref' : 'no-ref', $byId ? 'id' : 'no-id']);
             self::assertSame(0, $child->wait());
