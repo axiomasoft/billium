@@ -6554,6 +6554,13 @@
       "source": "packages/core/database/migrations/execution/2026_11_25_000005_index_billium_execution_recon_item_review.php"
     },
     {
+      "kind": "migration",
+      "id": "2026_11_25_000006_index_billium_allocation_receipt_ref",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/ledger/2026_11_25_000006_index_billium_allocation_receipt_ref.php"
+    },
+    {
       "kind": "route",
       "id": "billium.server.capabilities",
       "status": "new",

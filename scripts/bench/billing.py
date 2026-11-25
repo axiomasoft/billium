@@ -26,6 +26,7 @@ EXPECTED_INDEXES: list[str] = [
     "billium_ledger_discrepancy_observed_idx",
     "billium_discrepancy_event_discrepancy_idx",
     "billium_allocation_receipt_digest_idx",
+    "billium_allocation_receipt_ref_idx",
     "billium_observation_owner_binding_pkey",
     "billium_idempotency_receipt_scope_key",
     "billium_idempotency_opaque_receipt_scope",
@@ -159,6 +160,19 @@ def build_query_specs() -> list[dict[str, Any]]:
                 "SELECT receipt_ref FROM public.billium_allocation_receipt "
                 "WHERE seller_ref = 'bench-seller-a' AND environment = 'test' "
                 "AND semantic_digest = 'sha256:bench-digest' AND kind = 'refund_detail' LIMIT 1"
+            ),
+        },
+        {
+            "id": "ledger.allocation_by_receipt_ref",
+            "category": "ledger",
+            "table": "billium_allocation",
+            "expectedIndexes": ["billium_allocation_receipt_ref_idx"],
+            "forbidSort": False,
+            "boundedLimit": None,
+            "sql": (
+                "SELECT id, obligation_id FROM public.billium_allocation "
+                "WHERE seller_ref = 'bench-seller-a' AND environment = 'test' "
+                "AND receipt_ref = 'allocation:bench-a' AND reverses_id IS NULL AND amount_minor > 0"
             ),
         },
         {
