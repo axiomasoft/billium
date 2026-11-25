@@ -30,6 +30,7 @@ These checks cannot fail on their own: another check on the same path refuses ev
 | execution | Same-code currency scale on child payments | `Money` uses the canonical scale per currency |
 | execution | Refund root kind | A root is always a charge or an authorization |
 | execution | Same amount with a different binding on root replay | The binding carries the command's semantic digest |
+| collection | Currency comparison in the ledger's collection obligation lock at admission | `openCase` refuses a case whose currency differs from its obligation, and a case's currency never changes; the same lock still checks customer and component |
 | rating | `is_numeric` after the decimal patterns in `Dec` and `MoneyFactory` | The patterns |
 | rating | Currency exponent bounds in `StrategyCatalog` | The exponent must equal the ISO scale of the currency |
 
@@ -43,7 +44,3 @@ These checks guard reachable inputs but need a database fixture larger than a mi
 - ledger: refund rows sharing a charge operation reference in `PaymentProjection`.
 - usage: snapshot-reference and pinned-fact checks in `DatabaseUsage` and `DatabaseAggregationParticipants`.
 - rating: booking, price store and occurrence checks (`DatabaseRatingBooking`, `DatabasePriceVersionStore`, `DatabaseOccurrenceService`, `UsageAggregateAdapter` reopen policy).
-
-## Known behaviour
-
-`OpenDunningCase` accepts a currency that differs from its obligation; only collection admission refuses the case later.

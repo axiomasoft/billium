@@ -19,5 +19,8 @@ interface CollectionObligation
 
     public function lockOutstandingMinor(TransactionContext $context, BillingAccountScope $scope, string $obligationRef, string $intentRef, string $currency, string $customerRef): int;
 
+    /** Currency of the obligation in the billing account, or null when the account has no such obligation; reads without a lock. */
+    public function obligationCurrency(TransactionContext $context, BillingAccountScope $scope, string $obligationRef): ?string;
+
     public function outcomeApplied(TransactionContext $context, BillingAccountScope $scope, string $intentRef, string $operationRef, string $authority, int $revision, string $state): bool;
 }

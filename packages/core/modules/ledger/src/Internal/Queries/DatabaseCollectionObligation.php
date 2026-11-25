@@ -62,6 +62,20 @@ final readonly class DatabaseCollectionObligation implements CollectionObligatio
         return is_int($row->open_minor) ? $row->open_minor : throw new LockPlanChanged('Collection outstanding amount is unavailable');
     }
 
+    public function obligationCurrency(TransactionContext $context, BillingAccountScope $scope, string $obligationRef): ?string
+    {
+        $this->runner->assertCurrent($context, 'ledger');
+        $caller = $context->caller();
+        if ($scope->sellerRef !== $caller->sellerRef || $scope->environment !== $caller->environment) {
+            throw new ProblemException(ProblemCode::AuthDenied, 'Collection obligation is outside the admitted scope');
+        }
+        $currency = $this->databases->connection($context->connectionName())->table('billium_obligation')
+            ->where(['seller_ref' => $scope->sellerRef, 'environment' => $scope->environment, 'installation_ref' => $caller->installationRef,
+                'billing_account_ref' => $scope->billingAccountRef, 'obligation_ref' => $obligationRef])->value('currency');
+
+        return is_string($currency) ? $currency : null;
+    }
+
     /** @return array{Connection, stdClass, int} */
     private function lockObligation(TransactionContext $context, BillingAccountScope $scope, string $obligationRef, string $intentRef, string $currency, string $customerRef, ?string $componentRef): array
     {
