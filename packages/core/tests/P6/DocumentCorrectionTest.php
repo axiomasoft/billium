@@ -217,6 +217,29 @@ final class DocumentCorrectionTest extends DocumentsTestCase
         self::assertNull($cn1->body['resultingLegalDocumentRef'] ?? null);
         self::assertSame(1, $this->rows('billium_document_legal'));
 
+        // An active series of another document type cannot number a credit note.
+        try {
+            $this->correctionService()->issueCreditNote(new IssueDocumentCreditNote(
+                commandKey: 'cmd-cn-inv-series',
+                scope: $this->account(),
+                correctionRef: 'corr-cn-inv-series',
+                creditNoteRef: 'cn-inv-series',
+                originalLegalDocumentRef: $origLegalRef,
+                invoiceRef: 'inv-bundle',
+                mode: CreditNoteMode::OpenOnly,
+                lines: [new CreditNoteLineRequest('line-1', '0.5', 591)],
+                taxPolicy: $policy,
+                reason: 'invoice_series_for_credit',
+                issueLegalDocument: true,
+                seriesRef: 'INV',
+                periodKey: '2026',
+            ));
+            self::fail('credit note numbered in an invoice series');
+        } catch (ProblemException $error) {
+            self::assertSame([ProblemCode::ValidationInvalid, 'billium.documents.series_document_type_mismatch'], [$error->problem, $error->detail]);
+        }
+        self::assertSame(1, $this->rows('billium_document_legal'));
+
         // Partial Credit #2 (exhausts remaining balance with separate CN legal number; original snapshot remains immutable).
         $cn2 = $this->correctionService()->issueCreditNote(new IssueDocumentCreditNote(
             commandKey: 'cmd-cn-2',
@@ -490,6 +513,17 @@ final class DocumentCorrectionTest extends DocumentsTestCase
         ));
         self::assertTrue($writeOff->accepted);
         self::assertSame(CorrectionKind::WriteOff, $this->correctionService()->findCorrection($this->docScope(), 'corr-wo-1')?->correctionKind);
+        foreach (['zero amount' => [0, 'RUB', ProblemCode::ValidationInvalid], 'foreign currency' => [500, 'USD', ProblemCode::MoneyCurrencyMismatch]] as $case => [$amount, $currency, $problem]) {
+            try {
+                $this->correctionService()->recordWriteOff(new RecordDocumentWriteOff(
+                    commandKey: 'cmd-wo-'.$case, scope: $this->docScope(), correctionRef: 'corr-wo-'.$case,
+                    originalLegalDocumentRef: $origRef, amountMinor: $amount, currency: $currency, reason: 'refused_write_off',
+                ));
+                self::fail($case);
+            } catch (ProblemException $error) {
+                self::assertSame($problem, $error->problem, $case);
+            }
+        }
 
         // Void & Reissue voids original (#1), never reuses number #1, and allocates #2 linked to original.
         $finReissue = $this->finalizations()->createDraft(new CreateDocumentDraft(
@@ -1096,6 +1130,20 @@ final class DocumentCorrectionTest extends DocumentsTestCase
         self::assertSame(0, $this->rows('billium_obligation', "obligation_ref = 'ob-f7-pos-bad'"));
         self::assertSame($corrCountBefore, $this->rows('billium_document_correction'));
         self::assertSame($legalCountBefore, $this->rows('billium_document_legal'));
+
+        // A correction in another currency than the original document is refused before any obligation is written.
+        try {
+            $this->correctionService()->issuePositiveCorrection(new IssuePositiveDocumentCorrection(
+                commandKey: 'cmd-usd', scope: $this->account(), correctionRef: 'corr-usd', originalLegalDocumentRef: $origRef,
+                obligationRef: 'ob-usd', customerRef: 'cust-f7orig', componentRef: 'comp-1', parentOccurrenceRef: 'occ-usd',
+                correctionRevision: 1, deltaNetMinor: 1000, deltaTaxMinor: 200, currency: 'USD', taxPolicy: $policy,
+                reason: 'foreign_currency_attempt', issueLegalDocument: false,
+            ));
+            self::fail('Positive correction in another currency than the original must be refused');
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::MoneyCurrencyMismatch, $error->problem);
+        }
+        self::assertSame(0, $this->rows('billium_obligation', "obligation_ref = 'ob-usd'"));
 
         // F12: Ready Correction finalization with matching obligation/amounts (1000/200/1200) but mismatched componentRef ('component-B' vs 'component-A') MUST refuse.
         $this->finalizations()->createDraft(new CreateDocumentDraft(
