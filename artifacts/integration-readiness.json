@@ -3,7 +3,7 @@
   "item": "PLAN1.P9.8",
   "spec_revision": "2026-10",
   "spec_lock_path": "spec/revisions/2026-10/revision.lock.json",
-  "spec_lock_sha256": "sha256:eb021eaa43885c32d8acdf0e0e7821ef03c177058e55567e45c33f652808b2a5",
+  "spec_lock_sha256": "sha256:224975f07c97b8793498f4aec142bdd4aa2be29c3bded382853d0b7fa845a0ad",
   "decision_ids": [
     "D17",
     "D21",
@@ -48,7 +48,7 @@
     {
       "path": "spec/revisions/2026-10/revision.lock.json",
       "role": "spec-lock",
-      "sha256": "sha256:eb021eaa43885c32d8acdf0e0e7821ef03c177058e55567e45c33f652808b2a5"
+      "sha256": "sha256:224975f07c97b8793498f4aec142bdd4aa2be29c3bded382853d0b7fa845a0ad"
     },
     {
       "path": "docs/migrations/source-mapping.json",
@@ -83,12 +83,12 @@
     {
       "path": "conformance/consumers/bridge/tests/reports/valid-loopback-complete.json",
       "role": "consumer-loopback-report-fixture",
-      "sha256": "sha256:1bb824872aee1c809919366c0382670945de013638cd417c06b27ec26b699f6b"
+      "sha256": "sha256:1db6afcaec29b83278f99f890f70f05cbadf255bdd706a5888faeea3746ebb79"
     },
     {
       "path": "conformance/consumers/bridge/tests/reports/valid-external-pending.json",
       "role": "consumer-pending-report-fixture",
-      "sha256": "sha256:91f15dcfbf9f2d50fcf2b00d0e85d1ffa100b89bac15ffcf8b786234db0880a0"
+      "sha256": "sha256:cb22e22a52b8fcdc2ee9fe1abbf62272ab91ab14df37b56fa8cf27ae4d02cda7"
     }
   ],
   "local_runtime_reports": [
@@ -336,7 +336,7 @@
       "evidence_refs": [
         {
           "path": "spec/revisions/2026-10/revision.lock.json",
-          "sha256": "sha256:eb021eaa43885c32d8acdf0e0e7821ef03c177058e55567e45c33f652808b2a5"
+          "sha256": "sha256:224975f07c97b8793498f4aec142bdd4aa2be29c3bded382853d0b7fa845a0ad"
         },
         {
           "path": "docs/migrations/source-mapping.json",
@@ -428,7 +428,7 @@
         },
         {
           "path": "conformance/consumers/bridge/tests/reports/valid-loopback-complete.json",
-          "sha256": "sha256:1bb824872aee1c809919366c0382670945de013638cd417c06b27ec26b699f6b"
+          "sha256": "sha256:1db6afcaec29b83278f99f890f70f05cbadf255bdd706a5888faeea3746ebb79"
         }
       ],
       "reason": "CT-01..CT-20 passed on local loopback with externalReady=false and rolloutGatePassed=false; double/loopback promotion blocked by check-report.py."
@@ -537,7 +537,7 @@
       "evidence_refs": [
         {
           "path": "conformance/consumers/bridge/tests/reports/valid-external-pending.json",
-          "sha256": "sha256:91f15dcfbf9f2d50fcf2b00d0e85d1ffa100b89bac15ffcf8b786234db0880a0"
+          "sha256": "sha256:cb22e22a52b8fcdc2ee9fe1abbf62272ab91ab14df37b56fa8cf27ae4d02cda7"
         }
       ],
       "reason": "No authorized external consumer deployment is attached; remote rollout stays disabled while local loopback suite is green (D59/D71)."
@@ -753,5 +753,5 @@
       "schema_rollback_authorizes_fact_deletion_or_replay": false
     }
   },
-  "manifestDigest": "sha256:fbe6f7b7dd1133d77548af95fc5d7c0ac9ba1f0e19a4495a81cb3d8a2a1a754a"
+  "manifestDigest": "sha256:e4240e9f387237878457ce24011e05dce8c3588fa3c8f04ce8cc4c9a1ed5d10b"
 }
