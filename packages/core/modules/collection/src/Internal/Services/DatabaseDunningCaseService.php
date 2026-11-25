@@ -28,6 +28,7 @@ use Billium\Collection\Internal\CollectionReceipt;
 use Billium\Collection\Internal\Queries\DatabaseDunningQueries;
 use Billium\Collection\Internal\Support\RetryJitter;
 use Billium\Collection\Internal\Support\RowCast;
+use Billium\Collection\Internal\Validation\ObligationCurrencyGuard;
 use Billium\Collection\Internal\Work\CollectionWork;
 use Billium\Collection\Internal\Work\CollectionWorkClaim;
 use Billium\Contracts\Contracts\Codec;
@@ -50,8 +51,6 @@ use Billium\Core\Enums\Runner\LockScope;
 use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Exceptions\Runner\LockPlanChanged;
 use Billium\Execution\Data\ExecutionScope;
-use Billium\Ledger\Contracts\CollectionObligation;
-use Billium\Ledger\Data\Runtime\BillingAccountScope;
 use Billium\Platform\Contracts\Idempotency\IdempotencyReceiptQueries;
 use Billium\Platform\Data\Idempotency\PinnedCommand;
 use DateTimeImmutable;
@@ -86,7 +85,7 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
         private DatabaseCollectionParticipants $participants,
         private IdempotencyReceiptQueries $receipts,
         private CollectionWork $work,
-        private CollectionObligation $obligations,
+        private ObligationCurrencyGuard $obligationCurrency,
     ) {}
 
     #[Override]
@@ -148,11 +147,7 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
             body: function (TransactionContext $context) use ($caller, $command, $currency, $caseDigest): CollectionReceipt {
                 $this->runner->assertCurrent($context, 'collection');
                 $db = $this->databases->connection($context->connectionName());
-                $obligationCurrency = $this->obligations->obligationCurrency($context,
-                    new BillingAccountScope($caller->sellerRef, $caller->environment, $command->billingAccountRef), $command->obligationRef);
-                if ($obligationCurrency !== null && $obligationCurrency !== $currency) {
-                    throw new ProblemException(ProblemCode::MoneyCurrencyMismatch, 'billium.collection.obligation_currency_mismatch');
-                }
+                $this->obligationCurrency->assertMatches($context, $caller, $command->billingAccountRef, $command->obligationRef, $currency);
 
                 if ($command->componentRef !== null) {
                     $activeOwner = $db->table('billium_collection_recurring_owner')
