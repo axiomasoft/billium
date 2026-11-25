@@ -48,9 +48,9 @@ Left without an index on purpose: `billium_feed_bootstrap_session.new_partition_
 
 ## Bounded Batching & Cursor Pagination
 
-All queue, feed, and list reads enforce explicit upper bounds and stable keyset cursors instead of `OFFSET`:
+Queue, feed, and list reads use explicit limits and stable keyset cursors instead of `OFFSET`:
 
-- **`LedgerQueries::dueObligations`**: uses `(due_at, id)` keyset cursor pagination with `LIMIT (limit + 1)` to detect `nextCursor` cleanly on `billium_obligation_account_due_idx`.
+- **`LedgerQueries::dueObligations`**: uses `(due_at, id)` keyset cursor pagination with `LIMIT (limit + 1)` to detect `nextCursor` cleanly on `billium_obligation_account_due_idx`. The page stays within one billing account, but `billium.query.v1` allows any `limit` up to 2^53 − 1, so the caller, not the server, bounds the page size.
 - **`OutboxRelay::claim`**: enforces `1 <= limit <= 1000`, filters by `available_at <= statement_timestamp()` (a stable clock so PostgreSQL stops at the first future backoff row), and locks only the bounded batch with `FOR UPDATE OF d SKIP LOCKED`.
 - **`EventFeedReader::read`**: walks `(tx_id, id)` in index order up to `pg_snapshot_xmin(pg_current_snapshot())` with an explicit page `LIMIT`, preventing cross-seller scans or external `Sort` nodes.
 - **`OutboxPruner::prune`**: removes safe prefixes in bounded batches of at most `1000` rows per transaction.
