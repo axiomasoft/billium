@@ -106,5 +106,6 @@
   "2026_11_25_000003_index_billium_ledger_discrepancy_lookups",
   "2026_11_25_000004_index_billium_allocation_receipt_digest",
   "2026_11_25_000005_index_billium_execution_recon_item_review",
-  "2026_11_25_000006_index_billium_allocation_receipt_ref"
+  "2026_11_25_000006_index_billium_allocation_receipt_ref",
+  "2026_11_25_000007_index_billium_document_credit_note_line_original"
 ]

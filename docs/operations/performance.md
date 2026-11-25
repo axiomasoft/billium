@@ -13,6 +13,7 @@ Billium verifies hot-path PostgreSQL query plans, bounded batching, seller-scope
 | Ledger | `billium_ledger_discrepancy` | `billium_ledger_discrepancy_observed_idx` | `(seller_ref, environment, observed_payment_id)` | Unresolved discrepancies of a charge and its refunds in payment status |
 | Ledger | `billium_discrepancy_event` | `billium_discrepancy_event_discrepancy_idx` | `(discrepancy_id, kind)` | Resolution check in payment status and refund reconcile |
 | Ledger | `billium_allocation_receipt` | `billium_allocation_receipt_digest_idx` | `(seller_ref, environment, semantic_digest)` | Refund detail replay probe, refund reconcile basis, payment status and checkpoint receipt lookups |
+| Documents | `billium_document_credit_note_line` | `billium_document_credit_note_line_original_idx` | `(seller_ref, environment, original_legal_document_id)` | Prior credits of the original invoice in a document correction |
 | Execution | `billium_execution_recon_item` | `billium_execution_recon_item_review_idx` | `(review_ref) WHERE review_ref IS NOT NULL` | Manual repair lookup of a reviewed inventory item (late refund adjudication, linked correction approval) |
 | Ledger | `billium_allocation` | `billium_allocation_obligation_idx` | `(seller_ref, environment, obligation_id, id)` | Allocations by obligation in deterministic ID order |
 | Ledger | `billium_allocation` | `billium_allocation_receipt_ref_idx` | `(seller_ref, environment, receipt_ref)` | `reverseAllocation` lookup of the original allocation by its public reference |
@@ -45,6 +46,7 @@ Each change below has a plan test that fails without it (one is a query rewrite 
 | Refund detail replay probe in `billium_record_refund_detail()` | 700k receipts | 50 ms | 0.07 ms | `scripts/bench/billing.py` (`ledger.refund_detail_by_digest`) |
 | Reviewed inventory item lookup in manual repair | 1M retained items | 75 ms | 0.09 ms | `HotPathIndexTest` |
 | Original allocation lookup in `reverseAllocation` (read before and after its lock plan) | 500k allocations | 31 ms | 0.06 ms | `ReverseAllocationLookupPlanTest`, `scripts/bench/billing.py` (`ledger.allocation_by_receipt_ref`) |
+| Prior credit note lines of the original invoice in a document correction | 400k credit note lines | 28–35 ms | 0.04 ms | `CreditNoteLineLookupPlanTest` |
 | Per-case child reads in `DunningQueries` and `CollectionInterventionQueries` (steps, policy migrations, notifications, signals, interventions): resolve the case id by `case_ref`, then read the child `(seller_ref, environment, dunning_case_id, …)` index; no new index | 100k cases, 300k steps, 200k notifications | 24 ms (steps), 19 ms (notification by key) | 0.04 ms | `CaseRefLookupPlanTest` |
 
 Left without an index on purpose: `billium_feed_bootstrap_session.new_partition_id` is read only during gap recovery and bootstrap proof (9 ms even at 100k sessions), and foreign keys of append-only tables are not indexed by default: their parent rows are never deleted, so such an index would only serve a join. Add one only for a measured hot path.
