@@ -15,12 +15,26 @@ use Packman\Attributes\Internal;
 #[Internal]
 final class ObservationOwnership
 {
+    /**
+     * SQL expression of an owner binding's primary key for the observed operation behind the given table alias.
+     * It must stay identical to the key billium_claim_observation_owner() derives, so a lookup by it uses the
+     * primary key instead of scanning every binding.
+     *
+     * @param  literal-string  $alias
+     * @return literal-string
+     */
+    public static function bindingKey(string $alias): string
+    {
+        return "encode(sha256(convert_to(jsonb_build_array({$alias}.seller_ref,{$alias}.environment,{$alias}.source_authority,{$alias}.operation_ref)::text,'UTF8')),'hex')";
+    }
+
     public static function hasLegacyRevision(Connection $db, PaymentObservation $o): bool
     {
         return $db->table('billium_observed_payment as p')->where('p.installation_ref', $o->installationRef)->where('p.seller_ref', $o->sellerRef)
             ->where('p.environment', $o->environment)->where('p.source_authority', $o->sourceAuthority)->where('p.provider_account_ref', $o->providerAccountRef)
             ->where('p.operation_ref', $o->operationRef)->whereNotExists(static fn (Builder $q) => $q->selectRaw('1')
-            ->from('billium_observation_owner_binding as b')->whereColumn('b.seller_ref', 'p.seller_ref')->whereColumn('b.environment', 'p.environment')
+            ->from('billium_observation_owner_binding as b')->whereRaw('b.operation_key = '.self::bindingKey('p'))
+            ->whereColumn('b.seller_ref', 'p.seller_ref')->whereColumn('b.environment', 'p.environment')
             ->whereColumn('b.source_authority', 'p.source_authority')->whereColumn('b.operation_ref', 'p.operation_ref'))->exists();
     }
 

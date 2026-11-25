@@ -183,6 +183,7 @@ final readonly class ParkedDrainer
         }
         $authorities = implode(',', array_fill(0, count($caller->sourceAuthorities), '?'));
         $ready = self::DEPENDENCY_READY;
+        $bindingKey = ObservationOwnership::bindingKey('o');
         $statuses = [];
         $refusal = null;
         $attemptedParks = [];
@@ -193,7 +194,8 @@ final readonly class ParkedDrainer
             SELECT k.id, k.inbox_id, o.source_authority, binding.intent_owner_namespace FROM public.billium_observation_park k
             JOIN public.billium_observed_payment o
               ON o.id = k.observed_payment_id AND o.seller_ref = k.seller_ref AND o.environment = k.environment
-            LEFT JOIN public.billium_observation_owner_binding binding ON binding.seller_ref=o.seller_ref AND binding.environment=o.environment
+            LEFT JOIN public.billium_observation_owner_binding binding ON binding.operation_key={$bindingKey}
+               AND binding.seller_ref=o.seller_ref AND binding.environment=o.environment
                AND binding.installation_ref=o.installation_ref AND binding.source_authority=o.source_authority AND binding.operation_ref=o.operation_ref
                AND binding.provider_account_ref=o.provider_account_ref
             WHERE (binding.intent_owner_namespace IS NULL OR binding.intent_owner_namespace IN (SELECT jsonb_array_elements_text(?::jsonb)))
