@@ -32,7 +32,7 @@ Billium verifies hot-path PostgreSQL query plans, bounded batching, seller-scope
 
 ## Measured Index Additions
 
-Each change below has a plan test that fails without it, except the replay probe, which runs inside a routine; `scripts/bench/billing.py` checks its index instead. Timings are single-seller `EXPLAIN ANALYZE` runs on PostgreSQL 18 before and after the change, on synthetic tables at the stated scale:
+Each change below has a plan test that fails without it (one is a query rewrite on existing indexes), except the replay probe, which runs inside a routine; `scripts/bench/billing.py` checks its index instead. Timings are single-seller `EXPLAIN ANALYZE` runs on PostgreSQL 18 before and after the change, on synthetic tables at the stated scale:
 
 | Query path | Scale | Before | After | Plan test |
 | :--- | :--- | ---: | ---: | :--- |
@@ -43,6 +43,7 @@ Each change below has a plan test that fails without it, except the replay probe
 | Refund reconcile basis in `RefundReconciler::compare` | 250k observations, 500k revisions, 700k receipts | 159 ms | 0.15 ms | `RefundReconcileLookupPlanTest` |
 | Refund detail replay probe in `billium_record_refund_detail()` | 700k receipts | 50 ms | 0.07 ms | `scripts/bench/billing.py` (`ledger.refund_detail_by_digest`) |
 | Reviewed inventory item lookup in manual repair | 1M retained items | 75 ms | 0.09 ms | `HotPathIndexTest` |
+| Per-case child reads in `DunningQueries` and `CollectionInterventionQueries` (steps, policy migrations, notifications, signals, interventions): resolve the case id by `case_ref`, then read the child `(seller_ref, environment, dunning_case_id, …)` index; no new index | 100k cases, 300k steps, 200k notifications | 24 ms (steps), 19 ms (notification by key) | 0.04 ms | `CaseRefLookupPlanTest` |
 
 Left without an index on purpose: `billium_feed_bootstrap_session.new_partition_id` is read only during gap recovery and bootstrap proof (9 ms even at 100k sessions), and foreign keys of append-only tables are not indexed by default: their parent rows are never deleted, so such an index would only serve a join. Add one only for a measured hot path.
 
