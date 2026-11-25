@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Ledger\Tests\Commands;
 
+use Billium\Contracts\Data\Currency;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
@@ -216,6 +217,23 @@ final class AllocationCommandsTest extends LedgerTestCase
 
         // The same reversal in the original currency still goes through.
         self::assertSame('6000', $this->reverse('rub', 'a1', '60.00')->orThrow()->body['remainder_minor'] ?? null);
+    }
+
+    public function test_an_amount_with_a_forged_currency_scale_is_refused_and_changes_nothing(): void
+    {
+        $this->obligation('o1', 10000);
+        $this->payWith();
+        // Currency is publicly constructible: 100 RUB at scale 0 is 100 minor units to the routine, i.e. 1.00 RUB.
+        $forged = new Money(100, new Currency('RUB', 0));
+        try {
+            $this->ledger()->allocate(new Allocate('alloc-forged', $this->account(), 'forged', 'o1', $forged, 'payment-a', null));
+            self::fail('an amount whose scale differs from the frozen exponent table is refused');
+        } catch (ProblemException $e) {
+            self::assertSame(ProblemCode::MoneyScaleInvalid, $e->problem);
+        }
+        self::assertSame(0, $this->rows('billium_allocation'));
+        self::assertSame(0, $this->obligationState('o1')['allocated']);
+        self::assertSame(['allocated' => 0, 'flag' => false], $this->paymentState());
     }
 
     public function test_positive_remainders_can_be_reversed_through_the_returned_journal_identity_until_zero(): void
