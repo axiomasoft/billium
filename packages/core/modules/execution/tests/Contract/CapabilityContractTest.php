@@ -289,6 +289,29 @@ final class CapabilityContractTest extends TestCase
         self::assertSame([], $manifest->officialSources);
     }
 
+    /** @return iterable<string, array{SnapshotOverrides}> */
+    public static function inconsistentSnapshots(): iterable
+    {
+        yield 'empty capability version' => [['capabilityVersion' => '']];
+        yield 'keyed currencies' => [['currencies' => [1 => 'RUB']]];
+        yield 'no currencies' => [['currencies' => []]];
+        yield 'lowercase currency' => [['currencies' => ['rub']]];
+        yield 'partial refund without refund effect' => [['partialRefund' => true]];
+        yield 'partial void without authorization effect' => [['partialVoidAuthorization' => true]];
+    }
+
+    /** @param SnapshotOverrides $overrides */
+    #[DataProvider('inconsistentSnapshots')]
+    public function test_an_incomplete_or_inconsistent_snapshot_is_refused(array $overrides): void
+    {
+        try {
+            self::snapshot($overrides);
+            self::fail('inconsistent capability snapshot');
+        } catch (ProblemException $e) {
+            self::assertSame(ProblemCode::ValidationInvalid, $e->problem);
+        }
+    }
+
     public function test_malformed_capability_lists_refuse_at_the_boundary(): void
     {
         $this->expectException(ProblemException::class);

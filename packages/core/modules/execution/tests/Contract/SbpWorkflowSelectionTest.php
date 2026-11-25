@@ -171,6 +171,13 @@ final class SbpWorkflowSelectionTest extends TestCase
         );
     }
 
+    public function test_a_merchant_revision_without_capability_snapshot_is_refused(): void
+    {
+        $merchant = self::merchant('bank-a', self::snapshot('bank-a', refunds: false));
+        $this->expectException(ProblemException::class);
+        new MerchantRevision(...array_replace(get_object_vars($merchant), ['capabilitySnapshotRef' => '']));
+    }
+
     private static function merchant(string $revision, CapabilitySnapshot $capability, string $environment = 'test', ?string $account = null, ?string $driverVersion = null): MerchantRevision
     {
         $time = new DateTimeImmutable('2026-11-17T00:00:00Z');
