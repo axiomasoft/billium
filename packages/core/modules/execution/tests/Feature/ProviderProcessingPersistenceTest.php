@@ -461,6 +461,15 @@ final class ProviderProcessingPersistenceTest extends ExecutionTestCase
             $registry = $this->application()->make(AbsenceProofRegistry::class);
             $proof = $registry->verify($cert, $op, $attempt, $cap);
             $untrusted = VerifiedAbsence::verify(self::createStub(ProviderAbsenceVerifier::class), $cert, $op, $attempt, $cap);
+            foreach (['capability without absence certification' => ['absenceCertification' => false],
+                'capability of another qualification' => ['qualificationEvidenceRef' => 'other-qualification']] as $case => $change) {
+                try {
+                    VerifiedAbsence::verify(self::createStub(ProviderAbsenceVerifier::class), $cert, $op, $attempt, new CapabilitySnapshot(...array_replace(get_object_vars($cap), $change)));
+                    self::fail($case);
+                } catch (ProblemException $e) {
+                    self::assertSame(ProblemCode::ValidationInvalid, $e->problem, $case);
+                }
+            }
             $merchant = $this->store->merchantRevision($scope, $op->binding->merchantRevisionRef);
             $lookup = new ProviderLookupResult(ProviderLookupState::CertifiedAbsent, null, null, $cert, null, null);
             $journal = $this->application()->make(AttemptJournal::class);

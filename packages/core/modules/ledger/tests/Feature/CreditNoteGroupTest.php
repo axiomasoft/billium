@@ -65,6 +65,19 @@ final class CreditNoteGroupTest extends LedgerTestCase
         self::assertSame(0, $this->rows('billium_credit_note'));
     }
 
+    public function test_an_empty_group_is_refused(): void
+    {
+        $this->fixture();
+        try {
+            $this->runner()->run($this->spec(key: 'k-empty'), fn (TransactionContext $context): Receipt => self::receipt([
+                'ref' => $this->participant()->issue($context, $this->group([]))->creditNoteRef]));
+            self::fail('An empty credit-note group was accepted');
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::ValidationInvalid, $error->problem);
+        }
+        self::assertSame(0, $this->rows('billium_credit_note'));
+    }
+
     private function fixture(): void
     {
         foreach (['a', 'b'] as $suffix) {
