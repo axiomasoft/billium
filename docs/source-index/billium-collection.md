@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-collection
 
-Path `packages/core/modules/collection/src`, namespace `Billium\Collection\`, layer L2. 98 types.
+Path `packages/core/modules/collection/src`, namespace `Billium\Collection\`, layer L2. 99 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -151,6 +151,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
 | [`DefaultSavedMethodCapabilityValidator`](../../packages/core/modules/collection/src/Internal/Validation/DefaultSavedMethodCapabilityValidator.php) | class | *Internal* |  |
+| [`ObligationCurrencyGuard`](../../packages/core/modules/collection/src/Internal/Validation/ObligationCurrencyGuard.php) | class | *Internal* | A dunning case collects its obligation in the obligation's own currency; an unknown obligation is left to admission. |
 
 ## Internal/Work
 
