@@ -182,17 +182,6 @@ jobs:
       - run: bash scripts/ci.sh --step "$STEP"
         env:
           STEP: ${{ matrix.step }}
-      - name: Keep diagnostics of a failed run
-        if: failure()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: diagnostics-${{ matrix.step }}
-          # Runner logs and readiness reports land under build/; they are the only trace of a failed drill.
-          path: |
-            billium/build/**/*.log
-            billium/build/**/*.json
-          if-no-files-found: ignore
-          retention-days: 7
 
   quality:
     name: Quality ${{ matrix.step }}
@@ -415,6 +404,17 @@ jobs:
       - run: bash scripts/ci.sh --step "$STEP"
         env:
           STEP: ${{ matrix.step }}
+      - name: Keep diagnostics of a failed run
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: diagnostics-${{ matrix.step }}
+          # Runner logs and readiness reports land under build/; they are the only trace of a failed drill.
+          path: |
+            billium/build/**/*.log
+            billium/build/**/*.json
+          if-no-files-found: ignore
+          retention-days: 7
 
   toolchain:
     name: Toolchain image
