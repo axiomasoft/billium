@@ -62,6 +62,7 @@ Queue, feed, and list reads use explicit limits and stable keyset cursors instea
 - **`EventFeedReader::read`**: walks `(tx_id, id)` in index order up to `pg_snapshot_xmin(pg_current_snapshot())` with an explicit page `LIMIT`, preventing cross-seller scans or external `Sort` nodes.
 - **`OutboxPruner::prune`**: removes safe prefixes in bounded batches of at most `1000` rows per transaction.
 - **Execution & collection due work**: claim queries bound rows with `ORDER BY due_at, id LIMIT N` (or `ORDER BY next_attempt_at, step_id LIMIT N`).
+- **`ImportReconciler::reconcileBatch`**: resolves the revision mapping and the applied receipt of staged rows in chunks of 500, one set-based query each per chunk, instead of two queries per row (`ImportReconcileQueryBudgetTest`). On PostgreSQL 18 with 11k staged rows this cut the call from 28,034 queries and 8.0 s to 6,058 queries and 3.3 s, with an identical report. The rest is the per-row `ImportMonetaryPort::findObservationOutcome` call for mapped payment and refund evidence, which stays per row because the port takes one operation. The staged rows are still loaded at once, because the manifest inventory checksum covers the whole batch.
 
 ## Isolation & Dispatch Contention Guardrails
 
