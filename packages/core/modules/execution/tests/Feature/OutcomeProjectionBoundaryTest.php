@@ -142,6 +142,12 @@ final class OutcomeProjectionBoundaryTest extends ExecutionTestCase
         $audits = $history->admissionConflicts($scope, 'remote-billium', AuthorizePayment::SCHEMA, 'checkout', Fixture::key(1));
         self::assertCount(1, $audits);
         $audit = $audits[0];
+        try {
+            $history->admissionConflicts($scope, 'remote-billium', AuthorizePayment::SCHEMA, 'checkout', Fixture::key(1), 0);
+            self::fail('An empty conflict page was accepted');
+        } catch (ProblemException $e) {
+            self::assertSame([ProblemCode::ValidationInvalid, 'Invalid admission conflict query'], [$e->problem, $e->detail]);
+        }
         $lookup = $queries->receipt($scope, $receiptRef);
         $find = $queries->find($scope, 'root-a');
         $status = $queries->status($scope, 'root-a');
