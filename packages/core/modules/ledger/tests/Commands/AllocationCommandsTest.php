@@ -198,6 +198,26 @@ final class AllocationCommandsTest extends LedgerTestCase
         self::assertSame(6000, $this->obligationState('obligation-a')['allocated']);
     }
 
+    public function test_a_remainder_in_another_currency_is_refused_and_changes_nothing(): void
+    {
+        $this->obligation('o1', 10000);
+        $this->payWith();
+        $this->allocateFrom('a1', 'o1', '100.00')->orThrow();
+        try {
+            $this->ledger()->reverseAllocation(new ReverseAllocation('rev-usd', $this->account(), 'usd', 'a1', 'correction', Money::parse('60.00', 'USD')));
+            self::fail('a remainder is placed in the currency of the original allocation');
+        } catch (ProblemException $e) {
+            self::assertSame(ProblemCode::MoneyCurrencyMismatch, $e->problem);
+        }
+        self::assertSame(1, $this->rows('billium_allocation'));
+        self::assertSame(10000, $this->obligationState('o1')['allocated']);
+        self::assertSame(['allocated' => 10000, 'flag' => false], $this->paymentState());
+        self::assertSame(0, $this->rows('billium_idempotency_receipt', "command_key LIKE '%rev-usd%'"));
+
+        // The same reversal in the original currency still goes through.
+        self::assertSame('6000', $this->reverse('rub', 'a1', '60.00')->orThrow()->body['remainder_minor'] ?? null);
+    }
+
     public function test_positive_remainders_can_be_reversed_through_the_returned_journal_identity_until_zero(): void
     {
         $this->obligation('o1', 10000);
