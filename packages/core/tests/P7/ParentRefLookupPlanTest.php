@@ -13,9 +13,9 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use stdClass;
 
-/** Per-case reads of dunning child rows go through the case id index, never through every child row of the seller. */
+/** Per-case and per-consent child reads go through the parent id index, never through every child row of the seller. */
 #[Group('pg')]
-final class CaseRefLookupPlanTest extends CollectionTestCase
+final class ParentRefLookupPlanTest extends CollectionTestCase
 {
     /** @return iterable<string, array{string, string}> */
     public static function reads(): iterable
@@ -25,10 +25,11 @@ final class CaseRefLookupPlanTest extends CollectionTestCase
         yield 'case notifications' => ['billium_collection_notification', 'billium_collection_notification_case_idx'];
         yield 'case signals' => ['billium_collection_host_signal', 'billium_collection_host_signal_case_idx'];
         yield 'case interventions' => ['billium_collection_manual_intervention', 'billium_collection_manual_intervention_case_idx'];
+        yield 'consent tombstones' => ['billium_collection_guard_tombstone', 'billium_collection_guard_tomb_seller_ref_environment_consen_key'];
     }
 
     #[DataProvider('reads')]
-    public function test_a_case_read_uses_the_child_case_index(string $table, string $index): void
+    public function test_a_child_read_uses_the_parent_id_index(string $table, string $index): void
     {
         $lookups = [];
         $this->application()->make(Dispatcher::class)->listen(QueryExecuted::class, static function (QueryExecuted $query) use (&$lookups, $table): void {
@@ -46,6 +47,7 @@ final class CaseRefLookupPlanTest extends CollectionTestCase
         $intervention->findNotificationByKey($scope, 'case-x', 1, 'tpl', '1', NotificationChannel::Email);
         $intervention->listCaseSignals($scope, 'case-x');
         $intervention->listCaseManualInterventions($scope, 'case-x');
+        $this->consentQueries()->listTombstones($scope, 'consent-x');
 
         self::assertNotSame([], $lookups);
         $plans = array_map($this->planOf(...), $lookups);
@@ -53,8 +55,8 @@ final class CaseRefLookupPlanTest extends CollectionTestCase
             self::assertStringNotContainsString('"Node Type": "Seq Scan"', $plan);
         }
         foreach ($plans as $plan) {
-            // A (seller_ref, environment) prefix scan filtered by case_ref would also avoid a Seq Scan; the case id must be a key.
-            self::assertMatchesRegularExpression('/"Index Cond": "[^"]*dunning_case_id = \\(InitPlan/', $plan);
+            // A (seller_ref, environment) prefix scan filtered by the copied ref would also avoid a Seq Scan; the parent id must be a key.
+            self::assertMatchesRegularExpression('/"Index Cond": "[^"]*(dunning_case_id|consent_guard_id) = \\(InitPlan/', $plan);
         }
         self::assertTrue(array_any($plans, static fn (string $plan): bool => str_contains($plan, '"Index Name": "'.$index.'"')), implode("\n", $plans));
     }

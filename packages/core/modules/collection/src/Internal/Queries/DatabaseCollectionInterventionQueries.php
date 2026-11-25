@@ -68,7 +68,7 @@ final readonly class DatabaseCollectionInterventionQueries implements Collection
             ->table('billium_collection_notification')
             ->where('seller_ref', $caller->sellerRef)
             ->where('environment', $caller->environment)
-            ->where('dunning_case_id', CaseRefLookup::caseId($caller->sellerRef, $caller->environment, $caseRef))
+            ->where('dunning_case_id', ParentIdLookup::dunningCase($caller->sellerRef, $caller->environment, $caseRef))
             ->where('case_ref', $caseRef)
             ->where('step_no', $stepNo)
             ->where('template_ref', $templateRef)
@@ -90,7 +90,7 @@ final readonly class DatabaseCollectionInterventionQueries implements Collection
             ->table('billium_collection_notification')
             ->where('seller_ref', $caller->sellerRef)
             ->where('environment', $caller->environment)
-            ->where('dunning_case_id', CaseRefLookup::caseId($caller->sellerRef, $caller->environment, $caseRef))
+            ->where('dunning_case_id', ParentIdLookup::dunningCase($caller->sellerRef, $caller->environment, $caseRef))
             ->where('case_ref', $caseRef)
             ->orderBy('id')
             ->get();
@@ -114,7 +114,7 @@ final readonly class DatabaseCollectionInterventionQueries implements Collection
             ->table('billium_collection_host_signal')
             ->where('seller_ref', $caller->sellerRef)
             ->where('environment', $caller->environment)
-            ->where('dunning_case_id', CaseRefLookup::caseId($caller->sellerRef, $caller->environment, $caseRef))
+            ->where('dunning_case_id', ParentIdLookup::dunningCase($caller->sellerRef, $caller->environment, $caseRef))
             ->where('case_ref', $caseRef)
             ->orderBy('id')
             ->get();
@@ -155,7 +155,7 @@ final readonly class DatabaseCollectionInterventionQueries implements Collection
             ->table('billium_collection_manual_intervention')
             ->where('seller_ref', $caller->sellerRef)
             ->where('environment', $caller->environment)
-            ->where('dunning_case_id', CaseRefLookup::caseId($caller->sellerRef, $caller->environment, $caseRef))
+            ->where('dunning_case_id', ParentIdLookup::dunningCase($caller->sellerRef, $caller->environment, $caseRef))
             ->where('case_ref', $caseRef)
             ->orderBy('id')
             ->get();

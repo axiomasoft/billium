@@ -80,6 +80,7 @@ final readonly class DatabaseConsentQueries implements ConsentQueries
             ->table('billium_collection_guard_tombstone')
             ->where('seller_ref', $caller->sellerRef)
             ->where('environment', $caller->environment)
+            ->where('consent_guard_id', ParentIdLookup::consentGuard($caller->sellerRef, $caller->environment, $consentRef))
             ->where('consent_ref', $consentRef)
             ->orderBy('guard_revision')
             ->get();

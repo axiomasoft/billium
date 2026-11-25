@@ -161,7 +161,7 @@ final readonly class DatabaseDunningQueries implements DunningQueries
             ->table('billium_collection_step')
             ->where('seller_ref', $caller->sellerRef)
             ->where('environment', $caller->environment)
-            ->where('dunning_case_id', CaseRefLookup::caseId($caller->sellerRef, $caller->environment, $caseRef))
+            ->where('dunning_case_id', ParentIdLookup::dunningCase($caller->sellerRef, $caller->environment, $caseRef))
             ->where('case_ref', $caseRef)
             ->orderBy('step_no')
             ->get();
@@ -203,7 +203,7 @@ final readonly class DatabaseDunningQueries implements DunningQueries
             ->table('billium_collection_case_policy_migration')
             ->where('seller_ref', $caller->sellerRef)
             ->where('environment', $caller->environment)
-            ->where('dunning_case_id', CaseRefLookup::caseId($caller->sellerRef, $caller->environment, $caseRef))
+            ->where('dunning_case_id', ParentIdLookup::dunningCase($caller->sellerRef, $caller->environment, $caseRef))
             ->where('case_ref', $caseRef)
             ->orderBy('to_case_revision')
             ->get();
