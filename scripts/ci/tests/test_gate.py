@@ -3,6 +3,7 @@
 import fnmatch
 import json
 import os
+import re
 import subprocess
 import tempfile
 import unittest
@@ -70,9 +71,33 @@ class GateSelectorTest(unittest.TestCase):
             LAYERS,
         )
 
-    def test_workflow_runs_one_gate_on_the_public_repository(self) -> None:
+    def test_list_steps_names_only_existing_step_functions(self) -> None:
+        steps = self.steps()
+        self.assertIn("php-pg", steps)
+        text = CI.read_text(encoding="utf-8")
+        for step in steps:
+            self.assertIn(f"step_{step.replace('-', '_')}() {{", text)
+
+    def test_unknown_step_exits_nonzero(self) -> None:
+        result = subprocess.run(
+            ["bash", str(CI), "--step", "not-a-step"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("unknown step", result.stderr)
+
+    def test_workflow_runs_every_step_and_layer_through_the_gate_script(self) -> None:
         text = WORKFLOW.read_text(encoding="utf-8")
-        self.assertIn("bash scripts/ci.sh", text)
+        # Each job calls ci.sh, so a new step or layer that is not wired into a job fails here.
+        for step in self.steps():
+            self.assertRegex(text, rf"\b{re.escape(step)}\b", f"step {step} has no CI job")
+        for layer in ("lint", "derived", "dart"):
+            self.assertIn(f"bash scripts/ci.sh --layer {layer}", text)
+        self.assertIn('bash scripts/ci.sh --step "$STEP"', text)
+        self.assertIn("name: CI gate", text)
         self.assertNotIn("--no-build", text)
         self.assertNotIn("vendor/bin/pest", text)
         self.assertNotIn("dart test", text)
@@ -127,6 +152,16 @@ class GateSelectorTest(unittest.TestCase):
             self.assertIn("derived: FAIL", full.stdout)
             self.assertNotIn("php:", full.stdout)
             self.assertNotIn("conformance:", full.stdout)
+
+    def steps(self) -> list[str]:
+        result = subprocess.run(
+            ["bash", str(CI), "--list-steps"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return [line for line in result.stdout.splitlines() if line]
 
     def affected_for(self, relative: str, suffix: str) -> list[str]:
         with tempfile.TemporaryDirectory(prefix="billium-ci-git-") as directory:
