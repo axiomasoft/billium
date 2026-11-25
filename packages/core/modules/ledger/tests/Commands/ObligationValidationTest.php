@@ -8,6 +8,8 @@ use Billium\Contracts\Data\Currency;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Ledger\Data\Allocations\Allocate;
+use Billium\Ledger\Data\Credits\RecordCustomerCredit;
 use Billium\Ledger\Data\Obligations\AdjustObligation;
 use Billium\Ledger\Data\Obligations\RecordObligation;
 use Billium\Ledger\Data\Runtime\BillingAccountScope;
@@ -33,5 +35,26 @@ final class ObligationValidationTest extends LedgerTestCase
         }
         self::assertSame(0, $this->rows('billium_idempotency_receipt', "command_kind LIKE 'ledger.%'"));
         self::assertSame(0, $this->rows('billium_allocation_receipt'));
+    }
+
+    public function test_amounts_outside_each_command_range_are_refused_before_any_write(): void
+    {
+        $this->obligation('o1', 1000);
+        $rub = static fn (int $minor): Money => new Money($minor, Currency::of('RUB'));
+        foreach ([
+            'negative obligation' => fn () => $this->ledger()->recordObligation(new RecordObligation('k-neg', $this->account(), 'o-neg', 'basis', 'customer', 'component', $rub(-1), self::digest())),
+            'zero adjustment' => fn () => $this->ledger()->adjustObligation(new AdjustObligation('k-zero', $this->account(), 'adjust-zero', 'o1', $rub(0), 'cause')),
+            'zero customer credit' => fn () => $this->ledger()->recordCustomerCredit(new RecordCustomerCredit('k-credit', $this->account(), 'credit-zero', 'source', $rub(0))),
+            'zero allocation' => fn () => $this->ledger()->allocate(new Allocate('k-alloc', $this->account(), 'alloc-zero', 'o1', $rub(0), customerCreditRef: 'credit-zero')),
+        ] as $case => $invoke) {
+            try {
+                $invoke();
+                self::fail($case);
+            } catch (ProblemException $e) {
+                self::assertSame(ProblemCode::ValidationInvalid, $e->problem, $case);
+            }
+        }
+        self::assertSame(1, $this->rows('billium_obligation'));
+        self::assertSame(0, $this->rows('billium_customer_credit'));
     }
 }

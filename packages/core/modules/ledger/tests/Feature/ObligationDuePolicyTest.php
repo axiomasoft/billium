@@ -105,7 +105,11 @@ final class ObligationDuePolicyTest extends LedgerTestCase
         self::assertIsArray($decoded);
         $decoded['dueAt'] = '2026-02-30T10:00:00.000000Z';
         $impossible = rtrim(strtr(base64_encode(json_encode($decoded, JSON_THROW_ON_ERROR)), '+/', '-_'), '=');
+        $decoded['dueAt'] = 1;
+        $numeric = rtrim(strtr(base64_encode(json_encode($decoded, JSON_THROW_ON_ERROR)), '+/', '-_'), '=');
         foreach (['impossible cursor instant' => fn (): array => $q->dueObligations('account-a', $due, 1, $impossible),
+            'numeric cursor instant' => fn (): array => $q->dueObligations('account-a', $due, 1, $numeric),
+            'zero limit' => fn (): array => $q->dueObligations('account-a', $due, 0),
             'unsafe limit' => fn (): array => $q->dueObligations('account-a', $due, PHP_INT_MAX)] as $case => $call) {
             try {
                 $call();
