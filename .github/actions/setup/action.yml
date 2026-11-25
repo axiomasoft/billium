@@ -1,0 +1,129 @@
+name: Set up Billium CI tooling
+description: >-
+  Shared job setup: Packman beside the checkout, PHP with Composer dependencies, and on request
+  Python, Dart and a throwaway PostgreSQL started from compose.yaml. Expects the product checked
+  out at ./billium.
+
+inputs:
+  php-version:
+    description: PHP version; empty skips PHP and Composer.
+    default: "8.4"
+  coverage:
+    description: Coverage driver for setup-php (none or pcov).
+    default: none
+  python:
+    description: Install Python and the toolchain requirements.
+    default: "false"
+  dart:
+    description: Install the Dart SDK pinned by the toolchain image.
+    default: "false"
+  postgres:
+    description: Start the compose PostgreSQL service and export the DB_* variables.
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Check out Packman beside the product
+      shell: bash
+      env:
+        PACKMAN_REPOSITORY: ${{ env.PACKMAN_REPOSITORY }}
+        PACKMAN_REF: ${{ env.PACKMAN_REF }}
+      run: |
+        # Anonymous clone: Packman is public, so no token is sent and a missing repository
+        # or tag fails here with a precise message instead of a Composer path error later.
+        url="https://github.com/${PACKMAN_REPOSITORY}.git"
+        if ! git ls-remote --exit-code --tags "$url" "refs/tags/${PACKMAN_REF}" >/dev/null 2>&1; then
+          echo "::error title=Packman unavailable::${PACKMAN_REPOSITORY}@${PACKMAN_REF} is not readable anonymously. The repository must be public and the tag must exist."
+          exit 1
+        fi
+        git -c advice.detachedHead=false clone --quiet --depth 1 --branch "$PACKMAN_REF" "$url" packman
+
+    - name: Set up PHP
+      if: inputs.php-version != ''
+      uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+      with:
+        php-version: ${{ inputs.php-version }}
+        extensions: bcmath, intl, gmp, zip, pdo_pgsql, pdo_sqlite
+        ini-values: memory_limit=1G
+        coverage: ${{ inputs.coverage }}
+        tools: composer:v2
+
+    - name: Locate the Composer cache
+      if: inputs.php-version != ''
+      id: composer-cache
+      shell: bash
+      run: echo "dir=$(composer config --global cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+    - name: Restore the Composer cache
+      if: inputs.php-version != ''
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ steps.composer-cache.outputs.dir }}
+        key: composer-${{ runner.os }}-php${{ inputs.php-version }}-${{ hashFiles('billium/composer.lock') }}-${{ env.PACKMAN_REF }}
+        restore-keys: composer-${{ runner.os }}-php${{ inputs.php-version }}-
+
+    - name: Install Composer dependencies
+      if: inputs.php-version != ''
+      shell: bash
+      working-directory: billium
+      run: composer install --no-interaction --no-progress --prefer-dist
+
+    - name: Set up Python
+      if: inputs.python == 'true'
+      uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+      with:
+        python-version: "3.13"
+        cache: pip
+        cache-dependency-path: billium/docker/toolchain/requirements.txt
+
+    - name: Install Python requirements
+      if: inputs.python == 'true'
+      shell: bash
+      run: python -m pip install --disable-pip-version-check -r billium/docker/toolchain/requirements.txt
+
+    - name: Read the pinned Dart version
+      if: inputs.dart == 'true'
+      id: dart-version
+      shell: bash
+      run: |
+        # The toolchain image is the single source of the Dart version.
+        version="$(sed -n 's/^ARG DART_VERSION=//p' billium/docker/toolchain/Dockerfile)"
+        [[ -n "$version" ]] || { echo "::error::DART_VERSION not found in docker/toolchain/Dockerfile"; exit 1; }
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+
+    - name: Set up Dart
+      if: inputs.dart == 'true'
+      uses: dart-lang/setup-dart@2286a0c042b44434fe26d292bbce8d34f7ec662b # v1.8.2
+      with:
+        sdk: ${{ steps.dart-version.outputs.version }}
+
+    - name: Restore the pub cache
+      if: inputs.dart == 'true'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.pub-cache
+        key: pub-${{ runner.os }}-${{ steps.dart-version.outputs.version }}-${{ hashFiles('billium/**/pubspec.yaml') }}
+        restore-keys: pub-${{ runner.os }}-${{ steps.dart-version.outputs.version }}-
+
+    - name: Start PostgreSQL
+      if: inputs.postgres == 'true'
+      shell: bash
+      working-directory: billium
+      run: |
+        # Same service, roles and throwaway tuning as local development; compose publishes no
+        # port, so the job reaches the container on its bridge address.
+        docker compose up --detach --wait postgres
+        host="$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$(docker compose ps --quiet postgres)")"
+        [[ -n "$host" ]] || { echo "::error::PostgreSQL container has no address"; exit 1; }
+        {
+          echo "DB_CONNECTION=pgsql"
+          echo "DB_HOST=$host"
+          echo "DB_PORT=5432"
+          echo "DB_DATABASE=billium_test"
+          echo "DB_USERNAME=billium_runtime"
+          echo "DB_PASSWORD=billium_runtime"
+          echo "DB_OWNER_USERNAME=billium"
+          echo "DB_OWNER_PASSWORD=billium"
+          echo "PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1"
+        } >> "$GITHUB_ENV"
