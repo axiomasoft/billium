@@ -84,6 +84,15 @@ final class PricingStrategyRegistryTest extends PlatformTestCase
         } catch (ProblemException $exception) {
             self::assertStringContainsString('billium.rating.price_version_conflict', $exception->detail);
         }
+        $relabelled = new PriceVersion(...array_replace(get_object_vars($price), ['unit' => 'seat']));
+        self::assertSame($price->termsDigest, $relabelled->termsDigest);
+        try {
+            $store->publish(price: $relabelled, commandKey: 'publish-relabelled');
+            self::fail('changed price with the same terms accepted');
+        } catch (ProblemException $exception) {
+            self::assertSame(ProblemCode::PolicyUnknown, $exception->problem);
+            self::assertSame('billium.rating.price_version_conflict', $exception->detail);
+        }
         try {
             $store->publish(price: $this->price('50.00'), commandKey: 'publish-1');
             self::fail('idempotency key with a different payload was accepted');
