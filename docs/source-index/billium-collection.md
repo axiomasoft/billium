@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-collection
 
-Path `packages/core/modules/collection/src`, namespace `Billium\Collection\`, layer L2. 97 types.
+Path `packages/core/modules/collection/src`, namespace `Billium\Collection\`, layer L2. 98 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -109,6 +109,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`DatabaseCollectionInterventionQueries`](../../packages/core/modules/collection/src/Internal/Queries/DatabaseCollectionInterventionQueries.php) | class | *Internal* |  |
 | [`DatabaseConsentQueries`](../../packages/core/modules/collection/src/Internal/Queries/DatabaseConsentQueries.php) | class | *Internal* |  |
 | [`DatabaseDunningQueries`](../../packages/core/modules/collection/src/Internal/Queries/DatabaseDunningQueries.php) | class | *Internal* |  |
+| [`ParentIdLookup`](../../packages/core/modules/collection/src/Internal/Queries/ParentIdLookup.php) | class | *Internal* | Child tables of a dunning case (steps, notifications, signals, interventions, policy migrations) and of a consent guard (tombstones) carry the parent's public… |
 
 ## Internal/Registrars
 

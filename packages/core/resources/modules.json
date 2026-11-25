@@ -477,14 +477,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "ledger",
-      "currentSchemaVersion": 18,
+      "currentSchemaVersion": 19,
       "supportedSchemaReadRange": {
-        "min": 18,
-        "max": 18
+        "min": 19,
+        "max": 19
       },
       "supportedSchemaWriteRange": {
-        "min": 18,
-        "max": 18
+        "min": 19,
+        "max": 19
       },
       "requiresModules": [
         {
@@ -626,6 +626,11 @@
           "id": "2026_11_25_000004_index_billium_allocation_receipt_digest",
           "version": 18,
           "checksum": "sha256:6d2e20d2fdd0d061f9648044c7c2a42c7f7be7cc7b8f1af9ffcad967f33a3046"
+        },
+        {
+          "id": "2026_11_25_000006_index_billium_allocation_receipt_ref",
+          "version": 19,
+          "checksum": "sha256:b518b42489d18088cf37de3a6fb77b8f8df49a43ec19d979102b437fc27dffc6"
         }
       ],
       "disablePolicy": {
@@ -1074,14 +1079,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "documents",
-      "currentSchemaVersion": 5,
+      "currentSchemaVersion": 7,
       "supportedSchemaReadRange": {
-        "min": 5,
-        "max": 5
+        "min": 7,
+        "max": 7
       },
       "supportedSchemaWriteRange": {
-        "min": 5,
-        "max": 5
+        "min": 7,
+        "max": 7
       },
       "requiresModules": [
         {
@@ -1149,6 +1154,16 @@
           "id": "2026_11_20_000006_add_render_blob_deleting_state",
           "version": 5,
           "checksum": "sha256:b04fb882d1c92cdc8902ebb8996dae84700ad09dbfc5a5295c280b3382066063"
+        },
+        {
+          "id": "2026_11_25_000007_index_billium_document_credit_note_line_original",
+          "version": 6,
+          "checksum": "sha256:566cae7bc64cea1f726574cdf770ac940e436fe0b133d1ad7f083cce52fa2c20"
+        },
+        {
+          "id": "2026_11_25_000008_index_billium_document_render_blob_cleanup",
+          "version": 7,
+          "checksum": "sha256:378f4b9cb30f4a6b1b554b241536fc9731acda898500177ee85f10b606b3449b"
         }
       ],
       "disablePolicy": {

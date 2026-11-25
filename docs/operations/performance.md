@@ -13,8 +13,11 @@ Billium verifies hot-path PostgreSQL query plans, bounded batching, seller-scope
 | Ledger | `billium_ledger_discrepancy` | `billium_ledger_discrepancy_observed_idx` | `(seller_ref, environment, observed_payment_id)` | Unresolved discrepancies of a charge and its refunds in payment status |
 | Ledger | `billium_discrepancy_event` | `billium_discrepancy_event_discrepancy_idx` | `(discrepancy_id, kind)` | Resolution check in payment status and refund reconcile |
 | Ledger | `billium_allocation_receipt` | `billium_allocation_receipt_digest_idx` | `(seller_ref, environment, semantic_digest)` | Refund detail replay probe, refund reconcile basis, payment status and checkpoint receipt lookups |
+| Documents | `billium_document_credit_note_line` | `billium_document_credit_note_line_original_idx` | `(seller_ref, environment, original_legal_document_id)` | Prior credits of the original invoice in a document correction |
+| Documents | `billium_document_render_blob` | `billium_document_render_blob_cleanup_idx` | `(seller_ref, environment, id) WHERE status IN ('orphaned', 'deleting')` | Orphan blob sweep in `cleanupOrphanBlobs` |
 | Execution | `billium_execution_recon_item` | `billium_execution_recon_item_review_idx` | `(review_ref) WHERE review_ref IS NOT NULL` | Manual repair lookup of a reviewed inventory item (late refund adjudication, linked correction approval) |
 | Ledger | `billium_allocation` | `billium_allocation_obligation_idx` | `(seller_ref, environment, obligation_id, id)` | Allocations by obligation in deterministic ID order |
+| Ledger | `billium_allocation` | `billium_allocation_receipt_ref_idx` | `(seller_ref, environment, receipt_ref)` | `reverseAllocation` lookup of the original allocation by its public reference |
 | Idempotency | `billium_idempotency_receipt` | `billium_idempotency_receipt_scope_key` | `UNIQUE (environment, seller_ref, command_kind, command_key)` | Command replay / conflict check |
 | Idempotency | `billium_idempotency_receipt` | `billium_idempotency_opaque_receipt_scope` | `(financial_scope, result->>'class', result#>>'{body,receiptRef}', created_at, id) WHERE outcome = 'accepted' AND financial_scope IS NOT NULL` | Opaque receipt lookup without scanning rejected rows |
 | Outbox | `billium_outbox_event` | `billium_outbox_event_scope_cursor` / `billium_outbox_event_seller_cursor` | `((source_scope::jsonb), tx_id, id)` and `(seller_ref, environment, tx_id, id)` | Seller/scope feed pagination in `(tx_id, id)` order without `Sort` |
@@ -32,7 +35,7 @@ Billium verifies hot-path PostgreSQL query plans, bounded batching, seller-scope
 
 ## Measured Index Additions
 
-Each change below has a plan test that fails without it, except the replay probe, which runs inside a routine; `scripts/bench/billing.py` checks its index instead. Timings are single-seller `EXPLAIN ANALYZE` runs on PostgreSQL 18 before and after the change, on synthetic tables at the stated scale:
+Each change below has a plan test that fails without it (one is a query rewrite on existing indexes), except the replay probe, which runs inside a routine; `scripts/bench/billing.py` checks its index instead. Timings are single-seller `EXPLAIN ANALYZE` runs on PostgreSQL 18 before and after the change, on synthetic tables at the stated scale:
 
 | Query path | Scale | Before | After | Plan test |
 | :--- | :--- | ---: | ---: | :--- |
@@ -43,6 +46,10 @@ Each change below has a plan test that fails without it, except the replay probe
 | Refund reconcile basis in `RefundReconciler::compare` | 250k observations, 500k revisions, 700k receipts | 159 ms | 0.15 ms | `RefundReconcileLookupPlanTest` |
 | Refund detail replay probe in `billium_record_refund_detail()` | 700k receipts | 50 ms | 0.07 ms | `scripts/bench/billing.py` (`ledger.refund_detail_by_digest`) |
 | Reviewed inventory item lookup in manual repair | 1M retained items | 75 ms | 0.09 ms | `HotPathIndexTest` |
+| Original allocation lookup in `reverseAllocation` (read before and after its lock plan) | 500k allocations | 31 ms | 0.06 ms | `ReverseAllocationLookupPlanTest`, `scripts/bench/billing.py` (`ledger.allocation_by_receipt_ref`) |
+| Prior credit note lines of the original invoice in a document correction | 400k credit note lines | 28–35 ms | 0.04 ms | `CreditNoteLineLookupPlanTest` |
+| Orphan blob sweep candidates in `cleanupOrphanBlobs` | 500k retained blobs, 10 orphaned | 34–37 ms | 0.06 ms | `RenderBlobCleanupPlanTest` |
+| Per-case child reads in `DunningQueries` and `CollectionInterventionQueries` (steps, policy migrations, notifications, signals, interventions) and consent tombstones in `ConsentQueries::listTombstones`: resolve the parent id by its public ref, then read the child `(seller_ref, environment, dunning_case_id or consent_guard_id, …)` index; no new index | 100k cases, 300k steps, 200k notifications | 24 ms (steps), 19 ms (notification by key) | 0.04 ms | `ParentRefLookupPlanTest` |
 
 Left without an index on purpose: `billium_feed_bootstrap_session.new_partition_id` is read only during gap recovery and bootstrap proof (9 ms even at 100k sessions), and foreign keys of append-only tables are not indexed by default: their parent rows are never deleted, so such an index would only serve a join. Add one only for a measured hot path.
 

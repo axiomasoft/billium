@@ -73,27 +73,27 @@ final readonly class IssueCreditNoteCommand
             throw new ProblemException(ProblemCode::AuthDenied, 'participant scope differs from caller');
         }
         $connection = $this->databases->connection($context->connectionName());
-        $read = fn (): array => $this->read($connection, $caller->sellerRef, $caller->environment, $command);
+        $read = fn (): CreditNotePlan => $this->read($connection, $caller->sellerRef, $caller->environment, $command);
         $before = $read();
-        if ($before['currency'] !== $command->lines[0]->money->currency->code) {
+        if ($before->currency !== $command->lines[0]->money->currency->code) {
             throw new ProblemException(ProblemCode::MoneyCurrencyMismatch, 'credit note currency differs from the invoice');
         }
-        $plan = new AllocateLockPlan($before['intents'], array_values($before['obligations']), [$before['invoice'], ...$before['invoices']], $before['payments'], $before['credits']);
+        $plan = $before->lockPlan();
         $plan->lock($context);
-        if ($read() !== $before) {
+        if (! $read()->sameAs($before)) {
             throw new LockPlanChanged('credit note rows changed');
         }
         $lines = [];
         foreach ($command->lines as $line) {
-            $lines[] = ['obligation_id' => $before['obligations'][$line->obligationRef], 'amount_minor' => $line->money->minor];
+            $lines[] = ['obligation_id' => $before->obligations[$line->obligationRef], 'amount_minor' => $line->money->minor];
         }
         [$receipt, $invoices] = $this->writer->apply($context, $connection, 'issue_credit_note', [
-            $caller->installationRef, $caller->sellerRef, $caller->environment, $command->scope->billingAccountRef, $before['currency'],
-            $before['invoice'], $command->creditNoteRef, $command->mode->value, json_encode($lines, JSON_THROW_ON_ERROR), $command->reason,
+            $caller->installationRef, $caller->sellerRef, $caller->environment, $command->scope->billingAccountRef, $before->currency,
+            $before->invoice, $command->creditNoteRef, $command->mode->value, json_encode($lines, JSON_THROW_ON_ERROR), $command->reason,
             $command->legalDocumentRef, self::digest($command),
         ], 'ledger.credit_note', $plan->invoices);
         if (! $receipt->replayed) {
-            $invoice = $invoices[$before['invoice']] ?? throw new ProblemException(ProblemCode::ReferenceUnknown, 'unknown invoice');
+            $invoice = $invoices[$before->invoice] ?? throw new ProblemException(ProblemCode::ReferenceUnknown, 'unknown invoice');
             $body = $receipt->body();
             $this->writer->event($context, 'credit_note.issued.v1', $command->invoiceRef, $invoice['revision'], [
                 'receipt_ref' => 'credit-note:'.$command->creditNoteRef,
@@ -101,7 +101,7 @@ final readonly class IssueCreditNoteCommand
                 'invoice_ref' => $command->invoiceRef,
                 'billing_account_ref' => $command->scope->billingAccountRef,
                 'mode' => $command->mode->value,
-                'currency' => $before['currency'],
+                'currency' => $before->currency,
                 'lines' => $body['lines'] ?? [],
                 'legal_document_ref' => $command->legalDocumentRef,
                 'invoice_status' => $invoice['status']->value,
@@ -111,8 +111,7 @@ final readonly class IssueCreditNoteCommand
         return $receipt;
     }
 
-    /** @return array{invoice: int, currency: string, obligations: array<string, int>, invoices: list<int>, intents: list<int>, payments: list<int>, credits: list<int>} */
-    public function correctionPlan(TransactionContext $context, IssueCreditNote $command): array
+    public function correctionPlan(TransactionContext $context, IssueCreditNote $command): CreditNotePlan
     {
         $this->runner->assertCurrent($context, 'ledger');
         $this->writer->assertMonetary($context);
@@ -125,10 +124,7 @@ final readonly class IssueCreditNoteCommand
         return $this->read($this->databases->connection($context->connectionName()), $caller->sellerRef, $caller->environment, $command);
     }
 
-    /**
-     * @return array{invoice: int, currency: string, obligations: array<string, int>, invoices: list<int>, intents: list<int>, payments: list<int>, credits: list<int>}
-     */
-    private function read(Connection $connection, string $seller, string $environment, IssueCreditNote $command): array
+    private function read(Connection $connection, string $seller, string $environment, IssueCreditNote $command): CreditNotePlan
     {
         $invoice = $connection->table('billium_invoice')->where('seller_ref', $seller)->where('environment', $environment)->where('invoice_ref', $command->invoiceRef)->first(['id', 'currency']);
         $refs = array_map(static fn (CreditNoteLine $line): string => $line->obligationRef, $command->lines);
@@ -157,15 +153,15 @@ final readonly class IssueCreditNoteCommand
             }
         }
 
-        return [
-            'invoice' => AllocationReceiptWriter::int($invoice->id),
-            'currency' => is_string($invoice->currency) ? $invoice->currency : '',
-            'obligations' => $obligations,
-            'invoices' => self::unique($invoices),
-            'intents' => self::unique($sources['intents']),
-            'payments' => self::unique($sources['payments']),
-            'credits' => self::unique($sources['credits']),
-        ];
+        return new CreditNotePlan(
+            invoice: AllocationReceiptWriter::int($invoice->id),
+            currency: is_string($invoice->currency) ? $invoice->currency : '',
+            obligations: $obligations,
+            invoices: self::unique($invoices),
+            intents: self::unique($sources['intents']),
+            payments: self::unique($sources['payments']),
+            credits: self::unique($sources['credits']),
+        );
     }
 
     /**

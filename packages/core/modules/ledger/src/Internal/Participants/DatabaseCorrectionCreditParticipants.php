@@ -48,15 +48,15 @@ final readonly class DatabaseCorrectionCreditParticipants implements CorrectionC
         foreach ($commands as $command) {
             $state = $this->creditNotes->correctionPlan($context, $command);
             $states[] = $state;
-            array_push($intents, ...$state['intents']);
-            array_push($obligations, ...array_values($state['obligations']));
-            array_push($invoices, $state['invoice'], ...$state['invoices']);
-            array_push($payments, ...$state['payments']);
-            array_push($credits, ...$state['credits']);
+            array_push($intents, ...$state->intents);
+            array_push($obligations, ...array_values($state->obligations));
+            array_push($invoices, $state->invoice, ...$state->invoices);
+            array_push($payments, ...$state->payments);
+            array_push($credits, ...$state->credits);
         }
         new AllocateLockPlan(intents: $intents, obligations: $obligations, invoices: $invoices, payments: $payments, credits: $credits)->lock($context);
         foreach ($commands as $index => $command) {
-            if ($this->creditNotes->correctionPlan($context, $command) !== $states[$index]) {
+            if (! $this->creditNotes->correctionPlan($context, $command)->sameAs($states[$index])) {
                 throw new LockPlanChanged('correction credit plan changed');
             }
         }

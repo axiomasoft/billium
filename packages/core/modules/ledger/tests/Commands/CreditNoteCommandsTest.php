@@ -161,4 +161,31 @@ final class CreditNoteCommandsTest extends LedgerTestCase
         self::assertSame('LEGAL-CN-1', $this->value('SELECT legal_document_ref FROM billium_credit_note'));
         self::assertSame(1000, $this->obligationState('obligation-a')['credited']);
     }
+
+    public function test_a_credit_note_in_another_currency_than_its_invoice_is_refused_and_changes_nothing(): void
+    {
+        $this->obligation('obligation-a', 10000);
+        $this->obligation('obligation-b', 1000);
+        $this->draft(['obligation-a' => 0, 'obligation-b' => 0]);
+        $this->issue();
+        $foreign = [new CreditNoteLine('obligation-a', Money::parse('20.00', 'USD'))];
+        $mixed = [new CreditNoteLine('obligation-a', Money::parse('20.00', 'RUB')), new CreditNoteLine('obligation-b', Money::parse('5.00', 'USD'))];
+        foreach (['line currency differs from the invoice' => $foreign, 'lines in two currencies' => $mixed] as $case => $lines) {
+            // Without the guard the routine books USD minor units as the invoice's RUB and freezes the document.
+            self::assertSame(ProblemCode::MoneyCurrencyMismatch, $this->refused(new IssueCreditNote('k-'.$case, $this->account(), 'cn-fx', 'invoice-a', CreditNoteMode::OpenOnly, $lines, 'goodwill')), $case);
+        }
+        self::assertSame(0, $this->rows('billium_credit_note'));
+        self::assertSame(['allocated' => 0, 'credited' => 0, 'open' => 10000, 'status' => 'open'], $this->obligationState('obligation-a'));
+        self::assertSame([0, 11000], [self::integer($this->invoiceRow()['credited_minor']), self::integer($this->invoiceRow()['open_minor'])]);
+        self::assertSame(0, $this->rows('billium_outbox_event', "type='credit_note.issued.v1'"));
+    }
+
+    private function refused(IssueCreditNote $command): ?ProblemCode
+    {
+        try {
+            return $this->ledger()->issueCreditNote($command)->problem;
+        } catch (ProblemException $e) {
+            return $e->problem;
+        }
+    }
 }
