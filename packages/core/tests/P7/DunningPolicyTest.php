@@ -250,6 +250,77 @@ final class DunningPolicyTest extends CollectionTestCase
         self::assertSame(8000, $case->currentOpenMinor);
     }
 
+    public function test_a_success_reporting_more_open_than_the_case_holds_is_refused_and_changes_nothing(): void
+    {
+        $this->dunningPolicyService()->registerPolicyVersion($this->policyCommand(commandKey: 'reg-open-rise', policyRef: 'pol-open-rise'));
+        $t0 = new DateTimeImmutable('2026-11-20T00:00:00Z', new DateTimeZone('UTC'));
+        $this->dunningCaseService()->openCase(new OpenDunningCase(
+            commandKey: 'open-open-rise',
+            scope: $this->collectionScope(),
+            caseRef: 'case-open-rise',
+            billingAccountRef: 'account-a',
+            obligationRef: 'obl-open-rise',
+            collectionGeneration: 1,
+            policyRef: 'pol-open-rise',
+            policyVersion: 1,
+            currency: 'RUB',
+            openAmountMinor: 8000,
+            openedAt: $t0,
+        ));
+        $this->dunningCaseService()->planStep(new PlanCollectionStep(
+            commandKey: 'plan-open-rise',
+            scope: $this->collectionScope(),
+            caseRef: 'case-open-rise',
+            stepRef: 'step-open-rise',
+            stepNo: 1,
+            businessPaymentIntentRef: 'bpi-open-rise',
+            operationRef: 'op-open-rise',
+            amountMinor: 3000,
+            scheduledAt: $t0->modify('+60 seconds'),
+            expectedCaseRevision: 1,
+        ));
+        $this->dunningCaseService()->transitionStep(new TransitionCollectionStep(
+            commandKey: 'disp-open-rise',
+            scope: $this->collectionScope(),
+            caseRef: 'case-open-rise',
+            stepRef: 'step-open-rise',
+            targetStatus: CollectionStepStatus::Dispatched,
+            expectedStepRevision: 1,
+            occurredAt: $t0->modify('+70 seconds'),
+        ));
+        $success = fn (string $commandKey, int $updatedOpenMinor): TransitionCollectionStep => new TransitionCollectionStep(
+            commandKey: $commandKey,
+            scope: $this->collectionScope(),
+            caseRef: 'case-open-rise',
+            stepRef: 'step-open-rise',
+            targetStatus: CollectionStepStatus::Succeeded,
+            expectedStepRevision: 2,
+            occurredAt: $t0->modify('+80 seconds'),
+            outcomeEvidenceDigest: self::digest('5'),
+            updatedOpenMinor: $updatedOpenMinor,
+        );
+        $before = $this->dunningQueries()->findCase($this->collectionScope(), 'case-open-rise');
+        self::assertNotNull($before);
+
+        try {
+            $this->dunningCaseService()->transitionStep($success('succeed-open-rise', 8001));
+            self::fail('A success cannot raise the open amount of the case');
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::ValidationInvalid, $error->problem);
+            self::assertSame('updatedOpenMinor cannot exceed currentOpenMinor', $error->detail);
+        }
+
+        $after = $this->dunningQueries()->findCase($this->collectionScope(), 'case-open-rise');
+        self::assertNotNull($after);
+        self::assertSame(8000, $after->currentOpenMinor);
+        self::assertSame($before->caseRevision, $after->caseRevision);
+        self::assertSame(1, $this->rows('billium_collection_step', "step_ref = 'step-open-rise' AND status = 'dispatched'"));
+
+        $settled = $this->dunningCaseService()->transitionStep($success('succeed-open-rise-valid', 5000));
+        self::assertSame(CollectionStepStatus::Succeeded, $settled->step->status);
+        self::assertSame(5000, $settled->case->currentOpenMinor);
+    }
+
     public function test_a_policy_migration_to_a_threshold_in_another_currency_is_refused_and_changes_nothing(): void
     {
         $this->dunningPolicyService()->registerPolicyVersion($this->policyCommand(commandKey: 'reg-threshold-1', policyRef: 'pol-threshold'));
