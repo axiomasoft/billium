@@ -129,6 +129,25 @@ final class ObservationApplyTest extends ObservationTestCase
         self::assertSame(2, $this->rows('billium_allocation'));
     }
 
+    public function test_a_first_charge_in_another_currency_than_its_intent_allocates_nothing(): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $usd = ObservationFactory::charge('op-1', 1, 1000, fields: ['currency' => 'USD']);
+
+        // The intake quarantines the delivery and keeps the handler's reason on the inbox row.
+        self::assertSame(ProblemCode::ObservationConflict->value, $this->tryObserve($usd));
+        self::assertSame('quarantined', $this->inboxStatus(self::eventId($usd)));
+        self::assertSame(ProblemCode::MoneyCurrencyMismatch->value, $this->value('SELECT last_error_class FROM billium_inbox_message WHERE external_event_id = ?', [self::eventId($usd)]));
+        self::assertSame(0, $this->rows('billium_payment'));
+        self::assertSame(0, $this->rows('billium_allocation'));
+        self::assertSame(0, $this->allocated('o1'));
+
+        // A charge of the intent in its own currency still settles it.
+        self::assertSame('assign', $this->observe(ObservationFactory::charge('op-2', 1, 1000, sequence: 2))->mode());
+        self::assertSame(1000, $this->allocated('o1'));
+    }
+
     public function test_the_same_revision_with_another_economic_snapshot_is_quarantined_and_the_partition_advances(): void
     {
         $this->debt('o1', 1000);
