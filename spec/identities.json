@@ -6568,6 +6568,13 @@
       "source": "packages/core/database/migrations/documents/2026_11_25_000007_index_billium_document_credit_note_line_original.php"
     },
     {
+      "kind": "migration",
+      "id": "2026_11_25_000008_index_billium_document_render_blob_cleanup",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/documents/2026_11_25_000008_index_billium_document_render_blob_cleanup.php"
+    },
+    {
       "kind": "route",
       "id": "billium.server.capabilities",
       "status": "new",
