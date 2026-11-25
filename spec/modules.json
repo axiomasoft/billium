@@ -477,14 +477,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "ledger",
-      "currentSchemaVersion": 17,
+      "currentSchemaVersion": 18,
       "supportedSchemaReadRange": {
-        "min": 17,
-        "max": 17
+        "min": 18,
+        "max": 18
       },
       "supportedSchemaWriteRange": {
-        "min": 17,
-        "max": 17
+        "min": 18,
+        "max": 18
       },
       "requiresModules": [
         {
@@ -621,6 +621,11 @@
           "id": "2026_11_25_000003_index_billium_ledger_discrepancy_lookups",
           "version": 17,
           "checksum": "sha256:475746f76242088c6c91bdcdd5d3b908f6fbe0b550f6b6abb11ff3562bbbcbb0"
+        },
+        {
+          "id": "2026_11_25_000004_index_billium_allocation_receipt_digest",
+          "version": 18,
+          "checksum": "sha256:6d2e20d2fdd0d061f9648044c7c2a42c7f7be7cc7b8f1af9ffcad967f33a3046"
         }
       ],
       "disablePolicy": {
