@@ -11,7 +11,10 @@ use Packman\Config\Laravel\ConfigurationValidator;
 #[Internal]
 final readonly class HttpLimits
 {
-    /** @param int<1, 511> $maxDepth */
+    /**
+     * @param  int<1, 9007199254740991>  $maxBodyBytes
+     * @param  int<1, 511>  $maxDepth
+     */
     private function __construct(public int $maxBodyBytes, public int $maxDepth) {}
 
     public static function fromArray(mixed $config): self

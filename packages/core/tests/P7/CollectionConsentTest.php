@@ -507,6 +507,31 @@ final class CollectionConsentTest extends CollectionTestCase
         self::assertSame('consent_binding_not_found', $foreignVerdict->denialCode);
     }
 
+    public function test_a_per_charge_cap_above_the_per_period_cap_is_refused_and_changes_nothing(): void
+    {
+        [$merchant, $capabilities] = $this->savedMethodMerchant();
+
+        try {
+            $this->consentService()->registerBinding(
+                $this->registerCommand(commandKey: 'reg-caps-inverted', perChargeCapMinor: 25001, perPeriodCapMinor: 25000),
+                $merchant,
+                $capabilities,
+            );
+            self::fail('A per-charge cap above the per-period cap must be refused');
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::ValidationInvalid, $error->problem);
+            self::assertSame('perChargeCapMinor cannot exceed perPeriodCapMinor', $error->detail);
+        }
+        self::assertSame(0, $this->rows('billium_collection_consent_binding'));
+
+        $equal = $this->consentService()->registerBinding(
+            $this->registerCommand(commandKey: 'reg-caps-equal', perChargeCapMinor: 25000, perPeriodCapMinor: 25000),
+            $merchant,
+            $capabilities,
+        );
+        self::assertSame(25000, $equal->perChargeCapMinor);
+    }
+
     public function test_binding_rotation_preserves_original_refund_route_and_requires_action_never_reports_success(): void
     {
         [$merchantA, $capA] = $this->savedMethodMerchant(merchantAccountRef: 'merchant-a', merchantConfigRevision: 'mrev-a1');

@@ -187,7 +187,6 @@ final class PlatformOutboxRegistrar implements PackageRegistrar
         $app->singleton(ImportReconciler::class, static fn (Application $app): DatabaseImportReconciler => new DatabaseImportReconciler(
             $app->make(DatabaseManager::class),
             $app->make(BilliumOptions::class),
-            $app->make(ImportIdentityStore::class),
             $app->make(AccountingMapper::class),
             static fn (): CallerContext => $app->make(CallerContext::class),
             static fn (): ImportMonetaryPort => $app->make(ImportMonetaryPort::class),
