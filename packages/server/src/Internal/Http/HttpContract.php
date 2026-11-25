@@ -10,7 +10,7 @@ use Packman\Attributes\Internal;
 #[Internal]
 final class HttpContract
 {
-    public const string SPEC_HASH = 'sha256:eb021eaa43885c32d8acdf0e0e7821ef03c177058e55567e45c33f652808b2a5';
+    public const string SPEC_HASH = 'sha256:224975f07c97b8793498f4aec142bdd4aa2be29c3bded382853d0b7fa845a0ad';
 
     public const array PROBLEM_HTTP = [
         'billium.validation.invalid' => 400,
