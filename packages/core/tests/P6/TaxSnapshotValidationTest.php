@@ -47,6 +47,8 @@ final class TaxSnapshotValidationTest extends DocumentsTestCase
             [['taxMinor' => -1, 'grossMinor' => self::NET - 1] + $line], ProblemCode::ValidationInvalid, 'tax_snapshot_line_math_conflict'];
         yield 'line net differs from the draft' => [TaxConvention::Exclusive, ['subtotalMinor' => self::NET + 1, 'totalMinor' => self::NET + 2001],
             [['netMinor' => self::NET + 1, 'grossMinor' => self::NET + 2001] + $line], ProblemCode::ValidationInvalid, 'tax_snapshot_line_amount_conflict'];
+        yield 'inclusive line matching neither draft amount' => [TaxConvention::Inclusive, ['subtotalMinor' => 9000, 'taxMinor' => 1800, 'totalMinor' => 10800],
+            [['netMinor' => 9000, 'taxMinor' => 1800, 'grossMinor' => 10800] + $line], ProblemCode::ValidationInvalid, 'tax_snapshot_inclusive_amount_conflict'];
         yield 'tax on a none-declared draft' => [TaxConvention::NoneDeclared, [], [$line], ProblemCode::ValidationInvalid, 'none_declared_requires_zero_tax_and_reason'];
     }
 
