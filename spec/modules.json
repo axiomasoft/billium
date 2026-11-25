@@ -1190,14 +1190,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "execution",
-      "currentSchemaVersion": 35,
+      "currentSchemaVersion": 36,
       "supportedSchemaReadRange": {
-        "min": 35,
-        "max": 35
+        "min": 36,
+        "max": 36
       },
       "supportedSchemaWriteRange": {
-        "min": 35,
-        "max": 35
+        "min": 36,
+        "max": 36
       },
       "requiresModules": [
         {
@@ -1458,6 +1458,11 @@
           "id": "2026_11_21_000003_index_billium_execution_admission",
           "version": 35,
           "checksum": "sha256:2ec8b2a94f9d2a7126e9b44c121a2823fdc7a61585ee24f1fb39613fd92a4937"
+        },
+        {
+          "id": "2026_11_25_000005_index_billium_execution_recon_item_review",
+          "version": 36,
+          "checksum": "sha256:10f863bee3a915ef23793d629a9fa8a5f4ec360da1e19a35b8275b8bf7e76b25"
         }
       ],
       "disablePolicy": {

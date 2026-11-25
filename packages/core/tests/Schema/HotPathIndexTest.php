@@ -70,6 +70,27 @@ final class HotPathIndexTest extends ExecutionTestCase
         }
     }
 
+    public function test_repair_finds_the_reviewed_inventory_item_by_review(): void
+    {
+        // The shape LateRefundAdjudication and LinkedCorrectionApproval issue inside their repair transaction.
+        $pdo = TestEnvironment::pdo(owner: true);
+        $pdo->beginTransaction();
+        try {
+            $pdo->exec('SET LOCAL enable_seqscan = off');
+            $statement = $pdo->query(<<<'SQL'
+                EXPLAIN SELECT work_ref FROM public.billium_execution_recon_item
+                WHERE review_ref = 'review-a' AND evidence_ref = 'evidence-a' AND root_ref = 'root-a' AND kind = 'refund'
+                  AND disposition = 'held_discrepancy' AND source_digest = 'digest-a' LIMIT 1
+                SQL);
+            self::assertNotFalse($statement);
+            $plan = implode("\n", array_map(self::text(...), $statement->fetchAll(PDO::FETCH_COLUMN)));
+            self::assertStringContainsString('billium_execution_recon_item_review_idx', $plan);
+            self::assertStringNotContainsString('Seq Scan', $plan);
+        } finally {
+            $pdo->rollBack();
+        }
+    }
+
     /** @param list<string> $fragments */
     private function assertIndex(string $name, array $fragments): void
     {
