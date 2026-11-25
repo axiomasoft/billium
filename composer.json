@@ -84,8 +84,8 @@
         "sort-packages": true
     },
     "scripts": {
-        "lint": "vendor/bin/pint",
-        "lint:check": "vendor/bin/pint --test",
+        "lint": "vendor/bin/pint --parallel",
+        "lint:check": "vendor/bin/pint --test --parallel",
         "analyse": "vendor/bin/phpstan analyse --memory-limit=1G --no-progress",
         "refactor": "vendor/bin/rector process",
         "refactor:check": "vendor/bin/rector process --dry-run",
