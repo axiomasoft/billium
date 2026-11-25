@@ -33,7 +33,7 @@
     "limit": {
       "type": "integer",
       "minimum": 1,
-      "maximum": 9007199254740991
+      "maximum": 1000
     },
     "cursor": {
       "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"

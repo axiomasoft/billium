@@ -385,7 +385,7 @@
   {
     "id": "BC-ENV-27",
     "doc": "03-envelopes.md",
-    "line_digest": "sha256:ba472760302eba54074c3e1c4e0c99511f58551f61da10f8f0f767a6eee4e72a",
+    "line_digest": "sha256:fb1dd5a4cf56e796e72756ed3505c8083fdc2ad879ce7ec37da5a6357041b20d",
     "refs": [
       "REQ-CON-14",
       "REQ-CON-20",

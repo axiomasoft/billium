@@ -110,6 +110,7 @@ final class ObligationDuePolicyTest extends LedgerTestCase
         foreach (['impossible cursor instant' => fn (): array => $q->dueObligations('account-a', $due, 1, $impossible),
             'numeric cursor instant' => fn (): array => $q->dueObligations('account-a', $due, 1, $numeric),
             'zero limit' => fn (): array => $q->dueObligations('account-a', $due, 0),
+            'limit above the page ceiling' => fn (): array => $q->dueObligations('account-a', $due, 1001),
             'unsafe limit' => fn (): array => $q->dueObligations('account-a', $due, PHP_INT_MAX)] as $case => $call) {
             try {
                 $call();
@@ -118,6 +119,7 @@ final class ObligationDuePolicyTest extends LedgerTestCase
                 self::assertSame(ProblemCode::ValidationInvalid, $error->problem, $case);
             }
         }
+        self::assertCount(3, self::arr($q->dueObligations('account-a', new DateTimeImmutable('2099-01-01Z'), 1000)['obligations']));
         $wire = $q->dispatch(json_encode(['schema' => 'billium.query.v1', 'installationRef' => self::INSTALLATION, 'sellerRef' => 'seller-a', 'environment' => 'test',
             'query' => 'dueObligations', 'selector' => ['billingAccountRef' => 'account-a'], 'asOf' => '2026-10-28T10:00:00Z', 'limit' => 2], JSON_THROW_ON_ERROR));
         (new Codec)->decode(json_encode($wire, JSON_THROW_ON_ERROR));

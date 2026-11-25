@@ -7,6 +7,11 @@ provider or reserve a refund. Missing references and references outside the auth
 seller or environment return `billium.reference.unknown` (REQ-CON-14, INV-14, D35, D60).
 
 The direct methods return arrays; amounts are `MoneyWire` arrays with string `amount` and `currency`.
+The arrays are deliberate: each result is the `result` member of a published response schema
+(`ledger.payment_status.v1`, `ledger.due_obligations.v1` and the other query results), the HTTP server passes
+it through unchanged, and unknown optional members must survive a roundtrip (BC-ENV-27). Typed value objects
+would duplicate those schemas in PHP, drop members a newer revision adds, and change a `1.0` API for every
+caller, so the schema stays the single contract and `dispatch` output is validated against it in tests.
 `obligation` includes original due, signed adjustment, allocation, credit, open balance, frozen references,
 revision and due policy provenance. `invoice` includes stored snapshots, line obligations, totals and open
 balance; its legal number remains null until the documents module owns it. `receipt(receiptRef)` returns
@@ -15,7 +20,11 @@ receipt, which can then be retrieved without another money operation (REQ-CON-14
 ACC-RST-05).
 
 `dispatch(json)` validates `billium.query.v1` using the contracts codec and checks its installation, seller
-and environment against the caller. Mismatches return `billium.auth.denied`. Selector names are
+and environment against the caller. Over HTTP every query kind uses the one host action `ledger.query`.
+The host policy still decides per kind: `AuthorizationVerdict::authorize` receives the validated `query` and
+`selector` in `ResourceScope::selectors`, so a host can allow `paymentStatus` and deny `refundAuthorization`
+(`AuthContextTest`). Separate actions per kind would only rename what hosts already see and would break
+every host policy that allows `ledger.query` today. Mismatches return `billium.auth.denied`. Selector names are
 `paymentRef`, `obligationRef`, `invoiceRef`, `operationRef` for `allocationByOperation`, and
 `billingAccountRef` for `dueObligations`. An optional `sourceAuthority` disambiguates a payment/operation.
 An authority-free selector matching multiple sources returns `billium.validation.invalid`; it never chooses
@@ -49,7 +58,8 @@ decimal string in the charge currency. An amount above capacity is not allowed a
 bounded by the allocated amount. Hold or noncurrent projection also refuses advice. P5 owns execution
 reservations; reading this result grants no reservation (D35, REQ-CON-14).
 
-`dueObligations(accountRef, asOf, limit, cursor)` returns eligibility candidates with a scoped keyset cursor.
+`dueObligations(accountRef, asOf, limit, cursor)` returns eligibility candidates with a scoped keyset cursor;
+`limit` is 1 to 1000, the same ceiling as the event feed.
 It requires open positive obligations, nonnull `due_at <= asOf`, and
 `collection_eligible_at <= asOf` when present. Ordering is `(due_at, id)`; cursors bind installation, seller,
 environment, account and `asOf`. A null due date never falls back to creation or invoice time. A known
