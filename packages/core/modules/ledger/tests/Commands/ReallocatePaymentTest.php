@@ -173,5 +173,12 @@ final class ReallocatePaymentTest extends LedgerTestCase
                 self::assertContains($e->problem, [ProblemCode::ValidationInvalid, ProblemCode::SchemaUnsupported], $case);
             }
         }
+        try {
+            // A valid envelope of another schema decodes, so only the type check stands between it and the constructor.
+            ReallocatePayment::fromWire('{"schema":"payment.find.v1","installationRef":"inst-test","environment":"test","sellerRef":"seller-a","operationRef":"op-1"}');
+            self::fail('a decoded envelope of another schema');
+        } catch (ProblemException $e) {
+            self::assertSame(ProblemCode::SchemaUnsupported, $e->problem);
+        }
     }
 }

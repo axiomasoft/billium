@@ -100,6 +100,20 @@ final class ObligationDuePolicyTest extends LedgerTestCase
                 self::assertSame(ProblemCode::ValidationInvalid, $error->problem);
             }
         }
+        // A well-shaped but impossible calendar instant and a limit past the JSON-safe integer range are refused, not queried.
+        $decoded = json_decode(self::text(base64_decode(strtr(self::text($page['nextCursor']), '-_', '+/'), true)), true, 16, JSON_THROW_ON_ERROR);
+        self::assertIsArray($decoded);
+        $decoded['dueAt'] = '2026-02-30T10:00:00.000000Z';
+        $impossible = rtrim(strtr(base64_encode(json_encode($decoded, JSON_THROW_ON_ERROR)), '+/', '-_'), '=');
+        foreach (['impossible cursor instant' => fn (): array => $q->dueObligations('account-a', $due, 1, $impossible),
+            'unsafe limit' => fn (): array => $q->dueObligations('account-a', $due, PHP_INT_MAX)] as $case => $call) {
+            try {
+                $call();
+                self::fail($case);
+            } catch (ProblemException $error) {
+                self::assertSame(ProblemCode::ValidationInvalid, $error->problem, $case);
+            }
+        }
         $wire = $q->dispatch(json_encode(['schema' => 'billium.query.v1', 'installationRef' => self::INSTALLATION, 'sellerRef' => 'seller-a', 'environment' => 'test',
             'query' => 'dueObligations', 'selector' => ['billingAccountRef' => 'account-a'], 'asOf' => '2026-10-28T10:00:00Z', 'limit' => 2], JSON_THROW_ON_ERROR));
         (new Codec)->decode(json_encode($wire, JSON_THROW_ON_ERROR));
