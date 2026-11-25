@@ -55,8 +55,9 @@ final class ParentRefLookupPlanTest extends CollectionTestCase
             self::assertStringNotContainsString('"Node Type": "Seq Scan"', $plan);
         }
         foreach ($plans as $plan) {
-            // A (seller_ref, environment) prefix scan filtered by the copied ref would also avoid a Seq Scan; the parent id must be a key.
-            self::assertMatchesRegularExpression('/"Index Cond": "[^"]*(dunning_case_id|consent_guard_id) = \\(InitPlan/', $plan);
+            // A (seller_ref, environment) prefix scan filtered by the copied ref would also avoid a Seq Scan; the parent id must be
+            // a key. PostgreSQL 16 prints the InitPlan output as $0, PostgreSQL 17+ as (InitPlan 1).col1.
+            self::assertMatchesRegularExpression('/"Index Cond": "[^"]*(dunning_case_id|consent_guard_id) = (\\$\\d|\\(InitPlan)/', $plan);
         }
         self::assertTrue(array_any($plans, static fn (string $plan): bool => str_contains($plan, '"Index Name": "'.$index.'"')), implode("\n", $plans));
     }
