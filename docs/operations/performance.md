@@ -21,6 +21,7 @@ Billium verifies hot-path PostgreSQL query plans, bounded batching, seller-scope
 | Execution | `billium_execution_attempt` | `billium_execution_provider_reference` | `UNIQUE (installation_ref, environment, provider_id, merchant_account_ref, provider_reference)` | Provider callback & lookup correlation |
 | Execution | `billium_execution_business_binding` | `billium_execution_business_identity_digest_unique` | `UNIQUE (business_identity_digest)` | Business identity lookup |
 | Execution | `billium_execution_operation` | `billium_execution_operation_root_idx` | `(installation_ref, seller_ref, environment, intent_owner_namespace, root_operation_ref)` | Root + child operation tree reads |
+| Schedule | `billium_schedule_occurrence_amendment` | `billium_schedule_occurrence_amendment_lookup` | `(seller_ref, environment, occurrence_ref, schedule_revision)` | Revision-confirmation check in `ScheduleQueries::occurrence` |
 | Collection | `billium_collection_work` | `billium_collection_work_due_idx` | `(seller_ref, status, next_attempt_at, step_id) WHERE next_attempt_at IS NOT NULL` | Due collection step scheduling |
 
 ## Bounded Batching & Cursor Pagination

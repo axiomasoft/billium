@@ -51,13 +51,14 @@ final class ScheduleProviderTest extends TestCase
         self::assertTrue($app->isBooted());
         $descriptor = ModuleCatalog::packaged()->descriptor('schedule');
         self::assertNotNull($descriptor);
-        self::assertSame(4, $descriptor->currentSchemaVersion);
+        self::assertSame(5, $descriptor->currentSchemaVersion);
         self::assertCount(11, $descriptor->ownedTables);
         self::assertSame([
             '2026_11_10_000500_create_billium_schedule_periods',
             '2026_11_10_000600_create_billium_schedule_occurrences',
             '2026_11_10_000610_create_billium_schedule_billing_correction',
             '2026_11_10_000620_allow_rated_correction_parents',
+            '2026_11_25_000001_index_billium_schedule_occurrence_amendment',
         ], array_column($descriptor->migrationIdentities, 'id'));
         $rating = ModuleCatalog::packaged()->descriptor('rating');
         self::assertNotNull($rating);
