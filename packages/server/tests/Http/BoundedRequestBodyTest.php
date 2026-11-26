@@ -8,8 +8,10 @@ use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Server\Internal\Http\BoundedRequestBody;
 use Illuminate\Http\Request;
+use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 
 final class BoundedRequestBodyTest extends TestCase
 {
@@ -25,7 +27,35 @@ final class BoundedRequestBodyTest extends TestCase
     {
         $body = str_repeat('a', 200_000);
 
-        self::assertSame($body, BoundedRequestBody::read(self::request($body), 200_000));
+        self::assertSame($body, BoundedRequestBody::read(self::request(self::stream($body)), 200_000));
+    }
+
+    public function test_laravel_buffered_json_is_checked_without_copying_it_to_a_stream(): void
+    {
+        $body = '{"example":"'.str_repeat('x', 1000).'"}';
+        $trackingRequest = new class extends Request
+        {
+            #[\Override]
+            public function getContent(bool $asResource = false): string
+            {
+                if ($asResource) {
+                    throw new LogicException('Unexpected stream copy of buffered content');
+                }
+
+                return parent::getContent();
+            }
+        };
+        $request = $trackingRequest::createFromBase(SymfonyRequest::create(
+            '/billium/v1/sellers/s/queries',
+            'POST',
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: $body,
+        ));
+
+        self::assertSame($body, BoundedRequestBody::read($request, strlen($body)));
+        $this->expectException(ProblemException::class);
+
+        BoundedRequestBody::read($request, 1000);
     }
 
     public function test_an_oversized_stream_is_refused_after_reading_at_most_one_byte_past_the_limit(): void

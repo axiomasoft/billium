@@ -8,13 +8,13 @@ use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Illuminate\Http\Request;
 use Packman\Attributes\Internal;
+use ReflectionProperty;
 
 /**
  * Reads a request body without accepting more than the configured byte limit.
  *
- * A declared Content-Length above the limit is refused before any byte is read; otherwise the body stream is
- * read in bounded chunks and refused as soon as it passes the limit, so an oversized or chunked body is never
- * copied into memory beyond limit + 1 bytes.
+ * A declared Content-Length above the limit is refused before reading. Already buffered content is checked
+ * in place. An unread stream is consumed in bounded chunks, up to one byte beyond the limit.
  */
 #[Internal]
 final class BoundedRequestBody
@@ -29,6 +29,17 @@ final class BoundedRequestBody
         $declared = $request->headers->get('Content-Length');
         if ($declared !== null && ! self::declaredWithin($declared, $maxBytes)) {
             throw new ProblemException(ProblemCode::ValidationInvalid);
+        }
+
+        // Symfony has no cached-content accessor. getContent() can drain an unread stream, and
+        // getContent(true) copies Laravel's already buffered JSON into a temporary stream.
+        $buffered = new ReflectionProperty(Request::class, 'content')->getValue($request);
+        if (is_string($buffered)) {
+            if (strlen($buffered) > $maxBytes) {
+                throw new ProblemException(ProblemCode::ValidationInvalid);
+            }
+
+            return $buffered;
         }
 
         $stream = $request->getContent(true);
@@ -64,7 +75,7 @@ final class BoundedRequestBody
         }
         $digits = ltrim($declared, '0');
 
-        // Any value above 16 digits exceeds the largest configurable limit (2^53 - 1) and would overflow int.
+        // Bound the decimal length before converting it to an integer.
         return strlen($digits) <= 16 && (int) $digits <= $maxBytes;
     }
 }
