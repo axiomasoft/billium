@@ -8,6 +8,7 @@ use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Data\Currency;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
+use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runner\OperationRunner;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Contracts\Runtime\CallerContext;
@@ -493,6 +494,14 @@ final class InventoryReconciliationTest extends ExecutionTestCase
             $log = $db->getQueryLog();
             $db->disableQueryLog();
             self::assertCount(1, $recovery->rows);
+            foreach (['unknown discrepancy status' => ['closed', 1, 'Unknown discrepancy status'], 'empty queue page' => ['open', 0, 'Queue page size must be between 1 and 100']] as $case => [$status, $limit, $detail]) {
+                try {
+                    $queries->openDiscrepancies($scope, 'remote-billium', $status, $until, $limit);
+                    self::fail($case);
+                } catch (ProblemException $e) {
+                    self::assertSame([ProblemCode::ValidationInvalid, $detail], [$e->problem, $e->detail], $case);
+                }
+            }
             self::assertSame(UnknownResultTest::attemptRef(), $recovery->rows[0]->attemptRef);
             self::assertSame('account-a', $recovery->rows[0]->merchantAccountRef);
             self::assertSame(1, $recovery->rows[0]->dispatchWorkAttempts);

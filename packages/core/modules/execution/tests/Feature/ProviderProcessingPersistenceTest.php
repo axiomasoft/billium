@@ -20,6 +20,7 @@ use Billium\Core\Tests\TestEnvironment;
 use Billium\Execution\Contracts\ExecutionStore;
 use Billium\Execution\Contracts\ProviderAbsenceVerifier;
 use Billium\Execution\Data\AdmissionPlan;
+use Billium\Execution\Data\CapabilityDetails;
 use Billium\Execution\Data\CapabilitySnapshot;
 use Billium\Execution\Data\CapacitySnapshot;
 use Billium\Execution\Data\DispatchDecision;
@@ -461,6 +462,19 @@ final class ProviderProcessingPersistenceTest extends ExecutionTestCase
             $registry = $this->application()->make(AbsenceProofRegistry::class);
             $proof = $registry->verify($cert, $op, $attempt, $cap);
             $untrusted = VerifiedAbsence::verify(self::createStub(ProviderAbsenceVerifier::class), $cert, $op, $attempt, $cap);
+            foreach (['capability without absence certification' => ['absenceCertification' => false],
+                'capability of another qualification' => ['qualificationEvidenceRef' => 'other-qualification'],
+                'capability of another digest' => ['digest' => str_repeat('b', 64)],
+                'capability of another account' => ['merchantAccountRef' => 'other-account'],
+                'capability of another lookup namespace' => ['details' => new CapabilityDetails(...array_replace(get_object_vars($cap->details), ['lookupNamespace' => 'other-namespace']))],
+            ] as $case => $change) {
+                try {
+                    VerifiedAbsence::verify(self::createStub(ProviderAbsenceVerifier::class), $cert, $op, $attempt, new CapabilitySnapshot(...array_replace(get_object_vars($cap), $change)));
+                    self::fail($case);
+                } catch (ProblemException $e) {
+                    self::assertSame(ProblemCode::ValidationInvalid, $e->problem, $case);
+                }
+            }
             $merchant = $this->store->merchantRevision($scope, $op->binding->merchantRevisionRef);
             $lookup = new ProviderLookupResult(ProviderLookupState::CertifiedAbsent, null, null, $cert, null, null);
             $journal = $this->application()->make(AttemptJournal::class);

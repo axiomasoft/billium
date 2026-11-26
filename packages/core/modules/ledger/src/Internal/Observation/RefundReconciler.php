@@ -14,6 +14,8 @@ use Billium\Ledger\Internal\Commands\AllocateLockPlan;
 use Billium\Ledger\Internal\Receipts\AllocationReceiptWriter;
 use Billium\Ledger\Internal\Repositories\LedgerRepository;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\JoinClause;
+use InvalidArgumentException;
 use LogicException;
 use Packman\Attributes\Internal;
 
@@ -40,14 +42,13 @@ final readonly class RefundReconciler
         private BilliumOptions $options,
     ) {}
 
-    /**
-     * @param  int|null  $afterSeconds  consistency window; null uses billium.ledger.refund_reconcile_after_seconds
-     * @return array{compared: int, recorded: int, resolved: int}
-     */
-    public function reconcile(?int $afterSeconds = null, int $limit = 100): array
+    /** @param  int|null  $afterSeconds  consistency window; null uses billium.ledger.refund_reconcile_after_seconds */
+    public function reconcile(?int $afterSeconds = null, int $limit = 100): RefundReconcileReport
     {
         $window = $afterSeconds ?? $this->options->ledger->refundReconcileAfterSeconds;
-        $window = $window >= 0 ? $window : 3600;
+        if ($window < 0 || $limit < 1 || $limit > 1000) {
+            throw new InvalidArgumentException('The consistency window is nonnegative and the limit between 1 and 1000');
+        }
         $caller = $this->callers->current();
         $candidates = $this->roots->connection()->select(<<<'SQL'
             SELECT p.id FROM public.billium_payment p
@@ -71,13 +72,11 @@ final readonly class RefundReconciler
                   p.created_at) <= now() - make_interval(secs => ?)
             ORDER BY progress.compared_at NULLS FIRST, p.id LIMIT ?
             SQL, [$caller->sellerRef, $caller->environment, $window, $limit]);
-        $report = ['compared' => 0, 'recorded' => 0, 'resolved' => 0];
+        $report = new RefundReconcileReport;
         foreach ($candidates as $candidate) {
             $payment = is_object($candidate) && is_int($candidate->id ?? null) ? $candidate->id : throw new LogicException('Expected a payment id');
             $body = $this->roots->root(fn (TransactionContext $context): array => $this->compare($context, $payment), 'ledger.refund_reconcile', commitKind: null);
-            $report['compared']++;
-            $report['recorded'] += ($body['recorded'] ?? false) === true ? 1 : 0;
-            $report['resolved'] += is_array($body['resolved'] ?? null) ? count($body['resolved']) : 0;
+            $report = $report->with(($body['recorded'] ?? false) === true, is_array($body['resolved'] ?? null) ? count($body['resolved']) : 0);
         }
 
         return $report;
@@ -106,8 +105,16 @@ final readonly class RefundReconciler
         $latest = null;
         // Only a validated detail receipt admits a revision to the basis. Latest observed facts can be quarantined
         // or held; neither may replace the last consistent refund detail or resolve an existing mismatch.
+        // Restrict revisions to this charge's refunds up front: DISTINCT ON keeps the join from pushing the charge
+        // filter down, so otherwise every revision and refund detail of the seller is joined on each comparison.
+        $refunds = $db->table('billium_observed_payment')->select('id')
+            ->where('installation_ref', $caller->installationRef)->where('seller_ref', $caller->sellerRef)->where('environment', $caller->environment)
+            ->where('kind', 'refund')->where('original_ref', $paymentRef)->where('source_authority', $payment->source_authority)
+            ->where('currency', $payment->currency)->where('billing_account_ref', $payment->billing_account_ref);
         $validated = $db->table('billium_observed_payment_revision as rev')
-            ->join('billium_allocation_receipt as rc', 'rc.semantic_digest', '=', 'rev.material_digest')
+            ->join('billium_allocation_receipt as rc', static fn (JoinClause $join): JoinClause => $join->on('rc.semantic_digest', '=', 'rev.material_digest')
+                ->on('rc.seller_ref', '=', 'rev.seller_ref')->on('rc.environment', '=', 'rev.environment'))
+            ->where('rev.seller_ref', $caller->sellerRef)->where('rev.environment', $caller->environment)->whereIn('rev.observed_payment_id', $refunds)
             ->where('rc.installation_ref', $caller->installationRef)->where('rc.seller_ref', $caller->sellerRef)->where('rc.environment', $caller->environment)
             ->where('rc.kind', 'refund_detail')->whereRaw("rc.body::jsonb ->> 'mode' = ?", ['refund_detail'])
             ->whereRaw("rc.body::jsonb ->> 'original_payment_ref' = ?", [$paymentRef])

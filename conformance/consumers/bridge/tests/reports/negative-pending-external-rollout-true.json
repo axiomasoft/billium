@@ -34,7 +34,7 @@
       "commitHash": "abcdef1234567890abcdef1234567890abcdef12",
       "packageHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "specRevision": "2026-10",
-      "specHash": "sha256:eb021eaa43885c32d8acdf0e0e7821ef03c177058e55567e45c33f652808b2a5"
+      "specHash": "sha256:224975f07c97b8793498f4aec142bdd4aa2be29c3bded382853d0b7fa845a0ad"
     },
     "consumer": {
       "name": "external-consumer-unconfigured",
@@ -296,7 +296,7 @@
       }
     ],
     "hashes": {
-      "spec": "sha256:eb021eaa43885c32d8acdf0e0e7821ef03c177058e55567e45c33f652808b2a5",
+      "spec": "sha256:224975f07c97b8793498f4aec142bdd4aa2be29c3bded382853d0b7fa845a0ad",
       "fixtures": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
       "harness": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
       "packages": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
@@ -307,6 +307,6 @@
     "localRequiredSuiteComplete": false,
     "externalReady": false,
     "rolloutGatePassed": true,
-    "reportDigest": "sha256:5d44159deeb8614e8a992cf7b455538a4176aeea4e46f6e6885fe4048064ddc3"
+    "reportDigest": "sha256:f253b0419270a98c816cd2219cbceb2fe44ab4c585142be8f8a52e7071a4f9ba"
   }
 }

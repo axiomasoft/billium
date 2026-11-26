@@ -51,7 +51,8 @@ final class SettlementIntentNoEffectClosureTest extends LedgerTestCase
     {
         return $this->runner()->run($this->spec(key: $key), function (TransactionContext $context) use ($proof, $revision, $withProof, $closure, $after): Receipt {
             $minted = $withProof ? new NoEffectProof(
-                is_string($proof['rootRef'] ?? null) ? $proof['rootRef'] : $context->rootRef(), 'intent-a', $revision, 'step-1',
+                is_string($proof['rootRef'] ?? null) ? $proof['rootRef'] : $context->rootRef(),
+                is_string($proof['intent'] ?? null) ? $proof['intent'] : 'intent-a', $revision, 'step-1',
                 is_string($proof['kind'] ?? null) ? $proof['kind'] : 'not_dispatched',
                 is_string($proof['evidenceRef'] ?? null) ? $proof['evidenceRef'] : 'evidence:no-dispatch',
                 ($proof['permit'] ?? false) === true, is_string($proof['effect'] ?? null) ? $proof['effect'] : 'none',
@@ -127,6 +128,24 @@ final class SettlementIntentNoEffectClosureTest extends LedgerTestCase
             self::assertSame(ProblemCode::IdempotencyConflict, $e->problem);
         }
         self::assertSame(1, $this->rows('billium_settlement_intent_closure'));
+    }
+
+    public function test_a_proof_for_another_intent_or_an_undeclared_intent_refuses(): void
+    {
+        try {
+            $this->close('k-undeclared');
+            self::fail('undeclared intent');
+        } catch (ProblemException $e) {
+            self::assertSame(ProblemCode::ReferenceUnknown, $e->problem);
+        }
+        $this->declared();
+        try {
+            $this->close('k-other-intent', ['intent' => 'intent-b']);
+            self::fail('proof of another intent');
+        } catch (ProblemException $e) {
+            self::assertSame(ProblemCode::ValidationInvalid, $e->problem);
+        }
+        self::assertSame(0, $this->rows('billium_settlement_intent_closure'));
     }
 
     public function test_committed_permit_and_pending_unknown_or_sent_effect_refuse_and_nothing_closes(): void

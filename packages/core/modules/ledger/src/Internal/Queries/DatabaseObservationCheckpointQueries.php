@@ -13,6 +13,7 @@ use Billium\Ledger\Contracts\ObservationCheckpointQueries;
 use Billium\Ledger\Data\Allocations\AllocationReceipt;
 use Billium\Ledger\Data\Allocations\ObservationCheckpoint;
 use Billium\Ledger\Data\Views\LedgerView;
+use Billium\Ledger\Internal\Observation\ObservationOwnership;
 use Billium\Ledger\Internal\Observation\ParkedDrainer;
 use Billium\Ledger\Internal\Observation\PaymentProjection;
 use Billium\Platform\Contracts\Feed\FeedRecoveryQueries;
@@ -38,14 +39,15 @@ final readonly class DatabaseObservationCheckpointQueries implements Observation
                 throw new ProblemException(ProblemCode::AuthDenied, 'Observation query scope is not authenticated');
             }
 
+            $bindingKey = ObservationOwnership::bindingKey('o');
             $root = $observation->originalPaymentRef ?? $observation->operationRef;
-            $revision = $db->selectOne(<<<'SQL'
+            $revision = $db->selectOne(<<<SQL
                 SELECT o.id AS observed_id, r.material_digest
                 FROM public.billium_observed_payment o
                 JOIN public.billium_observed_payment_revision r ON
                     (r.installation_ref,r.seller_ref,r.environment,r.observed_payment_id) = (o.installation_ref,o.seller_ref,o.environment,o.id)
                 JOIN public.billium_observation_owner_binding b ON
-                    b.operation_key = encode(sha256(convert_to(jsonb_build_array(o.seller_ref,o.environment,o.source_authority,o.operation_ref)::text,'UTF8')),'hex')
+                    b.operation_key = {$bindingKey}
                 WHERE (o.installation_ref,o.seller_ref,o.environment,o.source_authority,o.operation_ref,o.provider_account_ref,o.kind)
                     = (?,?,?,?,?,?,?)
                   AND (b.installation_ref,b.seller_ref,b.environment,b.source_authority,b.operation_ref,b.provider_account_ref)

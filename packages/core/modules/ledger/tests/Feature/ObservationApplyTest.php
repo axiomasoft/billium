@@ -11,6 +11,7 @@ use Billium\Core\Tests\Support\ObservationFactory;
 use Billium\Ledger\Data\Allocations\AllocationReceipt;
 use Billium\Ledger\Internal\Observation\EconomicDigest;
 use Billium\Ledger\Internal\Observation\ObservationHandler;
+use Billium\Ledger\Internal\Observation\RefundReconcileReport;
 use Billium\Ledger\Tests\Observation\ObservationTestCase;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Group;
@@ -85,7 +86,7 @@ final class ObservationApplyTest extends ObservationTestCase
         self::assertSame(4, $this->rows('billium_observed_payment'));
         self::assertSame(2, $this->rows('billium_allocation'));
         self::assertSame(4, $this->rows('billium_allocation_receipt', "kind IN ('payment_observation','refund_detail')"));
-        self::assertSame(0, $this->reconciler()->reconcile(0)['recorded']);
+        self::assertSame(0, $this->reconciler()->reconcile(0)->recorded);
         self::assertSame(0, $this->rows('billium_ledger_discrepancy'));
     }
 
@@ -127,6 +128,25 @@ final class ObservationApplyTest extends ObservationTestCase
         self::assertSame(3, self::integer($this->observedRow()['revision']), 'the current observed snapshot never regresses');
         self::assertSame(3, $this->rows('billium_observed_payment_revision'), 'the older revision is kept as history');
         self::assertSame(2, $this->rows('billium_allocation'));
+    }
+
+    public function test_a_first_charge_in_another_currency_than_its_intent_allocates_nothing(): void
+    {
+        $this->debt('o1', 1000);
+        $this->intent('intent-a', ['o1']);
+        $usd = ObservationFactory::charge('op-1', 1, 1000, fields: ['currency' => 'USD']);
+
+        // The intake quarantines the delivery and keeps the handler's reason on the inbox row.
+        self::assertSame(ProblemCode::ObservationConflict->value, $this->tryObserve($usd));
+        self::assertSame('quarantined', $this->inboxStatus(self::eventId($usd)));
+        self::assertSame(ProblemCode::MoneyCurrencyMismatch->value, $this->value('SELECT last_error_class FROM billium_inbox_message WHERE external_event_id = ?', [self::eventId($usd)]));
+        self::assertSame(0, $this->rows('billium_payment'));
+        self::assertSame(0, $this->rows('billium_allocation'));
+        self::assertSame(0, $this->allocated('o1'));
+
+        // A charge of the intent in its own currency still settles it.
+        self::assertSame('assign', $this->observe(ObservationFactory::charge('op-2', 1, 1000, sequence: 2))->mode());
+        self::assertSame(1000, $this->allocated('o1'));
     }
 
     public function test_the_same_revision_with_another_economic_snapshot_is_quarantined_and_the_partition_advances(): void
@@ -238,7 +258,7 @@ final class ObservationApplyTest extends ObservationTestCase
         $this->observe(ObservationFactory::refund('op-r1', 'op-1', 4, 400, sequence: 2));
         $older = $this->observe(ObservationFactory::refund('op-r1', 'op-1', 3, 300, sequence: 3));
         self::assertSame('refund_detail', $older->mode());
-        self::assertSame(['compared' => 1, 'recorded' => 0, 'resolved' => 0], $this->reconciler()->reconcile(0));
+        self::assertEquals(new RefundReconcileReport(1, 0, 0), $this->reconciler()->reconcile(0));
 
         $held = $this->observe(ObservationFactory::refund('op-r1', 'op-1', 2, 500, sequence: 4));
         self::assertSame('hold', $held->mode());

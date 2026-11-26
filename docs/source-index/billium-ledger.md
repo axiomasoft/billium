@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-ledger
 
-Path `packages/core/modules/ledger/src`, namespace `Billium\Ledger\`, layer L2. 99 types.
+Path `packages/core/modules/ledger/src`, namespace `Billium\Ledger\`, layer L2. 101 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -99,6 +99,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`BootstrapPartitionCommand`](../../packages/core/modules/ledger/src/Internal/Commands/BootstrapPartitionCommand.php) | class | *Internal* | ledger.feed.bootstrap (PF-13, PF-14, ACC-RST-07): staged bootstrap of one observation partition over FeedPartitions with the ledger ObservationHandler. |
 | [`CreateInvoiceCommand`](../../packages/core/modules/ledger/src/Internal/Commands/CreateInvoiceCommand.php) | class | *Internal* | Draft over unbilled obligations; no event, no number (D49). |
 | [`CreditNoteGroupRef`](../../packages/core/modules/ledger/src/Internal/Commands/CreditNoteGroupRef.php) | class | *Internal* | The only place that knows how a multi-invoice credit names its parts and how the group reference lists them. |
+| [`CreditNotePlan`](../../packages/core/modules/ledger/src/Internal/Commands/CreditNotePlan.php) | class | *Internal* | The rows a credit note touches, read before and again after its lock plan is taken (COV-167): the invoice and its currency, the credited obligations by ref, an… |
 | [`DeclareSettlementIntentCommand`](../../packages/core/modules/ledger/src/Internal/Commands/DeclareSettlementIntentCommand.php) | class | *Internal* |  |
 | [`DiscardInvoiceCommand`](../../packages/core/modules/ledger/src/Internal/Commands/DiscardInvoiceCommand.php) | class | *Internal* | draft → discarded; the obligations are released. |
 | [`IssueCreditNoteCommand`](../../packages/core/modules/ledger/src/Internal/Commands/IssueCreditNoteCommand.php) | class | *Internal* | Credit note on an issued invoice (COV-167, COV-174): open_only reduces open; reverse_allocations first releases live allocations of the line (LIFO, full revers… |
@@ -141,6 +142,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`ObservationOwnership`](../../packages/core/modules/ledger/src/Internal/Observation/ObservationOwnership.php) | class | *Internal* |  |
 | [`ParkedDrainer`](../../packages/core/modules/ledger/src/Internal/Observation/ParkedDrainer.php) | class | *Internal* | Drives observation work one economic event per NEW root Tx (inbox-feed): the next accounted sequence of a partition, the later parked revision of an operation… |
 | [`PaymentProjection`](../../packages/core/modules/ledger/src/Internal/Observation/PaymentProjection.php) | class | *Internal* | Economic apply of ONE observed revision inside its root Tx (observation-apply, D41, D46, D57, D60). |
+| [`RefundReconcileReport`](../../packages/core/modules/ledger/src/Internal/Observation/RefundReconcileReport.php) | class | *Internal* | Counts of one refund reconcile pass: charges compared, mismatches recorded and earlier mismatches resolved. |
 | [`RefundReconciler`](../../packages/core/modules/ledger/src/Internal/Observation/RefundReconciler.php) | class | *Internal* | D48 reconcile job of the D41 refund basis: after the configured consistency window the ordinary charge basis (payment.refunded_minor, assigned only from the ch… |
 
 ## Internal/Participants

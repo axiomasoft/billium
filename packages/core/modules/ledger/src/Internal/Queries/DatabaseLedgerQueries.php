@@ -26,6 +26,9 @@ use Packman\Attributes\Internal;
 #[Internal]
 final readonly class DatabaseLedgerQueries implements LedgerQueries
 {
+    /** One due page is read and encoded in memory; the same ceiling as the event feed keeps a single request bounded. */
+    private const int DUE_PAGE_MAX = 1000;
+
     public function __construct(private ReadSession $reads, private CallerContext $callers, private FeedRecoveryQueries $feedRecovery) {}
 
     public function paymentStatus(string $paymentRef, ?string $sourceAuthority = null): array
@@ -94,7 +97,7 @@ final readonly class DatabaseLedgerQueries implements LedgerQueries
 
     public function dueObligations(string $billingAccountRef, DateTimeImmutable $asOf, int $limit = 100, ?string $cursor = null): array
     {
-        if ($billingAccountRef === '' || $limit < 1 || $limit > 9007199254740991) {
+        if ($billingAccountRef === '' || $limit < 1 || $limit > self::DUE_PAGE_MAX) {
             throw self::invalid();
         }
         $time = View::timestamp($asOf->format('Y-m-d\TH:i:s.uP'));

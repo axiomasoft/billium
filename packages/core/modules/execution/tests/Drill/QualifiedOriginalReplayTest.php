@@ -61,7 +61,7 @@ final class QualifiedOriginalReplayTest extends ExecutionTestCase
     public static function qualifications(): array
     {
         $cases = ['approved', 'lost-replay-response', 'found', 'different-bytes', 'different-key', 'different-account',
-            'missing-approval', 'expired-approval', 'missing-permission', 'expired-window', 'retired-writer', 'revoked-at-egress', 'unqualified-driver', 'no-readiness', 'namespace-recovery', 'unverified-process', 'foreign-first-egress', 'financial-hold', 'archive-unavailable', 'no-host', 'missing-egress', 'revoked-approval-at-egress', 'expired-at-egress'];
+            'missing-approval', 'expired-approval', 'missing-permission', 'expired-window', 'retired-writer', 'revoked-at-egress', 'unqualified-driver', 'no-readiness', 'namespace-recovery', 'unverified-process', 'foreign-first-egress', 'financial-hold', 'archive-unavailable', 'no-host', 'missing-egress', 'revoked-approval-at-egress', 'expired-at-egress', 'no-lookup'];
 
         return array_combine($cases, array_map(static fn (string $case): array => [$case], $cases));
     }
@@ -74,7 +74,7 @@ final class QualifiedOriginalReplayTest extends ExecutionTestCase
         try {
             $app = $this->application();
             $scope = Fixture::scope();
-            $cap = SimulatedCapabilities::snapshot(idempotencySeconds: $case === 'expired-window' ? 1 : 120);
+            $cap = SimulatedCapabilities::snapshot(idempotencySeconds: $case === 'expired-window' ? 1 : 120, visibility: $case === 'no-lookup' ? 'none' : 'complete', absence: $case !== 'no-lookup');
             Fixture::seedMerchant($app, $cap);
             $writer = Fixture::host($app, $path, cap: $cap);
             $delegate = $app->make(PaymentDrivers::class)->resolve($cap->driverId, $cap->driverContractVersion);
@@ -174,7 +174,7 @@ final class QualifiedOriginalReplayTest extends ExecutionTestCase
             self::assertSame(1, UnknownResultTest::events($path.'.psp', 'first-request'));
             self::assertSame(1, UnknownResultTest::events($path, 'provider.call'));
             self::assertSame(match ($case) {
-                'missing-permission', 'unverified-process' => 0, 'lost-replay-response' => 2, default => 1
+                'missing-permission', 'unverified-process', 'no-lookup' => 0, 'lost-replay-response' => 2, default => 1
             }, UnknownResultTest::events($path.'.psp', 'lookup'));
             $effects = array_values(array_filter(new DurableJournal($path)->records(), static fn (object $r): bool => $r instanceof ProviderRecord));
             self::assertCount(1, $effects);

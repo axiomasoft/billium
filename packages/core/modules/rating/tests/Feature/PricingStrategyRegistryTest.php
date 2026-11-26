@@ -84,6 +84,15 @@ final class PricingStrategyRegistryTest extends PlatformTestCase
         } catch (ProblemException $exception) {
             self::assertStringContainsString('billium.rating.price_version_conflict', $exception->detail);
         }
+        $relabelled = new PriceVersion(...array_replace(get_object_vars($price), ['unit' => 'seat']));
+        self::assertSame($price->termsDigest, $relabelled->termsDigest);
+        try {
+            $store->publish(price: $relabelled, commandKey: 'publish-relabelled');
+            self::fail('changed price with the same terms accepted');
+        } catch (ProblemException $exception) {
+            self::assertSame(ProblemCode::PolicyUnknown, $exception->problem);
+            self::assertSame('billium.rating.price_version_conflict', $exception->detail);
+        }
         try {
             $store->publish(price: $this->price('50.00'), commandKey: 'publish-1');
             self::fail('idempotency key with a different payload was accepted');
@@ -149,5 +158,35 @@ final class PricingStrategyRegistryTest extends PlatformTestCase
         self::assertSame('0.2000', $this->value('SELECT rate_text FROM billium_rating_tax_snapshot'));
         self::assertSame('test-evidence', $this->value('SELECT evidence_digest FROM billium_rating_tax_snapshot'));
         self::assertSame('55000', self::sqlState($this->owner()->getPdo(), 'DELETE FROM billium_rating_tax_snapshot'));
+    }
+
+    public function test_pricing_strategy_store_refuses_foreign_prices_and_mismatched_tax_snapshot_kinds(): void
+    {
+        $store = $this->application()->make(PriceVersionStore::class);
+        $foreign = new PriceVersion(...array_replace(get_object_vars($this->price('49.00')), ['sellerRef' => 'seller-b']));
+        $this->refused(ProblemCode::AuthDenied, 'billium.rating.seller_scope_mismatch', static fn () => $store->publish(price: $foreign, commandKey: 'foreign'));
+        $taxes = $this->application()->make(TaxSnapshotStore::class);
+        $rate = static fn (TaxSnapshotKind $kind): TaxSnapshot => new TaxSnapshot(snapshotRef: 'tax-'.$kind->value, kind: $kind, mode: TaxMode::Exclusive,
+            jurisdiction: 'TEST', taxCode: 'TEST', rate: '0.2000', effectiveDate: new DateTimeImmutable('2026-01-01'), taxPoint: new DateTimeImmutable('2026-02-01'),
+            noTaxReason: null, resolver: 'test-host', resolverVersion: '1', inputDigest: 'input', evidenceDigest: 'evidence');
+        $this->refused(ProblemCode::ValidationInvalid, 'billium.rating.terms_invalid: standard tax snapshot required',
+            static fn () => $taxes->freeze(snapshot: $rate(TaxSnapshotKind::Correction), commandKey: 'correction-as-standard'));
+        $policy = new TaxCorrectionPolicySnapshot(policyRef: 'policy', policyVersion: '1', treatment: 'original_rate', selectedRate: $rate(TaxSnapshotKind::Standard),
+            effectiveFrom: new DateTimeImmutable('2026-01-01'), effectiveTo: null, inputDigest: 'input', outputDigest: 'output', resolverVersion: '1');
+        $this->refused(ProblemCode::ValidationInvalid, 'billium.rating.tax_policy_unsupported',
+            static fn () => $taxes->freezeCorrection(policy: $policy, commandKey: 'standard-as-correction'));
+        self::assertSame(0, $this->rows('billium_rating_price_version'));
+        self::assertSame(0, $this->rows('billium_rating_tax_snapshot'));
+    }
+
+    private function refused(ProblemCode $problem, string $detail, callable $call): void
+    {
+        try {
+            $call();
+            self::fail('Expected '.$detail);
+        } catch (ProblemException $exception) {
+            self::assertSame($problem, $exception->problem);
+            self::assertSame($detail, $exception->detail);
+        }
     }
 }

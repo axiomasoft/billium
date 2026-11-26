@@ -6,6 +6,7 @@ namespace Billium\Execution\Tests\Contract;
 
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Execution\Data\DispatchRequest;
 use Billium\Execution\Data\ExecutionScope;
 use Billium\Execution\Data\FrozenBinding;
 use Billium\Execution\Data\OriginDecision;
@@ -69,5 +70,23 @@ final class DispatchPortsTest extends TestCase
         $origin = new OriginDecision($this->binding()->scope, 'other', 'intent', 'shop', 'remote-billium', 1, null, 'basis', 'policy', null);
         $this->expectException(ProblemException::class);
         $this->binding($origin);
+    }
+
+    public function test_a_binding_or_dispatch_request_without_capability_digest_is_refused(): void
+    {
+        $binding = $this->binding();
+        $request = new DispatchRequest($binding->scope, 'root', 'attempt', 'reference', EffectKind::Charge, Money::parse('1.00', 'RUB'), 'binding', 'capability',
+            'owner', 1, 1, 1, 1, 1, 'billium.psp_dispatch.v1');
+        foreach ([
+            'binding' => fn (): object => new FrozenBinding(...array_replace(get_object_vars($binding), ['capabilityDigest' => ''])),
+            'dispatch request' => fn (): object => new DispatchRequest(...array_replace(get_object_vars($request), ['capabilityDigest' => ''])),
+        ] as $case => $make) {
+            try {
+                $make();
+                self::fail($case);
+            } catch (ProblemException $e) {
+                self::assertStringContainsString('capabilityDigest', $e->getMessage(), $case);
+            }
+        }
     }
 }

@@ -57,12 +57,12 @@ final class ScheduleSchemaTest extends ScheduleTestCase
     {
         $descriptor = $this->application()->make(ModuleRegistry::class)->descriptor('schedule');
         self::assertNotNull($descriptor);
-        self::assertCount(4, $descriptor->migrationIdentities);
+        self::assertCount(5, $descriptor->migrationIdentities);
         foreach ($descriptor->migrationIdentities as $migration) {
             $path = dirname(__DIR__, 4).'/database/migrations/schedule/'.$migration->id.'.php';
             self::assertSame('sha256:'.hash_file('sha256', $path), $migration->checksum);
         }
-        self::assertSame(4, $this->value("SELECT schema_version FROM billium_module_state WHERE module_id='schedule'"));
+        self::assertSame(5, $this->value("SELECT schema_version FROM billium_module_state WHERE module_id='schedule'"));
         self::assertCount(11, $descriptor->ownedTables);
     }
 }

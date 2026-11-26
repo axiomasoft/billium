@@ -191,6 +191,18 @@ final class CollectionAdmissionTest extends ExecutableCollectionTestCase
         self::assertSame(0, $this->rows('billium_outbox_command'));
     }
 
+    public function test_a_case_in_another_currency_than_its_obligation_is_refused_at_open(): void
+    {
+        $this->application()->make(Ledger::class)->recordObligation(new RecordObligation(
+            'usd-obligation', $this->account(), 'obligation-usd', 'basis-usd', 'customer-a', 'component-a', $this->money(5000), self::digest(),
+        ))->orThrow();
+        $this->assertRefused(ProblemCode::MoneyCurrencyMismatch, fn () => $this->dunningCaseService()->openCase(new OpenDunningCase(
+            'open-usd', $this->collectionScope(), 'case-usd', 'account-a', 'obligation-usd', 1, 'policy-a', 1, 'USD', 5000,
+            openedAt: new DateTimeImmutable('-1 hour'),
+        )));
+        self::assertSame(0, $this->rows('billium_collection_dunning_case', "case_ref = 'case-usd'"));
+    }
+
     /** @return iterable<string, array{string, string}> */
     public static function overlappingRootIdentities(): iterable
     {

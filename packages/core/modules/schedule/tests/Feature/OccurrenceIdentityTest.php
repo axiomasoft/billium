@@ -17,6 +17,7 @@ use Billium\Schedule\Contracts\PinnedOccurrenceInputs;
 use Billium\Schedule\Internal\OccurrenceConformance;
 use Billium\Schedule\Tests\OccurrenceTestCase;
 use Billium\Schedule\Tests\Support\Terms;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 
 #[Group('pg')]
@@ -69,6 +70,34 @@ final class OccurrenceIdentityTest extends OccurrenceTestCase
         $absent = $queries->find($scope, $missing, $proof);
         self::assertSame('absent', $absent->status);
         self::assertEquals((object) ['proofRef' => 'history-proof'], $absent->absenceCertificate);
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function shiftedIntervals(): iterable
+    {
+        yield 'start differs from the pinned period' => ['2024-01-30T00:00:00Z', '2024-02-29T00:00:00Z'];
+        yield 'end differs from the pinned period' => ['2024-01-31T00:00:00Z', '2024-03-01T00:00:00Z'];
+    }
+
+    #[DataProvider('shiftedIntervals')]
+    public function test_a_wire_interval_that_differs_from_the_pinned_period_is_refused(string $start, string $end): void
+    {
+        $this->createSchedule();
+        $codec = new Codec;
+        $command = $codec->decode($codec->canonicalize(['schema' => EnsureBillingOccurrence::SCHEMA, 'commandKey' => '5a0f7c38-1d0e-4e43-9a51-0d6f3a2b7c11',
+            'installationRef' => self::INSTALLATION, 'sellerRef' => 'seller-a', 'environment' => 'test', 'componentRef' => 'component-a',
+            'purpose' => 'recurring_charge', 'scheduleRevision' => 1, 'interval' => (object) ['start' => $start, 'end' => $end]]));
+        self::assertInstanceOf(EnsureBillingOccurrence::class, $command);
+        $resolver = $this->createMock(PinnedOccurrenceInputs::class);
+        $resolver->method('resolve')->willReturn($this->ensure());
+        try {
+            $this->occurrences()->ensureBillingOccurrence($command, $resolver);
+            self::fail('A wire interval outside the pinned period was accepted');
+        } catch (ProblemException $problem) {
+            self::assertSame(ProblemCode::AuthDenied, $problem->problem);
+            self::assertSame('', $problem->detail);
+        }
+        self::assertSame(0, $this->rows('billium_schedule_billing_occurrence'));
     }
 
     public function test_module_owned_conformance_dispatch_uses_the_same_occurrence_writer(): void

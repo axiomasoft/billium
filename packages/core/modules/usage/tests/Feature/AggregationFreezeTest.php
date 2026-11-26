@@ -89,6 +89,8 @@ final class AggregationFreezeTest extends AggregationTestCase
         self::assertSame($before, $this->value('SELECT row_to_json(s)::text FROM billium_usage_aggregate_snapshot s WHERE snapshot_revision=1'));
         $this->domainRefusal(fn () => $this->assertCurrent($first), 'snapshot_superseded');
         $this->assertCurrent($second);
+        $this->domainRefusal(fn () => $this->assertCurrent($second, new AggregateSnapshotRef(snapshotRef: FixtureValues::text($second['snapshotRef']),
+            snapshotDigest: FixtureValues::text($second['snapshotDigest']), quantity: '11.000000000', quantityScale: 9, window: $this->window(), frontierDigest: 'pinned-frontier')), 'snapshot_superseded');
         $this->domainRefusal(fn () => $this->queries()->classifyLateFact(window: $this->window(), observedAtMicros: $this->window()->endMicros, factId: 'late', factRevision: 1), 'original_window_mismatch');
     }
 
@@ -272,10 +274,10 @@ final class AggregationFreezeTest extends AggregationTestCase
     }
 
     /** @param array<string, mixed> $receipt */
-    private function assertCurrent(array $receipt): void
+    private function assertCurrent(array $receipt, ?AggregateSnapshotRef $pinned = null): void
     {
-        $this->runner()->run(spec: new OperationSpec(commandKind: 'usage.test_current', sellerRef: 'seller-a', environment: 'test', mode: FinancialMode::Administrative, operationClass: ModuleOperationClass::NewIntent, modules: ['platform', 'usage']), body: function (TransactionContext $context) use ($receipt): FreezeReceipt {
-            $this->application()->make(AggregationParticipants::class)->assertSnapshotCurrent(context: $context, ref: new AggregateSnapshotRef(snapshotRef: FixtureValues::text($receipt['snapshotRef']), snapshotDigest: FixtureValues::text($receipt['snapshotDigest'])));
+        $this->runner()->run(spec: new OperationSpec(commandKind: 'usage.test_current', sellerRef: 'seller-a', environment: 'test', mode: FinancialMode::Administrative, operationClass: ModuleOperationClass::NewIntent, modules: ['platform', 'usage']), body: function (TransactionContext $context) use ($receipt, $pinned): FreezeReceipt {
+            $this->application()->make(AggregationParticipants::class)->assertSnapshotCurrent(context: $context, ref: $pinned ?? new AggregateSnapshotRef(snapshotRef: FixtureValues::text($receipt['snapshotRef']), snapshotDigest: FixtureValues::text($receipt['snapshotDigest'])));
 
             return new FreezeReceipt([]);
         })->orThrow();

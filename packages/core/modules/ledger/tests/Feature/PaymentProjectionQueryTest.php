@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Billium\Ledger\Tests\Feature;
 
 use Billium\Contracts\Contracts\Codec;
+use Billium\Contracts\Data\Currency;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
+use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Tests\Support\ObservationFactory;
 use Billium\Ledger\Tests\Observation\OverRefundVector;
@@ -100,6 +102,12 @@ final class PaymentProjectionQueryTest extends QueryTestCase
         self::assertSame('10.00', self::arr(self::arr($before['applied'])['allocated'])['amount']);
         self::assertSame('90.00', self::arr($before['spendable'])['amount']);
         self::assertTrue($this->queries()->refundAuthorization('op-1', Money::parse('1.00', 'RUB'))['allowed']);
+        try {
+            $this->queries()->refundAuthorization('op-1', new Money(-100, Currency::of('RUB')));
+            self::fail('negative refund amount');
+        } catch (ProblemException $e) {
+            self::assertSame(ProblemCode::ValidationInvalid, $e->problem);
+        }
 
         self::assertSame(ProblemCode::RecoveryRequired->value,
             $this->tryObserve(ObservationFactory::charge('op-1', 2, 10000, sequence: 2, fields: ['sourceLineage' => 'L2'])));

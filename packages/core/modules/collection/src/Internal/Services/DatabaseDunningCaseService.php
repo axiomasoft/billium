@@ -28,6 +28,7 @@ use Billium\Collection\Internal\CollectionReceipt;
 use Billium\Collection\Internal\Queries\DatabaseDunningQueries;
 use Billium\Collection\Internal\Support\RetryJitter;
 use Billium\Collection\Internal\Support\RowCast;
+use Billium\Collection\Internal\Validation\ObligationCurrencyGuard;
 use Billium\Collection\Internal\Work\CollectionWork;
 use Billium\Collection\Internal\Work\CollectionWorkClaim;
 use Billium\Contracts\Contracts\Codec;
@@ -84,6 +85,7 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
         private DatabaseCollectionParticipants $participants,
         private IdempotencyReceiptQueries $receipts,
         private CollectionWork $work,
+        private ObligationCurrencyGuard $obligationCurrency,
     ) {}
 
     #[Override]
@@ -145,6 +147,7 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
             body: function (TransactionContext $context) use ($caller, $command, $currency, $caseDigest): CollectionReceipt {
                 $this->runner->assertCurrent($context, 'collection');
                 $db = $this->databases->connection($context->connectionName());
+                $this->obligationCurrency->assertMatches($context, $caller, $command->billingAccountRef, $command->obligationRef, $currency);
 
                 if ($command->componentRef !== null) {
                     $activeOwner = $db->table('billium_collection_recurring_owner')

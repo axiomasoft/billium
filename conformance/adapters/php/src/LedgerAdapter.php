@@ -193,7 +193,7 @@ final class LedgerAdapter
 
         return match ($op) {
             'ledger.drain' => ['drained' => count(array_filter($app->make(ParkedDrainer::class)->retryParked(), static fn (string $status): bool => $status === 'applied'))],
-            'ledger.reconcile_refunds' => ['discrepancies' => $app->make(RefundReconciler::class)->reconcile($args->after_seconds ?? null)['recorded']],
+            'ledger.reconcile_refunds' => ['discrepancies' => $app->make(RefundReconciler::class)->reconcile($args->after_seconds ?? null)->recorded],
             'ledger.query' => $this->query($args),
             'ledger.bootstrap' => $this->bootstrap($args),
             default => throw new LogicException("Unknown ledger op {$op}"),

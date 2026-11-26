@@ -6519,6 +6519,62 @@
       "source": "packages/core/database/migrations/platform/2026_11_22_000002_create_billium_authority_routing_tables.php"
     },
     {
+      "kind": "migration",
+      "id": "2026_11_25_000001_index_billium_schedule_occurrence_amendment",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/schedule/2026_11_25_000001_index_billium_schedule_occurrence_amendment.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_25_000002_index_billium_observed_refunds_by_original",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/ledger/2026_11_25_000002_index_billium_observed_refunds_by_original.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_25_000003_index_billium_ledger_discrepancy_lookups",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/ledger/2026_11_25_000003_index_billium_ledger_discrepancy_lookups.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_25_000004_index_billium_allocation_receipt_digest",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/ledger/2026_11_25_000004_index_billium_allocation_receipt_digest.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_25_000005_index_billium_execution_recon_item_review",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/execution/2026_11_25_000005_index_billium_execution_recon_item_review.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_25_000006_index_billium_allocation_receipt_ref",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/ledger/2026_11_25_000006_index_billium_allocation_receipt_ref.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_25_000007_index_billium_document_credit_note_line_original",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/documents/2026_11_25_000007_index_billium_document_credit_note_line_original.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_25_000008_index_billium_document_render_blob_cleanup",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/documents/2026_11_25_000008_index_billium_document_render_blob_cleanup.php"
+    },
+    {
       "kind": "route",
       "id": "billium.server.capabilities",
       "status": "new",

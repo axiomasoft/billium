@@ -22,7 +22,9 @@ Privileged reconciliation and repair operations (`RepairCommands::repair`) requi
 
 ## 4. Payload Limits, Metadata Bounds, and Secret Redaction
 
-1. **Bounded HTTP payloads.** Requests exceeding `billium-server.max_body_bytes` or `max_depth` are rejected with `400` (`billium.validation.invalid`) before command processing.
+1. **Bounded HTTP payloads.** Set an ingress limit for `/billium/` at the reverse proxy or web server, at or below `billium-server.max_body_bytes`. Apply it to requests with both declared and chunked bodies before forwarding to PHP. For Nginx, use `client_max_body_size`. Laravel's default request capture reads and decodes JSON before middleware runs.
+
+   Billium rejects bodies over `max_body_bytes` (up to 16 MiB) or `max_depth` with `400` (`billium.validation.invalid`) before command processing. It checks `Content-Length` before reading, checks already buffered bodies in place, and reads unread streams in 64 KiB chunks up to `max_body_bytes + 1` bytes.
 2. **Bounded & sanitized metadata.** Invoice metadata is limited to 64 KiB (`65536` bytes) and guarded by PostgreSQL `CHECK` constraints (`SQLSTATE 23514`) that reject inline secret keys (`token`, `apiKey`, `secret`) while permitting opaque `secret_ref` locators.
 3. **Opaque `SecretRef` discipline.** `Billium\Execution\Data\SecretRef` accepts only `secret://...` locators and rejects raw credential material.
 4. **Zero inline secret persistence.** `CallbackFrame` / `CallbackCustody` never persists raw PAN, CVV/CVV2, `password`, `api_key`, or `client_secret` inline in `billium_execution_provider_evidence.sanitized_payload`; sensitive frames are routed to the external `CallbackPayloadArchive` and referenced only by `secure_payload_ref`.

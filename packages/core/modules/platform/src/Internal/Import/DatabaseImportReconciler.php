@@ -14,7 +14,6 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Platform\Contracts\Accounting\AccountingMapper;
-use Billium\Platform\Contracts\Import\ImportIdentityStore;
 use Billium\Platform\Contracts\Import\ImportMonetaryPort;
 use Billium\Platform\Contracts\Import\ImportReconciler;
 use Billium\Platform\Data\Accounting\AccountingSourceRecord;
@@ -44,6 +43,11 @@ use Packman\Attributes\Internal;
 #[Internal]
 final readonly class DatabaseImportReconciler implements ImportReconciler
 {
+    /**
+     * Staged rows resolved per mapping/receipt round trip; bounds both the bind payload and the per-chunk result.
+     */
+    private const int LOOKUP_CHUNK_SIZE = 500;
+
     private MoneyMath $math;
 
     /**
@@ -53,7 +57,6 @@ final readonly class DatabaseImportReconciler implements ImportReconciler
     public function __construct(
         private DatabaseManager $databases,
         private BilliumOptions $options,
-        private ImportIdentityStore $store,
         private AccountingMapper $accountingMapper,
         private Closure $callers,
         private Closure $monetaryPort,
@@ -148,130 +151,133 @@ final readonly class DatabaseImportReconciler implements ImportReconciler
         $envelopeBuilder = new ImportObservationEnvelopeBuilder($this->codec);
         $monetary = ($this->monetaryPort)();
 
-        foreach ($records as $row) {
-            $sourceRecordId = self::strField($row, 'source_record_id');
-            $recordKind = ImportRecordKind::from(self::strField($row, 'record_kind'));
-            $revision = self::intField($row, 'source_record_revision');
-            $validationStatus = self::strField($row, 'validation_status');
-            $currencyCode = self::optStrField($row, 'currency');
-            $amountMinor = self::optIntField($row, 'amount_minor');
-            $payload = self::decodeArray(self::strField($row, 'payload'));
+        foreach (array_chunk($records, self::LOOKUP_CHUNK_SIZE) as $chunk) {
+            $lookups = $this->resolveChunk($db, $chunk);
+            foreach ($chunk as $position => $row) {
+                $sourceRecordId = self::strField($row, 'source_record_id');
+                $recordKind = ImportRecordKind::from(self::strField($row, 'record_kind'));
+                $revision = self::intField($row, 'source_record_revision');
+                $validationStatus = self::strField($row, 'validation_status');
+                $currencyCode = self::optStrField($row, 'currency');
+                $amountMinor = self::optIntField($row, 'amount_minor');
+                $payload = self::decodeArray(self::strField($row, 'payload'));
 
-            $identity = new ImportSourceIdentity(
-                installationRef: self::strField($row, 'installation_ref'),
-                environment: self::strField($row, 'environment'),
-                sellerRef: self::strField($row, 'seller_ref'),
-                sourceSystem: self::strField($row, 'source_system'),
-                sourceInstallation: self::strField($row, 'source_installation'),
-                sourceBook: self::strField($row, 'source_book'),
-                sourceRecordId: $sourceRecordId,
-                recordKind: $recordKind,
-            );
+                $identity = new ImportSourceIdentity(
+                    installationRef: self::strField($row, 'installation_ref'),
+                    environment: self::strField($row, 'environment'),
+                    sellerRef: self::strField($row, 'seller_ref'),
+                    sourceSystem: self::strField($row, 'source_system'),
+                    sourceInstallation: self::strField($row, 'source_installation'),
+                    sourceBook: self::strField($row, 'source_book'),
+                    sourceRecordId: $sourceRecordId,
+                    recordKind: $recordKind,
+                );
 
-            if ($validationStatus === 'conflict') {
-                $discrepancies[] = [
-                    'sourceRecordId' => $sourceRecordId,
-                    'recordKind' => $recordKind->value,
-                    'code' => 'import.record_conflict',
-                    'detail' => 'Source identity/revision has a conflicting payload digest or tombstoned mapping',
-                ];
-            } elseif ($validationStatus === 'rejected') {
-                $discrepancies[] = [
-                    'sourceRecordId' => $sourceRecordId,
-                    'recordKind' => $recordKind->value,
-                    'code' => self::optStrField($row, 'rejection_code') ?? 'import.record_rejected',
-                    'detail' => 'Record rejected during validation/apply',
-                ];
-            }
+                if ($validationStatus === 'conflict') {
+                    $discrepancies[] = [
+                        'sourceRecordId' => $sourceRecordId,
+                        'recordKind' => $recordKind->value,
+                        'code' => 'import.record_conflict',
+                        'detail' => 'Source identity/revision has a conflicting payload digest or tombstoned mapping',
+                    ];
+                } elseif ($validationStatus === 'rejected') {
+                    $discrepancies[] = [
+                        'sourceRecordId' => $sourceRecordId,
+                        'recordKind' => $recordKind->value,
+                        'code' => self::optStrField($row, 'rejection_code') ?? 'import.record_rejected',
+                        'detail' => 'Record rejected during validation/apply',
+                    ];
+                }
 
-            $mapping = $this->store->findMapping($identity, $revision);
-            $receipt = $this->store->findAppliedReceipt($identity, $revision);
+                $mappingTargetRef = $lookups[$position]['mappingTargetRef'];
+                $receiptStatus = $lookups[$position]['receiptStatus'];
 
-            // Classify the record's actual runtime disposition without claiming queued observations as applied.
-            $disposition = 'pending';
-            if ($validationStatus === 'unanchored_evidence' || $recordKind === ImportRecordKind::UnanchoredEvidence) {
-                $disposition = 'unanchored';
-            } elseif (in_array($recordKind, [ImportRecordKind::ProvenPaymentEvidence, ImportRecordKind::ProvenRefundEvidence], true)) {
-                if ($mapping !== null && $mapping->billiumTargetRef !== null) {
-                    $disposition = 'applied';
-                    $opKind = $recordKind === ImportRecordKind::ProvenRefundEvidence ? 'refund' : 'charge';
-                    $funding = is_array($payload['fundingRefs'] ?? null) ? $payload['fundingRefs'] : [];
-                    $origRefs = is_array($payload['originalBusinessRefs'] ?? null) ? $payload['originalBusinessRefs'] : [];
-                    $opRef = $this->resolveOperationRefForRow($sourceRecordId, $recordKind, $funding, $origRefs);
-                    $obsOutcome = $monetary->findObservationOutcome($migrationSourceAuthority, $opRef, $opKind, max(1, $revision));
-                    if ($obsOutcome->status === ImportObservationOutcome::STATUS_HELD_DISCREPANCY) {
-                        $discrepancies[] = [
-                            'sourceRecordId' => $sourceRecordId,
-                            'recordKind' => $recordKind->value,
-                            'code' => 'import.observation_held_discrepancy',
-                            'detail' => 'Observed payment/refund projected with financial hold discrepancy',
-                        ];
-                    }
-                    if ($currencyCode !== null && $amountMinor !== null && $amountMinor > 0) {
-                        $factEntry = $this->evaluateAccountingFact(
-                            identity: $identity,
-                            payload: $payload,
-                            money: new Money($amountMinor, Currency::of($currencyCode)),
-                            occurredAt: new DateTimeImmutable(self::strField($row, 'event_business_date')),
-                            envelopeBuilder: $envelopeBuilder,
-                        );
-                        if ($factEntry !== null) {
-                            if (isset($seenAccountingFactRefs[$factEntry['sourceFactRef']])) {
-                                $discrepancies[] = [
-                                    'sourceRecordId' => $sourceRecordId,
-                                    'currency' => $currencyCode,
-                                    'recordKind' => $recordKind->value,
-                                    'code' => 'import.duplicate_accounting_fact_ref',
-                                    'detail' => 'Duplicate accounting sourceFactRef within reconciled batch',
-                                ];
-                            }
-                            $seenAccountingFactRefs[$factEntry['sourceFactRef']] = true;
-                            $accountingFacts[] = $factEntry;
+                // Classify the record's actual runtime disposition without claiming queued observations as applied.
+                $disposition = 'pending';
+                if ($validationStatus === 'unanchored_evidence' || $recordKind === ImportRecordKind::UnanchoredEvidence) {
+                    $disposition = 'unanchored';
+                } elseif (in_array($recordKind, [ImportRecordKind::ProvenPaymentEvidence, ImportRecordKind::ProvenRefundEvidence], true)) {
+                    if ($mappingTargetRef !== null) {
+                        $disposition = 'applied';
+                        $opKind = $recordKind === ImportRecordKind::ProvenRefundEvidence ? 'refund' : 'charge';
+                        $funding = is_array($payload['fundingRefs'] ?? null) ? $payload['fundingRefs'] : [];
+                        $origRefs = is_array($payload['originalBusinessRefs'] ?? null) ? $payload['originalBusinessRefs'] : [];
+                        $opRef = $this->resolveOperationRefForRow($sourceRecordId, $recordKind, $funding, $origRefs);
+                        $obsOutcome = $monetary->findObservationOutcome($migrationSourceAuthority, $opRef, $opKind, max(1, $revision));
+                        if ($obsOutcome->status === ImportObservationOutcome::STATUS_HELD_DISCREPANCY) {
+                            $discrepancies[] = [
+                                'sourceRecordId' => $sourceRecordId,
+                                'recordKind' => $recordKind->value,
+                                'code' => 'import.observation_held_discrepancy',
+                                'detail' => 'Observed payment/refund projected with financial hold discrepancy',
+                            ];
                         }
+                        if ($currencyCode !== null && $amountMinor !== null && $amountMinor > 0) {
+                            $factEntry = $this->evaluateAccountingFact(
+                                identity: $identity,
+                                payload: $payload,
+                                money: new Money($amountMinor, Currency::of($currencyCode)),
+                                occurredAt: new DateTimeImmutable(self::strField($row, 'event_business_date')),
+                                envelopeBuilder: $envelopeBuilder,
+                            );
+                            if ($factEntry !== null) {
+                                if (isset($seenAccountingFactRefs[$factEntry['sourceFactRef']])) {
+                                    $discrepancies[] = [
+                                        'sourceRecordId' => $sourceRecordId,
+                                        'currency' => $currencyCode,
+                                        'recordKind' => $recordKind->value,
+                                        'code' => 'import.duplicate_accounting_fact_ref',
+                                        'detail' => 'Duplicate accounting sourceFactRef within reconciled batch',
+                                    ];
+                                }
+                                $seenAccountingFactRefs[$factEntry['sourceFactRef']] = true;
+                                $accountingFacts[] = $factEntry;
+                            }
+                        }
+                    } elseif ($receiptStatus === ImportReceiptStatus::ObservationQueued) {
+                        $disposition = 'queued_or_parked';
+                        $pendingQueuedOrParked++;
+                    } else {
+                        $pendingQueuedOrParked++;
                     }
-                } elseif ($receipt !== null && $receipt->status === ImportReceiptStatus::ObservationQueued) {
-                    $disposition = 'queued_or_parked';
-                    $pendingQueuedOrParked++;
                 } else {
-                    $pendingQueuedOrParked++;
+                    if ($receiptStatus === ImportReceiptStatus::Applied || $mappingTargetRef !== null) {
+                        $disposition = 'applied';
+                    } elseif (! in_array($validationStatus, ['rejected', 'conflict'], true)) {
+                        $pendingQueuedOrParked++;
+                    }
                 }
-            } else {
-                if (($receipt !== null && $receipt->status === ImportReceiptStatus::Applied) || ($mapping !== null && $mapping->billiumTargetRef !== null)) {
-                    $disposition = 'applied';
-                } elseif (! in_array($validationStatus, ['rejected', 'conflict'], true)) {
-                    $pendingQueuedOrParked++;
-                }
-            }
 
-            if ($currencyCode !== null && $amountMinor !== null && $validationStatus !== 'rejected') {
-                $money = new Money($amountMinor, Currency::of($currencyCode));
-                $zero = new Money(0, Currency::of($currencyCode));
-                $key = $identity->sellerRef.'|'.$currencyCode.'|'.$recordKind->value;
-                $buckets[$key] ??= [
-                    'sellerRef' => $identity->sellerRef,
-                    'currency' => $currencyCode,
-                    'recordKind' => $recordKind,
-                    'expectedCount' => 0,
-                    'expectedTotal' => $zero,
-                    'appliedCount' => 0,
-                    'appliedTotal' => $zero,
-                    'queuedCount' => 0,
-                    'queuedTotal' => $zero,
-                    'unanchoredCount' => 0,
-                    'unanchoredTotal' => $zero,
-                ];
-                $buckets[$key]['expectedCount']++;
-                $buckets[$key]['expectedTotal'] = $this->math->add($buckets[$key]['expectedTotal'], $money);
+                if ($currencyCode !== null && $amountMinor !== null && $validationStatus !== 'rejected') {
+                    $money = new Money($amountMinor, Currency::of($currencyCode));
+                    $zero = new Money(0, Currency::of($currencyCode));
+                    $key = $identity->sellerRef.'|'.$currencyCode.'|'.$recordKind->value;
+                    $buckets[$key] ??= [
+                        'sellerRef' => $identity->sellerRef,
+                        'currency' => $currencyCode,
+                        'recordKind' => $recordKind,
+                        'expectedCount' => 0,
+                        'expectedTotal' => $zero,
+                        'appliedCount' => 0,
+                        'appliedTotal' => $zero,
+                        'queuedCount' => 0,
+                        'queuedTotal' => $zero,
+                        'unanchoredCount' => 0,
+                        'unanchoredTotal' => $zero,
+                    ];
+                    $buckets[$key]['expectedCount']++;
+                    $buckets[$key]['expectedTotal'] = $this->math->add($buckets[$key]['expectedTotal'], $money);
 
-                if ($disposition === 'applied') {
-                    $buckets[$key]['appliedCount']++;
-                    $buckets[$key]['appliedTotal'] = $this->math->add($buckets[$key]['appliedTotal'], $money);
-                } elseif ($disposition === 'queued_or_parked') {
-                    $buckets[$key]['queuedCount']++;
-                    $buckets[$key]['queuedTotal'] = $this->math->add($buckets[$key]['queuedTotal'], $money);
-                } elseif ($disposition === 'unanchored') {
-                    $buckets[$key]['unanchoredCount']++;
-                    $buckets[$key]['unanchoredTotal'] = $this->math->add($buckets[$key]['unanchoredTotal'], $money);
+                    if ($disposition === 'applied') {
+                        $buckets[$key]['appliedCount']++;
+                        $buckets[$key]['appliedTotal'] = $this->math->add($buckets[$key]['appliedTotal'], $money);
+                    } elseif ($disposition === 'queued_or_parked') {
+                        $buckets[$key]['queuedCount']++;
+                        $buckets[$key]['queuedTotal'] = $this->math->add($buckets[$key]['queuedTotal'], $money);
+                    } elseif ($disposition === 'unanchored') {
+                        $buckets[$key]['unanchoredCount']++;
+                        $buckets[$key]['unanchoredTotal'] = $this->math->add($buckets[$key]['unanchoredTotal'], $money);
+                    }
                 }
             }
         }
@@ -514,6 +520,101 @@ final readonly class DatabaseImportReconciler implements ImportReconciler
             ?? ('imp-pay:'.$sourceRecordId);
 
         return strlen($candidate) <= 200 ? $candidate : 'imp-pay:'.hash('sha256', $candidate);
+    }
+
+    /**
+     * Resolves the revision mapping target and the applied receipt status for a chunk of staged rows in two
+     * set-based round trips. Lookup keys mirror ImportIdentityStore::findMapping() with a revision and
+     * ImportIdentityStore::findAppliedReceipt(); results are keyed by the row position inside the chunk.
+     *
+     * @param  list<object>  $chunk
+     * @return array<int, array{mappingTargetRef: ?string, receiptStatus: ?ImportReceiptStatus}>
+     */
+    private function resolveChunk(Connection $db, array $chunk): array
+    {
+        $mappingKeys = [];
+        $receiptKeys = [];
+        foreach ($chunk as $position => $row) {
+            $identity = new ImportSourceIdentity(
+                installationRef: self::strField($row, 'installation_ref'),
+                environment: self::strField($row, 'environment'),
+                sellerRef: self::strField($row, 'seller_ref'),
+                sourceSystem: self::strField($row, 'source_system'),
+                sourceInstallation: self::strField($row, 'source_installation'),
+                sourceBook: self::strField($row, 'source_book'),
+                sourceRecordId: self::strField($row, 'source_record_id'),
+                recordKind: ImportRecordKind::from(self::strField($row, 'record_kind')),
+            );
+            $revision = self::intField($row, 'source_record_revision');
+            $mappingKeys[] = [
+                'ord' => $position,
+                'installation_ref' => $identity->installationRef,
+                'environment' => $identity->environment,
+                'seller_ref' => $identity->sellerRef,
+                'source_installation' => $identity->sourceInstallation,
+                'source_book' => $identity->sourceBook,
+                'source_record_id' => $identity->sourceRecordId,
+                'record_kind' => $identity->recordKind->value,
+                'source_record_revision' => $revision,
+            ];
+            $receiptKeys[] = [
+                'ord' => $position,
+                'installation_ref' => $identity->installationRef,
+                'environment' => $identity->environment,
+                'seller_ref' => $identity->sellerRef,
+                'source_identity_digest' => $identity->identityDigest($this->codec),
+                'source_record_revision' => $revision,
+            ];
+        }
+        if ($mappingKeys === []) {
+            return [];
+        }
+
+        $mappings = $db->select(
+            'SELECT k.ord, m.billium_target_ref '
+            .'FROM jsonb_to_recordset(?::jsonb) AS k('
+            .'ord integer, installation_ref text, environment text, seller_ref text, source_installation text, '
+            .'source_book text, source_record_id text, record_kind text, source_record_revision bigint) '
+            .'JOIN public.billium_import_mapping m '
+            .'ON m.installation_ref = k.installation_ref AND m.environment = k.environment AND m.seller_ref = k.seller_ref '
+            .'AND m.source_installation = k.source_installation AND m.source_book = k.source_book '
+            .'AND m.source_record_id = k.source_record_id AND m.record_kind = k.record_kind '
+            .'AND m.source_record_revision = k.source_record_revision',
+            [json_encode($mappingKeys, JSON_THROW_ON_ERROR)],
+        );
+        /** @var array<int, ?string> $targetRefs */
+        $targetRefs = [];
+        foreach ($mappings as $mapping) {
+            $targetRefs[self::intField($mapping, 'ord')] = self::optStrField($mapping, 'billium_target_ref');
+        }
+
+        $receipts = $db->select(
+            'SELECT DISTINCT ON (k.ord) k.ord, r.status '
+            .'FROM jsonb_to_recordset(?::jsonb) AS k('
+            .'ord integer, installation_ref text, environment text, seller_ref text, '
+            .'source_identity_digest text, source_record_revision bigint) '
+            .'JOIN public.billium_import_receipt r '
+            .'ON r.installation_ref = k.installation_ref AND r.environment = k.environment AND r.seller_ref = k.seller_ref '
+            .'AND r.source_identity_digest = k.source_identity_digest AND r.source_record_revision = k.source_record_revision '
+            ."AND r.status IN ('applied', 'observation_queued') "
+            .'ORDER BY k.ord, r.id ASC',
+            [json_encode($receiptKeys, JSON_THROW_ON_ERROR)],
+        );
+        /** @var array<int, ImportReceiptStatus> $receiptStatuses */
+        $receiptStatuses = [];
+        foreach ($receipts as $receipt) {
+            $receiptStatuses[self::intField($receipt, 'ord')] = ImportReceiptStatus::from(self::strField($receipt, 'status'));
+        }
+
+        $resolved = [];
+        foreach (array_keys($chunk) as $position) {
+            $resolved[$position] = [
+                'mappingTargetRef' => $targetRefs[$position] ?? null,
+                'receiptStatus' => $receiptStatuses[$position] ?? null,
+            ];
+        }
+
+        return $resolved;
     }
 
     private function connection(): Connection

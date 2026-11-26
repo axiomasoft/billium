@@ -29,7 +29,7 @@ final class ReconcileRefundsCommand extends Command
         }
         try {
             $report = $reconciler->reconcile($after === null ? null : (int) $after, (int) $limit);
-            $this->line("compared={$report['compared']} recorded={$report['recorded']} resolved={$report['resolved']}");
+            $this->line("compared={$report->compared} recorded={$report->recorded} resolved={$report->resolved}");
 
             return self::SUCCESS;
         } catch (Throwable $error) {

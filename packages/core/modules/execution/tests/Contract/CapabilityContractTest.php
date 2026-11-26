@@ -127,6 +127,12 @@ final class CapabilityContractTest extends TestCase
         self::snapshot()->requireEffect(EffectKind::Charge, 'RUB', true);
     }
 
+    public function test_an_undeclared_currency_is_unsupported(): void
+    {
+        $this->expectExceptionObject(new ProblemException(ProblemCode::CapabilityUnsupported, 'Exact effect, currency and qualification are required'));
+        self::snapshot()->requireEffect(EffectKind::Charge, 'USD', false);
+    }
+
     public function test_named_sbp_provider_capabilities_stay_separate(): void
     {
         $bankA = self::snapshot();
@@ -287,6 +293,32 @@ final class CapabilityContractTest extends TestCase
         self::assertSame(QualificationMode::Simulated, $manifest->mode);
         self::assertCount(3, $manifest->unresolvedGaps);
         self::assertSame([], $manifest->officialSources);
+    }
+
+    /** @return iterable<string, array{SnapshotOverrides}> */
+    public static function inconsistentSnapshots(): iterable
+    {
+        yield 'empty capability version' => [['capabilityVersion' => '']];
+        yield 'keyed currencies' => [['currencies' => [1 => 'RUB']]];
+        yield 'no currencies' => [['currencies' => []]];
+        yield 'lowercase currency' => [['currencies' => ['rub']]];
+        yield 'partial refund without refund effect' => [['partialRefund' => true]];
+        yield 'partial void without authorization effect' => [['partialVoidAuthorization' => true]];
+        yield 'partial capture flag without a partial capture mode' => [['partialCapture' => true]];
+        yield 'capture effect without a capture mode' => [['supportedEffects' => [EffectKind::Charge, EffectKind::Capture]]];
+        yield 'absence certification without complete inventory' => [['absenceCertification' => true]];
+    }
+
+    /** @param SnapshotOverrides $overrides */
+    #[DataProvider('inconsistentSnapshots')]
+    public function test_an_incomplete_or_inconsistent_snapshot_is_refused(array $overrides): void
+    {
+        try {
+            self::snapshot($overrides);
+            self::fail('inconsistent capability snapshot');
+        } catch (ProblemException $e) {
+            self::assertSame(ProblemCode::ValidationInvalid, $e->problem);
+        }
     }
 
     public function test_malformed_capability_lists_refuse_at_the_boundary(): void

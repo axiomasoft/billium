@@ -33,7 +33,7 @@
       "commitHash": "abcdef1234567890abcdef1234567890abcdef12",
       "packageHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "specRevision": "2026-10",
-      "specHash": "sha256:eb021eaa43885c32d8acdf0e0e7821ef03c177058e55567e45c33f652808b2a5"
+      "specHash": "sha256:224975f07c97b8793498f4aec142bdd4aa2be29c3bded382853d0b7fa845a0ad"
     },
     "consumer": {
       "name": "billium-reference-bridge-consumer",
@@ -41,7 +41,7 @@
       "commitHash": "abcdef1234567890abcdef1234567890abcdef12",
       "packageHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       "specRevision": "2026-10",
-      "specHash": "sha256:eb021eaa43885c32d8acdf0e0e7821ef03c177058e55567e45c33f652808b2a5",
+      "specHash": "sha256:224975f07c97b8793498f4aec142bdd4aa2be29c3bded382853d0b7fa845a0ad",
       "deliveryProfile": "loopback-http"
     },
     "runtime": {
@@ -539,7 +539,7 @@
       }
     ],
     "hashes": {
-      "spec": "sha256:eb021eaa43885c32d8acdf0e0e7821ef03c177058e55567e45c33f652808b2a5",
+      "spec": "sha256:224975f07c97b8793498f4aec142bdd4aa2be29c3bded382853d0b7fa845a0ad",
       "fixtures": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
       "harness": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
       "packages": "sha256:3333333333333333333333333333333333333333333333333333333333333333",

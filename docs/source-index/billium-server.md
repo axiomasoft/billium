@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-server
 
-Path `packages/server/src`, namespace `Billium\Server\`, layer L3. 38 types.
+Path `packages/server/src`, namespace `Billium\Server\`, layer L3. 39 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## .
@@ -55,6 +55,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
+| [`BoundedRequestBody`](../../packages/server/src/Internal/Http/BoundedRequestBody.php) | class | *Internal* | Reads a request body without accepting more than the configured byte limit. |
 | [`CapabilitiesController`](../../packages/server/src/Internal/Http/CapabilitiesController.php) | class | *Internal* |  |
 | [`EnvelopeResponse`](../../packages/server/src/Internal/Http/EnvelopeResponse.php) | class | *Internal* |  |
 | [`ExecutionController`](../../packages/server/src/Internal/Http/ExecutionController.php) | class | *Internal* |  |

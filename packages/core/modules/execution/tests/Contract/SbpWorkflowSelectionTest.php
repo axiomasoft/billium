@@ -24,6 +24,7 @@ use Billium\Execution\Internal\Admission\QualifiedAdapter;
 use Billium\Execution\Internal\Dispatch\TransportBoundary;
 use DateTimeImmutable;
 use Illuminate\Database\DatabaseManager;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 
@@ -86,6 +87,7 @@ final class SbpWorkflowSelectionTest extends TestCase
             [self::merchant('bank-a', $bankA, account: $bankB->merchantAccountRef), EffectKind::Charge, 'RUB'],
             [self::merchant('bank-a', $bankA, driverVersion: $bankB->driverContractVersion), EffectKind::Charge, 'RUB'],
             [self::merchant('bank-a-changed-capability', $bankA), EffectKind::Charge, 'RUB'],
+            [self::merchant('bank-a', $bankA, capabilityDigest: hash('sha256', 'stale-capability')), EffectKind::Charge, 'RUB'],
             [self::merchant('bank-b', $bankB, environment: 'production'), EffectKind::Refund, 'RUB'],
         ] as [$merchant, $kind, $currency]) {
             try {
@@ -106,6 +108,31 @@ final class SbpWorkflowSelectionTest extends TestCase
         self::assertCount(4, $verified);
     }
 
+    public function test_a_merchant_currency_gap_or_missing_initiation_mode_is_unsupported(): void
+    {
+        foreach ([
+            'currency outside the merchant revision' => [self::snapshot('bank-c', refunds: false), ['USD']],
+            'no qualified initiation mode' => [self::snapshot('bank-c', refunds: false, initiates: false), ['RUB']],
+        ] as $case => [$capability, $currencies]) {
+            $merchants = self::createStub(MerchantRegistry::class);
+            $merchants->method('capabilities')->willReturn($capability);
+            $drivers = self::createStub(PaymentDrivers::class);
+            $drivers->method('resolve')->willReturn($this->driver($capability->driverContractVersion));
+            $drivers->method('capabilities')->willReturn($capability);
+            $verifier = $this->createMock(AdapterQualification::class);
+            $verifier->expects(self::never())->method('verify');
+            $databases = self::createStub(DatabaseManager::class);
+            $databases->method('getConnections')->willReturn([]);
+            $selector = new QualifiedAdapter($merchants, static fn (): PaymentDrivers => $drivers, static fn (): AdapterQualification => $verifier, new TransportBoundary($databases));
+            try {
+                $selector->select(self::merchant('bank-c', $capability, currencies: $currencies), EffectKind::Charge, 'RUB');
+                self::fail($case);
+            } catch (ProblemException $exception) {
+                self::assertSame(ProblemCode::CapabilityUnsupported, $exception->problem, $case);
+            }
+        }
+    }
+
     private function driver(string $contractVersion): PaymentDriver
     {
         $driver = $this->createMock(PaymentDriver::class);
@@ -117,15 +144,15 @@ final class SbpWorkflowSelectionTest extends TestCase
         return $driver;
     }
 
-    private static function snapshot(string $bank, bool $refunds): CapabilitySnapshot
+    private static function snapshot(string $bank, bool $refunds, bool $initiates = true): CapabilitySnapshot
     {
         $effects = $refunds ? [EffectKind::Charge, EffectKind::Refund] : [EffectKind::Charge];
         $details = new CapabilityDetails(
             version: 'sbp-fixture.v1',
-            initiateWithIdempotency: true,
+            initiateWithIdempotency: $initiates,
             initiateWithoutIdempotency: false,
-            idempotencyKeyScope: $bank.'/account/reference',
-            idempotencyRetentionSeconds: 300,
+            idempotencyKeyScope: $initiates ? $bank.'/account/reference' : null,
+            idempotencyRetentionSeconds: $initiates ? 300 : null,
             lookupByProviderId: true,
             lookupVisibility: $refunds ? 'eventual' : 'complete',
             lookupRetentionSeconds: $refunds ? 86400 : 172800,
@@ -171,13 +198,31 @@ final class SbpWorkflowSelectionTest extends TestCase
         );
     }
 
-    private static function merchant(string $revision, CapabilitySnapshot $capability, string $environment = 'test', ?string $account = null, ?string $driverVersion = null): MerchantRevision
+    /** @return iterable<string, array{array<string, mixed>}> */
+    public static function incompleteMerchantRevisions(): iterable
+    {
+        yield 'no capability snapshot' => [['capabilitySnapshotRef' => '']];
+        yield 'no capability digest' => [['capabilityDigest' => '']];
+        yield 'keyed currencies' => [['currencyCodes' => [1 => 'RUB']]];
+    }
+
+    /** @param array<string, mixed> $overrides */
+    #[DataProvider('incompleteMerchantRevisions')]
+    public function test_an_incomplete_merchant_revision_is_refused(array $overrides): void
+    {
+        $merchant = self::merchant('bank-a', self::snapshot('bank-a', refunds: false));
+        $this->expectException(ProblemException::class);
+        new MerchantRevision(...array_replace(get_object_vars($merchant), $overrides));
+    }
+
+    /** @param list<string> $currencies */
+    private static function merchant(string $revision, CapabilitySnapshot $capability, string $environment = 'test', ?string $account = null, ?string $driverVersion = null, ?string $capabilityDigest = null, array $currencies = ['RUB']): MerchantRevision
     {
         $time = new DateTimeImmutable('2026-11-17T00:00:00Z');
 
         return new MerchantRevision($revision, new ExecutionScope('test-installation', 'seller-a', $environment, 'sbp-owner'),
             $account ?? $capability->merchantAccountRef, $capability->driverId.'-provider', $capability->driverId, $driverVersion ?? $capability->driverContractVersion,
-            $capability->snapshotRef, $capability->digest, new SecretRef('secret://fixture/sbp'), 'credential-v1', ['RUB'],
+            $capability->snapshotRef, $capabilityDigest ?? $capability->digest, new SecretRef('secret://fixture/sbp'), 'credential-v1', $currencies,
             hash('sha256', $revision), $time, new MerchantRevisionPolicy($time, null, null, 'fixture-sbp.v1', $revision.'-webhook',
                 $revision.'-continuity', $revision.'-settlement', $revision.'-mandate'));
     }
