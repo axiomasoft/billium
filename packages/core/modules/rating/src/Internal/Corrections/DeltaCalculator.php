@@ -7,7 +7,9 @@ namespace Billium\Rating\Internal\Corrections;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Rating\Internal\Storage\RatingRows;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class DeltaCalculator
 {
     /**

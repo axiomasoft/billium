@@ -2,11 +2,8 @@
 
 Статус: требования уровня A корпуса (PLAN1.P1.1), дописанные строки уровней B и C (PLAN1.P1.2) и строки,
 добавленные по заявкам аудита решениями D20–D26 (PLAN1.P1.6);
-существующие строки не перенумерованы, новые получили свободные номера в своих разделах. Источник каждой строки — ID `SRC-NNN` из
-`research/P1-corpus.md` плана `2026.10.14-№1-BILLIUM-V1` в [workspace](planning.md)
-(`BRAIN` = `/home/vostrikov/Vaults/Brain`);
-`§` указывает раздел документа. Диспозиция каждого прочитанного документа — в
-`knowledge/corpus-ledger.md` того же плана в workspace.
+существующие строки не перенумерованы, новые получили свободные номера в своих разделах. Источник каждой строки — ID `SRC-NNN`.
+`§` указывает раздел документа.
 
 Правила документа:
 
@@ -57,7 +54,7 @@ delegated engine внутри Billium; второго writer у сущности
 | ID | Требование | Источник |
 |:--|:--|:--|
 | REQ-PROF-01 | Профили поставки: `embedded` (Laravel-пакет внутри хоста) и `server` (отдельный сервис с API для нескольких продуктов) на одном коде. Обязательны только `billium-contracts` и core | SRC-009 CD-14; SRC-002 §4 |
-| REQ-PROF-02 | Лёгкий embedded-путь не требует CoreX, Tariffler, центрального сервера или приватного ERP | SRC-014 §Требования; SRC-006 §1; SRC-018 §Interfaces; SRC-016 §1 п. 4 |
+| REQ-PROF-02 | Лёгкий embedded-путь не требует внешнего ядра хоста, Tariffler, центрального сервера или приватного ERP | SRC-014 §Требования; SRC-006 §1; SRC-018 §Interfaces; SRC-016 §1 п. 4 |
 | REQ-PROF-03 | Дополнительные модули и профили не расширяют обязательный install footprint потребителя | SRC-025 §Что ещё не определено; SRC-014 §Модульная граница |
 | REQ-PROF-04 | Профили authority исполнения — отдельная ось: `embedded-commerz` (исполняет Commerz, Billium максимум ведёт allocation), `remote-billium` (исполняет Billium execution, Commerz хранит проекцию), `standalone-billium` (obligations и collection операции исполняет Billium) | SRC-005 §Authority profiles; SRC-002 §2 |
 | REQ-PROF-05 | Профиль исполнения фиксируется в операции с первого принятого execution command и не меняется. Смена профиля действует только для новых операций или через отдельный fenced handover. Появление Billium server старые операции не переключает | SRC-005 §Authority profiles; SRC-016 §3; SRC-006 (рекомендация); SRC-021 §Решения |
@@ -279,8 +276,8 @@ ID сценариев — из источников; полный перечен
 | CONFLICT-06 | Состояние репозитория: канон и досье — «repo нет», «`repo:` пуст», «без коммитов»; рабочее дерево Brain содержит незакоммиченное `repo: ~/projects/packages/billium` в tower (sha256 `dc22ac6bd5d4` против snapshot `e2c40fe7ddec`) и неотслеживаемый каталог `docs/` | SRC-004; SRC-016 §4.2; SRC-026; SRC-008 §W-02/03 | Открыт; brain sync — внешний эффект, решает владелец (вопрос P1.8) |
 | CONFLICT-07 | Tower: фискализация 54-ФЗ — bounded context внутри Billium. Канон CD-04: фискализацию запускает исполнитель оплаты через fiscal driver или receipt capability PaymentDrivers | SRC-004 §Ключевые решения; SRC-009 CD-04; SRC-002 §5 | Действует канон (REQ-CON-24) |
 | CONFLICT-08 | Рекомендация дистрибуции говорит о «pro extensions». Канон: нет `pro`-префиксов и edition-веток, платность — доступность пакета | SRC-001 §B-A / B-B / B-C; SRC-016 §1 п. 2, §3 | Действует канон (REQ-PROF-10); модель дистрибуции — вопрос I-02 |
-| CONFLICT-09 | Package-Boundaries: «старые frozen схемы Billium остаются существующим контрактом v1», зависимость старого Billium от `corex/payments`, модуль Fiscal integration внутри Billium; Purchase-and-Activation ссылается на «frozen Billium v1». Канон: драйверы — PaymentDrivers (CD-03), фискал — исполнитель (CD-04); контракты v1 проектирует P1.7, старые схемы лежат в исключённом `Development/` | SRC-049 §Лёгкое ядро, §Что сохраняем; SRC-109 §Связь финансовых состояний; SRC-009 CD-03, CD-04 | Действует канон; старые схемы не читаются. Опубликованы ли они потребителям — вопрос владельцу в P1.8 |
+| CONFLICT-09 | Package-Boundaries: «старые frozen схемы Billium остаются существующим контрактом v1», зависимость старого Billium от `legacy/payments`, модуль Fiscal integration внутри Billium; Purchase-and-Activation ссылается на «frozen Billium v1». Канон: драйверы — PaymentDrivers (CD-03), фискал — исполнитель (CD-04); контракты v1 проектирует P1.7, старые схемы лежат в исключённом `Development/` | SRC-049 §Лёгкое ядро, §Что сохраняем; SRC-109 §Связь финансовых состояний; SRC-009 CD-03, CD-04 | Действует канон; старые схемы не читаются. Опубликованы ли они потребителям — вопрос владельцу в P1.8 |
 | CONFLICT-10 | Tower: arm's-length вызов Lago по REST «не заражает» проприетарный код AGPL. Distribution options: это не универсальный факт, нужен разбор лицензии и edition | SRC-004 §Ключевые решения; SRC-061 §Licence premises | Открыт; проверяет P1.4 (DR-01, лицензии), до этого Lago по REST не считается безопасным по умолчанию |
-| CONFLICT-11 | Towers FlexCRM и FlexStore (вердикт P3.1): тарифный биллинг аккаунта «остаётся в `corex/billing`», FlexStore — «разовые и подписочные платежи e-commerce» через Billium. Канон: `corex/billing` вынесен в standalone Billium, розница — Commerz | SRC-178 §Синергии; SRC-179 §Синергии; SRC-181 §Состав ядра; SRC-002 §4 | Действует канон (REQ-OUT-03, REQ-PROF-19); строки towers — в brain-updates P1.8 |
+| CONFLICT-11 | Towers FlexCRM и FlexStore (вердикт P3.1): тарифный биллинг аккаунта «остаётся в `host/billing`», FlexStore — «разовые и подписочные платежи e-commerce» через Billium. Канон: `host/billing` вынесен в standalone Billium, розница — Commerz | SRC-178 §Синергии; SRC-179 §Синергии; SRC-181 §Состав ядра; SRC-002 §4 | Действует канон (REQ-OUT-03, REQ-PROF-19); строки towers — в brain-updates P1.8 |
 | CONFLICT-12 | Tower Memster: Billium — «монетизация авторов». Требования: выплаты правообладателям и payables — кандидат Settlement, не строится | SRC-180 §Синергии; SRC-002 §1; SRC-030 §Подтверждённое | Действует REQ-OUT-09; I-15 — вопрос владельцу |
 | CONFLICT-13 | Package-Boundary-Policy называет адаптер `commerz-billium-adapter`; канон — мост `commerz-billium` в репозитории Commerz | SRC-211 §Adapter policy; SRC-009 CD-02; SRC-013 §Реестр | Действует канон (REQ-CON-01, REQ-OUT-08) |

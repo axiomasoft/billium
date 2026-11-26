@@ -1,0 +1,32 @@
+{
+  "id": "errors/codes/decode-module-unavailable",
+  "spec_refs": [
+    "BC-ERR-01",
+    "BC-ERR-04",
+    "BC-ERR-06"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "problem.decode",
+      "args": {
+        "json_text": "{\"code\":\"billium.module.unavailable\",\"category\":\"module\",\"retryable\":false,\"sameKey\":true,\"receipt\":\"none\",\"title\":\"Problem\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "code": "billium.module.unavailable",
+        "category": "module",
+        "retryable": false,
+        "sameKey": true,
+        "receipt": "none"
+      }
+    }
+  ]
+}

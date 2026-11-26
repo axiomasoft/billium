@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Billium\Ledger\Internal;
 
 use InvalidArgumentException;
+use Packman\Attributes\Internal;
 
 /**
  * Invoice FSM table and the pure reference oracle of the derived payment status (p3-ledger-design invoice-fsm, D28, D47).
  * The guarded DB routines own the authoritative status update in the Tx of the settled change; PHP never writes status
  * or counters and uses this type only to check the table and name the transitions the commands request.
  */
+#[Internal]
 enum InvoiceStatus: string
 {
     case Draft = 'draft';

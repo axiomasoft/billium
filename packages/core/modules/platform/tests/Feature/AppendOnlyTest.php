@@ -6,7 +6,8 @@ namespace Billium\Platform\Tests\Feature;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Data\Receipt;
+use Billium\Core\Data\Runner\Receipt;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Platform\Tests\PlatformTestCase;
 use PHPUnit\Framework\Attributes\Group;
@@ -14,6 +15,7 @@ use PHPUnit\Framework\Attributes\Group;
 /** billium_append_only() and the guarded platform tables reject history rewrites even from the schema owner. */
 #[Group('D54')]
 #[Group('D55')]
+#[Group('pg')]
 final class AppendOnlyTest extends PlatformTestCase
 {
     public function test_append_only_tables_reject_update_and_delete(): void
@@ -48,6 +50,7 @@ final class AppendOnlyTest extends PlatformTestCase
         self::assertSame('55000', self::sqlState($owner, 'DELETE FROM billium_financial_session'));
         self::assertSame('42501', self::sqlState($runtime, "UPDATE billium_financial_session SET state = 'sealed'"));
         self::assertSame('42501', self::sqlState($runtime, "UPDATE billium_financial_session SET state = 'sealed', sealed_at = now()"));
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('seal', 'seal-guard-test', [1]);
         $sealed = $this->installation()->seal('seal-guard-test', 1);
         self::assertSame('sealed', $sealed->state);
         self::assertNotNull($sealed->sealedAt);
@@ -79,7 +82,9 @@ final class AppendOnlyTest extends PlatformTestCase
         self::assertSame(1, $this->rows('billium_financial_session'));
         self::assertSame(2, $this->rows('billium_financial_session_event'));
         self::assertTrue($this->runner()->run($this->spec(), static fn (): Receipt => self::receipt())->accepted);
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('seal', 'seal-before-next-epoch', [1]);
         $this->installation()->seal('seal-before-next-epoch', 1);
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('open', 'open-next', ['owner-1', 1, 1, 1, 'evidence:open-next']);
         $opened = $this->installation()->openSession('open-next', 'owner-1', 1, 1, 1, 'evidence:open-next');
         self::assertSame('recovery', $opened->state);
         try {
@@ -88,6 +93,7 @@ final class AppendOnlyTest extends PlatformTestCase
         } catch (ProblemException $refusal) {
             self::assertSame(ProblemCode::RecoveryRequired, $refusal->problem);
         }
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('activate', 'activate-next', [2, 'certificate:2', 'admission:2', 'evidence:2']);
         self::assertSame('active', $this->installation()->activateSession('activate-next', 2, 'certificate:2', 'admission:2', 'evidence:2')->state);
         self::assertSame(1, $this->rows('billium_financial_session_event', "transition='activated' AND session_id IN (SELECT id FROM billium_financial_session WHERE epoch=2)"));
     }

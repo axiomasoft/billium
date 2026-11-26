@@ -4,21 +4,26 @@ declare(strict_types=1);
 
 namespace Billium\Usage\Data;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Usage\Internal\Canonical\CanonicalJson;
+use Packman\Attributes\Api;
 
+/** @phpstan-import-type FrontierEntry from SourceCompleteness */
 #[Api]
 final readonly class CompletenessFrontier
 {
     public string $digest;
 
-    /** @var list<array<string, mixed>> */
+    /** @var list<FrontierEntry> sorted by source, then evidence sequence */
     public array $evidence;
 
     /** @param list<SourceCompleteness> $evidence */
     public function __construct(public string $contractRef, public int $contractVersion, array $evidence)
     {
-        usort($evidence, static fn (SourceCompleteness $a, SourceCompleteness $b): int => strcmp($a->sourceRef, $b->sourceRef) ?: $a->evidenceSeq <=> $b->evidenceSeq);
+        usort($evidence, static function (SourceCompleteness $a, SourceCompleteness $b): int {
+            $comparison = strcmp($a->sourceRef, $b->sourceRef);
+
+            return $comparison !== 0 ? $comparison : $a->evidenceSeq <=> $b->evidenceSeq;
+        });
         $this->evidence = array_map(static fn (SourceCompleteness $e): array => [
             ...$e->payload(), 'evidenceDigest' => $e->evidenceDigest,
         ], $evidence);

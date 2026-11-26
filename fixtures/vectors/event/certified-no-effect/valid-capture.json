@@ -1,0 +1,29 @@
+{
+  "id": "event/certified-no-effect/valid-capture",
+  "spec_refs": [
+    "BC-ENV-01",
+    "BC-ENV-03",
+    "BC-ID-12"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"aggregateRef\":\"capture:2\",\"digest\":\"sha256:2a86976ea9335efa870d45e46030a440fd0a57cb5b428e9bd5d4224c3b394204\",\"environment\":\"test\",\"eventContractRevision\":\"events-2026-11-v4\",\"eventId\":\"01JBX5Q0Z8M3N4P7R9S2T6V1WC\",\"eventType\":\"payment.certified_no_effect.v1\",\"installationRef\":\"installation-a\",\"occurredAt\":\"2026-11-18T10:00:00.000001Z\",\"payload\":{\"bindingRevision\":\"merchant:7\",\"certificateDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"certificateRef\":\"absence:2\",\"coverageThrough\":\"2026-11-18T09:59:59.000000Z\",\"merchantAccountRef\":\"merchant:main\",\"operationKind\":\"capture\",\"operationRef\":\"capture:2\",\"providerReference\":\"provider-request:2\",\"requested\":{\"amount\":\"12.30\",\"currency\":\"RUB\"},\"revision\":3,\"rootOperationRef\":\"authorize:1\",\"status\":\"failed-terminal\"},\"revision\":3,\"schema\":\"billium.event.v4\",\"sellerRef\":\"seller-a\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "billium.event.v4",
+        "digest": "sha256:2a86976ea9335efa870d45e46030a440fd0a57cb5b428e9bd5d4224c3b394204"
+      }
+    }
+  ]
+}

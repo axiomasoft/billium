@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace Billium\Schedule\Contracts;
 
-use Billium\Contracts\Attributes\Api;
-use Billium\Contracts\Attributes\Spi;
-use Billium\Contracts\Attributes\SpiKind;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Receipt;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\Receipt;
 use Billium\Schedule\Data\Commands\AdvanceOccurrence;
+use Packman\Attributes\Spi;
+use Packman\Attributes\SpiKind;
 
-#[Api]
 #[Spi(SpiKind::Call)]
 interface OccurrenceParticipants
 {

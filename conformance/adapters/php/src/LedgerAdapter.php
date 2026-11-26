@@ -10,46 +10,52 @@ use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\BilliumCoreServiceProvider;
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Contracts\FinancialSessionAdmission;
 use Billium\Core\Contracts\Modules\ModuleRegistry;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Caller;
-use Billium\Core\Data\StoredOutcome;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
+use Billium\Core\Data\Runner\StoredOutcome;
+use Billium\Core\Data\Runtime\Caller;
+use Billium\Core\Data\Runtime\FinancialScope;
 use Billium\Core\Tests\Support\FixedCallerContext;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Ledger\Contracts\Ledger;
 use Billium\Ledger\Contracts\LedgerQueries;
 use Billium\Ledger\Contracts\ObservationApplier;
-use Billium\Ledger\Data\Allocate;
-use Billium\Ledger\Data\AllocationReceipt;
-use Billium\Ledger\Data\BillingAccountScope;
-use Billium\Ledger\Data\CreateInvoice;
-use Billium\Ledger\Data\CreditNoteLine;
-use Billium\Ledger\Data\CreditNoteMode;
-use Billium\Ledger\Data\DeclareSettlementIntent;
-use Billium\Ledger\Data\InvoiceLineInput;
-use Billium\Ledger\Data\IssueCreditNote;
-use Billium\Ledger\Data\IssueInvoice;
-use Billium\Ledger\Data\ObligationDuePolicy;
-use Billium\Ledger\Data\ReallocatePayment;
-use Billium\Ledger\Data\RecordCustomerCredit;
-use Billium\Ledger\Data\RecordObligation;
-use Billium\Ledger\Data\ReverseAllocation;
-use Billium\Ledger\Data\UpdateInvoiceMetadata;
-use Billium\Ledger\Data\VoidInvoice;
+use Billium\Ledger\Data\Allocations\Allocate;
+use Billium\Ledger\Data\Allocations\AllocationReceipt;
+use Billium\Ledger\Data\Allocations\ReallocatePayment;
+use Billium\Ledger\Data\Allocations\ReverseAllocation;
+use Billium\Ledger\Data\Credits\RecordCustomerCredit;
+use Billium\Ledger\Data\Invoices\CreateInvoice;
+use Billium\Ledger\Data\Invoices\CreditNoteLine;
+use Billium\Ledger\Data\Invoices\CreditNoteMode;
+use Billium\Ledger\Data\Invoices\InvoiceLineInput;
+use Billium\Ledger\Data\Invoices\IssueCreditNote;
+use Billium\Ledger\Data\Invoices\IssueInvoice;
+use Billium\Ledger\Data\Invoices\UpdateInvoiceMetadata;
+use Billium\Ledger\Data\Invoices\VoidInvoice;
+use Billium\Ledger\Data\Obligations\ObligationDuePolicy;
+use Billium\Ledger\Data\Obligations\RecordObligation;
+use Billium\Ledger\Data\Runtime\BillingAccountScope;
+use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
 use Billium\Ledger\Internal\Commands\BootstrapPartitionCommand;
 use Billium\Ledger\Internal\Observation\EconomicDigest;
 use Billium\Ledger\Internal\Observation\ObservationHandler;
 use Billium\Ledger\Internal\Observation\ParkedDrainer;
 use Billium\Ledger\Internal\Observation\RefundReconciler;
-use Billium\Platform\Contracts\FeedPartitions;
-use Billium\Platform\Contracts\Installation;
+use Billium\Platform\Contracts\Feed\FeedPartitions;
+use Billium\Platform\Contracts\Installation\Installation;
 use Billium\Platform\Data\Inbox\BootstrapItem;
 use Billium\Platform\Data\Inbox\BootstrapPartition;
 use Billium\Platform\Internal\EventContracts\DatabaseEventContractRegistrar;
+use Billium\Rating\Laravel\RatingServiceProvider;
+use Billium\Schedule\Laravel\ScheduleServiceProvider;
+use Billium\Usage\Laravel\UsageServiceProvider;
 use DateTimeImmutable;
+use Illuminate\Console\Application as ConsoleApplication;
 use Illuminate\Container\Container;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Foundation\Application;
@@ -73,9 +79,16 @@ final class LedgerAdapter
     /** @var list<string> */
     private array $bootModules = [];
 
+    /** @var array<string, class-string> */
+    public const array RUNTIME_MODULE_PROVIDERS = [
+        'usage' => UsageServiceProvider::class,
+        'rating' => RatingServiceProvider::class,
+        'schedule' => ScheduleServiceProvider::class,
+    ];
+
     public function p4(): P4RuntimeAdapter
     {
-        $available = array_filter($this->runtimeModules, static fn (string $module): bool => class_exists('Billium\\'.ucfirst($module).'\\Internal\\'.ucfirst($module).'ServiceProvider'));
+        $available = array_filter($this->runtimeModules, static fn (string $module): bool => isset(self::RUNTIME_MODULE_PROVIDERS[$module]));
         if ($available !== [] && ($this->app === null || $this->bootModules !== $this->runtimeModules)) {
             $this->app = null;
             $this->boot();
@@ -203,6 +216,9 @@ final class LedgerAdapter
             $this->app['db']->purge($name);
         }
         $this->app->terminate();
+        $this->app->flush();
+        ConsoleApplication::forgetBootstrappers();
+        Container::setInstance(null);
         $this->app = null;
     }
 
@@ -227,8 +243,8 @@ final class LedgerAdapter
                     // Testbench configures the environment after provider registration.
                     // Enroll the selected binaries explicitly, before their boot/migration discovery.
                     foreach ($this->runtimeModules as $module) {
-                        $provider = 'Billium\\'.ucfirst($module).'\\Internal\\'.ucfirst($module).'ServiceProvider';
-                        if (class_exists($provider)) {
+                        $provider = LedgerAdapter::RUNTIME_MODULE_PROVIDERS[$module] ?? null;
+                        if ($provider !== null) {
                             $providers[] = $provider;
                         }
                     }
@@ -254,7 +270,8 @@ final class LedgerAdapter
             restore_exception_handler();
         }
         $output = new BufferedOutput;
-        if ($app->make(Kernel::class)->call('migrate', ['--database' => 'billium_owner', '--force' => true], $output) !== 0) {
+        TestEnvironment::noteMigrationRun();
+        if ($app->make(Kernel::class)->call('packman:schema:migrate', ['--scope' => 'central', '--database' => 'billium_owner', '--modules' => true, '--force' => true], $output) !== 0) {
             throw new LogicException('Ledger migrations failed: '.$output->fetch());
         }
         TestEnvironment::assertRuntimeSafe($app['db']->connection('pgsql')->getPdo());
@@ -276,28 +293,7 @@ final class LedgerAdapter
         $this->setCaller($this->callerInput);
         $owner = $app['db']->connection('billium_owner');
         // D50: committed fixtures, no RefreshDatabase transaction. Never truncate host tables.
-        $owner->unprepared(<<<'SQL'
-            DO $$
-            DECLARE
-                r record;
-                has_rows boolean;
-                non_empty_tables text[] := ARRAY[]::text[];
-            BEGIN
-                FOR r IN SELECT tablename FROM pg_tables
-                    WHERE schemaname = 'public' AND starts_with(tablename, 'billium_')
-                      AND tablename <> 'billium_event_contract'
-                    ORDER BY tablename
-                LOOP
-                    EXECUTE format('SELECT EXISTS (SELECT 1 FROM public.%I LIMIT 1)', r.tablename) INTO has_rows;
-                    IF has_rows THEN
-                        non_empty_tables := array_append(non_empty_tables, format('public.%I', r.tablename));
-                    END IF;
-                END LOOP;
-                IF cardinality(non_empty_tables) > 0 THEN
-                    EXECUTE 'TRUNCATE ' || array_to_string(non_empty_tables, ', ') || ' RESTART IDENTITY CASCADE';
-                END IF;
-            END $$
-            SQL);
+        TestEnvironment::truncateBilliumTables($owner->getPdo());
         $contractsIntact = $owner->scalar(<<<'SQL'
             SELECT (SELECT count(*) FROM public.billium_event_contract) = 7 AND NOT EXISTS (
                 SELECT 1 FROM public.billium_event_contract
@@ -312,11 +308,23 @@ final class LedgerAdapter
             $registrar->register($registrar->plan($descriptor, true));
         }
         $ref = $this->callers->current()->installationRef;
+        // Each reset starts a separate fixture history, including the simulated host's signed journal.
+        SimulatedFinancialAuthorityEvidence::reset();
+        $app->forgetInstance(SimulatedFinancialAuthorityEvidence::class);
+        $authority = SimulatedFinancialAuthorityEvidence::install($app);
         $installation = $app->make(Installation::class);
         $installation->init($ref);
+        $authority->issueTransition('open', 'open-1', ['owner-1', 1, 1, 1, 'evidence:conformance-open']);
         $installation->openSession('open-1', 'owner-1', 1, 1, 1, 'evidence:conformance-open');
+        $authority->issueTransition('activate', 'activate-1', [1, 'certificate:conformance', 'admission:conformance', 'evidence:conformance-activate']);
         $installation->activateSession('activate-1', 1, 'certificate:conformance', 'admission:conformance', 'evidence:conformance-activate');
-        $app->instance(FinancialSessionAdmission::class, new FixedSessionAdmission(FixedSessionAdmission::token($ref)));
+        $token = FixedSessionAdmission::token($ref);
+        // The ledger vectors use two independently admitted sellers; changing the caller never issues a grant.
+        $authority->issueProcess($token, [
+            new FinancialScope($ref, 'seller-a', 'test', null),
+            new FinancialScope($ref, 'seller-b', 'test', null),
+        ]);
+        $app->instance(FinancialSessionAdmission::class, new FixedSessionAdmission($token));
     }
 
     /** @return array<string, mixed> */

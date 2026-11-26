@@ -6,7 +6,9 @@ namespace Billium\Usage\Internal\Storage;
 
 use Billium\Usage\Data\FactRevision;
 use Billium\Usage\Data\WindowSelector;
+use Packman\Attributes\Internal;
 
+#[Internal]
 interface EffectiveFactSource
 {
     /** @return list<FactRevision> */

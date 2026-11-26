@@ -6,12 +6,12 @@ namespace Billium\Platform\Tests\Feature;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Receipt;
-use Billium\Core\Enums\FinancialMode;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\Receipt;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Tests\TestEnvironment;
-use Billium\Platform\Contracts\Outbox;
-use Billium\Platform\Data\OutboxEvent;
+use Billium\Platform\Contracts\Outbox\Outbox;
+use Billium\Platform\Data\Outbox\OutboxEvent;
 use Billium\Platform\Tests\PlatformTestCase;
 use DateTimeImmutable;
 use Illuminate\Database\QueryException;
@@ -23,6 +23,7 @@ use RuntimeException;
 /** PF-10/COV-279: the outbox row and its owning state share one root Tx on one connection, or neither exists. */
 #[Group('PF-10')]
 #[Group('ACC-CON-14')]
+#[Group('pg')]
 final class OutboxRecordTest extends PlatformTestCase
 {
     protected function setUp(): void

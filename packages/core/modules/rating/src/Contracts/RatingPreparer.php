@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Billium\Rating\Contracts;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Rating\Data\Rating\PreparedRating;
 use Billium\Rating\Data\Rating\PrepareRating;
 use Billium\Rating\Data\Rating\RatingHold;
+use Packman\Attributes\Api;
 
 #[Api]
 interface RatingPreparer

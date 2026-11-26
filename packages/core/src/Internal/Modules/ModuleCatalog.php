@@ -9,12 +9,17 @@ use Billium\Core\Data\Modules\CompatibilityFinding;
 use Billium\Core\Data\Modules\CompatibilityInput;
 use Billium\Core\Data\Modules\CompatibilityReport;
 use Billium\Core\Data\Modules\InstalledCheckpoint;
+use Billium\Core\Data\Modules\MigrationIdentity;
 use Billium\Core\Data\Modules\ModuleDescriptor;
 use Billium\Core\Data\Modules\ModuleManifest;
+use Billium\Core\Data\Modules\PublicEventDeclaration;
 use Billium\Core\Enums\Modules\CompatibilityFindingCode as Code;
 use Billium\Core\Enums\Modules\ModulePresence;
+use Packman\Attributes\Internal;
+use Packman\Foundation\DependencyOrder;
 
 /** Descriptor set + desired config + capabilities + checkpoints → report. Pure: no database, no filesystem after load. */
+#[Internal]
 final readonly class ModuleCatalog implements ModuleRegistry
 {
     public function __construct(private ModuleManifest $manifest) {}
@@ -139,7 +144,7 @@ final readonly class ModuleCatalog implements ModuleRegistry
             }
             foreach ($descriptor->publicEvents as $event) {
                 $previous = $events[$event->key()] ?? null;
-                if ($previous !== null && ($previous['owner'] !== $id || $previous['event'] != $event)) {
+                if ($previous !== null && ($previous['owner'] !== $id || ! self::samePublicEvent($previous['event'], $event))) {
                     $findings[] = new CompatibilityFinding(Code::EventContractConflict, $id, "event contract {$event->key()} is already declared by {$previous['owner']}");
                 } else {
                     $events[$event->key()] = ['owner' => $id, 'event' => $event];
@@ -162,8 +167,8 @@ final readonly class ModuleCatalog implements ModuleRegistry
                 }
             }
         }
-        $cycle = $this->cycle($byId);
-        if ($cycle !== null) {
+        $cycle = self::dependencyOrder($byId)->blocked;
+        if ($cycle !== []) {
             $findings[] = new CompatibilityFinding(Code::DependencyCycle, null, 'dependency cycle: '.implode(' -> ', $cycle));
         }
 
@@ -197,7 +202,7 @@ final readonly class ModuleCatalog implements ModuleRegistry
         $checkpoint = $input->checkpoints[$id] ?? new InstalledCheckpoint($id);
         $missing = array_values(array_filter(
             $descriptor->migrationIdentities,
-            static fn ($migration): bool => ! in_array($migration->id, $checkpoint->appliedMigrations, true),
+            static fn (MigrationIdentity $migration): bool => ! in_array($migration->id, $checkpoint->appliedMigrations, true),
         ));
         if ($checkpoint->schemaVersion < $descriptor->currentSchemaVersion || $missing !== []) {
             $findings[] = new CompatibilityFinding(Code::MigrationUnapplied, $id, "{$id} installed schema {$checkpoint->schemaVersion} is behind {$descriptor->currentSchemaVersion}");
@@ -212,51 +217,6 @@ final readonly class ModuleCatalog implements ModuleRegistry
     }
 
     /**
-     * @param  array<string, ModuleDescriptor>  $byId
-     * @return list<string>|null
-     */
-    private function cycle(array $byId): ?array
-    {
-        $state = [];
-        foreach (array_keys($byId) as $id) {
-            $found = $this->visit($id, [], $state, $byId);
-            if ($found !== null) {
-                return $found;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Depth-first walk; state 1 = on the current path, 2 = finished.
-     *
-     * @param  list<string>  $path
-     * @param  array<string, int>  $state
-     * @param  array<string, ModuleDescriptor>  $byId
-     * @return list<string>|null
-     */
-    private function visit(string $id, array $path, array &$state, array $byId): ?array
-    {
-        if (! isset($byId[$id]) || ($state[$id] ?? 0) === 2) {
-            return null;
-        }
-        if (($state[$id] ?? 0) === 1) {
-            return [...array_slice($path, (int) array_search($id, $path, true)), $id];
-        }
-        $state[$id] = 1;
-        foreach ($byId[$id]->requiredModuleIds() as $required) {
-            $found = $this->visit($required, [...$path, $id], $state, $byId);
-            if ($found !== null) {
-                return $found;
-            }
-        }
-        $state[$id] = 2;
-
-        return null;
-    }
-
-    /**
      * Dependency order of the enabled modules; empty when they contain a cycle.
      *
      * @param  array<string, ModuleDescriptor>  $enabled
@@ -264,24 +224,34 @@ final readonly class ModuleCatalog implements ModuleRegistry
      */
     private function bootOrder(array $enabled): array
     {
-        $order = [];
-        $remaining = $enabled;
-        while ($remaining !== []) {
-            $ready = array_filter(
-                $remaining,
-                static fn (ModuleDescriptor $descriptor): bool => array_all(
-                    $descriptor->requiredModuleIds(),
-                    static fn (string $required): bool => ! isset($enabled[$required]) || in_array($required, $order, true),
-                ),
-            );
-            if ($ready === []) {
-                return [];
-            }
-            $next = array_key_first($ready);
-            $order[] = $next;
-            unset($remaining[$next]);
+        $order = self::dependencyOrder($enabled);
+
+        return $order->blocked === [] ? $order->ordered : [];
+    }
+
+    /** @param array<string, ModuleDescriptor> $nodes */
+    private static function dependencyOrder(array $nodes): DependencyOrder
+    {
+        $dependencies = [];
+        foreach ($nodes as $id => $descriptor) {
+            $dependencies[$id] = array_values(array_filter(
+                $descriptor->requiredModuleIds(),
+                static fn (string $required): bool => isset($nodes[$required]),
+            ));
         }
 
-        return $order;
+        return DependencyOrder::resolve($dependencies);
+    }
+
+    private static function samePublicEvent(PublicEventDeclaration $a, PublicEventDeclaration $b): bool
+    {
+        return $a->eventType === $b->eventType
+            && $a->envelopeSchema === $b->envelopeSchema
+            && $a->eventContractRevision === $b->eventContractRevision
+            && $a->payloadSchemaRef === $b->payloadSchemaRef
+            && $a->payloadSchemaDigest === $b->payloadSchemaDigest
+            && $a->bootstrapMode === $b->bootstrapMode
+            && $a->snapshotSourceKey === $b->snapshotSourceKey
+            && $a->retentionPolicyRef === $b->retentionPolicyRef;
     }
 }

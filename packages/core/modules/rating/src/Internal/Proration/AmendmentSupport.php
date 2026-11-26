@@ -9,7 +9,9 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Rating\Data\Correction\HostAmendment;
 use Billium\Rating\Data\Pricing\PriceVersion;
 use Billium\Rating\Enums\StrategyId;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class AmendmentSupport
 {
     /** @param array<string, mixed>|null $quantitySnapshot */

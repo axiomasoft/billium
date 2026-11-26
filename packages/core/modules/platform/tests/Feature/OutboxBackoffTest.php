@@ -5,19 +5,22 @@ declare(strict_types=1);
 namespace Billium\Platform\Tests\Feature;
 
 use Billium\Contracts\Contracts\Codec;
-use Billium\Core\Contracts\EventPublisher;
+use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Contracts\Modules\ModuleRegistry;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Receipt;
-use Billium\Platform\Contracts\Outbox;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\EventPublisher;
+use Billium\Core\Data\Runner\Receipt;
+use Billium\Platform\Contracts\Outbox\Outbox;
 use Billium\Platform\Data\EventContracts\EventContractRegistration;
 use Billium\Platform\Data\EventContracts\RegisteredPublicEvent;
 use Billium\Platform\Internal\Outbox\OutboxRelay;
 use Billium\Platform\Tests\Outbox\OutboxTestCase;
 use Illuminate\Support\Str;
 use LogicException;
+use PHPUnit\Framework\Attributes\Group;
 use RuntimeException;
 
+#[Group('pg')]
 final class OutboxBackoffTest extends OutboxTestCase
 {
     public function test_claim_expiration_and_cas_keep_identity_and_digest(): void
@@ -38,6 +41,7 @@ final class OutboxBackoffTest extends OutboxTestCase
     public function test_repeated_claim_expiry_counts_as_failure_and_parks_at_the_budget(): void
     {
         config(['billium.outbox.delivery_budget' => 2]);
+        $this->application()->forgetInstance(BilliumOptions::class);
         $this->events(1);
         $this->publisher();
         $expire = fn () => $this->owner()->update("UPDATE billium_outbox_delivery SET claim_until = clock_timestamp() - interval '1 second'");
@@ -58,6 +62,7 @@ final class OutboxBackoffTest extends OutboxTestCase
     public function test_poison_backoff_parks_without_starving_later_work_and_requeue_preserves_bytes(): void
     {
         config(['billium.outbox.delivery_budget' => 2]);
+        $this->application()->forgetInstance(BilliumOptions::class);
         $this->events(2);
         $poison = self::text($this->value('SELECT event_id FROM billium_outbox_event ORDER BY id LIMIT 1'));
         $digest = $this->value('SELECT digest FROM billium_outbox_event WHERE event_id = ?', [$poison]);

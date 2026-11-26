@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 use Billium\Ledger\Internal\Repositories\LedgerPrivileges;
-use Illuminate\Database\Migrations\Migration;
+use Packman\Schema\Laravel\PackmanMigration;
 use Illuminate\Support\Facades\DB;
 
-return new class extends Migration
+return new class extends PackmanMigration
 {
     public function up(): void
     {
@@ -17,7 +17,7 @@ return new class extends Migration
             CREATE OR REPLACE FUNCTION public.billium_ledger_json_safe(value jsonb) RETURNS boolean
             LANGUAGE sql IMMUTABLE STRICT SET search_path = pg_catalog, pg_temp AS $$
                 SELECT jsonb_typeof(value) = 'object' AND octet_length(value::text) <= 65536
-                   AND value::text !~* '"(password|secret|token|authorization|card_number|pan|cvv|cvc|api_key|access_token|refresh_token)"[[:space:]]*:'
+                   AND value::text !~* '"(password|secret|token|authorization|card_?number|pan|cvv2?|cvc2?|api_?key|access_?token|refresh_?token|client_?secret|provider_?token|card_?cvv)"[[:space:]]*:'
             $$;
             REVOKE ALL ON FUNCTION public.billium_ledger_json_safe(jsonb) FROM PUBLIC;
             CREATE OR REPLACE FUNCTION public.billium_invoice_metadata_allowlist(value jsonb) RETURNS boolean

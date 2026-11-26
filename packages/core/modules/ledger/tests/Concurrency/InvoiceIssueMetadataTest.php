@@ -16,6 +16,7 @@ use PHPUnit\Framework\Attributes\Group;
  * and an allow-list key passes in either order.
  */
 #[Group('ACC-CON-17')]
+#[Group('pg')]
 final class InvoiceIssueMetadataTest extends LedgerTestCase
 {
     use InvoiceFixtures;
@@ -27,15 +28,20 @@ final class InvoiceIssueMetadataTest extends LedgerTestCase
             $this->obligation('obligation-'.$round, 1000);
             self::assertTrue($this->draft(['obligation-'.$round => 0], 'invoice-'.$round)->accepted);
         }
+        $results = ConcurrencyStand::run(InvoiceIssueMetadataScenario::class, 3, ['rounds' => $rounds]);
         for ($round = 1; $round <= $rounds; $round++) {
-            $results = ConcurrencyStand::run(InvoiceIssueMetadataScenario::class, 3, ['round' => $round]);
-            [$issue, $note, $foo] = $results;
-            self::assertTrue($issue['ok']['accepted'] ?? false, 'issue: '.json_encode($issue));
-            self::assertTrue($note['ok']['accepted'] ?? false, 'note passes before and after issue: '.json_encode($note));
+            $issue = $results[0]['ok']['rounds'][$round - 1] ?? null;
+            $note = $results[1]['ok']['rounds'][$round - 1] ?? null;
+            $foo = $results[2]['ok']['rounds'][$round - 1] ?? null;
+            self::assertIsArray($issue);
+            self::assertIsArray($note);
+            self::assertIsArray($foo);
+            self::assertTrue($issue['accepted'] ?? false, 'issue: '.json_encode($issue));
+            self::assertTrue($note['accepted'] ?? false, 'note passes before and after issue: '.json_encode($note));
             // `foo` is invalid in a draft (a validation exception, no stored result) and frozen after the issue (stored refusal).
-            $refusal = $foo['error']['code'] ?? $foo['ok']['problem'] ?? null;
+            $refusal = $foo['problem'] ?? null;
             self::assertContains($refusal, [ProblemCode::ValidationInvalid->value, ProblemCode::InvoiceFrozen->value], 'foo: '.json_encode($foo));
-            self::assertFalse($foo['ok']['accepted'] ?? false);
+            self::assertFalse($foo['accepted'] ?? false);
 
             $row = $this->invoiceRow('invoice-'.$round);
             self::assertSame('issued', $row['status']);

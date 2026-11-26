@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Billium\Core\Data\Modules;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Core\Internal\Modules\Shape;
+use Packman\Attributes\Api;
 
 /**
  * An internal command on the separate command-outbox lane (D63). It is not a billium.event envelope and never
  * enters the public feed, event catalog or SnapshotSource.
  */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class InternalCommandDeclaration
 {
     public function __construct(

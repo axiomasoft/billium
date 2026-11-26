@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Billium\Platform\Tests\Support;
 
 use Billium\Core\Contracts\Modules\ModuleTransitionEvidence;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Data\Modules\ModuleState;
 use Billium\Core\Data\Modules\ModuleTransitionFacts;
 use Billium\Platform\Tests\PlatformTestCase;

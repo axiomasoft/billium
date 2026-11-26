@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Billium\Core\Data\Modules;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Core\Internal\Modules\Shape;
+use Packman\Attributes\Api;
 
 /** Closed SQL schema-version range of a module migration stream. */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class SchemaRange
 {
     public function __construct(public int $min, public int $max)

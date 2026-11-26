@@ -10,7 +10,9 @@ use Billium\Usage\Enums\GaugePolicy;
 use Billium\Usage\Enums\MissingInitialPolicy;
 use Billium\Usage\Internal\Errors\UsageProblems;
 use Billium\Usage\Internal\Math\IntegerRounding;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class GaugeReducer
 {
     /**
@@ -74,10 +76,19 @@ final class GaugeReducer
      */
     public function samples(AggregationPolicy $policy, int $start, int $end, array $allEffective): array
     {
-        usort($allEffective, static fn (FactRevision $a, FactRevision $b): int => $a->observedAtMicros <=> $b->observedAtMicros
-            ?: strcmp($a->sourceRef, $b->sourceRef)
-            ?: ($a->sourceSequence ?? -1) <=> ($b->sourceSequence ?? -1)
-            ?: strcmp($a->factId, $b->factId));
+        usort($allEffective, static function (FactRevision $a, FactRevision $b): int {
+            $comparison = $a->observedAtMicros <=> $b->observedAtMicros;
+            if ($comparison !== 0) {
+                return $comparison;
+            }
+            $comparison = strcmp($a->sourceRef, $b->sourceRef);
+            if ($comparison !== 0) {
+                return $comparison;
+            }
+            $comparison = ($a->sourceSequence ?? -1) <=> ($b->sourceSequence ?? -1);
+
+            return $comparison !== 0 ? $comparison : strcmp($a->factId, $b->factId);
+        });
         $in = [];
         $carry = null;
         foreach ($allEffective as $fact) {

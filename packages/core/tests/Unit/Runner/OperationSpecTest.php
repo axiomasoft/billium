@@ -6,10 +6,10 @@ namespace Billium\Core\Tests\Unit\Runner;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Data\OperationSpec;
-use Billium\Core\Data\StoredOutcome;
-use Billium\Core\Enums\FinancialMode;
+use Billium\Core\Data\Runner\OperationSpec;
+use Billium\Core\Data\Runner\StoredOutcome;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
@@ -29,19 +29,20 @@ final class OperationSpecTest extends TestCase
     public function test_spec_rejects_incoherent_declarations(): void
     {
         $cases = [
-            'key without digest' => static fn () => new OperationSpec('ledger.x', 's', 'e', FinancialMode::Active, ModuleOperationClass::NewIntent, ['platform'], 'k'),
-            'monetary administration' => static fn () => new OperationSpec('platform.x', 's', 'e', FinancialMode::Administrative, ModuleOperationClass::HistoricalRead, [], commitKind: 'x'),
-            'financial without closure' => static fn () => new OperationSpec('ledger.x', 's', 'e', FinancialMode::Active, ModuleOperationClass::NewIntent, []),
-            'session control with modules' => static fn () => new OperationSpec('platform.x', 's', 'e', FinancialMode::SessionControl, ModuleOperationClass::HistoricalRead, ['platform']),
-            'duplicate module' => static fn () => new OperationSpec('ledger.x', 's', 'e', FinancialMode::Active, ModuleOperationClass::NewIntent, ['platform', 'platform']),
-            'invalid kind' => static fn () => new OperationSpec('Ledger', 's', 'e', FinancialMode::Active, ModuleOperationClass::NewIntent, ['platform']),
+            'An idempotency key needs its digest' => static fn () => new OperationSpec('ledger.x', 's', 'e', FinancialMode::Active, ModuleOperationClass::NewIntent, ['platform'], 'k'),
+            'Only an Active or Recovery operation is monetary' => static fn () => new OperationSpec('platform.x', 's', 'e', FinancialMode::Administrative, ModuleOperationClass::HistoricalRead, [], commitKind: 'x'),
+            'declares its participating-module closure' => static fn () => new OperationSpec('ledger.x', 's', 'e', FinancialMode::Active, ModuleOperationClass::NewIntent, []),
+            'Session control takes no module admission' => static fn () => new OperationSpec('platform.x', 's', 'e', FinancialMode::SessionControl, ModuleOperationClass::HistoricalRead, ['platform']),
+            'Duplicate participating module' => static fn () => new OperationSpec('ledger.x', 's', 'e', FinancialMode::Active, ModuleOperationClass::NewIntent, ['platform', 'platform']),
+            'Invalid command kind' => static fn () => new OperationSpec('Ledger', 's', 'e', FinancialMode::Active, ModuleOperationClass::NewIntent, ['platform']),
         ];
-        foreach ($cases as $case => $build) {
+        // Each case is keyed by the refusal it must hit, so a case broken in some other way cannot pass.
+        foreach ($cases as $reason => $build) {
             try {
                 $build();
-                self::fail($case);
-            } catch (InvalidArgumentException) {
-                $this->addToAssertionCount(1);
+                self::fail($reason);
+            } catch (InvalidArgumentException $error) {
+                self::assertStringContainsString($reason, $error->getMessage());
             }
         }
     }

@@ -7,9 +7,11 @@ namespace Billium\Ledger\Internal;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Illuminate\Database\Query\Builder;
+use Packman\Attributes\Internal;
 use stdClass;
 
 /** Payment selectors share the source identity used by ledger snapshots; bare refs require one match. */
+#[Internal]
 final class PaymentSource
 {
     public static function identity(string $authority, string $reference): string

@@ -1,0 +1,551 @@
+{
+    "schema": "external.import.source-mapping.v1",
+    "mappingVersion": "1.0.0",
+    "contractTarget": "external.import.v1",
+    "namespace": "billium/generic-source-export",
+    "batchIdInEconomicIdentity": false,
+    "renamesSourceBookOnMapperUpdate": false,
+    "artifactIntegrity": {
+        "requireExportCutoff": true,
+        "cutoffFormat": "rfc3339-utc",
+        "requireRecordsChecksum": true,
+        "checksumAlgorithm": "sha256-jcs",
+        "requireSanitizationPolicy": true,
+        "forbidDirectExternalDbAccess": true,
+        "forbidExportedCredentialsAsAuthority": true
+    },
+    "provenance": {
+        "sourceExporterResponsibility": "external_host_process",
+        "billiumReaderBoundary": "immutable_artifact_or_stream_only",
+        "localEvidenceClass": "sanitized_fixture_local_runtime",
+        "externalActivationInputsSeparated": true,
+        "externalActivationInputs": [
+            {
+                "inputId": "production_export_manifest",
+                "status": "external_owner_supplied"
+            },
+            {
+                "inputId": "source_freeze_certificate",
+                "status": "external_owner_supplied"
+            },
+            {
+                "inputId": "owner_approved_price_mapping",
+                "status": "external_owner_supplied"
+            },
+            {
+                "inputId": "target_activation_certificate",
+                "status": "external_owner_supplied"
+            }
+        ]
+    },
+    "profiles": [
+        {
+            "profileId": "generic",
+            "profileVersion": "1.0.0",
+            "sourceSystemNamespace": "generic/source-export",
+            "requiredFields": [
+                "sourceRecordId",
+                "sourceRecordRevision",
+                "recordType",
+                "eventBusinessDate",
+                "originalBusinessRefs",
+                "evidenceRefs"
+            ],
+            "optionalFields": [
+                "money",
+                "frozenPriceSnapshot",
+                "fundingRefs",
+                "legalDocument",
+                "partyRoles",
+                "missingEvidence",
+                "reasonCodes"
+            ],
+            "partyRoleSeparation": [
+                "subjectRef",
+                "payerRef",
+                "actorRef",
+                "customerRef",
+                "sellerRef"
+            ],
+            "forbiddenFabrications": [
+                "zero_amount",
+                "default_currency",
+                "current_plan_as_frozen_price",
+                "document_display_price_as_frozen_price",
+                "today_as_event_date",
+                "inferred_captured_status",
+                "synthetic_provider_ref",
+                "second_legal_invoice_number",
+                "nonmonetary_credit_as_money",
+                "noncurrency_reward_as_currency",
+                "expanded_mutable_subscription_charges",
+                "expanded_grant_obligations"
+            ],
+            "missingEvidenceDecisions": [
+                {
+                    "condition": "missing_price_or_currency",
+                    "matrixIds": [
+                        "IM-01"
+                    ],
+                    "targetRecordKind": "unanchored_evidence",
+                    "reasonCodes": [
+                        "import.missing_proven_price_basis"
+                    ],
+                    "missingEvidence": [
+                        "money",
+                        "currency",
+                        "frozenPriceSnapshot"
+                    ],
+                    "collectionAllowed": false,
+                    "syntheticObligationsAllowed": false
+                },
+                {
+                    "condition": "missing_funding_or_provider_refs",
+                    "matrixIds": [
+                        "IM-01"
+                    ],
+                    "targetRecordKind": "unanchored_evidence",
+                    "reasonCodes": [
+                        "import.missing_authoritative_funding_evidence"
+                    ],
+                    "missingEvidence": [
+                        "money",
+                        "fundingRefs",
+                        "fundingRefs.providerOperationRef"
+                    ],
+                    "collectionAllowed": false,
+                    "syntheticObligationsAllowed": false
+                },
+                {
+                    "condition": "missing_historical_invoice_number",
+                    "matrixIds": [
+                        "IM-16"
+                    ],
+                    "targetRecordKind": "unanchored_evidence",
+                    "reasonCodes": [
+                        "import.missing_historical_legal_number"
+                    ],
+                    "missingEvidence": [
+                        "legalDocument.originalIssuer",
+                        "legalDocument.sourceNumber"
+                    ],
+                    "collectionAllowed": false,
+                    "syntheticObligationsAllowed": false
+                },
+                {
+                    "condition": "unconfirmed_legal_ownership",
+                    "matrixIds": [
+                        "IM-16"
+                    ],
+                    "targetRecordKind": "proven_invoice_history",
+                    "reasonCodes": [
+                        "import.historical_evidence_only_no_second_legal_number"
+                    ],
+                    "missingEvidence": [],
+                    "collectionAllowed": false,
+                    "syntheticObligationsAllowed": false
+                },
+                {
+                    "condition": "exported_source_credential_detected",
+                    "matrixIds": [
+                        "D71"
+                    ],
+                    "targetRecordKind": "reject_artifact",
+                    "reasonCodes": [
+                        "export.forbidden_source_credential"
+                    ],
+                    "missingEvidence": [],
+                    "collectionAllowed": false,
+                    "syntheticObligationsAllowed": false
+                }
+            ]
+        },
+        {
+            "profileId": "reference-recurring",
+            "profileVersion": "1.0.0",
+            "sourceSystemNamespace": "reference-recurring/billing-export",
+            "fixturePath": "fixtures/integration/import/reference-recurring/export-artifact.json",
+            "requiredFields": [
+                "sourceRecordId",
+                "sourceRecordRevision",
+                "recordType",
+                "eventBusinessDate",
+                "originalBusinessRefs",
+                "evidenceRefs"
+            ],
+            "optionalFields": [
+                "money",
+                "frozenPriceSnapshot",
+                "currentPlanSnapshot",
+                "documentDisplayPrice",
+                "fundingRefs",
+                "legalDocument",
+                "partyRoles",
+                "attachedGrants",
+                "nonMonetaryEntitlement",
+                "mutableSubscriptionSummary"
+            ],
+            "partyRoleSeparation": [
+                "subjectRef",
+                "payerRef",
+                "actorRef",
+                "customerRef",
+                "sellerRef"
+            ],
+            "forbiddenFabrications": [
+                "zero_amount",
+                "default_currency",
+                "current_plan_as_frozen_price",
+                "document_display_price_as_frozen_price",
+                "today_as_event_date",
+                "inferred_captured_status",
+                "synthetic_provider_ref",
+                "second_legal_invoice_number",
+                "nonmonetary_credit_as_money",
+                "noncurrency_reward_as_currency",
+                "expanded_mutable_subscription_charges",
+                "expanded_grant_obligations"
+            ],
+            "missingEvidenceDecisions": [
+                {
+                    "condition": "mutable_subscription_without_frozen_occurrences",
+                    "matrixIds": [
+                        "IM-06"
+                    ],
+                    "targetRecordKind": "unanchored_evidence",
+                    "reasonCodes": [
+                        "import.mutable_subscription_without_frozen_occurrences"
+                    ],
+                    "missingEvidence": [
+                        "frozenPriceSnapshot",
+                        "provenOccurrences",
+                        "money"
+                    ],
+                    "collectionAllowed": false,
+                    "syntheticObligationsAllowed": false
+                },
+                {
+                    "condition": "current_plan_only_without_frozen_price",
+                    "matrixIds": [
+                        "IM-09"
+                    ],
+                    "targetRecordKind": "unanchored_evidence",
+                    "reasonCodes": [
+                        "import.current_plan_cannot_anchor_history"
+                    ],
+                    "missingEvidence": [
+                        "frozenPriceSnapshot"
+                    ],
+                    "collectionAllowed": false,
+                    "syntheticObligationsAllowed": false
+                },
+                {
+                    "condition": "annual_funding_with_periodic_grants",
+                    "matrixIds": [
+                        "IM-13"
+                    ],
+                    "targetRecordKind": "nonfinancial_agreement_reference",
+                    "reasonCodes": [
+                        "import.periodic_grants_nonmonetary_zero_synthetic_obligations"
+                    ],
+                    "missingEvidence": [],
+                    "collectionAllowed": false,
+                    "syntheticObligationsAllowed": false
+                }
+            ]
+        },
+        {
+            "profileId": "reference-credits",
+            "profileVersion": "1.0.0",
+            "sourceSystemNamespace": "reference-credits/entitlement-export",
+            "fixturePath": "fixtures/integration/import/reference-credits/export-artifact.json",
+            "requiredFields": [
+                "sourceRecordId",
+                "sourceRecordRevision",
+                "recordType",
+                "eventBusinessDate",
+                "originalBusinessRefs",
+                "evidenceRefs"
+            ],
+            "optionalFields": [
+                "money",
+                "frozenPriceSnapshot",
+                "currentPlanSnapshot",
+                "fundingRefs",
+                "legalDocument",
+                "partyRoles",
+                "nonMonetaryEntitlement",
+                "monetaryClaim"
+            ],
+            "partyRoleSeparation": [
+                "subjectRef",
+                "payerRef",
+                "actorRef",
+                "customerRef",
+                "sellerRef"
+            ],
+            "forbiddenFabrications": [
+                "zero_amount",
+                "default_currency",
+                "current_plan_as_frozen_price",
+                "document_display_price_as_frozen_price",
+                "today_as_event_date",
+                "inferred_captured_status",
+                "synthetic_provider_ref",
+                "second_legal_invoice_number",
+                "nonmonetary_credit_as_money",
+                "noncurrency_reward_as_currency",
+                "expanded_mutable_subscription_charges",
+                "expanded_grant_obligations"
+            ],
+            "missingEvidenceDecisions": [
+                {
+                    "condition": "nonmonetary_credit_claimed_as_money",
+                    "matrixIds": [
+                        "IM-07"
+                    ],
+                    "targetRecordKind": "unanchored_evidence",
+                    "reasonCodes": [
+                        "import.nonmonetary_credit_not_money"
+                    ],
+                    "missingEvidence": [
+                        "iso4217_currency",
+                        "authoritative_monetary_evidence"
+                    ],
+                    "collectionAllowed": false,
+                    "syntheticObligationsAllowed": false
+                },
+                {
+                    "condition": "noncurrency_reward_quantity",
+                    "matrixIds": [
+                        "IM-08"
+                    ],
+                    "targetRecordKind": "unanchored_evidence",
+                    "reasonCodes": [
+                        "import.noncurrency_reward_not_currency"
+                    ],
+                    "missingEvidence": [
+                        "iso4217_currency",
+                        "authoritative_monetary_evidence"
+                    ],
+                    "collectionAllowed": false,
+                    "syntheticObligationsAllowed": false
+                }
+            ]
+        }
+    ],
+    "mappingsChecksum": "sha256:bc91c3876558cdbdacc865fc0c0b06d6b50835c12c7bd7905c5921ea5c97875f",
+    "mappings": [
+        {
+            "installationRef": "inst-test",
+            "environment": "test",
+            "sellerRef": "seller-recurring-1",
+            "sourceSystem": "reference-recurring/billing-export",
+            "sourceInstallation": "src-inst-rec-1",
+            "sourceBook": "book-recurring-main",
+            "sourceRecordId": "rec-obl-annual-001",
+            "recordKind": "proven_obligation",
+            "sourceRecordRevision": 1,
+            "sourceIdentityDigest": "sha256:ad9f554b43b7718f09cd6b667f30d9f281f48e29d1512ce8ed33c7d6d5f98425",
+            "payloadDigest": "sha256:4838dae1bd2a12df022b568b519170c1e5c21933ab99d0961872e2efce60cc58",
+            "sourceFactRef": "import:3c585da7ec295b7124e6003e524aa3e6ffdf76d88942ce376a68ce983a58c0f1",
+            "status": "active"
+        },
+        {
+            "installationRef": "inst-test",
+            "environment": "test",
+            "sellerRef": "seller-recurring-1",
+            "sourceSystem": "reference-recurring/billing-export",
+            "sourceInstallation": "src-inst-rec-1",
+            "sourceBook": "book-recurring-main",
+            "sourceRecordId": "rec-grant-m01",
+            "recordKind": "nonfinancial_agreement_reference",
+            "sourceRecordRevision": 1,
+            "sourceIdentityDigest": "sha256:ce87fbf9621ccc196089fbc03de1541082c67dc47537d8081a908634c6786864",
+            "payloadDigest": "sha256:83df49dfd638d61ba4e1d631e6169fe1cdc9c16478b5bcba2610041080486cee",
+            "sourceFactRef": "import:d1e6463f159043660a80b3bf6ad457b4bb2b9d2fc0a0922c9b672992a3474051",
+            "status": "active"
+        },
+        {
+            "installationRef": "inst-test",
+            "environment": "test",
+            "sellerRef": "seller-recurring-1",
+            "sourceSystem": "reference-recurring/billing-export",
+            "sourceInstallation": "src-inst-rec-1",
+            "sourceBook": "book-recurring-main",
+            "sourceRecordId": "rec-sub-monthly-unanchored",
+            "recordKind": "unanchored_evidence",
+            "sourceRecordRevision": 1,
+            "sourceIdentityDigest": "sha256:0590ca4f016e3c439077fcb3ef42128d93278408660f8f9eb85c238aa848b024",
+            "payloadDigest": "sha256:d1233043e0fef9508d98afb930180be16a561a0226c6ab032ca54efc86f1b2f7",
+            "sourceFactRef": "import:d38c83805e3f3bc35fe5092fd1388af7f5f6d1dca537517ee307c10ddf29f2b9",
+            "status": "active"
+        },
+        {
+            "installationRef": "inst-test",
+            "environment": "test",
+            "sellerRef": "seller-recurring-1",
+            "sourceSystem": "reference-recurring/billing-export",
+            "sourceInstallation": "src-inst-rec-1",
+            "sourceBook": "book-recurring-main",
+            "sourceRecordId": "rec-obl-current-plan-only",
+            "recordKind": "unanchored_evidence",
+            "sourceRecordRevision": 1,
+            "sourceIdentityDigest": "sha256:7f30c313d299826a4bba182b7049dff79d602559ccb52355dd27ad25801bd328",
+            "payloadDigest": "sha256:fcf5a539ff5b2fd901a8632a0ddff707efb38563bb0ede968b8b3f92b9e25ea9",
+            "sourceFactRef": "import:b574114d093d5bb42ea448fa690f1948a46fcfc1a9d049fcee914f24c4120e06",
+            "status": "active"
+        },
+        {
+            "installationRef": "inst-test",
+            "environment": "test",
+            "sellerRef": "seller-recurring-1",
+            "sourceSystem": "reference-recurring/billing-export",
+            "sourceInstallation": "src-inst-rec-1",
+            "sourceBook": "book-recurring-main",
+            "sourceRecordId": "rec-inv-hist-001",
+            "recordKind": "proven_invoice_history",
+            "sourceRecordRevision": 1,
+            "sourceIdentityDigest": "sha256:c115ea0cfd01fa001421cab0a1cad6150461de888ba7d07a18655e33dd91863b",
+            "payloadDigest": "sha256:f3839d574a82d2b6c6dd54c39b751e43fe67f846ebab805804345a3a68145f90",
+            "sourceFactRef": "import:3422ae2c94dce99931b3b234ff2e500b9d7e64a3a61b7235ba10a1f1e0827c32",
+            "status": "active"
+        },
+        {
+            "installationRef": "inst-test",
+            "environment": "test",
+            "sellerRef": "seller-recurring-1",
+            "sourceSystem": "reference-recurring/billing-export",
+            "sourceInstallation": "src-inst-rec-1",
+            "sourceBook": "book-recurring-main",
+            "sourceRecordId": "rec-pay-missing-psp",
+            "recordKind": "unanchored_evidence",
+            "sourceRecordRevision": 1,
+            "sourceIdentityDigest": "sha256:89b3a90dd2df47c89014690cfc178c6a180e57aa1aed835857a6077cede0e73b",
+            "payloadDigest": "sha256:f29878c4ab555a9523225f35844afa0daffa10af1f194b49e5756c229e501897",
+            "sourceFactRef": "import:33d54e3be6329d5e3b9c066ca63a80c52f80ad51fda02583c12d17e8d8053a8f",
+            "status": "active"
+        },
+        {
+            "installationRef": "inst-test",
+            "environment": "test",
+            "sellerRef": "seller-recurring-1",
+            "sourceSystem": "reference-recurring/billing-export",
+            "sourceInstallation": "src-inst-rec-1",
+            "sourceBook": "book-recurring-main",
+            "sourceRecordId": "rec-pay-proven-001",
+            "recordKind": "proven_payment_evidence",
+            "sourceRecordRevision": 1,
+            "sourceIdentityDigest": "sha256:d813ecde253794178ee05c697869eaf38a79137db4d2aab3b1438f32bcda18b9",
+            "payloadDigest": "sha256:719027be8b428ee3648ea35c3813171c27e4816dcc3c7eb846120cdf8c8846d1",
+            "sourceFactRef": "import:bd42a4e1e8ec51f6860e97cf2b737e4d40978008e78838e9776bb4c4160ac4e4",
+            "status": "active"
+        },
+        {
+            "installationRef": "inst-test",
+            "environment": "test",
+            "sellerRef": "seller-credits-1",
+            "sourceSystem": "reference-credits/entitlement-export",
+            "sourceInstallation": "src-inst-cred-1",
+            "sourceBook": "book-credits-main",
+            "sourceRecordId": "cred-grant-welcome-001",
+            "recordKind": "nonfinancial_agreement_reference",
+            "sourceRecordRevision": 1,
+            "sourceIdentityDigest": "sha256:b075f2c65ab1031ed8a109aa6825ca19433b5b38ad3181595a288abecc4d260c",
+            "payloadDigest": "sha256:f2081f2cac81c15546162c4bfab554a63ef4d9ed22034cebbd8eb407f7568ae3",
+            "sourceFactRef": "import:1df119a52775a2fed71897e79eccc4a2deb2af408360d67df994effc73d85ba1",
+            "status": "active"
+        },
+        {
+            "installationRef": "inst-test",
+            "environment": "test",
+            "sellerRef": "seller-credits-1",
+            "sourceSystem": "reference-credits/entitlement-export",
+            "sourceInstallation": "src-inst-cred-1",
+            "sourceBook": "book-credits-main",
+            "sourceRecordId": "cred-balance-claimed-money-002",
+            "recordKind": "unanchored_evidence",
+            "sourceRecordRevision": 1,
+            "sourceIdentityDigest": "sha256:59e03629fa74bdb6967f832796493a9af6e1f870b5981273f35e07bee56a20de",
+            "payloadDigest": "sha256:8c84d01d252726074e8e4fa18c7cb681a39b518e9dd16e5892ef10fad0474c32",
+            "sourceFactRef": "import:9726a407803c505ab897f306f8b336fe97ca683744e5709131d5c5650a69d5b2",
+            "status": "active"
+        },
+        {
+            "installationRef": "inst-test",
+            "environment": "test",
+            "sellerRef": "seller-credits-1",
+            "sourceSystem": "reference-credits/entitlement-export",
+            "sourceInstallation": "src-inst-cred-1",
+            "sourceBook": "book-credits-main",
+            "sourceRecordId": "cred-reward-points-003",
+            "recordKind": "unanchored_evidence",
+            "sourceRecordRevision": 1,
+            "sourceIdentityDigest": "sha256:76926bf1f8fb10c207b32aef94c751d2fa2753557c6625a230689f9fc79998ad",
+            "payloadDigest": "sha256:939251482094b81e94f409329566430c4c9163a4422b9e9dc57213a9f8199312",
+            "sourceFactRef": "import:4ebfe10b56c971b11ff014efd4985889c13c69b8d231f23d0cdebd8a56249e5b",
+            "status": "active"
+        },
+        {
+            "installationRef": "inst-test",
+            "environment": "test",
+            "sellerRef": "seller-credits-1",
+            "sourceSystem": "reference-credits/entitlement-export",
+            "sourceInstallation": "src-inst-cred-1",
+            "sourceBook": "book-credits-main",
+            "sourceRecordId": "cred-reward-ref-004",
+            "recordKind": "nonfinancial_agreement_reference",
+            "sourceRecordRevision": 1,
+            "sourceIdentityDigest": "sha256:972df0460f656832505793f069dcbfa7f24037ece7774194e3b4de379e1a8bd6",
+            "payloadDigest": "sha256:b050f8845288d1c438a1e439bae95ba59ee64f282be18ede584f87aa4c51da32",
+            "sourceFactRef": "import:3eff44098a7129398c24941b7b0987f2976f672ee488e55c3c35a9f4ab823cbb",
+            "status": "active"
+        },
+        {
+            "installationRef": "inst-test",
+            "environment": "test",
+            "sellerRef": "seller-credits-1",
+            "sourceSystem": "reference-credits/entitlement-export",
+            "sourceInstallation": "src-inst-cred-1",
+            "sourceBook": "book-credits-main",
+            "sourceRecordId": "cred-obl-proven-usd-005",
+            "recordKind": "proven_obligation",
+            "sourceRecordRevision": 1,
+            "sourceIdentityDigest": "sha256:82448129f13296b194c89b13d2620186d08b05a5b8ead101cf2b6b02db468189",
+            "payloadDigest": "sha256:58b74ff4b3f2c52fd8fb824696d900b39f596312886144b6b3f67b4e147db187",
+            "sourceFactRef": "import:eafb60ddd8cc10efacc566126f07e10a268553d4c55c00cee1e454b18611bcba",
+            "status": "active"
+        },
+        {
+            "installationRef": "inst-test",
+            "environment": "test",
+            "sellerRef": "seller-credits-1",
+            "sourceSystem": "reference-credits/entitlement-export",
+            "sourceInstallation": "src-inst-cred-1",
+            "sourceBook": "book-credits-main",
+            "sourceRecordId": "cred-missing-price-006",
+            "recordKind": "unanchored_evidence",
+            "sourceRecordRevision": 1,
+            "sourceIdentityDigest": "sha256:10edfb42e34626d8f2e4279eccd54ddb6587dbc9fddbc0208ef5aab8458dacbf",
+            "payloadDigest": "sha256:fd4092f41fdad91941a64a66602ae46a4ed0811a63df1101ecf71795e6b94e32",
+            "sourceFactRef": "import:cf597e5814c7605fded6fff274b879d58d5d4d9eee9652cfe8346b4df0910518",
+            "status": "active"
+        },
+        {
+            "installationRef": "inst-test",
+            "environment": "test",
+            "sellerRef": "seller-credits-1",
+            "sourceSystem": "reference-credits/entitlement-export",
+            "sourceInstallation": "src-inst-cred-1",
+            "sourceBook": "book-credits-main",
+            "sourceRecordId": "cred-inv-hist-007",
+            "recordKind": "proven_invoice_history",
+            "sourceRecordRevision": 1,
+            "sourceIdentityDigest": "sha256:d4565fd260e07167812086d4bf9e58f9094f587858a3b998c1215129f280f4c0",
+            "payloadDigest": "sha256:c80007ae7d74d109f868f7a7610379ff6d19a1ff05b8e2fe5d2987b87821e651",
+            "sourceFactRef": "import:83e66d62342186f862af19cb3cf38811d4ea265b6ea5cd930f33d33c8dad6946",
+            "status": "active"
+        }
+    ],
+    "manifestDigest": "sha256:679cb54d83670e7d5a677c740f6a50228f7617200debe2fd816b887ced9dc221"
+}

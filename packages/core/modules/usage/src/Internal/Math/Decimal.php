@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Billium\Usage\Internal\Math;
 
 use Billium\Usage\Internal\Errors\UsageProblems;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class Decimal
 {
     public static function unscaled(string $value, int $scale): string

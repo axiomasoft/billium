@@ -7,8 +7,10 @@ namespace Billium\Platform\Internal\Outbox;
 use Billium\Platform\Internal\Installation\Rows;
 use Illuminate\Database\Connection;
 use LogicException;
+use Packman\Attributes\Internal;
 
 /** D25/D52/D60: owner-only maintenance, complete safe physical prefix, all delivery destinations and active pins. */
+#[Internal]
 final readonly class OutboxPruner
 {
     /** Upper bound of rows one maintenance transaction examines and deletes while it holds the exclusive barrier. */

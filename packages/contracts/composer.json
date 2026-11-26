@@ -6,6 +6,7 @@
     "require": {
         "php": "^8.4",
         "ext-mbstring": "*",
+        "axiomasoft/packman": "^0.1",
         "brick/math": "~0.15.0 || ~0.16.0 || ~0.17.0 || ~0.18.0 || ~0.19.0 || ~0.20.0 || ^1.0",
         "brick/money": "^0.15"
     },
@@ -17,6 +18,21 @@
     "extra": {
         "billium": {
             "spec_rev": "2026-10"
+        },
+        "packman": {
+            "schema-version": 1,
+            "package-type": "domain",
+            "stability": "dev",
+            "error-prefix": "billium",
+            "owns": [
+                "Attributes",
+                "Contracts",
+                "Data",
+                "Enums",
+                "Errors",
+                "Exceptions",
+                "Internal"
+            ]
         }
     },
     "minimum-stability": "stable",

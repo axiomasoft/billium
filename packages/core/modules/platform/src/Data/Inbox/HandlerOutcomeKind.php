@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Data\Inbox;
 
-use Billium\Contracts\Attributes\Api;
+use Packman\Attributes\Api;
 
-#[Api]
+#[Api(since: '1.0')]
 enum HandlerOutcomeKind: string
 {
     case Applied = 'applied';

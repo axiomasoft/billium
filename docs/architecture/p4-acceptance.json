@@ -163,9 +163,10 @@
       "tests": [
         "packages/core/modules/usage/tests/Unit/AggregationCompletenessTest.php",
         "packages/core/modules/usage/tests/Feature/AggregationFreezeTest.php",
-        "packages/core/modules/rating/tests/Feature/RatingPipelineUnknownPolicyTest.php::test_incomplete_source_and_erased_aggregate_hold_instead_of_zero"
+        "packages/core/modules/rating/tests/Feature/RatingPipelineUnknownPolicyTest.php::test_incomplete_source_and_erased_aggregate_hold_instead_of_zero",
+        "packages/core/modules/usage/tests/Feature/CollectorRestartReconciliationTest.php"
       ],
-      "expectation": "Gap, missing membership, dropped/retry-exhausted source or erased evidence never produces final zero",
+      "expectation": "Gap, missing membership, dropped/retry-exhausted source or erased evidence never produces final zero; actual retry-budget exhaustion, durable buffer restart and source sequence reconciliation retain exact units",
       "check": "policies"
     },
     {
@@ -175,7 +176,10 @@
       "tests": [
         "packages/core/tests/Integration/P4ModuleCompositionTest.php",
         "packages/core/tests/Integration/Usage/P4ModuleCompositionTest.php",
-        "packages/core/tests/Unit/Modules/P4ModuleCompositionTest.php"
+        "packages/core/tests/Unit/Modules/P4ModuleCompositionTest.php",
+        "packages/core/tests/Integration/P4AnnualBookingTest.php",
+        "packages/core/tests/Integration/P4EmbeddedAllocationTest.php",
+        "packages/core/tests/Integration/P4HistoricalMetricRatingTest.php"
       ],
       "expectation": "A-D authority matrix, fixed without usage/ledger, ledger posting without legal render, exact versioned extension/refusal",
       "check": "composition"
@@ -341,10 +345,15 @@
       "tests": [
         "packages/core/tests/Unit/Modules/RoleRegistrationTest.php",
         "packages/core/tests/Integration/P4ModuleCompositionTest.php",
-        "packages/core/tests/Integration/Usage/P4ModuleCompositionTest.php"
+        "packages/core/tests/Integration/Usage/P4ModuleCompositionTest.php",
+        "packages/core/modules/usage/tests/Feature/UsagePolicyVersionTest.php",
+        "packages/core/tests/Integration/P4HistoricalMetricRatingTest.php"
       ],
       "fixtures": [
-        "docs/architecture/optional-commercial-modules.md"
+        "docs/architecture/optional-commercial-modules.md",
+        "docs/contracts/usage-policy-versions.md",
+        "fixtures/vectors/usage/contracts/metric-policy2-attribution.json",
+        "fixtures/vectors/usage/contracts/metric-policy2-correction.json"
       ]
     }
   ],

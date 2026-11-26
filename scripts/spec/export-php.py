@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export the data of a spec revision into the PHP package axiomasoft/billium-contracts (P2.5).
+"""Export the data of a spec revision into the PHP package axiomasoft/billium-contracts.
 
 Writes resources/ (currency table, schema bundle, envelope registry) and the generated PHP types
 (ProblemCode, envelope classes). The package reads nothing outside itself after installation.
@@ -87,16 +87,16 @@ def render_problem_code(revision: Revision) -> str:
     )
     return (
         "<?php\n\ndeclare(strict_types=1);\n\nnamespace Billium\\Contracts\\Enums;\n\n"
-        "use Billium\\Contracts\\Attributes\\Api;\n\n"
+        "use Packman\\Attributes\\Api;\n\n"
         f"/**\n * {header(revision, 'problem-codes.json')}\n */\n"
-        f"#[Api]\nenum ProblemCode: string\n{{\n{cases}\n{methods}}}\n"
+        f"#[Api(since: '1.0')]\nenum ProblemCode: string\n{{\n{cases}\n{methods}}}\n"
     )
 
 
 def render_envelope(revision: Revision, envelope: Envelope) -> str:
     members = [member for member in envelope.members if member.name != "schema"]
     ordered = [m for m in members if m.required] + [m for m in members if not m.required]
-    uses = {"Billium\\Contracts\\Attributes\\Api", "Billium\\Contracts\\Data\\Envelope"}
+    uses = {"Billium\\Contracts\\Data\\Envelope", "Packman\\Attributes\\Api"}
     if any(member.kind == "money" for member in members):
         uses.add("Billium\\Contracts\\Data\\Money")
     use_lines = "".join(f"use {name};\n" for name in sorted(uses))
@@ -114,7 +114,7 @@ def render_envelope(revision: Revision, envelope: Envelope) -> str:
         "<?php\n\ndeclare(strict_types=1);\n\nnamespace Billium\\Contracts\\Data\\Envelopes;\n\n"
         f"{use_lines}\n"
         f"/**\n * {header(revision, 'schema/' + envelope.source)}\n */\n"
-        f"#[Api]\nfinal readonly class {envelope.class_name} extends Envelope\n{{\n"
+        f"#[Api(since: '1.0')]\nfinal readonly class {envelope.class_name} extends Envelope\n{{\n"
         f"    public const string SCHEMA = '{envelope.schema}';\n\n"
         f"{constructor_doc}    public function __construct(\n        \\stdClass $raw,\n{params}    ) {{\n"
         "        parent::__construct(raw: $raw, schema: self::SCHEMA);\n    }\n\n"
@@ -126,9 +126,9 @@ def render_envelope(revision: Revision, envelope: Envelope) -> str:
 def render_spec_revision(revision: Revision) -> str:
     return (
         "<?php\n\ndeclare(strict_types=1);\n\nnamespace Billium\\Contracts\\Contracts;\n\n"
-        "use Billium\\Contracts\\Attributes\\Api;\n\n"
+        "use Packman\\Attributes\\Api;\n\n"
         f"/**\n * {header(revision, 'revision.lock.json')}\n */\n"
-        f"#[Api]\nfinal class SpecRevision\n{{\n    public const string CURRENT = '{revision.name}';\n}}\n"
+        f"#[Api(since: '1.0')]\nfinal class SpecRevision\n{{\n    public const string CURRENT = '{revision.name}';\n}}\n"
     )
 
 
@@ -157,7 +157,7 @@ def main() -> int:
     except (OSError, KeyError, TypeError, ValueError, ExportError) as error:
         print(f"{TOOL}: {error}", file=sys.stderr)
         return 1
-    owned = ((args.out / "src/Data/Envelopes", "*.php"), (args.out / "resources", "**/*"))
+    owned = ((args.out / "src/Data/Envelopes", "*.php"), (args.out / "resources", "*.php"), (args.out / "resources/spec", "**/*"))
     return write_or_check(files, args.check, TOOL, owned=owned)
 
 

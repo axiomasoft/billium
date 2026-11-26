@@ -361,25 +361,11 @@
     "sameKey": true,
     "receipt": "none",
     "producer": "execution",
-    "when": "Capability is unsupported or unverified; refuse before operation, attempt, reservation or provider call.",
-    "clientAction": "Resolve capability/recovery with original identity; no automatic new key.",
+    "when": "Exact frozen driver/capability/action/account/currency evidence not supported; refuse before admission/effect; no fallback",
+    "clientAction": "Inspect the typed refusal and resolve its stated capability, capacity, hold or evidence condition.",
     "basis": [
-      "D57",
-      "D31"
-    ]
-  },
-  {
-    "code": "billium.lookup.ambiguous",
-    "category": "lookup",
-    "retryable": false,
-    "sameKey": true,
-    "receipt": "none",
-    "producer": "execution",
-    "when": "Lookup is not conclusive; keep recoveryRequired and the original key.",
-    "clientAction": "Resolve capability/recovery with original identity; no automatic new key.",
-    "basis": [
-      "D57",
-      "D31"
+      "D31",
+      "REQ-CON-05"
     ]
   },
   {
@@ -389,25 +375,83 @@
     "sameKey": false,
     "receipt": "stored",
     "producer": "execution",
-    "when": "Capture admission exceeds available authorization capacity.",
-    "clientAction": "Read current state before issuing a new business command.",
+    "when": "Capture exceeds locked available authorization",
+    "clientAction": "Inspect the typed refusal and resolve its stated capability, capacity, hold or evidence condition.",
     "basis": [
-      "D57",
-      "D31"
+      "D31",
+      "REQ-CON-05"
     ]
   },
   {
-    "code": "billium.authorization.not_voidable",
+    "code": "billium.authorization.capacity_exceeded",
     "category": "authorization",
     "retryable": false,
     "sameKey": false,
     "receipt": "stored",
     "producer": "execution",
-    "when": "Authorization state refuses a provider void command.",
-    "clientAction": "Read current state before issuing a new business command.",
+    "when": "Void amount exceeds locked unconsumed authorization",
+    "clientAction": "Inspect the typed refusal and resolve its stated capability, capacity, hold or evidence condition.",
     "basis": [
-      "D57",
-      "D31"
+      "D31",
+      "REQ-CON-05"
+    ]
+  },
+  {
+    "code": "billium.operation.financial_hold",
+    "category": "operation",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored",
+    "producer": "execution",
+    "when": "New monetary intent refused under discrepancy hold",
+    "clientAction": "Inspect the typed refusal and resolve its stated capability, capacity, hold or evidence condition.",
+    "basis": [
+      "D31",
+      "REQ-CON-05"
+    ]
+  },
+  {
+    "code": "billium.lookup.ambiguous",
+    "category": "lookup",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none",
+    "producer": "execution",
+    "when": "Provider evidence cannot identify reliable actual effect; retain unknown and reconcile",
+    "clientAction": "Inspect the typed refusal and resolve its stated capability, capacity, hold or evidence condition.",
+    "basis": [
+      "D31",
+      "REQ-CON-05"
+    ]
+  },
+  {
+    "code": "billium.module.unavailable",
+    "category": "module",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none",
+    "producer": "platform",
+    "when": "модуль не включён; отказ до custody и денежного эффекта, исторический query может остаться",
+    "clientAction": "не создавать новый ключ и не повторять эффект; читать историю там, где она ещё доступна",
+    "basis": [
+      "D55",
+      "D31",
+      "REQ-CON-05"
+    ]
+  },
+  {
+    "code": "billium.auth.unauthenticated",
+    "category": "auth",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none",
+    "producer": "platform",
+    "when": "credential отсутствует или недействителен, до чтения ресурса и custody",
+    "clientAction": "исправить credential; тот же ключ допустим, receipt не сохранён",
+    "basis": [
+      "REQ-CON-21",
+      "D31",
+      "M-45"
     ]
   }
 ]

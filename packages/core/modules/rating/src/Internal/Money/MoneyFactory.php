@@ -8,7 +8,9 @@ use Billium\Contracts\Data\Currency;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class MoneyFactory
 {
     public static function fromMinor(string $minor, string $currency, int $exponent): Money

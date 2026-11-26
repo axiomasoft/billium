@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Billium\Schedule\Internal;
 
 use LogicException;
+use Packman\Attributes\Internal;
 
 /** Strict hydration of owned persisted evidence; never coerce malformed commercial terms. */
+#[Internal]
 final class Payload
 {
     /** @param array<string, mixed> $value

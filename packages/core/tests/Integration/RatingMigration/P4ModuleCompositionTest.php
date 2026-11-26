@@ -6,7 +6,9 @@ namespace Billium\Core\Tests\Integration\RatingMigration;
 
 use Billium\Core\Tests\Integration\CompositionTestCase;
 use Billium\Rating\Contracts\RatingQuoter;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class P4ModuleCompositionTest extends CompositionTestCase
 {
     protected function modules(): array

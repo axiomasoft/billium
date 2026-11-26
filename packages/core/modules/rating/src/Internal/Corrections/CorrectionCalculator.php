@@ -11,7 +11,9 @@ use Billium\Rating\Data\Tax\TaxCorrectionPolicySnapshot;
 use Billium\Rating\Data\Tax\TaxCorrectionRequest;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
 use Billium\Rating\Internal\Pipeline\RatingComputation;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final readonly class CorrectionCalculator
 {
     public function __construct(private RatingComputation $rating) {}

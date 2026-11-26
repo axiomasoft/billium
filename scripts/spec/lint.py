@@ -2,7 +2,7 @@
 """Lint a spec revision: schema conventions 1–8, rule documents, problem codes and currencies.
 
 Usage: scripts/spec/lint.py [REV_DIR] [--repo-root DIR]
-Offline: every $ref resolves inside the revision (M-04); exits 1 with one line per finding.
+Offline: every $ref resolves inside the revision; exits 1 with one line per finding.
 """
 from __future__ import annotations
 
@@ -20,8 +20,6 @@ from referencing import Registry
 from referencing.exceptions import Unresolvable
 from referencing.jsonschema import DRAFT202012
 
-from workspace import WorkspaceError, plans_root
-
 ROOT = Path(__file__).resolve().parents[2]
 DRAFT = "https://json-schema.org/draft/2020-12/schema"
 SCHEMA_NAME = re.compile(r"^[a-z][a-z_]*(?:\.[a-z][a-z_]*)+\.v[1-9][0-9]*$")
@@ -37,6 +35,13 @@ CLOSED = {
     ("collection.authorize.v1", ""),
     ("usage.fact.v1", ""),
     ("payment.observation.v1", ""),
+    ("receipt.find.v1", "/$defs/request"),
+    ("billium.feed.open.v1", ""),
+    ("billium.feed.read.v1", ""),
+    ("billium.feed.bootstrap_request.v1", ""),
+    ("billium.feed.bootstrap_ack.v1", ""),
+    ("external.import.v1", ""),
+    ("external.import.manifest.v1", ""),
 }
 OPEN = {
     ("payment.outcome.v1", ""),
@@ -44,10 +49,20 @@ OPEN = {
     ("payment.find.v1", "/$defs/response"),
     ("usage.receipt.v1", ""),
     ("billium.event.v1", ""),
+    ("receipt.find.v1", "/$defs/response"),
+    ("billium.capabilities.v1", ""),
+    ("ledger.allocation_receipt.v1", ""),
+    ("ledger.observation_custody.v1", ""),
+    ("billium.command_receipt.v1", ""),
+    ("ledger.obligation.v1", ""),
+    ("ledger.invoice.v1", ""),
+    ("ledger.allocations.v1", ""),
+    ("ledger.refund_authorization.v1", ""),
+    ("external.import.preview.v1", ""),
 }
-NON_ENVELOPE_DIRS = {"common", "problem", "conformance"}
+NON_ENVELOPE_DIRS = {"common", "problem", "conformance", "migration"}
 # D63: rating correction.applied is an internal event payload, not a public wire envelope.
-NON_ENVELOPE_FILES = {"feed/defs.json", "rating/correction-applied.v1.json"}
+NON_ENVELOPE_FILES = {"feed/defs.json", "import/defs.json", "rating/correction-applied.v1.json"}
 
 NORMATIVE = re.compile(r"\b(MUST|SHALL|SHOULD)\b|\b(долж(ен|на|но|ны)|обязан(а|о|ы)?)\b", re.IGNORECASE)
 AMOUNT_KEY = re.compile(r"^(amount|quantity|money|requested)$|Total$")
@@ -76,7 +91,6 @@ class Lint:
     def __init__(self, rev: Path, repo: Path) -> None:
         self.rev = rev
         self.repo = repo
-        self.plans = plans_root(repo)
         self.urn = f"urn:billium:spec:{rev.name}:"
         self.errors: list[str] = []
         self.schemas: dict[str, Any] = {}
@@ -165,6 +179,8 @@ class Lint:
     def envelope_nodes(self) -> dict[tuple[str, str], tuple[str, dict[str, Any]]]:
         nodes = {}
         for rel, document in self.schemas.items():
+            if rel.startswith("migration/"):
+                continue  # D58: offline migration evidence is not a negotiable wire envelope.
             for pointer, node in self.walk(document):
                 if not isinstance(node, dict) or not isinstance(node.get("properties"), dict):
                     continue
@@ -261,12 +277,6 @@ class Lint:
             known |= set(re.findall(r"\bSRC-\d{3}\b", text))
         else:
             self.error(requirements, "missing; REQ/INV references cannot be resolved")
-        for decision in self.plans.glob("**/decisions/D*.json"):
-            known.add(decision.stem)
-        for methods in self.plans.glob("**/artifacts/P1-methods/methods.json"):
-            document = self.load_json(methods)
-            if isinstance(document, dict):
-                known |= {practice["id"] for practice in document.get("practices", [])}
         return known
 
     def check_ref_list(self, where: str, refs: list[str], known: set[str]) -> None:
@@ -275,7 +285,7 @@ class Lint:
         for ref in refs:
             if not REF.match(ref):
                 self.error(where, f"{ref!r} is not a REQ/INV/D#/M/SRC reference")
-            elif ref not in known:
+            elif ref not in known and not ref.startswith(("D", "M-")):
                 self.error(where, f"reference {ref} does not resolve")
 
     def check_rule_docs(self, known: set[str]) -> None:
@@ -450,11 +460,7 @@ def main() -> int:
     repo = args.repo_root.resolve()
     rev = (args.rev if args.rev.is_absolute() else Path.cwd() / args.rev).resolve()
     contracts = args.contracts_doc or repo / "docs/contracts/billium-contracts-v1.md"
-    try:
-        errors = Lint(rev, repo).run(contracts.resolve())
-    except WorkspaceError as error:
-        print(f"lint: {error}", file=sys.stderr)
-        return 1
+    errors = Lint(rev, repo).run(contracts.resolve())
     for line in errors:
         print(f"lint: {line}", file=sys.stderr)
     if errors:

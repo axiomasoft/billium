@@ -9,7 +9,9 @@ use Billium\Schedule\Data\Commands\MaterializeNext;
 use Billium\Schedule\Tests\OccurrenceTestCase;
 use Billium\Schedule\Tests\Support\OccurrenceScenario;
 use DateTimeImmutable;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class OccurrenceRevisionConcurrencyTest extends OccurrenceTestCase
 {
     public function test_five_postgresql_workers_materialize_one_business_occurrence(): void

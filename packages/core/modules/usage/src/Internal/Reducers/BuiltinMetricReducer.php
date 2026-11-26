@@ -9,7 +9,9 @@ use Billium\Usage\Data\AggregationPolicy;
 use Billium\Usage\Data\MetricReduction;
 use Billium\Usage\Data\WindowSelector;
 use Billium\Usage\Enums\AggregationSemantics;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final readonly class BuiltinMetricReducer implements MetricReducer
 {
     public function __construct(private string $algorithm, private AggregationSemantics $model) {}

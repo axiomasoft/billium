@@ -10,15 +10,16 @@ use Billium\Core\BilliumCoreServiceProvider;
 use Billium\Core\Data\Modules\InstalledCheckpoint;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Rating\Contracts\PricingStrategyRegistry;
-use Billium\Rating\Internal\RatingServiceProvider;
-use Billium\Schedule\Internal\ScheduleServiceProvider;
-use Billium\Usage\Internal\UsageServiceProvider;
+use Billium\Rating\Laravel\RatingServiceProvider;
+use Billium\Schedule\Laravel\ScheduleServiceProvider;
+use Billium\Usage\Laravel\UsageServiceProvider;
 use BilliumConformance\LedgerAdapter;
 use BilliumConformance\P4RuntimeAdapter;
 use Composer\Autoload\ClassLoader;
 use Illuminate\Config\Repository;
 use Illuminate\Container\Container;
 use Illuminate\Foundation\Application;
+use PHPUnit\Framework\Attributes\Group;
 use stdClass;
 use Symfony\Component\Process\Process;
 
@@ -34,7 +35,7 @@ final class P4BootstrapTest extends ModuleTestCase
             self::assertArrayHasKey("Billium\\{$module}\\", $prefixes);
             self::assertArrayHasKey("Billium\\{$module}\\Tests\\", $prefixes);
         }
-        $discovery = file_get_contents(dirname(__DIR__, 5).'/phpunit.xml.dist');
+        $discovery = file_get_contents(dirname(__DIR__, 5).'/phpunit.xml');
         self::assertIsString($discovery);
         self::assertStringContainsString('packages/core/modules/*/tests', $discovery);
     }
@@ -58,17 +59,24 @@ final class P4BootstrapTest extends ModuleTestCase
         $app = new Application(dirname(__DIR__, 5));
         $app->instance('config', new Repository);
         $app->register(BilliumCoreServiceProvider::class);
+        $app->boot();
         self::assertSame(['platform', 'ledger'], $app['config']->get('billium.modules.enabled'));
         foreach (['usage', 'rating', 'schedule'] as $module) {
             self::assertFalse($app['config']->get("billium.{$module}.enabled"));
         }
         self::assertFalse($app->bound(PricingStrategyRegistry::class));
-        // Explicitly enabled available binaries register their bindings without installing SQL.
-        $app['config']->set('billium.modules.enabled', ['platform', 'ledger', 'usage', 'rating', 'schedule']);
-        foreach (['usage', 'rating', 'schedule'] as $module) {
-            $app['config']->set("billium.{$module}.enabled", true);
-        }
-        new BilliumCoreServiceProvider($app)->register();
+        // A new host compiles its configured composition before registering any module providers.
+        $app = new Application(dirname(__DIR__, 5));
+        $app->instance('config', new Repository([
+            'billium' => [
+                'modules' => ['enabled' => ['platform', 'ledger', 'usage', 'rating', 'schedule']],
+                'usage' => ['enabled' => true],
+                'rating' => ['enabled' => true],
+                'schedule' => ['enabled' => true],
+            ],
+        ]));
+        $app->register(BilliumCoreServiceProvider::class);
+        $app->boot();
         self::assertArrayHasKey(UsageServiceProvider::class, $app->getLoadedProviders());
         self::assertArrayHasKey(ScheduleServiceProvider::class, $app->getLoadedProviders());
         self::assertArrayHasKey(RatingServiceProvider::class, $app->getLoadedProviders());
@@ -109,6 +117,7 @@ final class P4BootstrapTest extends ModuleTestCase
         self::assertSame(['enrolled' => true], new P4RuntimeAdapter($container)->run(operation: 'rating.rate', arguments: $arguments));
     }
 
+    #[Group('pg')]
     public function test_php_protocol_enrolls_runtime_operations_and_refuses_without_database_setup(): void
     {
         $root = dirname(__DIR__, 5);
@@ -148,6 +157,7 @@ final class P4BootstrapTest extends ModuleTestCase
         }
     }
 
+    #[Group('pg')]
     public function test_php_protocol_reaches_rating_quote_after_runtime_module_selection(): void
     {
         $root = dirname(__DIR__, 5);

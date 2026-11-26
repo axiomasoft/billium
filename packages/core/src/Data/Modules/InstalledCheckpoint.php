@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Billium\Core\Data\Modules;
 
-use Billium\Contracts\Attributes\Api;
+use Packman\Attributes\Api;
 
 /** What an installation really applied for a module stream: version 0 and no migrations when uninstalled. */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class InstalledCheckpoint
 {
     /** @param list<string> $appliedMigrations basenames */

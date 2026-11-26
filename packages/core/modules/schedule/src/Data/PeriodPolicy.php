@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Billium\Schedule\Data;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Schedule\Internal\ScheduleProblems;
 use DateTimeZone;
+use Packman\Attributes\Api;
 
 /** D56; owner schedule. Explicit strategies; no process-zone or fixed-30-day fallback. */
 #[Api]

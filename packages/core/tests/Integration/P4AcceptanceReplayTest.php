@@ -9,10 +9,10 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Tests\Integration\Support\P4DatabaseSnapshot;
 use Billium\Core\Tests\Integration\Support\P4TaxPolicy;
 use Billium\Ledger\Contracts\Ledger;
-use Billium\Ledger\Data\BillingAccountScope;
-use Billium\Ledger\Data\CreateInvoice;
-use Billium\Ledger\Data\InvoiceLineInput;
-use Billium\Ledger\Data\IssueInvoice;
+use Billium\Ledger\Data\Invoices\CreateInvoice;
+use Billium\Ledger\Data\Invoices\InvoiceLineInput;
+use Billium\Ledger\Data\Invoices\IssueInvoice;
+use Billium\Ledger\Data\Runtime\BillingAccountScope;
 use Billium\Rating\Contracts\PriceVersionStore;
 use Billium\Rating\Contracts\RatingCorrection;
 use Billium\Rating\Contracts\TaxCorrectionPolicyFrontier;
@@ -32,7 +32,9 @@ use Billium\Rating\Tests\RatingTestCase;
 use Billium\Usage\Tests\Support\UsageFixtures;
 use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class P4AcceptanceReplayTest extends RatingTestCase
 {
     /** @return array<string, array{string}> */

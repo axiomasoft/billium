@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Data\Inbox;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Contracts\Enums\ProblemCode;
+use Packman\Attributes\Api;
 
 /** Outcome of one custody step. Only `Applied` and a replayed `Duplicate` of an applied row carry a business receipt. */
-#[Api]
+#[Api(since: '1.0')]
 enum CustodyDisposition: string
 {
     /** Durable custody only: in order but not applied (raw-custody root, or a financial root has not drained it yet). */

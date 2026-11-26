@@ -5,10 +5,22 @@
     "license": "proprietary",
     "require": {
         "php": "^8.4",
-        "ext-bcmath": "*",
         "ext-pdo_pgsql": "*",
         "axiomasoft/billium-contracts": "^0.1",
+        "axiomasoft/packman": "^0.1.1",
+        "axiomasoft/packman-plugins": "^0.1.1",
+        "axiomasoft/packman-schema": "^0.1.1",
         "laravel/framework": "^13.0"
+    },
+    "replace": {
+        "axiomasoft/billium-collection": "self.version",
+        "axiomasoft/billium-documents": "self.version",
+        "axiomasoft/billium-execution": "self.version",
+        "axiomasoft/billium-ledger": "self.version",
+        "axiomasoft/billium-platform": "self.version",
+        "axiomasoft/billium-rating": "self.version",
+        "axiomasoft/billium-schedule": "self.version",
+        "axiomasoft/billium-usage": "self.version"
     },
     "autoload": {
         "psr-4": {
@@ -18,13 +30,38 @@
             "Billium\\Usage\\": "modules/usage/src/",
             "Billium\\Rating\\": "modules/rating/src/",
             "Billium\\Schedule\\": "modules/schedule/src/",
-            "Billium\\Execution\\": "modules/execution/src/"
-        }
+            "Billium\\Documents\\": "modules/documents/src/",
+            "Billium\\Execution\\": "modules/execution/src/",
+            "Billium\\Collection\\": "modules/collection/src/"
+        },
+        "files": [
+            "src/aliases.php"
+        ]
     },
     "extra": {
         "laravel": {
             "providers": [
                 "Billium\\Core\\BilliumCoreServiceProvider"
+            ]
+        },
+        "packman": {
+            "schema-version": 1,
+            "package-type": "domain",
+            "stability": "dev",
+            "error-prefix": "billium",
+            "owns": [
+                "Configuration",
+                "Contracts",
+                "Data",
+                "Database",
+                "Diagnostics",
+                "Enums",
+                "Errors",
+                "Events",
+                "Exceptions",
+                "Internal",
+                "Laravel",
+                "Plugins"
             ]
         }
     },

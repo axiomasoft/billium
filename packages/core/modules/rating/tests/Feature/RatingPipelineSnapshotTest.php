@@ -15,7 +15,9 @@ use Billium\Rating\Enums\BookingOutcome;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
 use Billium\Rating\Internal\Pipeline\RatingComputation;
 use Billium\Rating\Tests\RatingTestCase;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class RatingPipelineSnapshotTest extends RatingTestCase
 {
     public function test_frozen_lines_replay_without_current_prices_or_tax_and_cannot_be_mutated(): void

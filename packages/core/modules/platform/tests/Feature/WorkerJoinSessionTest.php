@@ -6,11 +6,12 @@ namespace Billium\Platform\Tests\Feature;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Receipt;
-use Billium\Core\Enums\FinancialMode;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\Receipt;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Tests\Support\Concurrency\ConcurrencyStand;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Platform\Tests\Concurrency\Scenarios\RootOperationScenario;
 use Billium\Platform\Tests\PlatformTestCase;
 use PHPUnit\Framework\Attributes\Group;
@@ -21,6 +22,7 @@ use PHPUnit\Framework\Attributes\Group;
  * expired or foreign token, or no token refuses before any financial effect.
  */
 #[Group('D62')]
+#[Group('pg')]
 final class WorkerJoinSessionTest extends PlatformTestCase
 {
     protected function setUp(): void
@@ -35,6 +37,8 @@ final class WorkerJoinSessionTest extends PlatformTestCase
         foreach ($results as $result) {
             self::assertTrue($result['ok']['accepted'] ?? false, json_encode($result, JSON_THROW_ON_ERROR));
         }
+        self::assertCount(4, array_unique(array_column(array_column($results, 'ok'), 'process_id')));
+        self::assertCount(4, array_unique(array_column(array_column($results, 'ok'), 'backend_pid')));
         self::assertSame(4, $this->rows('billium_money_commit_log', 'session_epoch = 1'));
         self::assertSame(1, $this->rows('billium_financial_session'), 'joining never opens a session');
         self::assertSame('active', $this->installation()->currentSession(self::INSTALLATION)?->state);
@@ -45,6 +49,7 @@ final class WorkerJoinSessionTest extends PlatformTestCase
         foreach (['process-1', 'process-1-restarted', 'queue-7'] as $process) {
             $token = FixedSessionAdmission::token(self::INSTALLATION, processRef: $process);
             $this->tokens->set($token);
+            SimulatedFinancialAuthorityEvidence::admitCurrent($this->application());
             $epoch = $this->runner()->run($this->spec(), static fn (TransactionContext $context): Receipt => self::receipt(['epoch' => $context->sessionEpoch()]))->body['epoch'];
             self::assertSame(1, $epoch, $process);
             // The token value and its nonce never reach the database.
@@ -66,6 +71,7 @@ final class WorkerJoinSessionTest extends PlatformTestCase
             ['authorityEpoch' => 2],
         ] as $claims) {
             $this->tokens->set(FixedSessionAdmission::fromArray($claims + ['installationRef' => self::INSTALLATION]));
+            SimulatedFinancialAuthorityEvidence::admitCurrent($this->application());
             $this->assertRefused(ProblemCode::RecoveryRequired, json_encode($claims, JSON_THROW_ON_ERROR));
         }
     }
@@ -75,10 +81,13 @@ final class WorkerJoinSessionTest extends PlatformTestCase
         $this->tokens->set(null);
         $this->assertRefused(ProblemCode::InstallationQuarantined, 'no token');
         $this->tokens->set(FixedSessionAdmission::token(self::INSTALLATION, expiresIn: '-1 second'));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($this->application());
         $this->assertRefused(ProblemCode::InstallationQuarantined, 'expired');
         $this->tokens->set(FixedSessionAdmission::token('inst-other'));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($this->application());
         $this->assertRefused(ProblemCode::InstallationQuarantined, 'foreign installation');
         $this->tokens->set(FixedSessionAdmission::token(self::INSTALLATION, modes: [FinancialMode::Recovery]));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($this->application());
         $this->assertRefused(ProblemCode::InstallationQuarantined, 'recovery-only token');
         self::assertSame(0, $this->rows('billium_test_effect'));
         self::assertSame(0, $this->rows('billium_money_commit_log'));

@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Billium\Rating\Internal\Storage;
 
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Enums\LockRank;
+use Billium\Core\Configuration\BilliumOptions;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Enums\Runner\LockRank;
 use Billium\Rating\Data\Rating\BookingReceipt;
 use Billium\Rating\Data\Rating\FrozenRatingInputs;
 use Billium\Rating\Data\Rating\PreparedRating;
@@ -21,18 +22,20 @@ use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\JoinClause;
+use Packman\Attributes\Internal;
 use stdClass;
 
+#[Internal]
 final readonly class RatingStore
 {
-    public function __construct(private DatabaseManager $databases, private CallerContext $callers, private OperationRunner $runner) {}
+    public function __construct(private DatabaseManager $databases, private CallerContext $callers, private OperationRunner $runner, private BilliumOptions $options) {}
 
     public function database(?TransactionContext $context = null): Connection
     {
         if ($context !== null) {
             $this->runner->assertCurrent(context: $context, moduleId: 'rating');
         }
-        $name = $context?->connectionName() ?? config('billium.connection');
+        $name = $context?->connectionName() ?? $this->options->connection;
 
         return $this->databases->connection(is_string($name) ? $name : null);
     }
@@ -164,20 +167,25 @@ final readonly class RatingStore
         $run = $db->table('billium_rating_run')->insertGetId([...$scope, 'run_ref' => 'run:'.$draft->basisRef, 'occurrence_ref' => $in->occurrenceRef,
             'billing_account_ref' => $in->billingAccountRef, 'inputs_digest' => $draft->inputsDigest, 'agreement_revision' => $in->agreementRevision,
             'period_start_micros' => $in->periodStartMicros, 'period_end_micros' => $in->periodEndMicros, 'frozen_inputs' => CanonicalJson::encode($in)]);
-        $id = (int) $db->table('billium_rating_rated_basis')->insertGetId([...$scope, 'basis_ref' => $draft->basisRef,
+        $id = $db->table('billium_rating_rated_basis')->insertGetId([...$scope, 'basis_ref' => $draft->basisRef,
             'run_id' => $run, 'occurrence_ref' => $in->occurrenceRef, 'kind' => $correctionRevision === 0 ? 'original' : 'correction',
             'correction_revision' => $correctionRevision === 0 ? null : $correctionRevision, 'predecessor_basis_ref' => $predecessorBasisRef,
             'currency' => $in->currency, 'currency_exponent' => $in->currencyExponent,
             'net_minor' => $draft->netMinor, 'tax_minor' => $draft->taxMinor, 'gross_minor' => $draft->grossMinor,
             'charge_kind' => $draft->chargeKind->value, 'no_charge_reason' => $draft->noChargeReason,
             'inputs_digest' => $draft->inputsDigest, 'rated_digest' => $draft->ratedDigest]);
+        // Every line has the same columns, so the basis stores them in one statement, in line order.
+        $rows = [];
         foreach ($draft->lines as $line) {
             $row = ['basis_id' => $id, 'line_snapshot' => CanonicalJson::encode($line)];
             foreach (get_object_vars($line) as $key => $value) {
                 $column = strtolower((string) preg_replace('/(?<!^)[A-Z]/', '_$0', $key));
                 $row[$key === 'intermediatesJson' ? 'intermediates' : $column] = $value;
             }
-            $db->table('billium_rating_rated_line')->insert($row);
+            $rows[] = $row;
+        }
+        if ($rows !== []) {
+            $db->table('billium_rating_rated_line')->insert($rows);
         }
 
         return $id;

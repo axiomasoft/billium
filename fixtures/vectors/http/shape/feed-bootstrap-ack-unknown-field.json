@@ -1,0 +1,27 @@
+{
+  "id": "http/shape/feed-bootstrap-ack-unknown-field",
+  "spec_refs": [
+    "BC-ENV-04",
+    "REQ-CON-20"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"billium.feed.bootstrap_ack.v1\",\"installationRef\":\"inst-1\",\"environment\":\"test\",\"sellerRef\":\"seller-1\",\"subscriptionRef\":\"sub-1\",\"selectionDigest\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\",\"leaseRef\":\"lease-1\",\"snapshotDigest\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\",\"future\":true}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

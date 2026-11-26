@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Billium\Core\Data\Modules;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Core\Enums\Modules\TransitionBlockerCode;
 use Billium\Core\Internal\Modules\Shape;
+use Packman\Attributes\Api;
 
 /** Blockers that must be zero before the module may become retired; the base set is mandatory for every module. */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class RetirementPolicy
 {
     /** @var list<TransitionBlockerCode> */

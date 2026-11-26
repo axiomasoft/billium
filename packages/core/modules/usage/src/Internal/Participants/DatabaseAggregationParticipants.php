@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Billium\Usage\Internal\Participants;
 
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Usage\Contracts\AggregationParticipants;
 use Billium\Usage\Data\AggregateSnapshotRef;
 use Billium\Usage\Data\FactRevision;
@@ -14,7 +14,9 @@ use Billium\Usage\Internal\Services\SnapshotBuilder;
 use Billium\Usage\Internal\Storage\AggregateStore;
 use Billium\Usage\Internal\Storage\EffectiveFactSource;
 use Billium\Usage\Internal\Window\WindowQualifier;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final readonly class DatabaseAggregationParticipants implements AggregationParticipants
 {
     public function __construct(

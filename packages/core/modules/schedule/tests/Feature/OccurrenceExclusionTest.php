@@ -11,7 +11,9 @@ use Billium\Schedule\Enums\OccurrencePurpose;
 use Billium\Schedule\Tests\OccurrenceTestCase;
 use Billium\Schedule\Tests\Support\Terms;
 use DateTimeImmutable;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class OccurrenceExclusionTest extends OccurrenceTestCase
 {
     public function test_annual_money_correlates_with_twelve_external_grants_without_minting_monthly_money(): void

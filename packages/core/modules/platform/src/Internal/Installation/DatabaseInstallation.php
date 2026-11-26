@@ -4,39 +4,47 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Internal\Installation;
 
-use Billium\Core\Contracts\CallerContext;
 use Billium\Core\Contracts\Modules\ModuleRegistry;
 use Billium\Core\Contracts\Modules\ModuleStateReader;
 use Billium\Core\Contracts\Modules\ModuleTransitionEvidence;
 use Billium\Core\Contracts\Modules\ModuleTransitionPlanner;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\LockRequest;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Contracts\Runtime\FinancialAuthorityEvidence;
+use Billium\Core\Data\Modules\ModuleBlocker;
 use Billium\Core\Data\Modules\ModuleState;
 use Billium\Core\Data\Modules\ModuleTransitionFacts;
-use Billium\Core\Data\OperationSpec;
-use Billium\Core\Data\StoredOutcome;
-use Billium\Core\Enums\FinancialMode;
-use Billium\Core\Enums\LockRank;
-use Billium\Core\Enums\LockScope;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Data\Runner\OperationSpec;
+use Billium\Core\Data\Runner\StoredOutcome;
+use Billium\Core\Data\Runtime\Caller;
+use Billium\Core\Data\Runtime\OwnerSessionIdentity;
+use Billium\Core\Data\Runtime\VerifiedSessionAuthorization;
 use Billium\Core\Enums\Modules\ModuleLifecycleState;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
-use Billium\Core\Exceptions\LockPlanChanged;
-use Billium\Platform\Contracts\Installation;
-use Billium\Platform\Data\FinancialSessionView;
-use Billium\Platform\Data\ModuleTransitionRequest;
-use Billium\Platform\Data\PlatformReceipt;
+use Billium\Core\Enums\Runner\LockRank;
+use Billium\Core\Enums\Runner\LockScope;
+use Billium\Core\Enums\Runtime\FinancialMode;
+use Billium\Core\Exceptions\Runner\LockPlanChanged;
+use Billium\Platform\Contracts\Installation\Installation;
+use Billium\Platform\Data\Installation\FinancialSessionView;
+use Billium\Platform\Data\Installation\ModuleTransitionRequest;
+use Billium\Platform\Data\Installation\PlatformReceipt;
 use Billium\Platform\Exceptions\TransitionRefused;
 use Closure;
+use DateTimeImmutable;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
 use LogicException;
+use Packman\Attributes\Internal;
 
 /**
  * Platform-owned writes of installation_state, financial_session(_event) and module_state/transitions. Transitions run
  * through the root runner, so the claim of their ref, the barrier locks and the history append share one root Tx.
  */
+#[Internal]
 final readonly class DatabaseInstallation implements Installation, ModuleStateReader
 {
     private const array ORDER = ['accepting' => 0, 'draining' => 1, 'recovery_only' => 2, 'retired' => 3];
@@ -54,6 +62,8 @@ final readonly class DatabaseInstallation implements Installation, ModuleStateRe
         private int $sealLockTimeoutMs,
         /** @var Closure(): ?ModuleTransitionEvidence */
         private Closure $evidence,
+        /** @var Closure(): FinancialAuthorityEvidence */
+        private Closure $authority,
     ) {}
 
     public function init(string $installationRef): void
@@ -112,7 +122,13 @@ final readonly class DatabaseInstallation implements Installation, ModuleStateRe
 
         return $this->sessionOperation('open', $transitionRef, $args, function (TransactionContext $context, Connection $db) use ($transitionRef, $ownerSessionRef, $deploymentGeneration, $attachmentGeneration, $authorityEpoch, $evidenceRef): FinancialSessionView {
             $installation = $context->caller()->installationRef;
-            $this->lockCurrentSession($context, $db);
+            $current = $this->lockCurrentSession($context, $db);
+            $authorization = $this->authorize($context, 'open', $transitionRef, [$ownerSessionRef, $deploymentGeneration, $attachmentGeneration, $authorityEpoch, $evidenceRef], $current);
+            if (! $this->sameOwner($authorization->owner, new OwnerSessionIdentity($installation, $ownerSessionRef, $deploymentGeneration, $attachmentGeneration, $authorityEpoch))
+                || $authorization->evidenceRef !== $evidenceRef
+                || ($current !== null && ! $this->sameOwner($authorization->retirementProof?->oldOwner, $this->ownerIdentity($current)))) {
+                throw new TransitionRefused('authority_owner_mismatch');
+            }
             $db->selectOne('SELECT public.billium_open_financial_session(?,?,?,?,?,?,?,?)', [
                 $installation, $ownerSessionRef, $deploymentGeneration, $attachmentGeneration, $authorityEpoch,
                 $transitionRef, $evidenceRef, $context->caller()->actorRef,
@@ -128,6 +144,8 @@ final readonly class DatabaseInstallation implements Installation, ModuleStateRe
 
         return $this->sessionOperation('activate', $transitionRef, $args, function (TransactionContext $context, Connection $db) use ($transitionRef, $epoch, $activationCertificateRef, $externalAdmissionRef, $evidenceRef): FinancialSessionView {
             $current = $this->expectSession($this->lockCurrentSession($context, $db), $epoch, ['recovery']);
+            $authorization = $this->authorize($context, 'activate', $transitionRef, [$epoch, $activationCertificateRef, $externalAdmissionRef, $evidenceRef], $current);
+            $this->assertActivation($authorization, $current, $context->caller(), $activationCertificateRef, $externalAdmissionRef, $evidenceRef);
             $this->transitionSession($db, $context, $epoch, 'active', $transitionRef, $activationCertificateRef, $externalAdmissionRef, $evidenceRef);
 
             return Sessions::current($db, $current->installationRef) ?? throw new LogicException('activated session vanished');
@@ -138,6 +156,7 @@ final readonly class DatabaseInstallation implements Installation, ModuleStateRe
     {
         return $this->sessionOperation('sealing', $transitionRef, [$epoch], function (TransactionContext $context, Connection $db) use ($transitionRef, $epoch): FinancialSessionView {
             $current = $this->expectSession($this->lockCurrentSession($context, $db), $epoch, ['active']);
+            $this->authorize($context, 'sealing', $transitionRef, [$epoch], $current);
             $this->transitionSession($db, $context, $epoch, 'sealing', $transitionRef);
 
             return Sessions::current($db, $current->installationRef) ?? throw new LogicException('sealing session vanished');
@@ -153,6 +172,7 @@ final readonly class DatabaseInstallation implements Installation, ModuleStateRe
                 $current = $this->lockCurrentSession($context, $db);
                 $db->statement('SET LOCAL lock_timeout = 0');
                 $current = $this->expectSession($current, $epoch, ['active', 'sealing']);
+                $this->authorize($context, 'seal', $transitionRef, [$epoch], $current);
                 $this->transitionSession($db, $context, $epoch, 'sealed', $transitionRef);
 
                 return Sessions::current($db, $current->installationRef) ?? throw new LogicException('sealed session vanished');
@@ -219,7 +239,7 @@ final readonly class DatabaseInstallation implements Installation, ModuleStateRe
         $facts = $this->transitionFacts($context, $current, $request, $active);
         $preview = $this->planner->previewTransition($current, $target, $facts);
         if (! $preview->allowed()) {
-            throw new TransitionRefused('blocked', array_map(static fn ($blocker): string => $blocker->code->value, $preview->blockers));
+            throw new TransitionRefused('blocked', array_map(static fn (ModuleBlocker $blocker): string => $blocker->code->value, $preview->blockers));
         }
         $moves = [$request->moduleId => $request->transitionRef];
         foreach ($preview->cascade as $dependent) {
@@ -232,7 +252,7 @@ final readonly class DatabaseInstallation implements Installation, ModuleStateRe
                 $dependentFacts = $this->transitionFacts($context, $states[$dependent], $request, []);
                 $dependentPreview = $this->planner->previewTransition($states[$dependent], $target, $dependentFacts);
                 if (! $dependentPreview->allowed()) {
-                    throw new TransitionRefused('blocked', array_map(static fn ($blocker): string => $blocker->code->value, $dependentPreview->blockers));
+                    throw new TransitionRefused('blocked', array_map(static fn (ModuleBlocker $blocker): string => $blocker->code->value, $dependentPreview->blockers));
                 }
             }
             $moves[$dependent] = "{$request->transitionRef}#{$dependent}";
@@ -284,7 +304,7 @@ final readonly class DatabaseInstallation implements Installation, ModuleStateRe
     private function sessionOperation(string $kind, string $transitionRef, array $args, Closure $body): FinancialSessionView
     {
         $caller = ($this->callers)()->current();
-        $digest = 'sha256:'.hash('sha256', json_encode([$kind, $caller->installationRef, ...$args], JSON_THROW_ON_ERROR));
+        $digest = $this->requestDigest($kind, $caller, $args);
         $spec = new OperationSpec(
             "platform.session.{$kind}", $caller->sellerRef, $caller->environment, FinancialMode::SessionControl,
             ModuleOperationClass::HistoricalRead, [], $transitionRef, $digest,
@@ -300,6 +320,132 @@ final readonly class DatabaseInstallation implements Installation, ModuleStateRe
             Rows::int($b['deploymentGeneration'] ?? null), Rows::int($b['attachmentGeneration'] ?? null), Rows::int($b['authorityEpoch'] ?? null),
             Rows::string($b['state'] ?? null), Rows::nullableString($b['activationCertificateRef'] ?? null), Rows::nullableString($b['sealedAt'] ?? null),
         );
+    }
+
+    /** @param list<int|string> $args */
+    private function requestDigest(string $kind, Caller $caller, array $args): string
+    {
+        return 'sha256:'.hash('sha256', json_encode([$kind, $caller->installationRef, $caller->actorRef,
+            $caller->sellerRef, $caller->environment, $caller->sourceAuthorities, ...$args,
+            ...($caller->intentOwnerNamespaces === [] ? [] : [['intentOwnerNamespaces.v1' => $caller->intentOwnerNamespaces]]),
+        ], JSON_THROW_ON_ERROR));
+    }
+
+    /** @param list<int|string> $args */
+    private function authorize(TransactionContext $context, string $kind, string $transitionRef, array $args, ?FinancialSessionView $current): VerifiedSessionAuthorization
+    {
+        $caller = $context->caller();
+        // The host has already verified/adopted this request before entering the root. Under the barrier: cache only.
+        $authorization = ($this->authority)()->transition($caller->installationRef, $transitionRef);
+        if ($authorization === null || $authorization->transitionRef !== $transitionRef
+            || $authorization->action !== $kind || $authorization->owner->installationRef !== $caller->installationRef
+            || $authorization->requestDigest !== $this->requestDigest($kind, $caller, $args)
+            || $authorization->audience !== 'billium.financial_session_control.v1'
+            || $authorization->expiresAt <= new DateTimeImmutable
+            || $authorization->expectedLocalEpoch !== $current?->epoch
+            || ($kind !== 'open' && ! $this->sameOwner($authorization->owner, $current === null ? null : $this->ownerIdentity($current)))) {
+            throw new TransitionRefused('verified_authority_required');
+        }
+
+        return $authorization;
+    }
+
+    private function sameOwner(?OwnerSessionIdentity $left, ?OwnerSessionIdentity $right): bool
+    {
+        return $left !== null && $right !== null && get_object_vars($left) === get_object_vars($right);
+    }
+
+    private function ownerIdentity(FinancialSessionView $session): OwnerSessionIdentity
+    {
+        return new OwnerSessionIdentity($session->installationRef, $session->ownerSessionRef, $session->deploymentGeneration,
+            $session->attachmentGeneration, $session->authorityEpoch);
+    }
+
+    private function assertActivation(VerifiedSessionAuthorization $authorization, FinancialSessionView $current, Caller $caller, string $certificateRef, string $admissionRef, string $evidenceRef): void
+    {
+        $certificate = $authorization->activationCertificate;
+        $retirement = $authorization->retirementProof;
+        $now = new DateTimeImmutable;
+        if ($certificate === null || $retirement === null || $certificate->certificateRef !== $certificateRef
+            || $authorization->externalAdmissionRef !== $admissionRef || $authorization->evidenceRef !== $evidenceRef
+            || ! $this->sameOwner($certificate->newOwner, $authorization->owner) || $certificate->localEpoch !== $current->epoch
+            || $certificate->retirementProofDigest !== $retirement->signatureDigest
+            || $retirement->oldOwner->installationRef !== $caller->installationRef || $retirement->issuedAt > $now
+            || $certificate->actorRef !== $caller->actorRef || $certificate->verdict !== 'activate'
+            || $certificate->expiresAt <= $now || $certificate->nonce !== $authorization->nonce) {
+            throw new TransitionRefused('activation_certificate_invalid');
+        }
+        $opened = $this->db()->selectOne("SELECT e.transition_ref FROM public.billium_financial_session_event e JOIN public.billium_financial_session s ON s.id = e.session_id WHERE s.installation_ref = ? AND s.epoch = ? AND e.transition = 'opened'", [$caller->installationRef, $current->epoch]);
+        $openRef = is_object($opened) ? Rows::string(Rows::field($opened, 'transition_ref')) : '';
+        $opening = ($this->authority)()->transition($caller->installationRef, $openRef);
+        if ($opening === null || $opening->action !== 'open' || ! $this->sameOwner($opening->owner, $authorization->owner)
+            || $opening->retirementProof?->signatureDigest !== $retirement->signatureDigest) {
+            throw new TransitionRefused('activation_retirement_mismatch');
+        }
+        $coverage = $certificate->coverage;
+        if ($coverage->namespaceStates === [] || $coverage->projectionValidationReceipts === []
+            || $coverage->downstreamValidationReceipts === [] || $coverage->recoveryHorizon > $now) {
+            throw new TransitionRefused('activation_coverage_incomplete');
+        }
+        $active = false;
+        foreach ($coverage->namespaceStates as $namespace) {
+            if ($namespace->scope->installationRef !== $caller->installationRef
+                || ! in_array($namespace->state, ['active', 'sealed', 'recovery'], true)) {
+                throw new TransitionRefused('activation_scope_invalid');
+            }
+            $active = $active || $namespace->state === 'active';
+        }
+        foreach ($coverage->namespaceStates as $namespace) {
+            if ($namespace->state !== 'active') {
+                continue;
+            }
+            foreach ($coverage->namespaceStates as $closed) {
+                if ($closed->state === 'active') {
+                    continue;
+                }
+                $overlap = true;
+                foreach (['sellerRef', 'environment', 'intentOwnerNamespace', 'sourceAuthority'] as $field) {
+                    $left = $namespace->scope->{$field};
+                    $right = $closed->scope->{$field};
+                    $overlap = $overlap && ($left === null || $right === null || $left === $right);
+                }
+                if ($overlap) {
+                    throw new TransitionRefused('activation_scope_overlap');
+                }
+            }
+        }
+        if (! $active) {
+            throw new TransitionRefused('activation_scope_empty');
+        }
+        foreach ($coverage->perAccountWatermarks as $account) {
+            if ($account->from > $coverage->recoveryHorizon || $account->through < $coverage->recoveryHorizon) {
+                throw new TransitionRefused('activation_coverage_incomplete');
+            }
+        }
+        foreach ($coverage->unresolved as $operation) {
+            if (! in_array($operation->permittedDisposition, ['terminal', 'safely_pending', 'sealed'], true)
+                || ($operation->permittedDisposition === 'safely_pending' && $operation->heldReservationRef === null)) {
+                throw new TransitionRefused('activation_unresolved_disposition');
+            }
+            // Unresolved accounts cannot disappear from the signed coverage. The host verifies account-to-owner
+            // namespace correspondence before caching; providerNamespace is not an intent-owner namespace.
+            $covered = false;
+            foreach ($coverage->perAccountWatermarks as $account) {
+                if ($account->merchantAccountRef === $operation->merchantAccountRef) {
+                    $covered = true;
+                    if ($operation->permittedDisposition === 'sealed') {
+                        foreach ($coverage->namespaceStates as $namespace) {
+                            if ($namespace->state === 'active' && $namespace->scope->intentOwnerNamespace === null) {
+                                throw new TransitionRefused('activation_unresolved_scope');
+                            }
+                        }
+                    }
+                }
+            }
+            if (! $covered) {
+                throw new TransitionRefused('activation_coverage_incomplete');
+            }
+        }
     }
 
     private function lockCurrentSession(TransactionContext $context, Connection $db): ?FinancialSessionView

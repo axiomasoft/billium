@@ -19,6 +19,7 @@ use PHPUnit\Framework\Attributes\Group;
  * exactly two allocations 30.00 + 70.00, invoice paid, totals assigned (never summed), nothing quarantined.
  */
 #[Group('ACC-CON-24')]
+#[Group('pg')]
 final class ObservationPartitionTest extends ObservationTestCase
 {
     public function test_six_workers_apply_one_partition_without_double_effect(): void

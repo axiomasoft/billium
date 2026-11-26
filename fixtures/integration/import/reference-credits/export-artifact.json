@@ -1,0 +1,250 @@
+{
+  "exportSchema": "source.export.v1",
+  "profile": "reference-credits",
+  "exportVersion": "1.0.0",
+  "batchId": "batch-cred-2026-10-001",
+  "sourceSystem": "reference-credits/entitlement-export",
+  "sourceInstallation": "src-inst-cred-1",
+  "sourceBook": "book-credits-main",
+  "sourceExportRevision": 1,
+  "exportCutoff": "2026-10-15T00:00:00Z",
+  "installationRef": "inst-test",
+  "environment": "test",
+  "sellerRef": "seller-credits-1",
+  "importPolicyVersion": "import-policy-v1",
+  "sanitizationPolicy": {
+    "piiRedacted": true,
+    "secretsStripped": true,
+    "policyVersion": "sanitize-v1"
+  },
+  "totalsByCurrency": [
+    {
+      "sellerRef": "seller-credits-1",
+      "currency": "USD",
+      "recordKind": "proven_obligation",
+      "count": 1,
+      "totalAmount": {
+        "amount": "49.00",
+        "currency": "USD"
+      },
+      "authoritativeCurrentBalance": false
+    },
+    {
+      "sellerRef": "seller-credits-1",
+      "currency": "EUR",
+      "recordKind": "proven_invoice_history",
+      "count": 1,
+      "totalAmount": {
+        "amount": "30.00",
+        "currency": "EUR"
+      },
+      "authoritativeCurrentBalance": false
+    }
+  ],
+  "provenance": {
+    "exportedByProcess": "source-host-exporter",
+    "artifactKind": "sanitized_fixture",
+    "externalActivationRequired": true
+  },
+  "records": [
+    {
+      "sourceRecordId": "cred-grant-welcome-001",
+      "sourceRecordRevision": 1,
+      "recordType": "credit_grant",
+      "eventBusinessDate": "2026-01-10T11:00:00Z",
+      "originalBusinessRefs": {
+        "customerRef": "cust-cred-10",
+        "agreementRef": "agr-cred-10"
+      },
+      "partyRoles": {
+        "subjectRef": "subj-learner-10",
+        "actorRef": "actor-promo-engine",
+        "customerRef": "cust-cred-10"
+      },
+      "evidenceRefs": [
+        {
+          "evidenceRef": "ev-cred-grant-001",
+          "kind": "agreement_reference",
+          "digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+          "sanitized": true
+        }
+      ],
+      "nonMonetaryEntitlement": {
+        "unit": "HOST_CREDITS",
+        "quantity": "500",
+        "reason": "welcome_bonus"
+      }
+    },
+    {
+      "sourceRecordId": "cred-balance-claimed-money-002",
+      "sourceRecordRevision": 1,
+      "recordType": "credit_balance",
+      "eventBusinessDate": "2026-02-10T11:00:00Z",
+      "monetaryClaim": true,
+      "originalBusinessRefs": {
+        "customerRef": "cust-cred-20",
+        "billingAccountRef": "acct-cred-20"
+      },
+      "partyRoles": {
+        "subjectRef": "subj-learner-20",
+        "customerRef": "cust-cred-20",
+        "billingAccountRef": "acct-cred-20"
+      },
+      "evidenceRefs": [],
+      "nonMonetaryEntitlement": {
+        "unit": "CREDITS",
+        "quantity": "1200"
+      }
+    },
+    {
+      "sourceRecordId": "cred-reward-points-003",
+      "sourceRecordRevision": 1,
+      "recordType": "reward_quantity",
+      "eventBusinessDate": "2026-03-10T11:00:00Z",
+      "originalBusinessRefs": {
+        "customerRef": "cust-cred-30"
+      },
+      "partyRoles": {
+        "subjectRef": "subj-learner-30",
+        "customerRef": "cust-cred-30"
+      },
+      "evidenceRefs": [],
+      "nonMonetaryEntitlement": {
+        "unit": "REWARD_POINTS",
+        "quantity": "2500"
+      }
+    },
+    {
+      "sourceRecordId": "cred-reward-ref-004",
+      "sourceRecordRevision": 1,
+      "recordType": "nonmonetary_reward_reference",
+      "eventBusinessDate": "2026-03-12T11:00:00Z",
+      "originalBusinessRefs": {
+        "customerRef": "cust-cred-30",
+        "agreementRef": "agr-loyalty-30"
+      },
+      "partyRoles": {
+        "subjectRef": "subj-learner-30",
+        "customerRef": "cust-cred-30"
+      },
+      "evidenceRefs": [
+        {
+          "evidenceRef": "ev-cred-reward-004",
+          "kind": "agreement_reference",
+          "digest": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+          "sanitized": true
+        }
+      ],
+      "nonMonetaryEntitlement": {
+        "unit": "STARS",
+        "quantity": "10"
+      }
+    },
+    {
+      "sourceRecordId": "cred-obl-proven-usd-005",
+      "sourceRecordRevision": 1,
+      "recordType": "obligation",
+      "eventBusinessDate": "2026-04-01T08:00:00Z",
+      "originalBusinessRefs": {
+        "customerRef": "cust-cred-50",
+        "billingAccountRef": "acct-cred-50",
+        "obligationRef": "src-obl-pack-005"
+      },
+      "partyRoles": {
+        "subjectRef": "subj-learner-50",
+        "payerRef": "payer-guardian-50",
+        "actorRef": "actor-checkout-50",
+        "customerRef": "cust-cred-50",
+        "billingAccountRef": "acct-cred-50"
+      },
+      "evidenceRefs": [
+        {
+          "evidenceRef": "ev-cred-price-005",
+          "kind": "price_snapshot",
+          "digest": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+          "sanitized": true,
+          "capturedAt": "2026-04-01T08:00:00Z"
+        }
+      ],
+      "money": {
+        "amount": "49.00",
+        "currency": "USD"
+      },
+      "frozenPriceSnapshot": {
+        "basis": "frozen_historical",
+        "priceVersionRef": "pv-2025-pack-usd",
+        "priceDigest": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+        "currency": "USD",
+        "termsRef": "terms-pack-v1",
+        "taxPolicyVersion": "tax-us-2025-v1",
+        "unitPrice": {
+          "amount": "49.00",
+          "currency": "USD"
+        },
+        "effectiveAt": "2025-06-01T00:00:00Z"
+      },
+      "currentPlanSnapshot": {
+        "priceVersionRef": "pv-2026-pack-usd-updated",
+        "unitPrice": {
+          "amount": "59.00",
+          "currency": "USD"
+        }
+      }
+    },
+    {
+      "sourceRecordId": "cred-missing-price-006",
+      "sourceRecordRevision": 1,
+      "recordType": "obligation",
+      "eventBusinessDate": "2026-04-05T08:00:00Z",
+      "originalBusinessRefs": {
+        "customerRef": "cust-cred-60",
+        "orderRef": "ord-cred-60"
+      },
+      "partyRoles": {
+        "subjectRef": "subj-learner-60",
+        "customerRef": "cust-cred-60"
+      },
+      "evidenceRefs": []
+    },
+    {
+      "sourceRecordId": "cred-inv-hist-007",
+      "sourceRecordRevision": 1,
+      "recordType": "historical_invoice",
+      "eventBusinessDate": "2026-04-10T12:00:00Z",
+      "originalBusinessRefs": {
+        "customerRef": "cust-cred-70",
+        "invoiceRef": "src-inv-cred-007",
+        "originalIssuer": "seller-legal-entity-cred-1",
+        "sourceNumber": "CRED-INV-2026-000077"
+      },
+      "partyRoles": {
+        "subjectRef": "subj-learner-70",
+        "payerRef": "payer-company-70",
+        "customerRef": "cust-cred-70"
+      },
+      "evidenceRefs": [
+        {
+          "evidenceRef": "ev-cred-inv-007",
+          "kind": "invoice_document",
+          "digest": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+          "sanitized": true,
+          "capturedAt": "2026-04-10T12:00:00Z"
+        }
+      ],
+      "money": {
+        "amount": "30.00",
+        "currency": "EUR"
+      },
+      "legalDocument": {
+        "originalIssuer": "seller-legal-entity-cred-1",
+        "sourceNumber": "CRED-INV-2026-000077",
+        "legalOwnershipConfirmed": true,
+        "issuedAt": "2026-04-10T12:00:00Z",
+        "renderDigest": "sha256:8888888888888888888888888888888888888888888888888888888888888888"
+      }
+    }
+  ],
+  "recordCount": 7,
+  "recordsChecksum": "sha256:91852eac439ab6fc69c62b7869e64f5c5496ad85691a935c92af00a64df0c4bb",
+  "artifactDigest": "sha256:57c7007f81ec6e41374ee0647381d858cc300d15c2a21f247bd154b76023bae8"
+}

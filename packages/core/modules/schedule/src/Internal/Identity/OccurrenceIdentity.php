@@ -6,7 +6,9 @@ namespace Billium\Schedule\Internal\Identity;
 
 use Billium\Schedule\Internal\Canonical;
 use DateTimeImmutable;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class OccurrenceIdentity
 {
     public static function ref(string $seller, string $env, string $component, string $purpose, DateTimeImmutable $start, DateTimeImmutable $end): string

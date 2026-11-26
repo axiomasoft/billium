@@ -1,0 +1,160 @@
+{
+  "protocol": "billium.consumer.bridge.case.v1",
+  "id": "CT-05",
+  "title": "Out-of-order stale outcome does not regress totals and refund before original charge parks then drains cleanly",
+  "standProfile": "ledger-external-executor",
+  "authoritySource": "standalone-billium",
+  "executionProfile": "external-executor",
+  "packageDelivery": "php-contracts-current",
+  "sources": ["D41", "D60", "INV-06", "INV-08"],
+  "steps": [
+    {
+      "name": "refundBeforeCharge",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "actor": "external-source",
+        "seal": "contentDigest",
+        "path": "/billium/v1/sellers/seller-a/observations",
+        "body": {
+          "schema": "payment.observation.v1",
+          "eventId": "01JBX5Q0Z8M3N4P7R9S2000501",
+          "sourceAuthority": "standalone-billium",
+          "sourceLineage": "L1",
+          "partitionRef": "ct05-part",
+          "sourceSequence": 1,
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "operationRef": "ct05-refund-1",
+          "operationKind": "refund",
+          "originalPaymentRef": "ct05-charge-1",
+          "businessIntentRef": "intent-ct05-ref",
+          "operationRevision": 1,
+          "state": "succeeded",
+          "currency": "RUB",
+          "requested": { "amount": "30.00", "currency": "RUB" },
+          "authorizedTotal": { "amount": "30.00", "currency": "RUB" },
+          "capturedTotal": { "amount": "30.00", "currency": "RUB" },
+          "refundedTotal": { "amount": "0.00", "currency": "RUB" },
+          "providerAccountRef": "pa-ext-1",
+          "evidenceRef": "ev-ct05-ref",
+          "observedAt": "2026-11-22T10:02:00Z",
+          "recordedAt": "2026-11-22T10:02:01Z"
+        }
+      },
+      "expect": {
+        "status": 202,
+        "body.schema": "ledger.observation_custody.v1",
+        "body.custodyStatus": "parked_dependency",
+        "body.receipt": "none"
+      }
+    },
+    {
+      "name": "chargeRev2WithRefunded30",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "actor": "external-source",
+        "seal": "contentDigest",
+        "path": "/billium/v1/sellers/seller-a/observations",
+        "body": {
+          "schema": "payment.observation.v1",
+          "eventId": "01JBX5Q0Z8M3N4P7R9S2000502",
+          "sourceAuthority": "standalone-billium",
+          "sourceLineage": "L1",
+          "partitionRef": "ct05-part",
+          "sourceSequence": 2,
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "operationRef": "ct05-charge-1",
+          "operationKind": "charge",
+          "businessIntentRef": "intent-100",
+          "operationRevision": 2,
+          "state": "succeeded",
+          "currency": "RUB",
+          "requested": { "amount": "100.00", "currency": "RUB" },
+          "authorizedTotal": { "amount": "100.00", "currency": "RUB" },
+          "capturedTotal": { "amount": "100.00", "currency": "RUB" },
+          "refundedTotal": { "amount": "30.00", "currency": "RUB" },
+          "providerAccountRef": "pa-ext-1",
+          "evidenceRef": "ev-ct05-chg2",
+          "observedAt": "2026-11-22T10:01:00Z",
+          "recordedAt": "2026-11-22T10:02:02Z"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body.schema": "ledger.allocation_receipt.v1"
+      }
+    },
+    {
+      "name": "staleOutOfOrderRev1",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "actor": "external-source",
+        "seal": "contentDigest",
+        "path": "/billium/v1/sellers/seller-a/observations",
+        "body": {
+          "schema": "payment.observation.v1",
+          "eventId": "01JBX5Q0Z8M3N4P7R9S2000503",
+          "sourceAuthority": "standalone-billium",
+          "sourceLineage": "L1",
+          "partitionRef": "ct05-part",
+          "sourceSequence": 3,
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "operationRef": "ct05-charge-1",
+          "operationKind": "charge",
+          "businessIntentRef": "intent-100",
+          "operationRevision": 1,
+          "state": "succeeded",
+          "currency": "RUB",
+          "requested": { "amount": "100.00", "currency": "RUB" },
+          "authorizedTotal": { "amount": "100.00", "currency": "RUB" },
+          "capturedTotal": { "amount": "40.00", "currency": "RUB" },
+          "refundedTotal": { "amount": "0.00", "currency": "RUB" },
+          "providerAccountRef": "pa-ext-1",
+          "evidenceRef": "ev-ct05-chg1",
+          "observedAt": "2026-11-22T10:00:00Z",
+          "recordedAt": "2026-11-22T10:02:03Z"
+        }
+      },
+      "expect": {
+        "status": 200
+      }
+    },
+    {
+      "name": "drainParked",
+      "target": "stand",
+      "op": "drain_observations",
+      "expect": {
+        "appliedCount": 3
+      }
+    },
+    {
+      "name": "finalStatus",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "path": "/billium/v1/sellers/seller-a/queries",
+        "body": {
+          "schema": "billium.query.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "query": "paymentStatus",
+          "selector": { "paymentRef": "ct05-charge-1" }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body.result.applied.capturedTotal.amount": "100.00",
+        "body.result.applied.refundedTotal.amount": "30.00"
+      }
+    }
+  ]
+}

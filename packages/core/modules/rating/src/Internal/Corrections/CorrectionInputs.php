@@ -9,7 +9,9 @@ use Billium\Rating\Data\Rating\FrozenRatingInputs;
 use Billium\Rating\Data\Rating\FrozenTax;
 use Billium\Rating\Data\Tax\TaxSnapshot;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class CorrectionInputs
 {
     /**
@@ -30,7 +32,7 @@ final class CorrectionInputs
             attribution: $old->attribution, agreementRevision: $old->agreementRevision, currency: $old->currency,
             currencyExponent: $old->currencyExponent, aggregates: $aggregates, prices: $old->prices, taxes: $frozenTaxes,
             occurrenceInputsDigest: $old->occurrenceInputsDigest, sourceDigest: $sourceDigest,
-            frontierExpectedDigest: $frontierDigest, frontierExpectedRowVersion: $version, noChargeReason: null,
+            frontierExpectedDigest: $frontierDigest, frontierExpectedRowVersion: $version,
             proration: $proration ?? $old->proration, correctionEvidence: $correctionEvidence);
     }
 }

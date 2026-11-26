@@ -8,7 +8,6 @@ import 'generated/problem_codes.g.dart';
 import 'jcs.dart';
 import 'money.dart';
 import 'p4_wire.dart';
-import 'payment_wire.dart';
 import 'problem.dart';
 import 'problem_exception.dart';
 import 'schema_validator.dart';
@@ -71,8 +70,6 @@ final class Codec {
       }
     }
 
-    validatePaymentWire(raw);
-
     final effect = schema == 'payment.effect.outcome.v1'
         ? raw
         : (schema == 'billium.event.v2' ? raw['payload'] : null);
@@ -91,6 +88,22 @@ final class Codec {
       throw const ProblemException(
         ProblemCode.validationInvalid,
         'effect envelope identity differs from its payload',
+      );
+    }
+    final repair = schema == 'billium.event.v3' ? raw['payload'] : null;
+    if (repair is Map && raw['aggregateRef'] != repair['repairRef']) {
+      throw const ProblemException(
+        ProblemCode.validationInvalid,
+        'repair envelope aggregateRef differs from its payload',
+      );
+    }
+    final noEffect = schema == 'billium.event.v4' ? raw['payload'] : null;
+    if (noEffect is Map &&
+        (raw['aggregateRef'] != noEffect['operationRef'] ||
+            raw['revision'] != noEffect['revision'])) {
+      throw const ProblemException(
+        ProblemCode.validationInvalid,
+        'certified no-effect envelope identity differs from its payload',
       );
     }
     final variant = entry.variants.firstWhere(

@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace Billium\Schedule\Internal\Locks;
 
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Enums\LockRank;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Enums\Runner\LockRank;
 use Billium\Schedule\Contracts\OccurrenceLocks;
 use LogicException;
+use Packman\Attributes\Internal;
 use WeakMap;
 
+#[Internal]
 final class ScheduleLockRequests implements OccurrenceLocks
 {
     /** @var WeakMap<TransactionContext, array<string, true>> */

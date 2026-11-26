@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Billium\Ledger\Tests\Observation;
 
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Platform\Contracts\CustodyHandler;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Platform\Contracts\Inbox\CustodyHandler;
 use Billium\Platform\Data\Inbox\HandlerOutcome;
 use Billium\Platform\Data\Inbox\InboxRow;
 use RuntimeException;

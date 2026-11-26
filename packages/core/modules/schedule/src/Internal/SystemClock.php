@@ -7,7 +7,9 @@ namespace Billium\Schedule\Internal;
 use Billium\Schedule\Contracts\Clock;
 use DateTimeImmutable;
 use DateTimeZone;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class SystemClock implements Clock
 {
     public function now(): DateTimeImmutable

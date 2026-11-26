@@ -1,0 +1,43 @@
+{
+  "targetSchema": "external.import.v1",
+  "reason": "proven_obligation requires frozenPriceSnapshot without default fabrication",
+  "payload": {
+    "schema": "external.import.v1",
+    "batchId": "batch-2026-10-001",
+    "sourceSystem": "host-commerce/billing-export",
+    "sourceInstallation": "src-inst-eu-1",
+    "sourceBook": "book-primary",
+    "sourceExportRevision": 1,
+    "exportCutoff": "2026-10-15T00:00:00Z",
+    "manifestDigest": "sha256:edea31f96db07766db26f97bd9c7a2f52d1f8f597ded7ab4155546a925ff5ff7",
+    "installationRef": "inst-1",
+    "environment": "test",
+    "sellerRef": "seller-1",
+    "sourceRecordId": "obl-1001",
+    "sourceRecordRevision": 1,
+    "recordKind": "proven_obligation",
+    "originalBusinessRefs": {
+      "customerRef": "cust-10",
+      "billingAccountRef": "acct-10",
+      "agreementRef": "agr-10",
+      "obligationRef": "src-obl-1001"
+    },
+    "eventBusinessDate": "2026-10-10T09:00:00Z",
+    "evidenceRefs": [
+      {
+        "evidenceRef": "ev-price-1001",
+        "kind": "price_snapshot",
+        "digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "sanitized": true,
+        "capturedAt": "2026-10-10T09:00:00Z"
+      }
+    ],
+    "money": {
+      "amount": "1490.00",
+      "currency": "RUB"
+    },
+    "importPolicyVersion": "import-policy-v1",
+    "sourceFactRef": "import:df2a788b0301e990576fa4a90393fb32a82fceeb49f237f4b4bdf108c1658d43",
+    "digest": "sha256:a5e7a76c46cf381826f6b391c05075218ee380a25d3a2b71f85f6ecda2659989"
+  }
+}

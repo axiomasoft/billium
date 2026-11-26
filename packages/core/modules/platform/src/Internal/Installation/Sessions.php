@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Internal\Installation;
 
-use Billium\Platform\Data\FinancialSessionView;
+use Billium\Platform\Data\Installation\FinancialSessionView;
 use Illuminate\Database\Connection;
+use Packman\Attributes\Internal;
 
 /** Plain reads of billium_financial_session; locking happens only through the root LockSet. */
+#[Internal]
 final class Sessions
 {
     public const string TABLE = 'billium_financial_session';

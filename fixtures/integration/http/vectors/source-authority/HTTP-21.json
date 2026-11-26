@@ -1,0 +1,633 @@
+{
+  "protocol": "billium.http.transcript.v1",
+  "id": "HTTP-21",
+  "title": "Source grants deny impersonation before custody and isolate identical event identities",
+  "profile": "custody",
+  "sources": [
+    "D23",
+    "D31",
+    "D62",
+    "D63"
+  ],
+  "steps": [
+    {
+      "op": "snapshot",
+      "name": "before",
+      "expect": {
+        "counts.inbox_message": 0,
+        "counts.inbox_conflict": 0
+      }
+    },
+    {
+      "op": "send",
+      "name": "impersonate",
+      "path": "/billium/v1/sellers/seller-a/observations",
+      "scoped": true,
+      "body": {
+        "schema": "payment.observation.v1",
+        "eventId": "01JBX5Q0Z8M3N4P7R9S2000021",
+        "sourceAuthority": "remote-billium",
+        "sourceLineage": "L1",
+        "partitionRef": "shared",
+        "sourceSequence": 1,
+        "operationRef": "root-a",
+        "operationKind": "charge",
+        "businessIntentRef": "intent-a",
+        "operationRevision": 1,
+        "state": "succeeded",
+        "currency": "RUB",
+        "requested": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "authorizedTotal": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "capturedTotal": {
+          "amount": "30.00",
+          "currency": "RUB"
+        },
+        "refundedTotal": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "providerAccountRef": "fixture-pa",
+        "evidenceRef": "fixture-evidence-21",
+        "observedAt": "2026-11-19T00:00:00Z",
+        "recordedAt": "2026-11-19T00:00:01Z"
+      },
+      "expect": {
+        "status": 403,
+        "body.code": "billium.auth.denied",
+        "body.receipt": "none"
+      },
+      "seal": "contentDigest",
+      "actor": "source-x"
+    },
+    {
+      "op": "send",
+      "name": "sellerRef",
+      "path": "/billium/v1/sellers/seller-a/observations",
+      "scoped": true,
+      "body": {
+        "schema": "payment.observation.v1",
+        "eventId": "01JBX5Q0Z8M3N4P7R9S2000021",
+        "sourceAuthority": "remote-billium",
+        "sourceLineage": "L1",
+        "partitionRef": "shared",
+        "sourceSequence": 1,
+        "operationRef": "root-a",
+        "operationKind": "charge",
+        "businessIntentRef": "intent-a",
+        "operationRevision": 1,
+        "state": "succeeded",
+        "currency": "RUB",
+        "requested": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "authorizedTotal": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "capturedTotal": {
+          "amount": "30.00",
+          "currency": "RUB"
+        },
+        "refundedTotal": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "providerAccountRef": "fixture-pa",
+        "evidenceRef": "fixture-evidence-21",
+        "observedAt": "2026-11-19T00:00:00Z",
+        "recordedAt": "2026-11-19T00:00:01Z",
+        "sellerRef": "seller-b"
+      },
+      "expect": {
+        "status": 403,
+        "body.code": "billium.auth.denied",
+        "body.receipt": "none",
+        "responseDigest": {
+          "$ref": "impersonate.responseDigest"
+        }
+      },
+      "seal": "contentDigest",
+      "actor": "source-y"
+    },
+    {
+      "op": "send",
+      "name": "environment",
+      "path": "/billium/v1/sellers/seller-a/observations",
+      "scoped": true,
+      "body": {
+        "schema": "payment.observation.v1",
+        "eventId": "01JBX5Q0Z8M3N4P7R9S2000021",
+        "sourceAuthority": "remote-billium",
+        "sourceLineage": "L1",
+        "partitionRef": "shared",
+        "sourceSequence": 1,
+        "operationRef": "root-a",
+        "operationKind": "charge",
+        "businessIntentRef": "intent-a",
+        "operationRevision": 1,
+        "state": "succeeded",
+        "currency": "RUB",
+        "requested": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "authorizedTotal": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "capturedTotal": {
+          "amount": "30.00",
+          "currency": "RUB"
+        },
+        "refundedTotal": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "providerAccountRef": "fixture-pa",
+        "evidenceRef": "fixture-evidence-21",
+        "observedAt": "2026-11-19T00:00:00Z",
+        "recordedAt": "2026-11-19T00:00:01Z",
+        "environment": "live"
+      },
+      "expect": {
+        "status": 403,
+        "body.code": "billium.auth.denied",
+        "body.receipt": "none",
+        "responseDigest": {
+          "$ref": "impersonate.responseDigest"
+        }
+      },
+      "seal": "contentDigest",
+      "actor": "source-y"
+    },
+    {
+      "op": "send",
+      "name": "partitionRef",
+      "path": "/billium/v1/sellers/seller-a/observations",
+      "scoped": true,
+      "body": {
+        "schema": "payment.observation.v1",
+        "eventId": "01JBX5Q0Z8M3N4P7R9S2000021",
+        "sourceAuthority": "remote-billium",
+        "sourceLineage": "L1",
+        "partitionRef": "outside",
+        "sourceSequence": 1,
+        "operationRef": "root-a",
+        "operationKind": "charge",
+        "businessIntentRef": "intent-a",
+        "operationRevision": 1,
+        "state": "succeeded",
+        "currency": "RUB",
+        "requested": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "authorizedTotal": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "capturedTotal": {
+          "amount": "30.00",
+          "currency": "RUB"
+        },
+        "refundedTotal": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "providerAccountRef": "fixture-pa",
+        "evidenceRef": "fixture-evidence-21",
+        "observedAt": "2026-11-19T00:00:00Z",
+        "recordedAt": "2026-11-19T00:00:01Z"
+      },
+      "expect": {
+        "status": 403,
+        "body.code": "billium.auth.denied",
+        "body.receipt": "none",
+        "responseDigest": {
+          "$ref": "impersonate.responseDigest"
+        }
+      },
+      "seal": "contentDigest",
+      "actor": "source-y"
+    },
+    {
+      "op": "send",
+      "name": "sourceLineage",
+      "path": "/billium/v1/sellers/seller-a/observations",
+      "scoped": true,
+      "body": {
+        "schema": "payment.observation.v1",
+        "eventId": "01JBX5Q0Z8M3N4P7R9S2000021",
+        "sourceAuthority": "remote-billium",
+        "sourceLineage": "L2",
+        "partitionRef": "shared",
+        "sourceSequence": 1,
+        "operationRef": "root-a",
+        "operationKind": "charge",
+        "businessIntentRef": "intent-a",
+        "operationRevision": 1,
+        "state": "succeeded",
+        "currency": "RUB",
+        "requested": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "authorizedTotal": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "capturedTotal": {
+          "amount": "30.00",
+          "currency": "RUB"
+        },
+        "refundedTotal": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "providerAccountRef": "fixture-pa",
+        "evidenceRef": "fixture-evidence-21",
+        "observedAt": "2026-11-19T00:00:00Z",
+        "recordedAt": "2026-11-19T00:00:01Z"
+      },
+      "expect": {
+        "status": 403,
+        "body.code": "billium.auth.denied",
+        "body.receipt": "none",
+        "responseDigest": {
+          "$ref": "impersonate.responseDigest"
+        }
+      },
+      "seal": "contentDigest",
+      "actor": "source-y"
+    },
+    {
+      "op": "send",
+      "name": "installationRef",
+      "path": "/billium/v1/sellers/seller-a/observations",
+      "scoped": true,
+      "body": {
+        "schema": "payment.observation.v1",
+        "eventId": "01JBX5Q0Z8M3N4P7R9S2000021",
+        "sourceAuthority": "remote-billium",
+        "sourceLineage": "L1",
+        "partitionRef": "shared",
+        "sourceSequence": 1,
+        "operationRef": "root-a",
+        "operationKind": "charge",
+        "businessIntentRef": "intent-a",
+        "operationRevision": 1,
+        "state": "succeeded",
+        "currency": "RUB",
+        "requested": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "authorizedTotal": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "capturedTotal": {
+          "amount": "30.00",
+          "currency": "RUB"
+        },
+        "refundedTotal": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "providerAccountRef": "fixture-pa",
+        "evidenceRef": "fixture-evidence-21",
+        "observedAt": "2026-11-19T00:00:00Z",
+        "recordedAt": "2026-11-19T00:00:01Z",
+        "installationRef": "other"
+      },
+      "expect": {
+        "status": 403,
+        "body.code": "billium.auth.denied",
+        "body.receipt": "none",
+        "responseDigest": {
+          "$ref": "impersonate.responseDigest"
+        }
+      },
+      "seal": "contentDigest",
+      "actor": "source-y"
+    },
+    {
+      "op": "snapshot",
+      "name": "zeroCustody",
+      "expect": {
+        "counts": {
+          "$ref": "before.counts"
+        },
+        "events": {
+          "$ref": "before.events"
+        },
+        "receipts": {
+          "$ref": "before.receipts"
+        },
+        "operations": {
+          "$ref": "before.operations"
+        },
+        "attempts": {
+          "$ref": "before.attempts"
+        },
+        "inbox": {
+          "$ref": "before.inbox"
+        }
+      }
+    },
+    {
+      "op": "send",
+      "name": "first",
+      "path": "/billium/v1/sellers/seller-a/observations",
+      "scoped": true,
+      "body": {
+        "schema": "payment.observation.v1",
+        "eventId": "01JBX5Q0Z8M3N4P7R9S2000021",
+        "sourceAuthority": "remote-billium",
+        "sourceLineage": "L1",
+        "partitionRef": "shared",
+        "sourceSequence": 1,
+        "operationRef": "root-a",
+        "operationKind": "charge",
+        "businessIntentRef": "intent-a",
+        "operationRevision": 1,
+        "state": "succeeded",
+        "currency": "RUB",
+        "requested": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "authorizedTotal": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "capturedTotal": {
+          "amount": "30.00",
+          "currency": "RUB"
+        },
+        "refundedTotal": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "providerAccountRef": "fixture-pa",
+        "evidenceRef": "fixture-evidence-21",
+        "observedAt": "2026-11-19T00:00:00Z",
+        "recordedAt": "2026-11-19T00:00:01Z"
+      },
+      "expect": {
+        "status": 423,
+        "body.code": "billium.recovery.required",
+        "body.receipt": "none"
+      },
+      "seal": "contentDigest",
+      "actor": "source-y"
+    },
+    {
+      "op": "send",
+      "name": "other",
+      "path": "/billium/v1/sellers/seller-a/observations",
+      "scoped": true,
+      "body": {
+        "schema": "payment.observation.v1",
+        "eventId": "01JBX5Q0Z8M3N4P7R9S2000021",
+        "sourceAuthority": "embedded-commerz",
+        "sourceLineage": "L1",
+        "partitionRef": "shared",
+        "sourceSequence": 1,
+        "operationRef": "root-a",
+        "operationKind": "charge",
+        "businessIntentRef": "intent-a",
+        "operationRevision": 1,
+        "state": "succeeded",
+        "currency": "RUB",
+        "requested": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "authorizedTotal": {
+          "amount": "100.00",
+          "currency": "RUB"
+        },
+        "capturedTotal": {
+          "amount": "30.00",
+          "currency": "RUB"
+        },
+        "refundedTotal": {
+          "amount": "0.00",
+          "currency": "RUB"
+        },
+        "providerAccountRef": "fixture-pa",
+        "evidenceRef": "fixture-evidence-21",
+        "observedAt": "2026-11-19T00:00:00Z",
+        "recordedAt": "2026-11-19T00:00:01Z"
+      },
+      "expect": {
+        "status": 423,
+        "body.code": "billium.recovery.required",
+        "body.receipt": "none"
+      },
+      "seal": "contentDigest",
+      "actor": "source-x"
+    },
+    {
+      "op": "send",
+      "name": "foreignX",
+      "use": "first",
+      "expect": {
+        "status": 403,
+        "body.code": "billium.auth.denied",
+        "body.receipt": "none"
+      },
+      "actor": "source-x"
+    },
+    {
+      "op": "send",
+      "name": "foreignY",
+      "use": "other",
+      "expect": {
+        "status": 403,
+        "body.code": "billium.auth.denied",
+        "body.receipt": "none"
+      },
+      "actor": "source-y"
+    },
+    {
+      "op": "snapshot",
+      "name": "namespace",
+      "expect": {
+        "counts.inbox_message": 2,
+        "counts.inbox_conflict": 0,
+        "counts.feed_partition": 2,
+        "counts.observed_payment": 0,
+        "counts.payment": 0,
+        "counts.idempotency_receipt": {
+          "$ref": "before.counts.idempotency_receipt"
+        },
+        "counts.outbox_event": 0,
+        "inbox.0.source_authority": "embedded-commerz",
+        "inbox.1.source_authority": "remote-billium",
+        "inbox.0.external_event_id": "01JBX5Q0Z8M3N4P7R9S2000021",
+        "inbox.1.external_event_id": "01JBX5Q0Z8M3N4P7R9S2000021"
+      }
+    },
+    {
+      "op": "activate_custody",
+      "name": "active",
+      "expect": {
+        "session": "active"
+      }
+    },
+    {
+      "op": "send",
+      "name": "appliedX",
+      "use": "other",
+      "actor": "source-x",
+      "expect": {
+        "status": 200,
+        "body.schema": "ledger.allocation_receipt.v1"
+      }
+    },
+    {
+      "op": "send",
+      "name": "appliedY",
+      "use": "first",
+      "actor": "source-y",
+      "expect": {
+        "status": 200,
+        "body.schema": "ledger.allocation_receipt.v1"
+      }
+    },
+    {
+      "op": "send",
+      "name": "receiptX",
+      "path": "/billium/v1/sellers/seller-a/receipts/find",
+      "scoped": true,
+      "actor": "source-x",
+      "body": {
+        "schema": "receipt.find.v1",
+        "receiptRef": {
+          "$ref": "appliedX.body.receiptRef"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body.status": "found"
+      }
+    },
+    {
+      "op": "send",
+      "name": "receiptY",
+      "path": "/billium/v1/sellers/seller-a/receipts/find",
+      "scoped": true,
+      "actor": "source-y",
+      "body": {
+        "schema": "receipt.find.v1",
+        "receiptRef": {
+          "$ref": "appliedY.body.receiptRef"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body.status": "found"
+      }
+    },
+    {
+      "op": "compare",
+      "name": "receiptIdentity",
+      "input": {
+        "left": {
+          "$ref": "appliedX.body.receiptRef"
+        },
+        "right": {
+          "$ref": "appliedY.body.receiptRef"
+        }
+      },
+      "expect": {
+        "different": true
+      }
+    },
+    {
+      "op": "snapshot",
+      "name": "appliedBefore",
+      "expect": {
+        "counts.observed_payment": 2,
+        "counts.inbox_conflict": 0
+      }
+    },
+    {
+      "op": "send",
+      "name": "readOtherX",
+      "path": "/billium/v1/sellers/seller-a/receipts/find",
+      "scoped": true,
+      "actor": "source-x",
+      "body": {
+        "schema": "receipt.find.v1",
+        "receiptRef": {
+          "$ref": "appliedY.body.receiptRef"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "body.code": "billium.auth.denied",
+        "body.receipt": "none",
+        "responseDigest": {
+          "$ref": "impersonate.responseDigest"
+        }
+      }
+    },
+    {
+      "op": "send",
+      "name": "readOtherY",
+      "path": "/billium/v1/sellers/seller-a/receipts/find",
+      "scoped": true,
+      "actor": "source-y",
+      "body": {
+        "schema": "receipt.find.v1",
+        "receiptRef": {
+          "$ref": "appliedX.body.receiptRef"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "body.code": "billium.auth.denied",
+        "body.receipt": "none",
+        "responseDigest": {
+          "$ref": "impersonate.responseDigest"
+        }
+      }
+    },
+    {
+      "op": "snapshot",
+      "name": "appliedAfter",
+      "expect": {
+        "counts": {
+          "$ref": "appliedBefore.counts"
+        },
+        "receipts": {
+          "$ref": "appliedBefore.receipts"
+        },
+        "events": {
+          "$ref": "appliedBefore.events"
+        },
+        "inbox": {
+          "$ref": "appliedBefore.inbox"
+        }
+      }
+    },
+    {
+      "op": "provider",
+      "name": "provider",
+      "expect": {
+        "calls.#": 0,
+        "lookups.#": 0
+      }
+    }
+  ]
+}

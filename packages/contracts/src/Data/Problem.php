@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Billium\Contracts\Data;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Contracts\Enums\ProblemCode;
+use Packman\Attributes\Api;
 
 /**
  * A decoded problem object (RFC 9457) whose registry members match the code's entry.
  */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class Problem
 {
     public function __construct(

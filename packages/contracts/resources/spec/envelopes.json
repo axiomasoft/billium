@@ -1,4 +1,14 @@
 {
+  "payment.execute.v1": {
+    "schemaId": "urn:billium:spec:2026-10:payment/execute.v1.json",
+    "variants": [
+      {
+        "class": "ExecutePayment",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
   "payment.authorize.v1": {
     "schemaId": "urn:billium:spec:2026-10:payment/authorize.v1.json",
     "variants": [
@@ -29,43 +39,13 @@
       }
     ]
   },
-  "payment.capabilities.v1": {
-    "schemaId": "urn:billium:spec:2026-10:payment/capabilities.v1.json",
+  "payment.execution_status.v1": {
+    "schemaId": "urn:billium:spec:2026-10:query/execution-status.v1.json",
     "variants": [
       {
-        "class": "CapabilitySnapshot",
-        "digestMember": "digest",
-        "verifyDigest": true
-      }
-    ]
-  },
-  "payment.qualification.v1": {
-    "schemaId": "urn:billium:spec:2026-10:payment/qualification.v1.json",
-    "variants": [
-      {
-        "class": "QualificationManifest",
-        "digestMember": "digest",
-        "verifyDigest": true
-      }
-    ]
-  },
-  "payment.driver_lookup.v1": {
-    "schemaId": "urn:billium:spec:2026-10:payment/driver-lookup.v1.json",
-    "variants": [
-      {
-        "class": "DriverLookupResult",
+        "class": "ExecutionStatus",
         "digestMember": "digest",
         "verifyDigest": false
-      }
-    ]
-  },
-  "payment.execute.v1": {
-    "schemaId": "urn:billium:spec:2026-10:payment/execute.v1.json",
-    "variants": [
-      {
-        "class": "ExecutePayment",
-        "digestMember": "digest",
-        "verifyDigest": true
       }
     ]
   },
@@ -265,6 +245,26 @@
       }
     ]
   },
+  "billium.event.v3": {
+    "schemaId": "urn:billium:spec:2026-10:execution/repair-event.v1.json",
+    "variants": [
+      {
+        "class": "ExecutionRepairEvent",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "billium.event.v4": {
+    "schemaId": "urn:billium:spec:2026-10:execution/certified-no-effect-event.v1.json",
+    "variants": [
+      {
+        "class": "ExecutionCertifiedNoEffectEvent",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
   "billium.feed.selection.v1": {
     "schemaId": "urn:billium:spec:2026-10:feed/selection.v1.json",
     "variants": [
@@ -402,6 +402,172 @@
         "class": "NoChargeReceipt",
         "digestMember": "digest",
         "verifyDigest": true
+      }
+    ]
+  },
+  "receipt.find.v1": {
+    "schemaId": "urn:billium:spec:2026-10:receipt/find.v1.json",
+    "variants": [
+      {
+        "class": "ReceiptResult",
+        "digestMember": "digest",
+        "verifyDigest": false,
+        "requires": "status"
+      },
+      {
+        "class": "FindReceipt",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "billium.capabilities.v1": {
+    "schemaId": "urn:billium:spec:2026-10:capabilities/capabilities.v1.json",
+    "variants": [
+      {
+        "class": "Capabilities",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "ledger.allocation_receipt.v1": {
+    "schemaId": "urn:billium:spec:2026-10:ledger/allocation-receipt.v1.json",
+    "variants": [
+      {
+        "class": "AllocationReceiptResult",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "ledger.observation_custody.v1": {
+    "schemaId": "urn:billium:spec:2026-10:ledger/observation-custody.v1.json",
+    "variants": [
+      {
+        "class": "ObservationCustody",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "billium.command_receipt.v1": {
+    "schemaId": "urn:billium:spec:2026-10:command/receipt.v1.json",
+    "variants": [
+      {
+        "class": "CommandReceipt",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "billium.feed.open.v1": {
+    "schemaId": "urn:billium:spec:2026-10:feed/open.v1.json",
+    "variants": [
+      {
+        "class": "FeedOpen",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "billium.feed.read.v1": {
+    "schemaId": "urn:billium:spec:2026-10:feed/read.v1.json",
+    "variants": [
+      {
+        "class": "FeedRead",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "billium.feed.bootstrap_request.v1": {
+    "schemaId": "urn:billium:spec:2026-10:feed/bootstrap-request.v1.json",
+    "variants": [
+      {
+        "class": "FeedBootstrapRequest",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "billium.feed.bootstrap_ack.v1": {
+    "schemaId": "urn:billium:spec:2026-10:feed/bootstrap-ack.v1.json",
+    "variants": [
+      {
+        "class": "FeedBootstrapAck",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "ledger.obligation.v1": {
+    "schemaId": "urn:billium:spec:2026-10:query/obligation.v1.json",
+    "variants": [
+      {
+        "class": "ObligationView",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "ledger.invoice.v1": {
+    "schemaId": "urn:billium:spec:2026-10:query/invoice.v1.json",
+    "variants": [
+      {
+        "class": "InvoiceView",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "ledger.allocations.v1": {
+    "schemaId": "urn:billium:spec:2026-10:query/allocations.v1.json",
+    "variants": [
+      {
+        "class": "AllocationQuery",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "ledger.refund_authorization.v1": {
+    "schemaId": "urn:billium:spec:2026-10:query/refund-authorization.v1.json",
+    "variants": [
+      {
+        "class": "RefundAuthorization",
+        "digestMember": "digest",
+        "verifyDigest": false
+      }
+    ]
+  },
+  "external.import.v1": {
+    "schemaId": "urn:billium:spec:2026-10:import/external.v1.json",
+    "variants": [
+      {
+        "class": "ExternalImport",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "external.import.manifest.v1": {
+    "schemaId": "urn:billium:spec:2026-10:import/manifest.v1.json",
+    "variants": [
+      {
+        "class": "ExternalImportManifest",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
+  "external.import.preview.v1": {
+    "schemaId": "urn:billium:spec:2026-10:import/preview.v1.json",
+    "variants": [
+      {
+        "class": "ExternalImportPreview",
+        "digestMember": "digest",
+        "verifyDigest": false
       }
     ]
   }

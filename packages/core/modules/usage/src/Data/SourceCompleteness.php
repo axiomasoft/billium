@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace Billium\Usage\Data;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Usage\Enums\CompletenessStatus;
 use Billium\Usage\Internal\Canonical\CanonicalJson;
 use Billium\Usage\Internal\Errors\UsageProblems;
+use Packman\Attributes\Api;
 
+/**
+ * @phpstan-type CompletenessPayload array{sourceRef: string, evidenceSeq: int, status: string, rangeStartMicros: int, rangeEndMicros: int, watermarkMicros: int, repairOrReplayRef: ?string}
+ * @phpstan-type FrontierEntry array{sourceRef: string, evidenceSeq: int, status: string, rangeStartMicros: int, rangeEndMicros: int, watermarkMicros: int, repairOrReplayRef: ?string, evidenceDigest: string}
+ */
 #[Api]
 final readonly class SourceCompleteness
 {
@@ -31,7 +35,7 @@ final readonly class SourceCompleteness
         }
     }
 
-    /** @return array<string, mixed> */
+    /** @return CompletenessPayload the digested evidence body, without its digest */
     public function payload(): array
     {
         return [

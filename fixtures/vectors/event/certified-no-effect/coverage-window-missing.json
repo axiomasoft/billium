@@ -1,0 +1,28 @@
+{
+  "id": "event/certified-no-effect/coverage-window-missing",
+  "spec_refs": [
+    "BC-ENV-01",
+    "BC-ENV-03",
+    "BC-ID-12"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"aggregateRef\":\"refund:2\",\"digest\":\"sha256:7272004b80fad60299a64e71f6e5efb298d39d767d1ec9e5d6bb872d88e9ad4f\",\"environment\":\"test\",\"eventContractRevision\":\"events-2026-11-v4\",\"eventId\":\"01JBX5Q0Z8M3N4P7R9S2T6V1WC\",\"eventType\":\"payment.certified_no_effect.v1\",\"installationRef\":\"installation-a\",\"occurredAt\":\"2026-11-18T10:00:00.000001Z\",\"payload\":{\"bindingRevision\":\"merchant:7\",\"certificateDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"certificateRef\":\"absence:2\",\"merchantAccountRef\":\"merchant:main\",\"operationKind\":\"refund\",\"operationRef\":\"refund:2\",\"providerReference\":\"provider-request:2\",\"requested\":{\"amount\":\"12.30\",\"currency\":\"RUB\"},\"revision\":3,\"rootOperationRef\":\"charge:1\",\"status\":\"failed-terminal\"},\"revision\":3,\"schema\":\"billium.event.v4\",\"sellerRef\":\"seller-a\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

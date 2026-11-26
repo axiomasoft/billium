@@ -6,12 +6,12 @@ namespace Billium\Ledger\Tests\Feature;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Caller;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Tests\Support\ObservationFactory;
 use Billium\Ledger\Internal\Observation\ObservationHandler;
 use Billium\Ledger\Tests\Observation\ObservationTestCase;
-use Billium\Platform\Contracts\FeedPartitions;
+use Billium\Platform\Contracts\Feed\FeedPartitions;
 use Billium\Platform\Data\Inbox\BootstrapPartition;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -22,6 +22,7 @@ use PHPUnit\Framework\Attributes\Group;
  * partition did not exist yet. An altered snapshot is refused before any item is applied.
  */
 #[Group('PF-13')]
+#[Group('pg')]
 final class FeedBootstrapTest extends ObservationTestCase
 {
     public function test_bootstrap_session_access_requires_its_source_authority_and_denial_preserves_items(): void
@@ -138,7 +139,7 @@ final class FeedBootstrapTest extends ObservationTestCase
         $this->debt('o3', 10000);
         $this->intent('intent-a', ['o1']);
         $early = ObservationFactory::charge('op-1', 2, 2000, sequence: 21);
-        self::assertSame(ProblemCode::ObservationParked->value, $this->attempt($early), 'no partition yet: custody waits for the cursor');
+        self::assertSame(ProblemCode::ObservationParked->value, $this->tryObserve($early), 'no partition yet: custody waits for the cursor');
 
         $status = $this->bootstrapper()->execute($this->snapshot('boot-1', 'L1', 20, [
             ObservationFactory::charge('op-1', 1, 1000, sequence: 7),
@@ -152,7 +153,7 @@ final class FeedBootstrapTest extends ObservationTestCase
         self::assertSame(2500, $this->allocated('o1'), 'op-1 1000 → 2000 and op-2 500 on the same intent');
 
         $this->observe(ObservationFactory::charge('op-2', 2, 700, sequence: 22));
-        self::assertSame(ProblemCode::ObservationParked->value, $this->attempt(ObservationFactory::charge('op-3', 2, 600, sequence: 23, fields: ['businessIntentRef' => 'intent-c'])));
+        self::assertSame(ProblemCode::ObservationParked->value, $this->tryObserve(ObservationFactory::charge('op-3', 2, 600, sequence: 23, fields: ['businessIntentRef' => 'intent-c'])));
         self::assertSame(['active', 23, 'L1'], [$this->partition()['state'], self::integer($this->partition()['accounted_sequence']), $this->partition()['source_lineage']]);
         self::assertSame(2700, $this->allocated('o1'));
 

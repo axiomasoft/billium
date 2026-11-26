@@ -6,7 +6,9 @@ namespace Billium\Core\Tests\Feature;
 
 use Billium\Core\Tests\DatabaseTestCase;
 use PHPUnit\Framework\Attributes\Depends;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class ConnectionReleaseTest extends DatabaseTestCase
 {
     /** @return list<int> */

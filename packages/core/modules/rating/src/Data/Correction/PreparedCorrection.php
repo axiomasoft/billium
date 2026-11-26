@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Billium\Rating\Data\Correction;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Rating\Data\Rating\FrozenRatingInputs;
 use Billium\Rating\Data\Tax\TaxCorrectionPolicySnapshot;
 use Billium\Rating\Data\Tax\TaxCorrectionRequest;
 use Billium\Rating\Enums\ReleasePolicy;
+use Packman\Attributes\Api;
 
 #[Api]
 final readonly class PreparedCorrection

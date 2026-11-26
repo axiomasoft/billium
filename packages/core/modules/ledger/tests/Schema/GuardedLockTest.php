@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Billium\Ledger\Tests\Schema;
 
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Enums\LockRank;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Enums\Runner\LockRank;
 use Billium\Core\Internal\Runner\LockSet;
 use Billium\Core\Tests\Support\FixedCallerContext;
 use InvalidArgumentException;

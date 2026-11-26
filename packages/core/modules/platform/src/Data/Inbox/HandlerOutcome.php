@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Data\Inbox;
 
-use Billium\Contracts\Attributes\Api;
 use InvalidArgumentException;
+use Packman\Attributes\Api;
 
 /**
  * What the owning handler did with one delivery inside the root Tx (INV-08): applied with the business receipt it
  * wrote, parked on a missing dependency (the source order still advances), or refused as a conflict (quarantined).
  */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class HandlerOutcome
 {
     private function __construct(

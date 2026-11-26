@@ -1,0 +1,22 @@
+{
+  "exportSchema": "source.export.v1",
+  "profile": "reference-recurring",
+  "exportVersion": "1.0.0",
+  "batchId": "batch-rec-neg-cutoff",
+  "sourceSystem": "reference-recurring/billing-export",
+  "sourceInstallation": "src-inst-rec-1",
+  "sourceBook": "book-recurring-main",
+  "sourceExportRevision": 1,
+  "installationRef": "inst-test",
+  "environment": "test",
+  "sellerRef": "seller-recurring-1",
+  "recordCount": 0,
+  "recordsChecksum": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "sanitizationPolicy": {
+    "piiRedacted": true,
+    "secretsStripped": true,
+    "policyVersion": "sanitize-v1"
+  },
+  "totalsByCurrency": [],
+  "records": []
+}

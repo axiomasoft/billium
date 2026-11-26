@@ -6,8 +6,10 @@ namespace Billium\Schedule\Internal;
 
 use Billium\Schedule\Data\ScheduleRevisionTerms;
 use DateTimeImmutable;
+use Packman\Attributes\Internal;
 use stdClass;
 
+#[Internal]
 final readonly class ComponentHead
 {
     public function __construct(

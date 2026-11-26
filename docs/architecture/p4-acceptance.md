@@ -60,7 +60,7 @@ minimum/maximum bounds, future-boundary pause/resume and unsupported midperiod/b
 calendar rules and the trusted extension gate. Positive PHP algorithms and database tests are listed
 separately from wire codec fixtures. `advance-codecs.json` proves only explicit fixed/approved-snapshot
 codec inputs; advance aggregate usage still refuses. No Dart monetary implementation is implied;
-the conductor's conformance gate owns cross-runtime codec evidence (D56/D59; owner PLAN1.P4.10).
+the integrated conformance gate owns cross-runtime codec evidence (D56/D59; owner PLAN1.P4.10).
 
 The host supplies approved prices, units, precision, currency/exponent versions, rounding/strategy
 versions, agreement attribution, immutable quantity snapshots, period/anchor/timezone/DST/timing,
@@ -70,9 +70,13 @@ host/Tariffler. Negative corrections, monetary customer credit, legal credit not
 distinct operations. P4 adds no payment route or operation-binding change (D55/D56/D63,
 REQ-OUT-01/02/05/10/15/16, REQ-OWN-20/21; owners host/usage/rating/schedule/ledger/execution).
 
-After V1–V7 actually run, the coordinator copies the product evidence into the plan-local
-`artifacts/P4-rating/acceptance.json` and freezes `artifacts/reviews/P4/candidate.json` through
-`tools/check_routing_review.py --print-candidate`. It binds genuine native executor session receipts,
-head/dirty digest and check evidence. The executor does not mutate plan state, invent actor identity,
-set `checks_passed=true` from these focused runs, or independently approve the phase
-(D59/D64/D66; owners coordinator/registrar/independent reviewer).
+For the owner-authorized manual completion session, the coordinator records current evidence in
+the plan-local `artifacts/P4-rating/acceptance.json` and the independent session packet
+`/home/vostrikov/projects/packages/billium-p4-session/reports/`. The packet records exact candidate
+HEAD/tree, file and log hashes, actual commands, failures, rechecks and any evidence reuse. The
+integration gate includes full PHP, Dart, conformance and Packman checks. A fresh independent
+Astra reviewer must approve that exact candidate before the coordinator manually closes P4 items
+and `phase.json.closed`. SKM commands, routing and lifecycle tools are not used in this session.
+Historical runs in the JSON manifest retain their original outcomes and do not substitute for
+current candidate evidence. No main merge, push, external host readiness or production recovery
+qualification is implied (D59; owners coordinator/independent reviewer).

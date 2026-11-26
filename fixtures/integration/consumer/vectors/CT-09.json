@@ -1,0 +1,75 @@
+{
+  "protocol": "billium.consumer.bridge.case.v1",
+  "id": "CT-09",
+  "title": "Snapshot plus tail replay preserves economic identity and committed contiguous cursor across crash recovery",
+  "standProfile": "execution",
+  "authoritySource": "billium",
+  "executionProfile": "remote-billium",
+  "packageDelivery": "php-contracts-current",
+  "sources": ["D52", "D60", "D63"],
+  "steps": [
+    {
+      "name": "bootstrapAndAck",
+      "target": "consumer",
+      "op": "feed_bootstrap_and_ack",
+      "args": {
+        "stateKey": "ct09",
+        "eventTypes": ["obligation.created.v1", "allocation.applied.v1"]
+      },
+      "expect": {
+        "ackStatus": 204,
+        "snapshotItemCount": 6
+      }
+    },
+    {
+      "name": "produceTailEvents",
+      "target": "stand",
+      "op": "declare_settlement_intent",
+      "args": {
+        "obligationRef": "ct09-tail-ob",
+        "intentRef": "ct09-tail-intent",
+        "amount": "15.00"
+      },
+      "expect": { "declared": true }
+    },
+    {
+      "name": "crashBeforeCursorCommit",
+      "target": "consumer",
+      "op": "feed_tail_sync",
+      "args": { "stateKey": "ct09", "crashBeforeCursorCommit": true },
+      "expect": {
+        "status": 200,
+        "eventsRead": 1,
+        "newlyApplied": 1,
+        "totalUniqueApplied": 7,
+        "cursorCommitted": false
+      }
+    },
+    {
+      "name": "replayTailAndCommitCursor",
+      "target": "consumer",
+      "op": "feed_tail_sync",
+      "args": { "stateKey": "ct09", "crashBeforeCursorCommit": false },
+      "expect": {
+        "status": 200,
+        "eventsRead": 1,
+        "newlyApplied": 0,
+        "totalUniqueApplied": 7,
+        "cursorCommitted": true,
+        "cursorAdvanced": true
+      }
+    },
+    {
+      "name": "subsequentReadEmptyAtCommittedHorizon",
+      "target": "consumer",
+      "op": "feed_tail_sync",
+      "args": { "stateKey": "ct09", "crashBeforeCursorCommit": false },
+      "expect": {
+        "status": 200,
+        "eventsRead": 0,
+        "newlyApplied": 0,
+        "totalUniqueApplied": 7
+      }
+    }
+  ]
+}

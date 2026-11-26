@@ -7,7 +7,7 @@ namespace Billium\Usage\Tests\Support;
 use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Data\Envelopes\MetricVersion;
 use Billium\Contracts\Data\Envelopes\UsageFactV2;
-use Billium\Core\Data\Caller;
+use Billium\Core\Data\Runtime\Caller;
 use Billium\Usage\Contracts\UsageAttribution;
 use Billium\Usage\Data\AttributionSnapshot;
 use Billium\Usage\Internal\DatabaseUsage;

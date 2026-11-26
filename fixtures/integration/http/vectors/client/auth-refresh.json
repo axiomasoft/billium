@@ -1,0 +1,33 @@
+{
+  "protocol": "billium.client.prepared.v1",
+  "id": "auth-refresh",
+  "op": "send",
+  "sources": ["D31", "D58"],
+  "shared": true,
+  "maxAttempts": 2,
+  "jsonText": "{\"schema\":\"payment.execute.v1\",\"commandKey\":\"7e0c4a52-91d3-4b6f-8a25-c3d1e9f04b87\",\"operationRef\":\"op-8f3a21\",\"operationKind\":\"charge\",\"source\":{\"context\":\"commerz\",\"orderRef\":\"ord-10234\",\"intentRef\":\"int-10234-1\"},\"installationRef\":\"inst-eu-1\",\"environment\":\"test\",\"executionProfile\":\"remote-billium\",\"routingEpoch\":1,\"sellerRef\":\"seller-acme\",\"merchantAccountRef\":\"ma-main\",\"money\":{\"amount\":\"1490.00\",\"currency\":\"RUB\"},\"bindingRevision\":\"bind-7c91d0e2\",\"returnContextRef\":\"rc-10234\",\"requestedAt\":\"2026-10-17T12:00:00Z\"}",
+  "transport": [
+    {
+      "status": 401,
+      "headers": {},
+      "body": "{\"code\":\"billium.auth.unauthenticated\",\"category\":\"auth\",\"retryable\":false,\"sameKey\":true,\"receipt\":\"none\",\"title\":\"Unauthenticated\",\"status\":401}"
+    },
+    {
+      "status": 202,
+      "headers": {},
+      "body": "{\"result\":\"accepted\",\"receipt\":\"CommandAccepted\"}"
+    }
+  ],
+  "expect": {
+    "outcome": "accepted",
+    "error": null,
+    "attempts.#": 2,
+    "authorizations.0": "Bearer owner",
+    "authorizations.1": "Bearer refreshed",
+    "sameBytes": true,
+    "newKey": false,
+    "rebuilt": false,
+    "cancelInvoked": false,
+    "prepared.commandKey": "7e0c4a52-91d3-4b6f-8a25-c3d1e9f04b87"
+  }
+}

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Data\Inbox;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Contracts\Enums\ProblemCode;
+use Packman\Attributes\Api;
 
 /**
  * Result of one custody step, returned after the root Tx commits (D31): the caller maps `problem()` to its transport
@@ -13,7 +13,7 @@ use Billium\Contracts\Enums\ProblemCode;
  * `drainPartitionId` names a partition whose next accounted sequence is already in custody: the caller drains it in a
  * NEW root Tx, one sequence at a time.
  */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class CustodyResult
 {
     public function __construct(

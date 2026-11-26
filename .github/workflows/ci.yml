@@ -2,26 +2,51 @@ name: ci
 
 on:
   push:
+    branches: [main]
   pull_request:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   gate:
     runs-on: ubuntu-latest
-    env:
-      SKM_WORKSPACES: ${{ github.workspace }}/workspaces
     defaults:
       run:
         working-directory: billium
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           path: billium
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
-          repository: academici/swissknifeman-axioma-workspace
-          path: workspaces/axioma
-          token: ${{ secrets.SKM_WORKSPACE_TOKEN }}
+          repository: axiomasoft/packman
+          ref: v0.1.1
+          path: packman
           persist-credentials: false
-      - run: docker compose build toolchain
+      - name: Match toolchain user to the checkout owner
+        run: |
+          echo "UID=$(id -u)" >> "$GITHUB_ENV"
+          echo "GID=$(id -g)" >> "$GITHUB_ENV"
+      - uses: actions/cache@v4
+        with:
+          path: billium/.ci-cache
+          key: billium-deps-${{ hashFiles('billium/composer.lock', 'billium/packages/contracts-dart/pubspec.yaml') }}
+          restore-keys: billium-deps-
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: billium/docker/toolchain
+          tags: billium-toolchain:local
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Prepare dependency caches
+        run: mkdir -p .ci-cache/composer .ci-cache/pub
       - run: docker compose run --rm toolchain composer install --no-interaction --prefer-dist
       - run: docker compose run --rm toolchain bash scripts/ci.sh

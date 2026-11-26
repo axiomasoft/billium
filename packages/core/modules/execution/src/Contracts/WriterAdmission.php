@@ -4,15 +4,18 @@ declare(strict_types=1);
 
 namespace Billium\Execution\Contracts;
 
-use Billium\Contracts\Attributes\Api;
-use Billium\Contracts\Attributes\Spi;
-use Billium\Contracts\Attributes\SpiKind;
-use Billium\Execution\Data\WriterAdmissionRequest;
-use Billium\Execution\Data\WriterAdmissionToken;
+use Billium\Execution\Data\DispatchRequest;
+use Billium\Execution\Data\DispatchTicket;
+use Packman\Attributes\Spi;
+use Packman\Attributes\SpiKind;
 
-#[Api]
-#[Spi(SpiKind::Implement)]
+/**
+ * ticket(DispatchRequest $request): DispatchTicket; verify(DispatchTicket $ticket,DispatchRequest $request): void; both Tx0. Authority stopped/timeout/expired/foreign ticket refuses new effects.
+ */
+#[Spi(kind: SpiKind::Implement, since: '1.0')]
 interface WriterAdmission
 {
-    public function admit(WriterAdmissionRequest $request): ?WriterAdmissionToken;
+    public function ticket(DispatchRequest $request): DispatchTicket;
+
+    public function verify(DispatchTicket $ticket, DispatchRequest $request): void;
 }

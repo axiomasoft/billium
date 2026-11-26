@@ -4,16 +4,17 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Tests\Outbox;
 
-use Billium\Core\Contracts\EventPublisher;
+use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Contracts\Modules\ModuleRegistry;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Receipt;
-use Billium\Platform\Contracts\EventFeed;
-use Billium\Platform\Contracts\Outbox;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\EventPublisher;
+use Billium\Core\Data\Runner\Receipt;
+use Billium\Platform\Contracts\Feed\EventFeed;
+use Billium\Platform\Contracts\Outbox\Outbox;
 use Billium\Platform\Data\EventContracts\EventContractRegistration;
 use Billium\Platform\Data\Feed\FeedScope;
 use Billium\Platform\Data\Feed\FeedSelection;
-use Billium\Platform\Data\OutboxEvent;
+use Billium\Platform\Data\Outbox\OutboxEvent;
 use Billium\Platform\Internal\EventContracts\DatabaseEventContractRegistrar;
 use Billium\Platform\Internal\Outbox\OutboxPruner;
 use Billium\Platform\Internal\Outbox\OutboxRelay;
@@ -27,6 +28,7 @@ abstract class OutboxTestCase extends PlatformTestCase
     {
         parent::setUp();
         config(['billium.feed.signing_key' => str_repeat('k', 32)]);
+        $this->application()->forgetInstance(BilliumOptions::class);
         $this->activeSession();
     }
 

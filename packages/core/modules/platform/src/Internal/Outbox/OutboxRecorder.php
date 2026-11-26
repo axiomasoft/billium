@@ -7,32 +7,37 @@ namespace Billium\Platform\Internal\Outbox;
 use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
-use Billium\Platform\Contracts\Outbox;
+use Billium\Platform\Contracts\Outbox\Outbox;
+use Billium\Platform\Data\EventContracts\PublicEventDestinations;
 use Billium\Platform\Data\EventContracts\RegisteredPublicEvent;
-use Billium\Platform\Data\OutboxEvent;
+use Billium\Platform\Data\Outbox\OutboxEvent;
 use Billium\Platform\Internal\EventContracts\DatabaseEventContractRegistrar;
 use Billium\Platform\Internal\Installation\Rows;
 use Closure;
+use DateTimeZone;
 use Illuminate\Database\DatabaseManager;
 use LogicException;
+use Packman\Attributes\Internal;
+use stdClass;
 
+#[Internal]
 final readonly class OutboxRecorder implements Outbox
 {
     /** @param Closure(): OperationRunner $runner */
-    public function __construct(private DatabaseManager $databases, private Codec $codec, private Closure $runner) {}
+    public function __construct(private DatabaseManager $databases, private Codec $codec, private Closure $runner, private ?PublicEventDestinations $destinations = null) {}
 
     public function record(TransactionContext $context, OutboxEvent|RegisteredPublicEvent $event): int
     {
         // Same runner, connection and root Tx as the owning state (PF-10); platform is in every admitted closure.
         ($this->runner)()->assertCurrent($context, 'platform');
-        // @phpstan-ignore identical.alwaysFalse (Keep the explicit admission invariant although sessionEpoch returns int or throws.)
-        if (! $context->spec()->mode->financial() || $context->sessionEpoch() === null
+        if (! $context->spec()->mode->financial()
             || in_array($context->spec()->operationClass, [ModuleOperationClass::ReceiptReplay, ModuleOperationClass::HistoricalRead, ModuleOperationClass::CallbackCustody], true)) {
             throw new LogicException('Outbox recording requires an admitted financial write operation class and session (D54, D55, D60)');
         }
+        $context->sessionEpoch(); // Refuses a financial context without an admitted session.
         $registered = $event instanceof RegisteredPublicEvent ? $event : null;
         $event = $registered->event ?? $event;
         if (! $event instanceof OutboxEvent) {
@@ -50,7 +55,8 @@ final readonly class OutboxRecorder implements Outbox
             throw new LogicException('module.event_contract_conflict: foreign registered event');
         }
         ($this->runner)()->assertCurrent($context, $contract->ownerModuleId);
-        $payload = $this->codec->canonicalize($event->payload === [] ? new \stdClass : $event->payload);
+        $destinations = $registered?->explicitDestinations() ?? $this->destinations?->forContract($contract) ?? ['default'];
+        $payload = $this->codec->canonicalize($event->payload === [] ? new stdClass : $event->payload);
         if (strlen($payload) > OutboxEvent::MAX_PAYLOAD_BYTES) {
             throw new LogicException("Outbox payload of {$event->type} exceeds ".OutboxEvent::MAX_PAYLOAD_BYTES.' bytes');
         }
@@ -58,16 +64,24 @@ final readonly class OutboxRecorder implements Outbox
         $digest = 'sha256:'.hash('sha256', $payload);
         $wire = ['schema' => $event->schemaVersion, 'eventId' => $event->eventId, 'eventType' => $event->type,
             'sellerRef' => $caller->sellerRef, 'aggregateRef' => $event->aggregateRef, 'revision' => $event->aggregateRevision,
-            'occurredAt' => $event->occurredAt->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z'),
+            'occurredAt' => $event->occurredAt->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z'),
             'digest' => $digest, 'payload' => json_decode($payload, false, 512, JSON_THROW_ON_ERROR)];
         if ($event->schemaVersion !== 'billium.event.v1') {
             $wire['eventContractRevision'] = $contract->contractRevision;
+        }
+        if ($event->schemaVersion === 'billium.event.v4') {
+            $wire['installationRef'] = $caller->installationRef;
+            $wire['environment'] = $caller->environment;
+        }
+        if (in_array($event->schemaVersion, ['billium.event.v3', 'billium.event.v4'], true)) {
+            $digest = $this->codec->digest($wire);
+            $wire['digest'] = $digest;
         }
         // Validate every immutable public envelope before either content or destination work can be inserted.
         $decoded = $this->codec->decode($this->codec->canonicalize($wire));
         if ($event->schemaVersion === 'billium.event.v2') {
             $effect = $decoded->raw->payload;
-            if (! $effect instanceof \stdClass) {
+            if (! $effect instanceof stdClass) {
                 throw new LogicException('Public effect payload must be an object');
             }
             if (($effect->installationRef ?? null) !== $caller->installationRef || ($effect->environment ?? null) !== $caller->environment
@@ -97,7 +111,7 @@ final readonly class OutboxRecorder implements Outbox
             }
             $stored = array_map(static fn (mixed $delivery): string => Rows::string(Rows::field($delivery, 'destination_ref')),
                 $db->select('SELECT destination_ref FROM public.billium_outbox_delivery WHERE event_id = ? ORDER BY destination_ref', [$event->eventId]));
-            $destinations = array_values(array_unique($registered->destinations ?? ['default']));
+            $destinations = array_values(array_unique($destinations));
             sort($destinations, SORT_STRING);
             if ($stored !== $destinations) {
                 throw new ProblemException(ProblemCode::IdempotencyConflict, 'Public event destinations are frozen');
@@ -105,7 +119,7 @@ final readonly class OutboxRecorder implements Outbox
 
             return Rows::int(Rows::field($existing, 'id'));
         }
-        EventRows::deliveries($db, 'billium_outbox_delivery', $event->eventId, $registered->destinations ?? ['default']);
+        EventRows::deliveries($db, 'billium_outbox_delivery', $event->eventId, $destinations);
 
         return Rows::int(Rows::field($row, 'id'));
     }

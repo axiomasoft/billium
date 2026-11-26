@@ -1,0 +1,27 @@
+{
+  "id": "http/shape/receipt-find-unknown-major",
+  "spec_refs": [
+    "BC-ENV-04",
+    "REQ-CON-20"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"receipt.find.v2\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.schema.unsupported"
+      }
+    }
+  ]
+}

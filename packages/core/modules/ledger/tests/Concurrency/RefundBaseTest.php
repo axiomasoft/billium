@@ -18,6 +18,7 @@ use PHPUnit\Framework\Attributes\Group;
  * discrepancy. With R1 = 40.00 it records exactly one discrepancy and the ledger is unchanged.
  */
 #[Group('ACC-CON-26')]
+#[Group('pg')]
 final class RefundBaseTest extends ObservationTestCase
 {
     public function test_charge_and_refund_child_repeats_assign_the_basis_once(): void

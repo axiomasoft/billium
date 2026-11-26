@@ -6,9 +6,11 @@ namespace Billium\Platform\Internal\Inbox;
 
 use Billium\Platform\Data\Inbox\InboxRow;
 use Billium\Platform\Internal\Installation\Rows;
+use Packman\Attributes\Internal;
 use stdClass;
 
 /** Mapping of billium_inbox_message records. */
+#[Internal]
 final class InboxRecords
 {
     public static function row(mixed $record): InboxRow

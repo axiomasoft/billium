@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Billium\Usage\Internal\Canonical;
 
 use LogicException;
+use Packman\Attributes\Internal;
 use stdClass;
 
+#[Internal]
 final class CanonicalJson
 {
     public static function encode(mixed $value): string

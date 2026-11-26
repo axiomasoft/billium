@@ -54,9 +54,13 @@ class ExportPhpTest(unittest.TestCase):
         self.assertIn("resources/currencies.php", files)
         self.assertIn("src/Enums/ProblemCode.php", files)
         envelopes = [name for name in files if name.startswith("src/Data/Envelopes/")]
-        self.assertEqual(len(envelopes), 35)
+        self.assertEqual(len(envelopes), 58)
+        self.assertIn("src/Data/Envelopes/FeedBootstrapAck.php", envelopes)
         self.assertIn("src/Data/Envelopes/MetricVersion.php", envelopes)
         self.assertIn("src/Data/Envelopes/RatedBasis.php", envelopes)
+        self.assertIn("src/Data/Envelopes/ExternalImport.php", envelopes)
+        self.assertIn("src/Data/Envelopes/ExternalImportManifest.php", envelopes)
+        self.assertIn("src/Data/Envelopes/ExternalImportPreview.php", envelopes)
         registry = json.loads(files["resources/spec/envelopes.json"])
         self.assertEqual(
             [entry["class"] for entry in registry["payment.find.v1"]["variants"]],

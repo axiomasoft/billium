@@ -6,18 +6,20 @@ namespace Billium\Ledger\Internal\Commands;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Exceptions\LockPlanChanged;
-use Billium\Ledger\Data\LedgerReceipt;
-use Billium\Ledger\Data\ReverseAllocation;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Exceptions\Runner\LockPlanChanged;
+use Billium\Ledger\Data\Allocations\ReverseAllocation;
+use Billium\Ledger\Data\Runtime\LedgerReceipt;
 use Billium\Ledger\Internal\Receipts\AllocationReceiptWriter;
 use Illuminate\Database\DatabaseManager;
+use Packman\Attributes\Internal;
 
 /**
  * Full immutable reversal of one original allocation (UNIQUE reverses_id) plus an optional remainder placed again from
  * the same source in the same Tx; history is never deleted (COV-289). billium_reverse_allocation owns the rows/counters.
  */
+#[Internal]
 final readonly class ReverseAllocationCommand
 {
     public function __construct(private DatabaseManager $databases, private OperationRunner $runner, private AllocationReceiptWriter $writer) {}
@@ -63,7 +65,10 @@ final readonly class ReverseAllocationCommand
             if (count($rows) !== 1) {
                 throw new ProblemException(ProblemCode::ReferenceUnknown, 'unknown original allocation');
             }
-            $row = $rows[0];
+            $row = $rows[0] ?? null;
+            if (! is_object($row)) {
+                throw new ProblemException(ProblemCode::ReferenceUnknown, 'unknown original allocation');
+            }
 
             return [
                 'id' => AllocationReceiptWriter::int($row->id),

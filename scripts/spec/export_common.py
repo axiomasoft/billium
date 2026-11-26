@@ -2,7 +2,7 @@
 
 Reads one spec revision and produces the language-neutral data both exporters render:
 the currency table, the problem-code registry, the schema bundle the codecs validate against
-and the envelope descriptors behind the generated envelope classes (P2.5, P2.6).
+and the envelope descriptors behind the generated envelope classes.
 """
 from __future__ import annotations
 
@@ -22,13 +22,11 @@ MONEY_WIRE_PATH = "common/money-wire.json"
 
 # class name, schema name, schema file, variant of a oneOf schema (def name) or None
 ENVELOPES = (
+    ("ExecutePayment", "payment.execute.v1", "payment/execute.v1.json", None),
     ("AuthorizePayment", "payment.authorize.v1", "payment/authorize.v1.json", None),
     ("CapturePayment", "payment.capture.v1", "payment/capture.v1.json", None),
     ("VoidAuthorization", "payment.void_authorization.v1", "payment/void-authorization.v1.json", None),
-    ("CapabilitySnapshot", "payment.capabilities.v1", "payment/capabilities.v1.json", None),
-    ("QualificationManifest", "payment.qualification.v1", "payment/qualification.v1.json", None),
-    ("DriverLookupResult", "payment.driver_lookup.v1", "payment/driver-lookup.v1.json", None),
-    ("ExecutePayment", "payment.execute.v1", "payment/execute.v1.json", None),
+    ("ExecutionStatus", "payment.execution_status.v1", "query/execution-status.v1.json", None),
     ("RequestRefund", "payment.refund.v1", "payment/refund.v1.json", None),
     ("CancelOperation", "payment.cancel.v1", "payment/cancel.v1.json", None),
     ("FindOperation", "payment.find.v1", "payment/find.v1.json", "request"),
@@ -49,6 +47,8 @@ ENVELOPES = (
     ("PaymentEffectOutcome", "payment.effect.outcome.v1", "payment/effect-outcome.v1.json", None),
     ("EventCatalog", "billium.event.catalog.v1", "event/catalog.v1.json", None),
     ("EventEnvelopeV2", "billium.event.v2", "event/event.v2.json", None),
+    ("ExecutionRepairEvent", "billium.event.v3", "execution/repair-event.v1.json", None),
+    ("ExecutionCertifiedNoEffectEvent", "billium.event.v4", "execution/certified-no-effect-event.v1.json", None),
     ("FeedSelection", "billium.feed.selection.v1", "feed/selection.v1.json", None),
     ("FeedPage", "billium.feed.page.v1", "feed/page.v1.json", None),
     ("FeedBootstrap", "billium.feed.bootstrap.v1", "feed/bootstrap.v1.json", None),
@@ -63,12 +63,32 @@ ENVELOPES = (
     ("EnsureBillingOccurrenceV2", "occurrence.ensure.v2", "occurrence/ensure.v2.json", None),
     ("PrepareObligationV2", "obligation.prepare.v2", "obligation/prepare.v2.json", None),
     ("NoChargeReceipt", "occurrence.no_charge.v1", "occurrence/no-charge.v1.json", None),
+    ("FindReceipt", "receipt.find.v1", "receipt/find.v1.json", "request"),
+    ("ReceiptResult", "receipt.find.v1", "receipt/find.v1.json", "response"),
+    ("Capabilities", "billium.capabilities.v1", "capabilities/capabilities.v1.json", None),
+    ("AllocationReceiptResult", "ledger.allocation_receipt.v1", "ledger/allocation-receipt.v1.json", None),
+    ("ObservationCustody", "ledger.observation_custody.v1", "ledger/observation-custody.v1.json", None),
+    ("CommandReceipt", "billium.command_receipt.v1", "command/receipt.v1.json", None),
+    ("FeedOpen", "billium.feed.open.v1", "feed/open.v1.json", None),
+    ("FeedRead", "billium.feed.read.v1", "feed/read.v1.json", None),
+    ("FeedBootstrapRequest", "billium.feed.bootstrap_request.v1", "feed/bootstrap-request.v1.json", None),
+    ("FeedBootstrapAck", "billium.feed.bootstrap_ack.v1", "feed/bootstrap-ack.v1.json", None),
+    ("ObligationView", "ledger.obligation.v1", "query/obligation.v1.json", None),
+    ("InvoiceView", "ledger.invoice.v1", "query/invoice.v1.json", None),
+    ("AllocationQuery", "ledger.allocations.v1", "query/allocations.v1.json", None),
+    ("RefundAuthorization", "ledger.refund_authorization.v1", "query/refund-authorization.v1.json", None),
+    ("ExternalImport", "external.import.v1", "import/external.v1.json", None),
+    ("ExternalImportManifest", "external.import.manifest.v1", "import/manifest.v1.json", None),
+    ("ExternalImportPreview", "external.import.preview.v1", "import/preview.v1.json", None),
 )
 
 KINDS = {"integer": "int", "string": "string", "object": "object", "array": "list", "boolean": "bool"}
 
 # A oneOf schema picks its envelope class by the presence of this member.
-VARIANT_SELECTOR = {"payment.find.v1": ("status", "response")}
+VARIANT_SELECTOR = {
+    "payment.find.v1": ("status", "response"),
+    "receipt.find.v1": ("status", "response"),
+}
 
 
 @dataclass(frozen=True)
@@ -113,7 +133,7 @@ class Revision:
         self.documents: dict[str, dict[str, object]] = {}
         for path in sorted((directory / "schema").rglob("*.json")):
             relative = path.relative_to(directory / "schema").as_posix()
-            if relative.startswith("conformance/"):
+            if relative.startswith(("conformance/", "migration/")):
                 continue
             document = load(path)
             expected = SCHEMA_BASE.format(revision=self.name, path=relative)

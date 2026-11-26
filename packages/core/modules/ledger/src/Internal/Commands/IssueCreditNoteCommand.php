@@ -6,22 +6,24 @@ namespace Billium\Ledger\Internal\Commands;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Exceptions\LockPlanChanged;
-use Billium\Ledger\Data\CreditNoteLine;
-use Billium\Ledger\Data\CreditNoteMode;
-use Billium\Ledger\Data\IssueCreditNote;
-use Billium\Ledger\Data\LedgerReceipt;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Exceptions\Runner\LockPlanChanged;
+use Billium\Ledger\Data\Invoices\CreditNoteLine;
+use Billium\Ledger\Data\Invoices\CreditNoteMode;
+use Billium\Ledger\Data\Invoices\IssueCreditNote;
+use Billium\Ledger\Data\Runtime\LedgerReceipt;
 use Billium\Ledger\Internal\Receipts\AllocationReceiptWriter;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
+use Packman\Attributes\Internal;
 
 /**
  * Credit note on an issued invoice (COV-167, COV-174): open_only reduces open; reverse_allocations first releases live
  * allocations of the line (LIFO, full reversal plus remainder) and credits without exceeding due. It is the same
- * routine for the public root and for P4/P6 participants (negative late delta, legal reference) in their root Tx.
+ * routine for the public root and for correction and document-numbering participants (negative late delta, legal reference) in their root Tx.
  */
+#[Internal]
 final readonly class IssueCreditNoteCommand
 {
     public const int MAX_LINES = 500;

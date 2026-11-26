@@ -1,0 +1,326 @@
+{
+  "protocol": "billium.http.transcript.v1",
+  "id": "HTTP-04",
+  "title": "Close TCP after committed admission, replay exact prepared bytes and recover one outcome",
+  "profile": "execution",
+  "sources": [
+    "D57",
+    "D58",
+    "D59",
+    "COV-AC-524"
+  ],
+  "steps": [
+    {
+      "op": "snapshot",
+      "name": "before",
+      "expect": {
+        "counts.outbox_event": 2
+      }
+    },
+    {
+      "op": "send",
+      "name": "lost",
+      "path": "/billium/v1/sellers/seller-a/payments/execute",
+      "scoped": true,
+      "body": {
+        "schema": "payment.execute.v1",
+        "commandKey": "00000000-0000-4100-8800-000000000001",
+        "operationRef": "root-a",
+        "operationKind": "charge",
+        "source": {
+          "context": "checkout",
+          "intentRef": "intent-a",
+          "orderRef": "order-a"
+        },
+        "executionProfile": "remote-billium",
+        "routingEpoch": 1,
+        "merchantAccountRef": "account-a",
+        "money": {
+          "amount": "1.00",
+          "currency": "RUB"
+        },
+        "bindingRevision": "merchant-a",
+        "requestedAt": "2026-11-17T00:00:00Z"
+      },
+      "expect": {
+        "transport": "closed",
+        "wire.upstreamStatus": 202,
+        "wire.checkpoint": "upstream-response-complete"
+      },
+      "fault": "close"
+    },
+    {
+      "op": "snapshot",
+      "name": "committed",
+      "expect": {
+        "counts.execution_operation": 1,
+        "counts.execution_attempt": 1,
+        "operations.0.merchant_revision_ref": "merchant-a",
+        "operations.0.intent_owner_namespace": "source-a"
+      }
+    },
+    {
+      "op": "send",
+      "name": "replayed",
+      "use": "lost",
+      "expect": {
+        "status": 202,
+        "body.result": "accepted",
+        "body.receipt": "CommandAccepted",
+        "body.operationRef": "root-a",
+        "wire.requestDigest": {
+          "$ref": "lost.wire.requestDigest"
+        },
+        "wire.commandKey": {
+          "$ref": "lost.wire.commandKey"
+        },
+        "responseDigest": {
+          "$ref": "lost.wire.upstreamResponseDigest"
+        }
+      }
+    },
+    {
+      "op": "send",
+      "name": "durableAdmission",
+      "path": "/billium/v1/sellers/seller-a/receipts/find",
+      "scoped": true,
+      "body": {
+        "schema": "receipt.find.v1",
+        "receiptRef": {"$ref": "committed.admissions.0.receipt_ref"}
+      },
+      "expect": {
+        "status": 200,
+        "body.status": "found",
+        "body.receiptSchema": "payment.admission.v1",
+        "body.body": {"$ref": "replayed.body"}
+      }
+    },
+    {
+      "op": "snapshot",
+      "name": "afterReplay",
+      "expect": {
+        "counts": {
+          "$ref": "committed.counts"
+        },
+        "events": {
+          "$ref": "committed.events"
+        },
+        "receipts": {
+          "$ref": "committed.receipts"
+        },
+        "operations": {
+          "$ref": "committed.operations"
+        },
+        "attempts": {
+          "$ref": "committed.attempts"
+        },
+        "inbox": {
+          "$ref": "committed.inbox"
+        }
+      }
+    },
+    {
+      "op": "worker",
+      "name": "dispatch",
+      "expect": {
+        "reductions.#": 1
+      },
+      "input": {
+        "operation": "root-a",
+        "action": "dispatch",
+        "mode": "success"
+      }
+    },
+    {
+      "op": "provider",
+      "name": "provider",
+      "expect": {
+        "calls.#": 1,
+        "lookups.#": 0,
+        "calls.0.account": "account-a"
+      }
+    },
+    {
+      "op": "send",
+      "name": "find",
+      "path": "/billium/v1/sellers/seller-a/operations/find",
+      "scoped": true,
+      "body": {
+        "schema": "payment.find.v1",
+        "operationRef": "root-a"
+      },
+      "expect": {
+        "status": 200,
+        "body.status": "succeeded",
+        "body.capturedTotal.amount": "1.00",
+        "body.refundedTotal.amount": "0.00"
+      }
+    },
+    {
+      "op": "deliver",
+      "name": "projection",
+      "expect": {"delivered": 1, "failed": 0}
+    },
+    {
+      "op": "snapshot",
+      "name": "settled",
+      "expect": {
+        "counts.execution_provider_fact": 1,
+        "counts.payment": 1,
+        "counts.outbox_command": 1,
+        "events.2.event_type": "payment.outcome.v1",
+        "events.3.event_type": "allocation.applied.v1"
+      }
+    },
+    {
+      "op": "send",
+      "name": "replayedAgain",
+      "use": "lost",
+      "expect": {
+        "status": 202,
+        "body.result": "accepted",
+        "body.receipt": "CommandAccepted",
+        "body.operationRef": "root-a",
+        "responseDigest": {
+          "$ref": "lost.wire.upstreamResponseDigest"
+        }
+      }
+    },
+    {
+      "op": "snapshot",
+      "name": "afterSettledReplay",
+      "expect": {
+        "counts": {
+          "$ref": "settled.counts"
+        },
+        "events": {
+          "$ref": "settled.events"
+        },
+        "receipts": {
+          "$ref": "settled.receipts"
+        },
+        "operations": {
+          "$ref": "settled.operations"
+        },
+        "attempts": {
+          "$ref": "settled.attempts"
+        },
+        "inbox": {
+          "$ref": "settled.inbox"
+        }
+      }
+    },
+    {
+      "op": "send",
+      "name": "ledger",
+      "path": "/billium/v1/sellers/seller-a/queries",
+      "scoped": true,
+      "body": {
+        "schema": "billium.query.v1",
+        "query": "paymentStatus",
+        "selector": {
+          "paymentRef": "root-a",
+          "sourceAuthority": "remote-billium"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body.result.projectionStatus": "current",
+        "body.result.financialHold.active": false,
+        "body.result.applied.allocated.amount": "1.00"
+      }
+    },
+    {
+      "op": "send",
+      "name": "allocation",
+      "path": "/billium/v1/sellers/seller-a/receipts/find",
+      "scoped": true,
+      "body": {
+        "schema": "receipt.find.v1",
+        "receiptRef": {
+          "$ref": "settled.allocations.3.receipt_ref"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body.status": "found",
+        "body.receiptSchema": "ledger.allocation_receipt.v1"
+      }
+    },
+    {
+      "op": "correlate",
+      "input": {
+        "grant": {
+          "grantRef": "fixture-grant-a",
+          "sellerRef": "seller-b",
+          "operationRef": "root-a"
+        },
+        "admission": {
+          "$ref": "replayed.body"
+        },
+        "outcome": {
+          "$ref": "ledger.body"
+        },
+        "allocation": {
+          "$ref": "allocation.body"
+        }
+      },
+      "name": "foreignGrant",
+      "expect": {
+        "status": "refused"
+      }
+    },
+    {
+      "op": "correlate",
+      "input": {
+        "grant": {
+          "grantRef": "fixture-grant-a",
+          "sellerRef": "seller-a",
+          "operationRef": "root-a"
+        },
+        "admission": {
+          "$ref": "replayed.body"
+        },
+        "outcome": {
+          "$ref": "ledger.body"
+        },
+        "allocation": {
+          "$ref": "allocation.body"
+        },
+        "loseResponse": true
+      },
+      "name": "provisionResponseLost",
+      "expect": {
+        "status": "lost-response",
+        "count": 1
+      }
+    },
+    {
+      "op": "correlate",
+      "input": {
+        "grant": {
+          "grantRef": "fixture-grant-a",
+          "sellerRef": "seller-a",
+          "operationRef": "root-a"
+        },
+        "admission": {
+          "$ref": "replayed.body"
+        },
+        "outcome": {
+          "$ref": "ledger.body"
+        },
+        "allocation": {
+          "$ref": "allocation.body"
+        }
+      },
+      "name": "provisionReplay",
+      "expect": {
+        "status": "found",
+        "count": 1,
+        "binding": {
+          "$ref": "provisionResponseLost.binding"
+        }
+      }
+    }
+  ]
+}

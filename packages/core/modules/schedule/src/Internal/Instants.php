@@ -6,7 +6,9 @@ namespace Billium\Schedule\Internal;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class Instants
 {
     public static function utc(string $value): DateTimeImmutable

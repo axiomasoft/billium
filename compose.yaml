@@ -1,7 +1,28 @@
 services:
   postgres:
     image: postgres:16.15-bookworm
-    command: ["postgres", "-c", "synchronous_commit=off", "-c", "full_page_writes=off"]
+    shm_size: 1gb
+    # Throwaway test durability. Production PostgreSQL is not started from this file.
+    command:
+      - postgres
+      - -c
+      - fsync=off
+      - -c
+      - synchronous_commit=off
+      - -c
+      - full_page_writes=off
+      - -c
+      - max_wal_size=2GB
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - work_mem=16MB
+      - -c
+      - max_connections=500
+      - -c
+      - max_locks_per_transaction=256
+    tmpfs:
+      - /var/lib/postgresql/data:size=8g
     environment:
       POSTGRES_DB: billium_test
       POSTGRES_USER: billium
@@ -15,6 +36,7 @@ services:
       timeout: 5s
       retries: 30
   toolchain:
+    image: billium-toolchain:local
     build: docker/toolchain
     user: "${UID:-1000}:${GID:-1000}"
     working_dir: /workspace
@@ -23,19 +45,18 @@ services:
         condition: service_healthy
     volumes:
       - .:/workspace
-      - composer-cache:/tmp/composer
-      - pub-cache:/tmp/pub-cache
+      # Composer path dependency used by the Packman integration.
+      - ../packman:/packman:ro
       - type: bind
-        source: ${SKM_WORKSPACES_ROOT:-${SKM_WORKSPACES:-${SKM_HOME:-${HOME}/.local/share/swissknifeman}/workspaces}}
-        target: /skm-workspaces
-        read_only: true
-        bind:
-          create_host_path: false
+        source: ${BILLIUM_COMPOSER_CACHE:-${PWD}/.ci-cache/composer}
+        target: /tmp/composer
+      - type: bind
+        source: ${BILLIUM_PUB_CACHE:-${PWD}/.ci-cache/pub}
+        target: /tmp/pub-cache
     environment:
       HOME: /tmp/home
       COMPOSER_HOME: /tmp/composer
       PUB_CACHE: /tmp/pub-cache
-      SKM_WORKSPACES: /skm-workspaces
       DB_CONNECTION: pgsql
       DB_HOST: postgres
       DB_PORT: 5432
@@ -44,6 +65,7 @@ services:
       DB_PASSWORD: billium_runtime
       DB_OWNER_USERNAME: billium
       DB_OWNER_PASSWORD: billium
+      PACKMAN_TEST_DESTRUCTIVE_OPT_IN: "1"
 
 configs:
   test-database-roles:
@@ -59,7 +81,3 @@ configs:
         GRANT SELECT ON TABLES TO billium_runtime;
       ALTER DEFAULT PRIVILEGES FOR ROLE billium IN SCHEMA public
         REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
-
-volumes:
-  composer-cache:
-  pub-cache:

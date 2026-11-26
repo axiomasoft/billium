@@ -10,6 +10,7 @@ use Billium\Platform\Tests\Outbox\RelayScenario;
 use PHPUnit\Framework\Attributes\Group;
 
 #[Group('ACC-CON-14')]
+#[Group('pg')]
 final class RelayConcurrencyTest extends OutboxTestCase
 {
     public function test_four_relays_deliver_one_hundred_durable_events_with_receiver_dedupe(): void

@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Billium\Rating\Internal\Storage;
 
-use Billium\Core\Data\Receipt;
+use Billium\Core\Data\Runner\Receipt;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final readonly class PricePublishedReceipt implements Receipt
 {
     /** @param array<string, mixed> $payload */

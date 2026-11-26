@@ -14,7 +14,9 @@ use Billium\Rating\Internal\Math\LargestRemainder;
 use Billium\Rating\Internal\Proration\ProrationCalculator;
 use Billium\Rating\Internal\Storage\RatingRows;
 use InvalidArgumentException;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class TaxCalculator
 {
     /**

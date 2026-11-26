@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Billium\Rating\Data\Rating;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Contracts\Data\Envelopes\QuantitySnapshot;
+use Packman\Attributes\Api;
 
 #[Api]
 final readonly class PrepareRating

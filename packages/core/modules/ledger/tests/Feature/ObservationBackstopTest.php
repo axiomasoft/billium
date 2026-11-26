@@ -17,6 +17,7 @@ use PHPUnit\Framework\Attributes\TestWith;
  * inconsistent snapshot in assign mode (only hold may carry it) and a parked marker is released once, never edited.
  */
 #[Group('D60')]
+#[Group('pg')]
 final class ObservationBackstopTest extends ObservationTestCase
 {
     #[TestWith([300, 0, 'succeeded'])]
@@ -457,7 +458,7 @@ final class ObservationBackstopTest extends ObservationTestCase
 
     public function test_a_parked_marker_is_released_once_and_never_edited(): void
     {
-        $this->attempt(ObservationFactory::charge('op-1', 1, 1000, sequence: 1));
+        $this->tryObserve(ObservationFactory::charge('op-1', 1, 1000, sequence: 1));
         $park = self::integer($this->value('SELECT id FROM billium_observation_park'));
         $this->routine('release_observation_park', ['seller-a', 'test', $park, null, 'applied']);
 

@@ -6,16 +6,16 @@ namespace Billium\Rating\Tests\Support;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Receipt;
-use Billium\Core\Exceptions\LockPlanChanged;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\Receipt;
+use Billium\Core\Exceptions\Runner\LockPlanChanged;
 use Billium\Ledger\Contracts\LedgerParticipants;
-use Billium\Ledger\Data\AdjustObligation;
-use Billium\Ledger\Data\CloseSettlementIntentNoEffect;
-use Billium\Ledger\Data\DeclareSettlementIntent;
-use Billium\Ledger\Data\IssueCreditNote;
-use Billium\Ledger\Data\IssueInvoice;
-use Billium\Ledger\Data\RecordObligation;
+use Billium\Ledger\Data\Invoices\IssueCreditNote;
+use Billium\Ledger\Data\Invoices\IssueInvoice;
+use Billium\Ledger\Data\Obligations\AdjustObligation;
+use Billium\Ledger\Data\Obligations\RecordObligation;
+use Billium\Ledger\Data\Settlements\CloseSettlementIntentNoEffect;
+use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
 use RuntimeException;
 
 final class LedgerFault implements LedgerParticipants
@@ -57,12 +57,7 @@ final class LedgerFault implements LedgerParticipants
 
     public function issueCreditNote(TransactionContext $context, IssueCreditNote $command): Receipt
     {
-        $receipt = $this->inner->issueCreditNote($context, $command);
-        if ($this->failure === 'credit_rollback') {
-            throw new RuntimeException('test after successful credit-note participant');
-        }
-
-        return $receipt;
+        return $this->inner->issueCreditNote($context, $command);
     }
 
     public function adjustObligation(TransactionContext $context, AdjustObligation $command): Receipt

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Billium\Rating\Data\Pricing;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Rating\Enums\IncrementMode;
+use Packman\Attributes\Api;
 
 #[Api]
 final readonly class QuantityRules

@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Billium\Platform\Internal\Installation;
 
 use LogicException;
+use Packman\Attributes\Internal;
 
 /** Narrowing of database row values. */
+#[Internal]
 final class Rows
 {
     public static function int(mixed $value): int

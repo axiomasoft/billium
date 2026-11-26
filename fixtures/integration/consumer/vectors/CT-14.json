@@ -1,0 +1,68 @@
+{
+  "protocol": "billium.consumer.bridge.case.v1",
+  "id": "CT-14",
+  "title": "Duplicate event deliveries and accounting cash export preserve stable sourceFactRef without second posting",
+  "standProfile": "execution",
+  "authoritySource": "billium",
+  "executionProfile": "remote-billium",
+  "packageDelivery": "php-contracts-current",
+  "sources": ["D25", "D58", "D60", "INV-08"],
+  "steps": [
+    {
+      "name": "admitPayment",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "path": "/billium/v1/sellers/seller-a/payments/execute",
+        "body": {
+          "schema": "payment.execute.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "commandKey": "00000000-0000-4100-8800-000000001401",
+          "operationRef": "ct14-pay-1",
+          "operationKind": "charge",
+          "source": { "context": "checkout", "intentRef": "intent-a", "orderRef": "ct14-order" },
+          "executionProfile": "remote-billium",
+          "routingEpoch": 1,
+          "merchantAccountRef": "account-a",
+          "money": { "amount": "10.00", "currency": "RUB" },
+          "bindingRevision": "merchant-a",
+          "requestedAt": "2026-11-22T10:00:00Z"
+        }
+      },
+      "expect": { "status": 202 }
+    },
+    {
+      "name": "dispatchPayment",
+      "target": "stand",
+      "op": "worker_dispatch",
+      "args": { "operation": "ct14-pay-1" },
+      "expect": { "reductions.0": "applied" }
+    },
+    {
+      "name": "exportedFact",
+      "target": "stand",
+      "op": "export_accounting_fact",
+      "args": { "paymentRef": "ct14-pay-1", "amountMinor": 1000 },
+      "expect": { "status": "mapped" }
+    },
+    {
+      "name": "consumeTripleDuplicate",
+      "target": "consumer",
+      "op": "accounting_consume_events",
+      "args": {
+        "duplicateDeliveries": 3,
+        "envelope": { "$ref": "exportedFact.envelope" }
+      },
+      "expect": {
+        "sourceFactRefStable": true,
+        "uniqueAppliedReceipts": 1,
+        "deliveryAckCount": 3,
+        "appliedCount": 1,
+        "totalPostedMinor": 1000,
+        "glWriteCount": 0
+      }
+    }
+  ]
+}

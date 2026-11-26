@@ -4,16 +4,14 @@ declare(strict_types=1);
 
 namespace Billium\Core\Contracts\Modules;
 
-use Billium\Contracts\Attributes\Api;
-use Billium\Contracts\Attributes\Spi;
-use Billium\Contracts\Attributes\SpiKind;
-use Billium\Core\Contracts\TransactionContext;
+use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Data\Modules\ModuleState;
 use Billium\Core\Data\Modules\ModuleTransitionFacts;
+use Packman\Attributes\Spi;
+use Packman\Attributes\SpiKind;
 
 /** Owning-module evidence, resolved only while the transition holds its sorted exclusive module barrier. */
-#[Api]
-#[Spi(SpiKind::Call)]
+#[Spi(kind: SpiKind::Call, since: '1.0')]
 interface ModuleTransitionEvidence
 {
     /**

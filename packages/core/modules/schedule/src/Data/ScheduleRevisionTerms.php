@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Billium\Schedule\Data;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Schedule\Internal\Canonical;
 use Billium\Schedule\Internal\Payload;
 use Billium\Schedule\Internal\ScheduleProblems;
 use DateTimeImmutable;
 use DateTimeZone;
+use Packman\Attributes\Api;
 
 /** Approved host input, not an agreement lifecycle (REQ-CON-33, REQ-NBR-06; owner schedule). */
 #[Api]

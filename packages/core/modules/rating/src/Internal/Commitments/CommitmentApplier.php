@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Billium\Rating\Internal\Commitments;
 
 use Billium\Rating\Internal\Math\Dec;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class CommitmentApplier
 {
     public static function apply(Dec $raw, int $exponent, ?int $minimumMinor, ?int $maximumMinor, string $alreadyBilledNetMinor): Dec

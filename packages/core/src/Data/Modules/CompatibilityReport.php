@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Billium\Core\Data\Modules;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Core\Enums\Modules\CompatibilityFindingCode;
+use Packman\Attributes\Api;
 
 /**
  * Outcome of boot validation. Any finding keeps effect-capable boot closed: liveness may stay green, readiness is
  * false and a doctor finding names the cause. `bootOrder` is the dependency order of the enabled modules.
  */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class CompatibilityReport
 {
     /**
@@ -27,6 +27,6 @@ final readonly class CompatibilityReport
 
     public function has(CompatibilityFindingCode $code, ?string $moduleId = null): bool
     {
-        return array_any($this->findings, fn ($finding) => $finding->code === $code && ($moduleId === null || $finding->moduleId === $moduleId));
+        return array_any($this->findings, fn (CompatibilityFinding $finding): bool => $finding->code === $code && ($moduleId === null || $finding->moduleId === $moduleId));
     }
 }

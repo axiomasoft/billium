@@ -6,25 +6,36 @@ namespace Billium\Usage\Internal;
 
 use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Data\Envelopes\MetricVersion;
+use Billium\Contracts\Data\Envelopes\UsageFact;
 use Billium\Contracts\Data\Envelopes\UsageFactV2;
+use Billium\Contracts\Data\Envelopes\UsageReceipt;
 use Billium\Contracts\Data\Envelopes\UsageReceiptV2;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Caller;
-use Billium\Core\Data\OperationSpec;
-use Billium\Core\Enums\FinancialMode;
+use Billium\Core\Configuration\BilliumOptions;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Data\Runner\OperationSpec;
+use Billium\Core\Data\Runner\StoredOutcome;
+use Billium\Core\Data\Runtime\Caller;
+use Billium\Core\Data\Runtime\FinancialScope;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
-use Billium\Platform\Data\PlatformReceipt;
+use Billium\Core\Enums\Runtime\FinancialMode;
+use Billium\Platform\Data\Installation\PlatformReceipt;
 use Billium\Usage\Contracts\Usage;
 use Billium\Usage\Contracts\UsageAttribution;
+use Billium\Usage\Contracts\UsageFactV1Attribution;
 use Billium\Usage\Data\AttributionSnapshot;
+use Billium\Usage\Data\UsageFactV1Inputs;
+use DateTimeImmutable;
+use DateTimeZone;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
+use Packman\Attributes\Internal;
 use stdClass;
 
+#[Internal]
 final readonly class DatabaseUsage implements Usage
 {
     public function __construct(
@@ -33,6 +44,7 @@ final readonly class DatabaseUsage implements Usage
         private CallerContext $callers,
         private UsageAttribution $attribution,
         private Codec $codec,
+        private BilliumOptions $options,
     ) {}
 
     public function registerMetric(MetricVersion $metric): void
@@ -73,21 +85,51 @@ final readonly class DatabaseUsage implements Usage
     {
         $fact = $this->codec->decode($this->codec->encode($fact));
         assert($fact instanceof UsageFactV2);
+        $outcome = $this->submit($fact);
+        $receipt = $this->codec->decode($this->codec->canonicalize($outcome->orThrow()->body));
+        assert($receipt instanceof UsageReceiptV2);
+
+        return $receipt;
+    }
+
+    public function acceptUsageFact(UsageFact $fact, UsageFactV1Attribution $attribution): UsageReceipt
+    {
+        $fact = $this->codec->decode($this->codec->encode($fact));
+        assert($fact instanceof UsageFact);
+        try {
+            $outcome = $this->submit($fact, $attribution)->orThrow();
+            $body = $outcome->replayed ? $this->v1Receipt($fact, 'duplicate') : $outcome->body;
+        } catch (ProblemException $problem) {
+            if ($problem->problem !== ProblemCode::IdempotencyConflict) {
+                throw $problem;
+            }
+            $body = $this->v1Receipt($fact, 'conflict');
+        }
+        $receipt = $this->codec->decode($this->codec->canonicalize($body));
+        assert($receipt instanceof UsageReceipt);
+
+        return $receipt;
+    }
+
+    private function submit(UsageFact|UsageFactV2 $fact, ?UsageFactV1Attribution $attribution = null): StoredOutcome
+    {
         $caller = $this->authenticate($fact->sellerRef);
         if (! in_array($fact->source, $caller->sourceAuthorities, true)) {
             throw new ProblemException(ProblemCode::AuthDenied, 'caller is not authorized for this usage source');
         }
         // A committed replay needs no mutable host lookup. The runner still authenticates and checks its digest.
-        $name = config('billium.connection');
-        $db = $this->databases->connection(is_string($name) ? $name : null);
-        $exists = $db->table('billium_usage_fact')->where([
+        $db = $this->databases->connection($this->options->connection);
+        $exists = $db->table('billium_usage_fact')->useWritePdo()->where([
             'seller_ref' => $caller->sellerRef, 'environment' => $caller->environment,
             'source' => $fact->source, 'fact_id' => $fact->factId, 'revision' => $fact->revision,
         ])->exists();
-        $snapshot = $exists ? null : $this->attribution->resolve(caller: $caller, fact: $fact);
-        $outcome = $this->runner->run(
-            spec: $this->spec($caller, 'usage.fact_submit', [$fact->source, $fact->factId, $fact->revision], $fact->digest),
-            body: function (TransactionContext $context) use ($fact, $caller, $snapshot): PlatformReceipt {
+        $pinned = $exists || $fact instanceof UsageFactV2 ? null : $attribution?->resolve($caller, $fact);
+        $snapshot = $exists ? null : ($fact instanceof UsageFactV2 ? $this->attribution->resolve($caller, $fact) : $pinned?->snapshot);
+        $scope = $fact instanceof UsageFact ? new FinancialScope($caller->installationRef, $caller->sellerRef, $caller->environment, null, $fact->source) : null;
+
+        return $this->runner->run(
+            spec: $this->spec($caller, 'usage.fact_submit', [$fact->source, $fact->factId, $fact->revision], $fact->digest, $scope),
+            body: function (TransactionContext $context) use ($fact, $caller, $snapshot, $pinned): PlatformReceipt {
                 $db = $this->database($context);
                 // Usage owns this leaf lock. No later platform or financial locks are acquired in the body.
                 $db->selectOne(query: 'SELECT pg_advisory_xact_lock(hashtextextended(?, 4202))',
@@ -101,13 +143,17 @@ final readonly class DatabaseUsage implements Usage
                 }
                 $metric = $this->codec->decode(self::text($row->body));
                 assert($metric instanceof MetricVersion);
-                $this->validateSemantics(fact: $fact, metric: $metric);
-                $this->validateSnapshot(fact: $fact, snapshot: $snapshot);
-                assert($snapshot instanceof AttributionSnapshot);
                 $previous = $db->table('billium_usage_fact')->where([
                     'seller_ref' => $caller->sellerRef, 'environment' => $caller->environment,
                     'source' => $fact->source, 'fact_id' => $fact->factId,
                 ])->orderByDesc('revision')->first();
+                $original = $fact;
+                if ($fact instanceof UsageFact) {
+                    $fact = $this->normalize($fact, $metric, $pinned, $previous);
+                }
+                $this->validateSemantics(fact: $fact, metric: $metric);
+                $this->validateSnapshot(fact: $fact, metric: $metric, snapshot: $snapshot);
+                assert($snapshot instanceof AttributionSnapshot);
                 $this->validateCorrection(fact: $fact, previous: $previous, snapshot: $snapshot);
                 $body = [
                     'schema' => 'usage.receipt.v2', 'sellerRef' => $caller->sellerRef,
@@ -117,9 +163,13 @@ final readonly class DatabaseUsage implements Usage
                         $caller->sellerRef, $caller->environment, $fact->source, $fact->factId, $fact->revision,
                     ])),
                 ];
-                $body['digest'] = $this->codec->digest($body);
+                if ($original instanceof UsageFact) {
+                    $body = $this->v1Receipt($original, 'accepted');
+                } else {
+                    $body['digest'] = $this->codec->digest($body);
+                }
                 $receipt = $this->codec->decode($this->codec->canonicalize($body));
-                assert($receipt instanceof UsageReceiptV2);
+                assert($receipt instanceof UsageReceiptV2 || $receipt instanceof UsageReceipt);
                 $db->table('billium_usage_fact')->insert([
                     'seller_ref' => $caller->sellerRef, 'environment' => $caller->environment,
                     'source' => $fact->source, 'fact_id' => $fact->factId, 'revision' => $fact->revision,
@@ -140,11 +190,57 @@ final readonly class DatabaseUsage implements Usage
                 return new PlatformReceipt('usage.fact_admitted', $body);
             },
         );
-        $outcome->orThrow();
-        $receipt = $this->codec->decode($this->codec->canonicalize($outcome->body));
-        assert($receipt instanceof UsageReceiptV2);
+    }
 
-        return $receipt;
+    private function normalize(UsageFact $fact, MetricVersion $metric, ?UsageFactV1Inputs $pinned, ?stdClass $previous): UsageFactV2
+    {
+        if ($pinned === null) {
+            throw new ProblemException(ProblemCode::PolicyUnknown, 'Missing original usage attribution and provenance');
+        }
+        $semantics = match ($metric->model->id) {
+            'additive_sum', 'additive_count' => 'additive',
+            'gauge' => 'gauge',
+            'exact_distinct' => 'distinct',
+            default => null,
+        };
+        if ($semantics !== $fact->semantics || ($pinned->snapshot->attribution->subjectRef ?? null) !== $fact->subjectRef
+            || ($semantics !== 'distinct' && self::decimal(self::text($pinned->value->quantity ?? null)) !== self::decimal($fact->quantity))
+            || (($fact->revision > 1 || $fact->correctsFactId !== null) && $pinned->correctionRef === null)) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'Usage fact differs from the pinned commercial input');
+        }
+        $body = ['schema' => UsageFactV2::SCHEMA, 'sellerRef' => $fact->sellerRef, 'source' => $fact->source,
+            'factId' => $fact->factId, 'revision' => $fact->revision, 'metricRef' => $fact->metricRef,
+            'metricVersion' => $fact->metricVersion, 'metricDigest' => $metric->digest, 'unit' => $fact->unit,
+            'attribution' => $pinned->snapshot->attribution, 'interval' => $fact->interval, 'eventAt' => $fact->eventAt,
+            'receivedAt' => new DateTimeImmutable('now', new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z'),
+            'value' => $pinned->value, 'grouping' => $pinned->grouping, 'billableStream' => $pinned->billableStream,
+            'provenance' => (object) [...get_object_vars($fact->provenance), 'sourceDigest' => $pinned->sourceDigest]];
+        if ($pinned->correctionRef !== null) {
+            if ($previous === null || $fact->revision <= 1) {
+                throw new ProblemException(ProblemCode::ValidationInvalid, 'Correction predecessor absent');
+            }
+            $body['correction'] = ['correctionRef' => $pinned->correctionRef,
+                'supersedesRevision' => $fact->revision - 1, 'originalFactDigest' => self::text($previous->digest)];
+        }
+        $body['digest'] = $this->codec->digest($body);
+        $normalized = $this->codec->decode($this->codec->canonicalize($body));
+        assert($normalized instanceof UsageFactV2);
+
+        return $normalized;
+    }
+
+    private static function decimal(string $quantity): string
+    {
+        return str_contains($quantity, '.') ? rtrim(rtrim($quantity, '0'), '.') : $quantity;
+    }
+
+    /** @return array<string, mixed> */
+    private function v1Receipt(UsageFact $fact, string $result): array
+    {
+        $body = ['schema' => UsageReceipt::SCHEMA, 'result' => $result, 'source' => $fact->source,
+            'factId' => $fact->factId, 'revision' => $fact->revision];
+
+        return [...$body, 'digest' => $this->codec->digest($body)];
     }
 
     private function authenticate(string $seller): Caller
@@ -158,12 +254,13 @@ final readonly class DatabaseUsage implements Usage
     }
 
     /** @param list<int|string> $identity */
-    private function spec(Caller $caller, string $kind, array $identity, string $digest): OperationSpec
+    private function spec(Caller $caller, string $kind, array $identity, string $digest, ?FinancialScope $scope = null): OperationSpec
     {
         return new OperationSpec(
             commandKind: $kind, sellerRef: $caller->sellerRef, environment: $caller->environment,
             mode: FinancialMode::Administrative, operationClass: ModuleOperationClass::NewIntent,
             modules: ['platform', 'usage'], commandKey: hash('sha256', $this->codec->canonicalize($identity)), digest: $digest,
+            financialScope: $scope, inputDigest: $scope === null ? null : $digest,
         );
     }
 
@@ -176,6 +273,9 @@ final readonly class DatabaseUsage implements Usage
 
     private function validateSemantics(UsageFactV2 $fact, MetricVersion $metric): void
     {
+        if ($metric->correctionPolicy->version === 2 && $fact->revision > $metric->correctionPolicy->maxRevision) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'fact exceeds immutable metric correction revision bound');
+        }
         $kind = match ($metric->model->id) {
             'additive_sum', 'gauge' => 'decimal', 'additive_count' => 'count', 'exact_distinct' => 'members',
             default => throw new ProblemException(ProblemCode::ValidationInvalid, 'unsupported metric semantics'),
@@ -192,7 +292,7 @@ final readonly class DatabaseUsage implements Usage
         }
     }
 
-    private function validateSnapshot(UsageFactV2 $fact, ?AttributionSnapshot $snapshot): void
+    private function validateSnapshot(UsageFactV2 $fact, MetricVersion $metric, ?AttributionSnapshot $snapshot): void
     {
         if ($snapshot === null || $snapshot->sellerRef !== $fact->sellerRef || $snapshot->mappingRef === '' || $snapshot->periodRef === ''
             || $this->codec->canonicalize($snapshot->attribution) !== $this->codec->canonicalize($fact->attribution)
@@ -204,6 +304,11 @@ final readonly class DatabaseUsage implements Usage
             || self::time($fact->eventAt) < self::time(self::text($fact->interval->start))
             || self::time($fact->eventAt) >= self::time(self::text($fact->interval->end))) {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'unresolved attribution or interval requires pre-split normalized facts');
+        }
+        if ($metric->attributionPolicy->version === 2
+            && ($snapshot->mappingRef !== $metric->attributionPolicy->mappingRef
+                || $this->codec->canonicalize($fact->attribution) !== $this->codec->canonicalize($metric->attributionPolicy->attribution))) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'fact differs from immutable metric attribution pin');
         }
     }
 

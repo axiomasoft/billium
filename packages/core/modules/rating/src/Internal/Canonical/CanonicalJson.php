@@ -8,7 +8,9 @@ use BackedEnum;
 use Billium\Rating\Data\Pricing\PriceVersion;
 use DateTimeInterface;
 use LogicException;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class CanonicalJson
 {
     public static function termsDigest(PriceVersion $price): string

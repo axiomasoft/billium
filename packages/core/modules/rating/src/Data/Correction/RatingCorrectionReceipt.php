@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Billium\Rating\Data\Correction;
 
-use Billium\Contracts\Attributes\Api;
-use Billium\Core\Data\Receipt;
+use Billium\Core\Data\Runner\Receipt;
 use Billium\Rating\Internal\Storage\RatingRows;
+use Packman\Attributes\Api;
 
 #[Api]
 final readonly class RatingCorrectionReceipt implements Receipt

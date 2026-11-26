@@ -7,6 +7,7 @@ namespace Billium\Rating\Tests\Unit;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Tests\Support\FixtureArguments;
 use Billium\Rating\Data\Rating\FrozenRatingInputs;
+use Billium\Rating\Enums\ChargeKind;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
 use Billium\Rating\Internal\Pipeline\RatingComputation;
 use Billium\Rating\Internal\RatingConformance;
@@ -71,10 +72,30 @@ final class RatingPipelineDigestTest extends TestCase
         FrozenInputsCodec::decode(json_encode($inputs, JSON_THROW_ON_ERROR));
     }
 
-    public function test_zero_quantity_does_not_invent_an_approved_zero_price(): void
+    public function test_exact_zero_quantity_has_no_charge_only_with_an_explicit_reason(): void
     {
         $data = $this->fixture()['given']['frozenInputs'];
         $data['aggregates'][0]['quantity'] = '0.000000000';
+        $data['noChargeReason'] = 'approved_zero_quantity';
+        $draft = new RatingComputation(strategies: new StrategyCatalog, taxes: new TaxCalculator)->compute(FrozenInputsCodec::decode(CanonicalJson::encode($data)));
+        self::assertSame(ChargeKind::NoCharge, $draft->chargeKind);
+        self::assertSame('approved_zero_quantity', $draft->noChargeReason);
+        self::assertSame(['0', '0', '0'], [$draft->netMinor, $draft->taxMinor, $draft->grossMinor]);
+    }
+
+    public function test_exact_zero_quantity_still_requires_a_no_charge_reason(): void
+    {
+        $data = $this->fixture()['given']['frozenInputs'];
+        $data['aggregates'][0]['quantity'] = '0.000000000';
+        $this->expectException(ProblemException::class);
+        $this->expectExceptionMessage('billium.rating.no_charge_reason_required');
+        new RatingComputation(strategies: new StrategyCatalog, taxes: new TaxCalculator)->compute(FrozenInputsCodec::decode(CanonicalJson::encode($data)));
+    }
+
+    public function test_nonzero_quantity_rounded_to_zero_does_not_invent_an_approved_zero_price(): void
+    {
+        $data = $this->fixture()['given']['frozenInputs'];
+        $data['aggregates'][0]['quantity'] = '0.000000001';
         $data['noChargeReason'] = 'caller-cannot-invent-zero-price';
         $this->expectException(ProblemException::class);
         $this->expectExceptionMessage('billium.rating.zero_price_not_declared');

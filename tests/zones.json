@@ -12,7 +12,7 @@
     },
     {
       "id": "conformance",
-      "paths": ["conformance/**"],
+      "paths": ["conformance/**", "scripts/test/server-http.sh"],
       "layers": ["conformance"]
     },
     {
@@ -22,8 +22,13 @@
     },
     {
       "id": "php-core",
-      "paths": ["packages/core/**", "packages/core/modules/**", "packages/core/database/**", "packages/core/config/**", "scripts/db/**", "scripts/lint/test-discovery.py", "scripts/lint/tests/**", "composer.json", "composer.lock", "phpstan.neon.dist", "pint.json", "rector.php", "phpunit.xml.dist", "tests/**"],
+      "paths": ["packages/core/**", "packages/core/modules/**", "packages/core/database/**", "packages/core/config/**", "scripts/db/**", "scripts/lint/test-discovery.py", "scripts/lint/tests/**", "composer.json", "composer.lock", "packman.json", "phpstan.neon", "pint.json", "rector.php", "phpunit.xml", "tests/**"],
       "layers": ["php", "conformance"]
+    },
+    {
+      "id": "php-server",
+      "paths": ["packages/server/**", "tests/minimal-host/server/**", "scripts/smoke/server-install.sh", "scripts/smoke/server-consumers.sh", "scripts/drills/server-restore.sh", "docs/server/**", "artifacts/server-readiness.json"],
+      "layers": ["derived", "php", "conformance"]
     },
     {
       "id": "dart-contracts",
@@ -31,8 +36,28 @@
       "layers": ["dart", "conformance"]
     },
     {
+      "id": "source-index",
+      "paths": ["packages/*/src/**", "packages/core/modules/*/src/**", "packman.json", "scripts/docs/**", "docs/source-index/**"],
+      "layers": ["derived"]
+    },
+    {
+      "id": "p9-integration",
+      "paths": [
+        "docs/migrations/**",
+        "docs/operations/integration-readiness.md",
+        "docs/contracts/external-import-v1.md",
+        "docs/contracts/consumer-contract-kit.md",
+        "artifacts/integration-readiness.json",
+        "artifacts/migration-drill-manifest.json",
+        "scripts/import/**",
+        "scripts/test/consumer-contract.sh",
+        "scripts/drills/integration-migration.sh"
+      ],
+      "layers": ["lint", "php", "conformance"]
+    },
+    {
       "id": "toolchain",
-      "paths": ["docker/**", "compose.yaml", "scripts/ci.sh", ".github/**"],
+      "paths": ["docker/**", "compose.yaml", "scripts/ci.sh", "scripts/ci/**", ".github/**"],
       "layers": ["lint", "derived", "php", "dart", "conformance"]
     }
   ]

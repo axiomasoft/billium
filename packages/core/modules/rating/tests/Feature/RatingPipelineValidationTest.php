@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Billium\Rating\Tests\Feature;
 
 use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Tests\Support\FixtureArguments;
 use Billium\Rating\Contracts\PriceVersionStore;
 use Billium\Rating\Contracts\RatingPreparer;
@@ -16,7 +17,9 @@ use Billium\Rating\Data\Rating\RatedBasisDraft;
 use Billium\Rating\Internal\Pipeline\RatingComputation;
 use Billium\Rating\Tests\RatingTestCase;
 use Illuminate\Database\QueryException;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class RatingPipelineValidationTest extends RatingTestCase
 {
     public function test_large_valid_fixed_price_can_be_prepared_and_booked(): void
@@ -69,6 +72,7 @@ final class RatingPipelineValidationTest extends RatingTestCase
     public function test_database_constraints_refuse_wrong_totals_cross_seller_booking_and_frontier_rewrite(): void
     {
         config(['billium.modules.enabled' => ['platform', 'rating', 'usage', 'schedule']]);
+        $this->application()->forgetInstance(BilliumOptions::class);
         $this->book($this->prepared());
         $row = $this->owner()->table('billium_rating_rated_basis')->first();
         self::assertNotNull($row);

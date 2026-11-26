@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Billium\Core\Enums\Modules;
 
-use Billium\Contracts\Attributes\Api;
+use Packman\Attributes\Api;
 
-#[Api]
+#[Api(since: '1.0')]
 enum ModuleTransitionKind: string
 {
     case Lifecycle = 'lifecycle';

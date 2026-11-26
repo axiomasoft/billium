@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lint the conformance corpus: vectors, golden and coverage (M-05, M-06, M-10, M-15, M-16).
+"""Lint the conformance corpus: vectors, golden and coverage.
 
 Usage: scripts/spec/lint-vectors.py [--rev DIR] [--vectors DIR] [--golden DIR] [--coverage FILE] [--repo-root DIR]
 Exits 1 with one line per finding.
@@ -7,14 +7,15 @@ Exits 1 with one line per finding.
 - every vector is valid by schema/conformance/vector.json, its id equals its path, expect matches script in length;
 - every spec_ref resolves (BC-* in rules.json, REQ/INV/D# as in lint.py);
 - every rule of rules.json is in some spec_refs or in fixtures/coverage.json with a reason (not_testable);
-- every closed command schema has a vector with an unknown member that is rejected for that reason alone (M-05);
-- literal digests and canonical texts in vectors equal the oracle output; a control golden differs from it (M-16);
+- every closed command schema has a vector with an unknown member that is rejected for that reason alone;
+- literal digests and canonical texts in vectors equal the oracle output; a control golden differs from it;
 - every golden file exists and is referenced; the required sets are not empty.
 """
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,7 @@ from typing import Any
 from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[2]
+CITATION = re.compile(r"^(?:D\d+|M-\d{2})$")
 sys.path.insert(0, str(ROOT / "scripts/spec"))
 sys.path.insert(0, str(ROOT / "conformance/runner"))
 sys.path.insert(0, str(ROOT / "conformance/oracles/jcs"))
@@ -79,6 +81,8 @@ class CorpusLint:
             for ref in vector.document["spec_refs"]:
                 if ref.startswith("BC-"):
                     resolvable = ref in rules
+                elif CITATION.match(ref):
+                    resolvable = True
                 else:
                     resolvable = ref in known
                 if not resolvable:

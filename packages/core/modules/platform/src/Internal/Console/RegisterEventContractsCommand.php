@@ -4,23 +4,26 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Internal\Console;
 
+use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Contracts\Modules\ModuleRegistry;
 use Billium\Platform\Internal\EventContracts\DatabaseEventContractRegistrar;
 use Illuminate\Console\Command;
 use Illuminate\Database\DatabaseManager;
 use LogicException;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class RegisterEventContractsCommand extends Command
 {
     protected $signature = 'billium:event-contracts:register {--database= : Explicit installation/upgrade owner connection}';
 
     protected $description = 'Explicitly register the configured module event contracts (D63)';
 
-    public function handle(DatabaseManager $databases, ModuleRegistry $modules): int
+    public function handle(DatabaseManager $databases, ModuleRegistry $modules, BilliumOptions $options): int
     {
         $database = $this->option('database');
-        $enabled = config('billium.modules.enabled');
-        if (! is_string($database) || $database === '' || ! is_array($enabled)) {
+        $enabled = $options->modules->enabled;
+        if (! is_string($database) || $database === '') {
             $this->error('An explicit owner database connection and module configuration are required');
 
             return self::FAILURE;

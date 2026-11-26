@@ -8,7 +8,9 @@ use Billium\Usage\Data\SourceCompleteness;
 use Billium\Usage\Data\WindowQualification;
 use Billium\Usage\Enums\CompletenessStatus;
 use Billium\Usage\Internal\Errors\UsageProblems;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class WindowQualifier
 {
     /**

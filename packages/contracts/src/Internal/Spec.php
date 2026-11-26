@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Billium\Contracts\Internal;
 
 use LogicException;
+use Packman\Attributes\Internal;
 
 /**
  * The spec revision data generated into resources/ by scripts/spec/export-php.py.
  */
+#[Internal]
 final class Spec
 {
     /** @var array<string, mixed>|null */

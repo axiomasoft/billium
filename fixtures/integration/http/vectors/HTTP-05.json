@@ -1,0 +1,202 @@
+{
+  "protocol": "billium.http.transcript.v1",
+  "id": "HTTP-05",
+  "title": "Same key with a changed digest conflicts; seller scope cannot replay it",
+  "profile": "execution",
+  "sources": [
+    "D23",
+    "D31",
+    "D58"
+  ],
+  "steps": [
+    {
+      "op": "send",
+      "name": "first",
+      "path": "/billium/v1/sellers/seller-a/payments/execute",
+      "scoped": true,
+      "body": {
+        "schema": "payment.execute.v1",
+        "commandKey": "00000000-0000-4100-8800-000000000001",
+        "operationRef": "root-a",
+        "operationKind": "charge",
+        "source": {
+          "context": "checkout",
+          "intentRef": "intent-a",
+          "orderRef": "order-a"
+        },
+        "executionProfile": "remote-billium",
+        "routingEpoch": 1,
+        "merchantAccountRef": "account-a",
+        "money": {
+          "amount": "1.00",
+          "currency": "RUB"
+        },
+        "bindingRevision": "merchant-a",
+        "requestedAt": "2026-11-17T00:00:00Z"
+      },
+      "expect": {
+        "status": 202,
+        "body.result": "accepted",
+        "body.receipt": "CommandAccepted",
+        "body.operationRef": "root-a"
+      }
+    },
+    {
+      "op": "snapshot",
+      "name": "admitted",
+      "expect": {
+        "counts.execution_operation": 1
+      }
+    },
+    {
+      "op": "send",
+      "name": "conflict",
+      "path": "/billium/v1/sellers/seller-a/payments/execute",
+      "scoped": true,
+      "body": {
+        "schema": "payment.execute.v1",
+        "commandKey": "00000000-0000-4100-8800-000000000001",
+        "operationRef": "root-a",
+        "operationKind": "charge",
+        "source": {
+          "context": "checkout",
+          "intentRef": "intent-a",
+          "orderRef": "order-a"
+        },
+        "executionProfile": "remote-billium",
+        "routingEpoch": 1,
+        "merchantAccountRef": "account-a",
+        "money": {
+          "amount": "2.00",
+          "currency": "RUB"
+        },
+        "bindingRevision": "merchant-a",
+        "requestedAt": "2026-11-17T00:00:00Z"
+      },
+      "expect": {
+        "status": 409,
+        "body.code": "billium.idempotency.conflict",
+        "body.receipt": "none"
+      }
+    },
+    {
+      "op": "send",
+      "name": "foreign",
+      "use": "first",
+      "expect": {
+        "status": 403,
+        "body.code": "billium.auth.denied",
+        "body.receipt": "none"
+      },
+      "actor": "other-seller"
+    },
+    {
+      "op": "send",
+      "name": "otherScope",
+      "path": "/billium/v1/sellers/seller-b/operations/find",
+      "scoped": true,
+      "body": {
+        "schema": "payment.find.v1",
+        "operationRef": "root-a",
+        "sellerRef": "seller-b"
+      },
+      "expect": {
+        "status": 403,
+        "body.code": "billium.auth.denied",
+        "body.receipt": "none"
+      },
+      "actor": "other-seller"
+    },
+    {
+      "op": "snapshot",
+      "name": "after",
+      "expect": {
+        "operations": {
+          "$ref": "admitted.operations"
+        },
+        "attempts": {
+          "$ref": "admitted.attempts"
+        },
+        "events": {
+          "$ref": "admitted.events"
+        }
+      }
+    },
+    {
+      "op": "seed_seller",
+      "name": "seedOtherSeller",
+      "expect": {
+        "seller": "seller-b"
+      }
+    },
+    {
+      "op": "send",
+      "name": "sameKeyOtherSeller",
+      "path": "/billium/v1/sellers/seller-b/payments/execute",
+      "scoped": true,
+      "body": {
+        "schema": "payment.execute.v1",
+        "commandKey": "00000000-0000-4100-8800-000000000001",
+        "operationRef": "root-a",
+        "operationKind": "charge",
+        "source": {
+          "context": "checkout",
+          "intentRef": "intent-a",
+          "orderRef": "order-a"
+        },
+        "executionProfile": "remote-billium",
+        "routingEpoch": 1,
+        "merchantAccountRef": "account-a",
+        "money": {
+          "amount": "2.00",
+          "currency": "RUB"
+        },
+        "bindingRevision": "merchant-a",
+        "requestedAt": "2026-11-17T00:00:00Z",
+        "sellerRef": "seller-b"
+      },
+      "expect": {
+        "status": 202,
+        "body.result": "accepted",
+        "body.receipt": "CommandAccepted",
+        "body.operationRef": "root-a",
+        "wire.commandKey": {
+          "$ref": "first.wire.commandKey"
+        }
+      },
+      "actor": "other-seller"
+    },
+    {
+      "op": "snapshot",
+      "name": "economies",
+      "expect": {
+        "counts.execution_operation": 2,
+        "counts.execution_attempt": 2,
+        "operations.0.seller_ref": "seller-a",
+        "operations.0.requested_minor": 100,
+        "operations.1.seller_ref": "seller-b",
+        "operations.1.requested_minor": 200,
+        "admissions.#": 2,
+        "admissions.0.seller_ref": "seller-a",
+        "admissions.1.seller_ref": "seller-b"
+      }
+    },
+    {
+      "op": "compare",
+      "name": "separateReceipts",
+      "input": {
+        "left": {"$ref": "economies.admissions.0.receipt_ref"},
+        "right": {"$ref": "economies.admissions.1.receipt_ref"}
+      },
+      "expect": {"different": true}
+    },
+    {
+      "op": "provider",
+      "name": "provider",
+      "expect": {
+        "calls.#": 0,
+        "lookups.#": 0
+      }
+    }
+  ]
+}

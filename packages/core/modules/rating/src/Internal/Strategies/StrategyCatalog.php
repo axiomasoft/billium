@@ -21,7 +21,9 @@ use Billium\Rating\Internal\Canonical\CanonicalJson;
 use Billium\Rating\Internal\Errors\RatingProblems;
 use Billium\Rating\Internal\Math\Dec;
 use InvalidArgumentException;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class StrategyCatalog implements PricingStrategyRegistry
 {
     /** @var array<string, PricingStrategy> */

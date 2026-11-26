@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Billium\Platform\Tests\Outbox;
 
 use Billium\Contracts\Contracts\Codec;
-use Billium\Platform\Contracts\SnapshotSource;
+use Billium\Platform\Contracts\Feed\SnapshotSource;
 use Billium\Platform\Data\Feed\FeedSelection;
 use Billium\Platform\Internal\Installation\Rows;
 use Billium\Platform\Tests\PlatformTestCase;

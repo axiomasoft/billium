@@ -6,16 +6,17 @@ namespace Billium\Ledger\Internal\Commands;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Exceptions\LockPlanChanged;
-use Billium\Ledger\Data\LedgerReceipt;
-use Billium\Ledger\Data\ReallocatePayment;
-use Billium\Ledger\Data\ReallocationMode;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Exceptions\Runner\LockPlanChanged;
+use Billium\Ledger\Data\Allocations\ReallocatePayment;
+use Billium\Ledger\Data\Allocations\ReallocationMode;
+use Billium\Ledger\Data\Runtime\LedgerReceipt;
 use Billium\Ledger\Internal\PaymentSource;
 use Billium\Ledger\Internal\Receipts\AllocationReceiptWriter;
 use Illuminate\Database\DatabaseManager;
 use LogicException;
+use Packman\Attributes\Internal;
 
 /**
  * allocation.reallocate.v1 (D35): after a confirmed refund made the payment over-allocated (reallocation_required,
@@ -24,6 +25,7 @@ use LogicException;
  * closed); reversal mode leaves the receivable open and authorizes no collection. The identity is the payment and the
  * refund state that required it, so a lost reply under another key replays the same receipt.
  */
+#[Internal]
 final readonly class ReallocatePaymentCommand
 {
     public const string POLICY = 'refund/1';

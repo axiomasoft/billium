@@ -78,6 +78,28 @@ objects, codec и коды ошибок; ни один не пишет дене�
 | `returnContextRef` | string | нет | ссылка для возврата пользователя |
 | `requestedAt` | string (RFC 3339) | да | время исходного запроса; повтор не меняет |
 
+### Авторизация и дочерние эффекты
+
+`payment.authorize.v1` (`AuthorizePayment`) использует поля root-команды execute и
+`operationKind=charge`, запрашивая только авторизацию положительной суммы. Поддержка
+авторизации проверяется по неизменяемой версии capabilities выбранного account.
+`payment.execute.v1` сохраняет семантику sale.
+
+`payment.capture.v1` (`CapturePayment`) и `payment.void_authorization.v1`
+(`VoidAuthorization`) содержат `commandKey`, `installationRef`, `environment`,
+`sellerRef`, дочерний `operationRef`, корневой `originalOperationRef`, `source`,
+положительный `money` и `requestedAt`; void дополнительно содержит `reasonCode`.
+Оба допускают необязательный `digest`. Merchant/account, routing и версия driver
+наследуются от корня: переопределение этих полей отклоняется схемой. Сумма всегда
+задана явно. Local cancel сохраняет семантику отмены неотправленной операции.
+
+`payment.execution_status.v1` показывает requested, версию binding/capabilities,
+capacity, delivery и recovery. Поля `commandAccepted`, `providerOutcomeRecorded`,
+`projectionApplied`, `allocationApplied` отражают отдельные подтверждения: transport
+ACK сам по себе не подтверждает применение projection или allocation. Суммы capacity
+имеют MoneyWire-форму со строковой точной суммой; неизвестное состояние требует
+recovery и не превращается в нулевую подтверждённую сумму.
+
 ### payment.refund.v1 (RequestRefund)
 
 Те же `schema`, `commandKey`, `operationRef` (свой), `installationRef`, `environment`, `sellerRef`,
@@ -397,6 +419,13 @@ Receipt policy — только колонка Receipt (M-45, D31). У набл�
 исправленным envelope (validation, schema, money-формат, auth, in_flight, transient,
 lookup.unavailable, 5xx). Новый код объявляет Receipt при добавлении; fixtures `errors/codes` проверяют
 колонку в PHP и Dart.
+| `billium.capability.unsupported` | Exact frozen driver/capability/action/account/currency evidence not supported; refuse before admission/effect; no fallback | нет | Inspect the typed refusal and resolve its stated capability, capacity, hold or evidence condition. | none | D31, REQ-CON-05 |
+| `billium.capture.capacity_exceeded` | Capture exceeds locked available authorization | нет | Inspect the typed refusal and resolve its stated capability, capacity, hold or evidence condition. | stored | D31, REQ-CON-05 |
+| `billium.authorization.capacity_exceeded` | Void amount exceeds locked unconsumed authorization | нет | Inspect the typed refusal and resolve its stated capability, capacity, hold or evidence condition. | stored | D31, REQ-CON-05 |
+| `billium.operation.financial_hold` | New monetary intent refused under discrepancy hold | нет | Inspect the typed refusal and resolve its stated capability, capacity, hold or evidence condition. | stored | D31, REQ-CON-05 |
+| `billium.lookup.ambiguous` | Provider evidence cannot identify reliable actual effect; retain unknown and reconcile | нет | Inspect the typed refusal and resolve its stated capability, capacity, hold or evidence condition. | none | D31, REQ-CON-05 |
+| `billium.module.unavailable` | модуль не включён; отказ до custody и денежного эффекта | нет | не создавать новый ключ; исторический query может остаться | none | D55, D31, REQ-CON-05 |
+| `billium.auth.unauthenticated` | credential отсутствует или недействителен, до чтения ресурса | нет | исправить credential; тот же ключ допустим | none | REQ-CON-21, D31, M-45 |
 
 ## План fixtures
 

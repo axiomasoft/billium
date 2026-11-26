@@ -12,8 +12,10 @@ use Billium\Rating\Internal\Math\IntegerRounding;
 use Billium\Rating\Internal\Storage\RatingRows;
 use DateTimeImmutable;
 use DateTimeZone;
+use Packman\Attributes\Internal;
 use Throwable;
 
+#[Internal]
 final class ProrationCalculator
 {
     /** @return array{elapsed: string, total: string} */

@@ -8,6 +8,7 @@ use Billium\Ledger\Tests\Queries\QueryTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
 #[Group('ACC-RST-05')]
+#[Group('pg')]
 final class LostAllocationResponseTest extends QueryTestCase
 {
     public function test_lost_allocation_reply_replays_the_original_receipt_and_can_be_queried(): void

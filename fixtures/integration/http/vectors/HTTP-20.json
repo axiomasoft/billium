@@ -1,0 +1,118 @@
+{
+  "protocol": "billium.http.transcript.v1",
+  "id": "HTTP-20",
+  "title": "Denied and unknown operations have the same non-disclosing response",
+  "profile": "execution",
+  "sources": [
+    "D23",
+    "D31",
+    "D58"
+  ],
+  "steps": [
+    {
+      "op": "send",
+      "name": "admit",
+      "path": "/billium/v1/sellers/seller-a/payments/execute",
+      "scoped": true,
+      "body": {
+        "schema": "payment.execute.v1",
+        "commandKey": "00000000-0000-4100-8800-000000000001",
+        "operationRef": "root-a",
+        "operationKind": "charge",
+        "source": {
+          "context": "checkout",
+          "intentRef": "intent-a",
+          "orderRef": "order-a"
+        },
+        "executionProfile": "remote-billium",
+        "routingEpoch": 1,
+        "merchantAccountRef": "account-a",
+        "money": {
+          "amount": "1.00",
+          "currency": "RUB"
+        },
+        "bindingRevision": "merchant-a",
+        "requestedAt": "2026-11-17T00:00:00Z"
+      },
+      "expect": {
+        "status": 202,
+        "body.result": "accepted",
+        "body.receipt": "CommandAccepted",
+        "body.operationRef": "root-a"
+      }
+    },
+    {
+      "op": "snapshot",
+      "name": "before",
+      "expect": {
+        "counts.execution_operation": 1
+      }
+    },
+    {
+      "op": "send",
+      "name": "denied",
+      "path": "/billium/v1/sellers/seller-a/operations/find",
+      "scoped": true,
+      "body": {
+        "schema": "payment.find.v1",
+        "operationRef": "root-a"
+      },
+      "expect": {
+        "status": 403,
+        "body.code": "billium.auth.denied",
+        "body.receipt": "none"
+      },
+      "actor": "revoked"
+    },
+    {
+      "op": "send",
+      "name": "unknown",
+      "path": "/billium/v1/sellers/seller-a/operations/find",
+      "scoped": true,
+      "body": {
+        "schema": "payment.find.v1",
+        "operationRef": "never-admitted"
+      },
+      "expect": {
+        "status": 403,
+        "body.code": "billium.auth.denied",
+        "body.receipt": "none",
+        "responseDigest": {
+          "$ref": "denied.responseDigest"
+        }
+      }
+    },
+    {
+      "op": "snapshot",
+      "name": "after",
+      "expect": {
+        "counts": {
+          "$ref": "before.counts"
+        },
+        "events": {
+          "$ref": "before.events"
+        },
+        "receipts": {
+          "$ref": "before.receipts"
+        },
+        "operations": {
+          "$ref": "before.operations"
+        },
+        "attempts": {
+          "$ref": "before.attempts"
+        },
+        "inbox": {
+          "$ref": "before.inbox"
+        }
+      }
+    },
+    {
+      "op": "provider",
+      "name": "provider",
+      "expect": {
+        "calls.#": 0,
+        "lookups.#": 0
+      }
+    }
+  ]
+}

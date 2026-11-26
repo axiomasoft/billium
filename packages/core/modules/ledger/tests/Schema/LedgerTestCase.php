@@ -8,9 +8,9 @@ use Billium\Contracts\Data\Currency;
 use Billium\Contracts\Data\Money;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Ledger\Contracts\Ledger;
-use Billium\Ledger\Data\BillingAccountScope;
-use Billium\Ledger\Data\RecordCustomerCredit;
-use Billium\Ledger\Data\RecordObligation;
+use Billium\Ledger\Data\Credits\RecordCustomerCredit;
+use Billium\Ledger\Data\Obligations\RecordObligation;
+use Billium\Ledger\Data\Runtime\BillingAccountScope;
 use Billium\Platform\Tests\PlatformTestCase;
 use PDO;
 

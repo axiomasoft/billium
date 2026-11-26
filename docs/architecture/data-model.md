@@ -281,8 +281,9 @@ Correction is a literal purpose exclusively in billing_correction. Its obligated
 and original [start,end) are rechecked; original_period_ref is the stable period correlation
 derived from the parent occurrence. UNIQUE parent/revision and parent/source-frontier plus
 head CAS reject duplicates/reordering. Exact frontier replay is checked before head CAS.
-`CorrectionBasis::derive(parentOccurrenceRef, correctionRevision)` canonically binds the
-obligation basis. A correction can overlap only through its registered parent lineage and
+The installed `CorrectionBasisPolicy` binds the obligation basis: schedule's default accepts
+`CorrectionBasis::derive(parentOccurrenceRef, correctionRevision)`, and rating replaces it with the
+ledger correction basis of the rated predecessor it books. A correction can overlap only through its registered parent lineage and
 never enters the normal scheduler/exclusion table. The outer P4.8 root owns rating/ledger work;
 registering lineage alone books no obligation (INV-11/12, D56/D63/FA03; owner schedule/rating).
 

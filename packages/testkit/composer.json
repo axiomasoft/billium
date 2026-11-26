@@ -1,0 +1,43 @@
+{
+    "name": "axiomasoft/billium-testkit",
+    "description": "Test-only deterministic Billium provider, receiver and recovery protocol fixtures.",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.4",
+        "axiomasoft/billium-collection": "^0.1",
+        "axiomasoft/billium-contracts": "^0.1",
+        "axiomasoft/billium-core": "^0.1",
+        "axiomasoft/billium-documents": "^0.1",
+        "axiomasoft/billium-execution": "^0.1",
+        "axiomasoft/billium-platform": "^0.1",
+        "axiomasoft/packman": "^0.1",
+        "laravel/framework": "^13.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Billium\\Testkit\\": "src/"
+        }
+    },
+    "extra": {
+        "packman": {
+            "schema-version": 1,
+            "package-type": "dev",
+            "dev_only": true,
+            "stability": "dev",
+            "owns": [
+                "Accounting",
+                "Coordinator",
+                "Documents",
+                "Drivers",
+                "Faults",
+                "Fiscal",
+                "Fixtures",
+                "Oracles",
+                "Restore"
+            ]
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

@@ -5,14 +5,15 @@ declare(strict_types=1);
 namespace Billium\Schedule\Internal;
 
 use Billium\Contracts\Enums\ProblemCode;
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Data\OperationSpec;
-use Billium\Core\Enums\FinancialMode;
-use Billium\Core\Enums\LockRank;
+use Billium\Core\Configuration\BilliumOptions;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Data\Runner\OperationSpec;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
+use Billium\Core\Enums\Runner\LockRank;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Schedule\Contracts\AgreementRevisionCommit;
 use Billium\Schedule\Contracts\AgreementRevisionGuard;
 use Billium\Schedule\Contracts\Clock;
@@ -24,7 +25,9 @@ use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
 use LogicException;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final readonly class DatabaseAgreementRevisionCommit implements AgreementRevisionCommit
 {
     public function __construct(
@@ -34,6 +37,7 @@ final readonly class DatabaseAgreementRevisionCommit implements AgreementRevisio
         private IntervalResolver $resolver,
         private AgreementRevisionGuard $guard,
         private Clock $clock,
+        private BilliumOptions $options,
     ) {}
 
     public function preview(ScheduleRevisionTerms $terms, int $ordinal, string $validUntil, string $commandKey): PeriodQuote
@@ -180,7 +184,7 @@ final readonly class DatabaseAgreementRevisionCommit implements AgreementRevisio
             ScheduleProblems::refuse('unsupported_pause_resume_transition');
         }
         if (Instants::utc($quote->period->start) < $coveredUntil
-            || ($terms->anchorPolicy === 'preserve' && $terms->action !== 'resume' && Instants::utc($quote->period->start) != $coveredUntil)) {
+            || ($terms->anchorPolicy === 'preserve' && $terms->action !== 'resume' && (Instants::utc($quote->period->start) <=> $coveredUntil) !== 0)) {
             ScheduleProblems::refuse('midperiod_or_backdated_correction_required');
         }
         if ($terms->anchorPolicy === 'preserve' && ($terms->anchorLocal !== $old->anchorLocal
@@ -230,10 +234,7 @@ final readonly class DatabaseAgreementRevisionCommit implements AgreementRevisio
 
     private function database(?string $connection = null): Connection
     {
-        $name = $connection ?? config('billium.connection') ?? config('database.default');
-        if (! is_string($name)) {
-            throw new LogicException('Schedule database connection must be configured');
-        }
+        $name = $connection ?? $this->options->connection ?? $this->databases->getDefaultConnection();
 
         return $this->databases->connection($name);
     }

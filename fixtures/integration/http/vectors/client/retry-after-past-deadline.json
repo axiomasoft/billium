@@ -1,0 +1,27 @@
+{
+  "protocol": "billium.client.prepared.v1",
+  "id": "retry-after-past-deadline",
+  "op": "send",
+  "sources": ["D31", "D58"],
+  "shared": true,
+  "maxAttempts": 2,
+  "deadlineMs": 500,
+  "jsonText": "{\"schema\":\"payment.execute.v1\",\"commandKey\":\"7e0c4a52-91d3-4b6f-8a25-c3d1e9f04b87\",\"operationRef\":\"op-8f3a21\",\"operationKind\":\"charge\",\"source\":{\"context\":\"commerz\",\"orderRef\":\"ord-10234\",\"intentRef\":\"int-10234-1\"},\"installationRef\":\"inst-eu-1\",\"environment\":\"test\",\"executionProfile\":\"remote-billium\",\"routingEpoch\":1,\"sellerRef\":\"seller-acme\",\"merchantAccountRef\":\"ma-main\",\"money\":{\"amount\":\"1490.00\",\"currency\":\"RUB\"},\"bindingRevision\":\"bind-7c91d0e2\",\"returnContextRef\":\"rc-10234\",\"requestedAt\":\"2026-10-17T12:00:00Z\"}",
+  "transport": [
+    {
+      "status": 503,
+      "headers": {"retry-after": "1"},
+      "body": "{\"code\":\"billium.transport.unavailable\",\"category\":\"transport\",\"retryable\":true,\"sameKey\":true,\"receipt\":\"none\",\"title\":\"Transport unavailable\",\"status\":503}"
+    }
+  ],
+  "expect": {
+    "outcome": "refused",
+    "error.code": "billium.transport.unavailable",
+    "error.receipt": "none",
+    "attempts.#": 1,
+    "waitedMs": 0,
+    "sameBytes": true,
+    "newKey": false,
+    "cancelInvoked": false
+  }
+}

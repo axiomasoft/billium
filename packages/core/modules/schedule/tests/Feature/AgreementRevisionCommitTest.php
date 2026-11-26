@@ -12,7 +12,9 @@ use Billium\Schedule\Internal\UnboundAgreementRevisionGuard;
 use Billium\Schedule\Tests\ScheduleTestCase;
 use Billium\Schedule\Tests\Support\Terms;
 use DateTimeImmutable;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class AgreementRevisionCommitTest extends ScheduleTestCase
 {
     public function test_expired_quote_is_refused_without_financial_change(): void

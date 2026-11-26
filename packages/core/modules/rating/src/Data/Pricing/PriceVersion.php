@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Billium\Rating\Data\Pricing;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Rating\Enums\RoundingMode;
 use Billium\Rating\Enums\RoundingStage;
 use Billium\Rating\Enums\StrategyId;
+use Packman\Attributes\Api;
 
 #[Api]
 final readonly class PriceVersion

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Build spec/identities.json and spec/identities/snapshots/<kind>.json from a spec revision (M-27, M-28).
+"""Build spec/identities.json and spec/identities/snapshots/<kind>.json from a spec revision.
 
 The registry is the frozen-identity ledger: every envelope, envelope field, problem code, event type,
-operation status, invoice status and the spec revision itself; config keys, migration identities and doctor
-findings are also tracked. Migration/config identities come from their product files, doctor
-findings from spec/modules.json (P3.13). Entries are appended with status "new";
+operation status, invoice status and the spec revision itself; config keys, migration identities, route names and doctor
+findings are also tracked. Migration, config and route identities come from their product files, doctor
+findings from spec/modules.json. Entries are appended with status "new";
 an entry that disappears from the sources must be kept with status "retired" by hand, otherwise
 the check fails. Snapshots are sorted id lists of the live (not retired) entries per kind.
 
@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -29,27 +30,34 @@ MODULES = ROOT / "spec/modules.json"
 
 
 def product_identities(root: Path) -> dict[tuple[str, str], str]:
-    """Read real migration basenames and flattened PHP config, never drill migrations (M-28)."""
+    """Read real migration basenames, flattened PHP config and named server routes."""
     found: dict[tuple[str, str], str] = {}
     for path in sorted((root / 'packages/core/database/migrations').rglob('*.php')):
         key = ('migration', path.stem)
         if key in found:
             raise IdentityError(f'duplicate migration identity {path.stem}: {found[key]} and {path.relative_to(root)}')
         found[key] = path.relative_to(root).as_posix()
-    config = 'packages/core/config/billium.php'
-    # Standalone config may call Laravel env(); bootstrap the same helper without booting an application.
-    result = subprocess.run(['php', '-r', 'require "vendor/autoload.php"; echo json_encode(require "' + config + '", JSON_THROW_ON_ERROR);'],
-                            cwd=root, capture_output=True, text=True, check=True)
-
-    def walk(value: object, prefix: str) -> None:
+    def walk(value: object, prefix: str, config: str) -> None:
         if isinstance(value, dict) and value:
             for key, item in value.items():
-                walk(item, prefix + '.' + key)
+                walk(item, prefix + '.' + key, config)
         else:
             # Lists are values (enabled modules, allow-lists), not public numeric config keys.
             found[("config-key", prefix)] = config
 
-    walk(json.loads(result.stdout), 'billium')
+    for config in ['packages/core/config/billium.php', 'packages/server/config/billium-server.php']:
+        # Standalone config may call Laravel env(); load the helper without booting an application.
+        result = subprocess.run(['php', '-r', 'require "vendor/autoload.php"; echo json_encode(require $argv[1], JSON_THROW_ON_ERROR);', config],
+                                cwd=root, capture_output=True, text=True, check=True)
+        walk(json.loads(result.stdout), Path(config).stem, config)
+    routes = 'packages/server/routes/http.php'
+    route_source = root / routes
+    if route_source.is_file():
+        for name in re.findall(r"->name\('([^']+)'\)", route_source.read_text(encoding='utf-8')):
+            key = ('route', name)
+            if key in found:
+                raise IdentityError(f'duplicate route identity {name}: {routes}')
+            found[key] = routes
     return found
 
 
@@ -90,6 +98,10 @@ def collect(directory: Path) -> dict[tuple[str, str], dict[str, str]]:
         prefix = f"{envelope.schema}#/$defs/{variant}" if variant else f"{envelope.schema}#"
         for member in envelope.members:
             add("envelope-field", f"{prefix}/properties/{member.name}", source)
+        document = revision.documents[revision.document_id(envelope.source)]
+        event_type = document.get("properties", {}).get("eventType", {}).get("const")
+        if isinstance(event_type, str):
+            add("event-type", event_type, source)
     for entry in revision.codes:
         add("problem-code", str(entry["code"]), f"{base}/problem-codes.json")
     defs = revision.documents[DEFS_ID.format(revision=rev)]["$defs"]  # type: ignore[index]
@@ -126,7 +138,7 @@ def merge(found: dict[tuple[str, str], dict[str, str]], previous: list[dict[str,
     for key in sorted(set(found) | set(old), key=lambda k: (KINDS.index(k[0]), k[1])):
         if key in old:
             entry = dict(old[key])
-            if key in found and key[0] in ('migration', 'config-key'):
+            if key in found and key[0] in ('migration', 'config-key', 'route'):
                 entry['source'] = found[key]['source']
             entries.append(entry)
         else:

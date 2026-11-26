@@ -1,0 +1,50 @@
+{
+    "schema": "packman-error-codes/1",
+    "package": "axiomasoft/billium-core",
+    "codes": [
+        {
+            "package": "axiomasoft/billium-core",
+            "enum": "Billium\\Core\\Errors\\BilliumCoreErrorCode",
+            "case": "LockOrderViolation",
+            "code": "billium.lock_order_violation",
+            "type": "urn:packman:problem:billium.lock_order_violation",
+            "status": 500,
+            "title": "Lock acquisition violated the global lock order.",
+            "retryable": false,
+            "category": "internal"
+        },
+        {
+            "package": "axiomasoft/billium-core",
+            "enum": "Billium\\Core\\Errors\\BilliumCoreErrorCode",
+            "case": "LockPlanChanged",
+            "code": "billium.lock_plan_changed",
+            "type": "urn:packman:problem:billium.lock_plan_changed",
+            "status": 409,
+            "title": "Locked row set changed after pre-read; retry root operation.",
+            "retryable": true,
+            "category": "conflict"
+        },
+        {
+            "package": "axiomasoft/billium-core",
+            "enum": "Billium\\Core\\Errors\\BilliumCoreErrorCode",
+            "case": "ModuleAdmissionRefused",
+            "code": "billium.module_admission_refused",
+            "type": "urn:packman:problem:billium.module_admission_refused",
+            "status": 503,
+            "title": "Module admission refused.",
+            "retryable": false,
+            "category": "unavailable"
+        },
+        {
+            "package": "axiomasoft/billium-core",
+            "enum": "Billium\\Core\\Errors\\BilliumCoreErrorCode",
+            "case": "TransitionRefused",
+            "code": "billium.transition_refused",
+            "type": "urn:packman:problem:billium.transition_refused",
+            "status": 409,
+            "title": "Session or module transition refused.",
+            "retryable": false,
+            "category": "conflict"
+        }
+    ]
+}

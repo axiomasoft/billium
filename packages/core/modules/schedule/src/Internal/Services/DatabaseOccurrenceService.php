@@ -4,11 +4,21 @@ declare(strict_types=1);
 
 namespace Billium\Schedule\Internal\Services;
 
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Exceptions\LockPlanChanged;
+use Billium\Contracts\Contracts\Codec;
+use Billium\Contracts\Data\Envelopes\CommandReceipt;
+use Billium\Contracts\Data\Envelopes\EnsureBillingOccurrence;
+use Billium\Contracts\Enums\ProblemCode;
+use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Data\Runner\StoredOutcome;
+use Billium\Core\Exceptions\Runner\LockPlanChanged;
+use Billium\Platform\Contracts\Idempotency\IdempotencyReceiptQueries;
+use Billium\Platform\Data\Idempotency\PinnedCommand;
 use Billium\Schedule\Contracts\IntervalResolver;
 use Billium\Schedule\Contracts\OccurrenceService;
+use Billium\Schedule\Contracts\PinnedOccurrenceInputs;
 use Billium\Schedule\Data\Commands\ApplyScheduleRevision;
 use Billium\Schedule\Data\Commands\CancelSchedule;
 use Billium\Schedule\Data\Commands\EnsureOccurrence;
@@ -28,23 +38,54 @@ use Billium\Schedule\Internal\Payload;
 use Billium\Schedule\Internal\Storage\OccurrenceStore;
 use DateTimeImmutable;
 use LogicException;
+use Packman\Attributes\Internal;
 use stdClass;
 
+#[Internal]
 final readonly class DatabaseOccurrenceService implements OccurrenceService
 {
     public function __construct(
         private OperationRunner $runner, private ScheduleOperations $operations,
         private ScheduleLockRequests $locks, private OccurrenceStore $store, private IntervalResolver $resolver,
+        private CallerContext $callers, private IdempotencyReceiptQueries $receipts,
     ) {}
 
     public function ensureOccurrence(EnsureOccurrence $command): OccurrenceReceipt
     {
+        return new OccurrenceReceipt($this->ensure($command)->orThrow()->body);
+    }
+
+    public function ensureBillingOccurrence(EnsureBillingOccurrence $command, PinnedOccurrenceInputs $inputs): CommandReceipt
+    {
+        $codec = new Codec;
+        $command = $codec->decode($codec->encode($command));
+        assert($command instanceof EnsureBillingOccurrence);
+        $wire = new PinnedCommand($this->callers->current(), $command, $command->installationRef, $command->sellerRef, $command->environment, $command->commandKey);
+        $stored = $this->receipts->replayCommand($wire->scope, $wire->kind(), $wire->key, $wire->inputDigest);
+        if ($stored !== null) {
+            return $wire->result($stored);
+        }
+        $pinned = $inputs->resolve($wire->scope, $command) ?? throw new ProblemException(ProblemCode::ReferenceUnknown);
+        if ($pinned->sellerRef !== $command->sellerRef || $pinned->environment !== $command->environment
+            || $pinned->componentRef !== $command->componentRef || $pinned->purpose->value !== $command->purpose
+            || $pinned->scheduleRevision !== $command->scheduleRevision
+            || OccurrenceTime::format($pinned->periodStart) !== OccurrenceTime::format(new DateTimeImmutable(Payload::text($command->interval->start)))
+            || OccurrenceTime::format($pinned->periodEnd) !== OccurrenceTime::format(new DateTimeImmutable(Payload::text($command->interval->end)))) {
+            throw new ProblemException(ProblemCode::AuthDenied);
+        }
+
+        return $wire->result($this->ensure($pinned, $wire));
+    }
+
+    private function ensure(EnsureOccurrence $command, ?PinnedCommand $wire = null): StoredOutcome
+    {
         $this->validate($command);
         $ref = $this->ref($command);
-        $outcome = $this->runner->run(
+
+        return $this->runner->run(
             spec: $this->operations->spec(kind: 'occurrence.ensure.v1', seller: $command->sellerRef,
-                environment: $command->environment, key: $command->commandKey, payload: $command),
-            body: function (TransactionContext $context) use ($command, $ref): OccurrenceReceipt {
+                environment: $command->environment, key: $wire->key ?? $command->commandKey, payload: $command, wire: $wire),
+            body: PinnedCommand::retaining($wire, function (TransactionContext $context) use ($command, $ref): OccurrenceReceipt {
                 $this->runner->assertCurrent(context: $context, moduleId: 'schedule');
                 $context->lock(ScheduleLockRequests::schedule($command->scheduleRef));
                 $head = $this->runnable(context: $context, ref: $command->scheduleRef);
@@ -66,10 +107,8 @@ final readonly class DatabaseOccurrenceService implements OccurrenceService
                 }
 
                 return $this->store->ensure(context: $context, command: $command, ref: $ref, head: $head);
-            },
-        )->orThrow();
-
-        return new OccurrenceReceipt($outcome->body);
+            }),
+        );
     }
 
     public function applyScheduleRevision(ApplyScheduleRevision $command): OccurrenceReceipt
@@ -127,7 +166,8 @@ final readonly class DatabaseOccurrenceService implements OccurrenceService
                         digest: $command->inputsDigest, ordinal: Payload::integer($row->ordinal));
                     $replacementRef = $this->ref($ensure);
                     $changes[] = [$row, $ensure, $replacement, $replacementRef];
-                    array_push($refs, Payload::text($row->occurrence_ref), $replacementRef);
+                    $refs[] = Payload::text($row->occurrence_ref);
+                    $refs[] = $replacementRef;
                 }
                 $this->locks->acquire(context: $context, occurrenceRefs: $refs);
                 // Posting may have won rank 50 while revision was planning. Re-plan this root, never supersede it.
@@ -138,8 +178,12 @@ final readonly class DatabaseOccurrenceService implements OccurrenceService
                     'schedule_id' => $head->id, 'revision' => $command->newRevision, 'terms_digest' => $terms->digest(),
                     'inputs_digest' => $command->inputsDigest, 'terms' => Canonical::encode($terms->toArray()),
                     'effective_from' => OccurrenceTime::format($command->effectiveFrom)]);
-                [, $applicableTerms, $next] = $this->applicableInterval(context: $context, head: $head, ordinal: Payload::integer($head->cursor_ordinal),
-                    start: new DateTimeImmutable(Payload::text($head->next_occurrence_at ?? $next->start)));
+                $ordinal = Payload::integer($head->cursor_ordinal);
+                [, $applicableTerms, $next] = $this->applicableInterval(context: $context, head: $head, ordinal: $ordinal,
+                    start: $this->cursorHint(context: $context, head: $head, ordinal: $ordinal, fallback: $next->start));
+                // A resume effective after the parked period must bill that later due interval, not stay paused on it.
+                [$ordinal, $applicableTerms, $next] = $this->skipPausedCursor(context: $context, head: $head, command: $command,
+                    ordinal: $ordinal, applicableTerms: $applicableTerms, next: $next);
                 $this->store->query(table: 'billing_schedule', context: $context)->where('id', $head->id)
                     ->update(['current_revision' => $command->newRevision, 'state' => 'active', 'runnable' => true,
                         'next_occurrence_at' => $next->start]);
@@ -183,7 +227,7 @@ final readonly class DatabaseOccurrenceService implements OccurrenceService
                 $paused = $applicableTerms->action === 'pause';
                 $version = $created ? 1 : Payload::integer($head->row_version) + 1;
                 $this->store->query(table: 'billing_schedule', context: $context)->where('id', $head->id)->update([
-                    'next_occurrence_at' => $paused ? null : $next->start, 'state' => $paused ? 'paused' : 'active',
+                    'cursor_ordinal' => $ordinal, 'next_occurrence_at' => $paused ? null : $next->start, 'state' => $paused ? 'paused' : 'active',
                     'runnable' => ! $paused, 'row_version' => $version, 'attempts' => 0, 'retry_at' => null,
                     'claim_token' => null, 'claim_expires_at' => null]);
                 $receipt = new OccurrenceReceipt(['scheduleRef' => $command->scheduleRef, 'scheduleRevision' => $command->newRevision,
@@ -265,7 +309,13 @@ final readonly class DatabaseOccurrenceService implements OccurrenceService
                     digest: Payload::text($revision->inputs_digest), ordinal: $ordinal);
                 $ref = $this->ref($ensure);
                 $this->locks->acquire(context: $context, occurrenceRefs: [$ref]);
-                $receipt = $this->store->ensure(context: $context, command: $ensure, ref: $ref, head: $head, evidence: $period->toArray());
+                $existing = $this->store->occurrence(ref: $ref, context: $context);
+                // Revision processing retains rated and obligated intervals for amendment.
+                $retained = $existing !== null && $existing->schedule_id === $head->id && $existing->ordinal === $ordinal
+                    && in_array($existing->state, ['rated', 'obligated'], true);
+                $receipt = $retained
+                    ? $this->store->receipt(row: $existing, created: false)
+                    : $this->store->ensure(context: $context, command: $ensure, ref: $ref, head: $head, evidence: $period->toArray());
                 $complete = $ordinal === 100000;
                 $paused = false;
                 $next = null;
@@ -319,6 +369,56 @@ final readonly class DatabaseOccurrenceService implements OccurrenceService
         return new OccurrenceReceipt($outcome->body);
     }
 
+    private function cursorHint(TransactionContext $context, stdClass $head, int $ordinal, string $fallback): DateTimeImmutable
+    {
+        if ($head->next_occurrence_at !== null) {
+            return new DateTimeImmutable(Payload::text($head->next_occurrence_at));
+        }
+        $row = $this->store->database($context)->table('billium_schedule_billing_schedule_revision')
+            ->where('schedule_id', $head->id)->where('revision', Payload::integer($head->current_revision))->first();
+        if ($row === null) {
+            return new DateTimeImmutable($fallback);
+        }
+        $previous = ScheduleRevisionTerms::fromArray(Payload::decode($row->terms));
+
+        return new DateTimeImmutable($this->resolver->resolve(terms: $previous, ordinal: $ordinal)->start);
+    }
+
+    /** @return array{int, ScheduleRevisionTerms, ResolvedInterval} */
+    private function skipPausedCursor(TransactionContext $context, stdClass $head, ApplyScheduleRevision $command, int $ordinal, ScheduleRevisionTerms $applicableTerms, ResolvedInterval $next): array
+    {
+        if ($head->state !== 'paused' || $applicableTerms->action !== 'pause' || $command->terms->action !== 'resume'
+            || ! $this->sameCalendar($applicableTerms, $command->terms)
+            || $command->effectiveFrom <= new DateTimeImmutable($next->start)) {
+            return [$ordinal, $applicableTerms, $next];
+        }
+        $hint = $next;
+        $previousStart = new DateTimeImmutable($next->start);
+        for ($candidate = $ordinal + 1; $candidate <= 100000; $candidate++) {
+            [, $laterTerms, $later] = $this->applicableInterval(context: $context, head: $head, ordinal: $candidate,
+                start: new DateTimeImmutable($hint->end));
+            $laterStart = new DateTimeImmutable($later->start);
+            if ($laterStart <= $previousStart || ! $this->sameCalendar($applicableTerms, $laterTerms)) {
+                break;
+            }
+            if ($laterTerms->action !== 'pause') {
+                return [$candidate, $laterTerms, $later];
+            }
+            $hint = $later;
+            $previousStart = $laterStart;
+        }
+
+        return [$ordinal, $applicableTerms, $next];
+    }
+
+    private function sameCalendar(ScheduleRevisionTerms $left, ScheduleRevisionTerms $right): bool
+    {
+        return $left->anchorLocal === $right->anchorLocal && $left->policy->timezone === $right->policy->timezone
+            && $left->policy->frequency === $right->policy->frequency && $left->policy->intervalCount === $right->policy->intervalCount
+            && $left->policy->endOfMonth === $right->policy->endOfMonth && $left->policy->dstGapPolicy === $right->policy->dstGapPolicy
+            && $left->policy->dstFoldPolicy === $right->policy->dstFoldPolicy;
+    }
+
     private function applicableRevision(TransactionContext $context, stdClass $head, DateTimeImmutable $periodStart): stdClass
     {
         $query = $this->store->database($context)->table('billium_schedule_billing_schedule_revision')->where('schedule_id', $head->id);
@@ -343,7 +443,7 @@ final readonly class DatabaseOccurrenceService implements OccurrenceService
     private function runnable(TransactionContext $context, string $ref): stdClass
     {
         $head = $this->store->head(ref: $ref, context: $context);
-        if ($head === null || $head->state !== 'active' || ! $head->runnable) {
+        if ($head === null || $head->state !== 'active' || (bool) $head->runnable === false) {
             OccurrenceProblems::refuse('schedule.not_runnable');
         }
 

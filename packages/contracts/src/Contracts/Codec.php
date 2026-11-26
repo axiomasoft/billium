@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Billium\Contracts\Contracts;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Contracts\Data\Envelope;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Data\Problem;
@@ -13,15 +12,15 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Contracts\Internal\Jcs;
 use Billium\Contracts\Internal\Json;
 use Billium\Contracts\Internal\P4Wire;
-use Billium\Contracts\Internal\PaymentWire;
 use Billium\Contracts\Internal\SchemaValidator;
 use Billium\Contracts\Internal\Spec;
+use Packman\Attributes\Api;
 use stdClass;
 
 /**
  * Strict decode and canonical encode of the envelopes of the spec revision, plus the digest of D32.
  */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class Codec
 {
     /** @param list<string>|null $supportedSchemas Explicit client capabilities; null uses this generated revision. */
@@ -65,8 +64,6 @@ final readonly class Codec
             }
         }
 
-        PaymentWire::validate($value);
-
         $effect = $value->schema === 'payment.effect.outcome.v1' ? $value : ($value->schema === 'billium.event.v2' ? $value->payload : null);
         if ($effect instanceof stdClass && $effect->operationRef === $effect->originalOperationRef) {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'effect operationRef must differ from its root');
@@ -74,6 +71,16 @@ final readonly class Codec
         if ($value->schema === 'billium.event.v2' && $effect instanceof stdClass
             && ($value->sellerRef !== $effect->sellerRef || $value->aggregateRef !== $effect->operationRef || $value->revision !== $effect->revision)) {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'effect envelope identity differs from its payload');
+        }
+        $repair = $value->schema === 'billium.event.v3' ? $value->payload : null;
+        if ($repair instanceof stdClass && $value->aggregateRef !== $repair->repairRef) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'repair envelope aggregateRef differs from its payload');
+        }
+
+        $noEffect = $value->schema === 'billium.event.v4' ? $value->payload : null;
+        if ($noEffect instanceof stdClass
+            && ($value->aggregateRef !== $noEffect->operationRef || $value->revision !== $noEffect->revision)) {
+            throw new ProblemException(ProblemCode::ValidationInvalid, 'certified no-effect envelope identity differs from its payload');
         }
 
         $variant = $entry['variants'][0];

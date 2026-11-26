@@ -9,13 +9,18 @@ use Billium\Contracts\Data\Currency;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Ledger\Data\AdjustObligation;
-use Billium\Ledger\Data\AmendObligationDuePolicy;
-use Billium\Ledger\Data\DeclareSettlementIntent;
-use Billium\Ledger\Data\ObligationDuePolicy;
-use Billium\Ledger\Data\RecordCustomerCredit;
-use Billium\Ledger\Data\RecordObligation;
+use Billium\Ledger\Data\Credits\RecordCustomerCredit;
+use Billium\Ledger\Data\Obligations\AdjustObligation;
+use Billium\Ledger\Data\Obligations\AmendObligationDuePolicy;
+use Billium\Ledger\Data\Obligations\ObligationDuePolicy;
+use Billium\Ledger\Data\Obligations\RecordObligation;
+use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
+use DateTimeImmutable;
+use DateTimeZone;
+use LogicException;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class CommandPayload
 {
     /** @return array<string, mixed> */
@@ -24,28 +29,41 @@ final class CommandPayload
         $values = get_object_vars($command);
         unset($values['commandKey']);
         $values['scope'] = get_object_vars($command->scope);
+        if ($command instanceof DeclareSettlementIntent) {
+            if ($command->requestedMinor === null) {
+                unset($values['requestedMinor']);
+            } else {
+                $values['requestedMinor'] = (string) $command->requestedMinor;
+            }
+        }
         if (isset($values['money']) && $values['money'] instanceof Money) {
             $values['money'] = ['minor' => (string) $values['money']->minor, 'currency' => $values['money']->currency->code];
         }
         if (isset($values['duePolicy']) && $values['duePolicy'] instanceof ObligationDuePolicy) {
             $policy = $values['duePolicy'];
             $values['duePolicy'] = [
-                'dueAt' => $policy->dueAt?->format('Y-m-d\TH:i:s.uP'),
+                'dueAt' => self::instant($policy->dueAt),
                 'version' => $policy->duePolicyVersion, 'source' => $policy->sourcePolicyRef,
                 'digest' => $policy->sourcePolicySnapshotDigest,
-                'eligibleAt' => $policy->collectionEligibleAt?->format('Y-m-d\TH:i:s.uP'),
+                'eligibleAt' => self::instant($policy->collectionEligibleAt),
             ];
         }
 
         $payload = [];
         foreach ($values as $key => $value) {
             if (! is_string($key)) {
-                throw new \LogicException('Command field must be named');
+                throw new LogicException('Command field must be named');
             }
             $payload[$key] = $value;
         }
 
         return $payload;
+    }
+
+    /** The digest names the instant, not the offset it was written in: the same due time replays from any timezone. */
+    private static function instant(?DateTimeImmutable $time): ?string
+    {
+        return $time?->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.uP');
     }
 
     public static function digest(RecordObligation|AdjustObligation|AmendObligationDuePolicy|RecordCustomerCredit|DeclareSettlementIntent $command): string

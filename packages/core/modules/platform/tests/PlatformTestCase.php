@@ -4,19 +4,21 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Tests;
 
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Contracts\FinancialSessionAdmission;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\OperationSpec;
-use Billium\Core\Enums\FinancialMode;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
+use Billium\Core\Data\Runner\OperationSpec;
+use Billium\Core\Data\Runtime\FinancialScope;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Tests\DatabaseTestCase;
 use Billium\Core\Tests\Support\FixedCallerContext;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Core\Tests\TestEnvironment;
-use Billium\Platform\Contracts\Installation;
-use Billium\Platform\Data\PlatformReceipt;
+use Billium\Platform\Contracts\Installation\Installation;
+use Billium\Platform\Data\Installation\PlatformReceipt;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Application;
@@ -35,6 +37,8 @@ abstract class PlatformTestCase extends DatabaseTestCase
 
     protected FixedSessionAdmission $tokens;
 
+    protected SimulatedFinancialAuthorityEvidence $authority;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -42,6 +46,7 @@ abstract class PlatformTestCase extends DatabaseTestCase
         $this->tokens = new FixedSessionAdmission;
         $this->application()->instance(CallerContext::class, $this->callers);
         $this->application()->instance(FinancialSessionAdmission::class, $this->tokens);
+        $this->authority = SimulatedFinancialAuthorityEvidence::install($this->application());
         self::createEffectTable();
     }
 
@@ -78,9 +83,12 @@ abstract class PlatformTestCase extends DatabaseTestCase
     {
         $installation = $this->installation();
         $installation->init(self::INSTALLATION);
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('open', 'open-1', ['owner-1', 1, 1, 1, 'evidence:open-1']);
         $installation->openSession('open-1', 'owner-1', 1, 1, 1, 'evidence:open-1');
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('activate', 'activate-1', [1, 'certificate:1', 'admission:1', 'evidence:activate-1']);
         $installation->activateSession('activate-1', 1, 'certificate:1', 'admission:1', 'evidence:activate-1');
         $this->tokens->set(FixedSessionAdmission::token(self::INSTALLATION));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($this->application());
     }
 
     protected function application(): Application
@@ -109,12 +117,13 @@ abstract class PlatformTestCase extends DatabaseTestCase
         ?string $commit = 'ledger.test_effect',
         ?string $seller = null,
         ?string $environment = null,
+        ?FinancialScope $financialScope = null,
     ): OperationSpec {
         $caller = $this->callers->current();
 
         return new OperationSpec(
             $kind, $seller ?? $caller->sellerRef, $environment ?? $caller->environment, $mode, $class, $modules,
-            $key, $key === null ? null : ($digest ?? 'sha256:'.str_repeat('a', 64)), $mode->financial() ? $commit : null,
+            $key, $key === null ? null : ($digest ?? 'sha256:'.str_repeat('a', 64)), $mode->financial() ? $commit : null, $financialScope,
         );
     }
 

@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Billium\Rating\Internal\Storage;
 
 use LogicException;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class RatingRows
 {
     public static function nullableText(mixed $value): ?string

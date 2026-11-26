@@ -5,19 +5,64 @@ declare(strict_types=1);
 namespace Billium\Usage\Tests\Feature;
 
 use Billium\Contracts\Contracts\Codec;
+use Billium\Contracts\Data\Envelopes\UsageFact;
 use Billium\Contracts\Data\Envelopes\UsageFactV2;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Data\Caller;
+use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Tests\Support\FixtureValues;
+use Billium\Usage\Contracts\UsageFactV1Attribution;
+use Billium\Usage\Data\UsageFactV1Inputs;
 use Billium\Usage\Internal\UsageQueries;
 use Billium\Usage\Tests\Support\UsageFixtures;
 use Billium\Usage\Tests\UsageTestCase;
 use Illuminate\Database\QueryException;
+use PHPUnit\Framework\Attributes\Group;
 use stdClass;
 
+#[Group('pg')]
 final class UsageAdmissionTest extends UsageTestCase
 {
+    public function test_v1_fact_pins_original_attribution_and_replays_without_the_resolver(): void
+    {
+        $v2 = UsageFixtures::fact();
+        $caller = new Caller('seller-a', 'test', self::INSTALLATION, 'courier', ['tariffler']);
+        $this->callers->set($caller);
+        $snapshot = $this->mappings->resolve($caller, $v2);
+        self::assertNotNull($snapshot);
+        $inputs = $this->createMock(UsageFactV1Attribution::class);
+        $inputs->expects(self::exactly(2))->method('resolve')->with($caller, self::isInstanceOf(UsageFact::class))
+            ->willReturnCallback(static fn (Caller $caller, UsageFact $fact): UsageFactV1Inputs => new UsageFactV1Inputs(
+                $snapshot, $v2->provenance->sourceDigest, (object) ['kind' => 'decimal', 'quantity' => $fact->revision === 1 ? '10' : '999'],
+                $v2->grouping, $v2->billableStream, $fact->revision === 2 ? 'correction-2' : null));
+        $codec = new Codec;
+        $raw = ['schema' => UsageFact::SCHEMA, 'source' => $v2->source, 'factId' => $v2->factId, 'revision' => $v2->revision,
+            'sellerRef' => $v2->sellerRef, 'subjectRef' => $v2->attribution->subjectRef, 'metricRef' => $v2->metricRef,
+            'metricVersion' => $v2->metricVersion, 'semantics' => 'additive', 'unit' => $v2->unit, 'quantity' => '10.0000000000',
+            'interval' => $v2->interval, 'eventAt' => $v2->eventAt, 'observedAt' => $v2->eventAt,
+            'provenance' => (object) ['collector' => $v2->provenance->collector, 'version' => $v2->provenance->version, 'sourceRef' => $v2->provenance->sourceRef]];
+        $fact = $codec->decode($codec->canonicalize($raw + ['digest' => $codec->digest($raw)]));
+        self::assertInstanceOf(UsageFact::class, $fact);
+        self::assertSame('accepted', $this->usage()->acceptUsageFact($fact, $inputs)->result);
+        self::assertSame('duplicate', $this->usage()->acceptUsageFact($fact, $inputs)->result);
+        $raw['quantity'] = '999';
+        $changed = $codec->decode($codec->canonicalize($raw + ['digest' => $codec->digest($raw)]));
+        self::assertInstanceOf(UsageFact::class, $changed);
+        self::assertSame('conflict', $this->usage()->acceptUsageFact($changed, $inputs)->result);
+        self::assertSame(1, $this->rows('billium_usage_fact'));
+        self::assertSame($snapshot->mappingRef, $this->value('SELECT mapping_ref FROM billium_usage_fact'));
+        self::assertSame($snapshot->periodRef, $this->value('SELECT period_ref FROM billium_usage_fact'));
+        $originalDigest = $this->value('SELECT digest FROM billium_usage_fact');
+        $raw['revision'] = 2;
+        $raw['correctsFactId'] = $fact->factId;
+        $correction = $codec->decode($codec->canonicalize($raw + ['digest' => $codec->digest($raw)]));
+        self::assertInstanceOf(UsageFact::class, $correction);
+        self::assertSame('accepted', $this->usage()->acceptUsageFact($correction, $inputs)->result);
+        self::assertSame($originalDigest, $this->value("SELECT body::jsonb#>>'{correction,originalFactDigest}' FROM billium_usage_fact WHERE revision = 2"));
+        self::assertSame(2, $this->rows('billium_usage_fact', "mapping_ref = 'mapping-1'"));
+        self::assertSame(0, $this->rows('billium_money_commit_log'));
+    }
+
     public function test_same_fact_from_ten_couriers_returns_one_stored_receipt_and_no_money(): void
     {
         $first = $this->usage()->submitUsageFact(UsageFixtures::fact());

@@ -22,6 +22,7 @@ use PHPUnit\Framework\Attributes\TestWith;
  */
 #[Group('ACC-CON-16')]
 #[Group('REQ-FAIL-13')]
+#[Group('pg')]
 final class FeedPartitionApplyTest extends InboxTestCase
 {
     #[TestWith([false, 2])]

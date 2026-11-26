@@ -4,16 +4,31 @@ declare(strict_types=1);
 
 namespace Billium\Core\Internal\Modules;
 
-/** MAJOR.MINOR.PATCH only: module and core API versions are not package SemVer and carry no pre-release. */
+use Packman\Attributes\Internal;
+use Packman\Config\Exceptions\InvalidConfiguration;
+use Packman\Plugins\Data\Plugin\PluginManifest;
+
+/** MAJOR.MINOR.PATCH only: delegates SemVer parsing to Packman PluginManifest without pre-release/build tags. */
+#[Internal]
 final class Semver
 {
     public static function isValid(string $version): bool
     {
-        return preg_match('/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/', $version) === 1;
+        if ($version === '' || str_contains($version, '-') || str_contains($version, '+')) {
+            return false;
+        }
+
+        try {
+            new PluginManifest(id: 'billium.semver', version: $version);
+
+            return true;
+        } catch (InvalidConfiguration) {
+            return false;
+        }
     }
 
     public static function compare(string $left, string $right): int
     {
-        return array_map(intval(...), explode('.', $left)) <=> array_map(intval(...), explode('.', $right));
+        return version_compare($left, $right);
     }
 }

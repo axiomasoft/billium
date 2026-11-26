@@ -138,12 +138,16 @@ final class EventDeclarationTest extends ModuleTestCase
         $parsed = InternalCommandDeclaration::fromArray($command, 'test');
         self::assertSame('billium.command.v1', $parsed->commandSchema);
 
-        foreach ([['commandSchema' => 'billium.event.v1'], ['commandSchema' => 'billium.event.v2'], ['payloadSchemaDigest' => 'nope']] as $broken) {
+        foreach ([
+            ['must be billium.command.vN', ['commandSchema' => 'billium.event.v1']],
+            ['must be billium.command.vN', ['commandSchema' => 'billium.event.v2']],
+            ['sha256 digest are required', ['payloadSchemaDigest' => 'nope']],
+        ] as [$reason, $broken]) {
             try {
                 InternalCommandDeclaration::fromArray([...$command, ...$broken], 'test');
                 self::fail('accepted '.json_encode($broken));
-            } catch (InvalidArgumentException) {
-                $this->addToAssertionCount(1);
+            } catch (InvalidArgumentException $error) {
+                self::assertStringContainsString($reason, $error->getMessage());
             }
         }
 

@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace Billium\Ledger\Data\Views;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Contracts\Data\Currency;
 use Billium\Contracts\Data\Money;
 use DateTimeImmutable;
 use DateTimeZone;
 use LogicException;
+use Packman\Attributes\Api;
 use stdClass;
 
 /** D29/D60: lossless DB-to-query rendering; never float or a current pricing lookup. */
-#[Api]
+#[Api(since: '1.0')]
 final class LedgerView
 {
     public static function text(mixed $value): string

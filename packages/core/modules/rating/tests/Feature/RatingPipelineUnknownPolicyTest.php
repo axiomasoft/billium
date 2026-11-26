@@ -12,7 +12,9 @@ use Billium\Rating\Data\Rating\RatingHold;
 use Billium\Rating\Enums\BookingOutcome;
 use Billium\Rating\Enums\HoldReason;
 use Billium\Rating\Tests\RatingTestCase;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class RatingPipelineUnknownPolicyTest extends RatingTestCase
 {
     public function test_missing_price_and_tax_hold_without_zero_or_financial_rows(): void

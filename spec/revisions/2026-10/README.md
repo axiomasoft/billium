@@ -29,6 +29,10 @@ envelopes, `ERR` — ошибки, `EVT` — события и receipts, `CNF` �
 | schema | Файл | Направление |
 |:--|:--|:--|
 | `payment.execute.v1` | `schema/payment/execute.v1.json` | команда |
+| `payment.authorize.v1` | `schema/payment/authorize.v1.json` | команда |
+| `payment.capture.v1` | `schema/payment/capture.v1.json` | команда |
+| `payment.void_authorization.v1` | `schema/payment/void-authorization.v1.json` | команда |
+| `payment.execution_status.v1` | `schema/query/execution-status.v1.json` | ответ |
 | `payment.refund.v1` | `schema/payment/refund.v1.json` | команда |
 | `payment.cancel.v1` | `schema/payment/cancel.v1.json` | команда |
 | `payment.find.v1` | `schema/payment/find.v1.json` | запрос и ответ |
@@ -48,6 +52,8 @@ envelopes, `ERR` — ошибки, `EVT` — события и receipts, `CNF` �
 | `payment.effect.outcome.v1` | `schema/payment/effect-outcome.v1.json` | исход child (D63) |
 | `billium.event.catalog.v1` | `schema/event/catalog.v1.json` | pinned catalog (D63) |
 | `billium.event.v2` | `schema/event/event.v2.json` | negotiated событие (D63) |
+| `billium.event.v3` | `schema/execution/repair-event.v1.json` | зарегистрированное событие repair |
+| `billium.event.v4` | `schema/execution/certified-no-effect-event.v1.json` | подтверждённое сертификатом завершение без эффекта |
 | `billium.feed.selection.v1` | `schema/feed/selection.v1.json` | pinned подписка (D63) |
 | `billium.feed.page.v1` | `schema/feed/page.v1.json` | страница safe feed (D52, D63) |
 | `billium.feed.bootstrap.v1` | `schema/feed/bootstrap.v1.json` | snapshot с retention pin (D60, D63) |
@@ -62,6 +68,22 @@ envelopes, `ERR` — ошибки, `EVT` — события и receipts, `CNF` �
 | `occurrence.ensure.v2` | `schema/occurrence/ensure.v2.json` | frozen commercial period (D12, D56) |
 | `obligation.prepare.v2` | `schema/obligation/prepare.v2.json` | frozen RatedBasis (D56) |
 | `occurrence.no_charge.v1` | `schema/occurrence/no-charge.v1.json` | explicit no-charge receipt (D56) |
+| `receipt.find.v1` | `schema/receipt/find.v1.json` | запрос и ответ поиска receipt (D31, D58) |
+| `billium.capabilities.v1` | `schema/capabilities/capabilities.v1.json` | описание поддержанной семантики, не права (D57, D61, D63) |
+| `ledger.allocation_receipt.v1` | `schema/ledger/allocation-receipt.v1.json` | ответ AllocationReceipt (INV-08, D31) |
+| `ledger.observation_custody.v1` | `schema/ledger/observation-custody.v1.json` | именованный custody parked, не бизнес-receipt (INV-08, D63) |
+| `billium.command_receipt.v1` | `schema/command/receipt.v1.json` | синхронный receipt prepare/ensure/authorize (D31) |
+| `billium.feed.open.v1` | `schema/feed/open.v1.json` | запрос pinned подписки (D63) |
+| `billium.feed.read.v1` | `schema/feed/read.v1.json` | запрос страницы по cursor (D63) |
+| `billium.feed.bootstrap_request.v1` | `schema/feed/bootstrap-request.v1.json` | запрос snapshot с тем же selection (D63) |
+| `billium.feed.bootstrap_ack.v1` | `schema/feed/bootstrap-ack.v1.json` | подтверждение durable snapshot и cursor (D60, D63) |
+| `ledger.obligation.v1` | `schema/query/obligation.v1.json` | ответ query obligation (REQ-CON-14) |
+| `ledger.invoice.v1` | `schema/query/invoice.v1.json` | ответ query invoice (REQ-CON-14) |
+| `ledger.allocations.v1` | `schema/query/allocations.v1.json` | ответ query allocationByOperation (REQ-CON-14) |
+| `ledger.refund_authorization.v1` | `schema/query/refund-authorization.v1.json` | ответ query refundAuthorization (D35) |
+| `external.import.v1` | `schema/import/external.v1.json` | входящая запись external import (D71) |
+| `external.import.manifest.v1` | `schema/import/manifest.v1.json` | иммутабельный manifest экспорта источника (D71) |
+| `external.import.preview.v1` | `schema/import/preview.v1.json` | типизированный отчёт preview валидации import (D71) |
 
 Общие узлы: `schema/common/defs.json` (идентификаторы, время, digest, все перечисления),
 `schema/common/money-wire.json`, `schema/problem/problem.json`. Формат conformance:

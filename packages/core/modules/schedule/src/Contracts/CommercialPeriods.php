@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Billium\Schedule\Contracts;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Contracts\Data\Envelopes\CommercialPeriod;
 use Billium\Schedule\Data\PeriodQuote;
+use Packman\Attributes\Api;
 
 #[Api]
 interface CommercialPeriods

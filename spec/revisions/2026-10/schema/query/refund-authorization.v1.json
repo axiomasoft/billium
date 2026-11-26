@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-10:query/refund-authorization.v1.json",
+  "title": "RefundAuthorization",
+  "type": "object",
+  "required": [
+    "schema",
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "result",
+    "digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "ledger.refund_authorization.v1"
+    },
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "result": {
+      "type": "object",
+      "required": [
+        "paymentRef",
+        "normalCapacity",
+        "requested",
+        "requiredReallocation",
+        "financialHold",
+        "projectionStatus",
+        "allowed",
+        "advisory"
+      ],
+      "properties": {
+        "paymentRef": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+        },
+        "normalCapacity": {
+          "$ref": "urn:billium:spec:2026-10:common/money-wire.json"
+        },
+        "requested": {
+          "$ref": "urn:billium:spec:2026-10:common/money-wire.json#/$defs/nonNegative"
+        },
+        "requiredReallocation": {
+          "$ref": "urn:billium:spec:2026-10:common/money-wire.json#/$defs/nonNegative"
+        },
+        "financialHold": {
+          "type": "object",
+          "required": [
+            "active",
+            "reasonCodes",
+            "discrepancyRefs"
+          ],
+          "properties": {
+            "active": {
+              "type": "boolean"
+            },
+            "reasonCodes": {
+              "type": "array",
+              "items": {
+                "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+              }
+            },
+            "discrepancyRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+              }
+            }
+          }
+        },
+        "projectionStatus": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/projectionStatus"
+        },
+        "allowed": {
+          "type": "boolean"
+        },
+        "advisory": {
+          "const": true
+        }
+      }
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    }
+  }
+}

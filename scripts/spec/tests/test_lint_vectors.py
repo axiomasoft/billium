@@ -78,7 +78,7 @@ class LintVectorsTest(CorpusCopy):
         self.assert_red("expect length differs from script length")
 
     def test_unresolvable_spec_ref(self) -> None:
-        for ref in ("BC-ZZZ-99", "REQ-ZZZ-99", "D9999"):
+        for ref in ("BC-ZZZ-99", "REQ-ZZZ-99", "INV-99"):
             with self.subTest(ref=ref):
                 self.edit_vector("money/scale/parse-rub-1490-00", lambda d, ref=ref: d["spec_refs"].append(ref))
                 self.assert_red(f"spec_ref {ref} does not resolve")

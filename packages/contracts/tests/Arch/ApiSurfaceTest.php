@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
-use Billium\Contracts\Attributes\Api;
+use Packman\Attributes\Api;
+use Packman\Attributes\Internal;
+use Packman\Attributes\Spi;
 
 /**
  * Public types of the contracts package outside Internal, from the public API only (reflection).
@@ -31,10 +33,20 @@ arch('contracts do not depend on Laravel or Eloquent')
     ->expect('Billium\Contracts')
     ->not->toUse(['Illuminate', 'Eloquent']);
 
-arch('every public type outside Internal carries #[Api]')
-    ->expect('Billium\Contracts')
-    ->toHaveAttribute(Api::class)
-    ->ignoring('Billium\Contracts\Internal');
+arch('every Internal type carries #[Internal]')
+    ->expect('Billium\Contracts\Internal')
+    ->toHaveAttribute(Internal::class);
+
+it('marks every public type outside Internal with #[Api] or #[Spi]', function (): void {
+    $missing = [];
+    foreach (archPublicTypes() as $class) {
+        if ($class->getAttributes(Api::class) === [] && $class->getAttributes(Spi::class) === []) {
+            $missing[] = $class->getName();
+        }
+    }
+
+    expect($missing)->toBe([]);
+});
 
 it('keeps float out of public properties, parameters and return types', function (): void {
     $offenders = [];

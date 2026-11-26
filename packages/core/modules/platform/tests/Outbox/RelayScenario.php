@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Tests\Outbox;
 
-use Billium\Core\Contracts\EventPublisher;
+use Billium\Core\Contracts\Runtime\EventPublisher;
 use Billium\Core\Tests\Support\Concurrency\Scenario;
 use Billium\Platform\Internal\Outbox\OutboxRelay;
 use Illuminate\Database\DatabaseManager;

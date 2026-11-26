@@ -6,7 +6,9 @@ namespace Billium\Schedule\Internal\Errors;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class OccurrenceProblems
 {
     public static function refuse(string $detail, bool $stored = false): never

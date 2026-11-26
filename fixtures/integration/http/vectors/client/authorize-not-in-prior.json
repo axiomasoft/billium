@@ -1,0 +1,24 @@
+{
+  "protocol": "billium.client.prepared.v1",
+  "id": "authorize-not-in-prior",
+  "op": "prepare",
+  "sources": ["D57", "D59"],
+  "shared": false,
+  "jsonText": "{\"schema\":\"payment.authorize.v1\"}",
+  "expect": {
+    "outcome": "refused",
+    "error.code": "billium.validation.invalid",
+    "attempts.#": 0,
+    "cancelInvoked": false,
+    "newKey": false
+  },
+  "priorExpect": {
+    "outcome": "refused",
+    "error.code": "billium.schema.unsupported",
+    "error.receipt": "none",
+    "attempts.#": 0,
+    "prepared": null,
+    "cancelInvoked": false,
+    "newKey": false
+  }
+}

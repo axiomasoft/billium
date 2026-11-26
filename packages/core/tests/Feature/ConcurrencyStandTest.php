@@ -11,6 +11,7 @@ use PHPUnit\Framework\Attributes\Group;
 use RuntimeException;
 
 #[Group('REQ-ACC-11')]
+#[Group('pg')]
 final class ConcurrencyStandTest extends DatabaseTestCase
 {
     protected function setUp(): void

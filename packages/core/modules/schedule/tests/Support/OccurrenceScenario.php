@@ -5,18 +5,19 @@ declare(strict_types=1);
 namespace Billium\Schedule\Tests\Support;
 
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Contracts\FinancialSessionAdmission;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
 use Billium\Core\Tests\Support\Concurrency\Scenario;
 use Billium\Core\Tests\Support\FixedCallerContext;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Schedule\Contracts\OccurrenceService;
 use Billium\Schedule\Data\Commands\ApplyScheduleRevision;
 use Billium\Schedule\Data\Commands\CancelSchedule;
 use Billium\Schedule\Data\Commands\EnsureOccurrence;
 use Billium\Schedule\Data\Commands\MaterializeNext;
 use Billium\Schedule\Enums\OccurrencePurpose;
-use Billium\Schedule\Internal\ScheduleServiceProvider;
+use Billium\Schedule\Laravel\ScheduleServiceProvider;
 use DateTimeImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Application;
@@ -56,6 +57,7 @@ final class OccurrenceScenario implements Scenario
     {
         $app->instance(CallerContext::class, FixedCallerContext::default());
         $app->instance(FinancialSessionAdmission::class, new FixedSessionAdmission(FixedSessionAdmission::token()));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($app);
         $app->register(ScheduleServiceProvider::class);
     }
 }

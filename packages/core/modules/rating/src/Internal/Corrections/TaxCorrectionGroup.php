@@ -6,7 +6,9 @@ namespace Billium\Rating\Internal\Corrections;
 
 use Billium\Rating\Data\Tax\TaxSnapshot;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class TaxCorrectionGroup
 {
     /** @param list<TaxSnapshot> $snapshots */
@@ -17,6 +19,6 @@ final class TaxCorrectionGroup
         }
         $first = CanonicalJson::encode($snapshots[0]);
 
-        return array_all($snapshots, fn ($snapshot) => ! (CanonicalJson::encode($snapshot) !== $first));
+        return array_all($snapshots, fn ($snapshot): bool => CanonicalJson::encode($snapshot) === $first);
     }
 }

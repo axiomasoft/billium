@@ -7,10 +7,12 @@ namespace Billium\Contracts\Internal;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use JsonException;
+use Packman\Attributes\Internal;
 
 /**
  * The only JSON entry point of the package: objects stay stdClass so that "{}" and "[]" and numeric keys survive.
  */
+#[Internal]
 final class Json
 {
     /**

@@ -9,7 +9,9 @@ use Billium\Contracts\Data\Envelopes\CommercialPeriod;
 use Billium\Schedule\Contracts\CommercialPeriods;
 use Billium\Schedule\Data\PeriodQuote;
 use LogicException;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final readonly class CommercialPeriodExport implements CommercialPeriods
 {
     public function __construct(private Codec $codec) {}

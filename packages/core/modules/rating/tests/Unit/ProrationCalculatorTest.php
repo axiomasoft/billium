@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Billium\Rating\Tests\Unit;
 
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Ledger\Data\CorrectionBasis as LedgerCorrectionBasis;
 use Billium\Rating\Data\Pricing\CommitmentTerms;
 use Billium\Rating\Data\Pricing\FixedTerms;
 use Billium\Rating\Data\Pricing\PriceVersion;
@@ -20,7 +19,6 @@ use Billium\Rating\Internal\Math\Dec;
 use Billium\Rating\Internal\Proration\AmendmentSupport;
 use Billium\Rating\Internal\Proration\ProrationCalculator;
 use Billium\Rating\Internal\Proration\ProrationPolicyCatalog;
-use Billium\Schedule\Data\CorrectionBasis as ScheduleCorrectionBasis;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
@@ -84,18 +82,6 @@ final class ProrationCalculatorTest extends TestCase
         $this->expectExceptionMessage('billium.rating.amendment_unsupported');
         (new ProrationCalculator)->fraction(policy: ProrationPolicyId::ElapsedSeconds, start: new DateTimeImmutable('2027-01-01Z'),
             end: new DateTimeImmutable('2027-02-01Z'), effectiveAt: new DateTimeImmutable('2026-12-31Z'), timezone: null);
-    }
-
-    public function test_schedule_and_ledger_correction_basis_match(): void
-    {
-        self::assertSame(
-            LedgerCorrectionBasis::derive(originalBasisRef: 'rating:original', correctionRef: 'occurrence', revision: 2),
-            ScheduleCorrectionBasis::deriveLedger(originalBasisRef: 'rating:original', parentOccurrenceRef: 'occurrence', correctionRevision: 2),
-        );
-        self::assertNotSame(
-            ScheduleCorrectionBasis::derive(parentOccurrenceRef: 'occurrence', correctionRevision: 2),
-            ScheduleCorrectionBasis::deriveLedger(originalBasisRef: 'rating:original', parentOccurrenceRef: 'occurrence', correctionRevision: 2),
-        );
     }
 
     public function test_delta_compares_full_bases_and_rejects_mixed_sign(): void

@@ -9,7 +9,7 @@ use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Tests\Support\ObservationFactory;
 use Billium\Ledger\Contracts\LedgerQueries;
-use Billium\Ledger\Data\AdjustObligation;
+use Billium\Ledger\Data\Obligations\AdjustObligation;
 use Billium\Ledger\Tests\Commands\AllocationFixtures;
 use Billium\Ledger\Tests\Commands\InvoiceFixtures;
 use Billium\Ledger\Tests\Observation\ObservationTestCase;

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Billium CI gate (M-33): the single carrier of the gate composition.
+# Billium CI gate: the single carrier of the gate composition.
 # Run inside the toolchain image:
 #   docker compose run --rm toolchain bash scripts/ci.sh [--layer X | --list | --affected RANGE]
 # A layer without a subject is red; a missing tool is red, never a skip.
@@ -15,12 +15,12 @@ declare -A SUBJECTS=(
     [derived]="freshness of derived files"
     [php]="PHP packages"
     [dart]="Dart package"
-    [conformance]="cross-language vectors and golden"
+    [conformance]="cross-language vectors, server HTTP, archive compatibility, restore, import, consumer contracts and migration drills"
 )
 
 fail() {
     echo "ci: $*" >&2
-    return 1
+    exit 1
 }
 
 need_path() {
@@ -33,18 +33,34 @@ need_tool() {
 
 layer_lint() {
     need_tool python3
+    need_path scripts/ci/tests
+    python3 -m unittest discover -s scripts/ci/tests -p 'test_*.py'
     need_path "$SPEC_REV_DIR/schema"
     python3 scripts/spec/lint.py "$SPEC_REV_DIR"
-    python3 -m unittest discover -s scripts/spec/tests -p test_workspace.py
-    python3 -m unittest discover -s scripts/spec/tests -p test_spec_tools.py
     need_path scripts/spec/lint-vectors.py
-    python3 -m unittest discover -s scripts/spec/tests -p test_lint_vectors.py
+    need_path scripts/spec/check-module-compatibility.py
+    python3 -m unittest discover -s scripts/spec/tests -p 'test_*.py'
     python3 scripts/spec/lint-vectors.py
+    python3 scripts/spec/check-module-compatibility.py --check
     python3 -m unittest discover -s scripts/lint/tests -p 'test_migrations.py'
     python3 scripts/lint/migrations.py
     python3 -m unittest discover -s scripts/lint/tests -p 'test_acceptance_groups.py'
     python3 scripts/lint/acceptance-groups.py --phase P3
+    python3 scripts/lint/acceptance-groups.py --phase P5
     python3 -m unittest discover -s scripts/lint/tests -p 'test_product_identities.py'
+    need_path scripts/spec/check-import-contract.py
+    need_path scripts/spec/check-import-fixtures.py
+    need_path scripts/spec/check-integration-readiness.py
+    need_path conformance/consumers/bridge/check-report.py
+    need_path docs/migrations/source-mapping.json
+    need_path artifacts/integration-readiness.json
+    python3 scripts/spec/check-import-contract.py --check
+    python3 scripts/spec/check-import-contract.py --source-mappings docs/migrations/source-mapping.json
+    python3 scripts/spec/check-import-contract.py --handoff
+    python3 scripts/spec/check-import-fixtures.py
+    python3 -m unittest discover -s conformance/consumers/bridge/tests -p 'test_*.py'
+    python3 conformance/consumers/bridge/check-report.py --fixture conformance/consumers/bridge/tests/reports
+    python3 scripts/spec/check-integration-readiness.py --check artifacts/integration-readiness.json
 }
 
 layer_derived() {
@@ -58,31 +74,50 @@ layer_derived() {
         found=1
     done
     ((found == 1)) || fail "derived: no generator found under scripts/spec/"
+    need_path scripts/docs/source-index.py
+    need_path scripts/spec/check-server-api.py
+    python3 scripts/docs/source-index.py --check
+    python3 scripts/spec/check-server-api.py --check
 }
 
 layer_php() {
     need_tool composer
+    need_tool php
+    need_tool python3
     need_path vendor/bin/pest
+    need_path vendor/bin/packman
     local manifest
     composer validate --strict
-    for manifest in packages/*/composer.json; do
-        [[ -f "$manifest" ]] || fail "php: no packages/*/composer.json"
+    for manifest in packages/*/composer.json packages/core/modules/*/composer.json; do
+        [[ -f "$manifest" ]] || fail "php: missing manifest $manifest"
         composer validate --strict "$manifest"
     done
+    mkdir -p build/phpstan build/rector .phpunit.cache
     vendor/bin/pint --test
     vendor/bin/phpstan analyse --memory-limit=1G
     vendor/bin/rector process --dry-run
+    php -d memory_limit=1G vendor/bin/packman gate
+    php -d memory_limit=1G vendor/bin/packman php-api --check
+    php -d memory_limit=1G vendor/bin/packman error-codes --check
+    php -d memory_limit=1G vendor/bin/packman config-schema --check
     need_path scripts/db/preflight.php
-    php scripts/db/preflight.php
+    PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 php scripts/db/preflight.php
+    PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 php scripts/db/prepare-worker-template.php
     python3 -m unittest discover -s scripts/lint/tests -p test_test_discovery.py
     python3 scripts/lint/test-discovery.py
-    vendor/bin/pest
+    vendor/bin/pest --exclude-group=pg
+    # One database per worker; pg-serial tests depend on the cluster-wide transaction horizon and run alone.
+    PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 PACKMAN_TEST_DB_PER_PROCESS=1 vendor/bin/pest --group=pg --exclude-group=pg-serial --parallel --processes=8
+    PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 vendor/bin/pest --group=pg-serial
     need_path scripts/smoke/consumer-install.sh
     bash scripts/smoke/consumer-install.sh php
+    need_path scripts/smoke/server-install.sh
+    bash scripts/smoke/server-install.sh --profile ledger-only
 }
 
 layer_dart() {
     need_tool dart
+    need_tool python3
     need_path packages/contracts-dart/pubspec.yaml
     (
         cd packages/contracts-dart
@@ -100,13 +135,35 @@ layer_dart() {
 layer_conformance() {
     need_tool python3
     need_tool php
+    need_tool dart
     need_path conformance/runner/run.py
     need_path conformance/adapters.json
     need_path conformance/oracles/jcs/oracle.py
     python3 -m unittest discover -s conformance/tests
     python3 conformance/runner/run.py --check-golden
-    php conformance/adapters/php/bin/with-database-lease.php python3 conformance/runner/run.py --adapter php
+    PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 php conformance/adapters/php/bin/with-database-lease.php python3 conformance/runner/run.py --adapter php
+    (cd conformance/adapters/dart && dart pub get)
     python3 conformance/runner/run.py --adapter dart
+    need_path scripts/test/server-http.sh
+    need_path scripts/drills/server-restore.sh
+    need_path conformance/compatibility/matrix.json
+    need_path scripts/smoke/server-consumers.sh
+    need_path artifacts/server-readiness.json
+    python3 -m json.tool artifacts/server-readiness.json >/dev/null
+    bash scripts/test/server-http.sh --client php --suite required --report build/server-readiness/http-php.json
+    bash scripts/test/server-http.sh --client dart --suite required --report build/server-readiness/http-dart.json
+    python3 conformance/compatibility/run.py --matrix conformance/compatibility/matrix.json
+    bash scripts/smoke/server-consumers.sh
+    bash scripts/drills/server-restore.sh
+    need_path conformance/import/run.py
+    need_path scripts/test/consumer-contract.sh
+    need_path scripts/drills/integration-migration.sh
+    need_path artifacts/migration-drill-manifest.json
+    PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 python3 conformance/import/run.py --adapter php --suite all --report build/integration-readiness/import-php-all.json
+    python3 conformance/import/run.py --adapter dart --suite codec --report build/integration-readiness/import-dart-codec.json
+    PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1 bash scripts/test/consumer-contract.sh --boundary loopback --suite all --report build/integration-readiness/consumer-loopback.json
+    python3 conformance/consumers/bridge/check-report.py --report build/integration-readiness/consumer-loopback.json
+    bash scripts/drills/integration-migration.sh --suite all --report build/integration-readiness/migration-drills.json
 }
 
 list_layers() {
@@ -120,7 +177,7 @@ affected_layers() {
     local range="$1" zones changed
     need_tool python3
     need_path tests/zones.json
-    changed="$(git diff --name-only "$range")"
+    changed="$(git -c safe.directory='*' diff --name-only "$range")"
     ZONES_CHANGED="$changed" python3 - <<'PY'
 import fnmatch
 import json
@@ -148,13 +205,86 @@ run_layer() {
     "layer_$layer"
 }
 
+# lint, derived and dart do not take the PostgreSQL suite lease. php and conformance do,
+# and pg-serial stays inside php after the parallel pg workers.
+declare -gA LAYER_RESULT=()
+GATE_STATUS=0
+
+record_layer() {
+    local layer="$1" rc="$2"
+    if ((rc == 0)); then
+        LAYER_RESULT[$layer]=PASS
+    else
+        LAYER_RESULT[$layer]=FAIL
+    fi
+}
+
+run_layer_captured() {
+    local layer="$1" logfile="$2" rc
+    # errexit is ignored inside an `if`/`||` context, so the subshell runs as a plain statement.
+    set +e
+    (
+        set -e
+        run_layer "$layer"
+    ) </dev/null >"$logfile" 2>&1
+    rc=$?
+    set -e
+    cat "$logfile"
+    record_layer "$layer" "$rc"
+    ((rc == 0)) || GATE_STATUS=1
+}
+
+run_parallel() {
+    local logdir="$1"
+    shift
+    local layer rc i
+    local -a layers=("$@") pids=()
+    for layer in "${layers[@]}"; do
+        (
+            set -e
+            run_layer "$layer"
+        ) </dev/null >"$logdir/$layer.log" 2>&1 &
+        pids+=("$!")
+    done
+    for i in "${!layers[@]}"; do
+        layer="${layers[$i]}"
+        set +e
+        wait "${pids[$i]}"
+        rc=$?
+        set -e
+        cat "$logdir/$layer.log"
+        record_layer "$layer" "$rc"
+        ((rc == 0)) || GATE_STATUS=1
+    done
+}
+
+print_summary() {
+    local layer
+    echo "== summary =="
+    for layer in "${LAYERS[@]}"; do
+        if [[ -v "LAYER_RESULT[$layer]" ]]; then
+            echo "$layer: ${LAYER_RESULT[$layer]}"
+        fi
+    done
+}
+
 main() {
     local mode=all arg=""
     while (($# > 0)); do
         case "$1" in
-            --layer) mode=layer; arg="${2:-}"; shift 2 ;;
+            --layer)
+                (($# >= 2)) || fail "unknown layer: <empty>"
+                mode=layer
+                arg="$2"
+                shift 2
+                ;;
             --list) mode=list; shift ;;
-            --affected) mode=affected; arg="${2:-}"; shift 2 ;;
+            --affected)
+                (($# >= 2)) || fail "missing range for --affected"
+                mode=affected
+                arg="$2"
+                shift 2
+                ;;
             *) fail "unknown argument: $1" ;;
         esac
     done
@@ -164,39 +294,32 @@ main() {
         affected) affected_layers "$arg"; return 0 ;;
     esac
 
-    local selected=("${LAYERS[@]}") layer known
+    GATE_STATUS=0
+    local logdir
     if [[ "$mode" == layer ]]; then
-        known=0
+        local known=0 layer
         for layer in "${LAYERS[@]}"; do
             [[ "$layer" == "$arg" ]] && known=1
         done
         ((known == 1)) || fail "unknown layer: ${arg:-<empty>}"
-        selected=("$arg")
+        logdir="$(mktemp -d)"
+        run_layer_captured "$arg" "$logdir/$arg.log"
+        rm -rf "$logdir"
+        print_summary
+        return "$GATE_STATUS"
     fi
 
-    local status=0 rc
-    local -a summary=()
-    for layer in "${selected[@]}"; do
-        # errexit is ignored inside an `if`/`||` context, so the layer runs as a plain statement.
-        set +e
-        (
-            set -e
-            run_layer "$layer"
-        )
-        rc=$?
-        set -e
-        if ((rc == 0)); then
-            summary+=("$layer: PASS")
-        else
-            summary+=("$layer: FAIL")
-            status=1
-            break
-        fi
-    done
-
-    echo "== summary =="
-    printf '%s\n' "${summary[@]}"
-    return "$status"
+    logdir="$(mktemp -d)"
+    run_parallel "$logdir" lint derived dart
+    if ((GATE_STATUS == 0)); then
+        run_layer_captured php "$logdir/php.log"
+    fi
+    if ((GATE_STATUS == 0)); then
+        run_layer_captured conformance "$logdir/conformance.log"
+    fi
+    rm -rf "$logdir"
+    print_summary
+    return "$GATE_STATUS"
 }
 
 main "$@"

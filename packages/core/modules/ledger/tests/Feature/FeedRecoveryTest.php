@@ -19,6 +19,7 @@ use PHPUnit\Framework\Attributes\TestWith;
  */
 #[Group('PF-14')]
 #[Group('ACC-RST-07')]
+#[Group('pg')]
 final class FeedRecoveryTest extends ObservationTestCase
 {
     #[TestWith([1])]
@@ -47,7 +48,7 @@ final class FeedRecoveryTest extends ObservationTestCase
             VALUES('payment.observation','embedded-commerz','L2','seller-a','test','part-1',2,'active')
             SQL));
         $restored = ObservationFactory::charge('op-1', 2, 600, sequence: $sequence, fields: ['sourceLineage' => 'L2']);
-        self::assertSame(ProblemCode::RecoveryRequired->value, $this->attempt($restored));
+        self::assertSame(ProblemCode::RecoveryRequired->value, $this->tryObserve($restored));
         self::assertSame(1, $this->rows('billium_feed_partition'));
         self::assertSame('held_recovery', $this->inboxStatus(self::eventId($restored)));
         self::assertSame(300, $this->allocated('o1'));
@@ -63,7 +64,7 @@ final class FeedRecoveryTest extends ObservationTestCase
         $charge = ObservationFactory::charge('op-1', 1, 300);
         $this->observe($charge);
         $restored = ObservationFactory::charge('op-1', 2, 600, fields: ['sourceLineage' => 'L2']);
-        self::assertSame(ProblemCode::RecoveryRequired->value, $this->attempt($restored));
+        self::assertSame(ProblemCode::RecoveryRequired->value, $this->tryObserve($restored));
         $runtime = TestEnvironment::pdo();
         self::assertSame('55000', self::sqlState($runtime, "UPDATE billium_feed_partition SET state='retired'"));
         self::assertSame('recovery_required', $this->partition()['state']);
@@ -71,7 +72,7 @@ final class FeedRecoveryTest extends ObservationTestCase
             INSERT INTO billium_feed_partition(channel,source_authority,source_lineage,seller_ref,environment,partition_ref,generation,state)
             VALUES('payment.observation','embedded-commerz','L2','seller-a','test','part-1',2,'active')
             SQL));
-        self::assertSame(ProblemCode::RecoveryRequired->value, $this->attempt(ObservationFactory::with($restored, ['eventId' => (string) Str::ulid()])));
+        self::assertSame(ProblemCode::RecoveryRequired->value, $this->tryObserve(ObservationFactory::with($restored, ['eventId' => (string) Str::ulid()])));
         self::assertSame(300, $this->allocated('o1'));
         self::assertSame(1, $this->rows('billium_feed_partition'));
         $status = $this->bootstrapper()->execute($this->snapshot('boot-recovery', 'L2', 1, [$restored]));
@@ -91,7 +92,7 @@ final class FeedRecoveryTest extends ObservationTestCase
         $this->observe($applied);
 
         $restored = ObservationFactory::charge('op-1', 2, 2500, sequence: 3, fields: ['sourceLineage' => 'L2']);
-        self::assertSame(ProblemCode::RecoveryRequired->value, $this->attempt($restored));
+        self::assertSame(ProblemCode::RecoveryRequired->value, $this->tryObserve($restored));
         self::assertSame('recovery_required', $this->partition()['state']);
         self::assertSame(1000, $this->allocated('o1'), '0 effect while recovery is required');
         self::assertSame(1, self::integer($this->observedRow()['revision']));
@@ -125,8 +126,8 @@ final class FeedRecoveryTest extends ObservationTestCase
         $this->observe(ObservationFactory::charge('op-1', 2, 2000, sequence: 2));
 
         $regressed = ObservationFactory::charge('op-1', 3, 4000, sequence: 2, fields: ['eventId' => (string) Str::ulid()]);
-        self::assertSame(ProblemCode::RecoveryRequired->value, $this->attempt($regressed));
-        self::assertSame(ProblemCode::RecoveryRequired->value, $this->attempt(ObservationFactory::charge('op-1', 3, 4000, sequence: 3)), 'the tail is held');
+        self::assertSame(ProblemCode::RecoveryRequired->value, $this->tryObserve($regressed));
+        self::assertSame(ProblemCode::RecoveryRequired->value, $this->tryObserve(ObservationFactory::charge('op-1', 3, 4000, sequence: 3)), 'the tail is held');
 
         self::assertSame('recovery_required', $this->partition()['state']);
         self::assertSame(2000, $this->allocated('o1'));

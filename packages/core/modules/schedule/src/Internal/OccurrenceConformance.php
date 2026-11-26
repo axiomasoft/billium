@@ -14,9 +14,11 @@ use Billium\Schedule\Data\ScheduleRevisionTerms;
 use Billium\Schedule\Enums\OccurrencePurpose;
 use Billium\Schedule\Internal\Errors\OccurrenceProblems;
 use DateTimeImmutable;
+use Packman\Attributes\Internal;
 use stdClass;
 
 /** Module-owned test protocol dispatch; no second scheduler or monetary writer (D55/D56). */
+#[Internal]
 final readonly class OccurrenceConformance
 {
     public function __construct(private OccurrenceService $service) {}

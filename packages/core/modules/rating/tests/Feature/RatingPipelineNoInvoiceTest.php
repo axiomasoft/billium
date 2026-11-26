@@ -5,15 +5,21 @@ declare(strict_types=1);
 namespace Billium\Rating\Tests\Feature;
 
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Exceptions\ModuleAdmissionRefused;
+use Billium\Core\Configuration\BilliumOptions;
+use Billium\Core\Exceptions\Modules\ModuleAdmissionRefused;
+use Billium\Core\Tests\Support\UsesFreshProfileDatabase;
 use Billium\Rating\Contracts\PriceVersionStore;
 use Billium\Rating\Enums\BookingOutcome;
 use Billium\Rating\Tests\RatingTestCase;
 use Billium\Usage\Tests\Support\UsageFixtures;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class RatingPipelineNoInvoiceTest extends RatingTestCase
 {
+    use UsesFreshProfileDatabase;
+
     /** @return list<array{string}> */
     public static function lostEvidence(): array
     {
@@ -48,6 +54,7 @@ final class RatingPipelineNoInvoiceTest extends RatingTestCase
         $this->owner()->table('billium_module_state')->where('module_id', 'ledger')->update([
             'state' => 'draining', 'generation' => 2, 'last_transition_ref' => 'publication-disable']);
         config(['billium.modules.enabled' => ['platform', 'rating', 'usage', 'schedule']]);
+        $this->application()->forgetInstance(BilliumOptions::class);
         $this->application()->make(PriceVersionStore::class)->publish(
             price: $this->price(version: 2, fixed: '140'), commandKey: 'price-while-ledger-disabled');
         self::assertSame(BookingOutcome::Unposted, $this->book($this->prepared(priceVersion: 2))->outcome);
@@ -119,6 +126,7 @@ final class RatingPipelineNoInvoiceTest extends RatingTestCase
     {
         $prepared = $this->prepared();
         config(['billium.modules.enabled' => ['platform', 'rating', 'usage', 'schedule']]);
+        $this->application()->forgetInstance(BilliumOptions::class);
         // The disabled module is genuinely inadmissible, even if another root tried to include it.
         $this->owner()->table('billium_module_state')->where('module_id', 'ledger')->update(['state' => 'draining', 'generation' => 2, 'last_transition_ref' => 'test-disable']);
         $first = $this->book($prepared);
@@ -129,6 +137,7 @@ final class RatingPipelineNoInvoiceTest extends RatingTestCase
         self::assertSame($prepared->draft->ratedDigest, $this->prepared()->draft->ratedDigest);
         self::assertSame(1, $this->tax->calls);
         config(['billium.modules.enabled' => ['platform', 'ledger', 'rating', 'usage', 'schedule']]);
+        $this->application()->forgetInstance(BilliumOptions::class);
         $this->owner()->table('billium_module_state')->where('module_id', 'ledger')->update(['state' => 'accepting', 'generation' => 3, 'last_transition_ref' => 'test-enable']);
         $posted = $this->book(prepared: $prepared, key: 'post-after-enable');
         self::assertSame(BookingOutcome::Booked, $posted->outcome);

@@ -1,0 +1,104 @@
+{
+  "protocol": "billium.http.transcript.v1",
+  "id": "HTTP-18",
+  "title": "Effect-capable host with missing writer admission fails closed",
+  "profile": "execution",
+  "sources": [
+    "D55",
+    "D61",
+    "D62"
+  ],
+  "steps": [
+    {
+      "op": "snapshot",
+      "name": "before",
+      "expect": {
+        "counts.outbox_event": 2
+      }
+    },
+    {
+      "op": "disable_writer",
+      "name": "noWriter",
+      "expect": {}
+    },
+    {
+      "op": "send",
+      "name": "live",
+      "path": "/billium/live",
+      "expect": {
+        "status": 200
+      }
+    },
+    {
+      "op": "send",
+      "name": "notReady",
+      "path": "/billium/ready",
+      "expect": {
+        "status": 503
+      }
+    },
+    {
+      "op": "send",
+      "name": "blocked",
+      "path": "/billium/v1/sellers/seller-a/payments/execute",
+      "scoped": true,
+      "body": {
+        "schema": "payment.execute.v1",
+        "commandKey": "00000000-0000-4100-8800-000000000001",
+        "operationRef": "root-a",
+        "operationKind": "charge",
+        "source": {
+          "context": "checkout",
+          "intentRef": "intent-a",
+          "orderRef": "order-a"
+        },
+        "executionProfile": "remote-billium",
+        "routingEpoch": 1,
+        "merchantAccountRef": "account-a",
+        "money": {
+          "amount": "1.00",
+          "currency": "RUB"
+        },
+        "bindingRevision": "merchant-a",
+        "requestedAt": "2026-11-17T00:00:00Z"
+      },
+      "expect": {
+        "status": 503,
+        "body.code": "billium.transport.unavailable",
+        "body.receipt": "none"
+      }
+    },
+    {
+      "op": "snapshot",
+      "name": "after",
+      "expect": {
+        "counts": {
+          "$ref": "before.counts"
+        },
+        "events": {
+          "$ref": "before.events"
+        },
+        "receipts": {
+          "$ref": "before.receipts"
+        },
+        "operations": {
+          "$ref": "before.operations"
+        },
+        "attempts": {
+          "$ref": "before.attempts"
+        },
+        "inbox": {
+          "$ref": "before.inbox"
+        }
+      }
+    },
+    {
+      "op": "provider",
+      "name": "provider",
+      "expect": {
+        "calls.#": 0,
+        "lookups.#": 0
+      }
+    }
+  ]
+}

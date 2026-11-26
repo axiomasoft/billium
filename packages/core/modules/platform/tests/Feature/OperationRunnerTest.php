@@ -6,14 +6,14 @@ namespace Billium\Platform\Tests\Feature;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Data\Receipt;
-use Billium\Core\Enums\FinancialMode;
-use Billium\Core\Enums\LockRank;
-use Billium\Core\Exceptions\LockPlanChanged;
-use Billium\Platform\Contracts\Outbox;
-use Billium\Platform\Data\OutboxEvent;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Data\Runner\Receipt;
+use Billium\Core\Enums\Runner\LockRank;
+use Billium\Core\Enums\Runtime\FinancialMode;
+use Billium\Core\Exceptions\Runner\LockPlanChanged;
+use Billium\Platform\Contracts\Outbox\Outbox;
+use Billium\Platform\Data\Outbox\OutboxEvent;
 use Billium\Platform\Tests\PlatformTestCase;
 use DateTimeImmutable;
 use Illuminate\Database\QueryException;
@@ -24,6 +24,7 @@ use RuntimeException;
 
 #[Group('M-55')]
 #[Group('D31')]
+#[Group('pg')]
 final class OperationRunnerTest extends PlatformTestCase
 {
     protected function setUp(): void

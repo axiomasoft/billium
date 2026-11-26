@@ -9,9 +9,11 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Rating\Data\Rating\QuoteRequest;
 use Billium\Rating\Internal\Pipeline\RatingComputation;
 use Billium\Rating\Internal\Storage\FrozenInputsCodec;
+use Packman\Attributes\Internal;
 use stdClass;
 
 /** Testkit wire adapter for the pure quote lane; financial writes retain their typed root command. */
+#[Internal]
 final readonly class RatingConformance
 {
     public function __construct(private RatingComputation $computation) {}

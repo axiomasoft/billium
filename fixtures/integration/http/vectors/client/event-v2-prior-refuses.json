@@ -1,0 +1,21 @@
+{
+  "protocol": "billium.client.prepared.v1",
+  "id": "event-v2-prior-refuses",
+  "op": "prepare",
+  "sources": ["D63"],
+  "shared": false,
+  "fixture": "fixtures/vectors/event/v2/valid.json",
+  "fixturePointer": "script.0.args.json_text",
+  "expect": {
+    "outcome": "prepared",
+    "prepared.schema": "billium.event.v2",
+    "attempts.#": 0
+  },
+  "priorExpect": {
+    "outcome": "refused",
+    "error.code": "billium.schema.unsupported",
+    "error.receipt": "none",
+    "prepared": null,
+    "attempts.#": 0
+  }
+}

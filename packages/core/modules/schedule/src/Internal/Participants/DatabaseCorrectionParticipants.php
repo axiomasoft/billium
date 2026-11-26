@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Billium\Schedule\Internal\Participants;
 
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Schedule\Contracts\CorrectionBasisPolicy;
 use Billium\Schedule\Contracts\CorrectionParticipants;
 use Billium\Schedule\Data\Commands\RegisterCorrectionChild;
-use Billium\Schedule\Data\CorrectionBasis;
 use Billium\Schedule\Data\CorrectionReceipt;
 use Billium\Schedule\Internal\Canonical;
 use Billium\Schedule\Internal\Errors\OccurrenceProblems;
@@ -17,10 +17,13 @@ use Billium\Schedule\Internal\Operations\ScheduleOperations;
 use Billium\Schedule\Internal\Payload;
 use Billium\Schedule\Internal\Storage\OccurrenceStore;
 use DateTimeImmutable;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final readonly class DatabaseCorrectionParticipants implements CorrectionParticipants
 {
-    public function __construct(private OperationRunner $runner, private ScheduleLockRequests $locks, private OccurrenceStore $store) {}
+    public function __construct(private OperationRunner $runner, private ScheduleLockRequests $locks, private OccurrenceStore $store,
+        private CorrectionBasisPolicy $basis) {}
 
     public function registerCorrectionChild(TransactionContext $context, RegisterCorrectionChild $command): CorrectionReceipt
     {
@@ -31,11 +34,7 @@ final readonly class DatabaseCorrectionParticipants implements CorrectionPartici
         if ($c->sellerRef !== $caller->sellerRef || $c->environment !== $caller->environment
             || $c->correctionRevision < 1 || $c->predecessorRevision !== ($c->correctionRevision === 1 ? null : $c->correctionRevision - 1)
             || (($c->taxCorrectionPolicyRef === null) !== ($c->taxCorrectionPolicyVersion === null))
-            || ! in_array($c->obligationBasisRef, [
-                CorrectionBasis::derive(parentOccurrenceRef: $c->parentOccurrenceRef, correctionRevision: $c->correctionRevision),
-                CorrectionBasis::deriveLedger(originalBasisRef: $c->predecessorRatedBasisRef, parentOccurrenceRef: $c->parentOccurrenceRef, correctionRevision: $c->correctionRevision),
-                CorrectionBasis::deriveLedger(originalBasisRef: 'rating:'.$c->predecessorRatedBasisRef, parentOccurrenceRef: $c->parentOccurrenceRef, correctionRevision: $c->correctionRevision),
-            ], true)) {
+            || ! $this->basis->accepts($c)) {
             OccurrenceProblems::refuse('correction.conflict');
         }
         foreach ([$c->predecessorRatedBasisRef, $c->sourceFrontierDigest, $c->reasonCode, $c->obligationBasisRef] as $ref) {
@@ -45,8 +44,8 @@ final readonly class DatabaseCorrectionParticipants implements CorrectionPartici
         }
         $parent = $this->store->occurrence(ref: $c->parentOccurrenceRef, context: $context);
         if ($parent === null || ! in_array($parent->state, ['obligated', 'rated'], true) || $parent->rated_basis_ref === null
-            || new DateTimeImmutable(Payload::text($parent->period_start)) != $c->originalPeriodStart
-            || new DateTimeImmutable(Payload::text($parent->period_end)) != $c->originalPeriodEnd) {
+            || (new DateTimeImmutable(Payload::text($parent->period_start)) <=> $c->originalPeriodStart) !== 0
+            || (new DateTimeImmutable(Payload::text($parent->period_end)) <=> $c->originalPeriodEnd) !== 0) {
             OccurrenceProblems::refuse('correction.parent_invalid');
         }
         $digest = Canonical::digest(ScheduleOperations::payload($c));

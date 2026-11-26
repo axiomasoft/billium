@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Billium\Usage\Internal\Math;
 
 use InvalidArgumentException;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class IntegerRounding
 {
     /** @return numeric-string */

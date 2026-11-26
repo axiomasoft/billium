@@ -11,8 +11,10 @@ use Billium\Rating\Enums\StrategyId;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
 use Billium\Rating\Internal\Proration\QuantitySnapshotScope;
 use Billium\Rating\Internal\Storage\RatingRows;
+use Packman\Attributes\Internal;
 
 /** Synthetic occurrence and host-approved quantity inputs do not depend on metered usage (D55/D56). */
+#[Internal]
 final class FixedOccurrenceInput
 {
     public static function matches(FrozenAggregate $aggregate): bool

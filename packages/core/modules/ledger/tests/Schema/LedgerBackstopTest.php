@@ -9,7 +9,9 @@ use Billium\Ledger\Internal\Repositories\LedgerPrivileges;
 use Illuminate\Config\Repository;
 use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class LedgerBackstopTest extends LedgerTestCase
 {
     public function test_every_ledger_table_denies_runtime_raw_dml_and_all_journals_are_append_only(): void
@@ -72,6 +74,8 @@ final class LedgerBackstopTest extends LedgerTestCase
         self::assertSame('23514', self::sqlState($owner, "UPDATE billium_invoice SET metadata='{\"labels\":{\"token\":\"secret\"}}'"));
         self::assertSame('23514', self::sqlState($owner, "UPDATE billium_invoice SET metadata=jsonb_build_object('note',repeat('x',65537))"));
         self::assertNull(self::sqlState($owner, "UPDATE billium_invoice SET metadata='{\"note\":\"ok\",\"labels\":[]}'"));
+        self::assertSame('23514', self::sqlState($owner, "UPDATE billium_invoice SET metadata='{\"labels\":{\"apiKey\":\"sk_live\"}}'"));
+        self::assertNull(self::sqlState($owner, "UPDATE billium_invoice SET metadata='{\"labels\":{\"secret_ref\":\"secret://merchant/key\"}}'"));
         self::assertSame('P0001', self::sqlState($owner, 'UPDATE billium_obligation SET adjusted_minor=1,revision=revision+1'));
     }
 

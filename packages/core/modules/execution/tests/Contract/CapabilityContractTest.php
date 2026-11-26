@@ -4,199 +4,329 @@ declare(strict_types=1);
 
 namespace Billium\Execution\Tests\Contract;
 
-use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Enums\ProblemCode;
-use Billium\Execution\Contracts\CapabilityGate;
-use Billium\Execution\Contracts\PaymentDrivers;
-use Billium\Execution\Data\Ambiguous;
+use Billium\Contracts\Exceptions\ProblemException;
+use Billium\Execution\Data\AbsenceCertificate;
+use Billium\Execution\Data\AdapterQualificationManifest;
+use Billium\Execution\Data\CapabilityDetails;
 use Billium\Execution\Data\CapabilitySnapshot;
-use Billium\Execution\Data\CertifiedAbsent;
-use Billium\Execution\Data\DriverLookup;
-use Billium\Execution\Data\ExecutionBinding;
-use Billium\Execution\Data\QualificationManifest;
-use Billium\Execution\Data\Unavailable;
-use Billium\Execution\Data\UnsupportedCapability;
-use Billium\Execution\Enums\CapabilityRequirement;
+use Billium\Execution\Data\ExecutionScope;
+use Billium\Execution\Data\FrozenBinding;
+use Billium\Execution\Data\ProviderLookupResult;
+use Billium\Execution\Data\SecretRef;
+use Billium\Execution\Enums\CaptureMode;
+use Billium\Execution\Enums\DriverCapability;
+use Billium\Execution\Enums\EffectKind;
+use Billium\Execution\Enums\ProviderEvidenceMode;
+use Billium\Execution\Enums\ProviderLookupState;
+use Billium\Execution\Enums\QualificationMode;
 use DateTimeImmutable;
-use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use ReflectionMethod;
-use ReflectionUnionType;
 
+/**
+ * @phpstan-type DetailOverrides array{
+ *     version?: string, initiateWithIdempotency?: bool, initiateWithoutIdempotency?: bool,
+ *     idempotencyKeyScope?: string|null, idempotencyRetentionSeconds?: int|null, lookupByProviderId?: bool,
+ *     lookupVisibility?: string, lookupRetentionSeconds?: int|null, captureMode?: CaptureMode,
+ *     multipleRefund?: bool, refundLookup?: bool, signedCallbacks?: bool,
+ *     callbackEventIdentity?: bool, callbackEventLookup?: bool, asynchronousStates?: bool,
+ *     settlementListing?: bool, settlementExport?: bool, disputes?: bool,
+ *     savedMethod?: bool, recurringConsent?: bool, fiscalPassthrough?: bool,
+ *     lookupNamespace?: string, referenceSemantics?: string, qualificationManifestRef?: string,
+ * }
+ * @phpstan-type SnapshotOverrides array{
+ *     snapshotRef?: string, driverId?: string, driverContractVersion?: string,
+ *     capabilityVersion?: string, merchantAccountRef?: string, supportedEffects?: array<mixed>,
+ *     currencies?: array<mixed>, evidenceMode?: ProviderEvidenceMode, partialCapture?: bool,
+ *     partialRefund?: bool, partialVoidAuthorization?: bool, authorizationExpiryEvidence?: bool,
+ *     lookupByReference?: bool, inventoryComplete?: bool, absenceCertification?: bool,
+ *     idempotencyValidUntil?: DateTimeImmutable|null, qualificationMode?: QualificationMode, qualificationEvidenceRef?: string,
+ *     digest?: string, details?: CapabilityDetails,
+ * }
+ */
 final class CapabilityContractTest extends TestCase
 {
-    /** @return array<string, mixed> */
-    private function fixture(string $name): array
+    /** @param DetailOverrides $overrides */
+    private static function details(array $overrides = []): CapabilityDetails
     {
-        $vector = json_decode((string) file_get_contents(dirname(__DIR__, 6).'/fixtures/vectors/payment/capabilities/'.$name.'.json'), true, 512, JSON_THROW_ON_ERROR);
-
-        return json_decode($vector['script'][0]['args']['json_text'], true, 512, JSON_THROW_ON_ERROR);
+        return new CapabilityDetails(...array_replace([
+            'version' => 'capability-details.v1',
+            'initiateWithIdempotency' => true,
+            'initiateWithoutIdempotency' => false,
+            'idempotencyKeyScope' => 'provider-account/reference',
+            'idempotencyRetentionSeconds' => 86400,
+            'lookupByProviderId' => true,
+            'lookupVisibility' => 'eventual',
+            'lookupRetentionSeconds' => 172800,
+            'captureMode' => CaptureMode::None,
+            'multipleRefund' => false,
+            'refundLookup' => false,
+            'signedCallbacks' => false,
+            'callbackEventIdentity' => false,
+            'callbackEventLookup' => false,
+            'asynchronousStates' => true,
+            'settlementListing' => false,
+            'settlementExport' => false,
+            'disputes' => false,
+            'savedMethod' => false,
+            'recurringConsent' => false,
+            'fiscalPassthrough' => false,
+            'lookupNamespace' => 'test-account/reference-v1',
+            'referenceSemantics' => 'immutable-business-reference.v1',
+            'qualificationManifestRef' => 'fixture-bank-a-manifest',
+        ], $overrides));
     }
 
-    /** @param array<string, mixed> $value */
-    private function signed(array $value): string
+    /** @param SnapshotOverrides $overrides */
+    private static function snapshot(array $overrides = []): CapabilitySnapshot
     {
-        $value['digest'] = (new Codec)->digest($value);
-
-        return json_encode($value, JSON_THROW_ON_ERROR);
+        return new CapabilitySnapshot(...array_replace([
+            'snapshotRef' => 'fixture-bank-a-snapshot',
+            'driverId' => 'fixture-bank-a-sbp',
+            'driverContractVersion' => 'bank-a-exact-v1',
+            'capabilityVersion' => 'capabilities-exact-v1',
+            'merchantAccountRef' => 'fixture-bank-a-account',
+            'supportedEffects' => [EffectKind::Charge],
+            'currencies' => ['RUB'],
+            'evidenceMode' => ProviderEvidenceMode::CumulativeSnapshot,
+            'partialCapture' => false,
+            'partialRefund' => false,
+            'partialVoidAuthorization' => false,
+            'authorizationExpiryEvidence' => false,
+            'lookupByReference' => true,
+            'inventoryComplete' => false,
+            'absenceCertification' => false,
+            'idempotencyValidUntil' => new DateTimeImmutable('2026-11-18T00:00:00Z'),
+            'qualificationMode' => QualificationMode::Simulated,
+            'qualificationEvidenceRef' => 'fixture-qualification-a',
+            'digest' => str_repeat('a', 64),
+            'details' => self::details(),
+        ], $overrides));
     }
 
-    /** @param array<string, mixed> $snapshot */
-    private function manifest(array $snapshot): QualificationManifest
+    public function test_unsupported_effect_refuses_with_stable_typed_problem_before_a_continuation_runs(): void
     {
-        $manifest = $this->fixture('simulated-qualification');
-        foreach (['driver', 'driverVersion', 'provider', 'providerApiVersion'] as $key) {
-            $manifest[$key] = $snapshot[$key];
+        $calls = 0;
+        try {
+            self::snapshot()->requireEffect(EffectKind::Capture, 'RUB', false);
+            $calls++;
+            self::fail('Unsupported capture reached the effect continuation');
+        } catch (ProblemException $exception) {
+            self::assertSame(ProblemCode::CapabilityUnsupported, $exception->problem);
+            self::assertSame('billium.capability.unsupported', $exception->problem->value);
         }
-        $manifest['capabilityDigest'] = (new Codec)->digest($snapshot);
-
-        return new QualificationManifest($this->signed($manifest));
+        self::assertSame(0, $calls);
+        // This contract test has no journal/PSP: runtime zero-row and zero-send assertions belong to admission tests.
     }
 
-    public function test_capability_matrix_refuses_before_any_admission_or_provider_effect(): void
+    public function test_simulated_qualification_cannot_authorize_a_production_effect(): void
     {
-        $full = $this->fixture('simulated-sbp-a');
-        $restricted = $this->fixture('simulated-sbp-b');
-        $gate = new CapabilityGate;
-        foreach (CapabilityRequirement::cases() as $requirement) {
-            $operations = $attempts = $reservations = $providerCalls = 0;
-            $dispatch = function (array $values) use ($gate, $requirement, &$operations, &$attempts, &$reservations, &$providerCalls): ?UnsupportedCapability {
-                $problem = $gate->check(
-                    snapshot: new CapabilitySnapshot($this->signed($values)),
-                    requirement: $requirement,
-                    qualification: $this->manifest($values),
-                );
-                if ($problem !== null) {
-                    return $problem;
-                }
-                $operations++;
-                $attempts++;
-                $reservations++;
-                $providerCalls++;
+        self::snapshot()->requireEffect(EffectKind::Charge, 'RUB', false);
+        $this->expectExceptionObject(new ProblemException(ProblemCode::CapabilityUnsupported, 'Exact effect, currency and qualification are required'));
+        self::snapshot()->requireEffect(EffectKind::Charge, 'RUB', true);
+    }
 
-                return null;
-            };
-            self::assertNull($dispatch($full), $requirement->value);
-            self::assertSame([1, 1, 1, 1], [$operations, $attempts, $reservations, $providerCalls]);
-            if ($requirement === CapabilityRequirement::Sale) {
-                continue;
+    public function test_named_sbp_provider_capabilities_stay_separate(): void
+    {
+        $bankA = self::snapshot();
+        $bankB = self::snapshot([
+            'driverId' => 'fixture-bank-b-sbp',
+            'merchantAccountRef' => 'fixture-bank-b-account',
+            'supportedEffects' => [EffectKind::Charge, EffectKind::Refund],
+            'lookupByReference' => false,
+            'details' => self::details(['lookupByProviderId' => false, 'lookupVisibility' => 'none', 'lookupRetentionSeconds' => null]),
+        ]);
+        $bankB->requireEffect(EffectKind::Refund, 'RUB', false);
+        self::assertNotSame($bankA->driverId, $bankB->driverId);
+        self::assertTrue($bankA->details->lookupByProviderId);
+        self::assertFalse($bankB->details->lookupByProviderId);
+        self::assertTrue($bankA->lookupByReference);
+        self::assertFalse($bankB->lookupByReference);
+        $this->expectException(ProblemException::class);
+        $bankA->requireEffect(EffectKind::Refund, 'RUB', false);
+    }
+
+    public function test_version_scope_retention_and_capability_gaps_are_explicit(): void
+    {
+        $snapshot = self::snapshot();
+        self::assertSame('bank-a-exact-v1', $snapshot->driverContractVersion);
+        self::assertSame('capabilities-exact-v1', $snapshot->capabilityVersion);
+        self::assertSame(86400, $snapshot->details->idempotencyRetentionSeconds);
+        self::assertSame('provider-account/reference', $snapshot->details->idempotencyKeyScope);
+        self::assertSame(172800, $snapshot->details->lookupRetentionSeconds);
+        self::assertFalse($snapshot->details->signedCallbacks);
+        self::assertFalse($snapshot->details->callbackEventIdentity);
+        self::assertFalse($snapshot->details->callbackEventLookup);
+        self::assertFalse($snapshot->details->settlementListing);
+        self::assertFalse($snapshot->details->settlementExport);
+        self::assertFalse($snapshot->details->disputes);
+        self::assertFalse($snapshot->details->savedMethod);
+        self::assertFalse($snapshot->details->recurringConsent);
+        self::assertFalse($snapshot->details->fiscalPassthrough);
+    }
+
+    public function test_partial_capture_mode_must_agree_with_the_snapshot(): void
+    {
+        $this->expectException(ProblemException::class);
+        self::snapshot(['details' => self::details(['captureMode' => CaptureMode::PartialMultiple])]);
+    }
+
+    public function test_idempotency_support_cannot_omit_scope_or_retention(): void
+    {
+        $this->expectException(ProblemException::class);
+        self::details(['idempotencyRetentionSeconds' => null]);
+    }
+
+    public function test_secret_references_carry_only_opaque_locators(): void
+    {
+        self::assertSame('secret://fixture-bank/account/revision', (new SecretRef('secret://fixture-bank/account/revision'))->locator);
+        $this->expectException(ProblemException::class);
+        new SecretRef('raw-password-secret');
+    }
+
+    /** @return iterable<string, array{ProviderLookupState}> */
+    public static function nonAbsenceStates(): iterable
+    {
+        foreach ([ProviderLookupState::Unavailable, ProviderLookupState::Ambiguous, ProviderLookupState::Unsupported] as $state) {
+            yield $state->value => [$state];
+        }
+    }
+
+    #[DataProvider('nonAbsenceStates')]
+    public function test_unavailable_lookup_never_constructs_an_absence_proof(ProviderLookupState $state): void
+    {
+        $result = new ProviderLookupResult($state, null, null, null, 'fixture.lookup.'.$state->value, null);
+        self::assertSame($state, $result->state);
+        self::assertNull($result->absence);
+        self::assertNull($result->snapshot);
+    }
+
+    public function test_found_cannot_be_constructed_without_provider_evidence_and_actual_snapshot(): void
+    {
+        $this->expectException(ProblemException::class);
+        new ProviderLookupResult(ProviderLookupState::Found, null, null, null, null, null);
+    }
+
+    public function test_certified_absent_cannot_be_constructed_from_an_http_status_or_timeout(): void
+    {
+        $this->expectException(ProblemException::class);
+        new ProviderLookupResult(ProviderLookupState::CertifiedAbsent, null, null, null, 'http.404', null);
+    }
+
+    public function test_certificate_cannot_be_attached_to_an_unavailable_lookup(): void
+    {
+        $scope = new ExecutionScope('installation', 'seller', 'test', 'authenticated-owner');
+        $binding = new FrozenBinding($scope, 'standalone-billium', 'business-intent', 'root-operation', 'merchant-revision', 'account', 'driver', 'exact-v1', 'capability-digest', 'semantic-digest', 'canonical.v1', null, 'commerz');
+        $certificate = new AbsenceCertificate('certificate', $binding, 'provider-reference', 'provider-namespace', 'complete-through-1', new DateTimeImmutable('2026-11-01T00:00:00Z'), new DateTimeImmutable('2026-11-02T00:00:00Z'), 'closed-dispatch-manifest', 'retirement-proof', 'egress-fence', 'qualification-proof', 'fixture-issuer', 'signature-digest', new DateTimeImmutable('2026-11-19T00:00:00Z'));
+        $this->expectException(ProblemException::class);
+        new ProviderLookupResult(ProviderLookupState::Unavailable, null, null, $certificate, 'lookup.unavailable', null);
+    }
+
+    /** @return iterable<string, array{DriverCapability, DetailOverrides, SnapshotOverrides}> */
+    public static function workflowCapabilities(): iterable
+    {
+        yield 'create-idempotency' => [DriverCapability::InitiateWithIdempotency, [], []];
+        yield 'provider-id-lookup' => [DriverCapability::LookupByProviderId, [], []];
+        yield 'reference-lookup' => [DriverCapability::LookupByReference, [], []];
+        yield 'authorize' => [DriverCapability::Authorize, [], ['supportedEffects' => [EffectKind::Charge, EffectKind::Authorize]]];
+        yield 'partial-capture' => [DriverCapability::PartialCapture, ['captureMode' => CaptureMode::PartialSingle], ['partialCapture' => true, 'supportedEffects' => [EffectKind::Charge, EffectKind::Authorize, EffectKind::Capture]]];
+        yield 'provider-void' => [DriverCapability::VoidAuthorization, [], ['supportedEffects' => [EffectKind::Charge, EffectKind::Authorize, EffectKind::VoidAuthorization]]];
+        yield 'partial-refund' => [DriverCapability::PartialRefund, [], ['partialRefund' => true, 'supportedEffects' => [EffectKind::Charge, EffectKind::Refund]]];
+        yield 'multiple-refund' => [DriverCapability::MultipleRefund, ['multipleRefund' => true], ['supportedEffects' => [EffectKind::Charge, EffectKind::Refund]]];
+        yield 'saved-method' => [DriverCapability::SavedMethod, ['savedMethod' => true], []];
+        yield 'recurring-consent' => [DriverCapability::RecurringConsent, ['recurringConsent' => true], []];
+        yield 'webhook-authenticity' => [DriverCapability::WebhookAuthenticity, ['signedCallbacks' => true], []];
+        yield 'webhook-event-lookup' => [DriverCapability::WebhookEventLookup, ['callbackEventIdentity' => true, 'callbackEventLookup' => true], []];
+        yield 'receipt-passthrough' => [DriverCapability::FiscalPassthrough, ['fiscalPassthrough' => true], []];
+        yield 'settlement-listing' => [DriverCapability::SettlementListing, ['settlementListing' => true], []];
+        yield 'settlement-export' => [DriverCapability::SettlementExport, ['settlementExport' => true], []];
+        yield 'disputes' => [DriverCapability::Disputes, ['disputes' => true], []];
+    }
+
+    /** @param DetailOverrides $detailOverrides
+     * @param  SnapshotOverrides  $snapshotOverrides
+     */
+    #[DataProvider('workflowCapabilities')]
+    public function test_declared_capability_matrix_admits_only_its_exact_supported_workflow(DriverCapability $feature, array $detailOverrides, array $snapshotOverrides): void
+    {
+        $supported = self::snapshot(array_replace($snapshotOverrides, ['details' => self::details($detailOverrides)]));
+        $supported->requireCapability($feature, false);
+        self::assertSame(QualificationMode::Simulated, $supported->qualificationMode);
+        $this->expectException(ProblemException::class);
+        $supported->requireCapability($feature, true);
+    }
+
+    /** @return iterable<string, array{DriverCapability}> */
+    public static function unsupportedWorkflows(): iterable
+    {
+        foreach (DriverCapability::cases() as $feature) {
+            if (! in_array($feature, [DriverCapability::InitiateWithIdempotency, DriverCapability::LookupByProviderId, DriverCapability::LookupByReference, DriverCapability::AsynchronousStates], true)) {
+                yield $feature->value => [$feature];
             }
-            $problem = $dispatch($restricted);
-            self::assertInstanceOf(UnsupportedCapability::class, $problem, $requirement->value);
-            self::assertSame(ProblemCode::CapabilityUnsupported, $problem->problem);
-            self::assertSame('none', $problem->problem->receipt());
-            self::assertFalse($problem->problem->retryable());
-            self::assertTrue($problem->problem->sameKey());
-            self::assertSame([1, 1, 1, 1], [$operations, $attempts, $reservations, $providerCalls], 'Refusal created no additional effect');
         }
     }
 
-    public function test_unverified_modes_and_missing_qualification_fail_closed(): void
+    #[DataProvider('unsupportedWorkflows')]
+    public function test_unsupported_workflow_returns_the_registered_deterministic_refusal(DriverCapability $feature): void
     {
-        $values = $this->fixture('simulated-sbp-a');
-        $values['authorize'] = 'unverified';
-        $snapshot = new CapabilitySnapshot($this->signed($values));
-        self::assertFalse($snapshot->supports(CapabilityRequirement::Authorize));
-        self::assertFalse($snapshot->supports(CapabilityRequirement::Capture));
-        self::assertFalse($snapshot->supports(CapabilityRequirement::VoidAuthorization));
-        self::assertNotNull((new CapabilityGate)->check(snapshot: $snapshot, requirement: CapabilityRequirement::Sale));
-    }
-
-    public function test_independent_simulated_callback_authenticity_fixture_rejects_wrong_signature_and_changed_bytes(): void
-    {
-        $vector = json_decode((string) file_get_contents(dirname(__DIR__, 6).'/fixtures/vectors/payment/capabilities/callback-signature-fixture.json'), true, 512, JSON_THROW_ON_ERROR);
-        $fixture = $vector['given']['authenticity'];
-        self::assertSame('fixture-hmac-sha256', $fixture['scheme']);
-        $signature = hash_hmac('sha256', $fixture['body'], $fixture['key']);
-        self::assertTrue(hash_equals($signature, $fixture['signature']));
-        self::assertFalse(hash_equals($signature, $fixture['wrongSignature']));
-        self::assertFalse(hash_equals(hash_hmac('sha256', $fixture['alteredBody'], $fixture['key']), $fixture['signature']));
-    }
-
-    public function test_capture_modes_are_not_interchangeable_and_refund_is_independently_gated(): void
-    {
-        foreach (['none' => [false, false, false], 'full' => [true, false, false], 'partial_single' => [true, true, false], 'partial_multiple' => [true, true, true], 'unverified' => [false, false, false]] as $mode => $expected) {
-            $values = $this->fixture('simulated-sbp-a');
-            $values['capture'] = $mode;
-            $snapshot = new CapabilitySnapshot($this->signed($values));
-            self::assertSame($expected, array_map($snapshot->supports(...), [CapabilityRequirement::Capture, CapabilityRequirement::PartialCapture, CapabilityRequirement::MultipleCapture]), $mode);
-            self::assertTrue($snapshot->supports(CapabilityRequirement::Refund));
+        $continuations = 0;
+        try {
+            self::snapshot()->requireCapability($feature, false);
+            $continuations++;
+            self::fail('Unsupported workflow reached continuation');
+        } catch (ProblemException $exception) {
+            self::assertSame(ProblemCode::CapabilityUnsupported, $exception->problem);
         }
+        self::assertSame(0, $continuations);
     }
 
-    public function test_simulated_and_sandbox_qualification_cannot_enable_production_or_another_version(): void
+    public function test_qualification_manifest_retains_unresolved_ru_provider_selection_gates(): void
     {
-        $values = $this->fixture('simulated-sbp-a');
-        $snapshot = new CapabilitySnapshot($this->signed($values));
-        $manifest = $this->fixture('simulated-qualification');
-        foreach (['simulated', 'sandbox'] as $mode) {
-            $manifest['qualification'] = $mode;
-            $qualification = new QualificationManifest($this->signed($manifest));
-            self::assertTrue($qualification->qualifies(snapshot: $snapshot, production: false));
-            self::assertNotNull((new CapabilityGate)->check(snapshot: $snapshot, requirement: CapabilityRequirement::Sale, qualification: $qualification, production: true));
-        }
-        $manifest['qualification'] = 'production';
-        $qualification = new QualificationManifest($this->signed($manifest));
-        self::assertTrue($qualification->qualifies(snapshot: $snapshot, production: true));
-        $values['driverVersion'] = 'future-version';
-        self::assertFalse($qualification->qualifies(snapshot: new CapabilitySnapshot($this->signed($values)), production: true));
-        $values = $this->fixture('simulated-sbp-a');
-        $values['idempotency']['guaranteedTtlSeconds'] = 1;
-        self::assertFalse($qualification->qualifies(snapshot: new CapabilitySnapshot($this->signed($values)), production: true));
-        $manifest['unresolvedGaps'] = ['live rotation not proved'];
-        self::assertFalse((new QualificationManifest($this->signed($manifest)))->qualifies(snapshot: $snapshot, production: true));
+        $manifest = new AdapterQualificationManifest('fixture-bank-a-manifest', 'fixture-bank-a-sbp', 'bank-a-exact-v1', 'fixture-provider-api.v1', str_repeat('a', 64), 'fixture-bank-a-account', 'test', [], new DateTimeImmutable('2026-11-17T00:00:00Z'), 'same-account authenticated continuity required', ['fixture-only-provider-journal'], ['No production adapter selected', 'Official provider sources and live sandbox evidence not supplied', 'Callback signing and credential rotation not qualified'], QualificationMode::Simulated, 'fixture-qualification-a');
+        self::assertSame(QualificationMode::Simulated, $manifest->mode);
+        self::assertCount(3, $manifest->unresolvedGaps);
+        self::assertSame([], $manifest->officialSources);
     }
 
-    public function test_lookup_contract_distinguishes_uncertainty_and_cannot_infer_absence_from_transport(): void
+    public function test_malformed_capability_lists_refuse_at_the_boundary(): void
     {
-        foreach (['find', 'findRefund'] as $method) {
-            $return = (new ReflectionMethod(PaymentDrivers::class, $method))->getReturnType();
-            self::assertInstanceOf(ReflectionUnionType::class, $return);
-            $types = array_map(static fn ($type): string => $type->getName(), $return->getTypes());
-            foreach ([Unavailable::class, Ambiguous::class, UnsupportedCapability::class, CertifiedAbsent::class] as $expected) {
-                self::assertContains($expected, $types);
-            }
-        }
-        self::assertNotEquals(new Unavailable('HTTP 404'), new Ambiguous('HTTP 404'));
-        self::assertTrue((new Unavailable('timeout'))->effectMayExist);
+        $this->expectException(ProblemException::class);
+        self::snapshot(['supportedEffects' => ['charge']]);
     }
 
-    public function test_absence_certificate_is_bound_to_original_account_selector_and_dispatch_window(): void
+    /** @return iterable<string, array{ProblemCode, string}> */
+    public static function newExecutionProblems(): iterable
     {
-        $capabilities = new CapabilitySnapshot($this->signed($this->fixture('simulated-sbp-a')));
-        $binding = new ExecutionBinding(
-            installationRef: 'inst-test', sellerRef: 'seller-a', environment: 'test',
-            merchantAccountRef: 'merchant:original', bindingRevision: 'binding:original',
-            driver: 'simulated-sbp-a', driverVersion: 'fixture-1', providerApiVersion: 'fixture-api-1',
-            credentialRevisionRef: 'credential:rotated-same-account', capabilityDigest: $capabilities->digest,
-        );
-        $lookup = new DriverLookup(
-            binding: $binding, selectorKind: 'business_ref', selectorValue: 'business:1',
-            dispatchFrom: new DateTimeImmutable('2026-11-09T00:00:00Z'),
-            dispatchThrough: new DateTimeImmutable('2026-11-09T01:00:00Z'),
-        );
-        $value = $this->fixture('lookup-certified-absent');
-        $certificate = new CertifiedAbsent(json: json_encode($value, JSON_THROW_ON_ERROR), query: $lookup, capabilities: $capabilities);
-        self::assertSame('external:retirement-proof', $certificate->fenceProofRef);
-        $value['absenceCertificate']['dispatchThrough'] = '2026-11-09T00:30:00Z';
-        $this->expectException(InvalidArgumentException::class);
-        new CertifiedAbsent(json: json_encode($value, JSON_THROW_ON_ERROR), query: $lookup, capabilities: $capabilities);
+        yield 'unsupported' => [ProblemCode::CapabilityUnsupported, 'billium.capability_unsupported'];
+        yield 'capture-capacity' => [ProblemCode::CaptureCapacityExceeded, 'billium.capture_capacity_exceeded'];
+        yield 'authorization-capacity' => [ProblemCode::AuthorizationCapacityExceeded, 'billium.authorization_capacity_exceeded'];
+        yield 'financial-hold' => [ProblemCode::OperationFinancialHold, 'billium.operation_financial_hold'];
+        yield 'lookup-ambiguous' => [ProblemCode::LookupAmbiguous, 'billium.lookup_ambiguous'];
     }
 
-    public function test_incomplete_lookup_cannot_produce_a_certificate_even_with_a_claimed_horizon(): void
+    #[DataProvider('newExecutionProblems')]
+    public function test_new_execution_problems_render_through_the_registered_error_descriptor(ProblemCode $problem, string $errorCode): void
     {
-        $values = $this->fixture('simulated-sbp-a');
-        $values['lookup']['business_ref']['mode'] = 'partial';
-        $capabilities = new CapabilitySnapshot($this->signed($values));
-        $binding = new ExecutionBinding(
-            installationRef: 'inst-test', sellerRef: 'seller-a', environment: 'test',
-            merchantAccountRef: 'merchant:original', bindingRevision: 'binding:original',
-            driver: 'simulated-sbp-a', driverVersion: 'fixture-1', providerApiVersion: 'fixture-api-1',
-            credentialRevisionRef: 'credential:1', capabilityDigest: $capabilities->digest,
-        );
-        $query = new DriverLookup(binding: $binding, selectorKind: 'business_ref', selectorValue: 'business:1',
-            dispatchFrom: new DateTimeImmutable('2026-11-09T00:00:00Z'), dispatchThrough: new DateTimeImmutable('2026-11-09T01:00:00Z'));
-        $this->expectException(InvalidArgumentException::class);
-        new CertifiedAbsent(json: json_encode($this->fixture('lookup-certified-absent'), JSON_THROW_ON_ERROR), query: $query, capabilities: $capabilities);
+        $descriptor = (new ProblemException($problem))->errorDescriptor();
+        self::assertSame($errorCode, $descriptor->code);
+        self::assertFalse($descriptor->retryable);
+    }
+
+    public function test_unsupported_capability_has_explicit_no_receipt_and_same_key_policy(): void
+    {
+        $path = dirname(__DIR__, 6).'/spec/revisions/2026-10/problem-codes.json';
+        $json = file_get_contents($path);
+        self::assertIsString($json);
+        $entries = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($entries);
+        $matching = array_values(array_filter($entries, static fn (mixed $entry): bool => is_array($entry) && ($entry['code'] ?? null) === ProblemCode::CapabilityUnsupported->value));
+        self::assertCount(1, $matching);
+        self::assertArrayHasKey('retryable', $matching[0]);
+        self::assertArrayHasKey('sameKey', $matching[0]);
+        self::assertArrayHasKey('receipt', $matching[0]);
+        self::assertFalse($matching[0]['retryable']);
+        self::assertTrue($matching[0]['sameKey']);
+        self::assertSame('none', $matching[0]['receipt']);
     }
 }

@@ -11,13 +11,11 @@ use Billium\Core\Tests\Integration\Support\P4TaxPolicy;
 use Billium\Core\Tests\Support\Extensions\FixedRuleV2;
 use Billium\Core\Tests\Support\FixtureArguments;
 use Billium\Ledger\Contracts\Ledger;
-use Billium\Ledger\Data\BillingAccountScope;
-use Billium\Ledger\Data\CreateInvoice;
-use Billium\Ledger\Data\InvoiceLineInput;
-use Billium\Ledger\Data\IssueInvoice;
-use Billium\Ledger\Internal\LedgerServiceProvider;
-use Billium\Platform\Contracts\Installation;
-use Billium\Platform\Internal\Installation\DatabaseInstallation;
+use Billium\Ledger\Data\Invoices\CreateInvoice;
+use Billium\Ledger\Data\Invoices\InvoiceLineInput;
+use Billium\Ledger\Data\Invoices\IssueInvoice;
+use Billium\Ledger\Data\Runtime\BillingAccountScope;
+use Billium\Ledger\Laravel\LedgerServiceProvider;
 use Billium\Rating\Contracts\PriceVersionStore;
 use Billium\Rating\Contracts\PricingStrategyRegistry;
 use Billium\Rating\Contracts\RatingBooking;
@@ -66,11 +64,13 @@ use Billium\Schedule\Data\Commands\EnsureOccurrence;
 use Billium\Schedule\Enums\OccurrencePurpose;
 use Billium\Schedule\Tests\Support\Terms;
 use Billium\Usage\Contracts\Usage;
-use Billium\Usage\Internal\UsageServiceProvider;
+use Billium\Usage\Laravel\UsageServiceProvider;
 use DateTimeImmutable;
 use Illuminate\Support\Arr;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class P4ModuleCompositionTest extends CompositionTestCase
 {
     /** @return iterable<string, array{StrategyId, bool, string}> */
@@ -143,11 +143,7 @@ final class P4ModuleCompositionTest extends CompositionTestCase
         self::assertSame('0', $prepared->draft->grossMinor);
         self::assertSame(ChargeKind::NoCharge, $prepared->draft->chargeKind);
         self::assertSame('approved_zero_quantity', $prepared->draft->noChargeReason);
-        config(['billium.modules.enabled' => ['platform', 'ledger', 'rating', 'schedule']]);
-        $this->application()->register(LedgerServiceProvider::class);
-        $this->migrateModules();
-        $this->application()->forgetInstance(DatabaseInstallation::class);
-        $this->application()->make(Installation::class)->init('inst-test');
+        $this->attachModule('ledger', LedgerServiceProvider::class);
         $receipt = $this->application()->make(RatingBooking::class)->book(new BookRatedBasis(
             prepared: $prepared, operationKey: 'zero-quantity'));
         self::assertSame(BookingOutcome::NoCharge, $receipt->outcome);
@@ -179,11 +175,8 @@ final class P4ModuleCompositionTest extends CompositionTestCase
             effectiveFrom: new DateTimeImmutable('2026-10-01Z'), inputsDigest: $prepared->inputs->occurrenceInputsDigest,
             commandKey: 'pause-unposted'));
         self::assertSame('rated', $this->owner()->table('billium_schedule_billing_occurrence')->value('state'));
-        config(['billium.modules.enabled' => ['platform', 'ledger', 'rating', 'schedule']]);
-        $this->application()->register(LedgerServiceProvider::class);
-        $this->migrateModules();
-        $this->application()->forgetInstance(DatabaseInstallation::class);
-        $this->application()->make(Installation::class)->init('inst-test');
+        $this->attachModule('ledger', LedgerServiceProvider::class);
+        $booking = $this->application()->make(RatingBooking::class);
         try {
             $booking->book(new BookRatedBasis(prepared: $prepared, operationKey: 'post-after-pause'));
             self::fail('Paused unposted basis created an obligation');
@@ -269,11 +262,7 @@ final class P4ModuleCompositionTest extends CompositionTestCase
     private function approvedQuantityRequest(StrategyId $strategy = StrategyId::PerUnit, bool $withUsage = false, string $selector = 'seats-1', ?TaxSnapshotPort $tax = null, string $unitPrice = '1'): PrepareRating
     {
         if ($withUsage) {
-            config(['billium.modules.enabled' => ['platform', 'rating', 'schedule', 'usage'], 'billium.usage.enabled' => true]);
-            $this->application()->register(UsageServiceProvider::class);
-            $this->migrateModules();
-            $this->application()->forgetInstance(DatabaseInstallation::class);
-            $this->application()->make(Installation::class)->init('inst-test');
+            $this->attachModule('usage', UsageServiceProvider::class);
         }
         $base = $this->prepared(tax: $tax)->inputs;
         $terms = match ($strategy) {
@@ -323,11 +312,7 @@ final class P4ModuleCompositionTest extends CompositionTestCase
             ? $this->application()->make(RatingPreparer::class)->prepare($request)
             : $this->prepared(tax: $tax);
         self::assertInstanceOf(PreparedRating::class, $prepared);
-        config(['billium.modules.enabled' => ['platform', 'ledger', 'rating', 'schedule']]);
-        $this->application()->register(LedgerServiceProvider::class);
-        $this->migrateModules();
-        $this->application()->forgetInstance(DatabaseInstallation::class);
-        $this->application()->make(Installation::class)->init('inst-test');
+        $this->attachModule('ledger', LedgerServiceProvider::class);
         $booked = $this->application()->make(RatingBooking::class)->book(new BookRatedBasis(prepared: $prepared, operationKey: 'fixed-book'));
         self::assertNotNull($booked->obligationRef);
         $scope = new BillingAccountScope(sellerRef: 'seller-a', environment: 'test', billingAccountRef: 'account-a');
@@ -345,11 +330,7 @@ final class P4ModuleCompositionTest extends CompositionTestCase
         $this->application()->make(TaxCorrectionPolicyFrontier::class)->publish(policy: $port->resolveCorrection($request), commandKey: 'correction-policy');
         foreach ([false, true] as $withUsage) {
             if ($withUsage) {
-                config(['billium.modules.enabled' => ['platform', 'ledger', 'rating', 'schedule', 'usage'], 'billium.usage.enabled' => true]);
-                $this->application()->register(UsageServiceProvider::class);
-                $this->migrateModules();
-                $this->application()->forgetInstance(DatabaseInstallation::class);
-                $this->application()->make(Installation::class)->init('inst-test');
+                $this->attachModule('usage', UsageServiceProvider::class);
             } else {
                 self::assertFalse($this->application()->bound(Usage::class));
                 self::assertNull($this->owner()->scalar("SELECT to_regclass('public.billium_usage_fact')::text"));
@@ -451,11 +432,7 @@ final class P4ModuleCompositionTest extends CompositionTestCase
     public function test_fixed_booking_adds_ledger_without_usage_legal_issue_render_or_execution(): void
     {
         $prepared = $this->prepared();
-        config(['billium.modules.enabled' => ['platform', 'ledger', 'rating', 'schedule']]);
-        $this->application()->register(LedgerServiceProvider::class);
-        $this->migrateModules();
-        $this->application()->forgetInstance(DatabaseInstallation::class);
-        $this->application()->make(Installation::class)->init('inst-test');
+        $this->attachModule('ledger', LedgerServiceProvider::class);
         $receipt = $this->application()->make(RatingBooking::class)->book(new BookRatedBasis(prepared: $prepared, operationKey: 'fixed-book'));
         self::assertSame(BookingOutcome::Booked, $receipt->outcome);
         self::assertSame(1, $this->owner()->table('billium_obligation')->count());

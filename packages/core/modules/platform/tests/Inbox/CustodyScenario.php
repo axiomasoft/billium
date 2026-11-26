@@ -4,21 +4,22 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Tests\Inbox;
 
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Contracts\FinancialSessionAdmission;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Caller;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Data\OperationSpec;
-use Billium\Core\Data\Receipt;
-use Billium\Core\Enums\FinancialMode;
-use Billium\Core\Enums\LockRank;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Data\Runner\OperationSpec;
+use Billium\Core\Data\Runner\Receipt;
+use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
+use Billium\Core\Enums\Runner\LockRank;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Tests\Support\Concurrency\Scenario;
 use Billium\Core\Tests\Support\FixedCallerContext;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
-use Billium\Platform\Contracts\FeedPartitions;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
+use Billium\Platform\Contracts\Feed\FeedPartitions;
 use Billium\Platform\Data\Inbox\CustodyDisposition;
 use Billium\Platform\Data\Inbox\CustodyResult;
 use Billium\Platform\Tests\PlatformTestCase;
@@ -37,6 +38,7 @@ final readonly class CustodyScenario implements Scenario
         $authority = isset($args['authority']) && is_string($args['authority']) ? $args['authority'] : InboxTestCase::AUTHORITY;
         $app->instance(CallerContext::class, new FixedCallerContext(new Caller('seller-a', 'test', PlatformTestCase::INSTALLATION, 'actor-'.$index, [$authority])));
         $app->instance(FinancialSessionAdmission::class, new FixedSessionAdmission(FixedSessionAdmission::fromArray(['processRef' => 'process-'.$index])));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($app);
         $app->make(OperationRunner::class);
     }
 

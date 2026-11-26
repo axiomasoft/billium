@@ -6,7 +6,9 @@ namespace Billium\Usage\Internal\Reducers;
 
 use Billium\Usage\Data\FactRevision;
 use Billium\Usage\Internal\Errors\UsageProblems;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class EffectiveRevisionSelector
 {
     /**

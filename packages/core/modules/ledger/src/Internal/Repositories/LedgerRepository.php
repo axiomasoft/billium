@@ -6,25 +6,27 @@ namespace Billium\Ledger\Internal\Repositories;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Enums\FinancialMode;
-use Billium\Core\Enums\LockRank;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\LockRequest;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
-use Billium\Core\Exceptions\LockPlanChanged;
-use Billium\Ledger\Data\AdjustObligation;
-use Billium\Ledger\Data\AmendObligationDuePolicy;
-use Billium\Ledger\Data\DeclareSettlementIntent;
-use Billium\Ledger\Data\LedgerReceipt;
-use Billium\Ledger\Data\RecordCustomerCredit;
-use Billium\Ledger\Data\RecordObligation;
+use Billium\Core\Enums\Runner\LockRank;
+use Billium\Core\Enums\Runtime\FinancialMode;
+use Billium\Core\Exceptions\Runner\LockPlanChanged;
+use Billium\Ledger\Data\Credits\RecordCustomerCredit;
+use Billium\Ledger\Data\Obligations\AdjustObligation;
+use Billium\Ledger\Data\Obligations\AmendObligationDuePolicy;
+use Billium\Ledger\Data\Obligations\RecordObligation;
+use Billium\Ledger\Data\Runtime\LedgerReceipt;
+use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
 use LogicException;
+use Packman\Attributes\Internal;
 
 /** Query builder reads and typed DB calls; no PHP counter writes (D60). */
+#[Internal]
 final readonly class LedgerRepository
 {
     public function __construct(private DatabaseManager $databases, private OperationRunner $runner) {}
@@ -43,10 +45,10 @@ final readonly class LedgerRepository
         array $allowedModes = [FinancialMode::Active],
     ): void {
         $this->runner->assertCurrent($context, 'ledger');
-        // @phpstan-ignore identical.alwaysFalse (Keep the explicit admission invariant although sessionEpoch returns int or throws.)
-        if ($allowedModes === [] || ! in_array($context->spec()->mode, $allowedModes, true) || $context->sessionEpoch() === null || ! $context->spec()->monetary()) {
+        if ($allowedModes === [] || ! in_array($context->spec()->mode, $allowedModes, true) || ! $context->spec()->monetary()) {
             throw new LogicException('Monetary ledger operations require an admitted financial session and commit accounting (D54, D60, D62)');
         }
+        $context->sessionEpoch(); // Throws when the root has no admitted financial session.
         if (! in_array($context->spec()->operationClass, $allowedClasses, true)) {
             throw new LogicException('Monetary ledger operation is not permitted for operation class '.$context->spec()->operationClass->value.' (D55, D60)');
         }
@@ -65,10 +67,10 @@ final readonly class LedgerRepository
         array $allowedModes = [FinancialMode::Active],
     ): void {
         $this->runner->assertCurrent($context, 'ledger');
-        // @phpstan-ignore identical.alwaysFalse (Keep the explicit admission invariant although sessionEpoch returns int or throws.)
-        if ($allowedModes === [] || ! in_array($context->spec()->mode, $allowedModes, true) || $context->sessionEpoch() === null) {
+        if ($allowedModes === [] || ! in_array($context->spec()->mode, $allowedModes, true)) {
             throw new LogicException('Ledger operations require an admitted financial session (D54, D60)');
         }
+        $context->sessionEpoch(); // Throws when the root has no admitted financial session.
         if (! in_array($context->spec()->operationClass, $allowedClasses, true)) {
             throw new LogicException('Ledger operation is not permitted for operation class '.$context->spec()->operationClass->value.' (D55, D60)');
         }

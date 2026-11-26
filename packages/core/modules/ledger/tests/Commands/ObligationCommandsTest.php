@@ -7,15 +7,17 @@ namespace Billium\Ledger\Tests\Commands;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Receipt;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\Receipt;
 use Billium\Ledger\Contracts\LedgerParticipants;
-use Billium\Ledger\Data\AdjustObligation;
-use Billium\Ledger\Data\RecordObligation;
+use Billium\Ledger\Data\Obligations\AdjustObligation;
+use Billium\Ledger\Data\Obligations\RecordObligation;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
 use LogicException;
+use PHPUnit\Framework\Attributes\Group;
 use RuntimeException;
 
+#[Group('pg')]
 final class ObligationCommandsTest extends LedgerTestCase
 {
     public function test_record_and_business_basis_replay_freeze_terms_and_emit_one_event(): void

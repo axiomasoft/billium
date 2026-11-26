@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Billium\Schedule\Internal;
 
 use LogicException;
+use Packman\Attributes\Internal;
 use stdClass;
 
+#[Internal]
 final class Canonical
 {
     public static function encode(mixed $value): string

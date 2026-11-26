@@ -6,7 +6,7 @@ namespace Billium\Schedule\Tests\Support;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\TransactionContext;
+use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Schedule\Contracts\AgreementRevisionGuard;
 use Billium\Schedule\Data\ScheduleRevisionTerms;
 

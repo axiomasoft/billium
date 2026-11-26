@@ -7,7 +7,7 @@ namespace Billium\Core\Tests\Unit\Modules;
 use Billium\Core\BilliumCoreServiceProvider;
 use Billium\Core\Enums\Modules\CompatibilityFindingCode as Code;
 use Billium\Rating\Contracts\RatingQuoter;
-use Billium\Schedule\Internal\ScheduleServiceProvider;
+use Billium\Schedule\Laravel\ScheduleServiceProvider;
 use Billium\Usage\Contracts\Usage;
 use Illuminate\Config\Repository;
 use Illuminate\Container\Container;
@@ -20,8 +20,8 @@ final class P4ModuleCompositionTest extends ModuleTestCase
         $cases = [
             'embedded-commerz' => [['platform', 'ledger'], self::LEDGER_PORTS],
             'ledger-only' => [['platform', 'ledger', 'rating', 'schedule'], self::LEDGER_PORTS],
-            'standalone-billium' => [['platform', 'ledger', 'rating', 'schedule', 'execution'], [...self::LEDGER_PORTS, 'PaymentDrivers', 'WriterAdmission']],
-            'remote-billium' => [['platform', 'ledger', 'execution'], [...self::LEDGER_PORTS, 'PaymentDrivers', 'WriterAdmission']],
+            'standalone-billium' => [['platform', 'ledger', 'rating', 'schedule', 'execution'], [...self::LEDGER_PORTS, ...self::EXECUTION_PORTS]],
+            'remote-billium' => [['platform', 'ledger', 'execution'], [...self::LEDGER_PORTS, ...self::EXECUTION_PORTS]],
         ];
         foreach ($cases as $profile => [$modules, $ports]) {
             $report = self::catalog()->check(self::input(composition: $profile, enabled: $modules, ports: $ports));
@@ -40,6 +40,7 @@ final class P4ModuleCompositionTest extends ModuleTestCase
             $app->instance('config', new Repository(['billium' => ['modules' => ['enabled' => ['platform', 'rating', 'usage']],
                 'rating' => ['enabled' => true], 'usage' => ['enabled' => false], 'schedule' => ['enabled' => true]]]));
             $app->register(BilliumCoreServiceProvider::class);
+            $app->boot();
             self::assertFalse($app->bound(Usage::class));
             self::assertArrayNotHasKey(ScheduleServiceProvider::class, $app->getLoadedProviders());
             self::assertInstanceOf(RatingQuoter::class, $app->make(RatingQuoter::class));

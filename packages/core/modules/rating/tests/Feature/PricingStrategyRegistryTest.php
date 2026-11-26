@@ -6,8 +6,8 @@ namespace Billium\Rating\Tests\Feature;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Data\Caller;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Tests\Support\FixtureArguments;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Platform\Tests\PlatformTestCase;
@@ -28,12 +28,14 @@ use Billium\Rating\Enums\StrategyId;
 use Billium\Rating\Enums\TaxMode;
 use Billium\Rating\Enums\TaxSnapshotKind;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
-use Billium\Rating\Internal\RatingServiceProvider;
+use Billium\Rating\Laravel\RatingServiceProvider;
 use DateTimeImmutable;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Foundation\Application;
+use PHPUnit\Framework\Attributes\Group;
 use Throwable;
 
+#[Group('pg')]
 final class PricingStrategyRegistryTest extends PlatformTestCase
 {
     /** @param Application $app */

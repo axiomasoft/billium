@@ -4,92 +4,75 @@ declare(strict_types=1);
 
 namespace Billium\Core;
 
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Contracts\FinancialSessionAdmission;
-use Billium\Core\Contracts\Modules\ModuleAdmissionGate;
-use Billium\Core\Contracts\Modules\ModuleRegistry;
-use Billium\Core\Contracts\Modules\ModuleTransitionPlanner;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Internal\Modules\ModuleCatalog;
-use Billium\Core\Internal\Modules\ModuleLifecycle;
-use Billium\Core\Internal\Runner\DatabaseOperationRunner;
-use Billium\Core\Internal\Runner\UnboundCallerContext;
-use Billium\Core\Internal\Runner\UnboundSessionAdmission;
-use Billium\Execution\Internal\ExecutionServiceProvider;
-use Billium\Ledger\Internal\LedgerServiceProvider;
-use Billium\Platform\Contracts\IdempotencyStore;
-use Billium\Platform\Contracts\RootAdmission;
-use Billium\Platform\Internal\PlatformServiceProvider;
-use Billium\Rating\Internal\RatingServiceProvider;
-use Billium\Schedule\Internal\ScheduleServiceProvider;
-use Billium\Usage\Internal\UsageServiceProvider;
-use Illuminate\Contracts\Foundation\Application;
-use Illuminate\Database\DatabaseManager;
+use Billium\Collection\Laravel\CollectionServiceProvider;
+use Billium\Core\Configuration\BilliumOptions;
+use Billium\Core\Internal\Runtime\ExecutionCompositionGuard;
+use Billium\Core\Laravel\Registrars\BilliumCoreRegistrar;
+use Billium\Documents\Laravel\DocumentsServiceProvider;
+use Billium\Execution\Laravel\ExecutionServiceProvider;
+use Billium\Ledger\Laravel\LedgerServiceProvider;
+use Billium\Platform\Laravel\PlatformServiceProvider;
+use Billium\Rating\Laravel\RatingServiceProvider;
+use Billium\Schedule\Laravel\ScheduleServiceProvider;
+use Billium\Usage\Laravel\UsageServiceProvider;
+use Illuminate\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
+use Override;
+use Packman\Attributes\Api;
+use Packman\Foundation\Concerns\RegistersPackageRegistrars;
+use Packman\Foundation\Contracts\PackageRegistrar;
+use Packman\Plugins\Contracts\Registry\PluginInspector;
 
+#[Api(since: '1.0')]
 final class BilliumCoreServiceProvider extends ServiceProvider
 {
+    use RegistersPackageRegistrars;
+
+    /** @var list<class-string<PackageRegistrar>> */
+    protected const array REGISTRARS = [BilliumCoreRegistrar::class];
+
+    /** @var array<string, class-string<ServiceProvider>> */
+    private const array OPTIONAL_MODULES = [
+        'ledger' => LedgerServiceProvider::class, 'execution' => ExecutionServiceProvider::class,
+        'usage' => UsageServiceProvider::class, 'schedule' => ScheduleServiceProvider::class,
+        'rating' => RatingServiceProvider::class, 'documents' => DocumentsServiceProvider::class,
+        'collection' => CollectionServiceProvider::class,
+    ];
+
+    #[Override]
     public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__.'/../config/billium.php', 'billium');
-        // D55: packaged descriptors only; validation is explicit (doctor/readiness), never a hidden boot side effect.
-        $this->app->singleton(ModuleRegistry::class, static fn (): ModuleCatalog => ModuleCatalog::packaged());
-        $this->app->singleton(ModuleLifecycle::class, static fn (Application $app): ModuleLifecycle => new ModuleLifecycle($app->make(ModuleRegistry::class)));
-        $this->app->alias(ModuleLifecycle::class, ModuleAdmissionGate::class);
-        $this->app->alias(ModuleLifecycle::class, ModuleTransitionPlanner::class);
-        // Host SPIs fail closed until the host binds its authenticated caller and its process-token authority (D62).
-        $this->app->bindIf(CallerContext::class, UnboundCallerContext::class, shared: true);
-        $this->app->bindIf(FinancialSessionAdmission::class, UnboundSessionAdmission::class, shared: true);
-        $this->app->singleton(OperationRunner::class, static function (Application $app): DatabaseOperationRunner {
-            $connection = config('billium.connection') ?? config('database.default');
-            $attempts = config('billium.runner.max_attempts', 3);
-            $deadline = config('billium.runner.root_deadline_ms', 30_000);
-
-            return new DatabaseOperationRunner(
-                $app->make(DatabaseManager::class)->connection(is_string($connection) ? $connection : null),
-                static fn (): CallerContext => $app->make(CallerContext::class),
-                $app->make(IdempotencyStore::class),
-                $app->make(RootAdmission::class),
-                is_int($attempts) ? $attempts : 3,
-                is_int($deadline) ? $deadline : 30_000,
-            );
-        });
-        $this->app->register(PlatformServiceProvider::class);
-        $enabled = config('billium.modules.enabled', []);
-        if (is_array($enabled) && in_array('ledger', $enabled, true)) {
-            $this->app->register(LedgerServiceProvider::class);
+        if ($this->app->getProviders(self::class) !== []) {
+            return;
         }
-        $this->registerCommercialModules();
+        $this->registerPackageRegistrars();
+        if ($this->app instanceof Application && $this->app->isBooted()) {
+            $this->activateModules();
+        } else {
+            $this->app->booting($this->activateModules(...));
+        }
     }
 
-    private function registerCommercialModules(): void
+    private function activateModules(): void
     {
-        // D55/D56: enroll module-owned providers only when enabled and available.
-        $providers = [
-            'execution' => ExecutionServiceProvider::class,
-            'usage' => UsageServiceProvider::class,
-            'rating' => RatingServiceProvider::class,
-            'schedule' => ScheduleServiceProvider::class,
-        ];
-        $enabled = config('billium.modules.enabled', []);
-        foreach ($providers as $module => $provider) {
-            if (! is_array($enabled) || ! in_array($module, $enabled, true)
-                || config("billium.{$module}.enabled") !== true) {
+        $active = array_column($this->app->make(PluginInspector::class)->describe(), null, 'id');
+        if (! isset($active['axiomasoft.billium.platform'])) {
+            return;
+        }
+        $this->app->register(PlatformServiceProvider::class);
+        foreach (self::OPTIONAL_MODULES as $module => $providerClass) {
+            if (! isset($active['axiomasoft.billium.'.$module])) {
                 continue;
             }
-            $this->registerAvailableProvider($provider);
-        }
-    }
-
-    private function registerAvailableProvider(string $provider): void
-    {
-        if (class_exists($provider) && is_subclass_of($provider, ServiceProvider::class)) {
-            $this->app->register($provider);
+            if ($module === 'execution') {
+                (new ExecutionCompositionGuard)->assertReady($this->app, $this->app->make(BilliumOptions::class), isset($active['axiomasoft.billium.ledger']));
+            }
+            $this->app->register($providerClass);
         }
     }
 
     public function boot(): void
     {
-        $this->loadMigrationsFrom(__DIR__.'/../database/migrations/platform');
+        $this->bootPackageRegistrars();
     }
 }

@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Billium\Platform\Internal\Feed;
 
 use Billium\Platform\Internal\Installation\Rows;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final readonly class PartitionRow
 {
     public function __construct(

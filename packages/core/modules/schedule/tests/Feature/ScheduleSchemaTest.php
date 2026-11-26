@@ -8,7 +8,9 @@ use Billium\Core\Contracts\Modules\ModuleRegistry;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Schedule\Tests\ScheduleTestCase;
 use Billium\Schedule\Tests\Support\Terms;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class ScheduleSchemaTest extends ScheduleTestCase
 {
     public function test_history_is_append_only_and_runtime_cannot_update_or_delete_it(): void
@@ -55,10 +57,12 @@ final class ScheduleSchemaTest extends ScheduleTestCase
     {
         $descriptor = $this->application()->make(ModuleRegistry::class)->descriptor('schedule');
         self::assertNotNull($descriptor);
-        $migration = $descriptor->migrationIdentities[0];
-        $path = dirname(__DIR__, 4).'/database/migrations/schedule/'.$migration->id.'.php';
-        self::assertSame('sha256:'.hash_file('sha256', $path), $migration->checksum);
-        self::assertSame(3, $this->value("SELECT schema_version FROM billium_module_state WHERE module_id='schedule'"));
+        self::assertCount(4, $descriptor->migrationIdentities);
+        foreach ($descriptor->migrationIdentities as $migration) {
+            $path = dirname(__DIR__, 4).'/database/migrations/schedule/'.$migration->id.'.php';
+            self::assertSame('sha256:'.hash_file('sha256', $path), $migration->checksum);
+        }
+        self::assertSame(4, $this->value("SELECT schema_version FROM billium_module_state WHERE module_id='schedule'"));
         self::assertCount(11, $descriptor->ownedTables);
     }
 }

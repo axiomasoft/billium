@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Billium\Usage\Data;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Usage\Enums\LatePolicy;
 use Billium\Usage\Internal\Errors\UsageProblems;
+use Packman\Attributes\Api;
 
 #[Api]
 final readonly class SourceFinalityContract
@@ -37,7 +37,7 @@ final readonly class SourceFinalityContract
         $this->requiredSources = $requiredSources;
     }
 
-    /** @return array<string, mixed> */
+    /** @return array{contractRef: string, version: int, requiredSources: list<string>, lateGraceMicros: int, postFinalPolicy: string, reopenAllowed: bool} */
     public function payload(): array
     {
         return [

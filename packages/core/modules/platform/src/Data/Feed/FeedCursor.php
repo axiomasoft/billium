@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Data\Feed;
 
-use Billium\Contracts\Attributes\Api;
+use Packman\Attributes\Api;
 
 /** D63: only the source authenticates this token; positions are diagnostic, not authority. */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class FeedCursor
 {
     public function __construct(public string $token, public FeedPosition $position) {}

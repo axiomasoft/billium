@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Billium\Usage\Tests\Concurrency;
 
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Data\Caller;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Tests\Support\Concurrency\Scenario;
 use Billium\Core\Tests\Support\FixedCallerContext;
 use Billium\Usage\Contracts\Usage;
 use Billium\Usage\Contracts\UsageAttribution;
-use Billium\Usage\Internal\UsageServiceProvider;
+use Billium\Usage\Laravel\UsageServiceProvider;
 use Billium\Usage\Tests\Support\UsageFixtures;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Application;

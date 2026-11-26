@@ -1,0 +1,27 @@
+{
+  "id": "http/shape/feed-read-unknown-field",
+  "spec_refs": [
+    "BC-ENV-04",
+    "REQ-CON-20"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"billium.feed.read.v1\",\"installationRef\":\"inst-1\",\"environment\":\"test\",\"sellerRef\":\"seller-1\",\"subscriptionRef\":\"sub-1\",\"selectionDigest\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\",\"cursor\":\"cursor-1\",\"future\":true}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

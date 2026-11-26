@@ -1,6 +1,12 @@
 [
+  "billium-server.max_body_bytes",
+  "billium-server.max_depth",
+  "billium.collection.enabled",
   "billium.connection",
-  "billium.execution.enabled",
+  "billium.documents.enabled",
+  "billium.execution.outgoing_enabled",
+  "billium.execution.release_evidence_ref",
+  "billium.execution.retention_policy_ref",
   "billium.feed.bootstrap_batch",
   "billium.feed.bootstrap_lease_seconds",
   "billium.feed.drain_batch",

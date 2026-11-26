@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-10:feed/read.v1.json",
+  "title": "Чтение страницы pinned подписки",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "subscriptionRef",
+    "selectionDigest",
+    "cursor"
+  ],
+  "properties": {
+    "schema": {
+      "const": "billium.feed.read.v1"
+    },
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "subscriptionRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "selectionDigest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    },
+    "cursor": {
+      "type": "string",
+      "minLength": 1
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    }
+  }
+}

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Billium\Usage\Internal\Services;
 
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\OperationSpec;
-use Billium\Core\Enums\FinancialMode;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Data\Runner\OperationSpec;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Usage\Contracts\AggregationService;
 use Billium\Usage\Data\FreezeAggregate;
 use Billium\Usage\Data\FreezeReceipt;
@@ -20,7 +20,9 @@ use Billium\Usage\Internal\Storage\AggregateStore;
 use Billium\Usage\Internal\Storage\AggregationRows;
 use Billium\Usage\Internal\Storage\EffectiveFactSource;
 use Billium\Usage\Internal\Window\WindowQualifier;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final readonly class DatabaseAggregationService implements AggregationService
 {
     public function __construct(

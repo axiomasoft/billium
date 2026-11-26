@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Billium\Usage\Data;
 
-use Billium\Contracts\Attributes\Api;
-use Billium\Core\Data\Receipt;
+use Billium\Core\Data\Runner\Receipt;
+use Packman\Attributes\Api;
 
 #[Api]
 final readonly class FreezeReceipt implements Receipt

@@ -8,41 +8,44 @@ use Billium\Contracts\Data\Currency;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Data\Receipt;
-use Billium\Core\Enums\FinancialMode;
-use Billium\Core\Enums\LockRank;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Data\Runner\Receipt;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
-use Billium\Core\Exceptions\LockOrderViolation;
+use Billium\Core\Enums\Runner\LockRank;
+use Billium\Core\Enums\Runtime\FinancialMode;
+use Billium\Core\Exceptions\Runner\LockOrderViolation;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
 use Billium\Core\Tests\Support\ObservationFactory;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Ledger\Contracts\LedgerParticipants;
-use Billium\Ledger\Data\AdjustObligation;
-use Billium\Ledger\Data\BillingAccountScope;
-use Billium\Ledger\Data\CloseSettlementIntentNoEffect;
-use Billium\Ledger\Data\CreditNoteLine;
-use Billium\Ledger\Data\CreditNoteMode;
-use Billium\Ledger\Data\DeclareSettlementIntent;
-use Billium\Ledger\Data\IssueCreditNote;
-use Billium\Ledger\Data\IssueInvoice;
-use Billium\Ledger\Data\NoEffectProof;
-use Billium\Ledger\Data\RecordObligation;
+use Billium\Ledger\Data\Invoices\CreditNoteLine;
+use Billium\Ledger\Data\Invoices\CreditNoteMode;
+use Billium\Ledger\Data\Invoices\IssueCreditNote;
+use Billium\Ledger\Data\Invoices\IssueInvoice;
+use Billium\Ledger\Data\Obligations\AdjustObligation;
+use Billium\Ledger\Data\Obligations\RecordObligation;
+use Billium\Ledger\Data\Runtime\BillingAccountScope;
+use Billium\Ledger\Data\Settlements\CloseSettlementIntentNoEffect;
+use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
+use Billium\Ledger\Data\Settlements\NoEffectProof;
 use Billium\Ledger\Internal\Observation\ObservationHandler;
 use Billium\Ledger\Internal\Observation\PaymentProjection;
 use Billium\Ledger\Internal\Observation\RefundReconciler;
 use Billium\Ledger\Tests\Commands\InvoiceFixtures;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
-use Billium\Platform\Contracts\CommandOutbox;
-use Billium\Platform\Contracts\Outbox;
+use Billium\Platform\Contracts\Outbox\CommandOutbox;
+use Billium\Platform\Contracts\Outbox\Outbox;
 use Billium\Platform\Data\EventContracts\PreparedInternalCommand;
-use Billium\Platform\Data\OutboxEvent;
+use Billium\Platform\Data\Outbox\OutboxEvent;
 use DateTimeImmutable;
 use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Group;
 use RuntimeException;
 
-/** D49/D60: the composed issue (P6 supplies the legal reference) is the same guarded routine in the caller's root Tx. */
+/** D49/D60: the composed issue (document numbering supplies the legal reference) is the same guarded routine in the caller's root Tx. */
+#[Group('pg')]
 final class InvoiceParticipantTest extends LedgerTestCase
 {
     use InvoiceFixtures;
@@ -62,9 +65,12 @@ final class InvoiceParticipantTest extends LedgerTestCase
         $this->obligation('obligation-a', 1000);
         $this->draft();
         $this->ledger()->declareSettlementIntent(new DeclareSettlementIntent('intent', $this->account(), 'intent-a', 'RUB', ['obligation-a']));
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('seal', 'seal-recovery', [1]);
         $this->installation()->seal('seal-recovery', 1);
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('open', 'sess-recovery-only', ['owner-1', 1, 1, 1, 'evidence:recovery']);
         $this->installation()->openSession('sess-recovery-only', 'owner-1', 1, 1, 1, 'evidence:recovery');
         $this->tokens->set(FixedSessionAdmission::token(self::INSTALLATION, modes: [FinancialMode::Recovery]));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($this->application());
         $tables = ['billium_obligation', 'billium_invoice', 'billium_allocation_receipt', 'billium_outbox_event', 'billium_money_commit_log'];
         $before = array_map($this->rows(...), $tables);
 
@@ -102,6 +108,7 @@ final class InvoiceParticipantTest extends LedgerTestCase
             $this->ledger()->declareSettlementIntent(new DeclareSettlementIntent('intent', $this->account(), 'intent-a', 'RUB', ['obligation-a']));
         }
         if ($mode === FinancialMode::RawCustody) {
+            SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('seal', 'seal-1', [1]);
             $this->installation()->seal('seal-1', 1);
         }
         $tables = ['billium_obligation', 'billium_allocation_receipt', 'billium_outbox_event', 'billium_money_commit_log'];
@@ -181,6 +188,7 @@ final class InvoiceParticipantTest extends LedgerTestCase
             $this->retireLedger();
         }
         if ($mode === FinancialMode::RawCustody) {
+            SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('seal', 'seal-outbox', [1]);
             $this->installation()->seal('seal-outbox', 1);
         }
         $tables = ['billium_outbox_event', 'billium_outbox_delivery', 'billium_outbox_command', 'billium_outbox_command_delivery', 'billium_money_commit_log'];

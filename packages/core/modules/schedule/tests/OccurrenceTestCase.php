@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Billium\Schedule\Tests;
 
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Receipt;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\Receipt;
 use Billium\Core\Tests\Support\FixtureArguments;
 use Billium\Schedule\Contracts\OccurrenceLocks;
 use Billium\Schedule\Contracts\OccurrenceParticipants;

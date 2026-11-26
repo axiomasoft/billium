@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export the normative module registry spec/modules.json into the core package resources (P3.13).
+"""Export the normative module registry spec/modules.json into the core package resources.
 
 The registry is validated against spec/schema/module-descriptor.json and written in canonical form to
 packages/core/resources/modules.json; the installed package reads nothing outside itself (D55).

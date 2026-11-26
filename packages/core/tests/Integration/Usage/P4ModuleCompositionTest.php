@@ -14,7 +14,9 @@ use Billium\Usage\Data\FreezeAggregate;
 use Billium\Usage\Internal\Reducers\ReducerRegistry;
 use Billium\Usage\Tests\AggregationTestCase;
 use Billium\Usage\Tests\Support\UsageFixtures;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class P4ModuleCompositionTest extends AggregationTestCase
 {
     public function test_two_source_adapters_produce_the_same_normalized_fact_and_snapshot(): void

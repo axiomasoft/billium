@@ -1,0 +1,15 @@
+{
+  "id": "http/shape/feed-read-unknown-field",
+  "kind": "reject-unknown",
+  "schema": "billium.feed.read.v1",
+  "body": {
+    "schema": "billium.feed.read.v1",
+    "installationRef": "inst-1",
+    "environment": "test",
+    "sellerRef": "seller-1",
+    "subscriptionRef": "sub-1",
+    "selectionDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "cursor": "cursor-1",
+    "future": true
+  }
+}

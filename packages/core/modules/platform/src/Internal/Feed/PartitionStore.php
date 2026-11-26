@@ -4,22 +4,25 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Internal\Feed;
 
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Enums\LockRank;
-use Billium\Core\Exceptions\LockPlanChanged;
+use Billium\Core\Configuration\BilliumOptions;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Enums\Runner\LockRank;
+use Billium\Core\Exceptions\Runner\LockPlanChanged;
 use Billium\Platform\Internal\Installation\Rows;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use LogicException;
+use Packman\Attributes\Internal;
 
 /**
  * Rank-30 access to feed_partition: the live partition of a source namespace is looked up WITHOUT its lineage (a changed
  * lineage is detected, never a second partition), then locked through the context's LockSet and re-read.
  */
+#[Internal]
 final readonly class PartitionStore
 {
-    public function __construct(private DatabaseManager $databases) {}
+    public function __construct(private DatabaseManager $databases, private BilliumOptions $options) {}
 
     public function connection(TransactionContext $context): Connection
     {
@@ -28,7 +31,7 @@ final readonly class PartitionStore
 
     public function defaultConnection(): Connection
     {
-        return $this->databases->connection(is_string($name = config('billium.connection')) ? $name : null);
+        return $this->databases->connection($this->options->connection);
     }
 
     /**
@@ -97,25 +100,28 @@ final readonly class PartitionStore
         }
         $namespace = [$partition->channel, $partition->sourceAuthority, $partition->sourceLineage,
             $partition->sellerRef, $partition->environment, $partition->partitionRef];
+        $scopeId = ObservationScopes::binding($db, 'partition_id', $partition->id)?->id;
         // Custody can commit after adoption has already scanned the tail. Covered orphans have
         // the same durable disposition as arrivals seen during adoption, even below the cursor.
         $db->update(<<<'SQL'
             UPDATE public.billium_inbox_message m
             SET partition_id = ?, status = 'quarantined', last_error_class = 'superseded_by_bootstrap', park_kind = NULL, park_ref = NULL
-            WHERE m.partition_id IS NULL AND m.status = 'parked_gap'
+            WHERE (SELECT scope_id FROM public.billium_feed_observation_scope_link WHERE inbox_id=m.id) IS NOT DISTINCT FROM ?::bigint
+              AND m.partition_id IS NULL AND m.status = 'parked_gap'
               AND m.channel = ? AND m.source_authority = ? AND m.source_lineage = ?
               AND m.seller_ref = ? AND m.environment = ? AND m.partition_ref = ? AND m.source_sequence <= ?
               AND EXISTS (SELECT 1 FROM public.billium_feed_bootstrap_session s
                   WHERE s.new_partition_id = ? AND s.status = 'adopted' AND m.source_sequence <= s.cursor_sequence)
-            SQL, [$partition->id, ...$namespace, $partition->accountedSequence, $partition->id]);
+            SQL, [$partition->id, $scopeId, ...$namespace, $partition->accountedSequence, $partition->id]);
         $regressed = $db->update(<<<'SQL'
             UPDATE public.billium_inbox_message SET status = 'held_recovery'
-            WHERE partition_id IS NULL AND status = 'parked_gap'
+            WHERE (SELECT scope_id FROM public.billium_feed_observation_scope_link WHERE inbox_id=billium_inbox_message.id) IS NOT DISTINCT FROM ?::bigint
+              AND partition_id IS NULL AND status = 'parked_gap'
               AND channel = ? AND source_authority = ? AND source_lineage = ?
               AND seller_ref = ? AND environment = ? AND partition_ref = ? AND source_sequence <= ?
               AND NOT EXISTS (SELECT 1 FROM public.billium_feed_bootstrap_session s
                   WHERE s.new_partition_id = ? AND s.status = 'adopted' AND billium_inbox_message.source_sequence <= s.cursor_sequence)
-            SQL, [...$namespace, $partition->accountedSequence, $partition->id]);
+            SQL, [$scopeId, ...$namespace, $partition->accountedSequence, $partition->id]);
         if ($regressed > 0) {
             $this->requireRecovery($db, $partition, 'sequence_regressed');
 
@@ -123,11 +129,12 @@ final readonly class PartitionStore
         }
         $attached = $db->update(<<<'SQL'
             UPDATE public.billium_inbox_message SET partition_id = ?
-            WHERE partition_id IS NULL AND status = 'parked_gap'
+            WHERE (SELECT scope_id FROM public.billium_feed_observation_scope_link WHERE inbox_id=billium_inbox_message.id) IS NOT DISTINCT FROM ?::bigint
+              AND partition_id IS NULL AND status = 'parked_gap'
               AND channel = ? AND source_authority = ? AND source_lineage = ?
               AND seller_ref = ? AND environment = ? AND partition_ref = ?
               AND source_sequence > ?
-            SQL, [$partition->id, $partition->channel, $partition->sourceAuthority, $partition->sourceLineage,
+            SQL, [$partition->id, $scopeId, $partition->channel, $partition->sourceAuthority, $partition->sourceLineage,
             $partition->sellerRef, $partition->environment, $partition->partitionRef, $partition->accountedSequence]);
         if ($attached > 0) {
             $this->extendCustody($db, $partition);

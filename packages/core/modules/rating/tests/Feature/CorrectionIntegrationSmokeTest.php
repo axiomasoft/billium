@@ -9,8 +9,9 @@ use Billium\Contracts\Data\Envelopes\UsageFactV2;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Caller;
+use Billium\Core\Configuration\BilliumOptions;
+use Billium\Core\Data\Runtime\Caller;
+use Billium\Core\Exceptions\Modules\ModuleAdmissionRefused;
 use Billium\Core\Tests\Support\Concurrency\ConcurrencyStand;
 use Billium\Core\Tests\Support\FixtureArguments;
 use Billium\Core\Tests\Support\FixtureValues;
@@ -18,11 +19,11 @@ use Billium\Ledger\Contracts\CorrectionCreditParticipants;
 use Billium\Ledger\Contracts\Ledger;
 use Billium\Ledger\Contracts\LedgerParticipants;
 use Billium\Ledger\Contracts\LedgerQueries;
-use Billium\Ledger\Data\Allocate;
-use Billium\Ledger\Data\BillingAccountScope;
-use Billium\Ledger\Data\CreateInvoice;
-use Billium\Ledger\Data\InvoiceLineInput;
-use Billium\Ledger\Data\IssueInvoice;
+use Billium\Ledger\Data\Allocations\Allocate;
+use Billium\Ledger\Data\Invoices\CreateInvoice;
+use Billium\Ledger\Data\Invoices\InvoiceLineInput;
+use Billium\Ledger\Data\Invoices\IssueInvoice;
+use Billium\Ledger\Data\Runtime\BillingAccountScope;
 use Billium\Rating\Contracts\PriceVersionStore;
 use Billium\Rating\Contracts\RatingCorrection;
 use Billium\Rating\Contracts\RatingPreparer;
@@ -56,6 +57,7 @@ use Billium\Rating\Internal\Canonical\CanonicalJson;
 use Billium\Rating\Internal\Storage\RatingStore;
 use Billium\Rating\Tests\RatingTestCase;
 use Billium\Rating\Tests\Support\CorrectionScenario;
+use Billium\Rating\Tests\Support\CreditFault;
 use Billium\Rating\Tests\Support\LedgerFault;
 use Billium\Rating\Tests\Support\TestTaxPort;
 use Billium\Usage\Contracts\UsageAttribution;
@@ -67,8 +69,10 @@ use DateTimeImmutable;
 use Illuminate\Database\QueryException;
 use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Group;
 use RuntimeException;
 
+#[Group('pg')]
 class CorrectionIntegrationSmokeTest extends RatingTestCase
 {
     /** @return array<string, array{string, string, string, string, string, string}> */
@@ -230,6 +234,7 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
     public function test_an_unposted_positive_basis_cannot_be_corrected_as_a_no_charge_booking(): void
     {
         config(['billium.modules.enabled' => ['platform', 'rating', 'usage', 'schedule']]);
+        $this->application()->forgetInstance(BilliumOptions::class);
         $receipt = $this->book($this->prepared());
         self::assertSame('unposted', $receipt->outcome->value);
         try {
@@ -695,6 +700,42 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         self::assertSame(1, $this->rows('billium_obligation'));
     }
 
+    public function test_zero_correction_of_a_no_charge_booking_does_not_admit_a_disabled_ledger(): void
+    {
+        $this->noChargeBooking();
+        $this->disableLedger();
+        $prepared = $this->prepareLateCorrection();
+        self::assertSame('0', $prepared->computation->deltaGrossMinor);
+        $receipt = $this->application()->make(RatingCorrection::class)->apply(new ApplyCorrection(prepared: $prepared, operationKey: 'zero-without-ledger'));
+        self::assertSame('none', $receipt->outcome);
+        self::assertNull($receipt->obligationRef);
+        self::assertSame(1, $this->rows('billium_rating_correction'));
+        self::assertSame(1, $this->rows('billium_schedule_billing_correction'));
+        self::assertSame(0, $this->rows('billium_obligation'));
+    }
+
+    public function test_non_zero_correction_with_a_disabled_ledger_refuses_with_a_ledger_module_error(): void
+    {
+        $zero = $this->noChargeBooking();
+        $this->usage()->submitUsageFact(UsageFixtures::fact(static function ($fact): void {
+            $fact->factId = 'late-positive';
+            $fact->value->quantity = '50';
+        }));
+        $this->freeze($zero);
+        $this->disableLedger();
+        $prepared = $this->prepareLateCorrection();
+        self::assertSame('5000', $prepared->computation->deltaGrossMinor);
+        try {
+            $this->application()->make(RatingCorrection::class)->apply(new ApplyCorrection(prepared: $prepared, operationKey: 'positive-without-ledger'));
+            self::fail('A positive correction booked debt without an admitted ledger');
+        } catch (ModuleAdmissionRefused $error) {
+            self::assertSame('ledger', $error->moduleId);
+        }
+        self::assertSame(0, $this->rows('billium_rating_correction'));
+        self::assertSame(0, $this->rows('billium_schedule_billing_correction'));
+        self::assertSame(0, $this->rows('billium_obligation'));
+    }
+
     public function test_mixed_sign_tax_and_usage_delta_is_held(): void
     {
         $this->tax->rate = '0.20';
@@ -741,8 +782,8 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $date = new DateTimeImmutable('2026-10-16Z');
         $this->publishPolicy(port: $port, date: $date);
         $this->application()->instance(TaxSnapshotPort::class, $port);
-        $fault = new LedgerFault(inner: $this->application()->make(LedgerParticipants::class), failure: 'credit_rollback');
-        $this->application()->instance(LedgerParticipants::class, $fault);
+        $this->application()->instance(CorrectionCreditParticipants::class, new CreditFault(
+            inner: $this->application()->make(CorrectionCreditParticipants::class), message: 'test after successful credit-note participant'));
         $correction = $this->application()->make(RatingCorrection::class);
         $prepared = $correction->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test', parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::PartialCancel, amendment: new HostAmendment(amendmentRef: 'cancel', revision: 1, effectiveAt: $date, prorationPolicy: ProrationPolicyId::ElapsedSeconds, kind: 'partial_cancel', timezone: null), reasonCode: 'cancel', releasePolicy: ReleasePolicy::OpenOnly));
         self::assertInstanceOf(PreparedCorrection::class, $prepared);
@@ -809,18 +850,8 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $negative = $correction->prepare($command);
         self::assertInstanceOf(PreparedCorrection::class, $negative);
         self::assertSame('-26000', $negative->computation->deltaGrossMinor);
-        $participant = $this->application()->make(CorrectionCreditParticipants::class);
-        $fault = new readonly class($participant) implements CorrectionCreditParticipants
-        {
-            public function __construct(private CorrectionCreditParticipants $inner) {}
-
-            public function issue(TransactionContext $context, array $commands): void
-            {
-                $this->inner->issue($context, $commands);
-                throw new RuntimeException('multi-credit fault');
-            }
-        };
-        $this->application()->instance(CorrectionCreditParticipants::class, $fault);
+        $this->application()->instance(CorrectionCreditParticipants::class, new CreditFault(
+            inner: $this->application()->make(CorrectionCreditParticipants::class), message: 'multi-credit fault'));
         $failing = $this->application()->make(RatingCorrection::class);
         $before = $this->value("SELECT head_digest FROM billium_rating_source_frontier WHERE frontier_key LIKE 'occurrence:%'");
         try {
@@ -1004,6 +1035,41 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
             self::assertSame(1, $this->rows('billium_obligation'));
             self::assertSame(0, $this->rows('billium_outbox_command'));
         }
+    }
+
+    /** Books a final no-charge basis from a corrected zero-quantity window and returns that window's snapshot digest. */
+    private function noChargeBooking(): string
+    {
+        $originalFact = UsageFixtures::fact(static function ($fact): void {
+            $fact->value->quantity = '100';
+        });
+        $digest = FixtureValues::text($this->queries()->snapshot($this->snapshotRef)['snapshotDigest']);
+        $this->usage()->submitUsageFact(UsageFixtures::correction(previous: $originalFact, quantity: '0'));
+        $zero = $this->freeze($digest);
+        $this->snapshotRef = FixtureValues::text($zero['snapshotRef']);
+        self::assertSame('no_charge', $this->book($this->prepared(noCharge: 'approved_zero_quantity'))->outcome->value);
+
+        return FixtureValues::text($zero['snapshotDigest']);
+    }
+
+    private function disableLedger(): void
+    {
+        $this->owner()->table('billium_module_state')->where('module_id', 'ledger')->update([
+            'state' => 'draining', 'generation' => 2, 'last_transition_ref' => 'correction-without-ledger']);
+    }
+
+    private function prepareLateCorrection(): PreparedCorrection
+    {
+        $port = $this->correctionTax(rate: '0', version: '1');
+        $date = new DateTimeImmutable('2026-11-15Z');
+        $this->publishPolicy(port: $port, date: $date);
+        $this->application()->instance(TaxSnapshotPort::class, $port);
+        $prepared = $this->application()->make(RatingCorrection::class)->prepare(new PrepareCorrection(sellerRef: 'seller-a', environment: 'test',
+            parentOccurrenceRef: $this->occurrenceRef, kind: CorrectionKind::LateUsage, amendment: null,
+            reasonCode: 'late', releasePolicy: null, correctionEffectiveDate: $date));
+        self::assertInstanceOf(PreparedCorrection::class, $prepared, json_encode($prepared, JSON_THROW_ON_ERROR));
+
+        return $prepared;
     }
 
     private function correctionTax(string $rate, string $version, string $treatment = 'current_legal_rate', ?TaxMode $mode = null): TaxSnapshotPort

@@ -11,6 +11,9 @@ use Billium\Platform\Tests\Outbox\OutboxTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
 #[Group('EVT-05')]
+#[Group('pg')]
+// Feed reads stop at the cluster-wide snapshot xmin, which transactions in other databases hold back.
+#[Group('pg-serial')]
 final class FeedBootstrapVsPruneTest extends OutboxTestCase
 {
     public function test_snapshot_overlap_with_a_horizon_delayed_tail_preserves_economic_identity(): void

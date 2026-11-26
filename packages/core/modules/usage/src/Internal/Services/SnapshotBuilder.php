@@ -19,7 +19,9 @@ use Billium\Usage\Internal\Errors\UsageProblems;
 use Billium\Usage\Internal\Math\Decimal;
 use Billium\Usage\Internal\Reducers\DistinctReducer;
 use Billium\Usage\Internal\Reducers\EffectiveRevisionSelector;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final readonly class SnapshotBuilder
 {
     public function __construct(private MetricReducerRegistry $registry) {}

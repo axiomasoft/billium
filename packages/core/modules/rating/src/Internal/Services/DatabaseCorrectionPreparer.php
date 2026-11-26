@@ -4,22 +4,25 @@ declare(strict_types=1);
 
 namespace Billium\Rating\Internal\Services;
 
-use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\CallerContext;
-use Billium\Ledger\Contracts\LedgerQueries;
+use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Rating\Contracts\TaxSnapshotPort;
 use Billium\Rating\Data\Correction\CorrectionCreditPart;
 use Billium\Rating\Data\Correction\PrepareCorrection;
 use Billium\Rating\Data\Correction\PreparedCorrection;
 use Billium\Rating\Data\Rating\FrozenAggregate;
+use Billium\Rating\Data\Rating\FrozenTax;
 use Billium\Rating\Data\Rating\RatingHold;
 use Billium\Rating\Data\Tax\TaxCorrectionRequest;
+use Billium\Rating\Data\Tax\TaxSnapshot;
 use Billium\Rating\Enums\CorrectionKind;
 use Billium\Rating\Enums\HoldReason;
 use Billium\Rating\Enums\ReleasePolicy;
 use Billium\Rating\Enums\TaxSnapshotKind;
+use Billium\Rating\Internal\Adapters\LedgerAdapter;
+use Billium\Rating\Internal\Adapters\ScheduleOccurrenceAdapter;
+use Billium\Rating\Internal\Adapters\UsageAggregateAdapter;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
 use Billium\Rating\Internal\Corrections\CorrectionCalculator;
 use Billium\Rating\Internal\Corrections\CorrectionDigest;
@@ -35,39 +38,36 @@ use Billium\Rating\Internal\Storage\FrozenInputsCodec;
 use Billium\Rating\Internal\Storage\RatingRows;
 use Billium\Rating\Internal\Storage\RatingStore;
 use Billium\Rating\Internal\Storage\TaxPolicyFrontier;
-use Billium\Schedule\Contracts\ScheduleQueries;
-use Billium\Usage\Contracts\AggregationQueries;
-use Billium\Usage\Data\WindowSelector;
-use Billium\Usage\Enums\LatePolicy;
-use DateTimeImmutable;
+use Billium\Schedule\Enums\OccurrenceState;
+use LogicException;
+use Packman\Attributes\Internal;
 use Throwable;
 
+#[Internal]
 final readonly class DatabaseCorrectionPreparer
 {
-    public function __construct(private CallerContext $callers, private RatingStore $store, private CorrectionStore $corrections, private ScheduleQueries $schedule,
-        private LedgerQueries $ledger, private TaxSnapshotPort $tax,
-        private TaxPolicyFrontier $policyFrontier, private RatingComputation $rating, private CorrectionCalculator $calculator,
-        private AmendmentSupport $amendmentSupport, private ProrationCalculator $proration, private ?AggregationQueries $usage = null) {}
+    public function __construct(private CallerContext $callers, private RatingStore $store, private CorrectionStore $corrections, private ScheduleOccurrenceAdapter $schedule,
+        private TaxSnapshotPort $tax, private TaxPolicyFrontier $policyFrontier, private RatingComputation $rating,
+        private CorrectionCalculator $calculator, private AmendmentSupport $amendmentSupport, private ProrationCalculator $proration,
+        private UsageAggregateAdapter $usage, private LedgerAdapter $ledger) {}
 
     public function prepare(PrepareCorrection $command): PreparedCorrection|RatingHold
     {
         if ($this->store->database()->transactionLevel() !== 0) {
-            throw new \LogicException('Correction preparation must run outside a transaction');
+            throw new LogicException('Correction preparation must run outside a transaction');
         }
         $caller = $this->callers->current();
         if ($caller->sellerRef !== $command->sellerRef || $caller->environment !== $command->environment) {
             throw new ProblemException(ProblemCode::AuthDenied, 'billium.rating.scope_denied');
         }
-        $occurrence = $this->schedule->occurrence($command->parentOccurrenceRef);
-        if ($occurrence === null || ! in_array($occurrence['state'] ?? null, ['obligated', 'rated'], true) || $command->reasonCode === '') {
+        $occurrence = $this->schedule->find($command->parentOccurrenceRef);
+        if ($occurrence === null || ! in_array($occurrence->state, [OccurrenceState::Obligated, OccurrenceState::Rated], true) || $command->reasonCode === '') {
             RatingComputation::refuse('correction_not_applicable');
         }
-        $original = $this->store->basis(RatingRows::text($occurrence['rated_basis_ref'] ?? null));
+        $original = $this->store->basis(RatingRows::text($occurrence->ratedBasisRef));
         $booking = $original === null ? null : $this->store->booking(RatingRows::integer($original->id));
         if ($original === null || $booking === null
-            || ! (($occurrence['state'] === 'obligated' && $booking->outcome === 'booked' && is_string($booking->obligation_ref))
-                || ($occurrence['state'] === 'rated' && $booking->outcome === 'no_charge' && $booking->obligation_ref === null
-                    && $original->charge_kind === 'no_charge' && RatingRows::decimal($original->gross_minor) === '0'))) {
+            || ! ($occurrence->state === OccurrenceState::Obligated && $booking->outcome === 'booked' && is_string($booking->obligation_ref)) && ! ($occurrence->state === OccurrenceState::Rated && $booking->outcome === 'no_charge' && $booking->obligation_ref === null && $original->charge_kind === 'no_charge' && RatingRows::decimal($original->gross_minor) === '0')) {
             RatingComputation::refuse('correction_not_applicable');
         }
         $head = $this->store->frontier($command->parentOccurrenceRef);
@@ -91,10 +91,8 @@ final readonly class DatabaseCorrectionPreparer
                 $this->amendmentSupport->assertSupported(kind: $amendment->kind, price: $price->snapshot,
                     quantitySnapshot: $retained->aggregates[$i]->quantitySnapshot);
             }
-            $periodStart = new DateTimeImmutable(RatingRows::text($occurrence['period_start']));
-            $periodEnd = new DateTimeImmutable(RatingRows::text($occurrence['period_end']));
-            $ratio = $this->proration->fraction(policy: $amendment->prorationPolicy, start: $periodStart,
-                end: $periodEnd, effectiveAt: $amendment->effectiveAt, timezone: $amendment->timezone);
+            $ratio = $this->proration->fraction(policy: $amendment->prorationPolicy, start: $occurrence->periodStart,
+                end: $occurrence->periodEnd, effectiveAt: $amendment->effectiveAt, timezone: $amendment->timezone);
             $fraction = [...$ratio, 'amendmentRef' => $amendment->amendmentRef, 'revision' => $amendment->revision,
                 'effectiveAt' => $amendment->effectiveAt->format('Y-m-d\TH:i:s.uP'), 'policy' => $amendment->prorationPolicy->value,
                 'timezone' => $amendment->timezone];
@@ -122,26 +120,23 @@ final readonly class DatabaseCorrectionPreparer
 
                 continue;
             }
-            if ($this->usage === null) {
+            if (! $this->usage->available()) {
                 return new RatingHold(reason: HoldReason::IncompleteSource, repairOrReplayRefs: [$aggregate->snapshotRef], detail: 'usage capability absent');
             }
-            $window = RatingRows::map($aggregate->snapshot['window'] ?? null);
-            $selector = new WindowSelector(sellerRef: $retained->sellerRef, environment: $retained->environment,
-                metricRef: $aggregate->metricRef, metricVersion: $aggregate->metricVersion, groupKey: RatingRows::map($window['group'] ?? null),
-                startMicros: $aggregate->windowStartMicros, endMicros: $aggregate->windowEndMicros);
+            $selector = $this->usage->window(sellerRef: $retained->sellerRef, environment: $retained->environment, aggregate: $aggregate);
             $status = $this->usage->windowStatus($selector);
-            if (($status['lagFacts'] ?? 0) > 0) {
-                $held = $this->latePolicyHold($selector);
+            if ($status['lagFacts'] > 0) {
+                $held = $this->usage->latePolicyHold($selector);
                 if ($held !== null) {
                     return $held;
                 }
             }
-            if (($status['state'] ?? null) !== 'final' || ($status['progress'] ?? null) !== 'aggregated' || ! is_string($status['finalSnapshotRef'] ?? null)) {
+            if ($status['state'] !== 'final' || $status['progress'] !== 'aggregated' || $status['finalSnapshotRef'] === null) {
                 return new RatingHold(reason: HoldReason::IncompleteSource, repairOrReplayRefs: [], detail: 'billium.rating.source_incomplete');
             }
-            $snapshot = RatingRows::map(json_decode(CanonicalJson::encode($this->usage->snapshot($status['finalSnapshotRef'])), true, 128, JSON_THROW_ON_ERROR));
+            $snapshot = $this->usage->snapshot($status['finalSnapshotRef']);
             if (($snapshot['snapshotRef'] ?? null) !== $aggregate->snapshotRef) {
-                $held = $this->latePolicyHold($selector);
+                $held = $this->usage->latePolicyHold($selector);
                 if ($held !== null) {
                     return $held;
                 }
@@ -154,7 +149,7 @@ final readonly class DatabaseCorrectionPreparer
                 quantitySnapshot: $aggregate->quantitySnapshot);
         }
         $sourceDigests = array_map(static fn (FrozenAggregate $a): string => $a->snapshotDigest, $aggregates);
-        $oldTaxes = array_map(static fn ($tax) => $tax->snapshot, $originalInputs->taxes);
+        $oldTaxes = array_map(static fn (FrozenTax $tax): TaxSnapshot => $tax->snapshot, $originalInputs->taxes);
         $preliminaryInputs = CorrectionInputs::replace(old: $retained, aggregates: $aggregates, taxes: $oldTaxes,
             sourceDigest: CanonicalJson::digest($sourceDigests), version: $head['rowVersion'], frontierDigest: $head['headDigest'], proration: $fraction);
         $candidate = $this->rating->compute(inputs: $preliminaryInputs, proration: $preliminaryInputs->proration,
@@ -209,23 +204,23 @@ final readonly class DatabaseCorrectionPreparer
         if (bccomp(RatingRows::decimal($computation->deltaGrossMinor), '0', 0) < 0 && $command->releasePolicy === null) {
             RatingComputation::refuse('release_policy_required');
         }
-        $obligation = $booking->obligation_ref === null ? null : $this->ledger->obligation($booking->obligation_ref);
-        $invoiceRef = is_string($obligation['billedInvoiceRef'] ?? null) ? $obligation['billedInvoiceRef'] : null;
+        // A zero correction books nothing, so it needs the original obligation's invoice only when ledger can still answer.
+        $zero = bccomp(RatingRows::decimal($computation->deltaGrossMinor), '0', 0) === 0;
+        $obligation = $booking->obligation_ref === null || ($zero && ! $this->ledger->available())
+            ? null : $this->ledger->obligation($booking->obligation_ref);
+        $invoiceRef = $obligation?->billedInvoiceRef;
         $creditParts = [];
         if (bccomp(RatingRows::decimal($computation->deltaGrossMinor), '0', 0) < 0) {
             $remaining = bcsub('0', RatingRows::decimal($computation->deltaGrossMinor), 0);
             $obligationRefs = $booking->obligation_ref === null ? [] : [$booking->obligation_ref];
             foreach ([...$obligationRefs, ...$this->corrections->childObligations($command->parentOccurrenceRef)] as $ref) {
-                $view = $ref === $booking->obligation_ref ? $obligation : $this->ledger->obligation($ref);
-                $amount = $command->releasePolicy === ReleasePolicy::OpenOnly
-                    ? (string) Money::fromWire($view['open'] ?? null)->minor
-                    : bcsub(bcadd((string) Money::fromWire($view['originalDue'] ?? null)->minor,
-                        (string) Money::fromWire($view['adjusted'] ?? null)->minor, 0), (string) Money::fromWire($view['credited'] ?? null)->minor, 0);
+                $view = $ref === $booking->obligation_ref && $obligation !== null ? $obligation : $this->ledger->obligation($ref);
+                $amount = $view->creditableMinor(openOnly: $command->releasePolicy === ReleasePolicy::OpenOnly);
                 if (bccomp($amount, '0', 0) <= 0) {
                     continue;
                 }
-                $invoice = $view['billedInvoiceRef'] ?? null;
-                if (! is_string($invoice) || ! in_array($view['billedInvoiceStatus'] ?? null, ['issued', 'partially_paid', 'paid', 'uncollectible'], true)) {
+                $invoice = $view->creditableInvoiceRef();
+                if ($invoice === null) {
                     return new RatingHold(reason: HoldReason::UnknownPolicy, repairOrReplayRefs: [], detail: 'billium.rating.invoice_not_issued');
                 }
                 $part = bccomp($amount, $remaining, 0) < 0 ? $amount : $remaining;
@@ -246,21 +241,5 @@ final readonly class DatabaseCorrectionPreparer
             expectedFrontierRowVersion: $head['rowVersion'], expectedFrontierDigest: $head['headDigest'], releasePolicy: $command->releasePolicy,
             command: $command, originalObligationRef: $booking->obligation_ref, invoiceRef: $invoiceRef,
             originalBasisRef: RatingRows::text($original->basis_ref), expectedPolicyRowVersion: $policyHead['version'], creditParts: $creditParts);
-    }
-
-    private function latePolicyHold(WindowSelector $selector): ?RatingHold
-    {
-        $policy = ($this->usage ?? RatingComputation::refuse('usage_capability_absent'))->latePolicy($selector);
-        if ($policy['policy'] === LatePolicy::Reject) {
-            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.usage.late_rejected');
-        }
-        if ($policy['policy'] === LatePolicy::ManualReview) {
-            return new RatingHold(reason: HoldReason::UnknownPolicy, repairOrReplayRefs: [], detail: 'billium.usage.late_manual_review');
-        }
-        if (! $policy['reopenAllowed']) {
-            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.usage.late_rejected');
-        }
-
-        return null;
     }
 }

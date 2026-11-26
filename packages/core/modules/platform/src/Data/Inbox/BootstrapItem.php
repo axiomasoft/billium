@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Data\Inbox;
 
-use Billium\Contracts\Attributes\Api;
 use InvalidArgumentException;
+use Packman\Attributes\Api;
 use stdClass;
 
 /** One immutable snapshot item of a staged bootstrap: an operation at one revision with its material digest. */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class BootstrapItem
 {
     public function __construct(
@@ -20,7 +20,7 @@ final readonly class BootstrapItem
         public ?int $id = null,
         public ?int $sessionId = null,
     ) {
-        if ($operationRef === '' || strlen($operationRef) > 200 || $revision < 0 || preg_match('/^sha256:[0-9a-f]{64}$/', $materialDigest) !== 1) {
+        if ($operationRef === '' || strlen($operationRef) > 200 || $revision < 0 || preg_match('/^sha256:[0-9a-f]{64}$/D', $materialDigest) !== 1) {
             throw new InvalidArgumentException('Bootstrap item needs an operation, a revision and a sha256 material digest');
         }
     }

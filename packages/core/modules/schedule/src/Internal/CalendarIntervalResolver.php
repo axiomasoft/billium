@@ -9,7 +9,9 @@ use Billium\Schedule\Data\ResolvedInterval;
 use Billium\Schedule\Data\ScheduleRevisionTerms;
 use DateTimeImmutable;
 use DateTimeZone;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class CalendarIntervalResolver implements IntervalResolver
 {
     public function resolve(ScheduleRevisionTerms $terms, int $ordinal): ResolvedInterval

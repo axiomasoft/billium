@@ -12,7 +12,9 @@ use Billium\Rating\Internal\Canonical\CanonicalJson;
 use Billium\Rating\Internal\Pipeline\RatingComputation;
 use Billium\Rating\Internal\Storage\RatingRows;
 use Billium\Rating\Internal\Storage\RatingStore;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final readonly class DatabaseRatingQueries implements RatingQueries
 {
     public function __construct(private RatingStore $store, private RatingComputation $computation) {}

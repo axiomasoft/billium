@@ -1,1 +1,24 @@
-[]
+[
+  "billium.server.capabilities",
+  "billium.server.collection.authorize",
+  "billium.server.execution.authorize",
+  "billium.server.execution.cancel",
+  "billium.server.execution.capture",
+  "billium.server.execution.execute",
+  "billium.server.execution.find",
+  "billium.server.execution.refund",
+  "billium.server.execution.void-authorization",
+  "billium.server.feed.bootstrap",
+  "billium.server.feed.bootstrap.ack",
+  "billium.server.feed.open",
+  "billium.server.feed.read",
+  "billium.server.ledger.observations",
+  "billium.server.ledger.query",
+  "billium.server.ledger.reallocate",
+  "billium.server.live",
+  "billium.server.rating.prepare",
+  "billium.server.ready",
+  "billium.server.receipts.find",
+  "billium.server.schedule.ensure",
+  "billium.server.usage.accept"
+]

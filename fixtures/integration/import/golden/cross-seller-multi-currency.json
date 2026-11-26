@@ -1,0 +1,317 @@
+{
+  "exportSchema": "source.export.v1",
+  "profile": "reference-recurring",
+  "exportVersion": "1.0.0",
+  "batchId": "batch-gold-multi-2026-10-001",
+  "sourceSystem": "reference-recurring/billing-export",
+  "sourceInstallation": "src-inst-gold-1",
+  "sourceBook": "book-gold-main",
+  "sourceExportRevision": 1,
+  "exportCutoff": "2026-10-20T00:00:00Z",
+  "installationRef": "inst-test",
+  "environment": "test",
+  "sellerRef": "seller-gold-1",
+  "importPolicyVersion": "import-policy-v1",
+  "sanitizationPolicy": {
+    "piiRedacted": true,
+    "secretsStripped": true,
+    "policyVersion": "sanitize-v1"
+  },
+  "totalsByCurrency": [
+    {
+      "sellerRef": "seller-gold-1",
+      "currency": "EUR",
+      "recordKind": "proven_invoice_history",
+      "count": 1,
+      "totalAmount": {
+        "amount": "99.00",
+        "currency": "EUR"
+      },
+      "authoritativeCurrentBalance": false
+    },
+    {
+      "sellerRef": "seller-gold-1",
+      "currency": "EUR",
+      "recordKind": "proven_obligation",
+      "count": 1,
+      "totalAmount": {
+        "amount": "99.00",
+        "currency": "EUR"
+      },
+      "authoritativeCurrentBalance": false
+    },
+    {
+      "sellerRef": "seller-gold-1",
+      "currency": "RUB",
+      "recordKind": "proven_obligation",
+      "count": 1,
+      "totalAmount": {
+        "amount": "12000.00",
+        "currency": "RUB"
+      },
+      "authoritativeCurrentBalance": false
+    },
+    {
+      "sellerRef": "seller-gold-1",
+      "currency": "USD",
+      "recordKind": "proven_obligation",
+      "count": 1,
+      "totalAmount": {
+        "amount": "250.00",
+        "currency": "USD"
+      },
+      "authoritativeCurrentBalance": false
+    }
+  ],
+  "provenance": {
+    "exportedByProcess": "source-host-exporter",
+    "artifactKind": "sanitized_fixture",
+    "externalActivationRequired": true
+  },
+  "records": [
+    {
+      "sourceRecordId": "gold-obl-annual-rub-001",
+      "sourceRecordRevision": 1,
+      "recordType": "annual_funding_with_grants",
+      "eventBusinessDate": "2025-11-01T09:00:00Z",
+      "originalBusinessRefs": {
+        "customerRef": "cust-gold-100",
+        "billingAccountRef": "acct-gold-100-rub",
+        "agreementRef": "agr-gold-annual-100",
+        "subscriptionRef": "sub-gold-annual-100",
+        "obligationRef": "src-gold-obl-annual-rub-001"
+      },
+      "partyRoles": {
+        "subjectRef": "subj-workspace-gold-100",
+        "payerRef": "payer-org-gold-100",
+        "actorRef": "actor-admin-gold-100",
+        "customerRef": "cust-gold-100",
+        "billingAccountRef": "acct-gold-100-rub"
+      },
+      "evidenceRefs": [
+        {
+          "evidenceRef": "ev-gold-price-rub-001",
+          "kind": "price_snapshot",
+          "digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "sanitized": true,
+          "capturedAt": "2025-11-01T09:00:00Z"
+        }
+      ],
+      "money": {
+        "amount": "12000.00",
+        "currency": "RUB"
+      },
+      "frozenPriceSnapshot": {
+        "basis": "frozen_historical",
+        "priceVersionRef": "pv-2025-annual-rub",
+        "priceDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "currency": "RUB",
+        "termsRef": "terms-annual-v1",
+        "taxPolicyVersion": "tax-ru-2025-v1",
+        "unitPrice": {
+          "amount": "12000.00",
+          "currency": "RUB"
+        },
+        "effectiveAt": "2025-01-01T00:00:00Z"
+      },
+      "currentPlanSnapshot": {
+        "priceVersionRef": "pv-2026-annual-rub-updated",
+        "unitPrice": {
+          "amount": "15900.00",
+          "currency": "RUB"
+        },
+        "effectiveAt": "2026-06-01T00:00:00Z"
+      },
+      "attachedGrants": [
+        {
+          "grantRef": "grant-m01",
+          "monthIndex": 1,
+          "unit": "HOST_QUOTA_UNITS",
+          "quantity": "100"
+        },
+        {
+          "grantRef": "grant-m02",
+          "monthIndex": 2,
+          "unit": "HOST_QUOTA_UNITS",
+          "quantity": "100"
+        },
+        {
+          "grantRef": "grant-m03",
+          "monthIndex": 3,
+          "unit": "HOST_QUOTA_UNITS",
+          "quantity": "100"
+        },
+        {
+          "grantRef": "grant-m04",
+          "monthIndex": 4,
+          "unit": "HOST_QUOTA_UNITS",
+          "quantity": "100"
+        },
+        {
+          "grantRef": "grant-m05",
+          "monthIndex": 5,
+          "unit": "HOST_QUOTA_UNITS",
+          "quantity": "100"
+        },
+        {
+          "grantRef": "grant-m06",
+          "monthIndex": 6,
+          "unit": "HOST_QUOTA_UNITS",
+          "quantity": "100"
+        },
+        {
+          "grantRef": "grant-m07",
+          "monthIndex": 7,
+          "unit": "HOST_QUOTA_UNITS",
+          "quantity": "100"
+        },
+        {
+          "grantRef": "grant-m08",
+          "monthIndex": 8,
+          "unit": "HOST_QUOTA_UNITS",
+          "quantity": "100"
+        },
+        {
+          "grantRef": "grant-m09",
+          "monthIndex": 9,
+          "unit": "HOST_QUOTA_UNITS",
+          "quantity": "100"
+        },
+        {
+          "grantRef": "grant-m10",
+          "monthIndex": 10,
+          "unit": "HOST_QUOTA_UNITS",
+          "quantity": "100"
+        },
+        {
+          "grantRef": "grant-m11",
+          "monthIndex": 11,
+          "unit": "HOST_QUOTA_UNITS",
+          "quantity": "100"
+        },
+        {
+          "grantRef": "grant-m12",
+          "monthIndex": 12,
+          "unit": "HOST_QUOTA_UNITS",
+          "quantity": "100"
+        }
+      ]
+    },
+    {
+      "sourceRecordId": "gold-obl-seat-usd-001",
+      "sourceRecordRevision": 1,
+      "recordType": "obligation",
+      "eventBusinessDate": "2025-11-02T10:00:00Z",
+      "originalBusinessRefs": {
+        "customerRef": "cust-gold-100",
+        "billingAccountRef": "acct-gold-100-usd",
+        "obligationRef": "src-gold-obl-seat-usd-001"
+      },
+      "partyRoles": {
+        "subjectRef": "subj-workspace-gold-100",
+        "payerRef": "payer-org-gold-100",
+        "customerRef": "cust-gold-100",
+        "billingAccountRef": "acct-gold-100-usd"
+      },
+      "evidenceRefs": [
+        {
+          "evidenceRef": "ev-gold-price-usd-001",
+          "kind": "price_snapshot",
+          "digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+          "sanitized": true,
+          "capturedAt": "2025-11-02T10:00:00Z"
+        }
+      ],
+      "money": {
+        "amount": "250.00",
+        "currency": "USD"
+      },
+      "frozenPriceSnapshot": {
+        "basis": "frozen_historical",
+        "priceVersionRef": "pv-2025-seat-usd",
+        "priceDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "currency": "USD",
+        "termsRef": "terms-seat-usd-v1",
+        "taxPolicyVersion": "tax-intl-2025-v1"
+      }
+    },
+    {
+      "sourceRecordId": "gold-obl-storage-eur-001",
+      "sourceRecordRevision": 1,
+      "recordType": "obligation",
+      "eventBusinessDate": "2025-11-03T10:00:00Z",
+      "originalBusinessRefs": {
+        "customerRef": "cust-gold-100",
+        "billingAccountRef": "acct-gold-100-eur",
+        "obligationRef": "src-gold-obl-storage-eur-001"
+      },
+      "partyRoles": {
+        "subjectRef": "subj-workspace-gold-100",
+        "payerRef": "payer-org-gold-100",
+        "customerRef": "cust-gold-100",
+        "billingAccountRef": "acct-gold-100-eur"
+      },
+      "evidenceRefs": [
+        {
+          "evidenceRef": "ev-gold-price-eur-001",
+          "kind": "price_snapshot",
+          "digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+          "sanitized": true,
+          "capturedAt": "2025-11-03T10:00:00Z"
+        }
+      ],
+      "money": {
+        "amount": "99.00",
+        "currency": "EUR"
+      },
+      "frozenPriceSnapshot": {
+        "basis": "frozen_historical",
+        "priceVersionRef": "pv-2025-storage-eur",
+        "priceDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "currency": "EUR",
+        "termsRef": "terms-storage-eur-v1",
+        "taxPolicyVersion": "tax-eu-2025-v1"
+      }
+    },
+    {
+      "sourceRecordId": "gold-inv-hist-eur-001",
+      "sourceRecordRevision": 1,
+      "recordType": "historical_invoice",
+      "eventBusinessDate": "2025-11-03T10:05:00Z",
+      "originalBusinessRefs": {
+        "customerRef": "cust-gold-100",
+        "invoiceRef": "src-gold-inv-hist-eur-001",
+        "originalIssuer": "seller-legal-eu-gold-1",
+        "sourceNumber": "GOLD-EU-2025-0099"
+      },
+      "partyRoles": {
+        "subjectRef": "subj-workspace-gold-100",
+        "payerRef": "payer-org-gold-100",
+        "customerRef": "cust-gold-100"
+      },
+      "evidenceRefs": [
+        {
+          "evidenceRef": "ev-gold-inv-eur-001",
+          "kind": "invoice_document",
+          "digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+          "sanitized": true,
+          "capturedAt": "2025-11-03T10:05:00Z"
+        }
+      ],
+      "money": {
+        "amount": "99.00",
+        "currency": "EUR"
+      },
+      "legalDocument": {
+        "originalIssuer": "seller-legal-eu-gold-1",
+        "sourceNumber": "GOLD-EU-2025-0099",
+        "legalOwnershipConfirmed": false,
+        "issuedAt": "2025-11-03T10:05:00Z",
+        "renderDigest": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+      }
+    }
+  ],
+  "recordCount": 4,
+  "recordsChecksum": "sha256:e77c414e01005717c3b3810ac247aaa42cbbd0058059f8c0c2bbfc06e2f262a4",
+  "artifactDigest": "sha256:be4e2dfe608df365b3615a0f36cbef65342ab0befe11269dcfcb206e4659e4e0"
+}

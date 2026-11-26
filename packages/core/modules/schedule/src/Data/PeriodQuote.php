@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Billium\Schedule\Data;
 
-use Billium\Contracts\Attributes\Api;
-use Billium\Core\Data\Receipt;
+use Billium\Core\Data\Runner\Receipt;
 use Billium\Schedule\Internal\Canonical;
 use Billium\Schedule\Internal\Payload;
+use Packman\Attributes\Api;
 
 #[Api]
 final readonly class PeriodQuote implements Receipt

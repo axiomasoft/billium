@@ -1,12 +1,22 @@
 # Local agent settings and runtime state
 .mcp.json
 .mcp.json.bak
-.codex/*
-!.codex/hooks/
+.mcp.json.example
+.ai/
+.codex/
+.gemini/
+.agents/
+AGENTS.md
+CLAUDE.md
+.claude/
+.serena/
+.claude/output-styles/
+.cursor/
+.grok/hooks/
+.ci-cache/
 .grok/config.toml
 .cursor/mcp.json
 .cursor/memory.env.ini
-.claude/settings.json
 .claude/settings.local.json
 .claude/*.env.ini
 .claude/maind-*.sh
@@ -14,10 +24,12 @@
 .claude/scheduled_tasks.lock
 .serena/cache/
 .serena/memories/
+.swissknifeman/config.toml.lock
 .swissknifeman/task-terminal/
 .swissknifeman/terminal-admission/
 .swissknifeman/state/
 .swissknifeman/orch/
+.swissknifeman/orch-artifacts/
 .swissknifeman/instruction-adopt/
 .claude/runs/
 .claude/analyze/
@@ -50,8 +62,6 @@ __pycache__/
 .env
 .env.*
 !.env.example
-.swissknifeman/backups/
-.swissknifeman/config.toml.lock
 /plans
 /tasks
 

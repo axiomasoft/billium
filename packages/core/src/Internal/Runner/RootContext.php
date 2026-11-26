@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace Billium\Core\Internal\Runner;
 
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Caller;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Data\OperationSpec;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Data\Runner\OperationSpec;
+use Billium\Core\Data\Runtime\Caller;
 use Closure;
 use LogicException;
+use Packman\Attributes\Internal;
 
 /** The only TransactionContext implementation; its state lives in the runner-owned Operation (D60). */
+#[Internal]
 final readonly class RootContext implements TransactionContext
 {
     public function __construct(
@@ -97,6 +99,7 @@ final readonly class RootContext implements TransactionContext
         return $this->operation->locks()->acquire(...$requests);
     }
 
+    /** @param Closure(): void $callback */
     public function afterCommit(Closure $callback): void
     {
         $this->assertActive();

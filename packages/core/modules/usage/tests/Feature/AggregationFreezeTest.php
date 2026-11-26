@@ -8,11 +8,11 @@ use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Data\Envelopes\UsageFactV2;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Caller;
-use Billium\Core\Data\OperationSpec;
-use Billium\Core\Enums\FinancialMode;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\OperationSpec;
+use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Tests\Support\FixtureValues;
 use Billium\Usage\Contracts\AggregationParticipants;
 use Billium\Usage\Data\AggregateSnapshotRef;
@@ -27,8 +27,10 @@ use Billium\Usage\Tests\AggregationTestCase;
 use Billium\Usage\Tests\Support\ReplayFactSource;
 use Billium\Usage\Tests\Support\UsageFixtures;
 use Illuminate\Database\QueryException;
+use PHPUnit\Framework\Attributes\Group;
 use stdClass;
 
+#[Group('pg')]
 final class AggregationFreezeTest extends AggregationTestCase
 {
     public function test_aggregation_freeze_is_immutable_idempotent_and_keeps_atomic_notification(): void
@@ -320,7 +322,8 @@ final class AggregationFreezeTest extends AggregationTestCase
 
     public function test_aggregation_definition_digest_mismatch_never_writes_a_snapshot(): void
     {
-        $this->policy(definitionDigest: 'sha256:'.str_repeat('0', 64));
+        $this->policy();
+        $this->application()->instance(EffectiveFactSource::class, new ReplayFactSource('sha256:'.str_repeat('0', 64)));
         $this->completeness();
         $this->domainRefusal(fn () => $this->freeze(), 'snapshot_digest_mismatch');
         self::assertSame(0, $this->rows('billium_usage_aggregate_snapshot'));

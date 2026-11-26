@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace Billium\Core\Data\Modules;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Core\Enums\Modules\ModuleLifecycleState;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Core\Enums\Modules\ModuleTransitionKind;
+use Packman\Attributes\Api;
 
 /**
- * What a disable/retire/uninstall would do. Read-only: applying it is a P3.3 root-Tx operation that re-checks the
+ * What a disable/retire/uninstall would do. Read-only: applying it is a platform root-Tx operation that re-checks the
  * facts under the installation lock. A preview never purges data (`purgesData` is always false).
  */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class ModuleTransitionPreview
 {
     /**

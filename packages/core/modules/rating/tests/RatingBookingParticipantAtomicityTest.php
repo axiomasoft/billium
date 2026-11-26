@@ -6,15 +6,17 @@ namespace Billium\Rating\Tests;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Ledger\Contracts\LedgerParticipants;
 use Billium\Rating\Tests\Support\LedgerFault;
 use Billium\Rating\Tests\Support\RunnerSpy;
 use Illuminate\Database\QueryException;
 use LogicException;
+use PHPUnit\Framework\Attributes\Group;
 use RuntimeException;
 
+#[Group('pg')]
 final class RatingBookingParticipantAtomicityTest extends RatingTestCase
 {
     public function test_failure_after_real_ledger_participant_rolls_back_basis_obligation_receipt_and_outbox(): void

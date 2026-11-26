@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Billium\Schedule\Internal\Storage;
 
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Contracts\TransactionContext;
+use Billium\Core\Configuration\BilliumOptions;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Schedule\Data\Commands\EnsureOccurrence;
 use Billium\Schedule\Data\Commands\RegisterCorrectionChild;
 use Billium\Schedule\Data\OccurrenceReceipt;
@@ -13,23 +14,23 @@ use Billium\Schedule\Internal\Canonical;
 use Billium\Schedule\Internal\Errors\OccurrenceProblems;
 use Billium\Schedule\Internal\OccurrenceTime;
 use Billium\Schedule\Internal\Payload;
+use DateTimeImmutable;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\QueryException;
 use LogicException;
+use Packman\Attributes\Internal;
 use stdClass;
 
+#[Internal]
 final readonly class OccurrenceStore
 {
-    public function __construct(private DatabaseManager $databases, private CallerContext $callers) {}
+    public function __construct(private DatabaseManager $databases, private CallerContext $callers, private BilliumOptions $options) {}
 
     public function database(?TransactionContext $context = null): Connection
     {
-        $name = $context?->connectionName() ?? config('billium.connection') ?? config('database.default');
-        if (! is_string($name)) {
-            throw new LogicException('Schedule connection is required');
-        }
+        $name = $context?->connectionName() ?? $this->options->connection ?? $this->databases->getDefaultConnection();
 
         return $this->databases->connection($name);
     }
@@ -131,8 +132,8 @@ final readonly class OccurrenceStore
     {
         return new OccurrenceReceipt(['occurrenceRef' => $row->occurrence_ref, 'incarnation' => $row->incarnation,
             'created' => $created, 'inputsDigest' => $row->inputs_digest, 'state' => $row->state,
-            'periodStart' => OccurrenceTime::format(new \DateTimeImmutable(Payload::text($row->period_start))),
-            'periodEnd' => OccurrenceTime::format(new \DateTimeImmutable(Payload::text($row->period_end)))]);
+            'periodStart' => OccurrenceTime::format(new DateTimeImmutable(Payload::text($row->period_start))),
+            'periodEnd' => OccurrenceTime::format(new DateTimeImmutable(Payload::text($row->period_end)))]);
     }
 
     /** @param array<string, mixed> $body */

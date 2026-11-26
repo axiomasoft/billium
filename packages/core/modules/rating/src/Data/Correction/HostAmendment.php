@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Billium\Rating\Data\Correction;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Rating\Enums\ProrationPolicyId;
 use DateTimeImmutable;
+use Packman\Attributes\Api;
 
 #[Api]
 final readonly class HostAmendment

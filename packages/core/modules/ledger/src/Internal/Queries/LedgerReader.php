@@ -6,15 +6,18 @@ namespace Billium\Ledger\Internal\Queries;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Data\Caller;
+use Billium\Core\Data\Runtime\Caller;
 use Billium\Ledger\Data\Views\LedgerView as View;
 use Billium\Ledger\Internal\Observation\ParkedDrainer;
-use Billium\Platform\Contracts\FeedRecoveryQueries;
+use Billium\Platform\Contracts\Feed\FeedRecoveryQueries;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Builder;
+use LogicException;
+use Packman\Attributes\Internal;
 use stdClass;
 
 /** D60: shared query/snapshot projection over ledger-owned facts, scoped before resolving any selector (INV-14). */
+#[Internal]
 final readonly class LedgerReader
 {
     public function __construct(private Connection $db, private Caller $caller, private FeedRecoveryQueries $feedRecovery) {}
@@ -46,10 +49,42 @@ final readonly class LedgerReader
     public function invoice(string $ref): array
     {
         $row = $this->one('billium_invoice', 'invoice_ref', $ref);
-        $lines = [];
-        foreach ($this->scoped('billium_invoice_line')->where('invoice_id', $row->id)->orderBy('position')->get() as $line) {
-            $obligation = $this->scoped('billium_obligation')->where('id', $line->obligation_id)->first() ?? throw self::unknown();
-            $lines[] = ['obligation' => View::obligation($obligation), 'position' => $line->position,
+        $lines = array_values($this->scoped('billium_invoice_line')->where('invoice_id', $row->id)->orderBy('position')->get()->all());
+
+        return self::invoiceView($row, $lines, $this->byId('billium_obligation', array_map(static fn (stdClass $line): mixed => $line->obligation_id, $lines)));
+    }
+
+    /**
+     * Scoped rows keyed by id, all of them or only the given ids, so a view resolves its references without a query per row.
+     *
+     * @param  array<mixed>|null  $ids
+     * @return array<int, stdClass>
+     */
+    public function byId(string $table, ?array $ids = null): array
+    {
+        $query = $this->scoped($table);
+        if ($ids !== null) {
+            $query->whereIn('id', array_values(array_unique($ids, SORT_REGULAR)));
+        }
+        $rows = [];
+        foreach ($query->get() as $row) {
+            $rows[View::integer($row->id)] = $row;
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param  list<stdClass>  $lines  the invoice's lines in position order
+     * @param  array<int, stdClass>  $obligations  scoped obligations keyed by id, covering every line
+     * @return array<string, mixed>
+     */
+    public static function invoiceView(stdClass $row, array $lines, array $obligations): array
+    {
+        $views = [];
+        foreach ($lines as $line) {
+            $obligation = $obligations[View::integer($line->obligation_id)] ?? throw self::unknown();
+            $views[] = ['obligation' => View::obligation($obligation), 'position' => $line->position,
                 'subtotal' => View::money($line->subtotal_minor, $line->currency), 'tax' => View::money($line->tax_minor, $line->currency),
                 'total' => View::money($line->amount_minor, $line->currency), 'snapshot' => (object) View::json($line->snapshot)];
         }
@@ -60,7 +95,7 @@ final readonly class LedgerReader
             'issuedAt' => View::timestamp($row->issued_at), 'subtotal' => View::money($row->subtotal_minor, $row->currency),
             'tax' => View::money($row->tax_minor, $row->currency), 'total' => View::money($row->total_minor, $row->currency),
             'allocated' => View::money($row->allocated_minor, $row->currency), 'credited' => View::money($row->credited_minor, $row->currency),
-            'open' => View::money($row->open_minor, $row->currency), 'lines' => $lines];
+            'open' => View::money($row->open_minor, $row->currency), 'lines' => $views];
     }
 
     /** @return array<string, mixed> */
@@ -111,7 +146,7 @@ final readonly class LedgerReader
             }
         }
         $park = $this->scoped('billium_observation_park')->where('observed_payment_id', $observed->id)->whereNull('released_at')->orderByDesc('id')->first();
-        $connectionName = $this->db->getName() ?? throw new \LogicException('Query connection must be named');
+        $connectionName = $this->db->getName() ?? throw new LogicException('Query connection must be named');
         $inboxPark = $park !== null ? null : $this->feedRecovery->pendingOperationPark($connectionName,
             ParkedDrainer::CHANNEL, View::text($observed->source_authority), View::text($observed->operation_ref));
         $pendingPark = $park !== null || $inboxPark !== null;

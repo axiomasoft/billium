@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Build fixtures/golden from the vectors: canon/* with the JCS oracle, errors/registry.json from problem-codes.json.
 
-Golden is authoritative and created only here (M-15): a golden file referenced by a vector under canon/ is the
+Golden is authoritative and created only here: a golden file referenced by a vector under canon/ is the
 oracle's output for the vector's input (`canon.canonicalize`/`envelope.roundtrip` → text, `canon.digest`/
-`envelope.decode` → digest). The golden of a control vector (M-16) is the oracle digest with its last hex
+`envelope.decode` → digest). The golden of a control vector is the oracle digest with its last hex
 digit changed, so the control is deliberately wrong. Writes by default; --check compares without writing and
 exits 1 on drift, on an unreferenced golden or on a golden without a generator.
 """

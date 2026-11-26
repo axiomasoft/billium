@@ -26,7 +26,9 @@ use Billium\Schedule\Tests\Support\Terms;
 use Billium\Usage\Tests\Support\UsageFixtures;
 use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class RatingBookingConcurrencyTest extends RatingTestCase
 {
     /** @return iterable<string, array{bool}> */

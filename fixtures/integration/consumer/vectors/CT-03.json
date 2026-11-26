@@ -1,0 +1,101 @@
+{
+  "protocol": "billium.consumer.bridge.case.v1",
+  "id": "CT-03",
+  "title": "Unsupported command major version and unknown fields on closed commands fail before send and at ingress",
+  "standProfile": "execution",
+  "authoritySource": "remote-billium",
+  "executionProfile": "remote-billium",
+  "packageDelivery": "php-contracts-current",
+  "sources": ["D31", "D58", "D61", "REQ-CON-20"],
+  "steps": [
+    {
+      "name": "beforeSnapshot",
+      "target": "stand",
+      "op": "snapshot",
+      "expect": {
+        "counts.execution_operation": 0
+      }
+    },
+    {
+      "name": "preflightUnsupportedMajor",
+      "target": "consumer",
+      "op": "preflight_command",
+      "args": {
+        "path": "/billium/v1/sellers/seller-a/payments/execute",
+        "body": {
+          "schema": "payment.execute.v2",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "commandKey": "00000000-0000-4100-8800-000000000301",
+          "operationRef": "ct03-op-1"
+        }
+      },
+      "expect": {
+        "accepted": false,
+        "wireAttempts": 0,
+        "code": "billium.schema.unsupported"
+      }
+    },
+    {
+      "name": "preflightUnknownField",
+      "target": "consumer",
+      "op": "preflight_command",
+      "args": {
+        "path": "/billium/v1/sellers/seller-a/payments/execute",
+        "body": {
+          "schema": "payment.execute.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "commandKey": "00000000-0000-4100-8800-000000000302",
+          "operationRef": "ct03-op-2",
+          "operationKind": "charge",
+          "source": { "context": "checkout", "intentRef": "intent-a" },
+          "executionProfile": "remote-billium",
+          "routingEpoch": 1,
+          "merchantAccountRef": "account-a",
+          "money": { "amount": "10.00", "currency": "RUB" },
+          "bindingRevision": "merchant-a",
+          "requestedAt": "2026-11-22T10:00:00Z",
+          "unknownClosedField": "forbidden"
+        }
+      },
+      "expect": {
+        "accepted": false,
+        "wireAttempts": 0,
+        "code": "billium.validation.invalid"
+      }
+    },
+    {
+      "name": "serverIngressUnsupportedMajor",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "rawSend": true,
+        "path": "/billium/v1/sellers/seller-a/payments/execute",
+        "body": {
+          "schema": "payment.execute.v2",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "commandKey": "00000000-0000-4100-8800-000000000303",
+          "operationRef": "ct03-op-3"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "body.code": "billium.schema.unsupported",
+        "body.receipt": "none"
+      }
+    },
+    {
+      "name": "afterSnapshot",
+      "target": "stand",
+      "op": "snapshot",
+      "expect": {
+        "counts": { "$ref": "beforeSnapshot.counts" }
+      }
+    }
+  ]
+}

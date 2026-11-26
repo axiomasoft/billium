@@ -1,0 +1,155 @@
+{
+  "schema": "billium.migration.drill_manifest.v1",
+  "item": "PLAN1.P9.7",
+  "decision_ids": ["D21", "D25", "D26", "D52", "D54", "D55", "D58", "D59", "D62", "D63", "D71"],
+  "runner": "scripts/drills/integration-migration.sh",
+  "default_report": "build/migration-drill/drill.json",
+  "steps": [
+    {
+      "id": "source-freeze",
+      "boundary": "postgresql-worker-fixture",
+      "file": "packages/core/modules/platform/tests/Migration/CounterIndependentRecoveryTest.php",
+      "tests": {
+        "test_mgate_01_old_workers_still_alive_after_freeze_cannot_mutate": {"gates": ["MGATE-01"]}
+      }
+    },
+    {
+      "id": "seal-drain",
+      "boundary": "postgresql-worker-fixture",
+      "file": "packages/core/modules/platform/tests/Concurrency/FinancialSessionSealTest.php",
+      "tests": {
+        "test_seal_waits_for_an_admitted_root_and_then_closes_admission": {"gates": ["MGATE-01"]}
+      }
+    },
+    {
+      "id": "snapshot-tail",
+      "boundary": "postgresql-fixture",
+      "file": "packages/core/modules/platform/tests/Drill/BootstrapAtomicAdoptionTest.php",
+      "tests": {
+        "test_a_recovering_partition_adopts_a_verified_bootstrap_only_after_every_item_is_disposed": {"gates": ["MGATE-02"]}
+      }
+    },
+    {
+      "id": "handoff-proof",
+      "boundary": "host-contract-fixture",
+      "file": "packages/core/modules/platform/tests/Migration/MigrationEvidenceTest.php",
+      "tests": {
+        "test_mgate_03_closes_every_mutator_and_drains_before_any_source_proof": {"gates": ["MGATE-01", "MGATE-03"]},
+        "test_tampered_snapshot_bytes_are_not_adopted": {"gates": ["MGATE-02", "MGATE-11"]},
+        "test_mgate_04_even_rehashed_mismatches_require_recovery": {"gates": ["MGATE-11"]},
+        "test_rollback_requires_no_target_commit_and_a_new_source_epoch": {"gates": ["MGATE-03", "MGATE-04"]},
+        "test_mgate_11_mismatched_proof_cannot_apply_or_activate": {
+          "gates": ["MGATE-11"],
+          "variants": ["wrong-freeze", "expired-freeze", "snapshot-token", "expired-snapshot", "snapshot-digest", "lease-reference", "expired-lease", "safe-cursor", "selection", "catalog", "source-lineage", "seller", "currency", "checksum"]
+        }
+      }
+    },
+    {
+      "id": "handoff-abort",
+      "boundary": "postgresql-fixture",
+      "file": "packages/core/modules/platform/tests/Migration/HandoffAbortDrillTest.php",
+      "tests": {
+        "test_failed_target_activation_requires_proved_safe_source_resume": {
+          "gates": ["MGATE-03", "MGATE-04"],
+          "variants": ["before-target-write", "after-target-write"]
+        }
+      }
+    },
+    {
+      "id": "old-binding",
+      "boundary": "postgresql-fixture",
+      "file": "packages/core/modules/platform/tests/Migration/AuthorityCutoverTest.php",
+      "tests": {
+        "test_mgate_01_epoch_barrier_keeps_original_owner_and_ct_20_refunds": {"gates": ["MGATE-05"]}
+      }
+    },
+    {
+      "id": "counter-recovery",
+      "boundary": "postgresql-worker-restore-fixture",
+      "file": "packages/core/modules/platform/tests/Migration/CounterIndependentRecoveryTest.php",
+      "tests": {
+        "test_mgate_06_diagnostic_counter_cannot_authorize_a_restored_attachment": {
+          "gates": ["MGATE-06"],
+          "variants": ["lower", "equal", "greater"]
+        }
+      }
+    },
+    {
+      "id": "worker-restart",
+      "boundary": "postgresql-worker-fixture",
+      "file": "packages/core/modules/platform/tests/Feature/WorkerJoinSessionTest.php",
+      "tests": {
+        "test_many_worker_processes_join_the_same_session_without_recovery": {"gates": ["MGATE-06"]},
+        "test_a_restarted_worker_with_a_new_token_joins_the_same_epoch": {"gates": ["MGATE-06"]}
+      }
+    },
+    {
+      "id": "restore-provider-and-delivery",
+      "boundary": "postgresql-worker-restore-fixture",
+      "file": "packages/core/tests/Drill/ExecutionRestoreTest.php",
+      "tests": {
+        "test_postbackup_provider_effect_and_downstream_replay_survive_a_real_postgres_restore": {"gates": ["MGATE-02", "MGATE-05", "MGATE-07"]},
+        "test_import_of_a_lost_postbackup_refund_restores_original_child_key_and_reservation_once": {"gates": ["MGATE-05"]},
+        "test_a_copy_missing_postbackup_local_cancel_and_customer_credit_allocation_cannot_dispatch_or_allocate": {"gates": ["MGATE-04", "MGATE-07"]}
+      }
+    },
+    {
+      "id": "retired-sender",
+      "boundary": "postgresql-provider-fixture",
+      "file": "packages/core/modules/execution/tests/Feature/WriterAdmissionProtocolTest.php",
+      "tests": {
+        "test_retired_egress_after_dispatch_commit_refuses_late_send": {"gates": ["MGATE-01", "MGATE-05"]}
+      }
+    },
+    {
+      "id": "rolling-upgrade",
+      "boundary": "postgresql-worker-fixture",
+      "file": "packages/core/tests/Drill/RollingUpgradeTest.php",
+      "tests": {
+        "test_expand_mixed_workers_interrupted_backfill_validate_and_code_rollback": {"gates": ["MGATE-08"]}
+      }
+    },
+    {
+      "id": "unsupported-worker-values",
+      "boundary": "postgresql-worker-fixture",
+      "file": "packages/core/modules/platform/tests/Migration/MixedWorkerDrillTest.php",
+      "tests": {
+        "test_mgate_08_old_worker_refuses_unknown_rows_before_provider_dispatch": {
+          "gates": ["MGATE-08"],
+          "variants": ["unknown-status", "unknown-operation"]
+        }
+      }
+    },
+    {
+      "id": "retirement",
+      "boundary": "postgresql-provider-fixture",
+      "file": "packages/core/modules/platform/tests/Migration/ModuleRetirementDrillTest.php",
+      "tests": {
+        "test_mgate_09_disable_keeps_original_refund_callback_and_receipt_history": {"gates": ["MGATE-09"]},
+        "test_mgate_10_lost_original_recovery_path_blocks_retirement_and_uninstall": {
+          "gates": ["MGATE-10"],
+          "variants": ["driver-unavailable", "credential-revoked"]
+        }
+      }
+    },
+    {
+      "id": "import-preservation",
+      "boundary": "postgresql-fixture",
+      "file": "packages/core/modules/platform/tests/Import/ImportApplyTest.php",
+      "tests": {
+        "test_refund_capacity_validation_and_post_apply_linked_corrections_without_destructive_rollback": {"gates": ["MGATE-04", "MGATE-08", "MGATE-10"]}
+      }
+    }
+  ],
+  "activation_inputs": {
+    "fixture_classification": "local repository fixtures with PostgreSQL and PHP workers, simulated host authority and provider",
+    "production_qualified": false,
+    "required_external": [
+      {"owner": "product owner", "decision": "D58", "input": "Approved scope, source mapping, selection, cutoff and reconciliation inventory"},
+      {"owner": "source deployment operator", "decision": "D58", "input": "Authenticated source freeze and seal, immutable snapshot, retained selected tail and live lease"},
+      {"owner": "target deployment operator", "decision": "D63", "input": "Durable dispositions, adopted cursor and matching per-seller/currency checksums"},
+      {"owner": "deployment authority", "decision": "D62", "input": "RetirementProof and separate current-lineage ActivationCertificate with unresolved effect and feed dispositions"},
+      {"owner": "operations and provider owners", "decision": "D59", "input": "Named operational ownership, retention and restore policy, and applicable live driver and consumer qualifications"}
+    ]
+  }
+}

@@ -6,21 +6,24 @@ namespace Billium\Platform\Internal\Feed;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Caller;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Enums\LockRank;
-use Billium\Core\Exceptions\LockPlanChanged;
-use Billium\Platform\Contracts\BootstrapItemHandler;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Enums\Runner\LockRank;
+use Billium\Core\Exceptions\Runner\LockPlanChanged;
+use Billium\Platform\Contracts\Inbox\AuthenticatedObservationBootstrap;
+use Billium\Platform\Contracts\Inbox\BootstrapItemHandler;
 use Billium\Platform\Data\Inbox\BootstrapItem;
 use Billium\Platform\Data\Inbox\BootstrapPartition;
 use Billium\Platform\Data\Inbox\BootstrapStatus;
 use Billium\Platform\Data\Inbox\HandlerOutcomeKind;
+use Billium\Platform\Data\Inbox\VerifiedObservationBootstrap;
 use Billium\Platform\Internal\Installation\Rows;
 use Closure;
 use Illuminate\Database\Connection;
 use LogicException;
+use Packman\Attributes\Internal;
+use stdClass;
 
 /**
  * Staged partition bootstrap (D60, inbox-feed): the complete snapshot is verified and stored first; every item then gets a
@@ -28,22 +31,38 @@ use LogicException;
  * the old partition and activate the new one together with the held tail. A partition is never active-partial and a crash
  * resumes from the item dispositions.
  */
+#[Internal]
 final readonly class BootstrapCoordinator
 {
     private const int SESSION_SEGMENT = 1;
 
     /** @param Closure(): OperationRunner $runner */
-    public function __construct(private PartitionStore $partitions, private Closure $runner) {}
+    public function __construct(private PartitionStore $partitions, private Closure $runner, private ?AuthenticatedObservationBootstrap $origins = null) {}
 
-    public function stage(TransactionContext $context, BootstrapPartition $snapshot): int
+    public function stage(TransactionContext $context, BootstrapPartition $snapshot, ?VerifiedObservationBootstrap $grant = null): int
     {
         ($this->runner)()->assertCurrent($context, 'platform');
         $caller = $context->caller();
         if ($snapshot->sellerRef !== $caller->sellerRef || $snapshot->environment !== $caller->environment
+            || ! $context->spec()->selectsSource($snapshot->sourceAuthority)
             || ! in_array($snapshot->sourceAuthority, $caller->sourceAuthorities, true)) {
             throw new ProblemException(ProblemCode::AuthDenied, 'The snapshot is outside the authenticated source scope');
         }
         $db = $this->partitions->connection($context);
+        $root = null;
+        if ($grant !== null) {
+            if ($this->origins === null) {
+                throw new ProblemException(ProblemCode::AuthDenied, 'No authenticated bootstrap context');
+            }
+            $this->origins->assertCurrent($caller, $snapshot, $grant);
+            if ($context->spec()->financialScope === null || get_object_vars($grant->scope) !== get_object_vars($context->spec()->financialScope) || ! $context->spec()->mode->financial()) {
+                throw new ProblemException(ProblemCode::AuthDenied, 'Bootstrap differs from the admitted scope');
+            }
+            $root = ObservationScopes::claim($db, $context, $snapshot->channel, $snapshot->sourceAuthority, $grant->providerAccountRef,
+                $grant->rootOperationRef, $snapshot->sourceLineage, $snapshot->partitionRef, $grant->proofDigest);
+        } elseif ($context->spec()->financialScope?->intentOwnerNamespace !== null) {
+            throw new ProblemException(ProblemCode::AuthDenied, 'Qualified bootstrap requires authenticated manifest');
+        }
         $this->partitions->lockNamespace($db, $snapshot->channel, $snapshot->sourceAuthority, $snapshot->sellerRef, $snapshot->environment, $snapshot->partitionRef);
         $existing = $db->selectOne('SELECT * FROM public.billium_feed_bootstrap_session WHERE bootstrap_ref = ?', [$snapshot->bootstrapRef]);
         if ($existing !== null) {
@@ -60,9 +79,26 @@ final readonly class BootstrapCoordinator
             throw new ProblemException(ProblemCode::ValidationInvalid, 'The bootstrap snapshot is incomplete or altered');
         }
         if ($existing !== null) {
+            if (ObservationScopes::binding($db, 'bootstrap_session_id', Rows::int(Rows::field($existing, 'id')))?->id !== $root?->id) {
+                throw new ProblemException(ProblemCode::ObservationConflict, 'Bootstrap reference already has different provenance');
+            }
+
             return Rows::int(Rows::field($existing, 'id')); // resume only an identical, complete manifest
         }
         $old = $this->partitions->live($db, $snapshot->channel, $snapshot->sourceAuthority, $snapshot->sellerRef, $snapshot->environment, $snapshot->partitionRef);
+        if ($old !== null && ObservationScopes::binding($db, 'partition_id', $old->id)?->id !== $root?->id) {
+            if ($root === null) {
+                throw new ProblemException(ProblemCode::RecoveryRequired, 'Unproven or foreign partition cannot be adopted');
+            }
+            $old = $this->partitions->lock($context, $old);
+            ProvenLegacyGeneration::link($db, $old, $snapshot, $root, $grant->proofDigest);
+        }
+        if ($root !== null) {
+            if (ObservationScopes::openBootstrap($db, Rows::int($root->id)) !== null) {
+                throw new ProblemException(ProblemCode::RecoveryRequired, 'Another manifest is already staged for this original root');
+            }
+            $old = ObservationScopes::live($db, Rows::int($root->id));
+        }
         if ($old === null) {
             // A pre-upgrade retirement must still be recoverable through bootstrap, never through first-delivery creation.
             $retired = $db->selectOne(<<<'SQL'
@@ -72,6 +108,7 @@ final readonly class BootstrapCoordinator
                 SQL, [$snapshot->channel, $snapshot->sourceAuthority, $snapshot->sellerRef, $snapshot->environment, $snapshot->partitionRef]);
             if ($retired !== null) {
                 $old = PartitionRow::from($retired);
+                ObservationScopes::check($context, $snapshot->sourceAuthority, ObservationScopes::binding($db, 'partition_id', $old->id));
                 $context->lock(new LockRequest(LockRank::FeedPartition, 'billium_feed_partition', [$old->id]));
                 if ($this->partitions->live($db, $snapshot->channel, $snapshot->sourceAuthority, $snapshot->sellerRef, $snapshot->environment, $snapshot->partitionRef) !== null) {
                     throw new LockPlanChanged('A partition appeared while staging recovery');
@@ -95,6 +132,7 @@ final readonly class BootstrapCoordinator
             $snapshot->partitionRef, $snapshot->cursorSequence, $snapshot->snapshotDigest, count($snapshot->items), $snapshot->sourceRetentionLeaseRef, $old?->id,
         ]);
         $id = Rows::int(Rows::field($session, 'id'));
+        ObservationScopes::link($db, 'bootstrap_session_id', $id, $root, $grant?->proofDigest);
         foreach ($snapshot->items as $item) {
             $db->insert(
                 'INSERT INTO public.billium_feed_bootstrap_item (session_id, operation_ref, revision, material_digest, payload) VALUES (?, ?, ?, ?, ?::jsonb)',
@@ -122,12 +160,19 @@ final readonly class BootstrapCoordinator
             }
             throw new ProblemException(ProblemCode::RecoveryRequired, "Bootstrap is {$status}");
         }
-        $record = $db->selectOne("SELECT * FROM public.billium_feed_bootstrap_item WHERE session_id = ? AND state = 'staged' ORDER BY id LIMIT 1", [$sessionId]);
+        // One pass over this session's staged items yields both the next item in manifest order and how many remain.
+        // Counting forces the session key scan; a bare ORDER BY id LIMIT 1 walks the primary key past every older session.
+        $record = $db->selectOne(<<<'SQL'
+            SELECT *, count(*) OVER () AS staged FROM public.billium_feed_bootstrap_item
+            WHERE session_id = ? AND state = 'staged' ORDER BY id LIMIT 1
+            SQL, [$sessionId]);
+        $remaining = 0;
         if ($record !== null) {
+            $remaining = Rows::int(Rows::field($record, 'staged')) - 1;
             $payload = json_decode(Rows::string(Rows::field($record, 'payload')), false, 64, JSON_THROW_ON_ERROR);
             $item = new BootstrapItem(
                 Rows::string(Rows::field($record, 'operation_ref')), Rows::int(Rows::field($record, 'revision')), Rows::string(Rows::field($record, 'material_digest')),
-                $payload instanceof \stdClass ? $payload : new \stdClass, Rows::int(Rows::field($record, 'id')), $sessionId,
+                $payload instanceof stdClass ? $payload : new stdClass, Rows::int(Rows::field($record, 'id')), $sessionId,
             );
             $namespace = [];
             foreach (['sourceAuthority' => 'source_authority', 'sourceLineage' => 'source_lineage', 'sellerRef' => 'seller_ref',
@@ -136,6 +181,11 @@ final readonly class BootstrapCoordinator
             }
             if (! BootstrapPartition::contains($item, $namespace) || ($item->payload->installationRef ?? null) !== $context->caller()->installationRef) {
                 throw new ProblemException(ProblemCode::ValidationInvalid, 'The bootstrap item is outside its manifest namespace');
+            }
+            $root = ObservationScopes::binding($db, 'bootstrap_session_id', $sessionId);
+            if ($root !== null && (($item->payload->originalPaymentRef ?? $item->operationRef) !== $root->root_operation_ref
+                || ($item->payload->providerAccountRef ?? null) !== $root->provider_account_ref)) {
+                throw new ProblemException(ProblemCode::ObservationConflict, 'Staged item differs from authenticated root');
             }
             $outcome = $handler->apply($context, $item);
             if ($outcome->kind === HandlerOutcomeKind::Conflict && $outcome->reference === ProblemCode::AuthDenied->value) {
@@ -149,7 +199,6 @@ final readonly class BootstrapCoordinator
             };
             $db->update('UPDATE public.billium_feed_bootstrap_item SET state = ?, result_ref = ?, disposed_at = now() WHERE id = ?', [$state, substr($ref, 0, 200), Rows::field($record, 'id')]);
         }
-        $remaining = Rows::int(Rows::field($db->selectOne("SELECT count(*) AS n FROM public.billium_feed_bootstrap_item WHERE session_id = ? AND state = 'staged'", [$sessionId]), 'n'));
         if ($remaining === 0) {
             $db->update("UPDATE public.billium_feed_bootstrap_session SET status = 'ready', updated_at = now() WHERE id = ?", [$sessionId]);
         }
@@ -161,7 +210,11 @@ final readonly class BootstrapCoordinator
     {
         ($this->runner)()->assertCurrent($context, 'platform');
         $db = $this->partitions->connection($context);
-        $planned = $this->session($db, $sessionId, $context->caller());
+        $planned = $this->session($db, $sessionId, $context);
+        $root = ObservationScopes::binding($db, 'bootstrap_session_id', $sessionId);
+        if ($root !== null) {
+            $db->selectOne('SELECT pg_advisory_xact_lock(hashtextextended(?,0))', [$root->root_key]);
+        }
         $this->partitions->lockNamespace($db, Rows::string(Rows::field($planned, 'channel')), Rows::string(Rows::field($planned, 'source_authority')),
             Rows::string(Rows::field($planned, 'seller_ref')), Rows::string(Rows::field($planned, 'environment')), Rows::string(Rows::field($planned, 'partition_ref')));
         $session = $this->lockSession($context, $db, $sessionId);
@@ -188,6 +241,7 @@ final readonly class BootstrapCoordinator
         }
         $new = $this->partitions->create($db, $channel, $authority, $lineage, $seller, $environment, $partitionRef, $generation, $cursor)
             ?? throw new LogicException('A live partition appeared during a staged bootstrap');
+        ObservationScopes::link($db, 'partition_id', $new->id, $root, $root === null ? null : Rows::string($root->proof_digest));
         $this->attachTail($db, $new, $oldId === null ? null : Rows::int($oldId), $cursor);
         $this->partitions->extendCustody($db, $new);
         $db->update("UPDATE public.billium_feed_bootstrap_session SET status = 'adopted', new_partition_id = ?, updated_at = now() WHERE id = ?", [$new->id, $sessionId]);
@@ -198,9 +252,8 @@ final readonly class BootstrapCoordinator
     public function status(TransactionContext $context, int $sessionId): BootstrapStatus
     {
         ($this->runner)()->assertCurrent($context, 'platform');
-        $caller = $context->caller();
         $db = $this->partitions->connection($context);
-        $session = $this->session($db, $sessionId, $caller);
+        $session = $this->session($db, $sessionId, $context);
         $counts = [];
         foreach ($db->select('SELECT state, count(*) AS n FROM public.billium_feed_bootstrap_item WHERE session_id = ? GROUP BY state', [$sessionId]) as $row) {
             $counts[Rows::string(Rows::field($row, 'state'))] = Rows::int(Rows::field($row, 'n'));
@@ -219,8 +272,11 @@ final readonly class BootstrapCoordinator
     private function attachTail(Connection $db, PartitionRow $new, ?int $oldId, int $cursor): void
     {
         $scope = [$new->channel, $new->sourceAuthority, $new->sellerRef, $new->environment, $new->partitionRef, $new->sourceLineage];
+        $binding = ObservationScopes::binding($db, 'partition_id', $new->id);
+        $scope[] = $binding?->id;
         $partitionMatch = '(m.partition_id IS NULL'.($oldId === null ? '' : ' OR m.partition_id = '.$oldId).')';
-        $ns = 'm.channel = ? AND m.source_authority = ? AND m.seller_ref = ? AND m.environment = ? AND m.partition_ref = ? AND m.source_lineage = ?';
+        $ns = 'm.channel = ? AND m.source_authority = ? AND m.seller_ref = ? AND m.environment = ? AND m.partition_ref = ? AND m.source_lineage = ?
+            AND (SELECT scope_id FROM public.billium_feed_observation_scope_link WHERE inbox_id=m.id) IS NOT DISTINCT FROM ?::bigint';
         $db->update(<<<SQL
             UPDATE public.billium_inbox_message m SET status = 'quarantined', last_error_class = 'superseded_by_bootstrap', park_kind = NULL, park_ref = NULL
             WHERE {$ns} AND {$partitionMatch} AND m.source_sequence <= ? AND m.status IN ('ready', 'parked_gap', 'parked_dependency', 'held_recovery')
@@ -244,13 +300,21 @@ final readonly class BootstrapCoordinator
             SQL, [$new->id, $cursor + 1, ...$scope, $cursor]);
     }
 
-    private function session(Connection $db, int $sessionId, Caller $caller): mixed
+    private function session(Connection $db, int $sessionId, TransactionContext $context): mixed
     {
+        $caller = $context->caller();
         $session = $db->selectOne('SELECT * FROM public.billium_feed_bootstrap_session WHERE id = ? AND seller_ref = ? AND environment = ?', [$sessionId, $caller->sellerRef, $caller->environment])
             ?? throw new ProblemException(ProblemCode::ReferenceUnknown, 'Unknown bootstrap session');
-        if (! in_array(Rows::string(Rows::field($session, 'source_authority')), $caller->sourceAuthorities, true)) {
+        $source = Rows::string(Rows::field($session, 'source_authority'));
+        if (! $context->spec()->selectsSource($source) || ! in_array($source, $caller->sourceAuthorities, true)) {
             throw new ProblemException(ProblemCode::AuthDenied, 'The bootstrap session is outside the authenticated source scope');
         }
+
+        $binding = ObservationScopes::binding($db, 'bootstrap_session_id', $sessionId);
+        if ($binding !== null && ! $context->spec()->mode->financial()) {
+            throw new ProblemException(ProblemCode::AuthDenied, 'Qualified bootstrap requires a current financial session');
+        }
+        ObservationScopes::check($context, $source, $binding);
 
         return $session;
     }
@@ -258,7 +322,7 @@ final readonly class BootstrapCoordinator
     /** Plans partition (rank 30, segment 0) then session (segment 1), locks both and re-reads the session. */
     private function lockSession(TransactionContext $context, Connection $db, int $sessionId): mixed
     {
-        $planned = $this->session($db, $sessionId, $context->caller());
+        $planned = $this->session($db, $sessionId, $context);
         $oldId = Rows::field($planned, 'old_partition_id');
         $requests = [new LockRequest(LockRank::FeedPartition, 'billium_feed_bootstrap_session', [$sessionId], segment: self::SESSION_SEGMENT)];
         if ($oldId !== null) {
@@ -267,7 +331,7 @@ final readonly class BootstrapCoordinator
         if (count($context->lock(...$requests)) !== count($requests)) {
             throw new LockPlanChanged('Bootstrap rows are gone');
         }
-        $current = $this->session($db, $sessionId, $context->caller());
+        $current = $this->session($db, $sessionId, $context);
         if (Rows::field($current, 'old_partition_id') !== $oldId) {
             throw new LockPlanChanged('Bootstrap plan changed');
         }

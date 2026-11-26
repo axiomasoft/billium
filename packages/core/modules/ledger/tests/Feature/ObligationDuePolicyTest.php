@@ -8,16 +8,18 @@ use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Data\Caller;
+use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Ledger\Contracts\LedgerQueries;
-use Billium\Ledger\Data\AmendObligationDuePolicy;
-use Billium\Ledger\Data\ObligationDuePolicy;
-use Billium\Ledger\Data\RecordObligation;
+use Billium\Ledger\Data\Obligations\AmendObligationDuePolicy;
+use Billium\Ledger\Data\Obligations\ObligationDuePolicy;
+use Billium\Ledger\Data\Obligations\RecordObligation;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
 use DateTimeImmutable;
 use PDOException;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class ObligationDuePolicyTest extends LedgerTestCase
 {
     public function test_creation_basis_replays_after_due_policy_amendment_but_changed_creation_payload_conflicts(): void
@@ -137,6 +139,42 @@ final class ObligationDuePolicyTest extends LedgerTestCase
         } catch (ProblemException $error) {
             self::assertSame(ProblemCode::ReferenceUnknown, $error->problem);
         }
+    }
+
+    public function test_due_query_keeps_the_microsecond_precision_of_as_of(): void
+    {
+        $due = new DateTimeImmutable('2026-10-28T10:00:00.000500Z');
+        $this->ledger()->recordObligation(new RecordObligation('key-precise', $this->account(), 'precise', 'basis-precise', 'customer', 'component',
+            Money::parse('1.00', 'RUB'), self::digest(), duePolicy: new ObligationDuePolicy($due, 'host/1', 'host-policy', self::digest())))->orThrow();
+        $q = $this->application()->make(LedgerQueries::class);
+
+        $page = $q->dueObligations('account-a', new DateTimeImmutable('2026-10-28T10:00:00.000900Z'));
+        self::assertSame(['precise'], array_column(self::arr($page['obligations']), 'obligationRef'), 'asOf after due_at must include it');
+        self::assertSame('2026-10-28T10:00:00.000900Z', $page['asOf']);
+        self::assertSame([], $q->dueObligations('account-a', new DateTimeImmutable('2026-10-28T10:00:00.000400Z'))['obligations']);
+        $wire = $q->dispatch(json_encode(['schema' => 'billium.query.v1', 'installationRef' => self::INSTALLATION, 'sellerRef' => 'seller-a', 'environment' => 'test',
+            'query' => 'dueObligations', 'selector' => ['billingAccountRef' => 'account-a'], 'asOf' => '2026-10-28T10:00:00.0009Z', 'limit' => 2], JSON_THROW_ON_ERROR));
+        $result = $wire['result'];
+        self::assertIsArray($result);
+        self::assertSame(['precise'], array_column(self::arr($result['obligations']), 'obligationRef'));
+    }
+
+    public function test_the_same_due_instant_in_another_offset_replays_the_creation_and_the_amendment(): void
+    {
+        $utc = new DateTimeImmutable('2026-10-28T10:00:00Z');
+        $local = new DateTimeImmutable('2026-10-28T13:00:00+03:00');
+        $make = fn (string $key, DateTimeImmutable $due): RecordObligation => new RecordObligation($key, $this->account(), 'offset', 'offset-basis',
+            'customer', 'component', Money::parse('1.00', 'RUB'), self::digest(), duePolicy: new ObligationDuePolicy($due, 'host/1', 'policy', self::digest(), $due));
+        $created = $this->ledger()->recordObligation($make('offset-utc', $utc))->orThrow();
+        $replay = $this->ledger()->recordObligation($make('offset-local', $local))->orThrow();
+        self::assertSame($created->body, $replay->body);
+
+        $amend = fn (DateTimeImmutable $due): AmendObligationDuePolicy => new AmendObligationDuePolicy('offset-amend', $this->account(), 'offset',
+            new ObligationDuePolicy($due->modify('+1 day'), 'host/2', 'amended', self::digest('b')));
+        $amended = $this->ledger()->amendObligationDuePolicy($amend($utc))->orThrow();
+        self::assertSame($amended->body, $this->ledger()->amendObligationDuePolicy($amend($local))->orThrow()->body);
+        self::assertSame(1, $this->rows('billium_allocation_receipt', "kind='obligation'"));
+        self::assertSame(1, $this->rows('billium_allocation_receipt', "kind='obligation_due_policy'"));
     }
 
     /** @return array<string, mixed> */

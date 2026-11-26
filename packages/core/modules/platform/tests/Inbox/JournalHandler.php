@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Tests\Inbox;
 
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Platform\Contracts\BootstrapItemHandler;
-use Billium\Platform\Contracts\CustodyHandler;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Platform\Contracts\Inbox\BootstrapItemHandler;
+use Billium\Platform\Contracts\Inbox\CustodyHandler;
 use Billium\Platform\Data\Inbox\BootstrapItem;
 use Billium\Platform\Data\Inbox\HandlerOutcome;
 use Billium\Platform\Data\Inbox\InboxRow;

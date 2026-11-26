@@ -9,7 +9,9 @@ use Billium\Usage\Contracts\MetricReducerRegistry;
 use Billium\Usage\Data\AggregationPolicy;
 use Billium\Usage\Enums\AggregationSemantics;
 use Billium\Usage\Internal\Errors\UsageProblems;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class ReducerRegistry implements MetricReducerRegistry
 {
     /** @var array<string, MetricReducer> */

@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Billium\Rating\Data\Tax;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Rating\Enums\TaxMode;
 use Billium\Rating\Enums\TaxSnapshotKind;
 use DateTimeImmutable;
+use Packman\Attributes\Api;
 
 #[Api]
 final readonly class TaxSnapshot

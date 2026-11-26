@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:internal:collection:execute:v1",
+  "type": "object",
+  "required": ["intentOwnerNamespace", "payment"],
+  "properties": {
+    "intentOwnerNamespace": {"type": "string", "minLength": 1},
+    "payment": {"$ref": "urn:billium:spec:2026-10:payment/execute.v1.json"}
+  },
+  "additionalProperties": false
+}

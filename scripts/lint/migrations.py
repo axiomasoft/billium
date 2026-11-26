@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import re
+from collections.abc import Iterable
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -95,12 +96,30 @@ def lint(path: Path, source: str) -> list[str]:
     return errors
 
 
+def duplicate_prefixes(items: Iterable[Path | str]) -> list[str]:
+    """Report migration paths or stems that share a YYYY_MM_DD_HHMMSS prefix."""
+    grouped: dict[str, list[str]] = {}
+    for item in items:
+        stem = item.stem if isinstance(item, Path) else Path(item).stem
+        match = re.match(r"^(\d{4}_\d{2}_\d{2}_\d{6})_", stem)
+        if match is None:
+            continue
+        grouped.setdefault(match.group(1), []).append(stem)
+    errors: list[str] = []
+    for prefix, stems in sorted(grouped.items()):
+        unique = sorted(set(stems))
+        if len(unique) > 1:
+            errors.append(f"duplicate migration prefix {prefix}: {', '.join(unique)}")
+    return errors
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("paths", nargs="*", type=Path)
     args = parser.parse_args()
     paths = args.paths or sorted((ROOT / "packages/core/database/migrations").rglob("*.php"))
     errors = [f"{path}: {error}" for path in paths for error in lint(path, path.read_text())]
+    errors.extend(duplicate_prefixes(paths))
     if not paths:
         errors.append("migrations: no migration files found")
     for error in errors:

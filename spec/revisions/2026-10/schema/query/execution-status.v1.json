@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-10:query/execution-status.v1.json",
+  "title": "ExecutionStatus",
+  "type": "object",
+  "properties": {
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "operationRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "rootOperationRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "bindingRevision": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "merchantAccountRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "capabilityVersion": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "driverContractVersion": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "schema": {
+      "const": "payment.execution_status.v1"
+    },
+    "operationKind": {
+      "enum": [
+        "charge",
+        "authorize",
+        "capture",
+        "void_authorization",
+        "refund"
+      ]
+    },
+    "revision": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/counter"
+    },
+    "status": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/operationStatus"
+    },
+    "requested": {
+      "$ref": "urn:billium:spec:2026-10:common/money-wire.json#/$defs/nonNegative"
+    },
+    "capacity": {
+      "type": "object",
+      "properties": {
+        "authorizedLimit": {
+          "$ref": "urn:billium:spec:2026-10:common/money-wire.json#/$defs/nonNegative"
+        },
+        "confirmedCapture": {
+          "$ref": "urn:billium:spec:2026-10:common/money-wire.json#/$defs/nonNegative"
+        },
+        "confirmedRefund": {
+          "$ref": "urn:billium:spec:2026-10:common/money-wire.json#/$defs/nonNegative"
+        },
+        "releasedAuthorization": {
+          "$ref": "urn:billium:spec:2026-10:common/money-wire.json#/$defs/nonNegative"
+        },
+        "heldCapture": {
+          "$ref": "urn:billium:spec:2026-10:common/money-wire.json#/$defs/nonNegative"
+        },
+        "heldVoid": {
+          "$ref": "urn:billium:spec:2026-10:common/money-wire.json#/$defs/nonNegative"
+        },
+        "heldRefund": {
+          "$ref": "urn:billium:spec:2026-10:common/money-wire.json#/$defs/nonNegative"
+        },
+        "captureAvailable": {
+          "$ref": "urn:billium:spec:2026-10:common/money-wire.json#/$defs/nonNegative"
+        },
+        "refundAvailable": {
+          "$ref": "urn:billium:spec:2026-10:common/money-wire.json#/$defs/nonNegative"
+        }
+      },
+      "required": [
+        "authorizedLimit",
+        "confirmedCapture",
+        "confirmedRefund",
+        "releasedAuthorization",
+        "heldCapture",
+        "heldVoid",
+        "heldRefund",
+        "captureAvailable",
+        "refundAvailable"
+      ],
+      "additionalProperties": false
+    },
+    "delivery": {
+      "type": "object",
+      "properties": {
+        "commandAccepted": {
+          "type": "boolean"
+        },
+        "providerOutcomeRecorded": {
+          "type": "boolean"
+        },
+        "projectionApplied": {
+          "type": "boolean"
+        },
+        "allocationApplied": {
+          "type": "boolean"
+        },
+        "observationCommandRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+          }
+        },
+        "lastAppliedObservationRevision": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/counter"
+        }
+      },
+      "required": [
+        "commandAccepted",
+        "providerOutcomeRecorded",
+        "projectionApplied",
+        "allocationApplied",
+        "observationCommandRefs"
+      ],
+      "additionalProperties": false
+    },
+    "recovery": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "enum": [
+            "current",
+            "pending",
+            "recovery_required",
+            "held_discrepancy"
+          ]
+        },
+        "reasonCodes": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+          }
+        },
+        "lastCompletedAt": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/timestamp"
+        },
+        "completenessCursor": {
+          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+        }
+      },
+      "required": [
+        "status",
+        "reasonCodes"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "operationRef",
+    "rootOperationRef",
+    "bindingRevision",
+    "merchantAccountRef",
+    "capabilityVersion",
+    "driverContractVersion",
+    "schema",
+    "operationKind",
+    "revision",
+    "status",
+    "requested",
+    "capacity",
+    "delivery",
+    "recovery"
+  ],
+  "additionalProperties": false
+}

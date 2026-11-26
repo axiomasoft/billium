@@ -1,0 +1,28 @@
+{
+  "id": "import/external-import-manifest-unknown-field",
+  "spec_refs": [
+    "BC-ENV-05",
+    "REQ-CON-20",
+    "D71"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"batchId\":\"batch-2026-10-001\",\"digest\":\"sha256:22158d0d2bb4b698f5cd1452cca45cd594dfbc3a6b150933c0fd3c7d999dc187\",\"environment\":\"test\",\"exportCutoff\":\"2026-10-15T00:00:00Z\",\"importPolicyVersion\":\"import-policy-v1\",\"installationRef\":\"inst-1\",\"recordCount\":3,\"recordsChecksum\":\"sha256:2222222222222222222222222222222222222222222222222222222222222222\",\"sanitizationPolicy\":{\"piiRedacted\":true,\"policyVersion\":\"sanitize-v1\",\"secretsStripped\":true},\"schema\":\"external.import.manifest.v1\",\"sellerRef\":\"seller-1\",\"sourceBook\":\"book-primary\",\"sourceExportRevision\":1,\"sourceInstallation\":\"src-inst-eu-1\",\"sourceSystem\":\"host-commerce/billing-export\",\"totalsByCurrency\":[{\"authoritativeCurrentBalance\":false,\"count\":1,\"currency\":\"RUB\",\"recordKind\":\"proven_obligation\",\"sellerRef\":\"seller-1\",\"totalAmount\":{\"amount\":\"1490.00\",\"currency\":\"RUB\"}},{\"authoritativeCurrentBalance\":false,\"count\":1,\"currency\":\"USD\",\"recordKind\":\"proven_invoice_history\",\"sellerRef\":\"seller-1\",\"totalAmount\":{\"amount\":\"25.00\",\"currency\":\"USD\"}}],\"unknownManifestField\":\"forbidden\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

@@ -1,0 +1,137 @@
+{
+  "id": "accounting/facts-and-exposure",
+  "description": "P6.6 accounting fact taxonomy, stable sourceFactRef separation, linked corrections/reversals, and ACC-RST-12 over-refund actual cash (140) vs noncash exposure (40).",
+  "spec_refs": [
+    "D53",
+    "D56"
+  ],
+  "profiles": [
+    "php"
+  ],
+  "given": {
+    "example": {
+      "scope": {
+        "installationRef": "inst-test",
+        "sellerRef": "seller-a",
+        "environment": "test",
+        "providerAccountRef": "merchant-a",
+        "currency": "RUB"
+      },
+      "expectedFacts": {
+        "invoice": {
+          "sourceFactRef": "fact:invoice.issued:d223772c8a36a1b719eeaa88753e9c98",
+          "factKind": "invoice.issued",
+          "category": "receivable",
+          "amountMinor": 100,
+          "originalFactRef": null,
+          "linkedCashFactRefs": [],
+          "exceptional": false
+        },
+        "capture": {
+          "sourceFactRef": "fact:payment.captured:0a871fff3c610c907a68e25b9fc0b12e",
+          "factKind": "payment.captured",
+          "category": "cash_in",
+          "amountMinor": 100,
+          "originalFactRef": null,
+          "linkedCashFactRefs": [],
+          "exceptional": false
+        },
+        "alloc1": {
+          "sourceFactRef": "fact:allocation.applied:3fb878e1a7b266bfd3183ca6da578c85",
+          "factKind": "allocation.applied",
+          "category": "noncash_allocation",
+          "amountMinor": 60,
+          "originalFactRef": null,
+          "linkedCashFactRefs": [],
+          "exceptional": false
+        },
+        "alloc2": {
+          "sourceFactRef": "fact:allocation.applied:d049479e1ae34f27b371c8de5fa1ccee",
+          "factKind": "allocation.applied",
+          "category": "noncash_allocation",
+          "amountMinor": 40,
+          "originalFactRef": null,
+          "linkedCashFactRefs": [],
+          "exceptional": false
+        },
+        "creditNote": {
+          "sourceFactRef": "fact:credit_note.issued:cbd045f3a4eadd4a4b48761b0f3bdd7c",
+          "factKind": "credit_note.issued",
+          "category": "receivable",
+          "amountMinor": 30,
+          "originalFactRef": "fact:invoice.issued:d223772c8a36a1b719eeaa88753e9c98",
+          "linkedCashFactRefs": [],
+          "exceptional": false
+        },
+        "writeOff": {
+          "sourceFactRef": "fact:write_off.recorded:6332540fddf1470365095c4882085dcc",
+          "factKind": "write_off.recorded",
+          "category": "receivable",
+          "amountMinor": 10,
+          "originalFactRef": "fact:invoice.issued:d223772c8a36a1b719eeaa88753e9c98",
+          "linkedCashFactRefs": [],
+          "exceptional": false
+        },
+        "refund1": {
+          "sourceFactRef": "fact:refund.succeeded:09993a73896e216657f29263284c5c5e",
+          "factKind": "refund.succeeded",
+          "category": "cash_out",
+          "amountMinor": 70,
+          "originalFactRef": "fact:payment.captured:0a871fff3c610c907a68e25b9fc0b12e",
+          "linkedCashFactRefs": [],
+          "exceptional": false
+        },
+        "refund2": {
+          "sourceFactRef": "fact:refund.succeeded:90af5e8de0f864db8ed978072ae9ed36",
+          "factKind": "refund.succeeded",
+          "category": "cash_out",
+          "amountMinor": 70,
+          "originalFactRef": "fact:payment.captured:0a871fff3c610c907a68e25b9fc0b12e",
+          "linkedCashFactRefs": [],
+          "exceptional": true
+        },
+        "exposure": {
+          "sourceFactRef": "fact:exposure.over_refund:c70529d02f6a837f610209ba4a3bc74b",
+          "factKind": "exposure.over_refund",
+          "category": "noncash_exposure",
+          "amountMinor": 40,
+          "originalFactRef": "fact:payment.captured:0a871fff3c610c907a68e25b9fc0b12e",
+          "linkedCashFactRefs": [
+            "fact:refund.succeeded:09993a73896e216657f29263284c5c5e",
+            "fact:refund.succeeded:90af5e8de0f864db8ed978072ae9ed36"
+          ],
+          "exceptional": true
+        }
+      },
+      "expectedCategoryTotalsMinor": {
+        "cash_in": 100,
+        "cash_out": 140,
+        "noncash_exposure": 40,
+        "noncash_allocation": 100,
+        "receivable": 140
+      },
+      "expectedCategoryCounts": {
+        "cash_in": 1,
+        "cash_out": 2,
+        "noncash_exposure": 1,
+        "noncash_allocation": 2,
+        "receivable": 3
+      }
+    }
+  },
+  "script": [
+    {
+      "op": "canon.digest",
+      "args": {
+        "json_text": "{\"expectedCategoryCounts\":{\"cash_in\":1,\"cash_out\":2,\"noncash_allocation\":2,\"noncash_exposure\":1,\"receivable\":3},\"expectedCategoryTotalsMinor\":{\"cash_in\":100,\"cash_out\":140,\"noncash_allocation\":100,\"noncash_exposure\":40,\"receivable\":140},\"expectedFacts\":{\"alloc1\":{\"amountMinor\":60,\"category\":\"noncash_allocation\",\"exceptional\":false,\"factKind\":\"allocation.applied\",\"linkedCashFactRefs\":[],\"originalFactRef\":null,\"sourceFactRef\":\"fact:allocation.applied:3fb878e1a7b266bfd3183ca6da578c85\"},\"alloc2\":{\"amountMinor\":40,\"category\":\"noncash_allocation\",\"exceptional\":false,\"factKind\":\"allocation.applied\",\"linkedCashFactRefs\":[],\"originalFactRef\":null,\"sourceFactRef\":\"fact:allocation.applied:d049479e1ae34f27b371c8de5fa1ccee\"},\"capture\":{\"amountMinor\":100,\"category\":\"cash_in\",\"exceptional\":false,\"factKind\":\"payment.captured\",\"linkedCashFactRefs\":[],\"originalFactRef\":null,\"sourceFactRef\":\"fact:payment.captured:0a871fff3c610c907a68e25b9fc0b12e\"},\"creditNote\":{\"amountMinor\":30,\"category\":\"receivable\",\"exceptional\":false,\"factKind\":\"credit_note.issued\",\"linkedCashFactRefs\":[],\"originalFactRef\":\"fact:invoice.issued:d223772c8a36a1b719eeaa88753e9c98\",\"sourceFactRef\":\"fact:credit_note.issued:cbd045f3a4eadd4a4b48761b0f3bdd7c\"},\"exposure\":{\"amountMinor\":40,\"category\":\"noncash_exposure\",\"exceptional\":true,\"factKind\":\"exposure.over_refund\",\"linkedCashFactRefs\":[\"fact:refund.succeeded:09993a73896e216657f29263284c5c5e\",\"fact:refund.succeeded:90af5e8de0f864db8ed978072ae9ed36\"],\"originalFactRef\":\"fact:payment.captured:0a871fff3c610c907a68e25b9fc0b12e\",\"sourceFactRef\":\"fact:exposure.over_refund:c70529d02f6a837f610209ba4a3bc74b\"},\"invoice\":{\"amountMinor\":100,\"category\":\"receivable\",\"exceptional\":false,\"factKind\":\"invoice.issued\",\"linkedCashFactRefs\":[],\"originalFactRef\":null,\"sourceFactRef\":\"fact:invoice.issued:d223772c8a36a1b719eeaa88753e9c98\"},\"refund1\":{\"amountMinor\":70,\"category\":\"cash_out\",\"exceptional\":false,\"factKind\":\"refund.succeeded\",\"linkedCashFactRefs\":[],\"originalFactRef\":\"fact:payment.captured:0a871fff3c610c907a68e25b9fc0b12e\",\"sourceFactRef\":\"fact:refund.succeeded:09993a73896e216657f29263284c5c5e\"},\"refund2\":{\"amountMinor\":70,\"category\":\"cash_out\",\"exceptional\":true,\"factKind\":\"refund.succeeded\",\"linkedCashFactRefs\":[],\"originalFactRef\":\"fact:payment.captured:0a871fff3c610c907a68e25b9fc0b12e\",\"sourceFactRef\":\"fact:refund.succeeded:90af5e8de0f864db8ed978072ae9ed36\"},\"writeOff\":{\"amountMinor\":10,\"category\":\"receivable\",\"exceptional\":false,\"factKind\":\"write_off.recorded\",\"linkedCashFactRefs\":[],\"originalFactRef\":\"fact:invoice.issued:d223772c8a36a1b719eeaa88753e9c98\",\"sourceFactRef\":\"fact:write_off.recorded:6332540fddf1470365095c4882085dcc\"}},\"scope\":{\"currency\":\"RUB\",\"environment\":\"test\",\"installationRef\":\"inst-test\",\"providerAccountRef\":\"merchant-a\",\"sellerRef\":\"seller-a\"}}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "digest": "sha256:7bf1a3744f362d06220fc0cec515ef1a9c4e9cd0350e555e806c7aa4eb2c091c"
+      }
+    }
+  ]
+}

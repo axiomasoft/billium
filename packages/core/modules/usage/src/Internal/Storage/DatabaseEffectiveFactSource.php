@@ -7,7 +7,7 @@ namespace Billium\Usage\Internal\Storage;
 use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Data\Envelopes\MetricVersion;
 use Billium\Contracts\Data\Envelopes\UsageFactV2;
-use Billium\Core\Contracts\CallerContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Usage\Data\FactRevision;
 use Billium\Usage\Data\WindowSelector;
 use Billium\Usage\Internal\Canonical\CanonicalJson;
@@ -16,8 +16,10 @@ use Billium\Usage\Internal\Math\Decimal;
 use DateTimeImmutable;
 use DateTimeZone;
 use Illuminate\Database\DatabaseManager;
+use Packman\Attributes\Internal;
 use stdClass;
 
+#[Internal]
 final readonly class DatabaseEffectiveFactSource implements EffectiveFactSource
 {
     // Reserved attribution dimensions keep historical payer/period scopes from being merged.
@@ -89,39 +91,11 @@ final readonly class DatabaseEffectiveFactSource implements EffectiveFactSource
             bindings: [...$bindings, $window->sellerRef, $window->environment, $window->metricRef, $window->metricVersion],
         );
         $revisions = [];
+        $semantics = null;
         foreach ($rows as $row) {
             assert($row instanceof stdClass);
-            $metric = $this->codec->decode(AggregationRows::text($row->metric_body));
-            assert($metric instanceof MetricVersion);
-            $model = AggregationRows::text($metric->model->id);
-            $semantics = match ($model) {
-                'additive_sum', 'additive_count' => 'additive',
-                'gauge' => 'gauge',
-                'exact_distinct' => 'distinct_exact',
-                default => throw UsageProblems::error('metric_semantics_unsupported'),
-            };
-            $names = array_keys($dimensions);
-            $expected = array_map(AggregationRows::text(...), $metric->groupingDimensions);
-            sort($names, SORT_STRING);
-            sort($expected, SORT_STRING);
-            $sources = array_map(AggregationRows::text(...), AggregationRows::items($row->required_sources));
-            $metricSources = array_map(AggregationRows::text(...), AggregationRows::items($metric->sourceSelection->sources));
-            sort($sources, SORT_STRING);
-            sort($metricSources, SORT_STRING);
-            if ($row->semantics !== $semantics || $names !== $expected || $sources !== $metricSources) {
-                throw UsageProblems::error('metric_policy_mismatch');
-            }
-            if ($model === 'gauge') {
-                $reducer = match ($metric->model->sampleReducer) {
-                    'latest', 'latest_sample', 'latest_as_of' => 'latest_as_of',
-                    'max_sample', 'max' => 'max',
-                    'time_weighted' => 'time_weighted',
-                    default => throw UsageProblems::error('metric_semantics_unsupported'),
-                };
-                if ($row->gauge_policy !== $reducer) {
-                    throw UsageProblems::error('metric_policy_mismatch');
-                }
-            }
+            // Every row repeats the one metric/policy/contract join; validate it once, not once per fact.
+            $semantics ??= $this->semantics(row: $row, names: array_keys($dimensions));
             if ($row->fact_id === null) {
                 continue;
             }
@@ -158,6 +132,47 @@ final readonly class DatabaseEffectiveFactSource implements EffectiveFactSource
         return $revisions;
     }
 
+    /**
+     * Checks the stored metric definition against its aggregation policy and finality contract.
+     *
+     * @param  list<string>  $names  grouping dimensions of the window
+     */
+    private function semantics(stdClass $row, array $names): string
+    {
+        $metric = $this->codec->decode(AggregationRows::text($row->metric_body));
+        assert($metric instanceof MetricVersion);
+        $model = AggregationRows::text($metric->model->id);
+        $semantics = match ($model) {
+            'additive_sum', 'additive_count' => 'additive',
+            'gauge' => 'gauge',
+            'exact_distinct' => 'distinct_exact',
+            default => throw UsageProblems::error('metric_semantics_unsupported'),
+        };
+        $expected = array_map(AggregationRows::text(...), $metric->groupingDimensions);
+        sort($names, SORT_STRING);
+        sort($expected, SORT_STRING);
+        $sources = array_map(AggregationRows::text(...), AggregationRows::items($row->required_sources));
+        $metricSources = array_map(AggregationRows::text(...), AggregationRows::items($metric->sourceSelection->sources));
+        sort($sources, SORT_STRING);
+        sort($metricSources, SORT_STRING);
+        if ($row->semantics !== $semantics || $names !== $expected || $sources !== $metricSources) {
+            throw UsageProblems::error('metric_policy_mismatch');
+        }
+        if ($model === 'gauge') {
+            $reducer = match ($metric->model->sampleReducer) {
+                'latest', 'latest_sample', 'latest_as_of' => 'latest_as_of',
+                'max_sample', 'max' => 'max',
+                'time_weighted' => 'time_weighted',
+                default => throw UsageProblems::error('metric_semantics_unsupported'),
+            };
+            if ($row->gauge_policy !== $reducer) {
+                throw UsageProblems::error('metric_policy_mismatch');
+            }
+        }
+
+        return $semantics;
+    }
+
     public static function identity(string $source, string $factId): string
     {
         return CanonicalJson::encode([$source, $factId]);
@@ -165,7 +180,7 @@ final readonly class DatabaseEffectiveFactSource implements EffectiveFactSource
 
     private static function micros(string $value, bool $exact = true): int
     {
-        // P4.2 retains nanoseconds. Aggregation never silently truncates a non-microsecond sample.
+        // Ingestion retains nanoseconds. Aggregation never silently truncates a non-microsecond sample.
         if ($exact && strlen($value) > 26 && trim(substr($value, 26), '0') !== '') {
             throw UsageProblems::error('time_precision_unsupported');
         }

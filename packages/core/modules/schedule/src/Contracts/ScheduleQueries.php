@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Billium\Schedule\Contracts;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Schedule\Data\DueBatch;
+use Billium\Schedule\Data\OccurrenceView;
 use DateTimeImmutable;
+use Packman\Attributes\Api;
 
 #[Api]
 interface ScheduleQueries
 {
-    /** @return array<string, mixed>|null */
-    public function occurrence(string $occurrenceRef): ?array;
+    public function occurrence(string $occurrenceRef): ?OccurrenceView;
 
     public function dueSchedules(string $sellerRef, DateTimeImmutable $asOf, int $limit = 100, ?string $cursor = null): DueBatch;
 

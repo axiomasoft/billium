@@ -9,7 +9,9 @@ use Billium\Rating\Data\Pricing\VolumeTerms;
 use Billium\Rating\Enums\StrategyId;
 use Billium\Rating\Internal\Errors\RatingProblems;
 use Billium\Rating\Internal\Math\Dec;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class VolumeStrategy extends AbstractStrategy
 {
     public function id(): StrategyId

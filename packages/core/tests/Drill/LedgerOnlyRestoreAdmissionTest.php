@@ -6,12 +6,13 @@ namespace Billium\Core\Tests\Drill;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Receipt;
-use Billium\Core\Data\StoredOutcome;
-use Billium\Core\Enums\FinancialMode;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\Receipt;
+use Billium\Core\Data\Runner\StoredOutcome;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Platform\Exceptions\TransitionRefused;
 use Billium\Platform\Tests\PlatformTestCase;
@@ -26,6 +27,7 @@ use PHPUnit\Framework\Attributes\Group;
 #[Group('D62')]
 #[Group('D54')]
 #[Group('REQ-ACC-12')]
+#[Group('pg')]
 final class LedgerOnlyRestoreAdmissionTest extends PlatformTestCase
 {
     protected function defineEnvironment($app): void
@@ -43,6 +45,7 @@ final class LedgerOnlyRestoreAdmissionTest extends PlatformTestCase
 
         // Restore: the host advanced the attachment generation outside the copy and retired the old process tokens.
         $this->tokens->set(FixedSessionAdmission::token(self::INSTALLATION, attachmentGeneration: 2));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($this->application());
         $this->assertRefused(ProblemCode::RecoveryRequired, 'restored copy with the new attachment');
         // A clone whose host gives no valid token refuses everything financial.
         $this->tokens->set(null);
@@ -51,6 +54,7 @@ final class LedgerOnlyRestoreAdmissionTest extends PlatformTestCase
         self::assertTrue($this->runner()->run($this->spec(key: 'custody-1', mode: FinancialMode::RawCustody, class: ModuleOperationClass::CallbackCustody), static fn (): Receipt => self::receipt())->accepted);
 
         // Recovery: a new epoch for the new attachment; the copied live epoch is superseded, not sealed.
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('open', 'open-restore', ['owner-1', 1, 2, 2, 'evidence:restore-barrier']);
         $opened = $this->installation()->openSession('open-restore', 'owner-1', 1, 2, 2, 'evidence:restore-barrier');
         self::assertSame(2, $opened->epoch);
         self::assertSame('recovery', $opened->state);
@@ -59,13 +63,16 @@ final class LedgerOnlyRestoreAdmissionTest extends PlatformTestCase
         self::assertNull($old->sealed_at);
 
         $this->tokens->set(FixedSessionAdmission::token(self::INSTALLATION, attachmentGeneration: 2, authorityEpoch: 2));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($this->application());
         $this->assertRefused(ProblemCode::RecoveryRequired, 'ordinary money before activation');
         $this->tokens->set(FixedSessionAdmission::token(self::INSTALLATION, attachmentGeneration: 2, authorityEpoch: 2, modes: [FinancialMode::Recovery]));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($this->application());
         $recovery = $this->runner()->run($this->spec(key: 'recovery-1', mode: FinancialMode::Recovery, class: ModuleOperationClass::UnknownResolution), static fn (TransactionContext $context): Receipt => self::receipt(['epoch' => $context->sessionEpoch()]));
         self::assertSame(['epoch' => 2], $recovery->body);
 
         // The old epoch can never come back; only the latest one is activated, and only with a certificate.
         try {
+            SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('activate', 'activate-old', [1, 'certificate:old', 'admission:old', 'evidence:old']);
             $this->installation()->activateSession('activate-old', 1, 'certificate:old', 'admission:old', 'evidence:old');
             self::fail('a superseded epoch is never reactivated');
         } catch (TransitionRefused $refused) {
@@ -73,8 +80,10 @@ final class LedgerOnlyRestoreAdmissionTest extends PlatformTestCase
         }
         self::assertSame('42501', self::sqlState(TestEnvironment::pdo(), "UPDATE billium_financial_session SET state = 'active' WHERE epoch = 1"));
 
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('activate', 'activate-restore', [2, 'certificate:restore', 'admission:restore', 'evidence:reconciled']);
         $this->installation()->activateSession('activate-restore', 2, 'certificate:restore', 'admission:restore', 'evidence:reconciled');
         $this->tokens->set(FixedSessionAdmission::token(self::INSTALLATION, attachmentGeneration: 2, authorityEpoch: 2));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($this->application());
         self::assertTrue($this->money('after activation')->accepted);
         // The recovery reducer and the first ordinary root after activation, both under the adopted epoch 2.
         self::assertSame(2, $this->rows('billium_money_commit_log', 'session_epoch = 2 AND commit_no > ?', [$liveCommits]));
@@ -82,6 +91,7 @@ final class LedgerOnlyRestoreAdmissionTest extends PlatformTestCase
 
         // A token of the pre-restore attachment is refused for good.
         $this->tokens->set(FixedSessionAdmission::token(self::INSTALLATION));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($this->application());
         $this->assertRefused(ProblemCode::RecoveryRequired, 'pre-restore token');
     }
 
@@ -89,13 +99,17 @@ final class LedgerOnlyRestoreAdmissionTest extends PlatformTestCase
     {
         $this->activeSession();
         $this->money('before seal');
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('sealing', 'closing', [1]);
         $this->installation()->beginSealing('closing', 1);
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('seal', 'seal', [1]);
         $this->installation()->seal('seal', 1);
 
         // Acquire after a clean release still opens recovery; matching commit numbers are not consulted at all.
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('open', 'open-next', ['owner-2', 2, 1, 3, 'evidence:handover']);
         $next = $this->installation()->openSession('open-next', 'owner-2', 2, 1, 3, 'evidence:handover');
         self::assertSame('recovery', $next->state);
         $this->tokens->set(FixedSessionAdmission::token(self::INSTALLATION, 'owner-2', 2, 1, 3));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($this->application());
         $this->assertRefused(ProblemCode::RecoveryRequired, 'no activation by release');
         self::assertSame(1, $this->rows('billium_money_commit_log'));
         self::assertSame('sealed', $this->owner()->selectOne('SELECT state FROM billium_financial_session WHERE epoch = 1')->state);

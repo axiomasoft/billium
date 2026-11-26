@@ -4,28 +4,30 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Tests\Concurrency\Scenarios;
 
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Contracts\FinancialSessionAdmission;
 use Billium\Core\Contracts\Modules\ModuleTransitionPlanner;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Caller;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
 use Billium\Core\Data\Modules\ModuleState;
 use Billium\Core\Data\Modules\ModuleTransitionFacts;
 use Billium\Core\Data\Modules\ModuleTransitionPreview;
-use Billium\Core\Data\OperationSpec;
-use Billium\Core\Data\Receipt;
-use Billium\Core\Enums\FinancialMode;
+use Billium\Core\Data\Runner\OperationSpec;
+use Billium\Core\Data\Runner\Receipt;
+use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Enums\Modules\ModuleLifecycleState;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
-use Billium\Core\Exceptions\ModuleAdmissionRefused;
+use Billium\Core\Enums\Runtime\FinancialMode;
+use Billium\Core\Exceptions\Modules\ModuleAdmissionRefused;
 use Billium\Core\Tests\Support\Concurrency\Scenario;
 use Billium\Core\Tests\Support\FixedCallerContext;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
-use Billium\Platform\Contracts\Installation;
-use Billium\Platform\Data\ModuleTransitionRequest;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
+use Billium\Platform\Contracts\Installation\Installation;
+use Billium\Platform\Data\Installation\ModuleTransitionRequest;
 use Billium\Platform\Exceptions\TransitionRefused;
 use Billium\Platform\Tests\PlatformTestCase;
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Application;
 
 /**
@@ -44,6 +46,7 @@ final readonly class RootOperationScenario implements Scenario
         )));
         $token = self::map($args, 'token') + ['processRef' => 'process-'.$index];
         $app->instance(FinancialSessionAdmission::class, new FixedSessionAdmission(FixedSessionAdmission::fromArray($token)));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($app);
         $plannerDelay = self::int($args, 'planner_delay_ms', 0);
         if ($plannerDelay > 0) {
             $inner = $app->make(ModuleTransitionPlanner::class);
@@ -73,6 +76,9 @@ final readonly class RootOperationScenario implements Scenario
         usleep(self::int($args, 'delay_ms', 0) * 1000);
         $started = hrtime(true);
         $action = self::str($args, 'action', 'run');
+        if ($action === 'seal') {
+            SimulatedFinancialAuthorityEvidence::install($app)->issueTransition('seal', self::str($args, 'ref', 'seal-1'), [self::int($args, 'epoch', 1)]);
+        }
         try {
             $result = match ($action) {
                 'run' => $this->operation($app, $index, $args),
@@ -89,7 +95,7 @@ final readonly class RootOperationScenario implements Scenario
             $result = ['refused' => $refused->reason];
         }
 
-        return $result + ['elapsed_ms' => intdiv(hrtime(true) - $started, 1_000_000), 'finished_at' => microtime(true)];
+        return $result + ['process_id' => getmypid(), 'backend_pid' => (int) $app->make(DatabaseManager::class)->connection()->scalar('SELECT pg_backend_pid()'), 'elapsed_ms' => intdiv(hrtime(true) - $started, 1_000_000), 'finished_at' => microtime(true)];
     }
 
     /**

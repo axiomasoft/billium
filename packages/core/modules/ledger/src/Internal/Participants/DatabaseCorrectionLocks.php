@@ -6,15 +6,17 @@ namespace Billium\Ledger\Internal\Participants;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Enums\LockRank;
-use Billium\Core\Exceptions\LockPlanChanged;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Enums\Runner\LockRank;
+use Billium\Core\Exceptions\Runner\LockPlanChanged;
 use Billium\Ledger\Contracts\CorrectionLocks;
 use Billium\Ledger\Data\Views\LedgerView;
 use Illuminate\Database\DatabaseManager;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final readonly class DatabaseCorrectionLocks implements CorrectionLocks
 {
     public function __construct(private OperationRunner $runner, private DatabaseManager $databases) {}

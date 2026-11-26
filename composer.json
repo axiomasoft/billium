@@ -1,20 +1,8 @@
 {
-    "name": "axiomasoft/billium-workspace",
-    "description": "Billium dev workspace: path-linked packages and shared tooling (private).",
+    "name": "axiomasoft/billium-monorepo",
+    "description": "Development monorepo for Billium — contracts, financial admission runtime, platform, and ledger modules.",
     "type": "project",
     "license": "proprietary",
-    "require": {
-        "php": "^8.4"
-    },
-    "require-dev": {
-        "axiomasoft/billium-contracts": "^0.1",
-        "axiomasoft/billium-core": "^0.1",
-        "laravel/pint": "^1.0",
-        "orchestra/testbench": "^11.0",
-        "pestphp/pest": "^4.0",
-        "phpstan/phpstan": "^2.3",
-        "rector/rector": "^2.0"
-    },
     "repositories": [
         {
             "type": "path",
@@ -22,12 +10,53 @@
             "options": {
                 "symlink": true,
                 "versions": {
-                    "axiomasoft/billium-contracts": "0.1.0",
-                    "axiomasoft/billium-core": "0.1.0"
+                    "axiomasoft/billium-contracts": "0.1.x-dev",
+                    "axiomasoft/billium-core": "0.1.x-dev",
+                    "axiomasoft/billium-server": "0.1.x-dev",
+                    "axiomasoft/billium-testkit": "0.1.x-dev"
+                }
+            }
+        },
+        {
+            "type": "path",
+            "url": "../packman/packages/*",
+            "options": {
+                "symlink": true,
+                "versions": {
+                    "axiomasoft/packman": "0.1.1",
+                    "axiomasoft/packman-schema": "0.1.1",
+                    "axiomasoft/packman-plugins": "0.1.1",
+                    "axiomasoft/packman-modules": "0.1.1",
+                    "axiomasoft/packman-panels": "0.1.1",
+                    "axiomasoft/packman-filament": "0.1.1",
+                    "axiomasoft/packman-testkit": "0.1.1",
+                    "axiomasoft/packman-devtools": "0.1.1"
                 }
             }
         }
     ],
+    "require": {
+        "php": "^8.4",
+        "axiomasoft/billium-contracts": "^0.1",
+        "axiomasoft/billium-core": "^0.1",
+        "axiomasoft/packman": "^0.1",
+        "axiomasoft/packman-plugins": "^0.1",
+        "axiomasoft/packman-schema": "^0.1"
+    },
+    "require-dev": {
+        "axiomasoft/billium-server": "^0.1",
+        "axiomasoft/billium-testkit": "^0.1",
+        "axiomasoft/packman-devtools": "^0.1",
+        "axiomasoft/packman-testkit": "^0.1",
+        "driftingly/rector-laravel": "^2.7",
+        "larastan/larastan": "^3.12",
+        "laravel/pint": "^1.32",
+        "orchestra/testbench": "^11.3",
+        "pestphp/pest": "^5.2",
+        "phpstan/phpstan": "^2.2.16 <2.3.6",
+        "phpstan/phpstan-strict-rules": "^2.0.12",
+        "rector/rector": "^2.6"
+    },
     "autoload-dev": {
         "psr-4": {
             "BilliumConformance\\": "conformance/adapters/php/src/",
@@ -37,16 +66,39 @@
             "Billium\\Usage\\Tests\\": "packages/core/modules/usage/tests/",
             "Billium\\Rating\\Tests\\": "packages/core/modules/rating/tests/",
             "Billium\\Schedule\\Tests\\": "packages/core/modules/schedule/tests/",
+            "Billium\\Server\\Tests\\": "packages/server/tests/",
+            "Billium\\Documents\\Tests\\": "packages/core/modules/documents/tests/",
+            "Billium\\Collection\\Tests\\": "packages/core/modules/collection/tests/",
+            "Billium\\Tooling\\PhpStan\\": "scripts/phpstan/src/",
             "Billium\\Execution\\Tests\\": "packages/core/modules/execution/tests/",
-            "Billium\\Tooling\\PhpStan\\": "scripts/phpstan/src/"
+            "Billium\\Testkit\\Tests\\": "packages/testkit/tests/"
         }
     },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
     "config": {
-        "sort-packages": true,
         "allow-plugins": {
-            "pestphp/pest-plugin": true
-        }
+            "pestphp/pest-plugin": true,
+            "phpstan/extension-installer": true
+        },
+        "sort-packages": true
     },
-    "minimum-stability": "stable",
-    "prefer-stable": true
+    "scripts": {
+        "lint": "vendor/bin/pint",
+        "lint:check": "vendor/bin/pint --test",
+        "analyse": "vendor/bin/phpstan analyse --memory-limit=1G --no-progress",
+        "refactor": "vendor/bin/rector process",
+        "refactor:check": "vendor/bin/rector process --dry-run",
+        "test": "vendor/bin/pest --exclude-group=pg",
+        "test:pg": [
+            "Composer\\Config::disableProcessTimeout",
+            "@putenv PACKMAN_TEST_DESTRUCTIVE_OPT_IN=1",
+            "PACKMAN_TEST_DB_PER_PROCESS=1 vendor/bin/pest --group=pg --exclude-group=pg-serial --parallel",
+            "vendor/bin/pest --group=pg-serial"
+        ],
+        "gate": "@php vendor/bin/packman gate",
+        "php-api": "@php vendor/bin/packman php-api --check",
+        "error-codes": "@php vendor/bin/packman error-codes --check",
+        "config-schema": "@php vendor/bin/packman config-schema --check"
+    }
 }

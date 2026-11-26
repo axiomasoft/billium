@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Billium\Schedule\Data;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Schedule\Internal\Canonical;
 use Billium\Schedule\Internal\Instants;
 use Billium\Schedule\Internal\ScheduleProblems;
 use DateTimeImmutable;
+use Packman\Attributes\Api;
 
 /** Immutable UTC boundaries plus retained source resolution evidence (D56; owner schedule). */
 #[Api]

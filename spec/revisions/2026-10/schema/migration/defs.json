@@ -1,0 +1,381 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-10:migration/defs.json",
+  "title": "D52/D54/D58/D62/D63 handoff evidence definitions",
+  "$defs": {
+    "ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "\\S"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "owner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "installationRef",
+        "ownerSessionRef",
+        "deploymentGeneration",
+        "attachmentGeneration",
+        "authorityEpoch"
+      ],
+      "properties": {
+        "installationRef": {
+          "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/ref"
+        },
+        "ownerSessionRef": {
+          "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/ref"
+        },
+        "deploymentGeneration": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "attachmentGeneration": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "authorityEpoch": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      }
+    },
+    "ledgerScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "feed",
+        "owner",
+        "books",
+        "entityRefs"
+      ],
+      "properties": {
+        "feed": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "installationRef",
+            "channel",
+            "sourceAuthority",
+            "sellerRef",
+            "environment",
+            "lineage"
+          ],
+          "properties": {
+            "installationRef": {
+              "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/ref"
+            },
+            "channel": {
+              "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/ref"
+            },
+            "sourceAuthority": {
+              "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/ref"
+            },
+            "sellerRef": {
+              "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/ref"
+            },
+            "environment": {
+              "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/ref"
+            },
+            "lineage": {
+              "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/ref"
+            }
+          }
+        },
+        "owner": {
+          "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/owner"
+        },
+        "books": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/ref"
+          }
+        },
+        "entityRefs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/ref"
+          }
+        }
+      }
+    },
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "handoffRef",
+        "source",
+        "target"
+      ],
+      "properties": {
+        "handoffRef": {
+          "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/ref"
+        },
+        "source": {
+          "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/ledgerScope"
+        },
+        "target": {
+          "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/ledgerScope"
+        }
+      }
+    },
+    "sourceFreezeCertificate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "planDigest",
+        "freezeGeneration",
+        "sealReceiptRef",
+        "sealReceiptDigest",
+        "closedMutators",
+        "signatureDigest"
+      ],
+      "properties": {
+        "planDigest": {
+          "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/digest"
+        },
+        "freezeGeneration": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "sealReceiptRef": {
+          "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/ref"
+        },
+        "sealReceiptDigest": {
+          "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/digest"
+        },
+        "closedMutators": {
+          "const": [
+            "admin",
+            "api",
+            "background",
+            "collection",
+            "cron",
+            "direct",
+            "import",
+            "ui"
+          ]
+        },
+        "signatureDigest": {
+          "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/digest"
+        }
+      }
+    },
+    "cursor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "token",
+        "txId",
+        "id"
+      ],
+      "properties": {
+        "token": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "txId": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,18})$"
+        }
+      }
+    },
+    "checksums": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sellerRef",
+          "currency",
+          "counts",
+          "totals",
+          "checksum"
+        ],
+        "properties": {
+          "sellerRef": {
+            "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/ref"
+          },
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          },
+          "counts": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "allocations",
+              "captured",
+              "corrections",
+              "obligations",
+              "receipts",
+              "refunded",
+              "reservations",
+              "sourceMaps",
+              "tombstones"
+            ],
+            "properties": {
+              "allocations": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "captured": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "corrections": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "obligations": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "receipts": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "refunded": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "reservations": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "sourceMaps": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "tombstones": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            }
+          },
+          "totals": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "allocated",
+              "captured",
+              "obligated",
+              "open",
+              "refunded",
+              "reserved"
+            ],
+            "properties": {
+              "allocated": {
+                "type": "string",
+                "pattern": "^(0|-?[1-9][0-9]*)$"
+              },
+              "captured": {
+                "type": "string",
+                "pattern": "^(0|-?[1-9][0-9]*)$"
+              },
+              "obligated": {
+                "type": "string",
+                "pattern": "^(0|-?[1-9][0-9]*)$"
+              },
+              "open": {
+                "type": "string",
+                "pattern": "^(0|-?[1-9][0-9]*)$"
+              },
+              "refunded": {
+                "type": "string",
+                "pattern": "^(0|-?[1-9][0-9]*)$"
+              },
+              "reserved": {
+                "type": "string",
+                "pattern": "^(0|-?[1-9][0-9]*)$"
+              }
+            }
+          },
+          "checksum": {
+            "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/digest"
+          }
+        }
+      }
+    },
+    "tail": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manifestDigest",
+        "terminalCursor",
+        "eventsDigest"
+      ],
+      "properties": {
+        "manifestDigest": {
+          "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/digest"
+        },
+        "terminalCursor": {
+          "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/cursor"
+        },
+        "eventsDigest": {
+          "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/digest"
+        }
+      }
+    },
+    "targetReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "receiptRef",
+        "manifestDigest",
+        "tailDigest",
+        "adoptedCursor",
+        "perSellerCurrencyChecksums",
+        "dispositionsDigest"
+      ],
+      "properties": {
+        "receiptRef": {
+          "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/ref"
+        },
+        "manifestDigest": {
+          "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/digest"
+        },
+        "tailDigest": {
+          "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/digest"
+        },
+        "adoptedCursor": {
+          "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/cursor"
+        },
+        "perSellerCurrencyChecksums": {
+          "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/checksums"
+        },
+        "dispositionsDigest": {
+          "$ref": "urn:billium:spec:2026-10:migration/defs.json#/$defs/digest"
+        }
+      }
+    }
+  }
+}

@@ -6,9 +6,11 @@ namespace Billium\Platform\Tests\Concurrency;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Data\Receipt;
-use Billium\Core\Enums\FinancialMode;
+use Billium\Core\Configuration\BilliumOptions;
+use Billium\Core\Data\Runner\Receipt;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Core\Tests\Support\Concurrency\ConcurrencyStand;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Platform\Exceptions\TransitionRefused;
 use Billium\Platform\Internal\Installation\DatabaseInstallation;
@@ -23,6 +25,7 @@ use PHPUnit\Framework\Attributes\Group;
 #[Group('D54')]
 #[Group('D62')]
 #[Group('D60')]
+#[Group('pg')]
 final class FinancialSessionSealTest extends PlatformTestCase
 {
     protected function setUp(): void
@@ -60,12 +63,14 @@ final class FinancialSessionSealTest extends PlatformTestCase
     public function test_seal_lock_timeout_refuses_without_asserting_a_seal(): void
     {
         config(['billium.financial_session.seal_lock_timeout_ms' => 200]);
+        $this->application()->forgetInstance(BilliumOptions::class);
         $this->application()->forgetInstance(DatabaseInstallation::class);
         $holder = TestEnvironment::pdo();
         $holder->beginTransaction();
         // An admitted root (or a stuck worker) holds the session row FOR SHARE.
         self::pdoValue($holder, 'SELECT id FROM billium_financial_session WHERE epoch = 1 FOR SHARE');
         try {
+            SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('seal', 'seal-timeout', [1]);
             $this->installation()->seal('seal-timeout', 1);
             self::fail('seal must not wait past its bound');
         } catch (TransitionRefused $refused) {
@@ -77,12 +82,15 @@ final class FinancialSessionSealTest extends PlatformTestCase
         self::assertSame(0, $this->rows('billium_idempotency_receipt', 'command_key = ?', ['seal-timeout']));
 
         // Once the drain bound holds, the same transition ref seals.
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('seal', 'seal-timeout', [1]);
         self::assertSame('sealed', $this->installation()->seal('seal-timeout', 1)->state);
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('seal', 'seal-timeout', [1]);
         self::assertSame('sealed', $this->installation()->seal('seal-timeout', 1)->state, 'replay returns the receipt');
     }
 
     public function test_sealing_closes_admission_before_the_seal(): void
     {
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('sealing', 'closing-1', [1]);
         self::assertSame('sealing', $this->installation()->beginSealing('closing-1', 1)->state);
         foreach ([FinancialMode::Active, FinancialMode::Recovery] as $mode) {
             try {
@@ -93,8 +101,10 @@ final class FinancialSessionSealTest extends PlatformTestCase
             }
         }
         self::assertSame(0, $this->rows('billium_money_commit_log'));
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('seal', 'seal-2', [1]);
         self::assertSame('sealed', $this->installation()->seal('seal-2', 1)->state);
         try {
+            SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('seal', 'seal-3', [1]);
             $this->installation()->seal('seal-3', 1);
             self::fail('a sealed session cannot be sealed again');
         } catch (TransitionRefused $refused) {

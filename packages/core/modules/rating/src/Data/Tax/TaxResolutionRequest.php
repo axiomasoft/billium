@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Billium\Rating\Data\Tax;
 
-use Billium\Contracts\Attributes\Api;
 use DateTimeImmutable;
+use Packman\Attributes\Api;
 
 #[Api]
 final readonly class TaxResolutionRequest

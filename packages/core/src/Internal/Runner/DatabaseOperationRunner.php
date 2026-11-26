@@ -6,26 +6,29 @@ namespace Billium\Core\Internal\Runner;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\OperationSpec;
-use Billium\Core\Data\Receipt;
-use Billium\Core\Data\StoredOutcome;
-use Billium\Core\Exceptions\LockPlanChanged;
-use Billium\Platform\Contracts\IdempotencyStore;
-use Billium\Platform\Contracts\RootAdmission;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Data\Runner\OperationSpec;
+use Billium\Core\Data\Runner\Receipt;
+use Billium\Core\Data\Runner\StoredOutcome;
+use Billium\Core\Exceptions\Runner\LockPlanChanged;
+use Billium\Platform\Contracts\Idempotency\FinancialIdempotencyStore;
+use Billium\Platform\Contracts\Idempotency\IdempotencyStore;
+use Billium\Platform\Contracts\Installation\RootAdmission;
 use Closure;
 use Illuminate\Database\Connection;
 use LogicException;
+use Packman\Attributes\Internal;
 use PDOException;
 use RuntimeException;
 use Throwable;
 
 /**
- * The root runner (operation-runner, M-55). Everything that changes money runs inside exactly one call of run() on a
+ * The root runner (operation-runner). Everything that changes money runs inside exactly one call of run() on a
  * connection at transaction level 0; there is no nested runner and no participant may start one.
  */
+#[Internal]
 final class DatabaseOperationRunner implements OperationRunner
 {
     /** SQLSTATEs whose whole database work may be repeated: serialization failure and deadlock (COV-288). */
@@ -59,6 +62,21 @@ final class DatabaseOperationRunner implements OperationRunner
             throw new ProblemException(ProblemCode::AuthDenied, 'operation scope differs from the authenticated caller');
         }
 
+        $scope = $spec->financialScope;
+        $digest = $spec->digest;
+        if ($scope !== null) {
+            if ($scope->installationRef !== $caller->installationRef || $scope->sellerRef !== $caller->sellerRef
+                || $scope->environment !== $caller->environment
+                || ($scope->intentOwnerNamespace !== null && ! in_array($scope->intentOwnerNamespace, $caller->intentOwnerNamespaces, true))
+                || ($scope->sourceAuthority !== null && ! in_array($scope->sourceAuthority, $caller->sourceAuthorities, true))) {
+                throw new ProblemException(ProblemCode::AuthDenied, 'selected financial scope differs from the authenticated grants');
+            }
+            if ($digest !== null && ($scope->intentOwnerNamespace !== null || $scope->sourceAuthority !== null)) {
+                $digest = 'sha256:'.hash('sha256', json_encode(['billium.financial_claim.v1', $scope->installationRef,
+                    $scope->sellerRef, $scope->environment, $scope->intentOwnerNamespace, $scope->sourceAuthority, $digest], JSON_THROW_ON_ERROR));
+            }
+        }
+
         for ($attempt = 1; ; $attempt++) {
             $operation = null;
             $claimId = null;
@@ -70,8 +88,13 @@ final class DatabaseOperationRunner implements OperationRunner
                 $this->connection->statement('SET LOCAL idle_in_transaction_session_timeout = '.$this->deadlineMs);
 
                 // Step 2: the claim is the first write of the root Tx (D51); a replay needs no session or module admission.
-                if ($spec->commandKey !== null && $spec->digest !== null) {
-                    $claim = $this->idempotency->claim($caller, $spec->commandKind, $spec->commandKey, $spec->digest);
+                if ($spec->commandKey !== null && $digest !== null) {
+                    if ($scope !== null && ! $this->idempotency instanceof FinancialIdempotencyStore) {
+                        throw new ProblemException(ProblemCode::RecoveryRequired, 'The configured idempotency store cannot retain financial scope provenance');
+                    }
+                    $claim = $scope !== null
+                        ? $this->idempotency->claimScoped($caller, $scope, $spec->commandKind, $spec->commandKey, $digest, $spec->inputDigest, $spec->originalExecutionBindingRef)
+                        : $this->idempotency->claim($caller, $spec->commandKind, $spec->commandKey, $digest);
                     if ($claim->replay !== null) {
                         $this->assertDepth(1);
                         $this->connection->commit();
@@ -184,7 +207,11 @@ final class DatabaseOperationRunner implements OperationRunner
         }
     }
 
-    /** The closure type is a promise PHP does not enforce; the caller checks the result at runtime. */
+    /**
+     * The closure type is a promise PHP does not enforce; the caller checks the result at runtime.
+     *
+     * @param  Closure(TransactionContext): Receipt  $body
+     */
     private static function invoke(Closure $body, TransactionContext $context): mixed
     {
         return $body($context);

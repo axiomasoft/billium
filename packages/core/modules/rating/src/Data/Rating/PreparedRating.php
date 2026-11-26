@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Rating\Data\Rating;
 
-use Billium\Contracts\Attributes\Api;
+use Packman\Attributes\Api;
 
 #[Api]
 final readonly class PreparedRating

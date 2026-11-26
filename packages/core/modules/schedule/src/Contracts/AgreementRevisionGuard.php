@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace Billium\Schedule\Contracts;
 
-use Billium\Contracts\Attributes\Api;
-use Billium\Contracts\Attributes\Spi;
-use Billium\Contracts\Attributes\SpiKind;
-use Billium\Core\Contracts\TransactionContext;
+use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Schedule\Data\ScheduleRevisionTerms;
+use Packman\Attributes\Spi;
+use Packman\Attributes\SpiKind;
 
 /**
  * Host authority (REQ-NBR-06, D56; owner host). Assert exact approved terms/revision and cancellation generation.
@@ -16,7 +15,6 @@ use Billium\Schedule\Data\ScheduleRevisionTerms;
  * authority before schedule's rank-40 lock. No network, foreign-table access by Billium or unlocked remote lookup.
  * A missing/tombstoned revision refuses; a stale approval is never replaced with current commercial terms.
  */
-#[Api]
 #[Spi(SpiKind::Implement)]
 interface AgreementRevisionGuard
 {

@@ -97,19 +97,48 @@
     },
     "attributionPolicy": {
       "type": "object",
-      "required": [
-        "id",
-        "version"
-      ],
-      "properties": {
-        "id": {
-          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/p4AttributionPolicy"
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "id",
+            "version"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/p4AttributionPolicy"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "additionalProperties": false
         },
-        "version": {
-          "const": 1
+        {
+          "type": "object",
+          "required": [
+            "id",
+            "version",
+            "mappingRef",
+            "attribution"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/p4AttributionPolicy"
+            },
+            "version": {
+              "const": 2
+            },
+            "mappingRef": {
+              "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+            },
+            "attribution": {
+              "$ref": "urn:billium:spec:2026-10:common/usage-rating.json#/$defs/attribution"
+            }
+          },
+          "additionalProperties": false
         }
-      },
-      "additionalProperties": false
+      ]
     },
     "effectiveCutoffPolicy": {
       "type": "object",
@@ -129,19 +158,46 @@
     },
     "correctionPolicy": {
       "type": "object",
-      "required": [
-        "id",
-        "version"
-      ],
-      "properties": {
-        "id": {
-          "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/p4CorrectionPolicy"
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "id",
+            "version"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/p4CorrectionPolicy"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "additionalProperties": false
         },
-        "version": {
-          "const": 1
+        {
+          "type": "object",
+          "required": [
+            "id",
+            "version",
+            "maxRevision"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/p4CorrectionPolicy"
+            },
+            "version": {
+              "const": 2
+            },
+            "maxRevision": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          "additionalProperties": false
         }
-      },
-      "additionalProperties": false
+      ]
     },
     "latePolicy": {
       "type": "object",

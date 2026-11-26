@@ -6,16 +6,17 @@ namespace Billium\Ledger\Tests\Observation;
 
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Contracts\FinancialSessionAdmission;
-use Billium\Core\Data\Caller;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
+use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Tests\Support\Concurrency\Scenario;
 use Billium\Core\Tests\Support\FixedCallerContext;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Ledger\Contracts\Ledger;
 use Billium\Ledger\Contracts\ObservationApplier;
-use Billium\Ledger\Data\Allocate;
-use Billium\Ledger\Data\BillingAccountScope;
+use Billium\Ledger\Data\Allocations\Allocate;
+use Billium\Ledger\Data\Runtime\BillingAccountScope;
 use Billium\Platform\Tests\PlatformTestCase;
 use Illuminate\Foundation\Application;
 use InvalidArgumentException;
@@ -34,6 +35,7 @@ final readonly class ObservationScenario implements Scenario
         $authorities = is_array($granted) ? array_values(array_filter($granted, is_string(...))) : ObservationTestCase::AUTHORITIES;
         $app->instance(CallerContext::class, new FixedCallerContext(new Caller('seller-a', 'test', PlatformTestCase::INSTALLATION, 'actor-'.$index, $authorities)));
         $app->instance(FinancialSessionAdmission::class, new FixedSessionAdmission(FixedSessionAdmission::token(PlatformTestCase::INSTALLATION, processRef: 'process-'.$index)));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($app);
     }
 
     /** @param array<string, mixed> $args */

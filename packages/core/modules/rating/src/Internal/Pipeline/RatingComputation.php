@@ -16,6 +16,7 @@ use Billium\Rating\Data\Pricing\PerUnitTerms;
 use Billium\Rating\Data\Pricing\PriceVersion;
 use Billium\Rating\Data\Pricing\PricingInput;
 use Billium\Rating\Data\Pricing\PricingResult;
+use Billium\Rating\Data\Pricing\Tier;
 use Billium\Rating\Data\Pricing\VolumeTerms;
 use Billium\Rating\Data\Rating\FrozenRatingInputs;
 use Billium\Rating\Data\Rating\Quote;
@@ -32,8 +33,10 @@ use Billium\Rating\Internal\Proration\QuantitySnapshotScope;
 use Billium\Rating\Internal\Storage\FrozenInputsCodec;
 use Billium\Rating\Internal\Storage\RatingRows;
 use Billium\Rating\Internal\Tax\TaxCalculator;
+use Packman\Attributes\Internal;
 
 /** Versioned strategies consume retained snapshots only; this class performs no I/O (D56). */
+#[Internal]
 final readonly class RatingComputation implements RatingQuoter
 {
     public function __construct(private PricingStrategyRegistry $strategies, private TaxCalculator $taxes) {}
@@ -146,7 +149,7 @@ final readonly class RatingComputation implements RatingQuoter
             $amounts = $allocated[$group][$key];
             $result = $priced[$i];
             $lines[] = new RatedLineDraft(lineNo: $i + 1, componentRef: $aggregate->componentRef, metricRef: $aggregate->metricRef,
-                metricVersion: (string) $aggregate->metricVersion, priceRef: $price->priceRef, priceVersion: $price->priceVersion,
+                metricVersion: $aggregate->metricVersion, priceRef: $price->priceRef, priceVersion: $price->priceVersion,
                 strategyId: $price->strategyId, strategyVersion: $price->strategyVersion, termsDigest: $price->termsDigest,
                 aggregateSnapshotDigest: $aggregate->snapshotDigest, windowStartMicros: $aggregate->windowStartMicros, windowEndMicros: $aggregate->windowEndMicros,
                 quantity: $aggregate->quantity, quantityScale: $aggregate->quantityScale, rawAmount: $result->rawAmount,
@@ -170,14 +173,20 @@ final readonly class RatingComputation implements RatingQuoter
             self::refuse('no_charge_reason_required');
         }
         $digest = $inputs->digest();
-        $basis = 'rb_'.substr(hash('sha256', implode('|', [$inputs->sellerRef, $inputs->environment, $inputs->occurrenceRef,
-            $predecessorBasisRef === null ? 'original' : 'correction:'.$correctionRevision, $digest])), 0, 48);
+        $basis = self::basisRef(inputs: $inputs, correctionRevision: $predecessorBasisRef === null ? null : $correctionRevision);
 
         return new RatedBasisDraft(basisRef: $basis, inputsDigest: $digest,
             ratedDigest: CanonicalJson::digest(['inputsDigest' => $digest, 'lines' => $lines, 'totals' => ['net' => $net, 'tax' => $taxTotal, 'gross' => $gross]]),
             chargeKind: $gross === '0' ? ChargeKind::NoCharge : ChargeKind::Charge,
             noChargeReason: $gross === '0' && $predecessorBasisRef !== null ? 'correction_zero' : $inputs->noChargeReason,
             lines: $lines, netMinor: $net, taxMinor: $taxTotal, grossMinor: $gross);
+    }
+
+    /** Basis identity of the original rating (null revision) or of one correction revision of an occurrence. */
+    public static function basisRef(FrozenRatingInputs $inputs, ?int $correctionRevision = null): string
+    {
+        return 'rb_'.substr(hash('sha256', implode('|', [$inputs->sellerRef, $inputs->environment, $inputs->occurrenceRef,
+            $correctionRevision === null ? 'original' : 'correction:'.$correctionRevision, $inputs->digest()])), 0, 48);
     }
 
     public static function commitmentScope(string $environment, CommitmentTerms $terms): string
@@ -203,7 +212,7 @@ final readonly class RatingComputation implements RatingQuoter
             return Dec::parse($terms->unitPrice)->isZero();
         }
         if ($terms instanceof GraduatedTerms || $terms instanceof VolumeTerms) {
-            return array_all($terms->tiers, static fn ($tier): bool => Dec::parse($tier->unitPrice)->isZero()
+            return array_all($terms->tiers, static fn (Tier $tier): bool => Dec::parse($tier->unitPrice)->isZero()
                 && Dec::parse($tier->flatFee)->isZero());
         }
 

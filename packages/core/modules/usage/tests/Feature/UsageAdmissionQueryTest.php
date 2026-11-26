@@ -10,8 +10,10 @@ use Billium\Usage\Internal\UsageQueries;
 use Billium\Usage\Tests\Support\UsageFixtures;
 use Billium\Usage\Tests\UsageTestCase;
 use Illuminate\Database\DatabaseManager;
+use PHPUnit\Framework\Attributes\Group;
 use stdClass;
 
+#[Group('pg')]
 final class UsageAdmissionQueryTest extends UsageTestCase
 {
     public function test_keyset_pages_order_by_event_time_with_nanoseconds_and_frozen_mapping(): void
@@ -66,6 +68,10 @@ final class UsageAdmissionQueryTest extends UsageTestCase
         $encoded = json_encode($plan, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR);
         self::assertStringContainsString('billium_usage_subject_window', $encoded);
         self::assertCount(5, $rows);
-        file_put_contents(dirname(__DIR__, 6).'/.phpunit.cache/p4.2/usage-explain.json', $encoded);
+        $artifactDirectory = dirname(__DIR__, 6).'/.phpunit.cache/p4.2';
+        if (! is_dir($artifactDirectory)) {
+            self::assertTrue(mkdir($artifactDirectory, 0777, true));
+        }
+        self::assertNotFalse(file_put_contents($artifactDirectory.'/usage-explain.json', $encoded));
     }
 }

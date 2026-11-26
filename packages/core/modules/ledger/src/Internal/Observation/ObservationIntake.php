@@ -5,14 +5,20 @@ declare(strict_types=1);
 namespace Billium\Ledger\Internal\Observation;
 
 use Billium\Contracts\Contracts\Codec;
+use Billium\Contracts\Data\Envelopes\ObservationCustody;
 use Billium\Contracts\Data\Envelopes\PaymentObservation;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\CallerContext;
-use Billium\Ledger\Contracts\ObservationApplier;
-use Billium\Ledger\Data\AllocationReceipt;
-use Billium\Platform\Contracts\CustodyHandler;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\AuthenticatedObservationContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Data\Runtime\FinancialScope;
+use Billium\Ledger\Contracts\QualifiedObservationApplier;
+use Billium\Ledger\Data\Allocations\AllocationReceipt;
+use Billium\Ledger\Data\Views\LedgerView;
+use Billium\Platform\Contracts\Inbox\CustodyHandler;
 use Billium\Platform\Data\Inbox\CustodyDisposition;
+use Packman\Attributes\Internal;
 
 /**
  * applyPaymentObservation facade (ObservationApplier). Decode and authentication refuse before any custody; a RawCustody
@@ -21,25 +27,61 @@ use Billium\Platform\Data\Inbox\CustodyDisposition;
  * reflects the durable disposition of THIS delivery: its AllocationReceipt, or — after commit — parked,
  * recovery-required or conflict (D31). Receipts are read on the configured Billium connection.
  */
-final readonly class ObservationIntake implements ObservationApplier
+#[Internal]
+final readonly class ObservationIntake implements QualifiedObservationApplier
 {
     public function __construct(
         private ParkedDrainer $roots,
         private CustodyHandler $handler,
         private CallerContext $callers,
+        private ?AuthenticatedObservationContext $origins = null,
     ) {}
 
     public function apply(string $json): AllocationReceipt
+    {
+        return self::allocation($this->applyWithCustody($json));
+    }
+
+    public function applyWithCustody(string $json): AllocationReceipt|ObservationCustody
+    {
+        return $this->intake($json, null, null);
+    }
+
+    public function applyQualified(string $json, FinancialScope $scope, string $proofDigest): AllocationReceipt
+    {
+        $caller = $this->callers->current();
+        if ($scope->installationRef !== $caller->installationRef || $scope->sellerRef !== $caller->sellerRef || $scope->environment !== $caller->environment
+            || $scope->sourceAuthority === null || $scope->intentOwnerNamespace === null || $caller->sourceAuthorities !== [$scope->sourceAuthority]
+            || $caller->intentOwnerNamespaces !== [$scope->intentOwnerNamespace] || preg_match('/^sha256:[0-9a-f]{64}$/D', $proofDigest) !== 1) {
+            throw new ProblemException(ProblemCode::AuthDenied, 'Qualified observation requires an isolated authenticated caller');
+        }
+
+        return self::allocation($this->intake($json, $scope, $proofDigest));
+    }
+
+    private function intake(string $json, ?FinancialScope $scope, ?string $proof): AllocationReceipt|ObservationCustody
     {
         $envelope = (new Codec)->decode($json);
         if (! $envelope instanceof PaymentObservation) {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'expected payment.observation.v1');
         }
         $raw = $envelope->raw;
+        if ($scope !== null) {
+            if ($this->origins === null || $proof === null) {
+                throw new ProblemException(ProblemCode::AuthDenied, 'No authenticated observation context');
+            }
+            $this->origins->assertOrigin($this->callers->current(), $scope, $raw, $proof);
+        }
         // 1. Raw custody in its own RawCustody root: it commits even while the financial session is sealed (D60).
-        $result = $this->roots->custody($raw, $this->handler);
+        $result = $this->roots->custody($raw, $this->handler, $scope, $proof);
         if ($result->disposition === CustodyDisposition::Conflict) {
             throw new ProblemException(ProblemCode::ObservationConflict, 'the event identity carries another content digest');
+        }
+        if ($scope !== null && ObservationOwnership::hasLegacyRevision($this->roots->connection(), $envelope)) {
+            $this->roots->root(function (TransactionContext $ctx) use ($scope, $raw, $envelope, $proof): void {
+                $this->origins->assertOrigin($ctx->caller(), $scope, $raw, $proof);
+                ObservationOwnership::prove($this->roots->connection(), $ctx, $envelope, $proof);
+            }, commitKind: null, scope: $scope);
         }
         // 2. Economic application in separate financial roots, one event each. A refused financial admission (sealed or
         //    recovery session) or a failed apply surfaces here; the committed custody stays for a later admitted drain.
@@ -48,15 +90,44 @@ final readonly class ObservationIntake implements ObservationApplier
         $replayed = $result->disposition === CustodyDisposition::Duplicate && $result->status === 'applied';
         if (in_array($result->status, ['ready', 'parked_gap', 'parked_dependency'], true)) {
             // The follow-up may have applied it; a duplicate custody call never invokes the handler.
-            $result = $this->roots->custody($raw, $this->handler);
+            $result = $this->roots->custody($raw, $this->handler, $scope, $proof);
         }
 
         return match ($result->status) {
-            'applied' => $this->receipt($result->resultRef ?? '', $replayed),
+            'applied' => $scope === null ? $this->receipt($result->resultRef ?? '', $replayed) :
+                $this->roots->root(function (TransactionContext $context) use ($result, $replayed, $envelope): AllocationReceipt {
+                    ObservationOwnership::check($this->roots->connection(), $context, $envelope);
+
+                    return $this->receipt($result->resultRef ?? '', $replayed);
+                }, commitKind: null, scope: $scope),
             'quarantined' => throw new ProblemException(ProblemCode::ObservationConflict, 'the observation is quarantined'),
             'held_recovery' => throw new ProblemException(ProblemCode::RecoveryRequired, 'the source partition requires recovery'),
+            'parked_gap', 'parked_dependency' => $this->parked($result->status),
             default => throw new ProblemException(ProblemCode::ObservationParked, 'the observation is in custody and waits ('.($result->status ?? 'unknown').')'),
         };
+    }
+
+    private static function allocation(AllocationReceipt|ObservationCustody $outcome): AllocationReceipt
+    {
+        if ($outcome instanceof ObservationCustody) {
+            throw new ProblemException(ProblemCode::ObservationParked, 'the observation is in custody and waits ('.$outcome->custodyStatus.')');
+        }
+
+        return $outcome;
+    }
+
+    private function parked(string $status): ObservationCustody
+    {
+        $caller = $this->callers->current();
+        $codec = new Codec;
+        $body = ['schema' => ObservationCustody::SCHEMA, 'installationRef' => $caller->installationRef,
+            'sellerRef' => $caller->sellerRef, 'environment' => $caller->environment,
+            'custodyStatus' => $status, 'code' => ProblemCode::ObservationParked->value, 'receipt' => 'none'];
+        $body['digest'] = $codec->digest($body);
+        $receipt = $codec->decode($codec->canonicalize($body));
+        assert($receipt instanceof ObservationCustody);
+
+        return $receipt;
     }
 
     private function receipt(string $ref, bool $replayed): AllocationReceipt
@@ -67,12 +138,7 @@ final readonly class ObservationIntake implements ObservationApplier
         if ($row === null || ! is_string($row->kind) || ! is_string($row->body)) {
             throw new ProblemException(ProblemCode::ObservationParked, 'the observation has no business receipt yet');
         }
-        $body = json_decode($row->body, true, 64, JSON_THROW_ON_ERROR);
-        $typed = [];
-        foreach (is_array($body) ? $body : [] as $key => $value) {
-            $typed[(string) $key] = $value;
-        }
 
-        return new AllocationReceipt($ref, $row->kind, $typed, $replayed);
+        return new AllocationReceipt($ref, $row->kind, LedgerView::json($row->body), $replayed);
     }
 }

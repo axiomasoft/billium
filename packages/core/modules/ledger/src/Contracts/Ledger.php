@@ -4,26 +4,26 @@ declare(strict_types=1);
 
 namespace Billium\Ledger\Contracts;
 
-use Billium\Contracts\Attributes\Api;
-use Billium\Core\Data\StoredOutcome;
-use Billium\Ledger\Data\AdjustObligation;
-use Billium\Ledger\Data\Allocate;
-use Billium\Ledger\Data\AmendObligationDuePolicy;
-use Billium\Ledger\Data\CreateInvoice;
-use Billium\Ledger\Data\DeclareSettlementIntent;
-use Billium\Ledger\Data\DiscardInvoice;
-use Billium\Ledger\Data\IssueCreditNote;
-use Billium\Ledger\Data\IssueInvoice;
-use Billium\Ledger\Data\MarkUncollectible;
-use Billium\Ledger\Data\ReallocatePayment;
-use Billium\Ledger\Data\RecordCustomerCredit;
-use Billium\Ledger\Data\RecordObligation;
-use Billium\Ledger\Data\ReverseAllocation;
-use Billium\Ledger\Data\UpdateInvoiceMetadata;
-use Billium\Ledger\Data\VoidInvoice;
+use Billium\Core\Data\Runner\StoredOutcome;
+use Billium\Ledger\Data\Allocations\Allocate;
+use Billium\Ledger\Data\Allocations\ReallocatePayment;
+use Billium\Ledger\Data\Allocations\ReverseAllocation;
+use Billium\Ledger\Data\Credits\RecordCustomerCredit;
+use Billium\Ledger\Data\Invoices\CreateInvoice;
+use Billium\Ledger\Data\Invoices\DiscardInvoice;
+use Billium\Ledger\Data\Invoices\IssueCreditNote;
+use Billium\Ledger\Data\Invoices\IssueInvoice;
+use Billium\Ledger\Data\Invoices\MarkUncollectible;
+use Billium\Ledger\Data\Invoices\UpdateInvoiceMetadata;
+use Billium\Ledger\Data\Invoices\VoidInvoice;
+use Billium\Ledger\Data\Obligations\AdjustObligation;
+use Billium\Ledger\Data\Obligations\AmendObligationDuePolicy;
+use Billium\Ledger\Data\Obligations\RecordObligation;
+use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
+use Packman\Attributes\Api;
 
 /** Root-only financial commands (D60). Composition uses LedgerParticipants in the existing root. */
-#[Api]
+#[Api(since: '1.0')]
 interface Ledger
 {
     public function recordObligation(RecordObligation $command): StoredOutcome;

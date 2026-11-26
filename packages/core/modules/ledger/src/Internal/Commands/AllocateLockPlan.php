@@ -4,16 +4,18 @@ declare(strict_types=1);
 
 namespace Billium\Ledger\Internal\Commands;
 
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Enums\LockRank;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Enums\Runner\LockRank;
 use LogicException;
+use Packman\Attributes\Internal;
 
 /**
  * Complete pre-read row set of one allocation-family command in the D27 order: settlement intents (65) → obligations
  * (70) → invoices (80) → payments, then customer credits (90). The guarded routine takes the same rows again, which is
  * reentrant after this prelock; the caller re-reads its plan under the locks and retries on a change (LockPlanChanged).
  */
+#[Internal]
 final readonly class AllocateLockPlan
 {
     /** @var list<int> */

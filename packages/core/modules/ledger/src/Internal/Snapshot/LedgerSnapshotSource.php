@@ -7,18 +7,20 @@ namespace Billium\Ledger\Internal\Snapshot;
 use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\CallerContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Ledger\Data\Views\LedgerView as View;
 use Billium\Ledger\Internal\Observation\ParkedDrainer;
 use Billium\Ledger\Internal\Queries\LedgerReader;
-use Billium\Platform\Contracts\FeedRecoveryQueries;
-use Billium\Platform\Contracts\SnapshotSource;
+use Billium\Platform\Contracts\Feed\FeedRecoveryQueries;
+use Billium\Platform\Contracts\Feed\SnapshotSource;
 use Billium\Platform\Data\Feed\FeedSelection;
 use Illuminate\Database\DatabaseManager;
 use LogicException;
+use Packman\Attributes\Internal;
 
 /** D60/D63: registered ledger snapshot streams share the feed's pinned read-only snapshot and source scope. */
-final readonly class LedgerSnapshotSource implements SnapshotSource
+#[Internal]
+readonly class LedgerSnapshotSource implements SnapshotSource
 {
     public const array KEYS = ['ledger.obligations', 'ledger.invoices', 'ledger.allocations', 'ledger.payments', 'ledger.discrepancies'];
 
@@ -64,11 +66,13 @@ final readonly class LedgerSnapshotSource implements SnapshotSource
     /** @return list<array<string, mixed>> */
     private function obligations(LedgerReader $reader): array
     {
+        $adjustments = $this->grouped($reader, 'billium_adjustment', 'obligation_id');
+        $creditNotes = $this->grouped($reader, 'billium_credit_note', 'obligation_id');
         $records = [];
         foreach ($reader->scoped('billium_obligation')->orderBy('id')->get() as $row) {
             $payload = View::obligation($row);
-            $payload['adjustments'] = $this->rows($reader, 'billium_adjustment', 'obligation_id', $row->id);
-            $payload['creditNotes'] = $this->rows($reader, 'billium_credit_note', 'obligation_id', $row->id);
+            $payload['adjustments'] = $adjustments[View::integer($row->id)] ?? [];
+            $payload['creditNotes'] = $creditNotes[View::integer($row->id)] ?? [];
             $records[] = self::record('obligation:'.View::text($row->obligation_ref), View::integer($row->revision), $payload);
         }
         foreach ($reader->scoped('billium_customer_credit')->orderBy('id')->get() as $row) {
@@ -81,10 +85,16 @@ final readonly class LedgerSnapshotSource implements SnapshotSource
     /** @return list<array<string, mixed>> */
     private function invoices(LedgerReader $reader): array
     {
+        $lines = [];
+        foreach ($reader->scoped('billium_invoice_line')->orderBy('invoice_id')->orderBy('position')->get() as $line) {
+            $lines[View::integer($line->invoice_id)][] = $line;
+        }
+        $obligations = $reader->byId('billium_obligation');
+        $creditNotes = $this->grouped($reader, 'billium_credit_note', 'invoice_id');
         $records = [];
         foreach ($reader->scoped('billium_invoice')->orderBy('id')->get() as $row) {
-            $payload = $reader->invoice(View::text($row->invoice_ref));
-            $payload['creditNotes'] = $this->rows($reader, 'billium_credit_note', 'invoice_id', $row->id);
+            $payload = LedgerReader::invoiceView($row, $lines[View::integer($row->id)] ?? [], $obligations);
+            $payload['creditNotes'] = $creditNotes[View::integer($row->id)] ?? [];
             $records[] = self::record('invoice:'.View::text($row->invoice_ref), View::integer($row->revision), $payload);
         }
 
@@ -99,12 +109,20 @@ final readonly class LedgerSnapshotSource implements SnapshotSource
             $records[] = self::record('receipt:'.View::text($row->receipt_ref), 1,
                 ['receiptRef' => $row->receipt_ref, 'kind' => $row->kind, 'semanticDigest' => $row->semantic_digest, 'body' => View::json($row->body)]);
         }
-        foreach ($reader->scoped('billium_allocation')->orderBy('id')->get() as $row) {
+        $obligations = $this->refs($reader, 'billium_obligation', 'obligation_ref');
+        $payments = $this->refs($reader, 'billium_payment', 'payment_ref');
+        $credits = $this->refs($reader, 'billium_customer_credit', 'credit_ref');
+        $allocations = $reader->scoped('billium_allocation')->orderBy('id')->get();
+        $receipts = [];
+        foreach ($allocations as $row) {
+            $receipts[View::integer($row->id)] = $row->receipt_ref;
+        }
+        foreach ($allocations as $row) {
             $payload = self::row($row);
-            $payload['obligationRef'] = $reader->scoped('billium_obligation')->where('id', $row->obligation_id)->value('obligation_ref');
-            $payload['paymentRef'] = $reader->scoped('billium_payment')->where('id', $row->payment_id)->value('payment_ref');
-            $payload['customerCreditRef'] = $reader->scoped('billium_customer_credit')->where('id', $row->customer_credit_id)->value('credit_ref');
-            $payload['reversesReceiptRef'] = $reader->scoped('billium_allocation')->where('id', $row->reverses_id)->value('receipt_ref');
+            $payload['obligationRef'] = self::ref($obligations, $row->obligation_id);
+            $payload['paymentRef'] = self::ref($payments, $row->payment_id);
+            $payload['customerCreditRef'] = self::ref($credits, $row->customer_credit_id);
+            $payload['reversesReceiptRef'] = self::ref($receipts, $row->reverses_id);
             $records[] = self::record('allocation:'.View::text($row->receipt_ref).':'.View::integer($row->id), 1, $payload);
         }
 
@@ -114,31 +132,41 @@ final readonly class LedgerSnapshotSource implements SnapshotSource
     /** @return list<array<string, mixed>> */
     private function payments(LedgerReader $reader, string $connectionName): array
     {
+        $observedRevisions = $this->grouped($reader, 'billium_observed_payment_revision', 'observed_payment_id');
+        $applied = [];
+        foreach ($reader->scoped('billium_payment')->orderBy('id')->get() as $payment) {
+            $applied[View::text($payment->source_authority)][View::text($payment->operation_ref)] ??= View::integer($payment->id);
+        }
+        $appliedRevisions = $this->grouped($reader, 'billium_payment_revision', 'payment_id');
+        $allocations = $this->grouped($reader, 'billium_allocation', 'payment_id');
         $records = [];
         foreach ($reader->scoped('billium_observed_payment')->orderBy('id')->get() as $row) {
             if ($row->kind === 'refund') {
                 // D41: refund children are immutable detail, never a second applied charge/refund basis.
                 $payload = self::row($row);
-                $payload['observedRevisions'] = $this->rows($reader, 'billium_observed_payment_revision', 'observed_payment_id', $row->id);
+                $payload['observedRevisions'] = $observedRevisions[View::integer($row->id)] ?? [];
                 $records[] = self::record('refund:'.View::text($row->source_authority).':'.View::text($row->operation_ref), View::integer($row->revision), $payload);
 
                 continue;
             }
             $payload = $reader->payment(View::text($row->operation_ref), View::text($row->source_authority));
-            $payload['observedRevisions'] = $this->rows($reader, 'billium_observed_payment_revision', 'observed_payment_id', $row->id);
-            $payment = $reader->scoped('billium_payment')->where('source_authority', $row->source_authority)->where('operation_ref', $row->operation_ref)->first();
-            $payload['appliedRevisions'] = $payment === null ? [] : $this->rows($reader, 'billium_payment_revision', 'payment_id', $payment->id);
-            $payload['allocations'] = $payment === null ? [] : $this->rows($reader, 'billium_allocation', 'payment_id', $payment->id);
+            $payload['observedRevisions'] = $observedRevisions[View::integer($row->id)] ?? [];
+            $paymentId = $applied[View::text($row->source_authority)][View::text($row->operation_ref)] ?? null;
+            $payload['appliedRevisions'] = $paymentId === null ? [] : $appliedRevisions[$paymentId] ?? [];
+            $payload['allocations'] = $paymentId === null ? [] : $allocations[$paymentId] ?? [];
             $records[] = self::record('payment:'.View::text($row->source_authority).':'.View::text($row->operation_ref), View::integer($row->revision), $payload);
         }
+        $obligations = $this->refs($reader, 'billium_obligation', 'obligation_ref');
+        $targets = [];
+        foreach ($reader->scoped('billium_settlement_target')->orderBy('settlement_intent_id')->orderBy('position')->get() as $target) {
+            $targets[View::integer($target->settlement_intent_id)][] = ['position' => $target->position,
+                'obligationRef' => self::ref($obligations, $target->obligation_id)];
+        }
+        $closures = $this->grouped($reader, 'billium_settlement_intent_closure', 'settlement_intent_id');
         foreach ($reader->scoped('billium_settlement_intent')->orderBy('id')->get() as $row) {
             $payload = self::row($row);
-            $payload['targets'] = [];
-            foreach ($reader->scoped('billium_settlement_target')->where('settlement_intent_id', $row->id)->orderBy('position')->get() as $target) {
-                $payload['targets'][] = ['position' => $target->position,
-                    'obligationRef' => $reader->scoped('billium_obligation')->where('id', $target->obligation_id)->value('obligation_ref')];
-            }
-            $payload['closures'] = $this->rows($reader, 'billium_settlement_intent_closure', 'settlement_intent_id', $row->id);
+            $payload['targets'] = $targets[View::integer($row->id)] ?? [];
+            $payload['closures'] = $closures[View::integer($row->id)] ?? [];
             $records[] = self::record('intent:'.View::text($row->business_intent_ref), View::integer($row->revision), $payload);
         }
         // D60: include source recovery flags even for empty partitions / before the first observed operation.
@@ -152,31 +180,55 @@ final readonly class LedgerSnapshotSource implements SnapshotSource
     /** @return list<array<string, mixed>> */
     private function discrepancies(LedgerReader $reader): array
     {
+        $observedPayments = $reader->byId('billium_observed_payment');
+        $events = $this->grouped($reader, 'billium_discrepancy_event', 'discrepancy_id');
         $records = [];
         foreach ($reader->scoped('billium_ledger_discrepancy')->orderBy('id')->get() as $row) {
             $payload = self::row($row);
-            $observed = $reader->scoped('billium_observed_payment')->where('id', $row->observed_payment_id)->first() ?? throw LedgerReader::unknown();
+            $observed = $observedPayments[View::integer($row->observed_payment_id)] ?? throw LedgerReader::unknown();
             $payload['operationRef'] = $observed->operation_ref;
             $payload['sourceAuthority'] = $observed->source_authority;
             $payload['expected'] = View::money($row->expected_minor, $observed->currency);
             $payload['actual'] = View::money($row->actual_minor, $observed->currency);
             unset($payload['expected_minor'], $payload['actual_minor']);
-            $payload['events'] = $this->rows($reader, 'billium_discrepancy_event', 'discrepancy_id', $row->id);
+            $payload['events'] = $events[View::integer($row->id)] ?? [];
             $records[] = self::record('discrepancy:'.View::text($row->fingerprint), View::integer($row->observed_revision), $payload);
         }
 
         return $records;
     }
 
-    /** @return list<array<string, mixed>> */
-    private function rows(LedgerReader $reader, string $table, string $column, mixed $value): array
+    /**
+     * The scoped rows of a child table grouped by their parent id, in id order: one query per child table instead
+     * of one per parent row.
+     *
+     * @return array<int, list<array<string, mixed>>>
+     */
+    private function grouped(LedgerReader $reader, string $table, string $column): array
     {
-        $rows = [];
-        foreach ($reader->scoped($table)->where($column, $value)->orderBy('id')->get() as $row) {
-            $rows[] = self::row($row);
+        $groups = [];
+        foreach ($reader->scoped($table)->whereNotNull($column)->orderBy('id')->get() as $row) {
+            $groups[View::integer($row->{$column})][] = self::row($row);
         }
 
-        return $rows;
+        return $groups;
+    }
+
+    /** @return array<int, mixed> the scoped rows' reference column keyed by id */
+    private function refs(LedgerReader $reader, string $table, string $column): array
+    {
+        $refs = [];
+        foreach ($reader->scoped($table)->get(['id', $column]) as $row) {
+            $refs[View::integer($row->id)] = $row->{$column};
+        }
+
+        return $refs;
+    }
+
+    /** @param array<int, mixed> $refs */
+    private static function ref(array $refs, mixed $id): mixed
+    {
+        return $id === null ? null : $refs[View::integer($id)] ?? null;
     }
 
     /** @return array<string, mixed> */

@@ -1,0 +1,89 @@
+{
+  "protocol": "billium.consumer.bridge.case.v1",
+  "id": "CT-06",
+  "title": "Concurrent refunds conserve captured minus confirmed minus reserved capacity on real PostgreSQL",
+  "standProfile": "execution",
+  "authoritySource": "remote-billium",
+  "executionProfile": "remote-billium",
+  "packageDelivery": "php-contracts-current",
+  "sources": ["D55", "D58", "ACC-CON-03"],
+  "steps": [
+    {
+      "name": "charge",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "path": "/billium/v1/sellers/seller-a/payments/execute",
+        "body": {
+          "schema": "payment.execute.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "commandKey": "00000000-0000-4100-8800-000000000601",
+          "operationRef": "ct06-charge-1",
+          "operationKind": "charge",
+          "source": { "context": "checkout", "intentRef": "intent-a", "orderRef": "ct06-order" },
+          "executionProfile": "remote-billium",
+          "routingEpoch": 1,
+          "merchantAccountRef": "account-a",
+          "money": { "amount": "1.00", "currency": "RUB" },
+          "bindingRevision": "merchant-a",
+          "requestedAt": "2026-11-22T10:00:00Z"
+        }
+      },
+      "expect": { "status": 202, "body.receipt": "CommandAccepted" }
+    },
+    {
+      "name": "dispatchCharge",
+      "target": "stand",
+      "op": "worker_dispatch",
+      "args": { "operation": "ct06-charge-1", "mode": "success" },
+      "expect": { "reductions.0": "applied" }
+    },
+    {
+      "name": "reserveForty",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "path": "/billium/v1/sellers/seller-a/payments/refund",
+        "body": {
+          "schema": "payment.refund.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "commandKey": "00000000-0000-4100-8800-000000000602",
+          "operationRef": "ct06-held-40",
+          "originalOperationRef": "ct06-charge-1",
+          "source": { "context": "checkout", "intentRef": "intent-ct06-held" },
+          "money": { "amount": "0.40", "currency": "RUB" },
+          "requestedAt": "2026-11-22T10:01:00Z",
+          "reasonCode": "return",
+          "category": "customer_request"
+        }
+      },
+      "expect": { "status": 202, "body.receipt": "CommandAccepted" }
+    },
+    {
+      "name": "raceSixByTwentyFive",
+      "target": "stand",
+      "op": "concurrent_refunds",
+      "args": {
+        "port": { "$ref": "port" },
+        "originalOperationRef": "ct06-charge-1",
+        "workers": 6,
+        "amount": "0.25"
+      },
+      "expect": {
+        "distinctWorkerProcesses": 6,
+        "distinctPgBackendPids": 6,
+        "overlappingServerTransactions": true,
+        "accepted": 2,
+        "capacityExceeded": 4,
+        "confirmedCaptureMinor": 100,
+        "totalRefundCommittedOrReservedMinor": 90,
+        "withinCapturedCapacity": true,
+        "financialHold": false
+      }
+    }
+  ]
+}

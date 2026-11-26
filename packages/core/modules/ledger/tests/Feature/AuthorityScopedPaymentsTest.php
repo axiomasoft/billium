@@ -6,19 +6,23 @@ namespace Billium\Ledger\Tests\Feature;
 
 use Billium\Contracts\Data\Money;
 use Billium\Contracts\Enums\ProblemCode;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Caller;
+use Billium\Core\Configuration\BilliumOptions;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runtime\Caller;
+use Billium\Core\Data\Runtime\FinancialScope;
 use Billium\Core\Tests\Support\ObservationFactory;
-use Billium\Ledger\Data\AdjustObligation;
-use Billium\Ledger\Data\ReallocatePayment;
-use Billium\Ledger\Data\ReallocationMode;
+use Billium\Ledger\Data\Allocations\ReallocatePayment;
+use Billium\Ledger\Data\Allocations\ReallocationMode;
+use Billium\Ledger\Data\Obligations\AdjustObligation;
 use Billium\Ledger\Internal\Observation\ObservationHandler;
 use Billium\Ledger\Tests\Queries\QueryTestCase;
-use Billium\Platform\Contracts\EventFeed;
-use Billium\Platform\Contracts\FeedPartitions;
+use Billium\Platform\Contracts\Feed\EventFeed;
+use Billium\Platform\Contracts\Feed\FeedPartitions;
 use Billium\Platform\Data\Feed\FeedScope;
+use PHPUnit\Framework\Attributes\Group;
 
 /** Same-ref sources must stay independent through commands, reads, snapshots and dependency retries. */
+#[Group('pg')]
 final class AuthorityScopedPaymentsTest extends QueryTestCase
 {
     private const array SOURCES = ['embedded-commerz', 'remote-billium'];
@@ -32,6 +36,39 @@ final class AuthorityScopedPaymentsTest extends QueryTestCase
             $this->observe(ObservationFactory::charge('same-payment', 1, 1600 + $index * 1900,
                 fields: ['sourceAuthority' => $authority, 'businessIntentRef' => 'intent-'.$suffix]));
         }
+    }
+
+    public function test_source_qualified_observations_and_locked_partitions_require_the_selected_source(): void
+    {
+        $this->debt('target', 1000);
+        $this->intent('one-intent', ['target']);
+        $caller = $this->callers->current();
+        self::assertSame([], $caller->intentOwnerNamespaces);
+        $source = new FinancialScope(self::INSTALLATION, $caller->sellerRef, $caller->environment, null, 'remote-billium');
+        $token = $this->tokens->currentToken(self::INSTALLATION);
+        self::assertNotNull($token);
+        $this->authority->issueProcess($token, [$source]);
+        $this->observe(ObservationFactory::charge('remote-only', 1, 1000, fields: ['sourceAuthority' => 'remote-billium', 'businessIntentRef' => 'one-intent']));
+        self::problem(ProblemCode::InstallationQuarantined, fn () => $this->observe(ObservationFactory::charge('other-source', 1, 1000,
+            fields: ['sourceAuthority' => 'standalone-billium', 'businessIntentRef' => 'other-intent'])));
+        self::assertSame(1, $this->rows('billium_payment', "source_authority = 'remote-billium'"));
+        self::assertSame(0, $this->rows('billium_payment', "source_authority = 'standalone-billium'"));
+        $feed = $this->application()->make(FeedPartitions::class);
+        $foreign = self::integer($this->value("SELECT id FROM billium_feed_partition WHERE source_authority = 'standalone-billium'"));
+        $inbox = self::integer($this->value("SELECT id FROM billium_inbox_message WHERE source_authority = 'standalone-billium'"));
+        self::assertSame('standalone-billium', $feed->sourceForPartition($caller, 'payment.observation', $foreign));
+        self::assertSame('standalone-billium', $feed->sourceForInbox($caller, 'payment.observation', $inbox));
+        $forged = new Caller($caller->sellerRef, $caller->environment, self::INSTALLATION, $caller->actorRef, ['standalone-billium']);
+        self::problem(ProblemCode::AuthDenied, fn () => $feed->sourceForPartition($forged, 'payment.observation', $foreign));
+        self::problem(ProblemCode::AuthDenied, fn () => $feed->sourceForInbox($forged, 'payment.observation', $inbox));
+        $handler = $this->application()->make(ObservationHandler::class);
+        self::problem(ProblemCode::AuthDenied, fn () => $this->runner()->run($this->spec(financialScope: $source),
+            static function (TransactionContext $context) use ($feed, $foreign, $handler) {
+                $feed->drain($context, $foreign, $handler);
+
+                return self::receipt();
+            }));
+        self::assertSame(0, $this->rows('billium_payment', "source_authority = 'standalone-billium'"));
     }
 
     public function test_wire_refund_authorization_selects_each_authority_with_the_same_payment_ref(): void
@@ -87,6 +124,7 @@ final class AuthorityScopedPaymentsTest extends QueryTestCase
         self::problem(ProblemCode::ValidationInvalid, fn () => $this->queries()->allocationByOperation('same-payment'));
 
         config(['billium.feed.signing_key' => str_repeat('k', 32)]);
+        $this->application()->forgetInstance(BilliumOptions::class);
         $feed = $this->application()->make(EventFeed::class);
         $selection = $feed->openFeed(new FeedScope(self::INSTALLATION, 'seller-a', 'test', '1'), 'events-2026-10-v1',
             ['billium.event.v1'], ['payment.outcome.v1']);
@@ -165,11 +203,12 @@ final class AuthorityScopedPaymentsTest extends QueryTestCase
     public function test_another_authoritys_original_charge_never_consumes_a_parked_refunds_retry_budget(): void
     {
         config(['billium.inbox.retry_backoff_seconds' => 0]);
+        $this->application()->forgetInstance(BilliumOptions::class);
         $this->debt('o1', 1000);
         $this->intent('intent-a', ['o1']);
         $this->observe(ObservationFactory::charge('same-payment', 1, 500));
         $refund = ObservationFactory::refund('refund-b', 'same-payment', 1, 100, fields: ['sourceAuthority' => 'remote-billium']);
-        self::assertSame(ProblemCode::ObservationParked->value, $this->attempt($refund));
+        self::assertSame(ProblemCode::ObservationParked->value, $this->tryObserve($refund));
         $attempts = $this->value('SELECT attempts FROM billium_inbox_message WHERE external_event_id=?', [self::eventId($refund)]);
         for ($i = 0; $i < 15; $i++) {
             self::assertSame([], $this->drainer()->retryParked());
@@ -189,7 +228,7 @@ final class AuthorityScopedPaymentsTest extends QueryTestCase
     {
         $this->debt('o1', 1000);
         $charge = ObservationFactory::charge('remote-charge', 1, 1000, fields: ['sourceAuthority' => 'remote-billium']);
-        self::assertSame(ProblemCode::ObservationParked->value, $this->attempt($charge));
+        self::assertSame(ProblemCode::ObservationParked->value, $this->tryObserve($charge));
         $inbox = $this->row('SELECT * FROM billium_inbox_message WHERE external_event_id=?', [self::eventId($charge)]);
         $parks = $this->table('SELECT * FROM billium_observation_park');
         self::assertSame('parked_dependency', $inbox['status']);

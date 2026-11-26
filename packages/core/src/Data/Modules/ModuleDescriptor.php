@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace Billium\Core\Data\Modules;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Core\Internal\Modules\Semver;
 use Billium\Core\Internal\Modules\Shape;
+use Packman\Attributes\Api;
 
 /**
  * Static descriptor of one Billium core module (D55): identity, schema stream and ranges, API and wire versions,
  * dependencies, ownership, lifecycle policies and event declarations. Data only: no secrets, no callbacks, and no
  * way to register an external plugin.
  */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class ModuleDescriptor
 {
     /**

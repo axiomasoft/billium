@@ -11,7 +11,7 @@ use Billium\Schedule\Contracts\Clock;
 use Billium\Schedule\Data\PeriodQuote;
 use Billium\Schedule\Data\ScheduleReceipt;
 use Billium\Schedule\Data\ScheduleRevisionTerms;
-use Billium\Schedule\Internal\ScheduleServiceProvider;
+use Billium\Schedule\Laravel\ScheduleServiceProvider;
 use Billium\Schedule\Tests\Support\FrozenClock;
 use Billium\Schedule\Tests\Support\HostGuard;
 use Illuminate\Contracts\Config\Repository;
@@ -34,6 +34,7 @@ abstract class ScheduleTestCase extends PlatformTestCase
     {
         parent::defineEnvironment($app);
         $app->make(Repository::class)->set('billium.modules.enabled', ['platform', 'ledger', 'rating', 'schedule']);
+        $app->make(Repository::class)->set('billium.rating.enabled', true);
         $app->make(Repository::class)->set('billium.schedule.enabled', true);
     }
 

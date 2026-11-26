@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace Billium\Rating\Data\Rating;
 
-use Billium\Contracts\Attributes\Api;
-use Billium\Core\Data\Receipt;
+use Billium\Core\Data\Runner\Receipt;
 use Billium\Rating\Enums\BookingOutcome;
+use LogicException;
+use Packman\Attributes\Api;
 
 #[Api]
 final readonly class BookingReceipt implements Receipt
@@ -32,12 +33,12 @@ final readonly class BookingReceipt implements Receipt
     {
         foreach (['basisRef', 'outcome', 'grossMinor', 'currency'] as $field) {
             if (! is_string($body[$field] ?? null)) {
-                throw new \LogicException('Invalid stored rating receipt');
+                throw new LogicException('Invalid stored rating receipt');
             }
         }
         $obligation = $body['obligationRef'] ?? null;
         if ($obligation !== null && ! is_string($obligation)) {
-            throw new \LogicException('Invalid stored obligation reference');
+            throw new LogicException('Invalid stored obligation reference');
         }
 
         return new self(basisRef: $body['basisRef'], outcome: BookingOutcome::from($body['outcome']),

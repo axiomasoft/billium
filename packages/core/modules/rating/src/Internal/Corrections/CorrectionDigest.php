@@ -6,7 +6,9 @@ namespace Billium\Rating\Internal\Corrections;
 
 use Billium\Rating\Data\Tax\TaxCorrectionPolicySnapshot;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class CorrectionDigest
 {
     /** @param list<string> $sourceSnapshotDigests */

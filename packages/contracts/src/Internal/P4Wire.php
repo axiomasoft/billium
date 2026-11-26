@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace Billium\Contracts\Internal;
 
+use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Data\Currency;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Packman\Attributes\Internal;
 use stdClass;
 
 /** Cross-field wire consistency only (BC-ENV-33..43); never rating or calendar calculation. */
+#[Internal]
 final class P4Wire
 {
     public const array SCHEMAS = [
@@ -40,7 +43,7 @@ final class P4Wire
             self::require($value->sellerRef === $period->sellerRef, 'period seller mismatch');
             if (isset($value->componentRef)) {
                 self::require($value->componentRef === $period->componentRef, 'period component mismatch');
-                self::require($value->interval == $period->interval, 'period interval mismatch');
+                self::require((new Codec)->canonicalize($value->interval) === (new Codec)->canonicalize($period->interval), 'period interval mismatch');
             }
             if (isset($value->attribution)) {
                 $attribution = self::object($value->attribution);
@@ -122,7 +125,9 @@ final class P4Wire
 
     private static function compare(string $a, string $b): int
     {
-        return strlen($a) <=> strlen($b) ?: strcmp($a, $b);
+        $lengthOrder = strlen($a) <=> strlen($b);
+
+        return $lengthOrder !== 0 ? $lengthOrder : strcmp($a, $b);
     }
 
     private static function compareDecimal(string $a, string $b): int
@@ -130,7 +135,9 @@ final class P4Wire
         [$ai, $af] = array_pad(explode('.', $a, 2), 2, '');
         [$bi, $bf] = array_pad(explode('.', $b, 2), 2, '');
 
-        return self::compare($ai, $bi) ?: strcmp(str_pad($af, 9, '0'), str_pad($bf, 9, '0'));
+        $integerOrder = self::compare($ai, $bi);
+
+        return $integerOrder !== 0 ? $integerOrder : strcmp(str_pad($af, 9, '0'), str_pad($bf, 9, '0'));
     }
 
     private static function require(bool $condition, string $detail): void

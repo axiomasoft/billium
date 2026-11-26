@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Data\Inbox;
 
-use Billium\Contracts\Attributes\Api;
+use Packman\Attributes\Api;
 
 /** Durable custody row of one authenticated delivery, as the handler sees it (content immutable, status moves). */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class InboxRow
 {
     public function __construct(

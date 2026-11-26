@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Billium\Usage\Internal\Participants;
 
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Usage\Contracts\AggregationLocks;
 use Billium\Usage\Internal\Errors\UsageProblems;
 use Billium\Usage\Internal\Storage\AggregateStore;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final readonly class DatabaseAggregationLocks implements AggregationLocks
 {
     public function __construct(private OperationRunner $runner, private AggregateStore $store) {}

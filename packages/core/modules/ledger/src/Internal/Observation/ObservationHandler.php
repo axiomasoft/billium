@@ -8,12 +8,13 @@ use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Data\Envelopes\PaymentObservation;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Platform\Contracts\BootstrapItemHandler;
-use Billium\Platform\Contracts\CustodyHandler;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Platform\Contracts\Inbox\BootstrapItemHandler;
+use Billium\Platform\Contracts\Inbox\CustodyHandler;
 use Billium\Platform\Data\Inbox\BootstrapItem;
 use Billium\Platform\Data\Inbox\HandlerOutcome;
 use Billium\Platform\Data\Inbox\InboxRow;
+use Packman\Attributes\Internal;
 use stdClass;
 
 /**
@@ -22,6 +23,7 @@ use stdClass;
  * envelope is decoded again (contentDigest included) and applied by PaymentProjection with the same economic dedupe for
  * live and bootstrap input; a snapshot item must name the operation, revision and material digest of its payload.
  */
+#[Internal]
 final readonly class ObservationHandler implements BootstrapItemHandler, CustodyHandler
 {
     public function __construct(private PaymentProjection $projection) {}

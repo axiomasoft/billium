@@ -175,13 +175,6 @@
     "receipt": "none"
   },
   {
-    "code": "billium.lookup.ambiguous",
-    "category": "lookup",
-    "retryable": false,
-    "sameKey": true,
-    "receipt": "none"
-  },
-  {
     "code": "billium.capture.capacity_exceeded",
     "category": "capture",
     "retryable": false,
@@ -189,10 +182,38 @@
     "receipt": "stored"
   },
   {
-    "code": "billium.authorization.not_voidable",
+    "code": "billium.authorization.capacity_exceeded",
     "category": "authorization",
     "retryable": false,
     "sameKey": false,
     "receipt": "stored"
+  },
+  {
+    "code": "billium.operation.financial_hold",
+    "category": "operation",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored"
+  },
+  {
+    "code": "billium.lookup.ambiguous",
+    "category": "lookup",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none"
+  },
+  {
+    "code": "billium.module.unavailable",
+    "category": "module",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none"
+  },
+  {
+    "code": "billium.auth.unauthenticated",
+    "category": "auth",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none"
   }
 ]

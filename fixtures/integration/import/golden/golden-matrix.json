@@ -1,0 +1,503 @@
+{
+  "schema": "external.import.golden-matrix.v1",
+  "version": "1.0.0",
+  "goldenAuthoring": {
+    "derivedFromImplementationOutput": false,
+    "oracle": "cyberphone-jcs-rfc8785",
+    "specRevision": "2026-10"
+  },
+  "evidenceBoundary": {
+    "localEvidenceClass": "sanitized_fixture_local_runtime",
+    "paidPspTransactions": 0,
+    "testDoubleCallsTrackedSeparately": true,
+    "externalActivationInputsSeparated": true,
+    "externalActivationInputs": [
+      {
+        "inputId": "production_export_manifest",
+        "status": "external_owner_supplied"
+      },
+      {
+        "inputId": "source_freeze_certificate",
+        "status": "external_owner_supplied"
+      },
+      {
+        "inputId": "owner_approved_price_mapping",
+        "status": "external_owner_supplied"
+      },
+      {
+        "inputId": "target_activation_certificate",
+        "status": "external_owner_supplied"
+      }
+    ]
+  },
+  "codecSlice": [
+    {
+      "id": "import-golden/im10-component-allocation-rounding",
+      "spec_refs": [
+        "BC-MON-03",
+        "INV-09",
+        "D71"
+      ],
+      "given": {},
+      "script": [
+        {
+          "op": "money.allocate",
+          "args": {
+            "total": {
+              "amount": "10.00",
+              "currency": "RUB"
+            },
+            "ratios": [
+              "1",
+              "1",
+              "1"
+            ]
+          }
+        }
+      ],
+      "expect": [
+        {
+          "ok": {
+            "parts": [
+              {
+                "amount": "3.34",
+                "currency": "RUB"
+              },
+              {
+                "amount": "3.33",
+                "currency": "RUB"
+              },
+              {
+                "amount": "3.33",
+                "currency": "RUB"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "import-golden/im08-reject-noncurrency-reward-unit",
+      "spec_refs": [
+        "BC-MON-04",
+        "INV-02",
+        "D71"
+      ],
+      "given": {},
+      "script": [
+        {
+          "op": "money.parse",
+          "args": {
+            "wire_text": "{\"amount\":\"500\",\"currency\":\"REWARD_POINTS\"}"
+          }
+        }
+      ],
+      "expect": [
+        {
+          "error": {
+            "code": "billium.money.scale_invalid"
+          }
+        }
+      ]
+    },
+    {
+      "id": "import-golden/im07-reject-nonmonetary-host-credit-currency",
+      "spec_refs": [
+        "BC-MON-04",
+        "INV-02",
+        "D71"
+      ],
+      "given": {},
+      "script": [
+        {
+          "op": "money.parse",
+          "args": {
+            "wire_text": "{\"amount\":\"100.00\",\"currency\":\"HOST_CREDITS\"}"
+          }
+        }
+      ],
+      "expect": [
+        {
+          "error": {
+            "code": "billium.money.scale_invalid"
+          }
+        }
+      ]
+    },
+    {
+      "id": "import-golden/control-must-fail-wrong-digest",
+      "spec_refs": [
+        "M-16",
+        "BC-ID-12",
+        "D71"
+      ],
+      "control": "must-fail",
+      "given": {},
+      "script": [
+        {
+          "op": "canon.digest",
+          "args": {
+            "json_text": "{\"recordKind\":\"unanchored_evidence\",\"schema\":\"external.import.v1\"}"
+          }
+        }
+      ],
+      "expect": [
+        {
+          "ok": {
+            "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        }
+      ]
+    }
+  ],
+  "cases": {
+    "IM-01": {
+      "title": "Missing price/currency/payment/provider refs yields unanchored_evidence, zero invented obligations/captures",
+      "spec_refs": [
+        "INV-01",
+        "INV-02",
+        "BC-ENV-08",
+        "D58",
+        "D71"
+      ],
+      "expectedGolden": {
+        "id": "IM-01",
+        "status": "unanchored_evidence",
+        "inventedObligations": 0,
+        "inventedCaptures": 0,
+        "collectionAllowed": false,
+        "missingEvidence": [
+          "currency",
+          "evidenceRefs.payment_provider_fact",
+          "evidenceRefs.price_snapshot",
+          "frozenPriceSnapshot",
+          "fundingRefs",
+          "fundingRefs.providerOperationRef",
+          "money"
+        ]
+      },
+      "expectedGoldenDigest": "sha256:109eaf99e7473886a24b212134a40cfc6474e48b7ff5259682a5fb420476a90c"
+    },
+    "IM-02": {
+      "title": "Same source record in two batches and mapper versions applies once with stable sourceFactRef",
+      "spec_refs": [
+        "INV-04",
+        "BC-ID-12",
+        "D58",
+        "D71"
+      ],
+      "expectedGolden": {
+        "id": "IM-02",
+        "batchesEvaluated": 2,
+        "mapperVersions": [
+          "1.0.0",
+          "2.0.0"
+        ],
+        "obligationsCreated": 2,
+        "paymentsCreated": 2,
+        "allocationsCreated": 2,
+        "replayAlreadyAppliedCount": 9,
+        "sourceFactRefStableAcrossMapperVersions": true
+      },
+      "expectedGoldenDigest": "sha256:a7fd11d91477f20ea3a57f209bac2f22f0008489fdd933eee62e1d9527868450"
+    },
+    "IM-03": {
+      "title": "Same source identity and revision with different payloadDigest conflicts and quarantines batch",
+      "spec_refs": [
+        "INV-04",
+        "BC-ID-12",
+        "D58",
+        "D71"
+      ],
+      "expectedGolden": {
+        "id": "IM-03",
+        "batchStatus": "quarantined",
+        "conflictCount": 1,
+        "conflictReason": "payload_digest_mismatch",
+        "originalAmountDueMinor": 100000
+      },
+      "expectedGoldenDigest": "sha256:1e7e265d95c9a87177ae5fc2dc8d5db611240b3a845f7681c23f68fcd725be96"
+    },
+    "IM-04": {
+      "title": "Interrupted apply at every commit boundary resumes with identical receipts and zero duplicates",
+      "spec_refs": [
+        "INV-04",
+        "INV-05",
+        "D60",
+        "D71"
+      ],
+      "expectedGolden": {
+        "id": "IM-04",
+        "batchStatus": "completed",
+        "obligationsCreated": 2,
+        "paymentsCreated": 2,
+        "allocationsCreated": 2,
+        "appliedReceiptsCount": 9,
+        "receiptsPreservedAcrossResume": true,
+        "reconciled": true
+      },
+      "expectedGoldenDigest": "sha256:f841c6a93cc8d3d0702886fb990be7c8092c877b35cf919829f26c69af9d6681"
+    },
+    "IM-05": {
+      "title": "Concurrent processes on same source identity serialize at PostgreSQL barrier without duplicate money",
+      "spec_refs": [
+        "INV-01",
+        "INV-04",
+        "D50",
+        "D60",
+        "D71"
+      ],
+      "expectedGolden": {
+        "id": "IM-05",
+        "concurrentWorkers": 4,
+        "obligationsCreated": 1,
+        "paymentsCreated": 1,
+        "allocationsCreated": 1,
+        "activeMappings": 3,
+        "duplicateMoneyCreated": 0
+      },
+      "expectedGoldenDigest": "sha256:5fff641d0add683d1568a44a01f6d7de3f2e5860fe1d117b2af6a15663e0f958"
+    },
+    "IM-06": {
+      "title": "Previous monthly subscription without frozen price/occurrences produces zero historical recurring charges",
+      "spec_refs": [
+        "INV-02",
+        "D58",
+        "D71"
+      ],
+      "expectedGolden": {
+        "id": "IM-06",
+        "recordKind": "unanchored_evidence",
+        "reasonCode": "import.mutable_subscription_without_frozen_occurrences",
+        "recurringObligationsSpawned": 0,
+        "money": null
+      },
+      "expectedGoldenDigest": "sha256:6bea5fff3ee3e842319e8b6a273fbdbb89d5b6d9da729b1e99a9bc58eb45fde0"
+    },
+    "IM-07": {
+      "title": "Host non-monetary credits/grants never become monetary balance or customer credits",
+      "spec_refs": [
+        "INV-02",
+        "BC-MON-04",
+        "D56",
+        "D71"
+      ],
+      "expectedGolden": {
+        "id": "IM-07",
+        "grantRecordKind": "nonfinancial_agreement_reference",
+        "claimedMoneyRecordKind": "unanchored_evidence",
+        "reasonCode": "import.nonmonetary_credit_not_money",
+        "customerCreditsCreated": 0
+      },
+      "expectedGoldenDigest": "sha256:4fc3e60a917e344eb168b55b30ee6c07a321d0e4afe67271ac308391b4c6b1c0"
+    },
+    "IM-08": {
+      "title": "Host non-currency reward quantities never become ISO currency or monetary balance",
+      "spec_refs": [
+        "INV-02",
+        "BC-MON-04",
+        "D56",
+        "D71"
+      ],
+      "expectedGolden": {
+        "id": "IM-08",
+        "rewardPointsRecordKind": "unanchored_evidence",
+        "rewardStarsRecordKind": "nonfinancial_agreement_reference",
+        "reasonCode": "import.noncurrency_reward_not_currency",
+        "isoCurrenciesInPreview": [
+          "EUR",
+          "USD"
+        ]
+      },
+      "expectedGoldenDigest": "sha256:32a07e86dad7823c6d85cab96428ac7758c1ed3290639e0a0604f57015c8af17"
+    },
+    "IM-09": {
+      "title": "Exact proven frozen PriceVersion/currency/tax retained after current PlanVersion change",
+      "spec_refs": [
+        "INV-02",
+        "INV-08",
+        "D58",
+        "D71"
+      ],
+      "expectedGolden": {
+        "id": "IM-09",
+        "retainedPriceVersionRef": "pv-2025-annual-rub",
+        "retainedTaxPolicyVersion": "tax-ru-2025-v1",
+        "retainedAmount": "12000.00",
+        "retainedCurrency": "RUB",
+        "ignoredCurrentPlanAmount": "15900.00",
+        "currentPlanOnlyRecordStatus": "unanchored_evidence"
+      },
+      "expectedGoldenDigest": "sha256:cd71a21bcf9c82a12fae5b16b007b7f5c3e08a465b685f6786cf82dec3094927"
+    },
+    "IM-10": {
+      "title": "Refund/correction references original owner and partial component exact MoneyMath rounding",
+      "spec_refs": [
+        "INV-08",
+        "INV-09",
+        "BC-MON-03",
+        "D58",
+        "D60",
+        "D71"
+      ],
+      "expectedGolden": {
+        "id": "IM-10",
+        "originalExecutorRef": "exec-gateway-alpha",
+        "originalOperationRef": "orig-op-rec-rub-0001",
+        "capturedMinor": 1200000,
+        "refundedMinor": 300000,
+        "overCapacityRefundStatus": "quarantined",
+        "componentSplitAmounts": [
+          "3.34",
+          "3.33",
+          "3.33"
+        ],
+        "creditNoteOpenMinorAfter": 200,
+        "externalProviderActionDispatched": false
+      },
+      "expectedGoldenDigest": "sha256:60b44b158505b930a38b94142b5d15b47ebe6e8ecd81a484ceefcc9840fb6cbc"
+    },
+    "IM-11": {
+      "title": "Imported historical payment/refund exports stable sourceFactRef with zero duplicate GL/cash or PSP calls",
+      "spec_refs": [
+        "INV-04",
+        "INV-10",
+        "D58",
+        "D71"
+      ],
+      "expectedGolden": {
+        "id": "IM-11",
+        "accountingFactKinds": [
+          "payment.captured",
+          "payment.captured",
+          "refund.succeeded"
+        ],
+        "sourceFactRefStableOnReplay": true,
+        "duplicateGlPostings": 0,
+        "paidPspTransactions": 0
+      },
+      "expectedGoldenDigest": "sha256:5cf7cf5bfaa75a8985141b55a1afbd8d8450462e4d1d9b3ee45e9a5339396214"
+    },
+    "IM-12": {
+      "title": "Revoked auth, missing scope and cross-seller mapping rejected before mutation; cross-seller same refs isolated",
+      "spec_refs": [
+        "INV-01",
+        "INV-12",
+        "D36",
+        "D71"
+      ],
+      "expectedGolden": {
+        "id": "IM-12",
+        "missingScopeError": "billium.auth.denied",
+        "revokedAuthError": "billium.auth.unauthenticated",
+        "crossSellerError": "billium.auth.denied",
+        "crossSellerSameRefsIsolated": true,
+        "mutationsOnRejectedAttempts": 0
+      },
+      "expectedGoldenDigest": "sha256:13cd4f3ba46dab2f585a4f89b30e6ab81d91e52d6d7f5c660bd378ea84468eae"
+    },
+    "IM-13": {
+      "title": "Claimed annual funding + 12 attached grants produces 1 obligation, never 12 new obligations",
+      "spec_refs": [
+        "INV-02",
+        "D56",
+        "D58",
+        "D71"
+      ],
+      "expectedGolden": {
+        "id": "IM-13",
+        "attachedGrantCount": 12,
+        "provenObligationsCreated": 1,
+        "expandedGrantObligations": 0,
+        "standaloneGrantRecordKind": "nonfinancial_agreement_reference"
+      },
+      "expectedGoldenDigest": "sha256:479f757dd9336ce4cca8504bd3ba4568e02ea8323c37516aa97096e36259499a"
+    },
+    "IM-14": {
+      "title": "Mixed currencies (EUR, RUB, USD) reconciled and conserved in separate currency buckets",
+      "spec_refs": [
+        "INV-02",
+        "BC-MON-01",
+        "D58",
+        "D71"
+      ],
+      "expectedGolden": {
+        "id": "IM-14",
+        "currencies": [
+          "EUR",
+          "RUB",
+          "USD"
+        ],
+        "conservedByCurrency": {
+          "EUR": {
+            "conserved": true,
+            "obligationsDueMinor": 9900
+          },
+          "RUB": {
+            "conserved": true,
+            "obligationsDueMinor": 1200000
+          },
+          "USD": {
+            "conserved": true,
+            "obligationsDueMinor": 25000
+          }
+        },
+        "crossCurrencySummed": false
+      },
+      "expectedGoldenDigest": "sha256:858c4584f0294e756c5e9128c0a925e3a6f9da492c0ae9d6f6a8a4e458c72f40"
+    },
+    "IM-15": {
+      "title": "Incomplete source checksum, missing exportCutoff or unexplained currency delta blocks cutover",
+      "spec_refs": [
+        "INV-04",
+        "D58",
+        "D63",
+        "D71"
+      ],
+      "expectedGolden": {
+        "id": "IM-15",
+        "missingCutoffError": "export.missing_exportCutoff",
+        "tamperedChecksumError": "export.records_checksum_mismatch",
+        "unexplainedDeltaBatchStatus": "quarantined",
+        "cutoverBlocked": true
+      },
+      "expectedGoldenDigest": "sha256:676b8dacb2e9277346c69da385c70abbb384d020f2ddf989f7af74197984b102"
+    },
+    "IM-16": {
+      "title": "Historical invoice originalIssuer and sourceNumber preserved without issuing second Billium legal number",
+      "spec_refs": [
+        "INV-08",
+        "FD-07",
+        "D58",
+        "D71"
+      ],
+      "expectedGolden": {
+        "id": "IM-16",
+        "originalIssuer": "seller-legal-entity-rec-1",
+        "originalSourceNumber": "REC-INV-2025-000412",
+        "billiumInvoicesIssued": 0,
+        "secondBilliumLegalNumberIssued": false
+      },
+      "expectedGoldenDigest": "sha256:8ff426dbb530ec50d20b2631f3e1cd7174ebd421009feba57ea4ccd8749fc016"
+    },
+    "IM-17": {
+      "title": "No external product DB imports/writes and no hardcoded external product names in P9 surfaces",
+      "spec_refs": [
+        "INV-01",
+        "M-38",
+        "D55",
+        "D71"
+      ],
+      "expectedGolden": {
+        "id": "IM-17",
+        "externalProductNamesFound": 0,
+        "legacyContractTermsFound": 0,
+        "externalDatabaseConnectionsFound": 0,
+        "forbiddenTransportError": "export.forbidden_external_transport",
+        "leakedCredentialError": "export.forbidden_source_credential"
+      },
+      "expectedGoldenDigest": "sha256:f35f24d0ca34cb19bb1741bbb81d078db4773af0a13ee7392b8d18b5185c490d"
+    }
+  },
+  "matrixDigest": "sha256:29d7b5c1fa87db9f57c9e2cfa47a74bcfea3bdccee190dfab0ba96f1b546d632"
+}

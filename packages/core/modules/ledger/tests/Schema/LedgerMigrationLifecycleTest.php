@@ -7,9 +7,11 @@ namespace Billium\Ledger\Tests\Schema;
 use Billium\Core\Data\Modules\MigrationIdentity;
 use Billium\Core\Internal\Modules\ModuleCatalog;
 use Billium\Core\Tests\TestEnvironment;
-use Billium\Ledger\Data\DeclareSettlementIntent;
+use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
 use Illuminate\Testing\PendingCommand;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class LedgerMigrationLifecycleTest extends LedgerTestCase
 {
     public function test_rebuilding_ledger_tables_refreshes_retained_functions_and_runtime_grants(): void
@@ -34,8 +36,11 @@ final class LedgerMigrationLifecycleTest extends LedgerTestCase
         $migrations = array_map(static fn (MigrationIdentity $migration): string => $migration->id, $ledger->migrationIdentities);
         for ($pass = 0; $pass < 2; $pass++) {
             $owner->getPdo()->exec('DROP TABLE '.implode(', ', $tables).' CASCADE');
+            TestEnvironment::prepareLedgerRebuild($owner);
             $owner->table('migrations')->whereIn('migration', $migrations)->delete();
-            $command = $this->artisan('migrate', ['--database' => 'billium_owner', '--force' => true]);
+            $command = $this->artisan('packman:schema:migrate', [
+                '--scope' => 'central', '--database' => 'billium_owner', '--modules' => true, '--force' => true,
+            ]);
             self::assertInstanceOf(PendingCommand::class, $command);
             $command->assertExitCode(0)->run();
             TestEnvironment::assertRuntimeSafe(TestEnvironment::pdo());

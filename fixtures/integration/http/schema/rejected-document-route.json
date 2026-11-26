@@ -1,0 +1,8 @@
+{
+  "method": "POST",
+  "path": "/billium/v1/sellers/{sellerRef}/documents/issue",
+  "auth": "document.issue",
+  "request": "document.issue.v1",
+  "result": "document.receipt.v1",
+  "statuses": [200]
+}

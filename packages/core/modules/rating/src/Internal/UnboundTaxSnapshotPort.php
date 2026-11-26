@@ -10,7 +10,9 @@ use Billium\Rating\Data\Tax\TaxCorrectionRequest;
 use Billium\Rating\Data\Tax\TaxResolutionRequest;
 use Billium\Rating\Data\Tax\TaxSnapshot;
 use LogicException;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class UnboundTaxSnapshotPort implements TaxSnapshotPort
 {
     public function resolve(TaxResolutionRequest $request): TaxSnapshot

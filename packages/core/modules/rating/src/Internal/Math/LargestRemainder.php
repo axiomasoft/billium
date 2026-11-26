@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Billium\Rating\Internal\Math;
 
 use LogicException;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final class LargestRemainder
 {
     /** @param array<string, string> $nums
@@ -33,7 +35,11 @@ final class LargestRemainder
             throw new LogicException('Allocation residual out of bounds');
         }
         $keys = array_keys($nums);
-        usort($keys, static fn (string|int $a, string|int $b): int => bccomp($remainders[$b], $remainders[$a], 0) ?: strcmp((string) $a, (string) $b));
+        usort($keys, static function (string $a, string $b) use ($remainders): int {
+            $comparison = bccomp($remainders[$b], $remainders[$a], 0);
+
+            return $comparison !== 0 ? $comparison : strcmp($a, $b);
+        });
         for ($i = 0; bccomp((string) $i, $residual, 0) < 0; $i++) {
             $floors[$keys[$i]] = bcadd($floors[$keys[$i]], '1', 0);
         }

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Billium\Rating\Contracts;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Rating\Enums\ProrationPolicyId;
+use Packman\Attributes\Api;
 
 #[Api]
 interface ProrationPolicyRegistry

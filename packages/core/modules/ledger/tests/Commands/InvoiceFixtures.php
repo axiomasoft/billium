@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Billium\Ledger\Tests\Commands;
 
-use Billium\Core\Data\StoredOutcome;
-use Billium\Ledger\Data\CreateInvoice;
-use Billium\Ledger\Data\InvoiceLineInput;
-use Billium\Ledger\Data\IssueInvoice;
-use Billium\Ledger\Data\UpdateInvoiceMetadata;
+use Billium\Core\Data\Runner\StoredOutcome;
+use Billium\Ledger\Data\Invoices\CreateInvoice;
+use Billium\Ledger\Data\Invoices\InvoiceLineInput;
+use Billium\Ledger\Data\Invoices\IssueInvoice;
+use Billium\Ledger\Data\Invoices\UpdateInvoiceMetadata;
 use PDO;
 use PDOException;
 

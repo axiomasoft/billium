@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Contracts\Enums\ProblemCode;
+use Packman\Attributes\Api;
+use Packman\Attributes\Spi;
 
 /**
  * @return list<class-string>
@@ -25,10 +26,11 @@ function publicTypes(): array
     return $types;
 }
 
-it('marks every public type outside Internal with #[Api]', function (): void {
+it('marks every public type outside Internal with #[Api] or #[Spi]', function (): void {
     $unmarked = array_filter(
         publicTypes(),
-        fn (string $type): bool => (new ReflectionClass($type))->getAttributes(Api::class) === [],
+        static fn (string $type): bool => (new ReflectionClass($type))->getAttributes(Api::class) === []
+            && (new ReflectionClass($type))->getAttributes(Spi::class) === [],
     );
 
     expect(publicTypes())->not->toBeEmpty()

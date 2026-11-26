@@ -27,8 +27,10 @@ use Billium\Rating\Enums\TaxMode;
 use Billium\Rating\Enums\TaxSnapshotKind;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
 use DateTimeImmutable;
+use Packman\Attributes\Internal;
 
 /** Retained v1 snapshots: explicit decoding, no current registry or vendor reads (D56). */
+#[Internal]
 final class FrozenInputsCodec
 {
     public static function decode(string $json): FrozenRatingInputs

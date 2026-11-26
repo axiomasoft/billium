@@ -6,17 +6,20 @@ namespace Billium\Usage\Internal;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\CallerContext;
+use Billium\Core\Configuration\BilliumOptions;
+use Billium\Core\Contracts\Runtime\CallerContext;
 use Illuminate\Database\DatabaseManager;
+use Packman\Attributes\Internal;
 
 /** D56 / COV-334: authorized keyset scan; each page is bounded, and always filters frozen attribution. */
+#[Internal]
 final readonly class UsageQueries
 {
-    public function __construct(private DatabaseManager $databases, private CallerContext $callers) {}
+    public function __construct(private DatabaseManager $databases, private CallerContext $callers, private BilliumOptions $options) {}
 
     /**
      * Returns effective revisions only. A correction accepted between pages requires a fresh scan to include it;
-     * this admission query does not promise a final aggregate snapshot (P4.3 owns that protocol).
+     * this admission query does not promise a final aggregate snapshot (the aggregation snapshot protocol owns that).
      *
      * @param  array{event_at:string,fact_id:string,revision:int,source:string}|null  $after
      * @return list<object>
@@ -40,13 +43,15 @@ final readonly class UsageQueries
             DatabaseUsage::time($start), DatabaseUsage::time($end)];
         if ($after !== null) {
             $sql .= ' AND (f.event_at,f.fact_id,f.revision,f.source)>(?,?,?,?)';
-            array_push($bindings, $after['event_at'], $after['fact_id'], $after['revision'], $after['source']);
+            $bindings[] = $after['event_at'];
+            $bindings[] = $after['fact_id'];
+            $bindings[] = $after['revision'];
+            $bindings[] = $after['source'];
         }
         $sql .= ' ORDER BY f.event_at,f.fact_id,f.revision,f.source LIMIT ?';
         $bindings[] = $limit;
 
-        $name = config('billium.connection');
-        $rows = $this->databases->connection(is_string($name) ? $name : null)->select(query: $sql, bindings: $bindings);
+        $rows = $this->databases->connection($this->options->connection)->select(query: $sql, bindings: $bindings);
 
         return array_values(array_filter($rows, is_object(...)));
     }

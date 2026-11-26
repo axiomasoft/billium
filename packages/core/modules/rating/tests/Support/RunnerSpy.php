@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Billium\Rating\Tests\Support;
 
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\OperationSpec;
-use Billium\Core\Data\StoredOutcome;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\OperationSpec;
+use Billium\Core\Data\Runner\StoredOutcome;
 use Closure;
 
 final class RunnerSpy implements OperationRunner

@@ -13,9 +13,7 @@
     "originalOperationRef",
     "source",
     "money",
-    "requestedAt",
-    "operationKind",
-    "digest"
+    "requestedAt"
   ],
   "properties": {
     "schema": {
@@ -50,10 +48,8 @@
     },
     "requestedAt": {
       "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/timestamp"
-    },
-    "operationKind": {
-      "const": "capture"
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "description": "positive explicit amount; operationRef child, originalOperationRef root; inherit root immutable merchant/profile/version. No merchant/routing override. No omit-amount capture-all behavior."
 }

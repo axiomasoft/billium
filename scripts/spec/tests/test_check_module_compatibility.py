@@ -1,4 +1,4 @@
-"""Negative and positive examples for scripts/spec/check-module-compatibility.py (P3.13)."""
+"""Negative and positive examples for scripts/spec/check-module-compatibility.py."""
 from __future__ import annotations
 
 import copy
@@ -173,6 +173,15 @@ class RepositoryTest(unittest.TestCase):
     def test_repository_is_clean(self) -> None:
         document = EXPORT.load_registry()
         self.assertEqual([], CHECK.repository_errors(document))
+
+    def test_core_config_key_missing_from_snapshot_is_rejected(self) -> None:
+        document = copy.deepcopy(EXPORT.load_registry())
+        document["modules"][0]["configKeys"].append("billium.unregistered_fixture_key")
+
+        self.assertIn(
+            "identity snapshot config-key differs from the module registry; run scripts/spec/identities.py",
+            CHECK.repository_errors(document),
+        )
 
     def test_payload_digest_mismatch_is_rejected(self) -> None:
         document = copy.deepcopy(EXPORT.load_registry())

@@ -1,0 +1,108 @@
+{
+  "protocol": "billium.http.transcript.v1",
+  "id": "HTTP-06",
+  "title": "Revoked replay denies without exposing a durable receipt",
+  "profile": "execution",
+  "sources": [
+    "D31",
+    "D58"
+  ],
+  "steps": [
+    {
+      "op": "send",
+      "name": "first",
+      "path": "/billium/v1/sellers/seller-a/payments/execute",
+      "scoped": true,
+      "body": {
+        "schema": "payment.execute.v1",
+        "commandKey": "00000000-0000-4100-8800-000000000001",
+        "operationRef": "root-a",
+        "operationKind": "charge",
+        "source": {
+          "context": "checkout",
+          "intentRef": "intent-a",
+          "orderRef": "order-a"
+        },
+        "executionProfile": "remote-billium",
+        "routingEpoch": 1,
+        "merchantAccountRef": "account-a",
+        "money": {
+          "amount": "1.00",
+          "currency": "RUB"
+        },
+        "bindingRevision": "merchant-a",
+        "requestedAt": "2026-11-17T00:00:00Z"
+      },
+      "expect": {
+        "status": 202,
+        "body.result": "accepted",
+        "body.receipt": "CommandAccepted",
+        "body.operationRef": "root-a"
+      }
+    },
+    {
+      "op": "snapshot",
+      "name": "before",
+      "expect": {
+        "counts.execution_operation": 1
+      }
+    },
+    {
+      "op": "send",
+      "name": "revoked",
+      "use": "first",
+      "expect": {
+        "status": 403,
+        "body.code": "billium.auth.denied",
+        "body.receipt": "none"
+      },
+      "actor": "revoked"
+    },
+    {
+      "op": "send",
+      "name": "current",
+      "use": "first",
+      "expect": {
+        "status": 202,
+        "body.result": "accepted",
+        "body.receipt": "CommandAccepted",
+        "body.operationRef": "root-a",
+        "responseDigest": {
+          "$ref": "first.responseDigest"
+        }
+      }
+    },
+    {
+      "op": "snapshot",
+      "name": "after",
+      "expect": {
+        "counts": {
+          "$ref": "before.counts"
+        },
+        "events": {
+          "$ref": "before.events"
+        },
+        "receipts": {
+          "$ref": "before.receipts"
+        },
+        "operations": {
+          "$ref": "before.operations"
+        },
+        "attempts": {
+          "$ref": "before.attempts"
+        },
+        "inbox": {
+          "$ref": "before.inbox"
+        }
+      }
+    },
+    {
+      "op": "provider",
+      "name": "provider",
+      "expect": {
+        "calls.#": 0,
+        "lookups.#": 0
+      }
+    }
+  ]
+}

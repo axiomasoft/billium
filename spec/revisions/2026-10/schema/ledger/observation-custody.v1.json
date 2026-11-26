@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-10:ledger/observation-custody.v1.json",
+  "title": "Именованный статус custody наблюдения",
+  "type": "object",
+  "required": [
+    "schema",
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "custodyStatus",
+    "code",
+    "receipt",
+    "digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "ledger.observation_custody.v1"
+    },
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/ref"
+    },
+    "custodyStatus": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/custodyStatus"
+    },
+    "code": {
+      "const": "billium.observation.parked"
+    },
+    "receipt": {
+      "const": "none"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/digest"
+    }
+  }
+}

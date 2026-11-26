@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace Billium\Rating\Internal\Storage;
 
-use Billium\Core\Contracts\TransactionContext;
+use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Rating\Data\Correction\PreparedCorrection;
 use Billium\Rating\Data\Correction\RatingCorrectionReceipt;
 use Billium\Rating\Data\Rating\PreparedRating;
 use Billium\Rating\Internal\Pipeline\RatingComputation;
+use LogicException;
+use Packman\Attributes\Internal;
 use stdClass;
 
+#[Internal]
 final readonly class CorrectionStore
 {
     public function __construct(private RatingStore $store) {}
@@ -43,7 +46,7 @@ final readonly class CorrectionStore
     {
         $booking = $this->store->database($context)->table('billium_rating_correction_booking')->where('correction_id', $correction->id)->first();
         if ($booking === null) {
-            throw new \LogicException('Correction booking is missing');
+            throw new LogicException('Correction booking is missing');
         }
 
         return new RatingCorrectionReceipt(correctionRef: RatingRows::text($correction->correction_ref),
@@ -59,7 +62,7 @@ final readonly class CorrectionStore
         $c = $prepared->computation;
         $basisId = $this->store->insertBasis(context: $context, prepared: new PreparedRating(inputs: $prepared->inputs, draft: $c->correctedBasis),
             correctionRevision: $c->correctionRevision, predecessorBasisRef: $c->predecessorBasisRef);
-        $id = (int) $this->store->database($context)->table('billium_rating_correction')->insertGetId([
+        $id = $this->store->database($context)->table('billium_rating_correction')->insertGetId([
             'seller_ref' => $prepared->inputs->sellerRef, 'environment' => $prepared->inputs->environment,
             'correction_ref' => $childRef, 'correction_kind' => $prepared->command->kind->value,
             'parent_occurrence_ref' => $prepared->inputs->occurrenceRef, 'correction_revision' => $c->correctionRevision,

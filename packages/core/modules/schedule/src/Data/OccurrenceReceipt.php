@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Billium\Schedule\Data;
 
-use Billium\Contracts\Attributes\Api;
-use Billium\Core\Data\Receipt;
+use Billium\Core\Data\Runner\Receipt;
+use Packman\Attributes\Api;
 
 #[Api]
 final readonly class OccurrenceReceipt implements Receipt

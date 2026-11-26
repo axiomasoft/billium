@@ -6,18 +6,20 @@ namespace Billium\Rating\Internal\Storage;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Data\OperationSpec;
-use Billium\Core\Enums\FinancialMode;
-use Billium\Core\Enums\LockRank;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Data\Runner\OperationSpec;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
+use Billium\Core\Enums\Runner\LockRank;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Rating\Contracts\TaxCorrectionPolicyFrontier;
 use Billium\Rating\Data\Tax\TaxCorrectionPolicySnapshot;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final readonly class TaxPolicyFrontier implements TaxCorrectionPolicyFrontier
 {
     public function __construct(private RatingStore $store, private CallerContext $callers, private OperationRunner $runner) {}

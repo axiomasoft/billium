@@ -12,7 +12,9 @@ use Billium\Rating\Data\Rating\RatingHold;
 use Billium\Rating\Enums\HoldReason;
 use Billium\Rating\Internal\Pipeline\FrozenInputsBuilder;
 use Billium\Rating\Internal\Pipeline\RatingComputation;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final readonly class DatabaseRatingPreparer implements RatingPreparer
 {
     public function __construct(private FrozenInputsBuilder $builder, private RatingComputation $computation) {}

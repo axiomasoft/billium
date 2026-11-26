@@ -9,8 +9,10 @@ use Billium\Core\Tests\TestEnvironment;
 use Billium\Ledger\Tests\Schema\AllocationRaceScenario;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
 use PDOException;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\TestWith;
 
+#[Group('pg')]
 final class AllocationBackstopTest extends LedgerTestCase
 {
     #[TestWith(['payment'])]

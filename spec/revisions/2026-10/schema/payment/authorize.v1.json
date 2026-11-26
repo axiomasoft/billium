@@ -17,9 +17,7 @@
     "merchantAccountRef",
     "money",
     "bindingRevision",
-    "requestedAt",
-    "executionMode",
-    "digest"
+    "requestedAt"
   ],
   "properties": {
     "schema": {
@@ -69,10 +67,8 @@
     },
     "requestedAt": {
       "$ref": "urn:billium:spec:2026-10:common/defs.json#/$defs/timestamp"
-    },
-    "executionMode": {
-      "const": "authorize"
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "description": "Authorization-only root command with an explicit positive limit and qualified provider capability; no capture is implied."
 }

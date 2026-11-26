@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace Billium\Rating\Contracts;
 
-use Billium\Contracts\Attributes\Api;
-use Billium\Contracts\Attributes\Spi;
-use Billium\Contracts\Attributes\SpiKind;
 use Billium\Rating\Data\Pricing\PriceVersion;
+use Packman\Attributes\Spi;
+use Packman\Attributes\SpiKind;
 
-#[Api]
 #[Spi(SpiKind::Call)]
 interface PriceVersionStore
 {

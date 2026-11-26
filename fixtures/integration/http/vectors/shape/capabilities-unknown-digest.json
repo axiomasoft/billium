@@ -1,0 +1,65 @@
+{
+  "id": "http/shape/capabilities-unknown-digest",
+  "kind": "preserve-unknown",
+  "schema": "billium.capabilities.v1",
+  "body": {
+    "schema": "billium.capabilities.v1",
+    "installationRef": "inst-1",
+    "environment": "test",
+    "specRevision": "2026-10",
+    "specHash": "sha256:abababababababababababababababababababababababababababababababab",
+    "serverApiVersion": "1",
+    "acceptedCommandSchemas": [
+      "payment.execute.v1",
+      "billium.feed.open.v1"
+    ],
+    "producedResponseSchemas": [
+      "payment.admission.v1",
+      "billium.feed.selection.v1"
+    ],
+    "eventSchemas": [
+      "billium.event.v1"
+    ],
+    "enabledModules": [
+      {
+        "module": "ledger",
+        "apiVersion": "1"
+      }
+    ],
+    "moduleApiVersions": {
+      "ledger": "1"
+    },
+    "features": {
+      "charge": true,
+      "refund": true,
+      "find": true,
+      "receipt": true,
+      "document": false,
+      "execution": false
+    },
+    "effects": {
+      "sale": true,
+      "authorize": false,
+      "capture": false,
+      "voidAuthorization": false,
+      "cancel": true
+    },
+    "limits": {
+      "maxBodyBytes": 1048576,
+      "maxDepth": 32
+    },
+    "lookupCompletenessPolicyRef": "policy/lookup-complete",
+    "catalogs": [
+      {
+        "eventContractRevision": "events-2026-10-v1",
+        "envelopeSchema": "billium.event.v1",
+        "eventTypes": [
+          "payment.outcome.v1"
+        ]
+      }
+    ],
+    "selectionMode": "explicit",
+    "trace": "span-1",
+    "digest": "sha256:5445309c00e6f6208e71307f5008513500a18eb2aed2f0ff553774018043001e"
+  }
+}

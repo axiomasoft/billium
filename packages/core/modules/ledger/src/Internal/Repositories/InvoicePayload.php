@@ -7,14 +7,17 @@ namespace Billium\Ledger\Internal\Repositories;
 use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Ledger\Data\CreateInvoice;
-use Billium\Ledger\Data\DiscardInvoice;
-use Billium\Ledger\Data\IssueInvoice;
-use Billium\Ledger\Data\MarkUncollectible;
-use Billium\Ledger\Data\UpdateInvoiceMetadata;
-use Billium\Ledger\Data\VoidInvoice;
+use Billium\Ledger\Data\Invoices\CreateInvoice;
+use Billium\Ledger\Data\Invoices\DiscardInvoice;
+use Billium\Ledger\Data\Invoices\InvoiceLineInput;
+use Billium\Ledger\Data\Invoices\IssueInvoice;
+use Billium\Ledger\Data\Invoices\MarkUncollectible;
+use Billium\Ledger\Data\Invoices\UpdateInvoiceMetadata;
+use Billium\Ledger\Data\Invoices\VoidInvoice;
+use Packman\Attributes\Internal;
 
 /** Semantic payload, digest and shape validation of the invoice commands; the command key is not part of the identity. */
+#[Internal]
 final class InvoicePayload
 {
     public const int MAX_LINES = 500;
@@ -63,7 +66,7 @@ final class InvoicePayload
             throw new ProblemException(ProblemCode::ValidationInvalid, 'legalDocumentRef is a nonempty bounded string');
         }
         if ($command instanceof CreateInvoice) {
-            $refs = array_map(static fn ($line): string => $line->obligationRef, $command->lines);
+            $refs = array_map(static fn (InvoiceLineInput $line): string => $line->obligationRef, $command->lines);
             if ($refs === [] || count($refs) > self::MAX_LINES || count($refs) !== count(array_unique($refs))) {
                 throw new ProblemException(ProblemCode::ValidationInvalid, 'an invoice has 1..'.self::MAX_LINES.' distinct obligation lines');
             }

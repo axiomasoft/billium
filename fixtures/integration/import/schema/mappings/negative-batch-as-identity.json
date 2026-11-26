@@ -1,0 +1,23 @@
+{
+  "namespace": "INVALID NAMESPACE",
+  "batchIdInEconomicIdentity": true,
+  "renamesSourceBookOnMapperUpdate": true,
+  "mappingsChecksum": "sha256:0f3af073ab08a788dfb69d1e9c5f2b2d57c5af2e47339f3e4ad4c8345481a8dd",
+  "mappings": [
+    {
+      "installationRef": "inst-1",
+      "environment": "test",
+      "sellerRef": "seller-1",
+      "sourceSystem": "host-commerce/billing-export",
+      "sourceInstallation": "src-inst-eu-1",
+      "sourceBook": "book-primary",
+      "sourceRecordId": "obl-1001",
+      "recordKind": "proven_obligation",
+      "sourceRecordRevision": 1,
+      "sourceIdentityDigest": "sha256:ab222febee305f31e43ed20eaec3c6b623f454d53b83cf0e45f66dadb4a31785",
+      "payloadDigest": "sha256:ca86192d65ab77d958d98792b9346fea402dcdd0d228ed8e569bfe40144fe3a8",
+      "sourceFactRef": "import:df2a788b0301e990576fa4a90393fb32a82fceeb49f237f4b4bdf108c1658d43",
+      "status": "active"
+    }
+  ]
+}

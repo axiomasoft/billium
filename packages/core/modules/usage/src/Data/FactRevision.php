@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Billium\Usage\Data;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Usage\Internal\Errors\UsageProblems;
+use Packman\Attributes\Api;
 
 #[Api]
 final readonly class FactRevision

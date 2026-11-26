@@ -4,17 +4,20 @@ declare(strict_types=1);
 
 namespace Billium\Platform\Tests\Feature;
 
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Receipt;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runner\Receipt;
 use Billium\Core\Tests\TestEnvironment;
-use Billium\Platform\Contracts\Outbox;
-use Billium\Platform\Data\OutboxEvent;
+use Billium\Platform\Contracts\Outbox\Outbox;
+use Billium\Platform\Data\Outbox\OutboxEvent;
 use Billium\Platform\Internal\Installation\RuntimeGrants;
 use Billium\Platform\Tests\PlatformTestCase;
 use DateTimeImmutable;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Testing\PendingCommand;
+use Packman\Schema\Contracts\Migration\SchemaMigrator;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class RuntimeGrantsTest extends PlatformTestCase
 {
     protected function defineEnvironment($app): void
@@ -31,11 +34,16 @@ final class RuntimeGrantsTest extends PlatformTestCase
         self::assertNotSame($runtimeRole, self::pdoValue(TestEnvironment::pdo(owner: true), 'SELECT current_user'));
 
         // The suite lease isolates this throwaway test database; rebuild so old grants cannot hide an omission.
-        // Laravel's migrate:fresh drops tables, but retains standalone PostgreSQL trigger functions: every migration
-        // creates its functions with CREATE OR REPLACE, so the retained ones must not break the rebuild.
-        $migration = $this->artisan('migrate:fresh', ['--database' => 'billium_owner', '--force' => true]);
-        self::assertInstanceOf(PendingCommand::class, $migration);
-        $migration->assertExitCode(0);
+        // Retain the historical PostgreSQL functions and give the forward-only execution additions a fresh installation.
+        TestEnvironment::prepareFreshRebuild($this->application());
+        $this->beforeApplicationDestroyed(fn () => TestEnvironment::restoreSuiteMigrations($this->application()));
+        $wipe = $this->artisan('db:wipe', ['--database' => 'billium_owner', '--force' => true]);
+        self::assertInstanceOf(PendingCommand::class, $wipe);
+        $wipe->assertExitCode(0);
+        $this->application()->make(SchemaMigrator::class)->migrateSets(
+            ['axiomasoft/billium-core:billium-platform', 'axiomasoft/billium-core:billium-ledger'],
+            'billium_owner',
+        );
         self::assertSame('pgsql', config('database.default'));
         self::assertSame($runtimeRole, RuntimeGrants::role());
         TestEnvironment::assertRuntimeSafe($runtime);

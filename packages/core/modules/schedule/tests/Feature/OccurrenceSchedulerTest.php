@@ -8,11 +8,15 @@ use Billium\Schedule\Contracts\ScheduleQueries;
 use Billium\Schedule\Data\Commands\CancelSchedule;
 use Billium\Schedule\Data\Commands\MaterializeNext;
 use Billium\Schedule\Data\Commands\RecordScheduleFailure;
+use Billium\Schedule\Enums\OccurrenceState;
 use Billium\Schedule\Tests\OccurrenceTestCase;
 use Billium\Schedule\Tests\Support\Terms;
 use DateTimeImmutable;
+use DateTimeZone;
 use Illuminate\Database\QueryException;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class OccurrenceSchedulerTest extends OccurrenceTestCase
 {
     public function test_future_pause_allows_earlier_intervals_and_stops_at_its_boundary(): void
@@ -51,6 +55,29 @@ final class OccurrenceSchedulerTest extends OccurrenceTestCase
         self::assertSame(2, $this->value('SELECT cursor_ordinal FROM billium_schedule_billing_schedule'));
         $this->refusal(fn () => $this->occurrences()->materializeNext($this->materialize(key: 'march', version: 4)), 'schedule.not_runnable');
         self::assertSame(3, $this->rows('billium_schedule_billing_occurrence'));
+    }
+
+    public function test_occurrence_view_is_typed_seller_scoped_and_carries_the_applicable_revision(): void
+    {
+        $this->createSchedule();
+        $ref = $this->occurrences()->ensureOccurrence($this->ensure())->body()['occurrenceRef'];
+        self::assertIsString($ref);
+        $queries = $this->application()->make(ScheduleQueries::class);
+        $view = $queries->occurrence($ref);
+        self::assertNotNull($view);
+        self::assertSame($ref, $view->occurrenceRef);
+        self::assertSame(['seller-a', 'test'], [$view->sellerRef, $view->environment]);
+        self::assertSame(OccurrenceState::Planned, $view->state);
+        self::assertSame('2024-01-31T00:00:00.000000Z', $view->periodStart->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z'));
+        self::assertGreaterThan($view->periodStart, $view->periodEnd);
+        self::assertSame(1, $view->createdRevision);
+        self::assertSame(1, $view->applicableRevision);
+        self::assertSame($view->inputsDigest, $view->applicableInputsDigest);
+        self::assertSame('apply', $view->applicableAction);
+        self::assertNull($view->ratedBasisRef);
+        self::assertFalse($view->applicableRevisionConfirmed);
+        $this->callers->as('seller-b');
+        self::assertNull($queries->occurrence($ref));
     }
 
     public function test_future_dated_revision_does_not_override_earlier_unmaterialized_or_pre_ensured_interval(): void

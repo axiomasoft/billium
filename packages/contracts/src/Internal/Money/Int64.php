@@ -6,10 +6,12 @@ namespace Billium\Contracts\Internal\Money;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Packman\Attributes\Internal;
 
 /**
  * The int64 bound of minor units (BC-MW-09): an overflow is an error, never a wrap.
  */
+#[Internal]
 final class Int64
 {
     /**

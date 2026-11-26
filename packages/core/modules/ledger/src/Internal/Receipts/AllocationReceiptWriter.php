@@ -4,16 +4,17 @@ declare(strict_types=1);
 
 namespace Billium\Ledger\Internal\Receipts;
 
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Ledger\Data\LedgerReceipt;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Ledger\Data\Runtime\LedgerReceipt;
 use Billium\Ledger\Internal\InvoiceStatus;
 use Billium\Ledger\Internal\Repositories\LedgerRepository;
-use Billium\Platform\Contracts\Outbox;
-use Billium\Platform\Data\OutboxEvent;
+use Billium\Platform\Contracts\Outbox\Outbox;
+use Billium\Platform\Data\Outbox\OutboxEvent;
 use DateTimeImmutable;
 use Illuminate\Database\Connection;
 use Illuminate\Support\Str;
 use LogicException;
+use Packman\Attributes\Internal;
 
 /**
  * AllocationReceipt boundary (BC-EVT-08, INV-09): the guarded routine writes the immutable receipt together with the
@@ -21,6 +22,7 @@ use LogicException;
  * of settled this writer re-reads the locked invoices and checks the DB-derived status against InvoiceStatus::derive,
  * then records the public event of a first (not replayed) application in the same root Tx.
  */
+#[Internal]
 final readonly class AllocationReceiptWriter
 {
     public function __construct(private LedgerRepository $routines, private Outbox $outbox) {}

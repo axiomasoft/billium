@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Billium\Core\Enums\Modules;
 
-use Billium\Contracts\Attributes\Api;
+use Packman\Attributes\Api;
 
 /** What a caller wants from a module; admission is decided per class (D55). */
-#[Api]
+#[Api(since: '1.0')]
 enum ModuleOperationClass: string
 {
     /** A new business intent, occurrence, usage admission or charge. */

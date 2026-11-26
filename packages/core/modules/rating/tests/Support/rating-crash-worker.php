@@ -1,7 +1,7 @@
 <?php
 
 declare(strict_types=1);
-use Billium\Core\Contracts\OperationRunner;
+use Billium\Core\Contracts\Runner\OperationRunner;
 use Billium\Core\Tests\Support\Concurrency\WorkerApplication;
 use Billium\Rating\Contracts\RatingBooking;
 use Billium\Rating\Data\Rating\BookRatedBasis;

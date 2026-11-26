@@ -1,0 +1,29 @@
+{
+  "protocol": "billium.http.transcript.v1",
+  "id": "HTTP-16",
+  "title": "Minimal independent contracts consumer installs the package archive",
+  "profile": "ledger",
+  "sources": [
+    "D9",
+    "D17",
+    "D61"
+  ],
+  "steps": [
+    {
+      "op": "send",
+      "name": "capabilities",
+      "path": "/billium/v1/capabilities",
+      "expect": {
+        "status": 200,
+        "body.features.execution": false
+      }
+    },
+    {
+      "op": "archive",
+      "name": "archive",
+      "expect": {
+        "installed": true
+      }
+    }
+  ]
+}

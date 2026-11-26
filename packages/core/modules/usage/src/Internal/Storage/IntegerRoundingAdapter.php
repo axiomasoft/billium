@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Billium\Usage\Internal\Storage;
 
+use Packman\Attributes\Internal;
+
+#[Internal]
 final class IntegerRoundingAdapter
 {
     /** Time conversion only; quantities are handled by Internal\\Math. */

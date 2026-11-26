@@ -1,0 +1,173 @@
+{
+  "protocol": "billium.consumer.bridge.case.v1",
+  "id": "CT-12",
+  "title": "Transport ACK, CommandAccepted, ProviderOutcomeRecorded, ProjectionApplied and AllocationReceipt stay independent",
+  "standProfile": "execution",
+  "authoritySource": "remote-billium",
+  "executionProfile": "remote-billium",
+  "packageDelivery": "php-contracts-current",
+  "sources": ["D31", "D58", "D60", "INV-08"],
+  "steps": [
+    {
+      "name": "commandAcceptedOnly",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "path": "/billium/v1/sellers/seller-a/payments/execute",
+        "body": {
+          "schema": "payment.execute.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "commandKey": "00000000-0000-4100-8800-000000001201",
+          "operationRef": "ct12-op-1",
+          "operationKind": "charge",
+          "source": { "context": "checkout", "intentRef": "ct12-deferred-intent", "orderRef": "ct12-order" },
+          "executionProfile": "remote-billium",
+          "routingEpoch": 1,
+          "merchantAccountRef": "account-a",
+          "money": { "amount": "10.00", "currency": "RUB" },
+          "bindingRevision": "merchant-a",
+          "requestedAt": "2026-11-22T10:00:00Z"
+        }
+      },
+      "expect": {
+        "status": 202,
+        "body.receipt": "CommandAccepted"
+      }
+    },
+    {
+      "name": "findPendingBeforeDispatch",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "path": "/billium/v1/sellers/seller-a/operations/find",
+        "body": {
+          "schema": "payment.find.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "operationRef": "ct12-op-1"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body.status": "pending",
+        "body.capturedTotal.amount": "0.00"
+      }
+    },
+    {
+      "name": "providerOutcomeBeforeProjection",
+      "target": "stand",
+      "op": "worker_dispatch",
+      "args": { "operation": "ct12-op-1" },
+      "expect": {
+        "delivery.commandAccepted": true,
+        "delivery.providerOutcomeRecorded": true,
+        "delivery.projectionApplied": false,
+        "delivery.allocationApplied": false
+      }
+    },
+    {
+      "name": "findProviderOutcomeBeforeRelay",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "path": "/billium/v1/sellers/seller-a/operations/find",
+        "body": {
+          "schema": "payment.find.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "operationRef": "ct12-op-1"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body.status": "succeeded",
+        "body.capturedTotal.amount": "10.00"
+      }
+    },
+    {
+      "name": "relayWithoutIntent",
+      "target": "stand",
+      "op": "relay_observations",
+      "expect": { "exitCode": 0 }
+    },
+    {
+      "name": "projectionAppliedPendingAllocation",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "path": "/billium/v1/sellers/seller-a/queries",
+        "body": {
+          "schema": "billium.query.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "query": "paymentStatus",
+          "selector": { "paymentRef": "ct12-op-1" }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body.result.projectionStatus": "allocation_pending",
+        "body.result.observed.capturedTotal.amount": "10.00"
+      }
+    },
+    {
+      "name": "declareIntent",
+      "target": "stand",
+      "op": "declare_settlement_intent",
+      "args": { "obligationRef": "ct12-ob-1", "intentRef": "ct12-deferred-intent", "amount": "10.00" },
+      "expect": { "declared": true }
+    },
+    {
+      "name": "relayForAllocationReceipt",
+      "target": "stand",
+      "op": "relay_observations",
+      "expect": { "exitCode": 0, "deliveredTotal": 1 }
+    },
+    {
+      "name": "allocationCompleted",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "path": "/billium/v1/sellers/seller-a/queries",
+        "body": {
+          "schema": "billium.query.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "query": "paymentStatus",
+          "selector": { "paymentRef": "ct12-op-1" }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body.result.projectionStatus": "current",
+        "body.result.applied.allocated.amount": "10.00"
+      }
+    },
+    {
+      "name": "findAllocationReceipt",
+      "target": "consumer",
+      "op": "http_command",
+      "args": {
+        "path": "/billium/v1/sellers/seller-a/receipts/find",
+        "body": {
+          "schema": "receipt.find.v1",
+          "installationRef": "inst-test",
+          "environment": "test",
+          "sellerRef": "seller-a",
+          "receiptRef": "observation:remote-billium:ct12-op-1#1"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body.status": "found",
+        "body.receiptSchema": "ledger.allocation_receipt.v1"
+      }
+    }
+  ]
+}

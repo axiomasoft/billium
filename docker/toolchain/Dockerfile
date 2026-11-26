@@ -1,3 +1,5 @@
+FROM postgres:16.15-bookworm AS postgres_client
+
 FROM php:8.4-cli-bookworm
 
 ARG DART_VERSION=3.13.5
@@ -24,5 +26,9 @@ RUN mkdir -p /tmp/home /tmp/composer /tmp/pub-cache \
     && chmod 1777 /tmp/home /tmp/composer /tmp/pub-cache
 
 ENV PATH=/opt/tooling/bin:/opt/dart-sdk/bin:$PATH
+
+COPY --from=postgres_client /usr/lib/postgresql/16/bin/pg_dump /usr/lib/postgresql/16/bin/pg_restore /usr/lib/postgresql/16/bin/psql /usr/local/bin/
+COPY --from=postgres_client /usr/lib/*-linux-gnu/libpq.so.5 /usr/local/lib/
+RUN ldconfig && pg_dump --version && pg_restore --version && psql --version
 
 WORKDIR /workspace

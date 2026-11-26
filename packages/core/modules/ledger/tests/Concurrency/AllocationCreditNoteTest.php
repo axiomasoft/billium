@@ -16,6 +16,7 @@ use PHPUnit\Framework\Attributes\Group;
  * issued invoice of 100.00. Exactly one of the four fits; open never goes below zero and nothing overcorrects.
  */
 #[Group('ACC-CON-09')]
+#[Group('pg')]
 final class AllocationCreditNoteTest extends LedgerTestCase
 {
     use AllocationFixtures;

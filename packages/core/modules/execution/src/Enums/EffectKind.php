@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Billium\Execution\Enums;
 
-use Billium\Contracts\Attributes\Api;
+use Packman\Attributes\Api;
 
-#[Api]
+#[Api(since: '1.0')]
 enum EffectKind: string
 {
-    case Sale = 'sale';
+    case Charge = 'charge';
     case Authorize = 'authorize';
     case Capture = 'capture';
     case VoidAuthorization = 'void_authorization';

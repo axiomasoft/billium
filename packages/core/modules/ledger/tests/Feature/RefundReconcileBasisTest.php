@@ -22,6 +22,7 @@ use PHPUnit\Framework\Attributes\TestWith;
  * appends resolution without editing history. The ledger never changes here.
  */
 #[Group('D60')]
+#[Group('pg')]
 final class RefundReconcileBasisTest extends ObservationTestCase
 {
     #[TestWith([0])]
@@ -129,7 +130,7 @@ final class RefundReconcileBasisTest extends ObservationTestCase
     {
         $this->debt('o1', 1000);
         $this->intent('intent-a', ['o1']);
-        $this->attempt(ObservationFactory::refund('op-r1', 'op-1', 1, 300, sequence: 1));
+        $this->tryObserve(ObservationFactory::refund('op-r1', 'op-1', 1, 300, sequence: 1));
         $this->observe(ObservationFactory::charge('op-1', 1, 1000, 300, sequence: 2));
 
         self::assertSame(['compared' => 0, 'recorded' => 0, 'resolved' => 0], $this->reconciler()->reconcile(3600), 'nothing inside the window');
@@ -181,7 +182,7 @@ final class RefundReconcileBasisTest extends ObservationTestCase
         $this->observe(ObservationFactory::charge('op-1', 1, 1000, 300));
         self::assertSame(1, $this->reconciler()->reconcile(0)['recorded']);
         $refund = ObservationFactory::refund('usd-refund', 'op-1', 1, 300, sequence: 2, fields: ['currency' => 'USD']);
-        self::assertSame(ProblemCode::ObservationConflict->value, $this->attempt($refund));
+        self::assertSame(ProblemCode::ObservationConflict->value, $this->tryObserve($refund));
         self::assertSame('quarantined', $this->inboxStatus(self::eventId($refund)));
         self::assertNull($this->observedRow('usd-refund')['billing_account_ref']);
         self::assertSame(['compared' => 1, 'recorded' => 0, 'resolved' => 0], $this->reconciler()->reconcile(0));
@@ -193,7 +194,7 @@ final class RefundReconcileBasisTest extends ObservationTestCase
         $this->debt('o1', 1000);
         $this->intent('intent-a', ['o1']);
         $this->observe(ObservationFactory::charge('op-1', 1, 1000));
-        $this->attempt(ObservationFactory::refund('usd-refund', 'op-1', 1, 300, sequence: 2, fields: ['currency' => 'USD']));
+        $this->tryObserve(ObservationFactory::refund('usd-refund', 'op-1', 1, 300, sequence: 2, fields: ['currency' => 'USD']));
         self::assertSame(['compared' => 0, 'recorded' => 0, 'resolved' => 0], $this->reconciler()->reconcile(0));
     }
 

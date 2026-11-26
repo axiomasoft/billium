@@ -4,21 +4,23 @@ declare(strict_types=1);
 
 namespace Billium\Usage\Internal\Services;
 
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Data\OperationSpec;
-use Billium\Core\Enums\FinancialMode;
-use Billium\Core\Enums\LockRank;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Data\Runner\OperationSpec;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
+use Billium\Core\Enums\Runner\LockRank;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Usage\Contracts\SourceCompletenessIntake;
 use Billium\Usage\Data\Commands\RecordSourceCompleteness;
 use Billium\Usage\Data\FreezeReceipt;
 use Billium\Usage\Internal\Canonical\CanonicalJson;
 use Billium\Usage\Internal\Errors\UsageProblems;
 use Billium\Usage\Internal\Storage\AggregateStore;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final readonly class DatabaseSourceCompletenessIntake implements SourceCompletenessIntake
 {
     public function __construct(private OperationRunner $runner, private CallerContext $callers, private AggregateStore $store) {}

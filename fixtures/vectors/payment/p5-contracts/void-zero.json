@@ -1,0 +1,28 @@
+{
+  "id": "payment/p5-contracts/void-zero",
+  "spec_refs": [
+    "BC-ENV-01",
+    "BC-ENV-09",
+    "BC-ID-12"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"schema\":\"payment.void_authorization.v1\",\"commandKey\":\"5d1f7c52-2b8e-4a31-9c47-6e0a1b2c3d4e\",\"installationRef\":\"inst-1\",\"environment\":\"test\",\"sellerRef\":\"seller-1\",\"operationRef\":\"op-2\",\"originalOperationRef\":\"op-1\",\"source\":{\"context\":\"commerz\",\"intentRef\":\"refund-int-1\"},\"money\":{\"amount\":\"0.00\",\"currency\":\"RUB\"},\"reasonCode\":\"customer_request\",\"requestedAt\":\"2026-10-18T09:30:00Z\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "error": {
+        "code": "billium.validation.invalid"
+      }
+    }
+  ]
+}

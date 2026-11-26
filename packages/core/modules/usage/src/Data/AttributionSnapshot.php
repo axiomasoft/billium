@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Usage\Data;
 
-use Billium\Contracts\Attributes\Api;
+use Packman\Attributes\Api;
 use stdClass;
 
 /** D56: trusted host evidence; mappingRef is the immutable host mapping revision, not a live account alias. */

@@ -1,0 +1,312 @@
+{
+  "id": "documents/tax-arithmetic",
+  "description": "P6.1 zero-float document tax arithmetic golden vectors (inclusive/exclusive, decimal rates, discount order, 0/2/3 exponents, largest-remainder rounding).",
+  "spec_refs": [
+    "D19",
+    "D56"
+  ],
+  "profiles": [
+    "php"
+  ],
+  "given": {
+    "example": {
+      "cases": [
+        {
+          "name": "exclusive_discount_before_tax_jpy_zero_exp",
+          "currency": "JPY",
+          "currencyExponent": 0,
+          "convention": "exclusive",
+          "roundingMode": "half_up",
+          "order": "discount_before_tax",
+          "noTaxReason": null,
+          "lines": [
+            {
+              "lineRef": "l1",
+              "amountDecimal": "105",
+              "discountDecimal": "5",
+              "rateDecimal": "0.10",
+              "taxCode": "VAT10"
+            },
+            {
+              "lineRef": "l2",
+              "amountDecimal": "33",
+              "discountDecimal": "0",
+              "rateDecimal": "0.10",
+              "taxCode": "VAT10"
+            }
+          ],
+          "expected": {
+            "subtotalMinor": 133,
+            "taxMinor": 13,
+            "totalMinor": 146,
+            "lines": [
+              {
+                "lineRef": "l1",
+                "netMinor": 100,
+                "taxMinor": 10,
+                "grossMinor": 110,
+                "residualMinor": 0
+              },
+              {
+                "lineRef": "l2",
+                "netMinor": 33,
+                "taxMinor": 3,
+                "grossMinor": 36,
+                "residualMinor": 0
+              }
+            ]
+          }
+        },
+        {
+          "name": "exclusive_largest_remainder_heterogeneous_usd",
+          "currency": "USD",
+          "currencyExponent": 2,
+          "convention": "exclusive",
+          "roundingMode": "half_up",
+          "order": "discount_before_tax",
+          "noTaxReason": null,
+          "lines": [
+            {
+              "lineRef": "a",
+              "amountDecimal": "0.33",
+              "discountDecimal": "0",
+              "rateDecimal": "0.0825",
+              "taxCode": "ST825"
+            },
+            {
+              "lineRef": "b",
+              "amountDecimal": "0.33",
+              "discountDecimal": "0",
+              "rateDecimal": "0.0825",
+              "taxCode": "ST825"
+            },
+            {
+              "lineRef": "c",
+              "amountDecimal": "0.10",
+              "discountDecimal": "0",
+              "rateDecimal": "0.075",
+              "taxCode": "ST075"
+            }
+          ],
+          "expected": {
+            "subtotalMinor": 76,
+            "taxMinor": 6,
+            "totalMinor": 82,
+            "lines": [
+              {
+                "lineRef": "a",
+                "netMinor": 33,
+                "taxMinor": 3,
+                "grossMinor": 36,
+                "residualMinor": 1
+              },
+              {
+                "lineRef": "b",
+                "netMinor": 33,
+                "taxMinor": 2,
+                "grossMinor": 35,
+                "residualMinor": 0
+              },
+              {
+                "lineRef": "c",
+                "netMinor": 10,
+                "taxMinor": 1,
+                "grossMinor": 11,
+                "residualMinor": 1
+              }
+            ]
+          }
+        },
+        {
+          "name": "inclusive_discount_before_tax_eur_half_even",
+          "currency": "EUR",
+          "currencyExponent": 2,
+          "convention": "inclusive",
+          "roundingMode": "half_even",
+          "order": "discount_before_tax",
+          "noTaxReason": null,
+          "lines": [
+            {
+              "lineRef": "a",
+              "amountDecimal": "10.00",
+              "discountDecimal": "0",
+              "rateDecimal": "0.19",
+              "taxCode": "DE19"
+            },
+            {
+              "lineRef": "b",
+              "amountDecimal": "10.00",
+              "discountDecimal": "0",
+              "rateDecimal": "0.19",
+              "taxCode": "DE19"
+            }
+          ],
+          "expected": {
+            "subtotalMinor": 1681,
+            "taxMinor": 319,
+            "totalMinor": 2000,
+            "lines": [
+              {
+                "lineRef": "a",
+                "netMinor": 841,
+                "taxMinor": 159,
+                "grossMinor": 1000,
+                "residualMinor": 1
+              },
+              {
+                "lineRef": "b",
+                "netMinor": 840,
+                "taxMinor": 160,
+                "grossMinor": 1000,
+                "residualMinor": 0
+              }
+            ]
+          }
+        },
+        {
+          "name": "inclusive_three_exponent_kwd",
+          "currency": "KWD",
+          "currencyExponent": 3,
+          "convention": "inclusive",
+          "roundingMode": "half_up",
+          "order": "discount_before_tax",
+          "noTaxReason": null,
+          "lines": [
+            {
+              "lineRef": "k1",
+              "amountDecimal": "1.000",
+              "discountDecimal": "0",
+              "rateDecimal": "0.05",
+              "taxCode": "GCC5"
+            }
+          ],
+          "expected": {
+            "subtotalMinor": 952,
+            "taxMinor": 48,
+            "totalMinor": 1000,
+            "lines": [
+              {
+                "lineRef": "k1",
+                "netMinor": 952,
+                "taxMinor": 48,
+                "grossMinor": 1000,
+                "residualMinor": 0
+              }
+            ]
+          }
+        },
+        {
+          "name": "exclusive_tax_before_discount_usd",
+          "currency": "USD",
+          "currencyExponent": 2,
+          "convention": "exclusive",
+          "roundingMode": "half_up",
+          "order": "tax_before_discount",
+          "noTaxReason": null,
+          "lines": [
+            {
+              "lineRef": "t1",
+              "amountDecimal": "10.00",
+              "discountDecimal": "2.00",
+              "rateDecimal": "0.10",
+              "taxCode": "TX10"
+            }
+          ],
+          "expected": {
+            "subtotalMinor": 800,
+            "taxMinor": 100,
+            "totalMinor": 900,
+            "lines": [
+              {
+                "lineRef": "t1",
+                "netMinor": 800,
+                "taxMinor": 100,
+                "grossMinor": 900,
+                "residualMinor": 0
+              }
+            ]
+          }
+        },
+        {
+          "name": "inclusive_tax_before_discount_usd",
+          "currency": "USD",
+          "currencyExponent": 2,
+          "convention": "inclusive",
+          "roundingMode": "half_up",
+          "order": "tax_before_discount",
+          "noTaxReason": null,
+          "lines": [
+            {
+              "lineRef": "t1",
+              "amountDecimal": "11.00",
+              "discountDecimal": "1.00",
+              "rateDecimal": "0.10",
+              "taxCode": "TX10"
+            }
+          ],
+          "expected": {
+            "subtotalMinor": 900,
+            "taxMinor": 100,
+            "totalMinor": 1000,
+            "lines": [
+              {
+                "lineRef": "t1",
+                "netMinor": 900,
+                "taxMinor": 100,
+                "grossMinor": 1000,
+                "residualMinor": 0
+              }
+            ]
+          }
+        },
+        {
+          "name": "none_declared_eur",
+          "currency": "EUR",
+          "currencyExponent": 2,
+          "convention": "none_declared",
+          "roundingMode": "half_up",
+          "order": "discount_before_tax",
+          "noTaxReason": "reverse_charge_eu_b2b",
+          "lines": [
+            {
+              "lineRef": "n1",
+              "amountDecimal": "125.00",
+              "discountDecimal": "25.00",
+              "rateDecimal": "0",
+              "taxCode": "RC"
+            }
+          ],
+          "expected": {
+            "subtotalMinor": 10000,
+            "taxMinor": 0,
+            "totalMinor": 10000,
+            "lines": [
+              {
+                "lineRef": "n1",
+                "netMinor": 10000,
+                "taxMinor": 0,
+                "grossMinor": 10000,
+                "residualMinor": 0
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "script": [
+    {
+      "op": "canon.digest",
+      "args": {
+        "json_text": "{\"cases\":[{\"convention\":\"exclusive\",\"currency\":\"JPY\",\"currencyExponent\":0,\"expected\":{\"lines\":[{\"grossMinor\":110,\"lineRef\":\"l1\",\"netMinor\":100,\"residualMinor\":0,\"taxMinor\":10},{\"grossMinor\":36,\"lineRef\":\"l2\",\"netMinor\":33,\"residualMinor\":0,\"taxMinor\":3}],\"subtotalMinor\":133,\"taxMinor\":13,\"totalMinor\":146},\"lines\":[{\"amountDecimal\":\"105\",\"discountDecimal\":\"5\",\"lineRef\":\"l1\",\"rateDecimal\":\"0.10\",\"taxCode\":\"VAT10\"},{\"amountDecimal\":\"33\",\"discountDecimal\":\"0\",\"lineRef\":\"l2\",\"rateDecimal\":\"0.10\",\"taxCode\":\"VAT10\"}],\"name\":\"exclusive_discount_before_tax_jpy_zero_exp\",\"noTaxReason\":null,\"order\":\"discount_before_tax\",\"roundingMode\":\"half_up\"},{\"convention\":\"exclusive\",\"currency\":\"USD\",\"currencyExponent\":2,\"expected\":{\"lines\":[{\"grossMinor\":36,\"lineRef\":\"a\",\"netMinor\":33,\"residualMinor\":1,\"taxMinor\":3},{\"grossMinor\":35,\"lineRef\":\"b\",\"netMinor\":33,\"residualMinor\":0,\"taxMinor\":2},{\"grossMinor\":11,\"lineRef\":\"c\",\"netMinor\":10,\"residualMinor\":1,\"taxMinor\":1}],\"subtotalMinor\":76,\"taxMinor\":6,\"totalMinor\":82},\"lines\":[{\"amountDecimal\":\"0.33\",\"discountDecimal\":\"0\",\"lineRef\":\"a\",\"rateDecimal\":\"0.0825\",\"taxCode\":\"ST825\"},{\"amountDecimal\":\"0.33\",\"discountDecimal\":\"0\",\"lineRef\":\"b\",\"rateDecimal\":\"0.0825\",\"taxCode\":\"ST825\"},{\"amountDecimal\":\"0.10\",\"discountDecimal\":\"0\",\"lineRef\":\"c\",\"rateDecimal\":\"0.075\",\"taxCode\":\"ST075\"}],\"name\":\"exclusive_largest_remainder_heterogeneous_usd\",\"noTaxReason\":null,\"order\":\"discount_before_tax\",\"roundingMode\":\"half_up\"},{\"convention\":\"inclusive\",\"currency\":\"EUR\",\"currencyExponent\":2,\"expected\":{\"lines\":[{\"grossMinor\":1000,\"lineRef\":\"a\",\"netMinor\":841,\"residualMinor\":1,\"taxMinor\":159},{\"grossMinor\":1000,\"lineRef\":\"b\",\"netMinor\":840,\"residualMinor\":0,\"taxMinor\":160}],\"subtotalMinor\":1681,\"taxMinor\":319,\"totalMinor\":2000},\"lines\":[{\"amountDecimal\":\"10.00\",\"discountDecimal\":\"0\",\"lineRef\":\"a\",\"rateDecimal\":\"0.19\",\"taxCode\":\"DE19\"},{\"amountDecimal\":\"10.00\",\"discountDecimal\":\"0\",\"lineRef\":\"b\",\"rateDecimal\":\"0.19\",\"taxCode\":\"DE19\"}],\"name\":\"inclusive_discount_before_tax_eur_half_even\",\"noTaxReason\":null,\"order\":\"discount_before_tax\",\"roundingMode\":\"half_even\"},{\"convention\":\"inclusive\",\"currency\":\"KWD\",\"currencyExponent\":3,\"expected\":{\"lines\":[{\"grossMinor\":1000,\"lineRef\":\"k1\",\"netMinor\":952,\"residualMinor\":0,\"taxMinor\":48}],\"subtotalMinor\":952,\"taxMinor\":48,\"totalMinor\":1000},\"lines\":[{\"amountDecimal\":\"1.000\",\"discountDecimal\":\"0\",\"lineRef\":\"k1\",\"rateDecimal\":\"0.05\",\"taxCode\":\"GCC5\"}],\"name\":\"inclusive_three_exponent_kwd\",\"noTaxReason\":null,\"order\":\"discount_before_tax\",\"roundingMode\":\"half_up\"},{\"convention\":\"exclusive\",\"currency\":\"USD\",\"currencyExponent\":2,\"expected\":{\"lines\":[{\"grossMinor\":900,\"lineRef\":\"t1\",\"netMinor\":800,\"residualMinor\":0,\"taxMinor\":100}],\"subtotalMinor\":800,\"taxMinor\":100,\"totalMinor\":900},\"lines\":[{\"amountDecimal\":\"10.00\",\"discountDecimal\":\"2.00\",\"lineRef\":\"t1\",\"rateDecimal\":\"0.10\",\"taxCode\":\"TX10\"}],\"name\":\"exclusive_tax_before_discount_usd\",\"noTaxReason\":null,\"order\":\"tax_before_discount\",\"roundingMode\":\"half_up\"},{\"convention\":\"inclusive\",\"currency\":\"USD\",\"currencyExponent\":2,\"expected\":{\"lines\":[{\"grossMinor\":1000,\"lineRef\":\"t1\",\"netMinor\":900,\"residualMinor\":0,\"taxMinor\":100}],\"subtotalMinor\":900,\"taxMinor\":100,\"totalMinor\":1000},\"lines\":[{\"amountDecimal\":\"11.00\",\"discountDecimal\":\"1.00\",\"lineRef\":\"t1\",\"rateDecimal\":\"0.10\",\"taxCode\":\"TX10\"}],\"name\":\"inclusive_tax_before_discount_usd\",\"noTaxReason\":null,\"order\":\"tax_before_discount\",\"roundingMode\":\"half_up\"},{\"convention\":\"none_declared\",\"currency\":\"EUR\",\"currencyExponent\":2,\"expected\":{\"lines\":[{\"grossMinor\":10000,\"lineRef\":\"n1\",\"netMinor\":10000,\"residualMinor\":0,\"taxMinor\":0}],\"subtotalMinor\":10000,\"taxMinor\":0,\"totalMinor\":10000},\"lines\":[{\"amountDecimal\":\"125.00\",\"discountDecimal\":\"25.00\",\"lineRef\":\"n1\",\"rateDecimal\":\"0\",\"taxCode\":\"RC\"}],\"name\":\"none_declared_eur\",\"noTaxReason\":\"reverse_charge_eu_b2b\",\"order\":\"discount_before_tax\",\"roundingMode\":\"half_up\"}]}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "digest": "sha256:3b7c70d9259da8285a854a6b0bd0d18bc57e737a1897d9be46c8fa7c07307d79"
+      }
+    }
+  ]
+}

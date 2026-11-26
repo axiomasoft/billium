@@ -1,0 +1,16 @@
+{
+  "id": "http/shape/feed-bootstrap-ack-unknown-field",
+  "kind": "reject-unknown",
+  "schema": "billium.feed.bootstrap_ack.v1",
+  "body": {
+    "schema": "billium.feed.bootstrap_ack.v1",
+    "installationRef": "inst-1",
+    "environment": "test",
+    "sellerRef": "seller-1",
+    "subscriptionRef": "sub-1",
+    "selectionDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "leaseRef": "lease-1",
+    "snapshotDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "future": true
+  }
+}

@@ -6,14 +6,16 @@ namespace Billium\Platform\Tests\Feature;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Data\Receipt;
+use Billium\Core\Data\Runner\Receipt;
 use Billium\Core\Tests\Support\FixedSessionAdmission;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Core\Tests\TestEnvironment;
 use Billium\Platform\Tests\PlatformTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
 /** D54: money_commit_log is diagnostic, append-only, one row per monetary root Tx with its session epoch. */
 #[Group('D54')]
+#[Group('pg')]
 final class MoneyCommitLogTest extends PlatformTestCase
 {
     protected function setUp(): void
@@ -40,9 +42,12 @@ final class MoneyCommitLogTest extends PlatformTestCase
     {
         $this->runner()->run($this->spec(), static fn (): Receipt => self::receipt());
         $installation = $this->installation();
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('open', 'open-2', ['owner-2', 2, 1, 2, 'evidence:handover']);
         $installation->openSession('open-2', 'owner-2', 2, 1, 2, 'evidence:handover');
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('activate', 'activate-2', [2, 'certificate:2', 'admission:2', 'evidence:activate-2']);
         $installation->activateSession('activate-2', 2, 'certificate:2', 'admission:2', 'evidence:activate-2');
         $this->tokens->set(FixedSessionAdmission::token(self::INSTALLATION, 'owner-2', 2, 1, 2));
+        SimulatedFinancialAuthorityEvidence::admitCurrent($this->application());
         $this->runner()->run($this->spec(), static fn (): Receipt => self::receipt());
 
         self::assertSame([['session_epoch' => 1], ['session_epoch' => 2]], $this->table('SELECT session_epoch FROM billium_money_commit_log ORDER BY commit_no'));

@@ -12,7 +12,9 @@ use Billium\Rating\Data\Rating\PreparedRating;
 use Billium\Rating\Data\Rating\QuoteRequest;
 use Billium\Rating\Internal\Pipeline\RatingComputation;
 use Billium\Rating\Tests\RatingTestCase;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class RatingPipelineQuoteTest extends RatingTestCase
 {
     public function test_quote_is_pure_and_excludes_cas_fields_from_identity(): void

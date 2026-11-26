@@ -18,6 +18,7 @@ use PHPUnit\Framework\Attributes\Group;
  * still fails on the scoped foreign key (23503).
  */
 #[Group('ACC-CON-19')]
+#[Group('pg')]
 final class CrossSellerAllocationTest extends LedgerTestCase
 {
     use AllocationFixtures;

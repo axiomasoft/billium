@@ -14,6 +14,7 @@ use PHPUnit\Framework\Attributes\Group;
  * index); a second payment of 50.00 pays the open 3333/1667 and settles both. Every row carries its lineage.
  */
 #[Group('SB-07')]
+#[Group('pg')]
 final class BundleAllocationTest extends ObservationTestCase
 {
     public function test_bundle_components_are_settled_pro_rata_through_observations(): void

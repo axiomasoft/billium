@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace Billium\Ledger\Tests\Database;
 
 use Billium\Core\Tests\TestEnvironment;
-use Billium\Ledger\Data\DeclareSettlementIntent;
+use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
 use PDOException;
+use PHPUnit\Framework\Attributes\Group;
 
-/** FA02 storage proof only; the collection owner's typed proof validation belongs to P3.8. */
+/** FA02 storage proof only; the collection owner's typed proof validation is tested with the allocation routines. */
+#[Group('pg')]
 final class SettlementClosureSchemaTest extends LedgerTestCase
 {
     public function test_guarded_closure_replays_one_scoped_immutable_receipt_and_preserves_targets(): void

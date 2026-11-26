@@ -1,0 +1,596 @@
+{
+  "exportSchema": "source.export.v1",
+  "profile": "reference-recurring",
+  "exportVersion": "1.0.0",
+  "batchId": "batch-rec-complete-2026-10-001",
+  "sourceSystem": "reference-recurring/billing-export",
+  "sourceInstallation": "src-inst-rec-1",
+  "sourceBook": "book-recurring-main",
+  "sourceExportRevision": 2,
+  "exportCutoff": "2026-10-20T00:00:00Z",
+  "installationRef": "inst-test",
+  "environment": "test",
+  "sellerRef": "seller-recurring-1",
+  "importPolicyVersion": "import-policy-v1",
+  "sanitizationPolicy": {
+    "piiRedacted": true,
+    "secretsStripped": true,
+    "policyVersion": "sanitize-v1"
+  },
+  "totalsByCurrency": [
+    {
+      "sellerRef": "seller-recurring-1",
+      "currency": "RUB",
+      "recordKind": "proven_allocation",
+      "count": 1,
+      "totalAmount": {
+        "amount": "12000.00",
+        "currency": "RUB"
+      },
+      "authoritativeCurrentBalance": false
+    },
+    {
+      "sellerRef": "seller-recurring-1",
+      "currency": "RUB",
+      "recordKind": "proven_invoice_history",
+      "count": 1,
+      "totalAmount": {
+        "amount": "12000.00",
+        "currency": "RUB"
+      },
+      "authoritativeCurrentBalance": false
+    },
+    {
+      "sellerRef": "seller-recurring-1",
+      "currency": "RUB",
+      "recordKind": "proven_obligation",
+      "count": 1,
+      "totalAmount": {
+        "amount": "12000.00",
+        "currency": "RUB"
+      },
+      "authoritativeCurrentBalance": false
+    },
+    {
+      "sellerRef": "seller-recurring-1",
+      "currency": "RUB",
+      "recordKind": "proven_payment_evidence",
+      "count": 1,
+      "totalAmount": {
+        "amount": "12000.00",
+        "currency": "RUB"
+      },
+      "authoritativeCurrentBalance": false
+    },
+    {
+      "sellerRef": "seller-recurring-1",
+      "currency": "RUB",
+      "recordKind": "proven_refund_evidence",
+      "count": 1,
+      "totalAmount": {
+        "amount": "3000.00",
+        "currency": "RUB"
+      },
+      "authoritativeCurrentBalance": false
+    },
+    {
+      "sellerRef": "seller-recurring-1",
+      "currency": "USD",
+      "recordKind": "proven_allocation",
+      "count": 1,
+      "totalAmount": {
+        "amount": "250.00",
+        "currency": "USD"
+      },
+      "authoritativeCurrentBalance": false
+    },
+    {
+      "sellerRef": "seller-recurring-1",
+      "currency": "USD",
+      "recordKind": "proven_obligation",
+      "count": 1,
+      "totalAmount": {
+        "amount": "250.00",
+        "currency": "USD"
+      },
+      "authoritativeCurrentBalance": false
+    },
+    {
+      "sellerRef": "seller-recurring-1",
+      "currency": "USD",
+      "recordKind": "proven_payment_evidence",
+      "count": 1,
+      "totalAmount": {
+        "amount": "250.00",
+        "currency": "USD"
+      },
+      "authoritativeCurrentBalance": false
+    }
+  ],
+  "provenance": {
+    "exportedByProcess": "source-host-exporter",
+    "artifactKind": "sanitized_fixture",
+    "externalActivationRequired": true
+  },
+  "records": [
+    {
+      "sourceRecordId": "rec-obl-annual-rub-001",
+      "sourceRecordRevision": 1,
+      "recordType": "annual_funding_with_grants",
+      "eventBusinessDate": "2025-11-01T09:00:00Z",
+      "originalBusinessRefs": {
+        "customerRef": "cust-rec-100",
+        "billingAccountRef": "acct-rec-100",
+        "agreementRef": "agr-annual-100",
+        "subscriptionRef": "sub-annual-100",
+        "obligationRef": "src-obl-annual-rub-001"
+      },
+      "partyRoles": {
+        "subjectRef": "subj-workspace-100",
+        "payerRef": "payer-org-100",
+        "actorRef": "actor-admin-100",
+        "customerRef": "cust-rec-100",
+        "billingAccountRef": "acct-rec-100"
+      },
+      "evidenceRefs": [
+        {
+          "evidenceRef": "ev-rec-price-rub-001",
+          "kind": "price_snapshot",
+          "digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "sanitized": true,
+          "capturedAt": "2025-11-01T09:00:00Z"
+        },
+        {
+          "evidenceRef": "ev-rec-tax-rub-001",
+          "kind": "tax_snapshot",
+          "digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+          "sanitized": true,
+          "capturedAt": "2025-11-01T09:00:00Z"
+        }
+      ],
+      "money": {
+        "amount": "12000.00",
+        "currency": "RUB"
+      },
+      "frozenPriceSnapshot": {
+        "basis": "frozen_historical",
+        "priceVersionRef": "pv-2025-annual-rub",
+        "priceDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "currency": "RUB",
+        "termsRef": "terms-annual-v1",
+        "taxPolicyVersion": "tax-ru-2025-v1",
+        "taxSnapshotDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "unitPrice": {
+          "amount": "12000.00",
+          "currency": "RUB"
+        },
+        "effectiveAt": "2025-01-01T00:00:00Z"
+      },
+      "currentPlanSnapshot": {
+        "priceVersionRef": "pv-2026-annual-rub-updated",
+        "unitPrice": {
+          "amount": "15900.00",
+          "currency": "RUB"
+        },
+        "effectiveAt": "2026-06-01T00:00:00Z"
+      },
+      "attachedGrants": [
+        {
+          "grantRef": "grant-m01",
+          "monthIndex": 1,
+          "unit": "HOST_QUOTA_UNITS",
+          "quantity": "100"
+        },
+        {
+          "grantRef": "grant-m02",
+          "monthIndex": 2,
+          "unit": "HOST_QUOTA_UNITS",
+          "quantity": "100"
+        },
+        {
+          "grantRef": "grant-m03",
+          "monthIndex": 3,
+          "unit": "HOST_QUOTA_UNITS",
+          "quantity": "100"
+        },
+        {
+          "grantRef": "grant-m04",
+          "monthIndex": 4,
+          "unit": "HOST_QUOTA_UNITS",
+          "quantity": "100"
+        },
+        {
+          "grantRef": "grant-m05",
+          "monthIndex": 5,
+          "unit": "HOST_QUOTA_UNITS",
+          "quantity": "100"
+        },
+        {
+          "grantRef": "grant-m06",
+          "monthIndex": 6,
+          "unit": "HOST_QUOTA_UNITS",
+          "quantity": "100"
+        },
+        {
+          "grantRef": "grant-m07",
+          "monthIndex": 7,
+          "unit": "HOST_QUOTA_UNITS",
+          "quantity": "100"
+        },
+        {
+          "grantRef": "grant-m08",
+          "monthIndex": 8,
+          "unit": "HOST_QUOTA_UNITS",
+          "quantity": "100"
+        },
+        {
+          "grantRef": "grant-m09",
+          "monthIndex": 9,
+          "unit": "HOST_QUOTA_UNITS",
+          "quantity": "100"
+        },
+        {
+          "grantRef": "grant-m10",
+          "monthIndex": 10,
+          "unit": "HOST_QUOTA_UNITS",
+          "quantity": "100"
+        },
+        {
+          "grantRef": "grant-m11",
+          "monthIndex": 11,
+          "unit": "HOST_QUOTA_UNITS",
+          "quantity": "100"
+        },
+        {
+          "grantRef": "grant-m12",
+          "monthIndex": 12,
+          "unit": "HOST_QUOTA_UNITS",
+          "quantity": "100"
+        }
+      ]
+    },
+    {
+      "sourceRecordId": "rec-obl-addon-usd-001",
+      "sourceRecordRevision": 1,
+      "recordType": "obligation",
+      "eventBusinessDate": "2025-11-02T10:00:00Z",
+      "originalBusinessRefs": {
+        "customerRef": "cust-rec-100",
+        "billingAccountRef": "acct-rec-100-usd",
+        "agreementRef": "agr-addon-usd-100",
+        "obligationRef": "src-obl-addon-usd-001"
+      },
+      "partyRoles": {
+        "subjectRef": "subj-workspace-100",
+        "payerRef": "payer-org-100",
+        "actorRef": "actor-admin-100",
+        "customerRef": "cust-rec-100",
+        "billingAccountRef": "acct-rec-100-usd"
+      },
+      "evidenceRefs": [
+        {
+          "evidenceRef": "ev-rec-price-usd-001",
+          "kind": "price_snapshot",
+          "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "sanitized": true,
+          "capturedAt": "2025-11-02T10:00:00Z"
+        }
+      ],
+      "money": {
+        "amount": "250.00",
+        "currency": "USD"
+      },
+      "frozenPriceSnapshot": {
+        "basis": "frozen_historical",
+        "priceVersionRef": "pv-2025-addon-usd",
+        "priceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "currency": "USD",
+        "termsRef": "terms-addon-usd-v1",
+        "taxPolicyVersion": "tax-intl-2025-v1",
+        "unitPrice": {
+          "amount": "250.00",
+          "currency": "USD"
+        },
+        "effectiveAt": "2025-01-01T00:00:00Z"
+      }
+    },
+    {
+      "sourceRecordId": "rec-grant-m01",
+      "sourceRecordRevision": 1,
+      "recordType": "periodic_grant",
+      "eventBusinessDate": "2025-11-01T09:05:00Z",
+      "originalBusinessRefs": {
+        "customerRef": "cust-rec-100",
+        "agreementRef": "agr-annual-100",
+        "subscriptionRef": "sub-annual-100"
+      },
+      "partyRoles": {
+        "subjectRef": "subj-workspace-100",
+        "customerRef": "cust-rec-100"
+      },
+      "evidenceRefs": [
+        {
+          "evidenceRef": "ev-rec-grant-m01",
+          "kind": "agreement_reference",
+          "digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+          "sanitized": true
+        }
+      ],
+      "nonMonetaryEntitlement": {
+        "grantRef": "grant-m01",
+        "scheduleTotalGrants": 12,
+        "unit": "HOST_QUOTA_UNITS",
+        "quantity": "100"
+      }
+    },
+    {
+      "sourceRecordId": "rec-inv-hist-001",
+      "sourceRecordRevision": 1,
+      "recordType": "historical_invoice",
+      "eventBusinessDate": "2025-11-01T09:10:00Z",
+      "originalBusinessRefs": {
+        "customerRef": "cust-rec-100",
+        "invoiceRef": "src-inv-hist-001",
+        "originalIssuer": "seller-legal-entity-rec-1",
+        "sourceNumber": "REC-INV-2025-000412"
+      },
+      "partyRoles": {
+        "subjectRef": "subj-workspace-100",
+        "payerRef": "payer-org-100",
+        "customerRef": "cust-rec-100"
+      },
+      "evidenceRefs": [
+        {
+          "evidenceRef": "ev-rec-inv-001",
+          "kind": "invoice_document",
+          "digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+          "sanitized": true,
+          "capturedAt": "2025-11-01T09:10:00Z"
+        }
+      ],
+      "money": {
+        "amount": "12000.00",
+        "currency": "RUB"
+      },
+      "legalDocument": {
+        "originalIssuer": "seller-legal-entity-rec-1",
+        "sourceNumber": "REC-INV-2025-000412",
+        "legalOwnershipConfirmed": false,
+        "issuedAt": "2025-11-01T09:10:00Z",
+        "renderDigest": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+      }
+    },
+    {
+      "sourceRecordId": "rec-alloc-rub-001",
+      "sourceRecordRevision": 1,
+      "recordType": "allocation",
+      "eventBusinessDate": "2025-11-01T09:01:30Z",
+      "originalBusinessRefs": {
+        "customerRef": "cust-rec-100",
+        "billingAccountRef": "acct-rec-100",
+        "obligationRef": "src-obl-annual-rub-001",
+        "paymentRef": "src-pay-rub-001"
+      },
+      "partyRoles": {
+        "subjectRef": "subj-workspace-100",
+        "payerRef": "payer-org-100",
+        "customerRef": "cust-rec-100",
+        "billingAccountRef": "acct-rec-100"
+      },
+      "evidenceRefs": [
+        {
+          "evidenceRef": "ev-rec-alloc-rub-001",
+          "kind": "allocation_lineage",
+          "digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+          "sanitized": true,
+          "capturedAt": "2025-11-01T09:01:30Z"
+        }
+      ],
+      "money": {
+        "amount": "12000.00",
+        "currency": "RUB"
+      }
+    },
+    {
+      "sourceRecordId": "rec-alloc-usd-001",
+      "sourceRecordRevision": 1,
+      "recordType": "allocation",
+      "eventBusinessDate": "2025-11-02T10:01:00Z",
+      "originalBusinessRefs": {
+        "customerRef": "cust-rec-100",
+        "billingAccountRef": "acct-rec-100-usd",
+        "obligationRef": "src-obl-addon-usd-001",
+        "paymentRef": "src-pay-usd-001"
+      },
+      "partyRoles": {
+        "subjectRef": "subj-workspace-100",
+        "payerRef": "payer-org-100",
+        "customerRef": "cust-rec-100",
+        "billingAccountRef": "acct-rec-100-usd"
+      },
+      "evidenceRefs": [
+        {
+          "evidenceRef": "ev-rec-alloc-usd-001",
+          "kind": "allocation_lineage",
+          "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "sanitized": true,
+          "capturedAt": "2025-11-02T10:01:00Z"
+        }
+      ],
+      "money": {
+        "amount": "250.00",
+        "currency": "USD"
+      }
+    },
+    {
+      "sourceRecordId": "rec-pay-rub-001",
+      "sourceRecordRevision": 1,
+      "recordType": "payment_evidence",
+      "eventBusinessDate": "2025-11-01T09:02:00Z",
+      "originalBusinessRefs": {
+        "customerRef": "cust-rec-100",
+        "billingAccountRef": "acct-rec-100",
+        "paymentRef": "src-pay-rub-001"
+      },
+      "partyRoles": {
+        "subjectRef": "subj-workspace-100",
+        "payerRef": "payer-org-100",
+        "actorRef": "actor-finance-100",
+        "customerRef": "cust-rec-100",
+        "billingAccountRef": "acct-rec-100"
+      },
+      "evidenceRefs": [
+        {
+          "evidenceRef": "ev-rec-pay-rub-001",
+          "kind": "payment_provider_fact",
+          "digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+          "sanitized": true,
+          "capturedAt": "2025-11-01T09:02:00Z"
+        }
+      ],
+      "money": {
+        "amount": "12000.00",
+        "currency": "RUB"
+      },
+      "fundingRefs": {
+        "sourceAuthority": "source-gateway-reconciled",
+        "fundingStatus": "captured",
+        "providerAccountRef": "acct-psp-rec-rub-1",
+        "providerOperationRef": "psp-op-rec-rub-0001",
+        "originalOperationRef": "orig-op-rec-rub-0001",
+        "originalExecutorRef": "exec-gateway-alpha",
+        "observedAt": "2025-11-01T09:02:00Z"
+      }
+    },
+    {
+      "sourceRecordId": "rec-pay-usd-001",
+      "sourceRecordRevision": 1,
+      "recordType": "payment_evidence",
+      "eventBusinessDate": "2025-11-02T10:02:00Z",
+      "originalBusinessRefs": {
+        "customerRef": "cust-rec-100",
+        "billingAccountRef": "acct-rec-100-usd",
+        "paymentRef": "src-pay-usd-001"
+      },
+      "partyRoles": {
+        "subjectRef": "subj-workspace-100",
+        "payerRef": "payer-org-100",
+        "actorRef": "actor-finance-100",
+        "customerRef": "cust-rec-100",
+        "billingAccountRef": "acct-rec-100-usd"
+      },
+      "evidenceRefs": [
+        {
+          "evidenceRef": "ev-rec-pay-usd-001",
+          "kind": "payment_provider_fact",
+          "digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "sanitized": true,
+          "capturedAt": "2025-11-02T10:02:00Z"
+        }
+      ],
+      "money": {
+        "amount": "250.00",
+        "currency": "USD"
+      },
+      "fundingRefs": {
+        "sourceAuthority": "source-gateway-reconciled",
+        "fundingStatus": "captured",
+        "providerAccountRef": "acct-psp-rec-usd-1",
+        "providerOperationRef": "psp-op-rec-usd-0001",
+        "originalOperationRef": "orig-op-rec-usd-0001",
+        "originalExecutorRef": "exec-gateway-alpha",
+        "observedAt": "2025-11-02T10:02:00Z"
+      }
+    },
+    {
+      "sourceRecordId": "rec-rfnd-rub-001",
+      "sourceRecordRevision": 1,
+      "recordType": "refund_evidence",
+      "eventBusinessDate": "2025-11-10T12:00:00Z",
+      "originalBusinessRefs": {
+        "customerRef": "cust-rec-100",
+        "billingAccountRef": "acct-rec-100",
+        "originalPaymentRef": "orig-op-rec-rub-0001"
+      },
+      "partyRoles": {
+        "subjectRef": "subj-workspace-100",
+        "payerRef": "payer-org-100",
+        "actorRef": "actor-finance-100",
+        "customerRef": "cust-rec-100",
+        "billingAccountRef": "acct-rec-100"
+      },
+      "evidenceRefs": [
+        {
+          "evidenceRef": "ev-rec-rfnd-rub-001",
+          "kind": "refund_provider_fact",
+          "digest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "sanitized": true,
+          "capturedAt": "2025-11-10T12:00:00Z"
+        }
+      ],
+      "money": {
+        "amount": "3000.00",
+        "currency": "RUB"
+      },
+      "fundingRefs": {
+        "sourceAuthority": "source-gateway-reconciled",
+        "fundingStatus": "refunded",
+        "providerAccountRef": "acct-psp-rec-rub-1",
+        "providerOperationRef": "psp-rfnd-rec-rub-0001",
+        "originalOperationRef": "orig-op-rec-rub-0001",
+        "originalExecutorRef": "exec-gateway-alpha",
+        "observedAt": "2025-11-10T12:00:00Z"
+      }
+    },
+    {
+      "sourceRecordId": "rec-sub-monthly-unanchored",
+      "sourceRecordRevision": 1,
+      "recordType": "mutable_subscription_state",
+      "eventBusinessDate": "2025-08-15T10:00:00Z",
+      "originalBusinessRefs": {
+        "customerRef": "cust-rec-200",
+        "subscriptionRef": "sub-monthly-200"
+      },
+      "partyRoles": {
+        "subjectRef": "subj-user-200",
+        "customerRef": "cust-rec-200"
+      },
+      "evidenceRefs": [],
+      "mutableSubscriptionSummary": {
+        "status": "active",
+        "cadence": "monthly",
+        "startedAt": "2025-01-15T00:00:00Z",
+        "currentPlanRef": "plan-pro-monthly-2026"
+      }
+    },
+    {
+      "sourceRecordId": "rec-obl-current-plan-only",
+      "sourceRecordRevision": 1,
+      "recordType": "obligation",
+      "eventBusinessDate": "2025-09-01T08:00:00Z",
+      "originalBusinessRefs": {
+        "customerRef": "cust-rec-300",
+        "obligationRef": "src-obl-current-plan-only"
+      },
+      "partyRoles": {
+        "subjectRef": "subj-user-300",
+        "customerRef": "cust-rec-300"
+      },
+      "evidenceRefs": [],
+      "money": {
+        "amount": "1990.00",
+        "currency": "RUB"
+      },
+      "currentPlanSnapshot": {
+        "priceVersionRef": "pv-2026-current-only",
+        "unitPrice": {
+          "amount": "1990.00",
+          "currency": "RUB"
+        }
+      }
+    }
+  ],
+  "recordCount": 11,
+  "recordsChecksum": "sha256:19621b54117c459cb2456bbd974a06e1ab9ff2b87c2f1aae47602fbb90db09d3",
+  "artifactDigest": "sha256:81607a12846ec4f3cd2b2a557563be85dfe12367ca209c83295e50a065d77f02"
+}

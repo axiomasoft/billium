@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Billium\Core\Data\Modules;
 
-use Billium\Contracts\Attributes\Api;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Core\Internal\Modules\Shape;
+use Packman\Attributes\Api;
 
 /**
  * What stays served after the module stops accepting new intents. `keeps` narrows the state matrix: a state
  * serves a class only if the descriptor keeps it as well.
  */
-#[Api]
+#[Api(since: '1.0')]
 final readonly class DisablePolicy
 {
     /** @param list<ModuleOperationClass> $keeps */

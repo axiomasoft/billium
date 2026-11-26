@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Billium\Core\Tests\Unit\Runner;
 
-use Billium\Core\Data\Caller;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Enums\LockRank;
-use Billium\Core\Enums\LockScope;
-use Billium\Core\Exceptions\LockOrderViolation;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Data\Runtime\Caller;
+use Billium\Core\Enums\Runner\LockRank;
+use Billium\Core\Enums\Runner\LockScope;
+use Billium\Core\Exceptions\Runner\LockOrderViolation;
 use Billium\Core\Internal\Runner\LockSet;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Group;
@@ -23,7 +23,7 @@ final class LockSetTest extends TestCase
     public function test_rank_values_follow_the_single_global_order(): void
     {
         $values = array_map(static fn (LockRank $rank): int => $rank->value, LockRank::cases());
-        self::assertSame([10, 15, 20, 25, 30, 35, 40, 44, 45, 50, 60, 65, 70, 80, 90, 100, 110, 115, 120, 130], $values);
+        self::assertSame([10, 15, 20, 25, 27, 28, 30, 35, 40, 44, 45, 50, 60, 65, 70, 80, 90, 100, 110, 115, 120, 130], $values);
         $sorted = $values;
         sort($sorted);
         self::assertSame($sorted, $values, 'cases are declared in lock order');
@@ -130,17 +130,17 @@ final class LockSetTest extends TestCase
     public function test_requests_reject_claims_foreign_tables_and_mixed_keys(): void
     {
         foreach ([
-            static fn (): LockRequest => new LockRequest(LockRank::Claim, 'billium_idempotency_receipt', [1]),
-            static fn (): LockRequest => new LockRequest(LockRank::Obligation, 'users', [1]),
-            static fn (): LockRequest => new LockRequest(LockRank::Obligation, 'billium_obligation', []),
-            static fn (): LockRequest => new LockRequest(LockRank::Obligation, 'billium_obligation', [1, 'a']),
-            static fn (): LockRequest => new LockRequest(LockRank::Obligation, 'billium_obligation', [1], keyColumn: 'id; drop'),
-        ] as $build) {
+            ['The claim is an insert, not a row lock', static fn (): LockRequest => new LockRequest(LockRank::Claim, 'billium_idempotency_receipt', [1])],
+            ['Lock target must be a billium_ table', static fn (): LockRequest => new LockRequest(LockRank::Obligation, 'users', [1])],
+            ['A lock request names at least one key', static fn (): LockRequest => new LockRequest(LockRank::Obligation, 'billium_obligation', [])],
+            ['Lock keys are all ids or all nonempty strings', static fn (): LockRequest => new LockRequest(LockRank::Obligation, 'billium_obligation', [1, 'a'])],
+            ['and a plain column', static fn (): LockRequest => new LockRequest(LockRank::Obligation, 'billium_obligation', [1], keyColumn: 'id; drop')],
+        ] as [$reason, $build]) {
             try {
                 $build();
-                self::fail('Expected an invalid lock request');
-            } catch (InvalidArgumentException) {
-                $this->addToAssertionCount(1);
+                self::fail('Expected an invalid lock request: '.$reason);
+            } catch (InvalidArgumentException $error) {
+                self::assertStringContainsString($reason, $error->getMessage());
             }
         }
     }

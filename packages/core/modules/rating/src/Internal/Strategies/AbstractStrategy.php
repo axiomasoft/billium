@@ -16,7 +16,9 @@ use Billium\Rating\Internal\Errors\RatingProblems;
 use Billium\Rating\Internal\Math\Dec;
 use Billium\Rating\Internal\Math\IntegerRounding;
 use InvalidArgumentException;
+use Packman\Attributes\Internal;
 
+#[Internal]
 abstract class AbstractStrategy implements PricingStrategy
 {
     public function version(): int

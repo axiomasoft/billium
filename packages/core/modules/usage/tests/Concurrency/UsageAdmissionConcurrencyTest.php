@@ -6,7 +6,9 @@ namespace Billium\Usage\Tests\Concurrency;
 
 use Billium\Core\Tests\Support\Concurrency\ConcurrencyStand;
 use Billium\Usage\Tests\UsageTestCase;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class UsageAdmissionConcurrencyTest extends UsageTestCase
 {
     public function test_two_worker_smoke(): void

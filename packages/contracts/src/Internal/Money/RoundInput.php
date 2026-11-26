@@ -6,10 +6,12 @@ namespace Billium\Contracts\Internal\Money;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
+use Packman\Attributes\Internal;
 
 /**
  * A validated decimal string of money.round split into its digits and fraction length.
  */
+#[Internal]
 final readonly class RoundInput
 {
     /**

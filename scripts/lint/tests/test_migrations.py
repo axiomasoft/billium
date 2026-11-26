@@ -93,6 +93,21 @@ class MigrationTests(unittest.TestCase):
     def test_comments_are_not_rules(self):
         self.assertEqual([], self.errors('// $t->enum(\n/* CREATE TYPE x AS ENUM; */\n-- ALTER TABLE host ADD CHECK (x);\nCREATE TABLE billium_test (note text);'))
 
+    def test_duplicate_migration_prefixes_are_rejected_across_directories(self):
+        same = [
+            'documents/2026_11_20_000005_add_render_blob_deleting_state.php',
+            'collection/2026_11_20_000005_create_billium_collection_notification_signal_and_intervention_tables.php',
+        ]
+        errors = LINT.duplicate_prefixes(same)
+        self.assertTrue(errors)
+        self.assertIn('2026_11_20_000005', errors[0])
+        self.assertEqual([], LINT.duplicate_prefixes([
+            Path('documents/2026_11_20_000006_add_render_blob_deleting_state.php'),
+            'collection/2026_11_20_000005_create_billium_collection_notification_signal_and_intervention_tables.php',
+        ]))
+        root = LINT.ROOT / 'packages/core/database/migrations'
+        self.assertEqual([], LINT.duplicate_prefixes(sorted(root.rglob('*.php'))))
+
 
 if __name__ == '__main__':
     unittest.main()

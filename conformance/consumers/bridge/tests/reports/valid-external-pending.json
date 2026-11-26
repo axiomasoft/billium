@@ -1,0 +1,309 @@
+{
+  "protocol": "billium.consumer.contract.report.v1",
+  "evidence_class": "consumer-contract",
+  "boundary": "external-runtime",
+  "status": "pending",
+  "pendingReason": "External consumer deployment not reachable in CI environment",
+  "suite": "all",
+  "required": [
+    "CT-01",
+    "CT-02",
+    "CT-03",
+    "CT-04",
+    "CT-05",
+    "CT-06",
+    "CT-07",
+    "CT-08",
+    "CT-09",
+    "CT-10",
+    "CT-11",
+    "CT-12",
+    "CT-13",
+    "CT-14",
+    "CT-15",
+    "CT-16",
+    "CT-17",
+    "CT-18",
+    "CT-19",
+    "CT-20"
+  ],
+  "producer": {
+    "name": "billium-server-loopback-producer",
+    "commitHash": "abcdef1234567890abcdef1234567890abcdef12",
+    "packageHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "specRevision": "2026-10",
+    "specHash": "sha256:eb021eaa43885c32d8acdf0e0e7821ef03c177058e55567e45c33f652808b2a5"
+  },
+  "consumer": {
+    "name": "external-consumer-unconfigured",
+    "available": false,
+    "commitHash": null,
+    "packageHash": null,
+    "specRevision": null,
+    "specHash": null,
+    "deliveryProfile": "external-http"
+  },
+  "runtime": {},
+  "results": [
+    {
+      "id": "CT-01",
+      "status": "pending",
+      "standProfile": "execution",
+      "authoritySource": "remote-billium",
+      "executionProfile": "remote-billium",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": []
+    },
+    {
+      "id": "CT-02",
+      "status": "pending",
+      "standProfile": "ledger-external-executor",
+      "authoritySource": "standalone-billium",
+      "executionProfile": "external-executor",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": []
+    },
+    {
+      "id": "CT-03",
+      "status": "pending",
+      "standProfile": "execution",
+      "authoritySource": "remote-billium",
+      "executionProfile": "remote-billium",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": []
+    },
+    {
+      "id": "CT-04",
+      "status": "pending",
+      "standProfile": "ledger-external-executor",
+      "authoritySource": "standalone-billium",
+      "executionProfile": "external-executor",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": []
+    },
+    {
+      "id": "CT-05",
+      "status": "pending",
+      "standProfile": "execution",
+      "authoritySource": "remote-billium",
+      "executionProfile": "remote-billium",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": []
+    },
+    {
+      "id": "CT-06",
+      "status": "pending",
+      "standProfile": "ledger-external-executor",
+      "authoritySource": "standalone-billium",
+      "executionProfile": "external-executor",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": []
+    },
+    {
+      "id": "CT-07",
+      "status": "pending",
+      "standProfile": "execution",
+      "authoritySource": "remote-billium",
+      "executionProfile": "remote-billium",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": []
+    },
+    {
+      "id": "CT-08",
+      "status": "pending",
+      "standProfile": "ledger-external-executor",
+      "authoritySource": "standalone-billium",
+      "executionProfile": "external-executor",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": []
+    },
+    {
+      "id": "CT-09",
+      "status": "pending",
+      "standProfile": "execution",
+      "authoritySource": "remote-billium",
+      "executionProfile": "remote-billium",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": []
+    },
+    {
+      "id": "CT-10",
+      "status": "pending",
+      "standProfile": "ledger-external-executor",
+      "authoritySource": "standalone-billium",
+      "executionProfile": "external-executor",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": []
+    },
+    {
+      "id": "CT-11",
+      "status": "pending",
+      "standProfile": "execution",
+      "authoritySource": "remote-billium",
+      "executionProfile": "remote-billium",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": []
+    },
+    {
+      "id": "CT-12",
+      "status": "pending",
+      "standProfile": "ledger-external-executor",
+      "authoritySource": "standalone-billium",
+      "executionProfile": "external-executor",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": []
+    },
+    {
+      "id": "CT-13",
+      "status": "pending",
+      "standProfile": "execution",
+      "authoritySource": "remote-billium",
+      "executionProfile": "remote-billium",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": []
+    },
+    {
+      "id": "CT-14",
+      "status": "pending",
+      "standProfile": "ledger-external-executor",
+      "authoritySource": "standalone-billium",
+      "executionProfile": "external-executor",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": []
+    },
+    {
+      "id": "CT-15",
+      "status": "pending",
+      "standProfile": "execution",
+      "authoritySource": "remote-billium",
+      "executionProfile": "remote-billium",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": []
+    },
+    {
+      "id": "CT-16",
+      "status": "pending",
+      "standProfile": "ledger-external-executor",
+      "authoritySource": "standalone-billium",
+      "executionProfile": "external-executor",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": []
+    },
+    {
+      "id": "CT-17",
+      "status": "pending",
+      "standProfile": "execution",
+      "authoritySource": "remote-billium",
+      "executionProfile": "remote-billium",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": []
+    },
+    {
+      "id": "CT-18",
+      "status": "pending",
+      "standProfile": "ledger-external-executor",
+      "authoritySource": "standalone-billium",
+      "executionProfile": "external-executor",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": []
+    },
+    {
+      "id": "CT-19",
+      "status": "pending",
+      "standProfile": "execution",
+      "authoritySource": "remote-billium",
+      "executionProfile": "remote-billium",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": []
+    },
+    {
+      "id": "CT-20",
+      "status": "pending",
+      "standProfile": "ledger-external-executor",
+      "authoritySource": "standalone-billium",
+      "executionProfile": "external-executor",
+      "packageDelivery": "php-contracts-current",
+      "sources": [
+        "D58"
+      ],
+      "transcript": []
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_class": "consumer-contract",
+      "boundary": "external-runtime",
+      "steps": []
+    }
+  ],
+  "hashes": {
+    "spec": "sha256:eb021eaa43885c32d8acdf0e0e7821ef03c177058e55567e45c33f652808b2a5",
+    "fixtures": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "harness": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "packages": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "dependencies": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+  },
+  "paidPspTransactions": 0,
+  "passed": false,
+  "localRequiredSuiteComplete": false,
+  "externalReady": false,
+  "rolloutGatePassed": false,
+  "reportDigest": "sha256:1d4f7dba84873e86275bb3ba149f7a96400f8a0055e9e46a07e0988fa68a9672"
+}

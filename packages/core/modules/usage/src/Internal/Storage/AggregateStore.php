@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace Billium\Usage\Internal\Storage;
 
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Enums\LockRank;
+use Billium\Core\Configuration\BilliumOptions;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Enums\Runner\LockRank;
 use Billium\Usage\Data\AggregateSnapshot;
 use Billium\Usage\Data\AggregationPolicy;
 use Billium\Usage\Data\CompletenessFrontier;
@@ -28,17 +29,20 @@ use Billium\Usage\Internal\Math\Decimal;
 use Billium\Usage\Internal\Reducers\GaugeReducer;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
+use Packman\Attributes\Internal;
 use stdClass;
 
+#[Internal]
 final readonly class AggregateStore
 {
-    public function __construct(private DatabaseManager $databases, private CallerContext $callers) {}
+    /** Rows per multi-row INSERT; keeps the widest membership row well below the PostgreSQL bind parameter limit. */
+    public const int INSERT_CHUNK = 1000;
+
+    public function __construct(private DatabaseManager $databases, private CallerContext $callers, private BilliumOptions $options) {}
 
     public function database(?string $connectionName = null): Connection
     {
-        $name = $connectionName ?? config('billium.connection');
-
-        return $this->databases->connection(is_string($name) ? $name : null);
+        return $this->databases->connection($connectionName ?? $this->options->connection);
     }
 
     public function authorize(WindowSelector $window): void
@@ -147,18 +151,14 @@ final readonly class AggregateStore
 
     public function head(Connection $db, WindowSelector $window): ?stdClass
     {
-        $row = $db->table('billium_usage_aggregate_series_head')->where([
+        return $db->table('billium_usage_aggregate_series_head')->where([
             'seller_ref' => $window->sellerRef, 'environment' => $window->environment, 'series_key' => $window->seriesKey(),
         ])->first();
-
-        return $row;
     }
 
     public function snapshot(Connection $db, string $ref): ?stdClass
     {
-        $row = $db->table('billium_usage_aggregate_snapshot')->where($this->scope())->where('snapshot_ref', $ref)->first();
-
-        return $row;
+        return $db->table('billium_usage_aggregate_snapshot')->where($this->scope())->where('snapshot_ref', $ref)->first();
     }
 
     public function headSnapshot(Connection $db, stdClass $head): ?stdClass
@@ -167,9 +167,7 @@ final readonly class AggregateStore
             return null;
         }
 
-        $row = $db->table('billium_usage_aggregate_snapshot')->where($this->scope())->where('snapshot_digest', $head->head_digest)->first();
-
-        return $row;
+        return $db->table('billium_usage_aggregate_snapshot')->where($this->scope())->where('snapshot_digest', $head->head_digest)->first();
     }
 
     public function reproducibility(Connection $db, stdClass $snapshot): Reproducibility
@@ -204,6 +202,13 @@ final readonly class AggregateStore
         return $members;
     }
 
+    public function hasMember(Connection $db, stdClass $snapshot, string $factId, int $factRevision): bool
+    {
+        return $db->table('billium_usage_aggregate_member')->where([
+            'snapshot_id' => $snapshot->id, 'fact_id' => $factId, 'fact_revision' => $factRevision,
+        ])->exists();
+    }
+
     public function window(stdClass $snapshot): WindowSelector
     {
         return new WindowSelector(
@@ -216,18 +221,7 @@ final readonly class AggregateStore
 
     public function hydrate(Connection $db, stdClass $snapshot): AggregateSnapshot
     {
-        $frontier = [];
-        foreach (AggregationRows::items($snapshot->completeness_frontier) as $raw) {
-            $item = AggregationRows::map($raw);
-            $frontier[] = new SourceCompleteness(
-                sourceRef: AggregationRows::text($item['sourceRef']), evidenceSeq: AggregationRows::integer($item['evidenceSeq']),
-                status: CompletenessStatus::from(AggregationRows::text($item['status'])),
-                rangeStartMicros: AggregationRows::integer($item['rangeStartMicros']), rangeEndMicros: AggregationRows::integer($item['rangeEndMicros']),
-                watermarkMicros: AggregationRows::integer($item['watermarkMicros']),
-                repairOrReplayRef: $item['repairOrReplayRef'] === null ? null : AggregationRows::text($item['repairOrReplayRef']),
-                evidenceDigest: AggregationRows::text($item['evidenceDigest']),
-            );
-        }
+        $frontier = array_map(AggregationRows::completeness(...), AggregationRows::items($snapshot->completeness_frontier));
         $scale = AggregationRows::integer($snapshot->quantity_scale);
 
         return new AggregateSnapshot(
@@ -289,18 +283,28 @@ final readonly class AggregateStore
             'completeness_frontier_digest' => $snapshot->completeness->digest, 'reduction_evidence' => CanonicalJson::encode((object) $reduction),
             'ingest_frontier_seq' => $effective === [] ? 0 : max(array_map(static fn (FactRevision $f): int => $f->ingestSeq, $effective)),
         ]);
+        $members = [];
+        $distinct = [];
         foreach ($effective as $fact) {
-            $db->table('billium_usage_aggregate_member')->insert([
+            $members[] = [
                 'snapshot_id' => $id, 'fact_id' => $fact->factId, 'fact_revision' => $fact->factRevision,
                 'fact_digest' => $fact->factDigest, 'source_ref' => $fact->sourceRef, 'source_sequence' => $fact->sourceSequence,
                 'observed_at_micros' => $fact->observedAtMicros, 'quantity_unscaled' => $fact->quantityUnscaled,
-            ]);
+            ];
             foreach (array_unique($fact->memberIds) as $member) {
-                $db->table('billium_usage_aggregate_distinct_member')->insert([
+                $distinct[] = [
                     'snapshot_id' => $id, 'member_id' => $member, 'identity_key_version' => $policy->identityKeyVersion,
                     'identity_namespace' => $policy->identityNamespace, 'contributing_fact_id' => $fact->factId,
-                ]);
+                ];
             }
+        }
+        // Membership grows with the window; one multi-row statement per chunk replaces a round trip per fact and member.
+        // Every fact row precedes the distinct rows that reference it.
+        foreach (array_chunk($members, self::INSERT_CHUNK) as $chunk) {
+            $db->table('billium_usage_aggregate_member')->insert($chunk);
+        }
+        foreach (array_chunk($distinct, self::INSERT_CHUNK) as $chunk) {
+            $db->table('billium_usage_aggregate_distinct_member')->insert($chunk);
         }
         $changed = $db->table('billium_usage_aggregate_series_head')->where([
             'seller_ref' => $window->sellerRef, 'environment' => $window->environment, 'series_key' => $window->seriesKey(),

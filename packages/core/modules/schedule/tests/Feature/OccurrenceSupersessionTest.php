@@ -8,7 +8,9 @@ use Billium\Schedule\Enums\OccurrenceState;
 use Billium\Schedule\Tests\OccurrenceTestCase;
 use Billium\Schedule\Tests\Support\Terms;
 use DateTimeImmutable;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class OccurrenceSupersessionTest extends OccurrenceTestCase
 {
     public function test_planned_replacement_and_return_to_original_use_a_new_incarnation(): void

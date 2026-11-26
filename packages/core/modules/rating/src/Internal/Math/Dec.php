@@ -6,7 +6,9 @@ namespace Billium\Rating\Internal\Math;
 
 use InvalidArgumentException;
 use LogicException;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final readonly class Dec
 {
     /** @param numeric-string $unscaled */

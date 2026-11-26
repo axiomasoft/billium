@@ -34,11 +34,13 @@ final class ConcurrencyStand
         $children = [];
         $deadline = microtime(true) + $timeoutSeconds;
         try {
+            $environment = getenv();
+            $environment['DB_DATABASE'] = TestEnvironment::databaseName();
             for ($index = 0; $index < $workers; $index++) {
                 $process = proc_open([
                     PHP_BINARY, $root.'/packages/core/tests/Support/Concurrency/bin/worker.php',
                     $scenario, (string) $index, $arguments, (string) $key,
-                ], [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, $root);
+                ], [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, $root, $environment);
                 if ($process === false) {
                     throw new RuntimeException("Unable to start worker {$index}");
                 }
@@ -111,19 +113,23 @@ final class ConcurrencyStand
 
             return $results;
         } finally {
-            // Kill before releasing a failed barrier so a timed-out run cannot execute later.
-            // A killed PHP process alone does not interrupt a PostgreSQL query such as pg_sleep.
+            // Kill before releasing a failed barrier so a timed-out run cannot execute later. Kill the PHP workers
+            // before their backends: Laravel reconnects after a lost connection and would rerun the statement.
+            foreach ($children as $child) {
+                if (proc_get_status($child['process'])['running']) {
+                    proc_terminate($child['process'], 9);
+                }
+            }
+            // A killed PHP process alone does not interrupt a PostgreSQL query such as pg_sleep; wait until each
+            // backend is gone so no statement of the timed-out run is still executing when the caller resumes.
             $cancel = $barrier->prepare(<<<'SQL'
-                SELECT pg_terminate_backend(pid) FROM pg_locks
+                SELECT pg_terminate_backend(pid, 5000) FROM pg_locks
                 WHERE locktype = 'advisory' AND classid = 0 AND objid = :key AND objsubid = 1
                   AND database = (SELECT oid FROM pg_database WHERE datname = current_database())
                   AND mode = 'ShareLock'
                 SQL);
             $cancel->execute(['key' => $key]);
             foreach ($children as $child) {
-                if (proc_get_status($child['process'])['running']) {
-                    proc_terminate($child['process'], 9);
-                }
                 fclose($child['pipes'][1]);
                 fclose($child['pipes'][2]);
                 proc_close($child['process']);

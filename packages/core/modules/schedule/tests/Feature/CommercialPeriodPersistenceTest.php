@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Billium\Schedule\Tests\Feature;
 
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Data\Caller;
+use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Tests\Support\FixtureValues;
 use Billium\Schedule\Contracts\CommercialPeriods;
 use Billium\Schedule\Contracts\IntervalResolver;
@@ -16,7 +16,9 @@ use Billium\Schedule\Tests\ScheduleTestCase;
 use Billium\Schedule\Tests\Support\Terms;
 use DateTimeImmutable;
 use LogicException;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('pg')]
 final class CommercialPeriodPersistenceTest extends ScheduleTestCase
 {
     public function test_persisted_quote_replay_and_commit_never_recalculate_boundaries(): void

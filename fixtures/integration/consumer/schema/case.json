@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:conformance:consumer-bridge-case:v1",
+  "title": "Billium reusable consumer/bridge contract fixture v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol",
+    "id",
+    "title",
+    "standProfile",
+    "authoritySource",
+    "executionProfile",
+    "packageDelivery",
+    "sources",
+    "steps"
+  ],
+  "properties": {
+    "protocol": {
+      "const": "billium.consumer.bridge.case.v1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^CT-(0[1-9]|1[0-9]|20)$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 5
+    },
+    "standProfile": {
+      "enum": ["execution", "ledger-external-executor"]
+    },
+    "authoritySource": {
+      "enum": ["remote-billium", "standalone-billium", "billium"]
+    },
+    "executionProfile": {
+      "enum": ["remote-billium", "external-executor"]
+    },
+    "packageDelivery": {
+      "enum": ["php-contracts-current", "php-contracts-archive-matrix"]
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^(D[0-9]+|INV-[0-9]+|REQ-[A-Z]+-[0-9]+|PB-[0-9]+|PF-[0-9]+|COV-AC-[0-9]+|ACC-[A-Z]+-[0-9]+)$"
+      }
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "target", "op", "expect"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "target": { "enum": ["consumer", "stand"] },
+          "op": { "type": "string", "minLength": 1 },
+          "args": { "type": "object" },
+          "expect": { "type": "object" }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "not": {
+        "properties": {
+          "authoritySource": { "enum": ["php-contracts-current", "php-contracts-archive-matrix"] }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "id": "import/external-import-valid-unanchored",
+  "spec_refs": [
+    "BC-ENV-01",
+    "BC-ENV-08",
+    "BC-ID-12",
+    "D71"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"batchId\":\"batch-2026-10-001\",\"digest\":\"sha256:484c3ab93fbedca1ccc07728ccb816120e213aa59c69f03d6c0da00d8163cd00\",\"environment\":\"test\",\"eventBusinessDate\":\"2026-06-01T00:00:00Z\",\"evidenceRefs\":[],\"exportCutoff\":\"2026-10-15T00:00:00Z\",\"importPolicyVersion\":\"import-policy-v1\",\"installationRef\":\"inst-1\",\"manifestDigest\":\"sha256:edea31f96db07766db26f97bd9c7a2f52d1f8f597ded7ab4155546a925ff5ff7\",\"missingEvidence\":[\"frozenPriceSnapshot\",\"money\",\"fundingRefs\"],\"originalBusinessRefs\":{\"customerRef\":\"cust-20\",\"subscriptionRef\":\"sub-2001\"},\"recordKind\":\"unanchored_evidence\",\"schema\":\"external.import.v1\",\"sellerRef\":\"seller-1\",\"sourceBook\":\"book-primary\",\"sourceExportRevision\":1,\"sourceFactRef\":\"import:c53986f33157184d525a839466eabb80d6e2614aa24658c9762b9442ab533506\",\"sourceInstallation\":\"src-inst-eu-1\",\"sourceRecordId\":\"ent-2001\",\"sourceRecordRevision\":1,\"sourceSystem\":\"host-commerce/billing-export\"}"
+      }
+    },
+    {
+      "op": "envelope.roundtrip",
+      "args": {
+        "json_text": "{\"batchId\":\"batch-2026-10-001\",\"digest\":\"sha256:484c3ab93fbedca1ccc07728ccb816120e213aa59c69f03d6c0da00d8163cd00\",\"environment\":\"test\",\"eventBusinessDate\":\"2026-06-01T00:00:00Z\",\"evidenceRefs\":[],\"exportCutoff\":\"2026-10-15T00:00:00Z\",\"importPolicyVersion\":\"import-policy-v1\",\"installationRef\":\"inst-1\",\"manifestDigest\":\"sha256:edea31f96db07766db26f97bd9c7a2f52d1f8f597ded7ab4155546a925ff5ff7\",\"missingEvidence\":[\"frozenPriceSnapshot\",\"money\",\"fundingRefs\"],\"originalBusinessRefs\":{\"customerRef\":\"cust-20\",\"subscriptionRef\":\"sub-2001\"},\"recordKind\":\"unanchored_evidence\",\"schema\":\"external.import.v1\",\"sellerRef\":\"seller-1\",\"sourceBook\":\"book-primary\",\"sourceExportRevision\":1,\"sourceFactRef\":\"import:c53986f33157184d525a839466eabb80d6e2614aa24658c9762b9442ab533506\",\"sourceInstallation\":\"src-inst-eu-1\",\"sourceRecordId\":\"ent-2001\",\"sourceRecordRevision\":1,\"sourceSystem\":\"host-commerce/billing-export\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "external.import.v1",
+        "digest": "sha256:484c3ab93fbedca1ccc07728ccb816120e213aa59c69f03d6c0da00d8163cd00"
+      }
+    },
+    {
+      "ok": {
+        "text": "{\"batchId\":\"batch-2026-10-001\",\"digest\":\"sha256:484c3ab93fbedca1ccc07728ccb816120e213aa59c69f03d6c0da00d8163cd00\",\"environment\":\"test\",\"eventBusinessDate\":\"2026-06-01T00:00:00Z\",\"evidenceRefs\":[],\"exportCutoff\":\"2026-10-15T00:00:00Z\",\"importPolicyVersion\":\"import-policy-v1\",\"installationRef\":\"inst-1\",\"manifestDigest\":\"sha256:edea31f96db07766db26f97bd9c7a2f52d1f8f597ded7ab4155546a925ff5ff7\",\"missingEvidence\":[\"frozenPriceSnapshot\",\"money\",\"fundingRefs\"],\"originalBusinessRefs\":{\"customerRef\":\"cust-20\",\"subscriptionRef\":\"sub-2001\"},\"recordKind\":\"unanchored_evidence\",\"schema\":\"external.import.v1\",\"sellerRef\":\"seller-1\",\"sourceBook\":\"book-primary\",\"sourceExportRevision\":1,\"sourceFactRef\":\"import:c53986f33157184d525a839466eabb80d6e2614aa24658c9762b9442ab533506\",\"sourceInstallation\":\"src-inst-eu-1\",\"sourceRecordId\":\"ent-2001\",\"sourceRecordRevision\":1,\"sourceSystem\":\"host-commerce/billing-export\"}"
+      }
+    }
+  ]
+}

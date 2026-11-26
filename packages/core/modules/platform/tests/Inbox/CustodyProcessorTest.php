@@ -6,11 +6,13 @@ namespace Billium\Platform\Tests\Inbox;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\Caller;
-use Billium\Core\Enums\FinancialMode;
+use Billium\Core\Configuration\BilliumOptions;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Data\Runtime\Caller;
+use Billium\Core\Enums\Runtime\FinancialMode;
+use Billium\Core\Tests\Support\SimulatedFinancialAuthorityEvidence;
 use Billium\Core\Tests\TestEnvironment;
-use Billium\Platform\Contracts\CustodyHandler;
+use Billium\Platform\Contracts\Inbox\CustodyHandler;
 use Billium\Platform\Data\Inbox\CustodyDisposition;
 use Billium\Platform\Data\Inbox\CustodyResult;
 use Billium\Platform\Data\Inbox\HandlerOutcome;
@@ -23,6 +25,7 @@ use RuntimeException;
 /** Custody order, parked, recovery and handler dispositions of one source partition (PF-12, PF-05, REQ-FAIL-12/13/23). */
 #[Group('PF-12')]
 #[Group('PF-05')]
+#[Group('pg')]
 final class CustodyProcessorTest extends InboxTestCase
 {
     public function test_first_delivery_opens_the_partition_and_applies_once(): void
@@ -39,6 +42,19 @@ final class CustodyProcessorTest extends InboxTestCase
         self::assertNotNull($row['applied_at']);
         $partition = $this->partitionRow(self::integer($row['partition_id']));
         self::assertSame([1, 1, 'active', 'L1', 1], [$partition['custody_sequence'], $partition['accounted_sequence'], $partition['state'], $partition['source_lineage'], $partition['generation']]);
+    }
+
+    public function test_a_digest_with_a_trailing_newline_is_refused_before_custody(): void
+    {
+        $envelope = $this->envelope(1);
+        $envelope->contentDigest = self::text($envelope->contentDigest)."\n";
+        try {
+            $this->custody($envelope, new JournalHandler);
+            self::fail('A malformed contentDigest must be refused as invalid input');
+        } catch (ProblemException $error) {
+            self::assertSame(ProblemCode::ValidationInvalid, $error->problem);
+        }
+        self::assertSame(0, $this->rows('billium_inbox_message'));
     }
 
     public function test_a_duplicate_returns_the_same_result_ref_without_a_second_effect(): void
@@ -322,6 +338,7 @@ final class CustodyProcessorTest extends InboxTestCase
     {
         $id = $this->seedPartition(10);
         $handler = new JournalHandler;
+        SimulatedFinancialAuthorityEvidence::install($this->application())->issueTransition('seal', 'seal-1', [1]);
         $this->installation()->seal('seal-1', 1);
 
         $received = $this->custody($this->envelope(11), $handler, FinancialMode::RawCustody);
@@ -421,6 +438,7 @@ final class CustodyProcessorTest extends InboxTestCase
     public function test_a_retry_rejects_ungranted_sources_before_the_retry_budget_check(): void
     {
         config(['billium.inbox.retry_budget' => 1]);
+        $this->application()->forgetInstance(BilliumOptions::class);
         $id = $this->seedPartition(10);
         $handler = new JournalHandler(['evt-L1-11' => HandlerOutcome::parkedDependency('payment', 'charge-1')]);
         $parked = $this->custody($this->envelope(11), $handler);

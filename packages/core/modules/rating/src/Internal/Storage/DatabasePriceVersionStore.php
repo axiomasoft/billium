@@ -6,14 +6,15 @@ namespace Billium\Rating\Internal\Storage;
 
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
-use Billium\Core\Contracts\CallerContext;
-use Billium\Core\Contracts\OperationRunner;
-use Billium\Core\Contracts\TransactionContext;
-use Billium\Core\Data\LockRequest;
-use Billium\Core\Data\OperationSpec;
-use Billium\Core\Enums\FinancialMode;
-use Billium\Core\Enums\LockRank;
+use Billium\Core\Configuration\BilliumOptions;
+use Billium\Core\Contracts\Runner\OperationRunner;
+use Billium\Core\Contracts\Runner\TransactionContext;
+use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Data\Runner\LockRequest;
+use Billium\Core\Data\Runner\OperationSpec;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
+use Billium\Core\Enums\Runner\LockRank;
+use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Rating\Contracts\PriceVersionStore;
 use Billium\Rating\Contracts\PricingStrategyRegistry;
 use Billium\Rating\Contracts\TaxSnapshotStore;
@@ -36,10 +37,12 @@ use Billium\Rating\Internal\Canonical\CanonicalJson;
 use Billium\Rating\Internal\Tax\TaxCalculator;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
+use Packman\Attributes\Internal;
 
+#[Internal]
 final readonly class DatabasePriceVersionStore implements PriceVersionStore, TaxSnapshotStore
 {
-    public function __construct(private DatabaseManager $databases, private OperationRunner $runner, private CallerContext $callers, private PricingStrategyRegistry $registry) {}
+    public function __construct(private DatabaseManager $databases, private OperationRunner $runner, private CallerContext $callers, private PricingStrategyRegistry $registry, private BilliumOptions $options) {}
 
     public function freeze(TaxSnapshot $snapshot, string $commandKey): void
     {
@@ -132,7 +135,7 @@ final readonly class DatabasePriceVersionStore implements PriceVersionStore, Tax
     public function find(string $priceRef, int $version): ?PriceVersion
     {
         $caller = $this->callers->current();
-        $name = config('billium.connection');
+        $name = $this->options->connection;
         $db = $this->databases->connection(is_string($name) ? $name : null);
         $row = $db->table('billium_rating_price_version')->where(['seller_ref' => $caller->sellerRef, 'environment' => $caller->environment, 'price_ref' => $priceRef, 'version' => $version])->first();
         if ($row === null) {

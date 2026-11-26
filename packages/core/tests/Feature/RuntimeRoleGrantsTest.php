@@ -14,6 +14,7 @@ use PHPUnit\Framework\Attributes\Group;
 use RuntimeException;
 
 #[Group('D60')]
+#[Group('pg')]
 final class RuntimeRoleGrantsTest extends DatabaseTestCase
 {
     protected function setUp(): void
@@ -127,15 +128,26 @@ final class RuntimeRoleGrantsTest extends DatabaseTestCase
     {
         $runtime = TestEnvironment::pdo();
         $owner = TestEnvironment::pdo(owner: true);
+        TestEnvironment::assertRuntimeSafe($runtime);
+        $column = $owner->prepare(<<<'SQL'
+            SELECT pg_catalog.quote_ident(attname)
+            FROM pg_catalog.pg_attribute
+            WHERE attrelid = pg_catalog.to_regclass(:relation) AND attnum > 0 AND NOT attisdropped
+            ORDER BY attnum LIMIT 1
+            SQL);
         foreach (MigrationTables::ownership(dirname(__DIR__, 2).'/database/migrations') as $table => $module) {
             if ($module !== 'ledger') {
                 continue;
             }
+            $relation = 'public."'.str_replace('"', '""', $table).'"';
+            $column->execute(['relation' => $relation]);
+            $identifier = $column->fetchColumn();
+            self::assertIsString($identifier, $relation);
             foreach ([
-                'INSERT INTO public.'.$table.' DEFAULT VALUES',
-                'UPDATE public.'.$table.' SET seller_ref=seller_ref WHERE false',
-                'DELETE FROM public.'.$table.' WHERE false',
-                'TRUNCATE public.'.$table.' CASCADE',
+                'INSERT INTO '.$relation.' DEFAULT VALUES',
+                'UPDATE '.$relation.' SET '.$identifier.' = DEFAULT WHERE false',
+                'DELETE FROM '.$relation.' WHERE false',
+                'TRUNCATE '.$relation.' CASCADE',
             ] as $sql) {
                 $this->assertPermissionDenied($runtime, $sql);
             }
