@@ -345,7 +345,8 @@ final readonly class LoopbackHost implements Authenticator, AuthorizationVerdict
             throw new LogicException('Expected a durably admitted attempt');
         }
         $worker = $app->make(AttemptWorker::class);
-        $lease = new DateTimeImmutable($mode === ResponseMode::AcceptedThenTimeout->value ? '+1 second' : '+1 minute');
+        // Recovery waits for the retry due time. Keep the worker lease valid while it records the timeout.
+        $lease = new DateTimeImmutable('+1 minute');
         $outcome = match ($action) {
             'dispatch' => $worker->dispatch(self::scope(), $attempt, 'http-worker', $lease),
             'lookup' => $worker->recover(self::scope(), $attempt, 'http-recovery', $lease),
