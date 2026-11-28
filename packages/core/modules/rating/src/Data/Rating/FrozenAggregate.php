@@ -27,6 +27,7 @@ final readonly class FrozenAggregate
         public int $quantityScale,
         public array $snapshot,
         public ?array $quantitySnapshot = null,
+        public ?string $unit = null,
     ) {
         $this->metricVersion = (string) $metricVersion;
     }

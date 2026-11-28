@@ -161,7 +161,7 @@ final class P4BootstrapTest extends ModuleTestCase
     public function test_php_protocol_reaches_rating_quote_after_runtime_module_selection(): void
     {
         $root = dirname(__DIR__, 5);
-        $fixture = json_decode(file_get_contents($root.'/fixtures/vectors/rating/pipeline/graduated-original.json'), true, 128, JSON_THROW_ON_ERROR);
+        $fixture = json_decode(file_get_contents($root.'/fixtures/vectors/rating/pipeline/graduated-verified-unit.json'), true, 128, JSON_THROW_ON_ERROR);
         $process = new Process(command: [PHP_BINARY, 'conformance/adapters/php/bin/adapter.php'], cwd: $root,
             env: TestEnvironment::suiteLeaseEnvironment());
         $messages = [

@@ -44,7 +44,7 @@ final readonly class DatabaseAggregationQueries implements AggregationQueries
             'effectiveRevisions' => $snapshot->effectiveRevisions, 'distinctCount' => $snapshot->distinctCount,
             'memberSetDigest' => $snapshot->memberSetDigest, 'reproducibility' => $snapshot->reproducibility->value,
             'completenessFrontier' => $snapshot->completeness->evidence, 'completenessFrontierDigest' => $snapshot->completeness->digest,
-            'reductionEvidence' => AggregationRows::map($row->reduction_evidence),
+            'reductionEvidence' => AggregationRows::map($row->reduction_evidence), 'unit' => $snapshot->unit,
         ];
     }
 

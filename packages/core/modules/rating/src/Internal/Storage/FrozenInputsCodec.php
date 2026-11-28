@@ -123,6 +123,7 @@ final class FrozenInputsCodec
             quantityScale: RatingRows::integer($d['quantityScale'] ?? null),
             snapshot: RatingRows::map($d['snapshot'] ?? null),
             quantitySnapshot: isset($d['quantitySnapshot']) ? RatingRows::map($d['quantitySnapshot']) : null,
+            unit: self::nullableText($d['unit'] ?? null),
         );
     }
 

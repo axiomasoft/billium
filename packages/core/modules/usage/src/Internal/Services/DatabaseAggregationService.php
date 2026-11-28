@@ -11,6 +11,7 @@ use Billium\Core\Data\Runner\OperationSpec;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Usage\Contracts\AggregationService;
+use Billium\Usage\Data\AggregateSnapshot;
 use Billium\Usage\Data\FreezeAggregate;
 use Billium\Usage\Data\FreezeReceipt;
 use Billium\Usage\Enums\LatePolicy;
@@ -52,10 +53,12 @@ final readonly class DatabaseAggregationService implements AggregationService
                 $this->runner->assertCurrent(context: $context, moduleId: 'usage');
                 $db = $this->store->database($context->connectionName());
                 $policy = $this->store->policy(db: $db, window: $window);
-                if ($this->facts->metricDefinitionDigest(
+                $unit = $this->facts->metricUnit(
                     sellerRef: $window->sellerRef, metricRef: $window->metricRef,
-                    metricVersion: $window->metricVersion, connectionName: $context->connectionName(),
-                ) !== $policy->metricDefinitionDigest) {
+                    metricVersion: $window->metricVersion, expectedDefinitionDigest: $policy->metricDefinitionDigest,
+                    connectionName: $context->connectionName(),
+                );
+                if ($unit === null) {
                     throw UsageProblems::error('snapshot_digest_mismatch');
                 }
                 $contract = $this->store->contract(db: $db, window: $window, policy: $policy);
@@ -98,9 +101,29 @@ final readonly class DatabaseAggregationService implements AggregationService
                 $this->store->insert(
                     context: $context, snapshot: $snapshot, policy: $policy,
                     effective: $this->builder->effective(policy: $policy, window: $window, revisions: $revisions), head: $head,
+                    unit: $unit,
                 );
 
-                return FreezeReceipt::snapshot(snapshot: $snapshot, created: true);
+                return FreezeReceipt::snapshot(
+                    snapshot: new AggregateSnapshot(
+                        snapshotRef: $snapshot->snapshotRef,
+                        snapshotDigest: $snapshot->snapshotDigest,
+                        snapshotRevision: $snapshot->snapshotRevision,
+                        predecessorDigest: $snapshot->predecessorDigest,
+                        window: $snapshot->window,
+                        algorithmId: $snapshot->algorithmId,
+                        algorithmVersion: $snapshot->algorithmVersion,
+                        quantity: $snapshot->quantity,
+                        quantityScale: $snapshot->quantityScale,
+                        effectiveRevisions: $snapshot->effectiveRevisions,
+                        distinctCount: $snapshot->distinctCount,
+                        memberSetDigest: $snapshot->memberSetDigest,
+                        reproducibility: $snapshot->reproducibility,
+                        completeness: $snapshot->completeness,
+                        unit: $unit,
+                    ),
+                    created: true,
+                );
             },
         );
         $outcome->orThrow();

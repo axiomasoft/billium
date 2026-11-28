@@ -30,8 +30,8 @@ final class UsageAdmissionProviderTest extends TestCase
         self::assertSame(['platform', 'ledger'], $app->make(\Illuminate\Contracts\Config\Repository::class)->get('billium.modules.enabled'));
         $descriptor = ModuleCatalog::packaged()->descriptor('usage');
         self::assertNotNull($descriptor);
-        self::assertSame(5, $descriptor->currentSchemaVersion);
-        self::assertCount(5, $descriptor->migrationIdentities);
+        self::assertSame(7, $descriptor->currentSchemaVersion);
+        self::assertCount(7, $descriptor->migrationIdentities);
         Container::setInstance();
     }
 

@@ -26,5 +26,6 @@ final readonly class AggregateSnapshot
         public ?string $memberSetDigest,
         public Reproducibility $reproducibility,
         public CompletenessFrontier $completeness,
+        public ?string $unit = null,
     ) {}
 }

@@ -25,4 +25,9 @@ final class ReplayFactSource implements EffectiveFactSource
     {
         return $this->metricDigest;
     }
+
+    public function metricUnit(string $sellerRef, string $metricRef, int|string $metricVersion, string $expectedDefinitionDigest, string $connectionName): ?string
+    {
+        return $expectedDefinitionDigest === $this->metricDigest ? 'call' : null;
+    }
 }

@@ -13,6 +13,7 @@ use Billium\Rating\Data\Rating\RatingHold;
 use Billium\Rating\Enums\HoldReason;
 use Billium\Rating\Internal\Canonical\CanonicalJson;
 use Billium\Rating\Internal\Pipeline\FixedOccurrenceInput;
+use Billium\Rating\Internal\Pipeline\MeteredUnitGuard;
 use Billium\Rating\Internal\Pipeline\RatingComputation;
 use Billium\Rating\Internal\Storage\RatingRows;
 use Billium\Usage\Contracts\AggregationLocks;
@@ -97,7 +98,8 @@ final readonly class UsageAggregateAdapter
                 ref: new AggregateSnapshotRef(snapshotRef: $aggregate->snapshotRef, snapshotDigest: $aggregate->snapshotDigest,
                     quantity: $aggregate->quantity, quantityScale: $aggregate->quantityScale,
                     window: $this->window(sellerRef: $inputs->sellerRef, environment: $inputs->environment, aggregate: $aggregate),
-                    frontierDigest: $aggregate->completenessFrontierDigest));
+                    frontierDigest: $aggregate->completenessFrontierDigest,
+                    unit: MeteredUnitGuard::resolveAndVerifyFrozenUnit($aggregate)));
         }
     }
 

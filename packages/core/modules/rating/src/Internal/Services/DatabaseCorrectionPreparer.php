@@ -141,12 +141,19 @@ final readonly class DatabaseCorrectionPreparer
                     return $held;
                 }
             }
+            $unit = $snapshot['unit'] ?? null;
+            if (! is_string($unit) || $unit === '') {
+                return new RatingHold(reason: HoldReason::AggregateNotReproducible, repairOrReplayRefs: [$aggregate->snapshotRef], detail: 'aggregate unit unverified');
+            }
+            if ($unit !== $retained->prices[$i]->snapshot->unit) {
+                RatingComputation::refuse('unit_mismatch');
+            }
             $aggregates[] = new FrozenAggregate(componentRef: $aggregate->componentRef, metricRef: $aggregate->metricRef,
                 metricVersion: $aggregate->metricVersion, snapshotRef: RatingRows::text($snapshot['snapshotRef'] ?? null),
                 snapshotDigest: RatingRows::text($snapshot['snapshotDigest'] ?? null), windowStartMicros: $aggregate->windowStartMicros,
                 windowEndMicros: $aggregate->windowEndMicros, completenessFrontierDigest: RatingRows::text($snapshot['completenessFrontierDigest'] ?? null),
                 quantity: RatingRows::text($snapshot['quantity'] ?? null), quantityScale: RatingRows::integer($snapshot['quantityScale'] ?? null), snapshot: $snapshot,
-                quantitySnapshot: $aggregate->quantitySnapshot);
+                quantitySnapshot: $aggregate->quantitySnapshot, unit: $unit);
         }
         $sourceDigests = array_map(static fn (FrozenAggregate $a): string => $a->snapshotDigest, $aggregates);
         $oldTaxes = array_map(static fn (FrozenTax $tax): TaxSnapshot => $tax->snapshot, $originalInputs->taxes);

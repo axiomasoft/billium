@@ -239,7 +239,34 @@ final readonly class AggregateStore
                 contractRef: AggregationRows::text($snapshot->finality_contract_ref),
                 contractVersion: AggregationRows::integer($snapshot->finality_contract_version), evidence: $frontier,
             ),
+            unit: $this->resolveUnitForRow(db: $db, row: $snapshot),
         );
+    }
+
+    private function resolveUnitForRow(Connection $db, stdClass $row): ?string
+    {
+        $stored = $row->metric_unit ?? null;
+        if (is_string($stored) && $stored !== '') {
+            return $stored;
+        }
+        $verified = $db->selectOne(<<<'SQL'
+            SELECT m.unit
+            FROM public.billium_usage_aggregation_policy p
+            JOIN public.billium_usage_metric m
+              ON m.seller_ref     = p.seller_ref
+             AND m.environment    = p.environment
+             AND m.metric_ref     = p.metric_ref
+             AND m.metric_version = p.metric_version
+            WHERE p.seller_ref     = ?
+              AND p.environment    = ?
+              AND p.metric_ref     = ?
+              AND p.metric_version = ?
+              AND p.metric_definition_digest = m.digest
+            SQL, [$row->seller_ref, $row->environment, $row->metric_ref, $row->metric_version]);
+
+        return is_object($verified) && is_string($verified->unit ?? null) && $verified->unit !== ''
+            ? $verified->unit
+            : null;
     }
 
     /** @param list<FactRevision> $revisions */
@@ -257,7 +284,7 @@ final readonly class AggregateStore
     }
 
     /** @param list<FactRevision> $effective */
-    public function insert(TransactionContext $context, AggregateSnapshot $snapshot, AggregationPolicy $policy, array $effective, stdClass $head): void
+    public function insert(TransactionContext $context, AggregateSnapshot $snapshot, AggregationPolicy $policy, array $effective, stdClass $head, ?string $unit = null): void
     {
         $db = $this->database($context->connectionName());
         $window = $snapshot->window;
@@ -271,7 +298,8 @@ final readonly class AggregateStore
         $id = $db->table('billium_usage_aggregate_snapshot')->insertGetId([
             'snapshot_ref' => $snapshot->snapshotRef, 'snapshot_digest' => $snapshot->snapshotDigest,
             'seller_ref' => $window->sellerRef, 'environment' => $window->environment, 'metric_ref' => $window->metricRef,
-            'metric_version' => $window->metricVersion, 'group_hash' => CanonicalJson::digest((object) $window->groupKey),
+            'metric_version' => $window->metricVersion, 'metric_unit' => $unit ?? $snapshot->unit,
+            'group_hash' => CanonicalJson::digest((object) $window->groupKey),
             'group_key' => CanonicalJson::encode((object) $window->groupKey), 'series_key' => $window->seriesKey(),
             'window_start_micros' => $window->startMicros, 'window_end_micros' => $window->endMicros,
             'snapshot_revision' => $snapshot->snapshotRevision, 'predecessor_digest' => $snapshot->predecessorDigest,

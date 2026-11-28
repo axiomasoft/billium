@@ -45,6 +45,24 @@ final readonly class DatabaseEffectiveFactSource implements EffectiveFactSource
         return $row === null ? null : AggregationRows::text($row->digest);
     }
 
+    public function metricUnit(string $sellerRef, string $metricRef, int|string $metricVersion, string $expectedDefinitionDigest, string $connectionName): ?string
+    {
+        $caller = $this->callers->current();
+        if ($sellerRef !== $caller->sellerRef) {
+            throw UsageProblems::error('scope_denied');
+        }
+        $row = $this->databases->connection($connectionName)->table('billium_usage_metric')->where([
+            'seller_ref' => $sellerRef, 'environment' => $caller->environment,
+            'metric_ref' => $metricRef, 'metric_version' => (string) $metricVersion,
+        ])->first(['digest', 'unit']);
+        if ($row === null || AggregationRows::text($row->digest) !== $expectedDefinitionDigest) {
+            return null;
+        }
+        $unit = $row->unit ?? null;
+
+        return is_string($unit) && $unit !== '' ? $unit : null;
+    }
+
     /** @return list<FactRevision> */
     public function revisionsForWindow(WindowSelector $window, string $connectionName): array
     {

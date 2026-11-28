@@ -782,6 +782,15 @@
                             "optional": false,
                             "default": null,
                             "flags": 1
+                        },
+                        {
+                            "name": "unit",
+                            "type": "?string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": true,
+                            "default": "null",
+                            "flags": 1
                         }
                     ],
                     "return": null,
@@ -859,6 +868,15 @@
                         },
                         {
                             "name": "frontierDigest",
+                            "type": "?string",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": true,
+                            "default": "null",
+                            "flags": 1
+                        },
+                        {
+                            "name": "unit",
                             "type": "?string",
                             "by_reference": false,
                             "variadic": false,

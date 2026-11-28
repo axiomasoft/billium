@@ -147,11 +147,18 @@ final readonly class FrozenInputsBuilder
                     || ($group['agreementRevision'] ?? null) !== $command->agreementRevision) {
                     RatingComputation::refuse('aggregate_scope_mismatch');
                 }
+                $unit = $aggregate['unit'] ?? null;
+                if (! is_string($unit) || $unit === '') {
+                    return new RatingHold(reason: HoldReason::AggregateNotReproducible, repairOrReplayRefs: [$component['snapshotRef']], detail: 'aggregate unit unverified');
+                }
+                if ($unit !== $price->unit) {
+                    RatingComputation::refuse('unit_mismatch');
+                }
                 $frozen = new FrozenAggregate(componentRef: $component['componentRef'], metricRef: $window->metricRef, metricVersion: $window->metricVersion,
                     snapshotRef: RatingRows::text($aggregate['snapshotRef'] ?? null), snapshotDigest: RatingRows::text($aggregate['snapshotDigest'] ?? null),
                     windowStartMicros: $start, windowEndMicros: $end, completenessFrontierDigest: RatingRows::text($aggregate['completenessFrontierDigest'] ?? null),
                     quantity: RatingRows::text($aggregate['quantity'] ?? null), quantityScale: RatingRows::integer($aggregate['quantityScale'] ?? null), snapshot: $aggregate,
-                    quantitySnapshot: $quantitySnapshot);
+                    quantitySnapshot: $quantitySnapshot, unit: $unit);
             }
             if ($currency !== null && ($price->currency !== $currency || $price->currencyExponent !== $exponent)) {
                 return new RatingHold(reason: HoldReason::UnknownPolicy, repairOrReplayRefs: [], detail: 'mixed currency is unsupported');

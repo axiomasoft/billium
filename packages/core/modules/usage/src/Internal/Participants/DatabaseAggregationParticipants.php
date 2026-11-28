@@ -33,11 +33,12 @@ final readonly class DatabaseAggregationParticipants implements AggregationParti
         $db = $this->store->database($context->connectionName());
         $snapshot = $this->store->snapshot(db: $db, ref: $ref->snapshotRef) ?? throw UsageProblems::error('snapshot_superseded');
         $window = $this->store->window($snapshot);
-        if ($ref->quantity !== null || $ref->window !== null || $ref->frontierDigest !== null || $ref->quantityScale !== null) {
+        if ($ref->quantity !== null || $ref->window !== null || $ref->frontierDigest !== null || $ref->quantityScale !== null || $ref->unit !== null) {
             $retained = $this->store->hydrate(db: $db, snapshot: $snapshot);
             if ($ref->quantity !== $retained->quantity || $ref->quantityScale !== $retained->quantityScale
                 || $ref->window === null || $ref->window->seriesKey() !== $retained->window->seriesKey()
-                || $ref->frontierDigest !== $retained->completeness->digest) {
+                || $ref->frontierDigest !== $retained->completeness->digest
+                || $ref->unit === null || $retained->unit === null || $ref->unit !== $retained->unit) {
                 throw UsageProblems::error('snapshot_superseded');
             }
         }

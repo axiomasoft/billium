@@ -20,6 +20,9 @@ final class InputsDigest
             if ($fields['quantitySnapshot'] === null) {
                 unset($fields['quantitySnapshot']);
             }
+            if ($fields['unit'] === null) {
+                unset($fields['unit']);
+            }
 
             return $fields;
         }, $inputs->aggregates);

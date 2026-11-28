@@ -747,14 +747,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "usage",
-      "currentSchemaVersion": 5,
+      "currentSchemaVersion": 7,
       "supportedSchemaReadRange": {
         "min": 5,
-        "max": 5
+        "max": 7
       },
       "supportedSchemaWriteRange": {
         "min": 5,
-        "max": 5
+        "max": 7
       },
       "requiresModules": [
         {
@@ -821,6 +821,16 @@
           "id": "2026_11_18_040004_index_billium_usage_reproducibility_snapshot",
           "version": 5,
           "checksum": "sha256:e03b82dc998cb4363966d85ba838502a95c646c475f632f555dda3b5f1fe772a"
+        },
+        {
+          "id": "2026_11_29_000100_add_unit_evidence_to_usage_aggregate_snapshot",
+          "version": 6,
+          "checksum": "sha256:240364cc46c66c93826f59f687993ef8f6ce0a1c011cde4b730033d23452b760"
+        },
+        {
+          "id": "2026_11_29_000101_validate_unit_evidence_on_usage_aggregate_snapshot",
+          "version": 7,
+          "checksum": "sha256:be66585b403d34e75e6b99fe9334a26cfc25cf5696046bb252452ec394f3c102"
         }
       ],
       "disablePolicy": {

@@ -6575,6 +6575,20 @@
       "source": "packages/core/database/migrations/documents/2026_11_25_000008_index_billium_document_render_blob_cleanup.php"
     },
     {
+      "kind": "migration",
+      "id": "2026_11_29_000100_add_unit_evidence_to_usage_aggregate_snapshot",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/usage/2026_11_29_000100_add_unit_evidence_to_usage_aggregate_snapshot.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_11_29_000101_validate_unit_evidence_on_usage_aggregate_snapshot",
+      "status": "new",
+      "since": "2026-10",
+      "source": "packages/core/database/migrations/usage/2026_11_29_000101_validate_unit_evidence_on_usage_aggregate_snapshot.php"
+    },
+    {
       "kind": "route",
       "id": "billium.server.capabilities",
       "status": "new",

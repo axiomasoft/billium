@@ -20,7 +20,7 @@ use Packman\Attributes\Api;
  *     effectiveRevisions: list<array{factId: string, factRevision: int, factDigest: string}>,
  *     distinctCount: ?int, memberSetDigest: ?string, reproducibility: string,
  *     completenessFrontier: list<FrontierEntry>, completenessFrontierDigest: string,
- *     reductionEvidence: array<string, mixed>,
+ *     reductionEvidence: array<string, mixed>, unit: ?string,
  * }
  * @phpstan-type WindowStatus array{
  *     state: 'open'|'qualified'|'final'|'held', lagFacts: int,

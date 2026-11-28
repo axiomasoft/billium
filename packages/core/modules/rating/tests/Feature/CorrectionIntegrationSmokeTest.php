@@ -511,7 +511,7 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
     public function test_partial_cancel_accepts_retained_approved_quantity_snapshot(): void
     {
         $base = $this->price(version: 2);
-        $data = [...get_object_vars($base), 'strategyId' => StrategyId::PerUnit, 'unit' => 'seat', 'terms' => new PerUnitTerms(unitPrice: '1'), 'termsDigest' => 'draft'];
+        $data = [...get_object_vars($base), 'strategyId' => StrategyId::PerUnit, 'unit' => 'call', 'terms' => new PerUnitTerms(unitPrice: '1'), 'termsDigest' => 'draft'];
         $data['termsDigest'] = CanonicalJson::termsDigest(FixtureArguments::construct(class: PriceVersion::class, arguments: $data));
         $this->application()->make(PriceVersionStore::class)->publish(price: FixtureArguments::construct(class: PriceVersion::class, arguments: $data), commandKey: 'approved-price');
         /** @var \stdClass&object{script: list<object{args: object{json_text: string}}>} $vector */
@@ -521,7 +521,7 @@ class CorrectionIntegrationSmokeTest extends RatingTestCase
         $raw->sellerRef = 'seller-a';
         $raw->attribution = UsageFixtures::fact()->attribution;
         $raw->quantity = '100';
-        $raw->unit = 'seat';
+        $raw->unit = 'call';
         $codec = new Codec;
         $raw->digest = $codec->digest($raw);
         $snapshot = $codec->decode($codec->canonicalize($raw));

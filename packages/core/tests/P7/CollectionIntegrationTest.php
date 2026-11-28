@@ -418,7 +418,7 @@ final class CollectionIntegrationTest extends ExecutableCollectionTestCase
 
     private function publishPrice(string $ref, StrategyId $strategy, FixedTerms|PerUnitTerms $terms): PriceVersion
     {
-        $draft = new PriceVersion('seller-a', $ref, 1, $strategy, 1, 'RUB', 2, 'ISO4217-2026-10', 'unit',
+        $draft = new PriceVersion('seller-a', $ref, 1, $strategy, 1, 'RUB', 2, 'ISO4217-2026-10', 'call',
             new QuantityRules(9, '1', '1', '1', IncrementMode::None), $terms,
             RoundingMode::HalfUp, RoundingStage::AfterTax, 'pilot/1', null, 'draft');
         $price = FixtureArguments::construct(PriceVersion::class, [...get_object_vars($draft), 'termsDigest' => CanonicalJson::termsDigest($draft)]);

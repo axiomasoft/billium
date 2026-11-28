@@ -40,6 +40,7 @@ use Billium\Rating\Internal\Corrections\CorrectionInputs;
 use Billium\Rating\Internal\Corrections\TaxCorrectionGroup;
 use Billium\Rating\Internal\Money\MoneyFactory;
 use Billium\Rating\Internal\Pipeline\FixedOccurrenceInput;
+use Billium\Rating\Internal\Pipeline\MeteredUnitGuard;
 use Billium\Rating\Internal\Pipeline\RatingComputation;
 use Billium\Rating\Internal\Proration\AmendmentSupport;
 use Billium\Rating\Internal\Proration\ProrationCalculator;
@@ -117,6 +118,9 @@ final readonly class DatabaseRatingCorrection implements RatingCorrection
                     RatingComputation::refuse('correction_frontier_stale');
                 }
                 $this->assertPinned(context: $context, p: $p);
+                foreach ($in->aggregates as $i => $aggregate) {
+                    MeteredUnitGuard::assertMatches(aggregate: $aggregate, price: $in->prices[$i]->snapshot);
+                }
                 $this->usage->assertCurrent(context: $context, inputs: $in);
                 $previous = $this->store->basis(ref: $c->predecessorBasisRef, context: $context);
                 if ($previous === null || CanonicalJson::encode($this->calculator->compute(inputs: $in, predecessor: $this->store->draft($previous),

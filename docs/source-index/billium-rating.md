@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-rating
 
-Path `packages/core/modules/rating/src`, namespace `Billium\Rating\`, layer L2. 119 types.
+Path `packages/core/modules/rating/src`, namespace `Billium\Rating\`, layer L2. 120 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -163,6 +163,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`FixedOccurrenceInput`](../../packages/core/modules/rating/src/Internal/Pipeline/FixedOccurrenceInput.php) | class | *Internal* | Synthetic occurrence and host-approved quantity inputs do not depend on metered usage (D55/D56). |
 | [`FrozenInputsBuilder`](../../packages/core/modules/rating/src/Internal/Pipeline/FrozenInputsBuilder.php) | class | *Internal* |  |
 | [`InputsDigest`](../../packages/core/modules/rating/src/Internal/Pipeline/InputsDigest.php) | class | *Internal* |  |
+| [`MeteredUnitGuard`](../../packages/core/modules/rating/src/Internal/Pipeline/MeteredUnitGuard.php) | class | *Internal* |  |
 | [`RatingComputation`](../../packages/core/modules/rating/src/Internal/Pipeline/RatingComputation.php) | class | *Internal* | Versioned strategies consume retained snapshots only; this class performs no I/O (D56). |
 
 ## Internal/Proration

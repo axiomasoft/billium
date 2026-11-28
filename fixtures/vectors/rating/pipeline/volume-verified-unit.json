@@ -1,0 +1,208 @@
+{
+    "id": "rating/pipeline/volume-verified-unit",
+    "description": "P4.7 retained-input volume quote: 100 calls at the first tier below 150; test-only inputs.",
+    "spec_refs": [
+        "D19",
+        "D56"
+    ],
+    "profiles": [
+        "php"
+    ],
+    "given": {
+        "modules": [
+            "usage",
+            "rating",
+            "schedule"
+        ],
+        "frozenInputs": {
+            "taxes": [
+                {
+                    "mode": "none_declared",
+                    "rate": "0",
+                    "taxCode": "test-tax",
+                    "snapshot": {
+                        "kind": "standard",
+                        "mode": "none_declared",
+                        "rate": "0",
+                        "taxCode": "test-tax",
+                        "resolver": "test-host",
+                        "taxPoint": "2026-11-01T00:00:00.000000+00:00",
+                        "inputDigest": "sha256:00e486ffd8de79e73cd48b638e498f7d157ab950e84d021eaf094669637ec56b",
+                        "noTaxReason": "test-exempt",
+                        "snapshotRef": "tax:component-1:0",
+                        "jurisdiction": "TEST",
+                        "effectiveDate": "2026-01-01T00:00:00.000000+00:00",
+                        "evidenceDigest": "test-evidence",
+                        "resolverVersion": "1"
+                    },
+                    "inputDigest": "sha256:00e486ffd8de79e73cd48b638e498f7d157ab950e84d021eaf094669637ec56b",
+                    "snapshotRef": "tax:component-1:0",
+                    "jurisdiction": "TEST",
+                    "snapshotDigest": "sha256:039db0afca4153de3492b463460c502f4c00c73c21f37945b4d2957779a5578c"
+                }
+            ],
+            "prices": [
+                {
+                    "priceRef": "api",
+                    "snapshot": {
+                        "unit": "call",
+                        "terms": {
+                            "tiers": [
+                                {
+                                    "index": 0,
+                                    "lower": "0",
+                                    "upper": "150",
+                                    "flatFee": "0",
+                                    "unitPrice": "1"
+                                },
+                                {
+                                    "index": 1,
+                                    "lower": "150",
+                                    "upper": null,
+                                    "flatFee": "0",
+                                    "unitPrice": "0.8"
+                                }
+                            ]
+                        },
+                        "version": 1,
+                        "currency": "USD",
+                        "priceRef": "api",
+                        "sellerRef": "seller-a",
+                        "commitment": null,
+                        "strategyId": "tiered_volume",
+                        "termsDigest": "sha256:332e1bfd4bffd439434c6d5c76f6f178ea931e5a85c497bb986fa16fb7ebe65c",
+                        "roundingMode": "half_up",
+                        "quantityRules": {
+                            "incrementMode": "none",
+                            "quantityScale": 9,
+                            "billingIncrement": "1",
+                            "conversionNumerator": "1",
+                            "conversionDenominator": "1"
+                        },
+                        "roundingStage": "after_tax",
+                        "exponentVersion": "ISO4217-2026-10",
+                        "strategyVersion": 1,
+                        "currencyExponent": 2,
+                        "roundingPolicyVersion": "test-rounding/1"
+                    },
+                    "strategyId": "tiered_volume",
+                    "termsDigest": "sha256:332e1bfd4bffd439434c6d5c76f6f178ea931e5a85c497bb986fa16fb7ebe65c",
+                    "componentRef": "component-1",
+                    "priceVersion": 1,
+                    "exponentVersion": "ISO4217-2026-10",
+                    "strategyVersion": 1,
+                    "alreadyBilledNetMinor": null,
+                    "commitmentBasisDigest": null,
+                    "commitmentScopeDigest": null,
+                    "roundingPolicyVersion": "test-rounding/1"
+                }
+            ],
+            "currency": "USD",
+            "sellerRef": "seller-a",
+            "aggregates": [
+                {
+                    "quantity": "100.000000000",
+                    "snapshot": {
+                        "window": {
+                            "group": {
+                                "region": "eu",
+                                "periodRef": "october-2026",
+                                "mappingRef": "mapping-1",
+                                "subjectRef": "subject-1",
+                                "customerRef": "original-customer",
+                                "agreementRef": "agreement-1",
+                                "componentRef": "component-1",
+                                "agreementRevision": "1",
+                                "billingAccountRef": "original-account",
+                                "attributionVersion": "host_snapshot/1"
+                            },
+                            "endMicros": 1793491200000000,
+                            "metricRef": "api_calls",
+                            "sellerRef": "seller-a",
+                            "environment": "test",
+                            "startMicros": 1790812800000000,
+                            "metricVersion": "api_calls/1"
+                        },
+                        "quantity": "100.000000000",
+                        "algorithmId": "additive_sum",
+                        "snapshotRef": "agg_6f54ef9cdc6379b8caa22e46fbc13141c2a28b99",
+                        "distinctCount": null,
+                        "quantityScale": 9,
+                        "snapshotDigest": "sha256:6f54ef9cdc6379b8caa22e46fbc13141c2a28b9980577bc35608f834cf31d2b0",
+                        "memberSetDigest": null,
+                        "reproducibility": "reproducible",
+                        "algorithmVersion": 1,
+                        "snapshotRevision": 1,
+                        "predecessorDigest": null,
+                        "reductionEvidence": [],
+                        "effectiveRevisions": [
+                            {
+                                "factId": "[\"tariffler\",\"fact-1\"]",
+                                "factDigest": "sha256:687ed244acf129eef97dab63be3b3c07e6d6817500a570177f66d3e78ed6a569",
+                                "factRevision": 1
+                            }
+                        ],
+                        "completenessFrontier": [
+                            {
+                                "status": "complete",
+                                "sourceRef": "tariffler",
+                                "evidenceSeq": 1,
+                                "evidenceDigest": "sha256:c3e1d7e7c3a14e9e76588192a596df280b2ace40e85f592f6014821dbfb5397e",
+                                "rangeEndMicros": 1793491200000000,
+                                "watermarkMicros": 1793491500000000,
+                                "rangeStartMicros": 1790812800000000,
+                                "repairOrReplayRef": null
+                            }
+                        ],
+                        "completenessFrontierDigest": "sha256:e7d3bd08ba345ec50b832cab668681ed2ca42dd08a509a0da5d54d1c563f1100",
+                        "unit": "call"
+                    },
+                    "metricRef": "api_calls",
+                    "snapshotRef": "agg_6f54ef9cdc6379b8caa22e46fbc13141c2a28b99",
+                    "componentRef": "component-1",
+                    "metricVersion": "api_calls/1",
+                    "quantityScale": 9,
+                    "snapshotDigest": "sha256:6f54ef9cdc6379b8caa22e46fbc13141c2a28b9980577bc35608f834cf31d2b0",
+                    "windowEndMicros": 1793491200000000,
+                    "windowStartMicros": 1790812800000000,
+                    "completenessFrontierDigest": "sha256:e7d3bd08ba345ec50b832cab668681ed2ca42dd08a509a0da5d54d1c563f1100",
+                    "unit": "call"
+                }
+            ],
+            "attribution": "{\"agreementRef\":\"agreement-1\",\"agreementRevision\":1,\"attributionVersion\":\"host_snapshot/1\",\"billingAccountRef\":\"original-account\",\"componentRef\":\"component-1\",\"customerRef\":\"original-customer\",\"effectiveAt\":\"2026-10-01T00:00:00Z\",\"subjectRef\":\"subject-1\"}",
+            "environment": "test",
+            "sourceDigest": "source:test:1",
+            "occurrenceRef": "occ_afa586cc8285cb5cae987fc9b4ecf1b15a33b07734f05180",
+            "noChargeReason": null,
+            "periodEndMicros": 1793491200000000,
+            "currencyExponent": 2,
+            "agreementRevision": "1",
+            "billingAccountRef": "original-account",
+            "periodStartMicros": 1790812800000000,
+            "frontierExpectedDigest": "",
+            "occurrenceInputsDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "frontierExpectedRowVersion": 0
+        }
+    },
+    "script": [
+        {
+            "op": "rating.rate",
+            "args": {
+                "action": "quote",
+                "frozen_inputs_json": "{\"aggregates\":[{\"completenessFrontierDigest\":\"sha256:e7d3bd08ba345ec50b832cab668681ed2ca42dd08a509a0da5d54d1c563f1100\",\"componentRef\":\"component-1\",\"metricRef\":\"api_calls\",\"metricVersion\":\"api_calls/1\",\"quantity\":\"100.000000000\",\"quantityScale\":9,\"quantitySnapshot\":null,\"snapshot\":{\"algorithmId\":\"additive_sum\",\"algorithmVersion\":1,\"completenessFrontier\":[{\"evidenceDigest\":\"sha256:c3e1d7e7c3a14e9e76588192a596df280b2ace40e85f592f6014821dbfb5397e\",\"evidenceSeq\":1,\"rangeEndMicros\":1793491200000000,\"rangeStartMicros\":1790812800000000,\"repairOrReplayRef\":null,\"sourceRef\":\"tariffler\",\"status\":\"complete\",\"watermarkMicros\":1793491500000000}],\"completenessFrontierDigest\":\"sha256:e7d3bd08ba345ec50b832cab668681ed2ca42dd08a509a0da5d54d1c563f1100\",\"distinctCount\":null,\"effectiveRevisions\":[{\"factDigest\":\"sha256:687ed244acf129eef97dab63be3b3c07e6d6817500a570177f66d3e78ed6a569\",\"factId\":\"[\\\"tariffler\\\",\\\"fact-1\\\"]\",\"factRevision\":1}],\"memberSetDigest\":null,\"predecessorDigest\":null,\"quantity\":\"100.000000000\",\"quantityScale\":9,\"reductionEvidence\":[],\"reproducibility\":\"reproducible\",\"snapshotDigest\":\"sha256:6f54ef9cdc6379b8caa22e46fbc13141c2a28b9980577bc35608f834cf31d2b0\",\"snapshotRef\":\"agg_6f54ef9cdc6379b8caa22e46fbc13141c2a28b99\",\"snapshotRevision\":1,\"unit\":\"call\",\"window\":{\"endMicros\":1793491200000000,\"environment\":\"test\",\"group\":{\"agreementRef\":\"agreement-1\",\"agreementRevision\":\"1\",\"attributionVersion\":\"host_snapshot/1\",\"billingAccountRef\":\"original-account\",\"componentRef\":\"component-1\",\"customerRef\":\"original-customer\",\"mappingRef\":\"mapping-1\",\"periodRef\":\"october-2026\",\"region\":\"eu\",\"subjectRef\":\"subject-1\"},\"metricRef\":\"api_calls\",\"metricVersion\":\"api_calls/1\",\"sellerRef\":\"seller-a\",\"startMicros\":1790812800000000}},\"snapshotDigest\":\"sha256:6f54ef9cdc6379b8caa22e46fbc13141c2a28b9980577bc35608f834cf31d2b0\",\"snapshotRef\":\"agg_6f54ef9cdc6379b8caa22e46fbc13141c2a28b99\",\"unit\":\"call\",\"windowEndMicros\":1793491200000000,\"windowStartMicros\":1790812800000000}],\"agreementRevision\":\"1\",\"attribution\":\"{\\\"agreementRef\\\":\\\"agreement-1\\\",\\\"agreementRevision\\\":1,\\\"attributionVersion\\\":\\\"host_snapshot/1\\\",\\\"billingAccountRef\\\":\\\"original-account\\\",\\\"componentRef\\\":\\\"component-1\\\",\\\"customerRef\\\":\\\"original-customer\\\",\\\"effectiveAt\\\":\\\"2026-10-01T00:00:00Z\\\",\\\"subjectRef\\\":\\\"subject-1\\\"}\",\"billingAccountRef\":\"original-account\",\"correctionEvidence\":null,\"currency\":\"USD\",\"currencyExponent\":2,\"environment\":\"test\",\"frontierExpectedDigest\":\"\",\"frontierExpectedRowVersion\":0,\"noChargeReason\":null,\"occurrenceInputsDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"occurrenceRef\":\"occ_afa586cc8285cb5cae987fc9b4ecf1b15a33b07734f05180\",\"periodEndMicros\":1793491200000000,\"periodStartMicros\":1790812800000000,\"prices\":[{\"alreadyBilledNetMinor\":null,\"commitmentBasisDigest\":null,\"commitmentScopeDigest\":null,\"componentRef\":\"component-1\",\"exponentVersion\":\"ISO4217-2026-10\",\"priceRef\":\"api\",\"priceVersion\":1,\"roundingPolicyVersion\":\"test-rounding/1\",\"snapshot\":{\"commitment\":null,\"currency\":\"USD\",\"currencyExponent\":2,\"exponentVersion\":\"ISO4217-2026-10\",\"priceRef\":\"api\",\"quantityRules\":{\"billingIncrement\":\"1\",\"conversionDenominator\":\"1\",\"conversionNumerator\":\"1\",\"incrementMode\":\"none\",\"quantityScale\":9},\"roundingMode\":\"half_up\",\"roundingPolicyVersion\":\"test-rounding/1\",\"roundingStage\":\"after_tax\",\"sellerRef\":\"seller-a\",\"strategyId\":\"tiered_volume\",\"strategyVersion\":1,\"terms\":{\"tiers\":[{\"flatFee\":\"0\",\"index\":0,\"lower\":\"0\",\"unitPrice\":\"1\",\"upper\":\"150\"},{\"flatFee\":\"0\",\"index\":1,\"lower\":\"150\",\"unitPrice\":\"0.8\",\"upper\":null}]},\"termsDigest\":\"sha256:332e1bfd4bffd439434c6d5c76f6f178ea931e5a85c497bb986fa16fb7ebe65c\",\"unit\":\"call\",\"version\":1},\"strategyId\":\"tiered_volume\",\"strategyVersion\":1,\"termsDigest\":\"sha256:332e1bfd4bffd439434c6d5c76f6f178ea931e5a85c497bb986fa16fb7ebe65c\"}],\"proration\":null,\"sellerRef\":\"seller-a\",\"sourceDigest\":\"source:test:1\",\"taxes\":[{\"inputDigest\":\"sha256:00e486ffd8de79e73cd48b638e498f7d157ab950e84d021eaf094669637ec56b\",\"jurisdiction\":\"TEST\",\"mode\":\"none_declared\",\"rate\":\"0\",\"snapshot\":{\"effectiveDate\":\"2026-01-01T00:00:00.000000+00:00\",\"evidenceDigest\":\"test-evidence\",\"inputDigest\":\"sha256:00e486ffd8de79e73cd48b638e498f7d157ab950e84d021eaf094669637ec56b\",\"jurisdiction\":\"TEST\",\"kind\":\"standard\",\"mode\":\"none_declared\",\"noTaxReason\":\"test-exempt\",\"rate\":\"0\",\"resolver\":\"test-host\",\"resolverVersion\":\"1\",\"snapshotRef\":\"tax:component-1:0\",\"taxCode\":\"test-tax\",\"taxPoint\":\"2026-11-01T00:00:00.000000+00:00\"},\"snapshotDigest\":\"sha256:039db0afca4153de3492b463460c502f4c00c73c21f37945b4d2957779a5578c\",\"snapshotRef\":\"tax:component-1:0\",\"taxCode\":\"test-tax\"}]}"
+            }
+        }
+    ],
+    "expect": [
+        {
+            "ok": {
+                "financial": false,
+                "inputsDigest": "sha256:d55bd3b68b5ea1405d99cd1f5cfded40ae3879ab15bed126e2bdf66d26ad6562",
+                "netMinor": "10000",
+                "taxMinor": "0",
+                "grossMinor": "10000",
+                "quoteDigest": "sha256:b749015c294b9d0a62e57b954c21acd9d92f830c4958c7bf2487fb6150504ebb"
+            }
+        }
+    ]
+}

@@ -27,7 +27,7 @@ final class RatingPipelineDigestTest extends TestCase
     private function fixture(): array
     {
         /** @var PipelineFixture $fixture */
-        $fixture = json_decode((string) file_get_contents(dirname(__DIR__, 6).'/fixtures/vectors/rating/pipeline/graduated-original.json'), true, 128, JSON_THROW_ON_ERROR);
+        $fixture = json_decode((string) file_get_contents(dirname(__DIR__, 6).'/fixtures/vectors/rating/pipeline/graduated-verified-unit.json'), true, 128, JSON_THROW_ON_ERROR);
 
         return $fixture;
     }
@@ -38,7 +38,7 @@ final class RatingPipelineDigestTest extends TestCase
         $handler = new RatingConformance(new RatingComputation(strategies: new StrategyCatalog, taxes: new TaxCalculator));
         self::assertEquals($fixture['expect'][0]['ok'], $handler(operation: 'rating.rate', arguments: (object) $fixture['script'][0]['args']));
         /** @var PipelineFixture $volume */
-        $volume = json_decode((string) file_get_contents(dirname(__DIR__, 6).'/fixtures/vectors/rating/pipeline/volume-original.json'), true, 128, JSON_THROW_ON_ERROR);
+        $volume = json_decode((string) file_get_contents(dirname(__DIR__, 6).'/fixtures/vectors/rating/pipeline/volume-verified-unit.json'), true, 128, JSON_THROW_ON_ERROR);
         self::assertEquals($volume['expect'][0]['ok'], $handler(operation: 'rating.rate', arguments: (object) $volume['script'][0]['args']));
         $in = FrozenInputsCodec::decode($fixture['script'][0]['args']['frozen_inputs_json']);
         self::assertSame(CanonicalJson::encode($in), CanonicalJson::encode(FrozenInputsCodec::decode(CanonicalJson::encode($in))));

@@ -13,5 +13,6 @@ final readonly class AggregateSnapshotRef
         public string $snapshotRef, public string $snapshotDigest,
         public ?string $quantity = null, public ?int $quantityScale = null,
         public ?WindowSelector $window = null, public ?string $frontierDigest = null,
+        public ?string $unit = null,
     ) {}
 }

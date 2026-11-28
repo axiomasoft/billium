@@ -15,4 +15,6 @@ interface EffectiveFactSource
     public function revisionsForWindow(WindowSelector $window, string $connectionName): array;
 
     public function metricDefinitionDigest(string $sellerRef, string $metricRef, int|string $metricVersion, string $connectionName): ?string;
+
+    public function metricUnit(string $sellerRef, string $metricRef, int|string $metricVersion, string $expectedDefinitionDigest, string $connectionName): ?string;
 }
