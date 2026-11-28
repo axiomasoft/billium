@@ -65,10 +65,8 @@ final readonly class PlatformRootAdmission implements RootAdmission
             throw new ProblemException(ProblemCode::RecoveryRequired, 'no adopted financial session');
         }
         $context->lock(new LockRequest(LockRank::FinancialSession, Sessions::TABLE, [$planned], shared: true, scope: LockScope::Installation));
-        if (Sessions::currentId($db, $installation) !== $planned) {
-            throw new LockPlanChanged('a newer financial session epoch appeared while waiting');
-        }
-        $session = Sessions::find($db, $planned) ?? throw new LockPlanChanged('financial session vanished');
+        $session = Sessions::findIfCurrent($db, $planned, $installation)
+            ?? throw new LockPlanChanged('a newer financial session epoch appeared while waiting');
         if ($mode === FinancialMode::Administrative) {
             return $session->epoch;
         }

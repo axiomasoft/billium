@@ -32,6 +32,21 @@ final class Sessions
         return is_object($row) ? self::view($row) : null;
     }
 
+    /**
+     * The session $id if it is still the latest epoch of its installation: the post-lock re-check and the read in one
+     * statement. Null means a newer epoch appeared (or the row is gone) and the caller's lock plan is stale.
+     */
+    public static function findIfCurrent(Connection $db, int $id, string $installationRef): ?FinancialSessionView
+    {
+        $row = $db->selectOne(
+            'SELECT '.self::COLUMNS.' FROM public.billium_financial_session WHERE id = ? AND installation_ref = ? '
+            .'AND id = (SELECT c.id FROM public.billium_financial_session c WHERE c.installation_ref = ? ORDER BY c.epoch DESC LIMIT 1)',
+            [$id, $installationRef, $installationRef],
+        );
+
+        return is_object($row) ? self::view($row) : null;
+    }
+
     public static function current(Connection $db, string $installationRef): ?FinancialSessionView
     {
         $id = self::currentId($db, $installationRef);

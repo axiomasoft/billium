@@ -458,11 +458,9 @@ final readonly class DatabaseInstallation implements Installation, ModuleStateRe
             return null;
         }
         $context->lock(new LockRequest(LockRank::FinancialSession, Sessions::TABLE, [$id], scope: LockScope::Installation));
-        if (Sessions::currentId($db, $installation) !== $id) {
-            throw new LockPlanChanged('a newer financial session epoch appeared while waiting');
-        }
 
-        return Sessions::find($db, $id);
+        return Sessions::findIfCurrent($db, $id, $installation)
+            ?? throw new LockPlanChanged('a newer financial session epoch appeared while waiting');
     }
 
     /** @param list<string> $states */
