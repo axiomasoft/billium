@@ -24,10 +24,8 @@ flowchart LR
     platform --> ledger
     platform --> usage
     platform --> rating
-    ledger --> rating
     platform --> schedule
     rating --> schedule
-    ledger --> schedule
     platform --> documents
     ledger --> documents
     platform --> execution

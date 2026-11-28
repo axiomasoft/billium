@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 SCOPE = {"installationRef": "inst-test", "environment": "test", "sellerRef": "seller-a"}
 P2_COMMIT = "a2e52060fa75d57e5149755f20e12796a3a3f94d"
+BASELINE_2026_10_COMMIT = "b7a165b045a053dde17373ffb1246e2490f808a8"
 CONTRACT_PACKAGES = {
     "php-contracts": "packages/contracts",
     "dart-contracts": "packages/contracts-dart",
@@ -31,6 +32,16 @@ def load(path: Path):
 
 def digest(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def prior_generations(matrix: dict) -> list[dict]:
+    generations = []
+    if isinstance(matrix.get("prior"), dict):
+        generations.append(matrix["prior"])
+    for entry in matrix.get("priors", []):
+        if isinstance(entry, dict):
+            generations.append(entry)
+    return generations
 
 
 def policy_errors(matrix: dict) -> list[str]:
@@ -49,6 +60,12 @@ def policy_errors(matrix: dict) -> list[str]:
         errors.append("prior snapshot must pin the P2 closure commit")
     if not isinstance(matrix.get("currentOnlySchemas"), list) or not matrix["currentOnlySchemas"]:
         errors.append("current-only schemas must be declared")
+    for idx, entry in enumerate(matrix.get("priors", [])):
+        if not isinstance(entry, dict):
+            errors.append(f"priors[{idx}] must be an object")
+            continue
+        if not entry.get("id") or not entry.get("commit") or not entry.get("specRevision"):
+            errors.append(f"priors[{idx}] must declare id, commit, and specRevision")
     return errors
 
 
@@ -56,27 +73,30 @@ def archive_errors(matrix: dict, base: Path) -> list[str]:
     errors = policy_errors(matrix)
     if errors:
         return errors
-    archives = matrix.get("prior", {}).get("archives", {})
-    if not isinstance(archives, dict) or archives.keys() != CONTRACT_PACKAGES.keys():
-        return errors + ["prior archives must contain the PHP and Dart contracts packages"]
-    for name, entry in archives.items():
-        if not isinstance(entry, dict):
-            errors.append(f"{name} archive entry is not an object")
+    for gen in prior_generations(matrix):
+        gen_id = gen.get("id", "prior")
+        archives = gen.get("archives", {})
+        if not isinstance(archives, dict) or archives.keys() != CONTRACT_PACKAGES.keys():
+            errors.append(f"{gen_id} archives must contain the PHP and Dart contracts packages")
             continue
-        path = base / str(entry.get("path", ""))
-        recorded = entry.get("sha256")
-        if path.is_symlink():
-            errors.append(f"{name} archive is a symlink")
-            continue
-        if not path.is_file():
-            errors.append(f"{name} archive is missing")
-            continue
-        if not isinstance(recorded, str) or recorded == "unpinned":
-            errors.append(f"{name} archive hash is not pinned")
-            continue
-        actual = digest(path.read_bytes())
-        if actual != recorded:
-            errors.append(f"{name} archive hash mismatch")
+        for name, entry in archives.items():
+            if not isinstance(entry, dict):
+                errors.append(f"{gen_id}/{name} archive entry is not an object")
+                continue
+            path = base / str(entry.get("path", ""))
+            recorded = entry.get("sha256")
+            if path.is_symlink():
+                errors.append(f"{gen_id}/{name} archive is a symlink")
+                continue
+            if not path.is_file():
+                errors.append(f"{gen_id}/{name} archive is missing")
+                continue
+            if not isinstance(recorded, str) or recorded == "unpinned":
+                errors.append(f"{gen_id}/{name} archive hash is not pinned")
+                continue
+            actual = digest(path.read_bytes())
+            if actual != recorded:
+                errors.append(f"{gen_id}/{name} archive hash mismatch")
     return errors
 
 
@@ -102,8 +122,8 @@ def pin(matrix_path: Path) -> int:
     return 0
 
 
-def package_archive(source: str) -> bytes:
-    data = subprocess.check_output(["git", "archive", "--format=zip", P2_COMMIT, source], cwd=ROOT)
+def package_archive(source: str, commit: str = P2_COMMIT) -> bytes:
+    data = subprocess.check_output(["git", "archive", "--format=zip", commit, source], cwd=ROOT)
     payload = io.BytesIO()
     with zipfile.ZipFile(io.BytesIO(data)) as tree, zipfile.ZipFile(payload, "w") as package:
         for entry in tree.infolist():
@@ -111,6 +131,32 @@ def package_archive(source: str) -> bytes:
                 path = entry.filename.removeprefix(source + "/")
                 package.writestr(zipfile.ZipInfo(path), tree.read(entry), compress_type=zipfile.ZIP_DEFLATED)
     return payload.getvalue()
+
+
+def pin_baseline(matrix_path: Path, gen_id: str, commit: str, spec_revision: str) -> int:
+    matrix = load(matrix_path)
+    archives = HERE / "archives"
+    archives.mkdir(parents=True, exist_ok=True)
+    entry_archives = {}
+    for name, source in CONTRACT_PACKAGES.items():
+        data = package_archive(source, commit)
+        path = archives / f"{gen_id}-{name}.zip"
+        path.write_bytes(data)
+        entry_archives[name] = {"path": f"archives/{path.name}", "sha256": digest(data)}
+    priors = [p for p in matrix.get("priors", []) if p.get("id") != gen_id]
+    priors.append({
+        "id": gen_id,
+        "commit": commit,
+        "publishedRelease": False,
+        "denotes": f"Baseline {spec_revision} contracts artifact before 2026-12",
+        "specRevision": spec_revision,
+        "currentOnlySchemas": [],
+        "archives": entry_archives,
+    })
+    matrix["priors"] = priors
+    matrix_path.write_text(json.dumps(matrix, indent=2) + "\n", encoding="utf-8")
+    print(f"pinned {gen_id} snapshot", flush=True)
+    return 0
 
 
 def pointer(value, path: str):
@@ -359,11 +405,12 @@ def execute(matrix_path: Path) -> int:
     if errors:
         print("\n".join(errors), flush=True)
         return 1
-    current_only = set(matrix["currentOnlySchemas"])
-    prior = matrix["prior"]["archives"]
-    if errors := schema_errors(HERE / prior["php-contracts"]["path"], current_only):
-        print("\n".join(errors), flush=True)
-        return 1
+    generations = prior_generations(matrix)
+    for gen in generations:
+        gen_current_only = set(gen.get("currentOnlySchemas", matrix["currentOnlySchemas"]))
+        if errors := schema_errors(HERE / gen["archives"]["php-contracts"]["path"], gen_current_only):
+            print("\n".join(errors), flush=True)
+            return 1
     if not (ROOT / "vendor/autoload.php").is_file():
         print("vendor/autoload.php is missing", flush=True)
         return 1
@@ -385,105 +432,125 @@ def execute(matrix_path: Path) -> int:
     ensure_dart(ROOT / "conformance/clients/dart")
     current_dart = ["dart", "run", "bin/client.dart"]
     problems = []
-    with tempfile.TemporaryDirectory(prefix="billium-prior-") as temporary:
-        root = Path(temporary)
-        extract(HERE / prior["php-contracts"]["path"], root / "php-contracts")
-        extract(HERE / prior["dart-contracts"]["path"], root / "billium_contracts")
-        env = {**os.environ, "BILLIUM_ARCHIVE_ROOT": str(root)}
-        env.pop("BILLIUM_AUTOLOAD", None)
-        try:
-            stage_prior_clients(root)
-            ensure_dart(root / "billium_client_conformance")
-            current = run_clients(batch, current_php, current_dart, ROOT, ROOT / "conformance/clients/dart", None)
-            prior_runs = run_clients(
-                batch,
-                php_command(str(root / "php-client/bin/client.php")),
-                ["dart", "run", "bin/client.dart"],
-                root,
-                root / "billium_client_conformance",
-                env,
-            )
-        except (RuntimeError, subprocess.CalledProcessError, json.JSONDecodeError, KeyError) as error:
-            print(str(error), flush=True)
-            return 1
-        by_id = {doc["id"]: doc for doc in vectors}
-        transport = 0
+    try:
+        current = run_clients(batch, current_php, current_dart, ROOT, ROOT / "conformance/clients/dart", None)
+    except (RuntimeError, subprocess.CalledProcessError, json.JSONDecodeError, KeyError) as error:
+        print(str(error), flush=True)
+        return 1
+
+    by_id = {doc["id"]: doc for doc in vectors}
+    transport = 0
+    for case in cases:
+        name = case["id"]
+        doc = by_id[name]
+        for label, result in (("current-php", current[0][name]), ("current-dart", current[1][name])):
+            problem = audit(result, f"{name}/{label}")
+            if problem:
+                problems.append(problem)
+            expected = doc.get("expect")
+            if expected:
+                failure = check(result, expected, f"{name}/{label}")
+                if failure:
+                    problems.append(failure)
+            golden = doc.get("golden")
+            if golden:
+                wanted = (ROOT / golden).read_text(encoding="utf-8").strip("\n")
+                if (result.get("prepared") or {}).get("bytes") != wanted:
+                    problems.append(f"{name}/{label} bytes differ from the P2 golden")
+        failure = compare_pair(current[0][name], current[1][name], name)
+        if failure:
+            problems.append(failure)
+        transport += 1
+
+    for case in corpus:
+        name = case["id"]
+        for label, result in (("current-php", current[0][name]), ("current-dart", current[1][name])):
+            problem = audit(result, f"{name}/{label}")
+            if problem:
+                problems.append(problem)
+        failure = compare_pair(current[0][name], current[1][name], name)
+        if failure:
+            problems.append(failure)
+        transport += 1
+
+    total_archive_steps = 0
+    for gen in generations:
+        gen_id = gen["id"]
+        prior = gen["archives"]
+        gen_current_only = set(gen.get("currentOnlySchemas", matrix["currentOnlySchemas"]))
+        gen_corpus_expectations = gen.get("corpusExpectations", corpus_expectations if gen is matrix.get("prior") else {})
         archive_steps = 0
-        for case in cases:
-            name = case["id"]
-            doc = by_id[name]
-            for label, result in (("current-php", current[0][name]), ("current-dart", current[1][name])):
-                problem = audit(result, f"{name}/{label}")
-                if problem:
-                    problems.append(problem)
-                expected = doc.get("expect")
-                if expected:
-                    failure = check(result, expected, f"{name}/{label}")
-                    if failure:
-                        problems.append(failure)
-                golden = doc.get("golden")
-                if golden:
-                    wanted = (ROOT / golden).read_text(encoding="utf-8").strip("\n")
-                    if (result.get("prepared") or {}).get("bytes") != wanted:
-                        problems.append(f"{name}/{label} bytes differ from the P2 golden")
-            failure = compare_pair(current[0][name], current[1][name], name)
-            if failure:
-                problems.append(failure)
-            prior_expect = doc.get("priorExpect")
-            shared = doc.get("shared", True)
-            for label, result in (("prior-php", prior_runs[0][name]), ("prior-dart", prior_runs[1][name])):
-                problem = audit(result, f"{name}/{label}")
-                if problem:
-                    problems.append(problem)
-                if prior_expect:
-                    failure = check(result, prior_expect, f"{name}/{label}")
-                    if failure:
-                        problems.append(failure)
-                elif shared:
-                    failure = check(result, doc.get("expect", {}), f"{name}/{label}")
-                    if failure:
-                        problems.append(failure)
-            failure = compare_pair(prior_runs[0][name], prior_runs[1][name], f"{name}/prior")
-            if failure:
-                problems.append(failure)
-            if shared and not prior_expect:
-                failure = compare_pair(current[0][name], prior_runs[0][name], f"{name}/generation")
+        with tempfile.TemporaryDirectory(prefix=f"billium-{gen_id}-") as temporary:
+            root = Path(temporary)
+            extract(HERE / prior["php-contracts"]["path"], root / "php-contracts")
+            extract(HERE / prior["dart-contracts"]["path"], root / "billium_contracts")
+            env = {**os.environ, "BILLIUM_ARCHIVE_ROOT": str(root)}
+            env.pop("BILLIUM_AUTOLOAD", None)
+            try:
+                stage_prior_clients(root)
+                ensure_dart(root / "billium_client_conformance")
+                prior_runs = run_clients(
+                    batch,
+                    php_command(str(root / "php-client/bin/client.php")),
+                    ["dart", "run", "bin/client.dart"],
+                    root,
+                    root / "billium_client_conformance",
+                    env,
+                )
+            except (RuntimeError, subprocess.CalledProcessError, json.JSONDecodeError, KeyError) as error:
+                print(str(error), flush=True)
+                return 1
+            for case in cases:
+                name = case["id"]
+                doc = by_id[name]
+                prior_expect = doc.get("priorExpect")
+                shared = doc.get("shared", True)
+                is_p2 = gen is matrix.get("prior")
+                for label, result in ((f"{gen_id}-php", prior_runs[0][name]), (f"{gen_id}-dart", prior_runs[1][name])):
+                    problem = audit(result, f"{name}/{label}")
+                    if problem:
+                        problems.append(problem)
+                    if is_p2 and prior_expect:
+                        failure = check(result, prior_expect, f"{name}/{label}")
+                        if failure:
+                            problems.append(failure)
+                    elif shared or not is_p2:
+                        failure = check(result, doc.get("expect", {}), f"{name}/{label}")
+                        if failure:
+                            problems.append(failure)
+                failure = compare_pair(prior_runs[0][name], prior_runs[1][name], f"{name}/{gen_id}")
                 if failure:
                     problems.append(failure)
-            transport += 1
-            archive_steps += 1
-        for case in corpus:
-            name = case["id"]
-            schema = schema_of(case["jsonText"])
-            for label, result in (
-                ("current-php", current[0][name]),
-                ("current-dart", current[1][name]),
-                ("prior-php", prior_runs[0][name]),
-                ("prior-dart", prior_runs[1][name]),
-            ):
-                problem = audit(result, f"{name}/{label}")
-                if problem:
-                    problems.append(problem)
-            failure = compare_pair(current[0][name], current[1][name], name)
-            if failure:
-                problems.append(failure)
-            if schema in current_only:
-                for label, result in (("prior-php", prior_runs[0][name]), ("prior-dart", prior_runs[1][name])):
-                    code = (result.get("error") or {}).get("code")
-                    if code != "billium.schema.unsupported" or result.get("attempts"):
-                        problems.append(f"{name}/{label} delivered a current-only schema: {code}")
+                if (shared and not prior_expect) or not is_p2:
+                    failure = compare_pair(current[0][name], prior_runs[0][name], f"{name}/{gen_id}-generation")
+                    if failure:
+                        problems.append(failure)
                 archive_steps += 1
-            else:
-                failure = compare_pair(prior_runs[0][name], prior_runs[1][name], f"{name}/prior")
-                if failure:
-                    problems.append(failure)
-                expected = corpus_expectations.get(name)
-                problems.extend(compare_corpus_generations(current[0][name], prior_runs[0][name], name, expected))
-                if expected is not None:
+            for case in corpus:
+                name = case["id"]
+                schema = schema_of(case["jsonText"])
+                for label, result in ((f"{gen_id}-php", prior_runs[0][name]), (f"{gen_id}-dart", prior_runs[1][name])):
+                    problem = audit(result, f"{name}/{label}")
+                    if problem:
+                        problems.append(problem)
+                if schema in gen_current_only:
+                    for label, result in ((f"{gen_id}-php", prior_runs[0][name]), (f"{gen_id}-dart", prior_runs[1][name])):
+                        code = (result.get("error") or {}).get("code")
+                        if code != "billium.schema.unsupported" or result.get("attempts"):
+                            problems.append(f"{name}/{label} delivered a current-only schema: {code}")
                     archive_steps += 1
-            transport += 1
+                else:
+                    failure = compare_pair(prior_runs[0][name], prior_runs[1][name], f"{name}/{gen_id}")
+                    if failure:
+                        problems.append(failure)
+                    expected = gen_corpus_expectations.get(name)
+                    problems.extend(compare_corpus_generations(current[0][name], prior_runs[0][name], name, expected))
+                    if expected is not None:
+                        archive_steps += 1
+        print(f"compatibility-archive[{gen_id}] steps={archive_steps}", flush=True)
+        total_archive_steps += archive_steps
     print(f"transport-contract steps={transport}", flush=True)
-    print(f"compatibility-archive steps={archive_steps}", flush=True)
+    print(f"compatibility-archive steps={total_archive_steps}", flush=True)
     if problems:
         print("\n".join(problems), flush=True)
         return 1
@@ -495,9 +562,12 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--matrix", required=True, type=Path)
     parser.add_argument("--pin", action="store_true")
+    parser.add_argument("--pin-baseline", nargs=3, metavar=("ID", "COMMIT", "SPEC_REVISION"))
     args = parser.parse_args(argv)
     if args.pin:
         return pin(args.matrix)
+    if args.pin_baseline:
+        return pin_baseline(args.matrix, args.pin_baseline[0], args.pin_baseline[1], args.pin_baseline[2])
     return execute(args.matrix)
 
 

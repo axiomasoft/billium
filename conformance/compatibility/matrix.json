@@ -3,16 +3,43 @@
   "forwardCompatibility": false,
   "corpusExpectations": {
     "HTTP-15/own": {
-      "current": {"outcome": "prepared", "prepared.schema": "billium.query.v1", "attempts.#": 0},
-      "prior": {"outcome": "refused", "error.code": "billium.validation.invalid", "error.receipt": "none", "attempts.#": 0}
+      "current": {
+        "outcome": "prepared",
+        "prepared.schema": "billium.query.v1",
+        "attempts.#": 0
+      },
+      "prior": {
+        "outcome": "refused",
+        "error.code": "billium.validation.invalid",
+        "error.receipt": "none",
+        "attempts.#": 0
+      }
     },
     "HTTP-15/wrongRoute": {
-      "current": {"outcome": "prepared", "prepared.schema": "billium.query.v1", "attempts.#": 0},
-      "prior": {"outcome": "refused", "error.code": "billium.validation.invalid", "error.receipt": "none", "attempts.#": 0}
+      "current": {
+        "outcome": "prepared",
+        "prepared.schema": "billium.query.v1",
+        "attempts.#": 0
+      },
+      "prior": {
+        "outcome": "refused",
+        "error.code": "billium.validation.invalid",
+        "error.receipt": "none",
+        "attempts.#": 0
+      }
     },
     "HTTP-15/wrongBody": {
-      "current": {"outcome": "prepared", "prepared.schema": "billium.query.v1", "attempts.#": 0},
-      "prior": {"outcome": "refused", "error.code": "billium.validation.invalid", "error.receipt": "none", "attempts.#": 0}
+      "current": {
+        "outcome": "prepared",
+        "prepared.schema": "billium.query.v1",
+        "attempts.#": 0
+      },
+      "prior": {
+        "outcome": "refused",
+        "error.code": "billium.validation.invalid",
+        "error.receipt": "none",
+        "attempts.#": 0
+      }
     }
   },
   "currentOnlySchemas": [
@@ -80,5 +107,25 @@
         "sha256": "21cff3d350012b224ca1f4db8b049d25059c768304ba2e3b81b90342b12fc8a4"
       }
     }
-  }
+  },
+  "priors": [
+    {
+      "id": "baseline-2026-10",
+      "commit": "b7a165b045a053dde17373ffb1246e2490f808a8",
+      "publishedRelease": false,
+      "denotes": "Baseline 2026-10 contracts artifact before 2026-12",
+      "specRevision": "2026-10",
+      "currentOnlySchemas": [],
+      "archives": {
+        "php-contracts": {
+          "path": "archives/baseline-2026-10-php-contracts.zip",
+          "sha256": "74369bde19e8c8bb27f8c8687eb2398bdc51c0be9561103e492bd8b8480e5bbb"
+        },
+        "dart-contracts": {
+          "path": "archives/baseline-2026-10-dart-contracts.zip",
+          "sha256": "eee35927c45227ad2587a34204ea59481cd121e449650fb44543eae0480f2924"
+        }
+      }
+    }
+  ]
 }

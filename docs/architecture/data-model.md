@@ -1,10 +1,9 @@
 # Billium — модель данных
 
-Синхронизация PLAN1.P3.12, 2026-10-29, дополнения P4.2–P4.9. Реализованы platform, ledger,
-usage admission/aggregation, rating booking/corrections, schedule commercial periods и monetary occurrences.
-Execution, documents и collection ниже сохраняют явно обозначенные будущие потоки (D55/D56/D63; owners core modules).
+Синхронизация PLAN1.P3.12–P10.1. Реализованы все 8 потоков модулей ядра: `platform`, `ledger`,
+`usage`, `rating`, `schedule`, `documents`, `execution` и `collection`.
 Основания: INV-01–INV-14, D21, D45–D52, D54/D55/D57/D60/D62/D63.
-DDL: `packages/core/database/migrations/{platform,ledger,usage,rating,schedule}/`. Реестр модулей:
+DDL: `packages/core/database/migrations/{platform,ledger,usage,rating,schedule,documents,execution,collection}/`. Реестр модулей:
 [`spec/modules.json`](../../spec/modules.json); контракты композиции:
 [module-compatibility.md](module-compatibility.md) (D55).
 [Полнота дизайна](design-coverage.md) задаёт поддерживаемые границы и оставшийся объём реализации.

@@ -346,6 +346,62 @@ def repository_errors(document: dict, root: Path = ROOT) -> list[str]:
             errors.append(f"identity snapshot {kind} differs from the module registry; run scripts/spec/identities.py")
 
     errors.extend(payload_schema_errors(modules, root))
+    if root == ROOT:
+        errors.extend(doc_parity_errors(modules, root))
+    return errors
+
+
+def doc_parity_errors(modules: list[dict], root: Path) -> list[str]:
+    errors: list[str] = []
+    expected_requires = {
+        m["moduleId"]: {r["moduleId"] for r in m["requiresModules"]}
+        for m in modules
+    }
+
+    data_model = root / "docs/architecture/data-model.md"
+    if data_model.is_file():
+        text = data_model.read_text(encoding="utf-8")
+        if "будущие потоки" in text:
+            errors.append("docs/architecture/data-model.md still marks implemented modules as future streams")
+        for stream in expected_requires:
+            if not re.search(rf"\b{re.escape(stream)}\b", text):
+                errors.append(f"docs/architecture/data-model.md does not mention migration stream {stream}")
+
+    composition = root / "docs/architecture/module-composition.md"
+    if composition.is_file():
+        text = composition.read_text(encoding="utf-8")
+        edges = re.findall(r"^\s*([a-z_]+)\s*-->\s*([a-z_]+)\s*$", text, re.MULTILINE)
+        actual_requires: dict[str, set[str]] = {mid: set() for mid in expected_requires}
+        for dep, target in edges:
+            if target in actual_requires:
+                actual_requires[target].add(dep)
+        for mid, reqs in expected_requires.items():
+            if actual_requires.get(mid) != reqs:
+                errors.append(
+                    f"docs/architecture/module-composition.md DAG for {mid} has {sorted(actual_requires.get(mid, set()))}, "
+                    f"expected {sorted(reqs)}"
+                )
+
+    compat = root / "docs/architecture/module-compatibility.md"
+    if compat.is_file():
+        text = compat.read_text(encoding="utf-8")
+        match = re.search(r"Внутренний DAG:\s*(.+?)\.\s+Нельзя", text, re.DOTALL)
+        if not match:
+            errors.append("docs/architecture/module-compatibility.md is missing 'Внутренний DAG:' summary")
+        else:
+            dag_text = re.sub(r"\([^)]*\)", "", match.group(1))
+            for item in dag_text.split(";"):
+                if "→" not in item:
+                    continue
+                mod, deps_raw = item.split("→", 1)
+                mod = mod.strip()
+                deps = {d.strip() for d in deps_raw.split("+") if d.strip()}
+                if mod in expected_requires and deps != expected_requires[mod]:
+                    errors.append(
+                        f"docs/architecture/module-compatibility.md DAG for {mod} has {sorted(deps)}, "
+                        f"expected {sorted(expected_requires[mod])}"
+                    )
+
     return errors
 
 

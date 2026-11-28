@@ -32,7 +32,7 @@ callback.
 исполнением требует execution и `WriterAdmission`. Столбец `server` в `embedded-commerz` — пример развёртывания,
 не запрет.
 
-Внутренний DAG: ledger→platform; usage→platform; rating→platform+ledger; schedule→platform+rating+ledger;
+Внутренний DAG: ledger→platform; usage→platform; rating→platform; schedule→platform+rating;
 documents→platform+ledger; execution→platform (+ порты PaymentDrivers, WriterAdmission, PaymentObservationSink,
 который связывает ledger); collection→platform+ledger+execution. Нельзя включить schedule без rating или collection
 без execution; «просто выключить отправку» недостаточно (D55).
