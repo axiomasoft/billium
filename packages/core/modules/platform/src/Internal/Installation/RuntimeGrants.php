@@ -16,6 +16,9 @@ use Packman\Attributes\Internal;
 #[Internal]
 final readonly class RuntimeGrants
 {
+    /** A public table, or a public function with its identity argument types (for example `bigint[], text`). */
+    private const string OBJECT = '/^public\.[a-z_][a-z0-9_]*$|^FUNCTION public\.[a-z_][a-z0-9_]*\([a-z0-9_ ,\[\]]*\)$/';
+
     public function __construct(private string $runtimeConnection) {}
 
     public static function role(): ?string
@@ -28,7 +31,7 @@ final readonly class RuntimeGrants
 
     public static function grant(string $privileges, string $object): void
     {
-        if (preg_match('/^[A-Z, ()a-z_]+$/', $privileges) !== 1 || preg_match('/^public\.[a-z_]+(?:\([a-z ]*\))?$|^FUNCTION public\.[a-z_]+\([a-z ,]*\)$/', $object) !== 1) {
+        if (preg_match('/^[A-Z, ()a-z0-9_]+$/', $privileges) !== 1 || preg_match(self::OBJECT, $object) !== 1) {
             throw new LogicException("Unsafe runtime grant {$privileges} ON {$object}");
         }
         $role = self::role();
@@ -43,7 +46,7 @@ final readonly class RuntimeGrants
 
     public static function revokeAll(string $object): void
     {
-        if (preg_match('/^public\.[a-z_]+(?:\([a-z ,]*\))?$|^FUNCTION public\.[a-z_]+\([a-z ,]*\)$/', $object) !== 1) {
+        if (preg_match(self::OBJECT, $object) !== 1) {
             throw new LogicException("Unsafe runtime revoke ON {$object}");
         }
         $role = self::role();
