@@ -53,6 +53,23 @@ Each change below has a plan test that fails without it (one is a query rewrite 
 
 Left without an index on purpose: `billium_feed_bootstrap_session.new_partition_id` is read only during gap recovery and bootstrap proof (9 ms even at 100k sessions), and foreign keys of append-only tables are not indexed by default: their parent rows are never deleted, so such an index would only serve a join. Add one only for a measured hot path.
 
+## Round Trips and Write Amplification (0.1.0)
+
+Measured on PostgreSQL 16.16 over local TCP. The suite counts come from `pg_stat_statements` (`track = all`) over the full PostgreSQL test suite.
+
+| Change | Measurement | Before | After |
+| :--- | :--- | ---: | ---: |
+| `Pdo\Pgsql::ATTR_DISABLE_PREPARES` on the connection (see [PostgreSQL deployment](postgresql-deployment.md#connection-options)) | 20k parameterised `SELECT`s, best of 3 | 60.7 µs/query | 30.7 µs/query |
+| Root attempt opens with `SET TRANSACTION` plus one `set_config()` `SELECT` for the deadline, idle timeout and RLS scope (`DatabaseOperationRunner`, `RlsSessionContext::apply()`) | statements per root attempt; 20,879 attempts in the suite | 4 | 2 (−41,758 round trips) |
+| Session admission re-checks and reads the locked financial session in one statement (`Sessions::findIfCurrent()`) | statements after the lock plan per admitted root | 3 | 2 |
+| 49 unique keys that contain the primary key and back no foreign key dropped (ledger, execution, usage; migrations `2026_12_01_00000{1,2,3}`) | 100k-row `INSERT` into a copy of `billium_allocation_receipt`, median of 3 | 4,769 ms | 4,013 ms (−16%) |
+| Same | index bytes per row / indexes on the 41 tables | 477 B / 201 | 324 B / 152 |
+| `billium:server:metrics` computes the parked-inbox count and the outbox lag once each | `EXPLAIN ANALYZE`, 300k inbox rows (6k parked), 3 runs | 69 ms, 3 inbox scans | 35 ms, 1 inbox scan |
+
+Composite unique keys that a foreign key references stay: they carry the cross-seller composite foreign keys. The drop migrations look each key up by table and column list and refuse to drop one that a foreign key depends on.
+
+Open items with measurements are tracked in the [0.1 database audit](../audit/v0.1-db-proposals.md).
+
 ## Bounded Batching & Cursor Pagination
 
 Queue, feed, and list reads use explicit limits and stable keyset cursors instead of `OFFSET`:
