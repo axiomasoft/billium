@@ -26,7 +26,8 @@ use Billium\Collection\Enums\RecurringOwnerStatus;
 use Billium\Collection\Internal\Canonical\CanonicalJson;
 use Billium\Collection\Internal\CollectionReceipt;
 use Billium\Collection\Internal\Queries\DatabaseDunningQueries;
-use Billium\Collection\Internal\Support\RetryJitter;
+use Billium\Collection\Internal\Reducers\DunningStepPlanner;
+use Billium\Collection\Internal\Reducers\DunningTransitionReducer;
 use Billium\Collection\Internal\Support\RowCast;
 use Billium\Collection\Internal\Validation\ObligationCurrencyGuard;
 use Billium\Collection\Internal\Work\CollectionWork;
@@ -86,6 +87,8 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
         private IdempotencyReceiptQueries $receipts,
         private CollectionWork $work,
         private ObligationCurrencyGuard $obligationCurrency,
+        private DunningTransitionReducer $transitionReducer = new DunningTransitionReducer,
+        private DunningStepPlanner $stepPlanner = new DunningStepPlanner,
     ) {}
 
     #[Override]
@@ -779,18 +782,6 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
                     || $case->nextAttemptAt > $dueAsOf)) {
                     throw new ProblemException(ProblemCode::OperationFinancialHold, 'billium.collection.case_not_due');
                 }
-                if ($case->status === DunningCaseStatus::ParkedUnknown) {
-                    throw new ProblemException(ProblemCode::OperationFinancialHold, 'billium.collection.case_parked_unknown');
-                }
-                if (in_array($case->status, [
-                    DunningCaseStatus::Exhausted,
-                    DunningCaseStatus::Settled,
-                    DunningCaseStatus::Cancelled,
-                    DunningCaseStatus::Paused,
-                ], true)) {
-                    throw new ProblemException(ProblemCode::OperationFinancialHold, 'billium.collection.case_not_plannable');
-                }
-
                 $policyRow = $db->table('billium_collection_dunning_policy')
                     ->where('id', $case->policyId)
                     ->first() ?? throw new LogicException('Pinned dunning policy missing');
@@ -801,44 +792,11 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
                     ->orderBy('step_no')
                     ->get();
 
-                $priorStep = null;
+                $hydratedSteps = [];
                 foreach ($existingSteps as $row) {
-                    $step = DatabaseDunningQueries::hydrateStep($row);
-                    if ($step->status === CollectionStepStatus::Unknown) {
-                        throw new ProblemException(ProblemCode::OperationFinancialHold, 'billium.collection.prior_step_unknown_case_parked');
-                    }
-                    if (in_array($step->status, [
-                        CollectionStepStatus::Planned,
-                        CollectionStepStatus::Authorized,
-                        CollectionStepStatus::Dispatched,
-                    ], true)) {
-                        throw new ProblemException(ProblemCode::OperationFinancialHold, 'billium.collection.prior_step_in_flight');
-                    }
-                    if ($step->stepNo === $command->stepNo - 1) {
-                        $priorStep = $step;
-                    }
+                    $hydratedSteps[] = DatabaseDunningQueries::hydrateStep($row);
                 }
-
-                $priorStepId = null;
-                if ($command->stepNo === 1) {
-                    if ($existingSteps->count() > 0) {
-                        throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.collection.step_sequence_invalid');
-                    }
-                } else {
-                    if ($priorStep === null) {
-                        throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.collection.prior_step_missing');
-                    }
-                    if ($priorStep->status !== CollectionStepStatus::FailedTerminal) {
-                        throw new ProblemException(ProblemCode::OperationFinancialHold, 'billium.collection.prior_step_not_terminal_decline');
-                    }
-                    if ($priorStep->declineCategory === null || ! in_array($priorStep->declineCategory, $policy->retryableDeclineCategories, true)) {
-                        throw new ProblemException(ProblemCode::OperationFinancialHold, 'billium.collection.decline_not_retryable');
-                    }
-                    if ($case->businessDeclineAttemptsUsed >= $case->maxBusinessDeclineAttempts) {
-                        throw new ProblemException(ProblemCode::OperationFinancialHold, 'billium.collection.business_decline_budget_exhausted');
-                    }
-                    $priorStepId = $priorStep->id;
-                }
+                $priorStepId = $this->stepPlanner->validateSequence($case, $policy, $hydratedSteps, $command->stepNo);
 
                 $duplicateIntent = $db->table('billium_collection_step')
                     ->where('seller_ref', $caller->sellerRef)
@@ -856,24 +814,25 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
                     );
                 }
 
-                $stepDef = self::stepDefinition($policy, $command->stepNo);
-                if ($stepDef === null) {
-                    throw new ProblemException(ProblemCode::PolicyUnknown, 'billium.collection.policy_step_not_defined');
-                }
+                $stepDef = $this->stepPlanner->resolveStepDefinition($policy, $command->stepNo);
                 $amount = $command->amountMinor;
                 $issuedAt = Date::now()->toDateTimeImmutable();
                 if ($authorization !== null) {
                     $amount = $this->admission->lockAndSize($context, $db, $authorization, $case, $stepDef->channel, $authorizationRef,
                         $prepared['binding'], $prepared['merchant'], $prepared['host'], $prepared['componentRef'], $dueAsOf, $issuedAt);
-                } elseif ($amount > $case->currentOpenMinor) {
-                    throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.collection.amount_exceeds_open');
                 }
-                if ($policy->minOutstandingMinor > 0 && $amount < $policy->minOutstandingMinor) {
-                    throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.collection.below_outstanding_threshold');
-                }
-                if ($command->scheduledAt > $case->recoveryDeadlineAt) {
-                    throw new ProblemException(ProblemCode::OperationFinancialHold, 'billium.collection.recovery_horizon_exceeded');
-                }
+                $planDecision = $this->stepPlanner->decide(
+                    case: $case,
+                    policy: $policy,
+                    stepDefinition: $stepDef,
+                    priorStepId: $priorStepId,
+                    amountMinor: $amount,
+                    scheduledAt: $command->scheduledAt,
+                    enforceOpenMinorCap: $authorization === null,
+                );
+                $priorStepId = $planDecision->priorStepId;
+                $stepDef = $planDecision->stepDefinition;
+                $amount = $planDecision->amountMinor;
 
                 $now = RowCast::formatUtc($issuedAt);
                 $scheduledAtUtc = RowCast::formatUtc($command->scheduledAt);
@@ -1246,17 +1205,17 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
                         break;
 
                     case CollectionStepStatus::Unknown:
-                        $parkReason = $command->declineReason ?? 'prior_step_unknown';
+                        $decision = $this->transitionReducer->reduceUnknown($case, $step, $command);
                         DunningTransitionWrites::updateStepCas($db, $step, [
                             'status' => CollectionStepStatus::Unknown->value,
                             'step_revision' => $step->stepRevision + 1,
-                            'decline_reason' => $parkReason,
+                            'decline_reason' => $decision->parkedReason,
                             'updated_at' => $now,
                         ]);
                         DunningTransitionWrites::updateCaseCas($db, $case, [
-                            'status' => DunningCaseStatus::ParkedUnknown->value,
-                            'parked_reason' => $parkReason,
-                            'parked_step_ref' => $step->stepRef,
+                            'status' => $decision->caseStatus->value,
+                            'parked_reason' => $decision->parkedReason,
+                            'parked_step_ref' => $decision->parkedStepRef,
                             'next_attempt_at' => null,
                             'case_revision' => $case->caseRevision + 1,
                             'updated_at' => $now,
@@ -1264,13 +1223,7 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
                         break;
 
                     case CollectionStepStatus::Succeeded:
-                        if ($command->outcomeEvidenceDigest === null) {
-                            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.collection.success_requires_evidence');
-                        }
-                        $newOpen = $observedOpen ?? $command->updatedOpenMinor ?? max(0, $case->currentOpenMinor - $step->amountMinor);
-                        if ($observedOpen === null && $newOpen > $case->currentOpenMinor) {
-                            throw new ProblemException(ProblemCode::ValidationInvalid, 'updatedOpenMinor cannot exceed currentOpenMinor');
-                        }
+                        $decision = $this->transitionReducer->reduceSucceeded($case, $step, $command, $observedOpen);
                         DunningTransitionWrites::updateStepCas($db, $step, [
                             'status' => CollectionStepStatus::Succeeded->value,
                             'step_revision' => $step->stepRevision + 1,
@@ -1280,21 +1233,19 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
                         ]);
 
                         $caseUpdate = [
-                            'current_open_minor' => $newOpen,
-                            'active_step_no' => null,
-                            'last_completed_step_no' => max($case->lastCompletedStepNo, $step->stepNo),
-                            'parked_reason' => null,
-                            'parked_step_ref' => null,
+                            'status' => $decision->caseStatus->value,
+                            'current_open_minor' => $decision->currentOpenMinor,
+                            'active_step_no' => $decision->activeStepNo,
+                            'last_completed_step_no' => $decision->lastCompletedStepNo,
+                            'parked_reason' => $decision->parkedReason,
+                            'parked_step_ref' => $decision->parkedStepRef,
                             'next_attempt_at' => null,
                             'case_revision' => $case->caseRevision + 1,
                             'updated_at' => $now,
                         ];
-                        if ($newOpen === 0) {
-                            $caseUpdate['status'] = DunningCaseStatus::Settled->value;
-                            $caseUpdate['closed_reason'] = 'step_succeeded';
+                        if ($decision->closedReason !== null) {
+                            $caseUpdate['closed_reason'] = $decision->closedReason;
                             $caseUpdate['closed_at'] = $occurredUtc;
-                        } else {
-                            $caseUpdate['status'] = DunningCaseStatus::Open->value;
                         }
                         DunningTransitionWrites::updateCaseCas($db, $case, $caseUpdate);
                         break;
@@ -1307,6 +1258,13 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
                             );
                         }
 
+                        $policyRow = $db->table('billium_collection_dunning_policy')
+                            ->where('id', $case->policyId)
+                            ->first() ?? throw new LogicException('Pinned dunning policy missing');
+                        $policy = DatabaseDunningQueries::hydratePolicy($policyRow);
+
+                        $decision = $this->transitionReducer->reduceTerminalDecline($case, $step, $policy, $command, $observedOpen);
+
                         DunningTransitionWrites::updateStepCas($db, $step, [
                             'status' => CollectionStepStatus::FailedTerminal->value,
                             'step_revision' => $step->stepRevision + 1,
@@ -1317,88 +1275,45 @@ final readonly class DatabaseDunningCaseService implements DunningCaseService
                             'updated_at' => $now,
                         ]);
 
-                        $policyRow = $db->table('billium_collection_dunning_policy')
-                            ->where('id', $case->policyId)
-                            ->first() ?? throw new LogicException('Pinned dunning policy missing');
-                        $policy = DatabaseDunningQueries::hydratePolicy($policyRow);
+                        $nextStepEligible = $decision->nextStepEligible;
+                        $nextStepNo = $decision->nextStepNo;
+                        $nextEligibleAtUtc = $decision->nextAttemptAt === null ? null : RowCast::formatUtc($decision->nextAttemptAt);
 
-                        $usedDeclines = $case->businessDeclineAttemptsUsed + 1;
-                        $isRetryable = in_array($command->declineCategory, $policy->retryableDeclineCategories, true);
-                        $budgetRemains = $usedDeclines < $case->maxBusinessDeclineAttempts;
-                        $candidateStepNo = $step->stepNo + 1;
-                        $nextDef = self::stepDefinition($policy, $candidateStepNo);
-
-                        $candidateEligibleAt = null;
-                        $withinHorizon = false;
-                        if ($nextDef !== null) {
-                            $scaledDelay = intdiv($nextDef->delaySeconds * $nextDef->backoffMultiplierBps, 10000);
-                            $baseDelay = min($nextDef->maxBackoffSeconds, max($nextDef->delaySeconds, $scaledDelay));
-                            $jitter = RetryJitter::seconds($case->caseRef, $step->stepRef, $command->occurredAt, $nextDef->jitterMaxSeconds);
-                            $effectiveDelay = $baseDelay + min($jitter, max(0, $nextDef->maxBackoffSeconds - $baseDelay));
-                            $candidateEligibleAt = $command->occurredAt->setTimezone(new DateTimeZone('UTC'))
-                                ->modify('+'.$effectiveDelay.' seconds');
-                            $withinHorizon = $candidateEligibleAt <= $case->recoveryDeadlineAt;
+                        $caseUpdate = [
+                            'status' => $decision->caseStatus->value,
+                            'current_open_minor' => $decision->currentOpenMinor,
+                            'business_decline_attempts_used' => $decision->businessDeclineAttemptsUsed,
+                            'active_step_no' => $decision->activeStepNo,
+                            'last_completed_step_no' => $decision->lastCompletedStepNo,
+                            'parked_reason' => $decision->parkedReason,
+                            'parked_step_ref' => $decision->parkedStepRef,
+                            'next_attempt_at' => $nextEligibleAtUtc,
+                            'case_revision' => $case->caseRevision + 1,
+                            'updated_at' => $now,
+                        ];
+                        if ($decision->closedReason !== null) {
+                            $caseUpdate['closed_reason'] = $decision->closedReason;
+                            $caseUpdate['closed_at'] = $occurredUtc;
                         }
-                        $open = $observedOpen ?? $case->currentOpenMinor;
-                        $aboveThreshold = $open > 0 && $open >= $policy->minOutstandingMinor;
-
-                        if ($isRetryable && $budgetRemains && $nextDef !== null && $withinHorizon && $aboveThreshold) {
-                            $nextStepEligible = true;
-                            $nextStepNo = $candidateStepNo;
-                            $nextEligibleAtUtc = RowCast::formatUtc($candidateEligibleAt);
-                            DunningTransitionWrites::updateCaseCas($db, $case, [
-                                'status' => DunningCaseStatus::Open->value,
-                                'current_open_minor' => $open,
-                                'business_decline_attempts_used' => $usedDeclines,
-                                'active_step_no' => null,
-                                'last_completed_step_no' => max($case->lastCompletedStepNo, $step->stepNo),
-                                'parked_reason' => null,
-                                'parked_step_ref' => null,
-                                'next_attempt_at' => $nextEligibleAtUtc,
-                                'case_revision' => $case->caseRevision + 1,
-                                'updated_at' => $now,
-                            ]);
-                        } else {
-                            $closedReason = match (true) {
-                                ! $isRetryable => 'non_retryable_decline:'.$command->declineCategory->value,
-                                ! $budgetRemains => 'business_decline_budget_exhausted',
-                                $nextDef === null => 'policy_steps_exhausted',
-                                ! $withinHorizon => 'recovery_horizon_exceeded',
-                                default => 'below_outstanding_threshold',
-                            };
-                            DunningTransitionWrites::updateCaseCas($db, $case, [
-                                'status' => DunningCaseStatus::Exhausted->value,
-                                'current_open_minor' => $open,
-                                'business_decline_attempts_used' => $usedDeclines,
-                                'active_step_no' => null,
-                                'last_completed_step_no' => max($case->lastCompletedStepNo, $step->stepNo),
-                                'parked_reason' => null,
-                                'parked_step_ref' => null,
-                                'next_attempt_at' => null,
-                                'closed_reason' => $closedReason,
-                                'closed_at' => $occurredUtc,
-                                'case_revision' => $case->caseRevision + 1,
-                                'updated_at' => $now,
-                            ]);
-                        }
+                        DunningTransitionWrites::updateCaseCas($db, $case, $caseUpdate);
                         break;
 
                     case CollectionStepStatus::Cancelled:
-                        $cancelReason = $command->declineReason ?? 'step_cancelled';
+                        $decision = $this->transitionReducer->reduceCancelled($case, $command);
                         DunningTransitionWrites::updateStepCas($db, $step, [
                             'status' => CollectionStepStatus::Cancelled->value,
                             'step_revision' => $step->stepRevision + 1,
-                            'decline_reason' => $cancelReason,
+                            'decline_reason' => $decision->closedReason,
                             'terminal_at' => $occurredUtc,
                             'updated_at' => $now,
                         ]);
                         DunningTransitionWrites::updateCaseCas($db, $case, [
-                            'status' => DunningCaseStatus::Cancelled->value,
-                            'active_step_no' => null,
-                            'parked_reason' => null,
-                            'parked_step_ref' => null,
+                            'status' => $decision->caseStatus->value,
+                            'active_step_no' => $decision->activeStepNo,
+                            'parked_reason' => $decision->parkedReason,
+                            'parked_step_ref' => $decision->parkedStepRef,
                             'next_attempt_at' => null,
-                            'closed_reason' => $cancelReason,
+                            'closed_reason' => $decision->closedReason,
                             'closed_at' => $occurredUtc,
                             'case_revision' => $case->caseRevision + 1,
                             'updated_at' => $now,
