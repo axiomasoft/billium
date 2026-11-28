@@ -20,6 +20,6 @@ final class SpecRevision
     /** @var array<string, string> */
     public const array HASHES = [
         '2026-10' => 'sha256:224975f07c97b8793498f4aec142bdd4aa2be29c3bded382853d0b7fa845a0ad',
-        '2026-12' => 'sha256:c3f62e3fe9d3b11795430b4ed4b4b8b2049f22b44af004dbba0df9de80c83320',
+        '2026-12' => 'sha256:63e990ce04704dfe07ed90ce7a87da5182c4715dae5489887c54b040abad7493',
     ];
 }

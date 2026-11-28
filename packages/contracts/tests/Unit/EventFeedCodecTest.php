@@ -25,14 +25,29 @@ it('runs the independent effect, repair, certified no-effect and feed vectors wh
         $json = $vector['script'][0]['args']['json_text'];
         $expected = $vector['expect'][0];
         try {
-            $activeCodec = $vector['id'] === 'event/v2/catalog-valid' ? Codec::forRevision('2026-10') : $codec;
-            $value = $activeCodec->decode($json);
+            $value = $codec->decode($json);
             expect(isset($expected['error']))->toBeFalse($vector['id']);
             expect($value->schema)->toBe($expected['ok']['schema']);
-            expect($activeCodec->digestOf($value))->toBe($expected['ok']['digest']);
-            expect($activeCodec->encode($value))->toBe($activeCodec->canonicalize($json));
+            expect($codec->digestOf($value))->toBe($expected['ok']['digest']);
+            expect($codec->encode($value))->toBe($codec->canonicalize($json));
         } catch (ProblemException $error) {
             expect($error->problem->value)->toBe($expected['error']['code'] ?? 'unexpected refusal: '.$vector['id']);
+        }
+    }
+});
+
+it('decodes each event catalog only under its own spec revision', function (): void {
+    $root = dirname(__DIR__, 4).'/spec/revisions/';
+    foreach (['2026-10' => '2026-12', '2026-12' => '2026-10'] as $own => $other) {
+        $json = (string) file_get_contents($root.$own.'/event-catalogs/events-2026-10-v2.json');
+        $codec = Codec::forRevision($own);
+        $catalog = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+        expect($codec->digestOf($codec->decode($json)))->toBe($catalog['digest']);
+        try {
+            Codec::forRevision($other)->decode($json);
+            throw new LogicException("the {$other} codec accepted the {$own} catalog");
+        } catch (ProblemException $error) {
+            expect($error->problem)->toBe(ProblemCode::ValidationInvalid);
         }
     }
 });
