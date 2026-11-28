@@ -6,6 +6,7 @@ namespace Billium\Core\Tests\Drill;
 
 use Billium\Core\Database\OnlineDdl;
 use Billium\Platform\Tests\PlatformTestCase;
+use LogicException;
 use PHPUnit\Framework\Attributes\Group;
 
 #[Group('pg')]
@@ -55,5 +56,38 @@ final class InterruptedOnlineIndexUpgradeTest extends PlatformTestCase
         self::assertTrue((bool) $after);
 
         $owner->statement('DROP INDEX CONCURRENTLY IF EXISTS public.'.$indexName);
+    }
+
+    public function test_the_session_lock_timeout_is_restored_after_the_build(): void
+    {
+        $owner = self::connection('billium_owner');
+        $indexName = 'idx_billium_drill_lock_timeout_test';
+        $owner->statement('DROP INDEX CONCURRENTLY IF EXISTS public.'.$indexName);
+        $owner->statement("SET lock_timeout = '7s'");
+
+        try {
+            OnlineDdl::createIndexConcurrently(
+                $owner,
+                $indexName,
+                'CREATE INDEX CONCURRENTLY '.$indexName.' ON public.billium_feed_command_lease (environment)',
+                lockTimeoutMs: 500,
+            );
+
+            self::assertSame('7s', $owner->scalar("SELECT current_setting('lock_timeout')"));
+        } finally {
+            $owner->statement('RESET lock_timeout');
+            $owner->statement('DROP INDEX CONCURRENTLY IF EXISTS public.'.$indexName);
+        }
+    }
+
+    public function test_a_blocking_create_index_statement_is_refused(): void
+    {
+        $this->expectException(LogicException::class);
+
+        OnlineDdl::createIndexConcurrently(
+            self::connection('billium_owner'),
+            'idx_billium_drill_blocking_test',
+            'CREATE INDEX idx_billium_drill_blocking_test ON public.billium_feed_command_lease (environment)',
+        );
     }
 }
