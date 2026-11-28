@@ -6962,6 +6962,15 @@
                             "optional": false,
                             "default": null,
                             "flags": 0
+                        },
+                        {
+                            "name": "settings",
+                            "type": "array",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": true,
+                            "default": "[]",
+                            "flags": 0
                         }
                     ],
                     "return": "void",
@@ -7008,6 +7017,15 @@
                             "variadic": false,
                             "optional": false,
                             "default": null,
+                            "flags": 0
+                        },
+                        {
+                            "name": "settings",
+                            "type": "array",
+                            "by_reference": false,
+                            "variadic": false,
+                            "optional": true,
+                            "default": "[]",
                             "flags": 0
                         }
                     ],

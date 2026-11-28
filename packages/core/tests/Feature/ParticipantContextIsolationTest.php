@@ -22,6 +22,7 @@ use Billium\Ledger\Data\Settlements\CloseSettlementIntentNoEffect;
 use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
 use Billium\Platform\Contracts\Outbox\Outbox;
 use Billium\Platform\Data\Outbox\OutboxEvent;
+use Billium\Platform\Internal\Installation\Rows;
 use Billium\Platform\Tests\Concurrency\Scenarios\RootOperationScenario;
 use Billium\Platform\Tests\PlatformTestCase;
 use DateTimeImmutable;
@@ -69,6 +70,38 @@ final class ParticipantContextIsolationTest extends PlatformTestCase
         self::assertSame(2, $this->rows('billium_test_effect'));
         self::assertSame(1, $this->rows('billium_outbox_event'));
         self::assertSame(1, $this->rows('billium_money_commit_log'));
+    }
+
+    public function test_the_root_sets_its_deadline_and_scope_only_for_its_own_transaction(): void
+    {
+        $outcome = $this->runner()->run($this->spec(key: 'k-settings'), function (TransactionContext $context): Receipt {
+            $row = self::connection($context->connectionName())->selectOne(<<<'SQL'
+                SELECT current_setting('transaction_isolation') AS isolation,
+                       current_setting('statement_timeout') AS statement_timeout,
+                       current_setting('idle_in_transaction_session_timeout') AS idle_timeout,
+                       current_setting('billium.seller_ref', true) AS seller_ref,
+                       current_setting('billium.environment', true) AS environment
+                SQL);
+
+            return self::receipt([
+                'isolation' => Rows::field($row, 'isolation'),
+                'statement_timeout' => Rows::field($row, 'statement_timeout'),
+                'idle_timeout' => Rows::field($row, 'idle_timeout'),
+                'seller_ref' => Rows::field($row, 'seller_ref'),
+                'environment' => Rows::field($row, 'environment'),
+            ]);
+        });
+        self::assertSame('read committed', $outcome->body['isolation']);
+        self::assertSame('30s', $outcome->body['statement_timeout']);
+        self::assertSame('30s', $outcome->body['idle_timeout']);
+        self::assertSame($this->callers->current()->sellerRef, $outcome->body['seller_ref']);
+        self::assertSame($this->callers->current()->environment, $outcome->body['environment']);
+
+        $after = self::connection('pgsql')->selectOne(
+            "SELECT current_setting('statement_timeout') AS statement_timeout, current_setting('billium.seller_ref', true) AS seller_ref",
+        );
+        self::assertSame('0', Rows::field($after, 'statement_timeout'));
+        self::assertContains(Rows::field($after, 'seller_ref'), [null, '']);
     }
 
     public function test_a_failing_participant_rolls_back_every_participant(): void

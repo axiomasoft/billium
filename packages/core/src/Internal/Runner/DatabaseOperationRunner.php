@@ -85,9 +85,11 @@ final class DatabaseOperationRunner implements OperationRunner
             try {
                 $started = hrtime(true);
                 $this->connection->statement('SET TRANSACTION ISOLATION LEVEL READ COMMITTED');
-                $this->connection->statement('SET LOCAL statement_timeout = '.$this->deadlineMs);
-                $this->connection->statement('SET LOCAL idle_in_transaction_session_timeout = '.$this->deadlineMs);
-                RlsSessionContext::apply($this->connection, $caller);
+                // Deadline and RLS scope are transaction-local settings, sent in one round trip.
+                RlsSessionContext::apply($this->connection, $caller, [
+                    'statement_timeout' => (string) $this->deadlineMs,
+                    'idle_in_transaction_session_timeout' => (string) $this->deadlineMs,
+                ]);
 
                 // Step 2: the claim is the first write of the root Tx (D51); a replay needs no session or module admission.
                 if ($spec->commandKey !== null && $digest !== null) {
