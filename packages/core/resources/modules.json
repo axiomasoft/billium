@@ -205,14 +205,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "platform",
-      "currentSchemaVersion": 32,
+      "currentSchemaVersion": 4,
       "supportedSchemaReadRange": {
-        "min": 30,
-        "max": 32
+        "min": 4,
+        "max": 4
       },
       "supportedSchemaWriteRange": {
-        "min": 30,
-        "max": 32
+        "min": 4,
+        "max": 4
       },
       "requiresModules": [],
       "requiresPorts": [
@@ -283,164 +283,24 @@
       ],
       "migrationIdentities": [
         {
-          "id": "2026_10_20_000001_create_billium_append_only_function",
+          "id": "2026_12_01_100001_create_billium_platform_core",
           "version": 1,
-          "checksum": "sha256:6ab75930355058114719a32029648b65c1dbe4b773a1c7b1383a9f8bd7b249ee"
+          "checksum": "sha256:bffdb8b91e1b31558416a924edc98209620d389b15f89b7b64e09b1cbafd20ee"
         },
         {
-          "id": "2026_10_20_000002_create_billium_idempotency_receipt_table",
+          "id": "2026_12_01_100002_create_billium_feed_inbox_and_event_protocol",
           "version": 2,
-          "checksum": "sha256:7ba05f10ae7f3d167fd0d2be9cb813fdebd94afb973f712dcdaba8cdfa2c5477"
+          "checksum": "sha256:3f6439e00780f1ec96fd396f5b2fc6925c7c94934364ca468cf849159cde6fea"
         },
         {
-          "id": "2026_10_20_000003_create_billium_outbox_event_table",
+          "id": "2026_12_01_100003_create_billium_import_staging",
           "version": 3,
-          "checksum": "sha256:00aacf54151ef6bb589d8bbfe6effea6492d3411edb6d59737d790a4bd50cdfd"
+          "checksum": "sha256:abc8a33cdfc0635b607c8c65e09779a9de4bd80c2eb4021b4f89fe9bf423020b"
         },
         {
-          "id": "2026_10_20_000004_create_billium_outbox_watermark_table",
+          "id": "2026_12_01_100004_create_billium_authority_routing",
           "version": 4,
-          "checksum": "sha256:e4f22a7a2024e72d068141871d8d02de54c7487f88ef8fb556fa10639400daf5"
-        },
-        {
-          "id": "2026_10_20_000005_create_billium_money_commit_log_table",
-          "version": 5,
-          "checksum": "sha256:a69a5c947e9773717bdb5e2bf834fdafff83b335bd6bb975e828758bf3ac4409"
-        },
-        {
-          "id": "2026_10_20_000006_create_billium_installation_state_table",
-          "version": 6,
-          "checksum": "sha256:c7a5c639a9e42ca1ebfab2e4536eedc6595d11e14ca26dda7100e768fb4572dd"
-        },
-        {
-          "id": "2026_10_20_000007_create_billium_financial_session_table",
-          "version": 7,
-          "checksum": "sha256:813517badc6589c0c1278ac93cdaed05d6216dba1dc4d1db9e38d28ad8afbded"
-        },
-        {
-          "id": "2026_10_20_000008_create_billium_financial_session_event_table",
-          "version": 8,
-          "checksum": "sha256:2b59340776a576380976ddfca337503ff3aa0524b51570ff6fa7d246cc3c6bad"
-        },
-        {
-          "id": "2026_10_20_000009_create_billium_module_state_table",
-          "version": 9,
-          "checksum": "sha256:b86a74385d892917a5ff68170dd8102ee82138e16019e36cbe135f15e1ba330f"
-        },
-        {
-          "id": "2026_10_20_000010_create_billium_module_transitions_table",
-          "version": 10,
-          "checksum": "sha256:1a3522c260dae15426510c666feff26c354b3adedc59cd450e265f2395124b6a"
-        },
-        {
-          "id": "2026_10_28_000011_create_billium_event_protocol",
-          "version": 11,
-          "checksum": "sha256:7d2bf0ed5c1d8f1cde0b36294430e36cd80520873dd8be760f1e15d9aad4acbb"
-        },
-        {
-          "id": "2026_10_20_000101_create_billium_feed_partition_table",
-          "version": 12,
-          "checksum": "sha256:e9fa3876aada155a1a183247bbb9c5cb5762bb550cdf1d435d77c56a8b762599"
-        },
-        {
-          "id": "2026_10_20_000102_create_billium_inbox_message_table",
-          "version": 13,
-          "checksum": "sha256:9126e20be0f19d57f28385b3707dca8ad8c07d629ddeac252523ded3d6606a8f"
-        },
-        {
-          "id": "2026_10_20_000103_create_billium_inbox_conflict_table",
-          "version": 14,
-          "checksum": "sha256:45f143fec3ec6a0b055be33084294d947fb80b05966673d7f07f0ce7239425c5"
-        },
-        {
-          "id": "2026_10_29_000012_guard_billium_session_and_partition_admission",
-          "version": 15,
-          "checksum": "sha256:d91c7ffc4e3f83fcfbe479b4f33cc645eb49b05a66631439f109129edce936f0"
-        },
-        {
-          "id": "2026_10_29_000013_bind_billium_bootstrap_items_to_manifest",
-          "version": 16,
-          "checksum": "sha256:f5501db080321a156972894ef53a3f10fbe177cff47ce4e305254ce51c0326a0"
-        },
-        {
-          "id": "2026_11_17_010001_bind_billium_observation_scope",
-          "version": 17,
-          "checksum": "sha256:6501f9dc55406ae0ee9c0db6ff6505da08ac6107ff82586fea8a37e479ad8b9a"
-        },
-        {
-          "id": "2026_11_17_010002_guard_billium_qualified_partition_adoption",
-          "version": 18,
-          "checksum": "sha256:477f07128525cf4343d5a247024ad6e10a775a2d1b0da7154c2ea67daf9e4ebd"
-        },
-        {
-          "id": "2026_11_17_010003_bind_billium_observation_command",
-          "version": 19,
-          "checksum": "sha256:cf084d71ff1cbf45519a29c850426acf1eb0f9175ce8bc68da884921990ba686"
-        },
-        {
-          "id": "2026_11_18_010004_retain_command_financial_scope",
-          "version": 20,
-          "checksum": "sha256:53d899040dac00990c611455ef27087a31e63f0a37202da51d6216eb7c3cc84d"
-        },
-        {
-          "id": "2026_11_18_010005_validate_command_financial_scope",
-          "version": 21,
-          "checksum": "sha256:991ae9c92961f9e39a43b446f724de01dc8f289311d115182595a590cd39e5e0"
-        },
-        {
-          "id": "2026_11_18_010006_retain_command_input_digest",
-          "version": 22,
-          "checksum": "sha256:1c591bd652d2f646d42ae4245ba1aadfd28018de6a8ec8e8071cddb96db87429"
-        },
-        {
-          "id": "2026_11_18_010007_validate_command_input_digest",
-          "version": 23,
-          "checksum": "sha256:8d546c632eddf35a97ddbde4ff119e453956445948a82eec0d7cd90eb9aaddb1"
-        },
-        {
-          "id": "2026_11_18_010008_retain_original_execution_binding",
-          "version": 24,
-          "checksum": "sha256:02f76dea3f49fb0827cabdbfaa7741b7b2dba1d01bd95a7309b5cba858406989"
-        },
-        {
-          "id": "2026_11_18_010009_validate_original_execution_binding",
-          "version": 25,
-          "checksum": "sha256:d7d777b231c14cadfe9f3b19a3cdec1f792876994087ae21ef4b7ec0bb6feed6"
-        },
-        {
-          "id": "2026_11_18_040001_index_billium_outbox_event_scope_cursor",
-          "version": 26,
-          "checksum": "sha256:bdf5e97589031b343e6b9c9dd4aaf1e528827b6d078e46aefb766ab1cabbdcf0"
-        },
-        {
-          "id": "2026_11_18_040002_index_billium_open_outbox_deliveries",
-          "version": 27,
-          "checksum": "sha256:aaf6a35f65265d6a42442d713a0bb89246dcffe6b49b9011337cdca820c21e44"
-        },
-        {
-          "id": "2026_11_18_040003_index_billium_staged_bootstrap_items",
-          "version": 28,
-          "checksum": "sha256:0202264f016df231e6850cf228c1cca349edf39cc5677976dd62891f46ce7941"
-        },
-        {
-          "id": "2026_11_21_000001_index_billium_feed_hot_paths",
-          "version": 29,
-          "checksum": "sha256:376f099f163738bef1301c206438f9bfba534d12da5ce5d7b123bf2bb79fdd59"
-        },
-        {
-          "id": "2026_11_22_000001_create_billium_import_staging_tables",
-          "version": 30,
-          "checksum": "sha256:b705dd8d46b92dc1dcd48955676886abdd8e2cd103c1282f99ec02031221fa0c"
-        },
-        {
-          "id": "2026_11_22_000002_create_billium_authority_routing_tables",
-          "version": 31,
-          "checksum": "sha256:7aa84adce900ad3dd88ca68d9d46600ab19766ae14ede34bd5af7ff539aa07d8"
-        },
-        {
-          "id": "2026_11_30_000001_create_billium_feed_command_lease",
-          "version": 32,
-          "checksum": "sha256:c34c650d64e75d65db69902613ab5e5d85ea596ace40330aa62108ac29665348"
+          "checksum": "sha256:bc7c1ddc3f6cf845da36aa844d97791e617f232eceda691232cf5914fa993c2b"
         }
       ],
       "disablePolicy": {
@@ -484,14 +344,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "ledger",
-      "currentSchemaVersion": 20,
+      "currentSchemaVersion": 5,
       "supportedSchemaReadRange": {
-        "min": 19,
-        "max": 20
+        "min": 5,
+        "max": 5
       },
       "supportedSchemaWriteRange": {
-        "min": 19,
-        "max": 20
+        "min": 5,
+        "max": 5
       },
       "requiresModules": [
         {
@@ -545,104 +405,29 @@
       ],
       "migrationIdentities": [
         {
-          "id": "2026_10_21_000001_create_billium_ledger",
+          "id": "2026_12_01_200001_create_billium_ledger_tables",
           "version": 1,
-          "checksum": "sha256:f3948dc8928f00024388963cbc8267c8c86e04e12db5d2a43ed5974cada0547d"
+          "checksum": "sha256:cf4eb8fd8c3d5d21d2d971e85f3f94103c5e1ac120090ea2546e41de00b95925"
         },
         {
-          "id": "2026_10_21_000002_guard_billium_ledger",
+          "id": "2026_12_01_200002_create_billium_ledger_guards",
           "version": 2,
-          "checksum": "sha256:e6a260d6886efdae4d946d45060c0d421d86f42ab75cf4e09385ac3d0595a29b"
+          "checksum": "sha256:a2f7a2c04e3f1b76fa6ace5afcc3b353caf4ec61f797c6d7b2602cffbeb6f1b3"
         },
         {
-          "id": "2026_10_21_000003_invoice_routines_billium_ledger",
+          "id": "2026_12_01_200003_create_billium_ledger_invoice_routines",
           "version": 3,
-          "checksum": "sha256:d8396ca8060669741893cecd96e2121eff003cccf97a62c6dc2710efe390844a"
+          "checksum": "sha256:89810a392af74108ebe5964b8763002a5fe43c1eb38fc4974f67060155cef23d"
         },
         {
-          "id": "2026_10_21_000004_allocation_routines_billium_ledger",
+          "id": "2026_12_01_200004_create_billium_ledger_allocation_routines",
           "version": 4,
-          "checksum": "sha256:4a5ce25bf96764675d9254c31e874d5f91e3c28408540a3faef836942d2815b8"
+          "checksum": "sha256:eb490662a43bba45803f82db3e17a03e11b2bddedd390fc50ae95f844942dd76"
         },
         {
-          "id": "2026_10_21_000005_observation_routines_billium_ledger",
+          "id": "2026_12_01_200005_create_billium_ledger_observation_routines",
           "version": 5,
-          "checksum": "sha256:99bbbf0f9814949ad4ad296dbc52ebc34f025faa9e4139cbad783fbf80018c80"
-        },
-        {
-          "id": "2026_10_29_000006_close_billium_ledger_review_gaps",
-          "version": 6,
-          "checksum": "sha256:44f5f1f8980bbf6828c055ce7fb82981ba240d1e08e584a288b0cb5c75dc6891"
-        },
-        {
-          "id": "2026_10_29_000007_bind_billium_payment_receipts_and_creation_replay",
-          "version": 7,
-          "checksum": "sha256:31ffb79121ad1b2960726c750badc34495efd88199381cf4c08e0980678c6355"
-        },
-        {
-          "id": "2026_10_29_000008_close_billium_projection_and_reversal_tails",
-          "version": 8,
-          "checksum": "sha256:20e161c73e53ae03463d4a10d33ffd7361cbbc329cffd6bc28c508aabab955ee"
-        },
-        {
-          "id": "2026_10_29_000009_sync_billium_draft_invoice_adjustments",
-          "version": 9,
-          "checksum": "sha256:303af252b7c17586581e9cb0fb9e204d93dac1cb01f30b4af399da7194ac10f2"
-        },
-        {
-          "id": "2026_11_09_000010_guard_billium_payment_terminal_state",
-          "version": 10,
-          "checksum": "sha256:1f734c131b6d330cfbe0bf082653ebc00be7876c86bedbed9554f2e9719d4bda"
-        },
-        {
-          "id": "2026_11_17_020001_bind_billium_observed_owner",
-          "version": 11,
-          "checksum": "sha256:f64dcc9988a16ef3a15c52ab3110ff823a75f42297eb7c0cc9c15b9cc78e6606"
-        },
-        {
-          "id": "2026_11_17_020002_prove_billium_observed_revision_owner",
-          "version": 12,
-          "checksum": "sha256:0b33c049ff921fe01bac47a3190bd746bee9aecfebab6c54a1d8e9d7fc2ce773"
-        },
-        {
-          "id": "2026_11_18_030001_refuse_missing_billium_refund_basis_totals",
-          "version": 13,
-          "checksum": "sha256:24263cf2a79eba6eba933436d251ad035b2f07e078dc00122b5851a97da5bb1f"
-        },
-        {
-          "id": "2026_11_18_030002_keep_cancelled_billium_obligation_on_credit_note",
-          "version": 14,
-          "checksum": "sha256:81920eea0a4c3a77958d9a2bb49d4a0128ca86fbafd90014144231ed65b2f7d1"
-        },
-        {
-          "id": "2026_11_21_000002_index_billium_ledger_hot_paths",
-          "version": 15,
-          "checksum": "sha256:48bc187a6f2720aea9e8a5c9964760abd3f9e6b17483b1cf8329beed9736b5e3"
-        },
-        {
-          "id": "2026_11_25_000002_index_billium_observed_refunds_by_original",
-          "version": 16,
-          "checksum": "sha256:a9b0d4f9b9ae83ac437a0e7bfcee8ccb8301873b039a4e44a6dfab7f418fed80"
-        },
-        {
-          "id": "2026_11_25_000003_index_billium_ledger_discrepancy_lookups",
-          "version": 17,
-          "checksum": "sha256:475746f76242088c6c91bdcdd5d3b908f6fbe0b550f6b6abb11ff3562bbbcbb0"
-        },
-        {
-          "id": "2026_11_25_000004_index_billium_allocation_receipt_digest",
-          "version": 18,
-          "checksum": "sha256:6d2e20d2fdd0d061f9648044c7c2a42c7f7be7cc7b8f1af9ffcad967f33a3046"
-        },
-        {
-          "id": "2026_11_25_000006_index_billium_allocation_receipt_ref",
-          "version": 19,
-          "checksum": "sha256:b518b42489d18088cf37de3a6fb77b8f8df49a43ec19d979102b437fc27dffc6"
-        },
-        {
-          "id": "2026_12_01_000001_drop_redundant_billium_ledger_unique_keys",
-          "version": 20,
-          "checksum": "sha256:4f20deb34cb260ecd5e92689dce1385cf0a534b14718de1b8c90892e1196299d"
+          "checksum": "sha256:3fdb575bfc364b91cd9098cb54d65a13031f58e6fc2b2ed48b8c04a731c28258"
         }
       ],
       "disablePolicy": {
@@ -759,14 +544,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "usage",
-      "currentSchemaVersion": 8,
+      "currentSchemaVersion": 2,
       "supportedSchemaReadRange": {
-        "min": 5,
-        "max": 8
+        "min": 2,
+        "max": 2
       },
       "supportedSchemaWriteRange": {
-        "min": 5,
-        "max": 8
+        "min": 2,
+        "max": 2
       },
       "requiresModules": [
         {
@@ -810,44 +595,14 @@
       ],
       "migrationIdentities": [
         {
-          "id": "2026_11_10_000001_create_billium_usage",
+          "id": "2026_12_01_300001_create_billium_usage_evidence",
           "version": 1,
-          "checksum": "sha256:46c67806b70d501b04bb70b3bb0b5a5899e50ffd934bf9c474243aab6130f1df"
+          "checksum": "sha256:a2de6e389530e39e1af0cdf83ce9274f9e9a8b739c781850406e103656599bcd"
         },
         {
-          "id": "2026_11_10_000300_create_usage_aggregation_tables",
+          "id": "2026_12_01_300002_create_billium_usage_aggregation",
           "version": 2,
-          "checksum": "sha256:9bc60438fe2f901a099b4b9be996fa79b10213a176d8a552ba9b680000c2b965"
-        },
-        {
-          "id": "2026_11_17_000900_bind_usage_metric_and_snapshot_semantics",
-          "version": 3,
-          "checksum": "sha256:76ad1c434d3c42f8763be94ed6626fe5d208a8e8e3fe648e7ba412a06fe1aaf3"
-        },
-        {
-          "id": "2026_11_17_000901_validate_usage_metric_and_snapshot_semantics",
-          "version": 4,
-          "checksum": "sha256:d1f6d85cf877a5a5db728d4513df9f49bcb442ca0974e2f84f3a0edddf96faa5"
-        },
-        {
-          "id": "2026_11_18_040004_index_billium_usage_reproducibility_snapshot",
-          "version": 5,
-          "checksum": "sha256:e03b82dc998cb4363966d85ba838502a95c646c475f632f555dda3b5f1fe772a"
-        },
-        {
-          "id": "2026_11_29_000100_add_unit_evidence_to_usage_aggregate_snapshot",
-          "version": 6,
-          "checksum": "sha256:240364cc46c66c93826f59f687993ef8f6ce0a1c011cde4b730033d23452b760"
-        },
-        {
-          "id": "2026_11_29_000101_validate_unit_evidence_on_usage_aggregate_snapshot",
-          "version": 7,
-          "checksum": "sha256:be66585b403d34e75e6b99fe9334a26cfc25cf5696046bb252452ec394f3c102"
-        },
-        {
-          "id": "2026_12_01_000003_drop_redundant_billium_usage_unique_keys",
-          "version": 8,
-          "checksum": "sha256:01a32ce749ac9e9b4b9cf5dfd89d7027d09d8d679b832cd85c198e9271af018e"
+          "checksum": "sha256:cb01fd22f1bca6b307d227a1aec3d7020a6471e6e757a9603dafcfe4f93d55f1"
         }
       ],
       "disablePolicy": {
@@ -889,7 +644,7 @@
       "migrationStream": "rating",
       "currentSchemaVersion": 2,
       "supportedSchemaReadRange": {
-        "min": 1,
+        "min": 2,
         "max": 2
       },
       "supportedSchemaWriteRange": {
@@ -935,14 +690,14 @@
       ],
       "migrationIdentities": [
         {
-          "id": "2026_11_10_000100_create_rating_pricing_tables",
+          "id": "2026_12_01_400001_create_billium_rating_pricing",
           "version": 1,
-          "checksum": "sha256:6a5897cef142b67a0d579f502f97b92b5ff6db398568b6d68e368bbb6ae64761"
+          "checksum": "sha256:28d4eb19507303a7e968b7ee1a885bc6cd38fb637a5350e4f256e5c0d86449ab"
         },
         {
-          "id": "2026_11_10_000400_create_rating_run_basis_booking",
+          "id": "2026_12_01_400002_create_billium_rating_runs_and_bookings",
           "version": 2,
-          "checksum": "sha256:7e354fd89c3f9389c17c579b07e50d30ced269801831aaa91f807ebc97cd0119"
+          "checksum": "sha256:4f90851af98686f3cb517563554cb22f79a72c3338555aa766affe500aff0b8f"
         }
       ],
       "disablePolicy": {
@@ -990,14 +745,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "schedule",
-      "currentSchemaVersion": 5,
+      "currentSchemaVersion": 3,
       "supportedSchemaReadRange": {
-        "min": 5,
-        "max": 5
+        "min": 3,
+        "max": 3
       },
       "supportedSchemaWriteRange": {
-        "min": 5,
-        "max": 5
+        "min": 3,
+        "max": 3
       },
       "requiresModules": [
         {
@@ -1043,29 +798,19 @@
       ],
       "migrationIdentities": [
         {
-          "id": "2026_11_10_000500_create_billium_schedule_periods",
+          "id": "2026_12_01_500001_create_billium_schedule_periods",
           "version": 1,
-          "checksum": "sha256:9d78e37ceb4770be3b9e5b727b1be049d7926a63a5b5e4c618a6afa63b502550"
+          "checksum": "sha256:06937da7863a70fd1016ba9a736c4898c2c2499ec4cbe4586082c6928627882c"
         },
         {
-          "id": "2026_11_10_000600_create_billium_schedule_occurrences",
+          "id": "2026_12_01_500002_create_billium_schedule_occurrences",
           "version": 2,
-          "checksum": "sha256:a621efce694c0c5dd24fa4bea1bfa3feb1be5e13d7cead59edd4bdd16d31a870"
+          "checksum": "sha256:e44f364bfef3ef76994de22cad14d47b250242b0582d4dd7eb1342f1f15cbabf"
         },
         {
-          "id": "2026_11_10_000610_create_billium_schedule_billing_correction",
+          "id": "2026_12_01_500003_create_billium_schedule_billing_corrections",
           "version": 3,
-          "checksum": "sha256:312ea9e49670840cf84d6f76d0a2c2e5dc1a54cb1d005481572cff3354f61219"
-        },
-        {
-          "id": "2026_11_10_000620_allow_rated_correction_parents",
-          "version": 4,
-          "checksum": "sha256:5495545fdce930f682910f25fdb169ded5100398a7f0967efced00e581c5dd48"
-        },
-        {
-          "id": "2026_11_25_000001_index_billium_schedule_occurrence_amendment",
-          "version": 5,
-          "checksum": "sha256:b77050c17ed58bef77ad4f7b1845c44b00fb1bf5766942e6986dbe0caa7bdfe0"
+          "checksum": "sha256:dd968e9d62b54110e00aa5bfe96c5985da606b83f477cef677391011d1cb98cd"
         }
       ],
       "disablePolicy": {
@@ -1106,14 +851,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "documents",
-      "currentSchemaVersion": 7,
+      "currentSchemaVersion": 4,
       "supportedSchemaReadRange": {
-        "min": 7,
-        "max": 7
+        "min": 4,
+        "max": 4
       },
       "supportedSchemaWriteRange": {
-        "min": 7,
-        "max": 7
+        "min": 4,
+        "max": 4
       },
       "requiresModules": [
         {
@@ -1158,39 +903,24 @@
       ],
       "migrationIdentities": [
         {
-          "id": "2026_11_19_000001_create_billium_documents_profiles_and_finalization",
+          "id": "2026_12_01_600001_create_billium_documents_profiles_and_finalization",
           "version": 1,
-          "checksum": "sha256:071b98883952205358c69af2ac655f5c501f85fd93c8b38ac090d2f7c52586ec"
+          "checksum": "sha256:3ef70c53eea6b5b8f525ab110dc90ff9afee92fcfec08c9cfbd080cf79ed97fa"
         },
         {
-          "id": "2026_11_19_000002_create_billium_documents_series_and_legal_issue",
+          "id": "2026_12_01_600002_create_billium_documents_series_and_legal_issue",
           "version": 2,
-          "checksum": "sha256:a77f5e80aa966fddba522f64514da2db9e92df43786cc2b4dce3d0e85363ef4f"
+          "checksum": "sha256:1776082bd7d9173e9f41e614c1d32a0960301c189669a87a00c0a4a652ae62e2"
         },
         {
-          "id": "2026_11_19_000003_create_billium_documents_render_tables",
+          "id": "2026_12_01_600003_create_billium_documents_rendering",
           "version": 3,
-          "checksum": "sha256:b8683b80a84d4d11df49828f0b806dd85c377535521762067712f42d93a4b286"
+          "checksum": "sha256:b4f26a8d1e1590585c83458a66bd24e9fab71916234295d6b75b57b0041c53c8"
         },
         {
-          "id": "2026_11_19_000004_create_billium_documents_corrections",
+          "id": "2026_12_01_600004_create_billium_documents_corrections",
           "version": 4,
-          "checksum": "sha256:9106bd796bb5b6e6eb30bf9723eff77bab34b62226027f67f559bf7ea72d15e9"
-        },
-        {
-          "id": "2026_11_20_000006_add_render_blob_deleting_state",
-          "version": 5,
-          "checksum": "sha256:b04fb882d1c92cdc8902ebb8996dae84700ad09dbfc5a5295c280b3382066063"
-        },
-        {
-          "id": "2026_11_25_000007_index_billium_document_credit_note_line_original",
-          "version": 6,
-          "checksum": "sha256:566cae7bc64cea1f726574cdf770ac940e436fe0b133d1ad7f083cce52fa2c20"
-        },
-        {
-          "id": "2026_11_25_000008_index_billium_document_render_blob_cleanup",
-          "version": 7,
-          "checksum": "sha256:378f4b9cb30f4a6b1b554b241536fc9731acda898500177ee85f10b606b3449b"
+          "checksum": "sha256:89e1ef6693eaab92e844c096aa7d7b9a4f98a05eeaffaf06680c6f300db15402"
         }
       ],
       "disablePolicy": {
@@ -1232,14 +962,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "execution",
-      "currentSchemaVersion": 37,
+      "currentSchemaVersion": 4,
       "supportedSchemaReadRange": {
-        "min": 36,
-        "max": 37
+        "min": 4,
+        "max": 4
       },
       "supportedSchemaWriteRange": {
-        "min": 36,
-        "max": 37
+        "min": 4,
+        "max": 4
       },
       "requiresModules": [
         {
@@ -1327,189 +1057,24 @@
       ],
       "migrationIdentities": [
         {
-          "id": "2026_11_17_000001_create_billium_execution_runtime",
+          "id": "2026_12_01_700001_create_billium_execution_runtime",
           "version": 1,
-          "checksum": "sha256:0c3b07deb16c150b9d5c07cd04cfe0fbefe7fd78da3379e5e059844a4ae477e8"
+          "checksum": "sha256:778c68ea1469d61b0dac80875f75ccfb09be1a79470d13f7749ba54195ebef86"
         },
         {
-          "id": "2026_11_17_000002_guard_billium_execution_merchants",
+          "id": "2026_12_01_700002_create_billium_execution_provider_provenance",
           "version": 2,
-          "checksum": "sha256:7709686086696457b5aea14465b5ea13c508bb8631059b33f6ad4a300e9b6010"
+          "checksum": "sha256:f00214e506b2b8398f746b6a9cdaf33661d0083a33756cedfcfb90d6b8b8cdbb"
         },
         {
-          "id": "2026_11_17_000003_guard_billium_execution_identities",
+          "id": "2026_12_01_700003_create_billium_execution_reconciliation",
           "version": 3,
-          "checksum": "sha256:1b0bbe51c0edea8f05733f221e47716fa2be45dc2b10e9107dc693b44129461c"
+          "checksum": "sha256:309ac7f61797e04493d92fd0421b30d2d52090977ddc5a591549b6cbc8b3a4ca"
         },
         {
-          "id": "2026_11_17_000004_harden_billium_execution_history",
+          "id": "2026_12_01_700004_create_billium_fiscal_tables",
           "version": 4,
-          "checksum": "sha256:2b7eac93c27014b960d8aa5044b32947ae1e0d6325478cc2e074da5c5a3ab235"
-        },
-        {
-          "id": "2026_11_17_000005_bind_billium_execution_merchant_namespaces",
-          "version": 5,
-          "checksum": "sha256:244d982cde6b17bcf2eacc4d075b42706ec1c152459a449b56dda3547a89bbb7"
-        },
-        {
-          "id": "2026_11_17_000006_guard_billium_execution_business_binding",
-          "version": 6,
-          "checksum": "sha256:a6df70f616f3bcb923859e6de825de49b28dfc1e8e6716d9a177df6c145ff03f"
-        },
-        {
-          "id": "2026_11_17_000007_validate_billium_execution_runtime",
-          "version": 7,
-          "checksum": "sha256:502eaeb46ae308c0aecf1d8683bdf98f50d401b1cc8ed09a0fae0e1aebbc686c"
-        },
-        {
-          "id": "2026_11_17_000008_bind_billium_execution_source_context",
-          "version": 8,
-          "checksum": "sha256:a87474d3eee0040cfbc1506c6d8536da0b45b2b89c3fd669aefc292e4b6d9942"
-        },
-        {
-          "id": "2026_11_17_000009_validate_billium_execution_source_context",
-          "version": 9,
-          "checksum": "sha256:44cb6ea545e6b227ac89b8f8f4108d790833e0452400362db4e93a1f0c30eef9"
-        },
-        {
-          "id": "2026_11_17_000010_index_billium_execution_business_identity_digest",
-          "version": 10,
-          "checksum": "sha256:2c7676861e526124780d542b7cdc4decf24b6516aa105beba49ccf6d662a6ede"
-        },
-        {
-          "id": "2026_11_17_000011_persist_dispatch_permit_and_due_state",
-          "version": 11,
-          "checksum": "sha256:1a3906b45c298f3bcc0684a5072570664ddad7f8793f93cd85f4bc4a2544628e"
-        },
-        {
-          "id": "2026_11_17_000012_validate_dispatch_permit_and_due_state",
-          "version": 12,
-          "checksum": "sha256:1024a854f53e077e00b80687dd9170da31490d671ebdca7cd6e0626743c2f20f"
-        },
-        {
-          "id": "2026_11_17_000013_grant_dispatch_collection_permit",
-          "version": 13,
-          "checksum": "sha256:b359467a71792b7c71f4d40aa1c54838dc31f63050e3f04b1f451863b1d08eac"
-        },
-        {
-          "id": "2026_11_17_000014_record_admission_conflicts_and_identity_retention",
-          "version": 14,
-          "checksum": "sha256:90f9db8a05f37589d83584fbe3ad1ea5af892ff2f069729eabe47bcb5b06c8a3"
-        },
-        {
-          "id": "2026_11_17_000015_validate_business_identity_retention",
-          "version": 15,
-          "checksum": "sha256:1e541e5e61242259ec0d93a86f939017dad6eb63f2946b1664033c9377c01dea"
-        },
-        {
-          "id": "2026_11_18_000016_lock_merchant_action_admission",
-          "version": 16,
-          "checksum": "sha256:73142dc8a441a257ae3c3451f4b4dd4c2341b5f3bf2872049891cdaf11084c80"
-        },
-        {
-          "id": "2026_11_18_000017_bind_provider_processing_provenance",
-          "version": 17,
-          "checksum": "sha256:ce120dca7e3e3036131d01863e7327b9453dadccdbd07b9702c75a4fcad63e97"
-        },
-        {
-          "id": "2026_11_18_000018_validate_provider_processing_provenance",
-          "version": 18,
-          "checksum": "sha256:3486c8836f906b9d4be7268d7db3dca011e319ecb878a246883b48d0c15fda46"
-        },
-        {
-          "id": "2026_11_18_000019_insert_qualified_provider_facts",
-          "version": 19,
-          "checksum": "sha256:a5585c6a3d6966e70a2b7f7a48b797e46c3cf4fcfff2976881dfba043e008918"
-        },
-        {
-          "id": "2026_11_18_000020_guard_contradictory_reservation_release",
-          "version": 20,
-          "checksum": "sha256:4678f2e49b0753f92fc2394d833e16998c57bcba3a7b78d4b5a578fe99b72721"
-        },
-        {
-          "id": "2026_11_18_000021_index_qualified_pending_observations",
-          "version": 21,
-          "checksum": "sha256:54d46684cc6e6351f8c39e7710c21b2253ec3c4cab80269435c6c3c7f0e4a9dc"
-        },
-        {
-          "id": "2026_11_18_000022_scope_admission_conflict_queries",
-          "version": 22,
-          "checksum": "sha256:a30601eb2e2b64e1dd1495c563d611bab69fea5425039f52a8348bb86dec3e18"
-        },
-        {
-          "id": "2026_11_18_000023_validate_admission_conflict_scope",
-          "version": 23,
-          "checksum": "sha256:0ea3c1b2e4455d3db73a8353bc9138ed7ee4837041106664352379df980808a2"
-        },
-        {
-          "id": "2026_11_18_000024_retain_child_business_identity",
-          "version": 24,
-          "checksum": "sha256:1e89f72b51b5881b7fb8885c802ffaa2a3323e678784dc9815554be1a3db0b22"
-        },
-        {
-          "id": "2026_11_18_000025_distinguish_authorization_release_evidence",
-          "version": 25,
-          "checksum": "sha256:45985e0bd5111483f3306b9f24a1238598ef39c8863bfe8f5fa5e355f4ab4d25"
-        },
-        {
-          "id": "2026_11_18_000026_validate_authorization_release_evidence",
-          "version": 26,
-          "checksum": "sha256:dec085239aaad2aed565388fb3ec3ca4f51e6bcf6ad94c813bc4449ec6a8e12a"
-        },
-        {
-          "id": "2026_11_18_000027_grant_authorization_release_reference",
-          "version": 27,
-          "checksum": "sha256:fa06ac69831d9e50a9e856842eeb6824e06d6b24dd138d485a82fe4dbe38e5b5"
-        },
-        {
-          "id": "2026_11_18_000028_retain_qualified_reconciliation_pages",
-          "version": 28,
-          "checksum": "sha256:6180e844c144718a223b37b228fee84d2168aed37f22e9a0625867e89de12089"
-        },
-        {
-          "id": "2026_11_18_000029_record_qualified_original_replay",
-          "version": 29,
-          "checksum": "sha256:4e69682dd8a07293582e7761c67935e98972bf4581e19170494a573c18315b69"
-        },
-        {
-          "id": "2026_11_18_000030_validate_reconciliation_review_shapes",
-          "version": 30,
-          "checksum": "sha256:c614606b663b1c16ad31b9b7e7fbe22033eff28073bbd925c1ec87fa1f04701f"
-        },
-        {
-          "id": "2026_11_18_000031_confirm_reconciliation_review_shapes",
-          "version": 31,
-          "checksum": "sha256:cb6fecf4a6045affe2184c178daf46b584c50167df24a1ae357f63d9fe5d4ef7"
-        },
-        {
-          "id": "2026_11_18_000032_retain_original_identity_import",
-          "version": 32,
-          "checksum": "sha256:5bf720356407658ad5101d097795960a6cd749ec2a42667664caf62d5952743a"
-        },
-        {
-          "id": "2026_11_18_000033_guard_archived_child_reservations",
-          "version": 33,
-          "checksum": "sha256:d4327f68458625e72d0764f0254ef7021ed4b4753615d8c8a01179fb48bcd51e"
-        },
-        {
-          "id": "2026_11_19_000034_create_billium_fiscal_tables",
-          "version": 34,
-          "checksum": "sha256:cde40512bdbfa59cb598987c16f20bdba83096c61d5ba70020664e7fc73fa7e9"
-        },
-        {
-          "id": "2026_11_21_000003_index_billium_execution_admission",
-          "version": 35,
-          "checksum": "sha256:2ec8b2a94f9d2a7126e9b44c121a2823fdc7a61585ee24f1fb39613fd92a4937"
-        },
-        {
-          "id": "2026_11_25_000005_index_billium_execution_recon_item_review",
-          "version": 36,
-          "checksum": "sha256:10f863bee3a915ef23793d629a9fa8a5f4ec360da1e19a35b8275b8bf7e76b25"
-        },
-        {
-          "id": "2026_12_01_000002_drop_redundant_billium_execution_unique_keys",
-          "version": 37,
-          "checksum": "sha256:29f01577deca3d3f21a810a92c4da691d7c2ee4536387c053422274fec7b4da4"
+          "checksum": "sha256:1fc5864516d07b0d8385ad86610b4f86b5082e9735bcbc9dae1580cc863dc6e4"
         }
       ],
       "disablePolicy": {
@@ -1594,7 +1159,7 @@
       "migrationStream": "collection",
       "currentSchemaVersion": 5,
       "supportedSchemaReadRange": {
-        "min": 4,
+        "min": 5,
         "max": 5
       },
       "supportedSchemaWriteRange": {
@@ -1658,29 +1223,29 @@
       ],
       "migrationIdentities": [
         {
-          "id": "2026_11_20_000001_create_billium_collection_consent_tables",
+          "id": "2026_12_01_800001_create_billium_collection_consent",
           "version": 1,
-          "checksum": "sha256:f37cdf61f165df7fa631aee64c3c7e2916b3cc2f6e24b82ea667efb17cff8042"
+          "checksum": "sha256:c4e3c6d83aadd72cf37b6bb313818e3e5b802b4b54de0a6f83a3cf5d356377d5"
         },
         {
-          "id": "2026_11_20_000002_create_billium_collection_policy_case_and_ownership_tables",
+          "id": "2026_12_01_800002_create_billium_collection_policies_and_cases",
           "version": 2,
-          "checksum": "sha256:bd3720a13134f75c6b22f6dfbaa58f20df6c3b5deedb4edfe16f9ad3475d10d9"
+          "checksum": "sha256:0011646903773dd473e210143f4d28203fc7594ea7abd89db233d693d567208c"
         },
         {
-          "id": "2026_11_20_000003_create_billium_collection_authorization",
+          "id": "2026_12_01_800003_create_billium_collection_authorization",
           "version": 3,
-          "checksum": "sha256:25c2ac76ff93cf5eb0ba69c58f611d92e1541bc662cdd3f916c3ddeec5eb826b"
+          "checksum": "sha256:004fc90c9e13272aaa2cca25395d6d50258c32ce2421702d9e681336a243ff08"
         },
         {
-          "id": "2026_11_20_000004_create_billium_collection_work",
+          "id": "2026_12_01_800004_create_billium_collection_work",
           "version": 4,
-          "checksum": "sha256:d0f0f04a771bdb6977c107b7ebb144a60ad44f6dc1ffae816de4f3f35b01356b"
+          "checksum": "sha256:3a7d185b9e35d971889efe00f41adc46405a05af481f275b46dee79a1799f35a"
         },
         {
-          "id": "2026_11_20_000005_create_billium_collection_notification_signal_and_intervention_tables",
+          "id": "2026_12_01_800005_create_billium_collection_notifications_signals_and_interventions",
           "version": 5,
-          "checksum": "sha256:cc7cfd2ad6e7bfd175534af7b4248f4e073d68ff0c25a9f0758ed3fc9ba705d9"
+          "checksum": "sha256:62671818af7584e4d2d547436b3b642e5d7a1967a55bd0d8cb5781834ef81ece"
         }
       ],
       "disablePolicy": {

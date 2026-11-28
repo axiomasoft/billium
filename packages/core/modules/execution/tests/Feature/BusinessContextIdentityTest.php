@@ -32,8 +32,6 @@ use Billium\Execution\Internal\Storage\DatabaseExecutionStore;
 use Billium\Platform\Data\Installation\PlatformReceipt;
 use Closure;
 use DateTimeImmutable;
-use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\QueryException;
 use LogicException;
 use PDO;
 use PHPUnit\Framework\Attributes\Group;
@@ -293,24 +291,6 @@ final class BusinessContextIdentityTest extends ExecutionTestCase
         self::assertSame(1, $this->rows('billium_execution_operation'));
         self::assertSame(2, $this->rows('billium_execution_business_binding'));
         self::assertSame('55000', self::sqlState(TestEnvironment::pdo(owner: true), "DELETE FROM billium_execution_business_binding WHERE operation_ref='closed-root'"));
-    }
-
-    public function test_legacy_reconciliation_refuses_retained_rows_without_inventing_a_context(): void
-    {
-        $this->admit($this->binding());
-        $databases = $this->application()->make(DatabaseManager::class);
-        $migration = require __DIR__.'/../../../../database/migrations/execution/2026_11_17_000008_bind_billium_execution_source_context.php';
-        $upgrade = [$migration, 'up'];
-        self::assertIsCallable($upgrade);
-        try {
-            $databases->usingConnection('billium_owner', fn () => $this->owner()->transaction(static fn () => $upgrade()));
-            self::fail('Version zero history accepted without reconciliation');
-        } catch (QueryException $e) {
-            self::assertSame('55000', $e->getCode());
-            self::assertStringContainsString('original source context requires verified historical reconciliation', $e->getMessage());
-        }
-        self::assertSame(1, $this->rows('billium_execution_operation'));
-        self::assertSame('commerz', $this->value('SELECT source_context FROM billium_execution_business_binding'));
     }
 
     public function test_raw_route_retains_evidence_without_an_emitter_grant_and_cannot_admit_money(): void

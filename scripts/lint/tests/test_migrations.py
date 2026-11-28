@@ -63,9 +63,10 @@ class MigrationTests(unittest.TestCase):
                     'ALTER TABLE billium_test ADD COLUMN source_scope text; '
                     f'ALTER TABLE billium_test ALTER COLUMN source_scope {action};'))
 
-    def test_event_protocol_migration_obeys_expand_contract_rules(self):
-        path = LINT.ROOT / 'packages/core/database/migrations/platform/2026_10_28_000011_create_billium_event_protocol.php'
-        self.assertEqual([], LINT.lint(path, path.read_text()))
+    def test_baseline_migrations_obey_the_rules(self):
+        for path in sorted((LINT.ROOT / 'packages/core/database/migrations').rglob('*.php')):
+            with self.subTest(path=path.name):
+                self.assertEqual([], LINT.lint(path, path.read_text()))
 
     def test_runtime_role_and_routine_boundary(self):
         for sql in [
@@ -95,15 +96,15 @@ class MigrationTests(unittest.TestCase):
 
     def test_duplicate_migration_prefixes_are_rejected_across_directories(self):
         same = [
-            'documents/2026_11_20_000005_add_render_blob_deleting_state.php',
-            'collection/2026_11_20_000005_create_billium_collection_notification_signal_and_intervention_tables.php',
+            'documents/2026_12_01_600005_create_billium_documents_archive.php',
+            'collection/2026_12_01_600005_create_billium_collection_archive.php',
         ]
         errors = LINT.duplicate_prefixes(same)
         self.assertTrue(errors)
-        self.assertIn('2026_11_20_000005', errors[0])
+        self.assertIn('2026_12_01_600005', errors[0])
         self.assertEqual([], LINT.duplicate_prefixes([
-            Path('documents/2026_11_20_000006_add_render_blob_deleting_state.php'),
-            'collection/2026_11_20_000005_create_billium_collection_notification_signal_and_intervention_tables.php',
+            Path('documents/2026_12_01_600005_create_billium_documents_archive.php'),
+            'collection/2026_12_01_800006_create_billium_collection_archive.php',
         ]))
         root = LINT.ROOT / 'packages/core/database/migrations'
         self.assertEqual([], LINT.duplicate_prefixes(sorted(root.rglob('*.php'))))

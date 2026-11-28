@@ -102,7 +102,7 @@ class ExecutionSchemaTest extends ExecutionTestCase
             return self::receipt();
         });
         self::assertSame(31, $this->rows('pg_tables', "schemaname='public' AND tablename LIKE 'billium_execution_%'"));
-        self::assertSame(1, $this->rows('migrations', "migration='2026_11_17_000001_create_billium_execution_runtime'"));
+        self::assertSame(1, $this->rows('migrations', "migration='2026_12_01_700001_create_billium_execution_runtime'"));
         self::assertSame(1, $this->rows('pg_tables', "schemaname='public' AND tablename='billium_financial_session'"));
     }
 

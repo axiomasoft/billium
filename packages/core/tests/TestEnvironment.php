@@ -174,7 +174,7 @@ final class TestEnvironment
 
         // A fixture wiped before the fresh-rebuild cleanup can still have these standalone routines.
         $app->make(Dispatcher::class)->listen(MigrationStarted::class, static function (MigrationStarted $event) use ($app): void {
-            if ($event->method !== 'up' || $event->name !== '2026_11_20_000004_create_billium_collection_work') {
+            if ($event->method !== 'up' || $event->name !== '2026_12_01_800004_create_billium_collection_work') {
                 return;
             }
 
