@@ -7,10 +7,10 @@ namespace Billium\Core\Database;
 use Illuminate\Database\Connection;
 use Illuminate\Database\QueryException;
 use LogicException;
-use Packman\Attributes\Internal;
+use Packman\Attributes\Api;
 use RuntimeException;
 
-#[Internal]
+#[Api(since: '1.0')]
 final readonly class OnlineDdl
 {
     public static function createIndexConcurrently(
