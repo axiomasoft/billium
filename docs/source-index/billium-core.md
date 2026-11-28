@@ -120,7 +120,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 |---|---|---|---|
 | [`BilliumSchemaSetProvider`](../../packages/core/src/Database/BilliumSchemaSetProvider.php) | class | **Spi** | Declares Billium's central PostgreSQL schema sets (`billium-platform` platform stream and module streams). |
 | [`ExecutionSchemaSetProvider`](../../packages/core/src/Database/ExecutionSchemaSetProvider.php) | class | **Spi** |  |
-| [`OnlineDdl`](../../packages/core/src/Database/OnlineDdl.php) | class | *Internal* |  |
+| [`OnlineDdl`](../../packages/core/src/Database/OnlineDdl.php) | class | **Api** |  |
 | [`RlsSessionContext`](../../packages/core/src/Database/RlsSessionContext.php) | class | **Api** | Transaction-local (SET LOCAL) PostgreSQL session context for optional seller-scoped RLS (ADR-08, REQ-PROF-09). |
 
 ## Diagnostics
