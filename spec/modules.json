@@ -484,14 +484,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "ledger",
-      "currentSchemaVersion": 19,
+      "currentSchemaVersion": 20,
       "supportedSchemaReadRange": {
         "min": 19,
-        "max": 19
+        "max": 20
       },
       "supportedSchemaWriteRange": {
         "min": 19,
-        "max": 19
+        "max": 20
       },
       "requiresModules": [
         {
@@ -638,6 +638,11 @@
           "id": "2026_11_25_000006_index_billium_allocation_receipt_ref",
           "version": 19,
           "checksum": "sha256:b518b42489d18088cf37de3a6fb77b8f8df49a43ec19d979102b437fc27dffc6"
+        },
+        {
+          "id": "2026_12_01_000001_drop_redundant_billium_ledger_unique_keys",
+          "version": 20,
+          "checksum": "sha256:4f20deb34cb260ecd5e92689dce1385cf0a534b14718de1b8c90892e1196299d"
         }
       ],
       "disablePolicy": {
@@ -754,14 +759,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "usage",
-      "currentSchemaVersion": 7,
+      "currentSchemaVersion": 8,
       "supportedSchemaReadRange": {
         "min": 5,
-        "max": 7
+        "max": 8
       },
       "supportedSchemaWriteRange": {
         "min": 5,
-        "max": 7
+        "max": 8
       },
       "requiresModules": [
         {
@@ -838,6 +843,11 @@
           "id": "2026_11_29_000101_validate_unit_evidence_on_usage_aggregate_snapshot",
           "version": 7,
           "checksum": "sha256:be66585b403d34e75e6b99fe9334a26cfc25cf5696046bb252452ec394f3c102"
+        },
+        {
+          "id": "2026_12_01_000003_drop_redundant_billium_usage_unique_keys",
+          "version": 8,
+          "checksum": "sha256:01a32ce749ac9e9b4b9cf5dfd89d7027d09d8d679b832cd85c198e9271af018e"
         }
       ],
       "disablePolicy": {
@@ -1222,14 +1232,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "execution",
-      "currentSchemaVersion": 36,
+      "currentSchemaVersion": 37,
       "supportedSchemaReadRange": {
         "min": 36,
-        "max": 36
+        "max": 37
       },
       "supportedSchemaWriteRange": {
         "min": 36,
-        "max": 36
+        "max": 37
       },
       "requiresModules": [
         {
@@ -1495,6 +1505,11 @@
           "id": "2026_11_25_000005_index_billium_execution_recon_item_review",
           "version": 36,
           "checksum": "sha256:10f863bee3a915ef23793d629a9fa8a5f4ec360da1e19a35b8275b8bf7e76b25"
+        },
+        {
+          "id": "2026_12_01_000002_drop_redundant_billium_execution_unique_keys",
+          "version": 37,
+          "checksum": "sha256:29f01577deca3d3f21a810a92c4da691d7c2ee4536387c053422274fec7b4da4"
         }
       ],
       "disablePolicy": {

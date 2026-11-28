@@ -6764,6 +6764,27 @@
       "source": "packages/core/database/migrations/platform/2026_11_30_000001_create_billium_feed_command_lease.php"
     },
     {
+      "kind": "migration",
+      "id": "2026_12_01_000001_drop_redundant_billium_ledger_unique_keys",
+      "status": "new",
+      "since": "2026-12",
+      "source": "packages/core/database/migrations/ledger/2026_12_01_000001_drop_redundant_billium_ledger_unique_keys.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_12_01_000002_drop_redundant_billium_execution_unique_keys",
+      "status": "new",
+      "since": "2026-12",
+      "source": "packages/core/database/migrations/execution/2026_12_01_000002_drop_redundant_billium_execution_unique_keys.php"
+    },
+    {
+      "kind": "migration",
+      "id": "2026_12_01_000003_drop_redundant_billium_usage_unique_keys",
+      "status": "new",
+      "since": "2026-12",
+      "source": "packages/core/database/migrations/usage/2026_12_01_000003_drop_redundant_billium_usage_unique_keys.php"
+    },
+    {
       "kind": "route",
       "id": "billium.server.capabilities",
       "status": "new",

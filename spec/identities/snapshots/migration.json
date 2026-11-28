@@ -111,5 +111,8 @@
   "2026_11_25_000008_index_billium_document_render_blob_cleanup",
   "2026_11_29_000100_add_unit_evidence_to_usage_aggregate_snapshot",
   "2026_11_29_000101_validate_unit_evidence_on_usage_aggregate_snapshot",
-  "2026_11_30_000001_create_billium_feed_command_lease"
+  "2026_11_30_000001_create_billium_feed_command_lease",
+  "2026_12_01_000001_drop_redundant_billium_ledger_unique_keys",
+  "2026_12_01_000002_drop_redundant_billium_execution_unique_keys",
+  "2026_12_01_000003_drop_redundant_billium_usage_unique_keys"
 ]
