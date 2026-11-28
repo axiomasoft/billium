@@ -6765,6 +6765,13 @@
     },
     {
       "kind": "route",
+      "id": "billium.server.capabilities.v2",
+      "status": "new",
+      "since": "2026-12",
+      "source": "packages/server/routes/http.php"
+    },
+    {
+      "kind": "route",
       "id": "billium.server.collection.authorize",
       "status": "new",
       "since": "2026-10",
@@ -6915,6 +6922,13 @@
       "id": "billium.server.usage.accept",
       "status": "new",
       "since": "2026-10",
+      "source": "packages/server/routes/http.php"
+    },
+    {
+      "kind": "route",
+      "id": "billium.server.usage.accept.v2",
+      "status": "new",
+      "since": "2026-12",
       "source": "packages/server/routes/http.php"
     },
     {

@@ -1,15 +1,54 @@
 import 'dart:convert';
 
+import 'generated/problem_codes.g.dart';
 import 'generated/spec_data.g.dart';
+import 'problem_exception.dart';
 
-/// Every schema of the revision by `$id`.
-final Map<String, Object?> schemas = _object(jsonDecode(schemasJson));
+/// Every schema of the default revision by `$id`.
+final Map<String, Object?> schemas = schemasByRevision[specRevision]!;
 
-/// Envelope registry by schema name: the schema `$id` and the ordered variants that pick a class.
-final Map<String, EnvelopeEntry> envelopeRegistry = {
-  for (final entry in _object(jsonDecode(envelopeRegistryJson)).entries)
-    entry.key: EnvelopeEntry._(_object(entry.value)),
+/// Envelope registry of the default revision by schema name.
+final Map<String, EnvelopeEntry> envelopeRegistry =
+    envelopeRegistryByRevision[specRevision]!;
+
+/// Every schema by spec revision and `$id`.
+final Map<String, Map<String, Object?>> schemasByRevision = {
+  for (final entry in schemasJsonByRevision.entries)
+    entry.key: _object(jsonDecode(entry.value)),
 };
+
+/// Envelope registry by spec revision and schema name.
+final Map<String, Map<String, EnvelopeEntry>> envelopeRegistryByRevision = {
+  for (final entry in envelopeRegistryJsonByRevision.entries)
+    entry.key: {
+      for (final regEntry in _object(jsonDecode(entry.value)).entries)
+        regEntry.key: EnvelopeEntry._(_object(regEntry.value)),
+    },
+};
+
+/// Returns the schema map for [revision] or throws `billium.schema.unsupported`.
+Map<String, Object?> schemasForRevision(String revision) {
+  final found = schemasByRevision[revision];
+  if (found == null) {
+    throw ProblemException(
+      ProblemCode.schemaUnsupported,
+      "spec revision '$revision' is not supported",
+    );
+  }
+  return found;
+}
+
+/// Returns the envelope registry for [revision] or throws `billium.schema.unsupported`.
+Map<String, EnvelopeEntry> envelopeRegistryForRevision(String revision) {
+  final found = envelopeRegistryByRevision[revision];
+  if (found == null) {
+    throw ProblemException(
+      ProblemCode.schemaUnsupported,
+      "spec revision '$revision' is not supported",
+    );
+  }
+  return found;
+}
 
 /// One schema of the envelope registry.
 final class EnvelopeEntry {

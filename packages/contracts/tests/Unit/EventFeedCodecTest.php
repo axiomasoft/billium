@@ -25,11 +25,12 @@ it('runs the independent effect, repair, certified no-effect and feed vectors wh
         $json = $vector['script'][0]['args']['json_text'];
         $expected = $vector['expect'][0];
         try {
-            $value = $codec->decode($json);
+            $activeCodec = $vector['id'] === 'event/v2/catalog-valid' ? Codec::forRevision('2026-10') : $codec;
+            $value = $activeCodec->decode($json);
             expect(isset($expected['error']))->toBeFalse($vector['id']);
             expect($value->schema)->toBe($expected['ok']['schema']);
-            expect($codec->digestOf($value))->toBe($expected['ok']['digest']);
-            expect($codec->encode($value))->toBe($codec->canonicalize($json));
+            expect($activeCodec->digestOf($value))->toBe($expected['ok']['digest']);
+            expect($activeCodec->encode($value))->toBe($activeCodec->canonicalize($json));
         } catch (ProblemException $error) {
             expect($error->problem->value)->toBe($expected['error']['code'] ?? 'unexpected refusal: '.$vector['id']);
         }

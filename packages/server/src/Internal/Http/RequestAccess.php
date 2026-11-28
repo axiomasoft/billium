@@ -6,6 +6,7 @@ namespace Billium\Server\Internal\Http;
 
 use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Data\Envelope;
+use Billium\Contracts\Data\Envelopes\UsageFactV2;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Configuration\BilliumOptions;
@@ -48,7 +49,7 @@ final readonly class RequestAccess
      * @param  non-empty-list<class-string<T>>  $allowed
      * @param  Closure(T, ExecutionContext): JsonResponse  $consume
      */
-    public function run(Request $request, string $seller, array $allowed, Closure $consume, ?string $action = null, bool $read = false): JsonResponse
+    public function run(Request $request, string $seller, array $allowed, Closure $consume, ?string $action = null, bool $read = false, ?Codec $codec = null): JsonResponse
     {
         try {
             if (! $this->readiness->hasAuthPorts()) {
@@ -61,7 +62,8 @@ final readonly class RequestAccess
                 throw new ProblemException(ProblemCode::AuthDenied);
             }
 
-            $envelope = $this->decode($request);
+            $activeCodec = $codec ?? $this->codec;
+            $envelope = $this->decode($request, $activeCodec);
             if (! in_array($envelope::class, $allowed, true)) {
                 throw new ProblemException(ProblemCode::ValidationInvalid);
             }
@@ -104,7 +106,7 @@ final readonly class RequestAccess
         }
     }
 
-    private function decode(Request $request): Envelope
+    private function decode(Request $request, Codec $codec): Envelope
     {
         $type = strtolower(trim(explode(';', $request->headers->get('Content-Type') ?? '', 2)[0]));
         if ($type !== 'application/json') {
@@ -116,10 +118,15 @@ final readonly class RequestAccess
         } catch (JsonException) {
             throw new ProblemException(ProblemCode::ValidationInvalid);
         }
-        $envelope = $this->codec->decode($body);
+        $envelope = $codec->decode($body);
         $header = $request->headers->all('Idempotency-Key');
-        if ($header !== [] && (! is_string($envelope->raw->commandKey ?? null) || $header !== [$envelope->raw->commandKey])) {
-            throw new ProblemException(ProblemCode::ValidationInvalid);
+        if ($header !== []) {
+            $expectedKey = $envelope instanceof UsageFactV2
+                ? $envelope->source.':'.$envelope->factId.':'.$envelope->revision
+                : ($envelope->raw->commandKey ?? null);
+            if (! is_string($expectedKey) || $header !== [$expectedKey]) {
+                throw new ProblemException(ProblemCode::ValidationInvalid);
+            }
         }
 
         return $envelope;

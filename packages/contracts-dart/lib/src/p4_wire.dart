@@ -1,8 +1,10 @@
+import 'capabilities_negotiator.dart';
 import 'generated/problem_codes.g.dart';
+import 'generated/spec_data.g.dart' as spec_data;
 import 'money.dart';
 import 'problem_exception.dart';
 
-// BC-ENV-33..43: cross-field wire validation, without financial/calendar calculation.
+// BC-ENV-33..46: cross-field wire validation, without financial/calendar calculation.
 const p4Schemas = {
   'usage.metric.v1',
   'usage.fact.v2',
@@ -17,8 +19,72 @@ const p4Schemas = {
   'occurrence.no_charge.v1',
 };
 
-void validateP4Wire(Map<String, Object?> value) {
+const _tokenQuantitySchemas = {
+  'usage.quantity.v1',
+  'usage.aggregate.v1',
+  'rating.basis.v1',
+};
+
+void validateP4Wire(
+  Map<String, Object?> value, {
+  String specRevision = spec_data.specRevision,
+}) {
   _walk(value);
+  final schema = value['schema'];
+  if (specRevision == '2026-10') {
+    _require(value['unit'] != 'token', 'token unit is unsupported in 2026-10');
+    final strategy = value['strategy'];
+    if (strategy is Map &&
+        strategy['id'] == 'per_unit' &&
+        strategy['version'] == 2) {
+      _require(false, 'per_unit@2 is unsupported in 2026-10');
+    }
+  } else {
+    const negotiator = CapabilitiesNegotiator();
+    if (value['unit'] == 'token') {
+      if (schema == 'usage.fact.v2') {
+        final factValue = value['value'];
+        if (factValue is Map && factValue['kind'] == 'decimal') {
+          final quantity = factValue['quantity'];
+          _require(
+            quantity is String,
+            'BC-ENV-45: token quantity must be string',
+          );
+          negotiator.validateTokenQuantity('token', quantity! as String);
+        }
+      } else if (_tokenQuantitySchemas.contains(schema)) {
+        final quantity = value['quantity'];
+        _require(
+          quantity is String,
+          'BC-ENV-45: token quantity must be string',
+        );
+        negotiator.validateTokenQuantity('token', quantity! as String);
+      }
+    }
+    if (schema == 'rating.price.v1' && value['strategy'] is Map) {
+      final strategy = value['strategy']! as Map;
+      if (strategy['id'] == 'per_unit' && strategy['version'] == 2) {
+        final conversion = strategy['quantityConversion'];
+        _require(
+          conversion is Map,
+          'BC-ENV-46: per_unit@2 requires quantityConversion',
+        );
+        final convMap = conversion! as Map;
+        final numerator = convMap['numerator'];
+        final denominator = convMap['denominator'];
+        final quantityScale = convMap['quantityScale'];
+        _require(
+          numerator is String && denominator is String && quantityScale is int,
+          'BC-ENV-46: invalid quantityConversion parameters',
+        );
+        negotiator.validatePerUnitV2Conversion(
+          numerator: numerator! as String,
+          denominator: denominator! as String,
+          quantityScale: quantityScale! as int,
+        );
+      }
+    }
+  }
   if (value['schema'] == 'period.commercial.v1') {
     _instant('${value['localStart']}Z');
     _instant('${value['localEnd']}Z');

@@ -23,12 +23,40 @@ use stdClass;
 #[Api(since: '1.0')]
 final readonly class Codec
 {
+    private string $specRevision;
+
     /** @param list<string>|null $supportedSchemas Explicit client capabilities; null uses this generated revision. */
-    public function __construct(private ?array $supportedSchemas = null) {}
+    public function __construct(private ?array $supportedSchemas = null, ?string $specRevision = null)
+    {
+        $this->specRevision = $specRevision ?? SpecRevision::CURRENT;
+        if (! in_array($this->specRevision, SpecRevision::SUPPORTED, true)) {
+            throw new ProblemException(
+                ProblemCode::SchemaUnsupported,
+                "unsupported spec revision '{$this->specRevision}'",
+            );
+        }
+    }
+
+    /** @param list<string>|null $supportedSchemas Explicit client capabilities; null uses the given revision. */
+    public static function forRevision(string $revision, ?array $supportedSchemas = null): self
+    {
+        return new self($supportedSchemas, $revision);
+    }
+
+    private const array UNITS_BY_REVISION = [
+        '2026-10' => ['call', 'seat', 'byte', 'member', 'second', 'event'],
+        '2026-12' => ['call', 'seat', 'byte', 'member', 'second', 'event', 'token'],
+    ];
+
+    /**
+     * @return list<string>
+     */
+    public function supportedUnits(): array
+    {
+        return self::UNITS_BY_REVISION[$this->specRevision];
+    }
 
     private const string ENVELOPES = 'Billium\\Contracts\\Data\\Envelopes\\';
-
-    private const string PROBLEM_SCHEMA = 'urn:billium:spec:2026-10:problem/problem.json';
 
     /**
      * Decode checks in order: JSON syntax, `schema`, fields, amounts (BC-ENV-03).
@@ -44,19 +72,19 @@ final readonly class Codec
         if ($this->supportedSchemas !== null && ! in_array($value->schema, $this->supportedSchemas, true)) {
             throw new ProblemException(ProblemCode::SchemaUnsupported, 'Schema is outside the pinned client capabilities');
         }
-        $entry = Spec::envelopes()[$value->schema]
+        $entry = Spec::envelopes($this->specRevision)[$value->schema]
             ?? throw new ProblemException(ProblemCode::SchemaUnsupported, "schema '{$value->schema}' is not in the revision");
 
         if ($value->schema === 'billium.event.v2' && ($value->eventContractRevision ?? null) !== 'events-2026-10-v2') {
             throw new ProblemException(ProblemCode::SchemaUnsupported, 'unknown pinned event catalog');
         }
 
-        $problem = new SchemaValidator(Spec::schemas())->check($entry['schemaId'], $value);
+        $problem = new SchemaValidator(Spec::schemas($this->specRevision))->check($entry['schemaId'], $value);
         if ($problem !== null) {
             throw new ProblemException($problem, "the object does not match {$value->schema}");
         }
         if (in_array($value->schema, P4Wire::SCHEMAS, true)) {
-            P4Wire::validate($value);
+            P4Wire::validate($value, $this->specRevision);
             foreach (get_object_vars($value) as $child) {
                 if ($child instanceof stdClass && isset($child->schema)) {
                     $this->decode(Jcs::canonicalize($child));
@@ -158,7 +186,7 @@ final readonly class Codec
      */
     public function digestOf(Envelope $envelope): string
     {
-        $member = Spec::envelopes()[$envelope->schema]['variants'][0]['digestMember'];
+        $member = Spec::envelopes($this->specRevision)[$envelope->schema]['variants'][0]['digestMember'];
 
         return $this->digest($envelope->raw, $member);
     }
@@ -169,7 +197,8 @@ final readonly class Codec
     public function decodeProblem(string $json): Problem
     {
         $value = Json::decode($json);
-        $code = new SchemaValidator(Spec::schemas())->check(self::PROBLEM_SCHEMA, $value);
+        $problemSchema = "urn:billium:spec:{$this->specRevision}:problem/problem.json";
+        $code = new SchemaValidator(Spec::schemas($this->specRevision))->check($problemSchema, $value);
         if ($code !== null || ! $value instanceof stdClass) {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'not a problem object of the revision');
         }

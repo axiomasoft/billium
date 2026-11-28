@@ -523,5 +523,19 @@
     "php": "Billium\\Contracts\\Attributes\\SpiKind",
     "dart": null,
     "category": "Attributes"
+  },
+  {
+    "schema": null,
+    "variant": null,
+    "php": null,
+    "dart": "CapabilitiesNegotiator",
+    "category": "Contracts"
+  },
+  {
+    "schema": null,
+    "variant": null,
+    "php": null,
+    "dart": "CapabilityCompatibility",
+    "category": "Contracts"
   }
 ]

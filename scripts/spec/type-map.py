@@ -43,6 +43,8 @@ PLAIN = (
     ("Attributes/Api", None),
     ("Attributes/Spi", None),
     ("Attributes/SpiKind", None),
+    (None, "CapabilitiesNegotiator"),
+    (None, "CapabilityCompatibility"),
 )
 
 
@@ -59,12 +61,12 @@ def build() -> list[dict[str, object]]:
             }
         )
     for path, dart in PLAIN:
-        namespace = path.split("/")[0]
+        namespace = "Contracts" if path is None else path.split("/")[0]
         entries.append(
             {
                 "schema": None,
                 "variant": None,
-                "php": PHP_NS + path.replace("/", "\\"),
+                "php": None if path is None else PHP_NS + path.replace("/", "\\"),
                 "dart": dart,
                 "category": namespace,
             }
@@ -120,7 +122,7 @@ def dart_exports() -> set[str]:
 
 def check(entries: list[dict[str, object]]) -> list[str]:
     errors = []
-    php = [str(e["php"]) for e in entries]
+    php = [str(e["php"]) for e in entries if e["php"]]
     if len(set(php)) != len(php):
         errors.append("type-map: duplicate php class")
     missing = php_existing(php)

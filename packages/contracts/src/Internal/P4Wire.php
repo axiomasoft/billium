@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Billium\Contracts\Internal;
 
 use Billium\Contracts\Contracts\Codec;
+use Billium\Contracts\Contracts\SpecRevision;
 use Billium\Contracts\Data\Currency;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
@@ -21,9 +22,20 @@ final class P4Wire
         'obligation.prepare.v2', 'occurrence.no_charge.v1',
     ];
 
-    public static function validate(stdClass $value): void
+    /** @var list<string> Strict P4 envelopes whose unit is constrained by p4Unit (legacy usage.fact.v1 is excluded). */
+    private const array STRICT_P4_UNIT_SCHEMAS = [
+        'usage.metric.v1',
+        'usage.fact.v2',
+        'usage.quantity.v1',
+        'usage.aggregate.v1',
+        'rating.price.v1',
+        'rating.basis.v1',
+    ];
+
+    public static function validate(stdClass $value, string $revision = SpecRevision::CURRENT): void
     {
         self::walk($value);
+        self::validateTokenProfile($value, $revision);
         if ($value->schema === 'usage.aggregate.v1') {
             $completeness = self::object($value->completeness);
             $window = self::object($value->window);
@@ -66,6 +78,76 @@ final class P4Wire
             self::require(self::object($correction->previouslyBookedAmount)->currency === $amount->currency
                 && self::object($correction->recomputedAmount)->currency === $amount->currency, 'correction currency mismatch');
         }
+    }
+
+    private static function validateTokenProfile(stdClass $envelope, string $revision): void
+    {
+        $schema = is_string($envelope->schema ?? null) ? $envelope->schema : '';
+        $unit = is_string($envelope->unit ?? null) ? $envelope->unit : null;
+
+        if ($unit === 'token' && $revision === '2026-10' && in_array($schema, self::STRICT_P4_UNIT_SCHEMAS, true)) {
+            throw new ProblemException(
+                ProblemCode::ValidationInvalid,
+                'unit "token" is not registered in spec revision 2026-10',
+            );
+        }
+
+        if ($unit === 'token' && $revision === '2026-12' && in_array($schema, self::STRICT_P4_UNIT_SCHEMAS, true)) {
+            $quantity = self::extractQuantity($envelope);
+            if ($quantity !== null && preg_match('/^(0|[1-9][0-9]{0,23})(\.0{1,9})?$/D', $quantity) !== 1) {
+                throw new ProblemException(
+                    ProblemCode::ValidationInvalid,
+                    'BC-ENV-45: token quantity must be a non-negative integer',
+                );
+            }
+        }
+
+        if ($schema === 'rating.price.v1' && isset($envelope->strategy) && $envelope->strategy instanceof stdClass) {
+            $strategy = $envelope->strategy;
+            if (($strategy->id ?? null) === 'per_unit' && ($strategy->version ?? null) === 2) {
+                if ($revision === '2026-10') {
+                    throw new ProblemException(
+                        ProblemCode::ValidationInvalid,
+                        'strategy per_unit@2 is not registered in spec revision 2026-10',
+                    );
+                }
+                $conv = $strategy->quantityConversion ?? null;
+                if (! $conv instanceof stdClass
+                    || ! is_string($conv->numerator ?? null)
+                    || ! is_string($conv->denominator ?? null)
+                    || ! is_numeric($conv->numerator)
+                    || ! is_numeric($conv->denominator)
+                    || ! is_int($conv->quantityScale ?? null)
+                    || $conv->quantityScale < 0
+                    || $conv->quantityScale > 12
+                    || bccomp($conv->denominator, '0', 0) <= 0) {
+                    throw new ProblemException(ProblemCode::ValidationInvalid, 'BC-ENV-46: invalid quantityConversion');
+                }
+                $scaledUnit = bcmul($conv->numerator, bcpow('10', (string) $conv->quantityScale, 0), 0);
+                if (bcmod($scaledUnit, $conv->denominator, 0) !== '0') {
+                    throw new ProblemException(
+                        ProblemCode::ValidationInvalid,
+                        'BC-ENV-46: quantityConversion is not exact for a single unit at quantityScale',
+                    );
+                }
+            }
+        }
+    }
+
+    private static function extractQuantity(stdClass $envelope): ?string
+    {
+        if (($envelope->schema ?? null) === 'usage.fact.v2'
+            && ($envelope->value ?? null) instanceof stdClass
+            && ($envelope->value->kind ?? null) === 'decimal'
+            && is_string($envelope->value->quantity ?? null)) {
+            return $envelope->value->quantity;
+        }
+        if (in_array($envelope->schema ?? null, ['usage.quantity.v1', 'usage.aggregate.v1', 'rating.basis.v1'], true)
+            && is_string($envelope->quantity ?? null)) {
+            return $envelope->quantity;
+        }
+
+        return null;
     }
 
     private static function walk(mixed $value): void

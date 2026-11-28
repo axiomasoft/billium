@@ -93,6 +93,24 @@ final readonly class DatabasePriceVersionStore implements PriceVersionStore, Tax
 
     public function publish(PriceVersion $price, string $commandKey): array
     {
+        return $this->doPublish(price: $price, commandKey: $commandKey, wireDigest: null, billableStream: null);
+    }
+
+    /**
+     * @param  array<string, mixed>  $billableStream
+     * @return array<string, mixed>
+     */
+    public function publishWithWireEvidence(PriceVersion $price, string $commandKey, string $wireDigest, array $billableStream): array
+    {
+        return $this->doPublish(price: $price, commandKey: $commandKey, wireDigest: $wireDigest, billableStream: $billableStream);
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $billableStream
+     * @return array<string, mixed>
+     */
+    private function doPublish(PriceVersion $price, string $commandKey, ?string $wireDigest, ?array $billableStream): array
+    {
         $caller = $this->callers->current();
         if ($caller->sellerRef !== $price->sellerRef) {
             throw new ProblemException(ProblemCode::AuthDenied, 'billium.rating.seller_scope_mismatch');
@@ -100,17 +118,25 @@ final readonly class DatabasePriceVersionStore implements PriceVersionStore, Tax
         $this->registry->validate($price);
         $publicationKey = CanonicalJson::digest([$price->priceRef, $price->version]);
         $priceDigest = CanonicalJson::digest($price);
+        $specDigest = $wireDigest === null
+            ? $priceDigest
+            : CanonicalJson::digest(['priceDigest' => $priceDigest, 'wireDigest' => $wireDigest, 'billableStream' => $billableStream]);
         $outcome = $this->runner->run(
             spec: new OperationSpec(commandKind: 'rating.price_version.publish.v1', sellerRef: $caller->sellerRef, environment: $caller->environment,
                 mode: FinancialMode::Administrative, operationClass: ModuleOperationClass::NewIntent, modules: ['platform', 'rating'],
-                commandKey: $commandKey, digest: $priceDigest),
-            body: function (TransactionContext $context) use ($price, $caller, $publicationKey, $priceDigest): PricePublishedReceipt {
+                commandKey: $commandKey, digest: $specDigest),
+            body: function (TransactionContext $context) use ($price, $caller, $publicationKey, $priceDigest, $wireDigest, $billableStream): PricePublishedReceipt {
                 $this->runner->assertCurrent(context: $context, moduleId: 'rating');
                 $db = $this->databases->connection($context->connectionName());
                 $scope = ['seller_ref' => $caller->sellerRef, 'environment' => $caller->environment, 'publication_key' => $publicationKey];
+                $insertPayload = ['priceRef' => $price->priceRef, 'version' => $price->version, 'priceDigest' => $priceDigest];
+                if ($wireDigest !== null) {
+                    $insertPayload['wireDigest'] = $wireDigest;
+                    $insertPayload['billableStream'] = $billableStream;
+                }
                 $db->table('billium_rating_price_publication')->insertOrIgnore([...$scope, 'price_ref' => $price->priceRef,
                     'version' => $price->version, 'terms_digest' => $price->termsDigest, 'event_type' => 'rating.price_version.published.v1',
-                    'payload' => CanonicalJson::encode(['priceRef' => $price->priceRef, 'version' => $price->version, 'priceDigest' => $priceDigest])]);
+                    'payload' => CanonicalJson::encode($insertPayload)]);
                 $context->lock(new LockRequest(rank: LockRank::RatingPriceVersion, table: 'billium_rating_price_publication', keys: [$publicationKey], keyColumn: 'publication_key'));
                 $head = $db->table('billium_rating_price_publication')->where($scope)->first();
                 $existing = $db->table('billium_rating_price_version')->where($scope)->first();
@@ -118,7 +144,11 @@ final readonly class DatabasePriceVersionStore implements PriceVersionStore, Tax
                     throw new ProblemException(ProblemCode::RecoveryRequired, 'billium.rating.publication_missing');
                 }
                 $payload = RatingRows::map(json_decode(RatingRows::text($head->payload), true, 32, JSON_THROW_ON_ERROR));
-                if (($payload['priceDigest'] ?? null) !== $priceDigest || $head->terms_digest !== $price->termsDigest) {
+                $sameWire = ($payload['wireDigest'] ?? null) === $wireDigest
+                    && ($wireDigest === null
+                        ? ($payload['billableStream'] ?? null) === null
+                        : isset($payload['billableStream']) && CanonicalJson::digest($payload['billableStream']) === CanonicalJson::digest($billableStream));
+                if (($payload['priceDigest'] ?? null) !== $priceDigest || $head->terms_digest !== $price->termsDigest || ! $sameWire) {
                     throw new ProblemException(ProblemCode::PolicyUnknown, 'billium.rating.price_version_conflict');
                 }
                 if ($existing === null) {

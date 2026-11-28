@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-rating
 
-Path `packages/core/modules/rating/src`, namespace `Billium\Rating\`, layer L2. 120 types.
+Path `packages/core/modules/rating/src`, namespace `Billium\Rating\`, layer L2. 122 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -113,6 +113,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`ReceiptReplayAdapter`](../../packages/core/modules/rating/src/Internal/Adapters/ReceiptReplayAdapter.php) | class | *Internal* |  |
 | [`ScheduleOccurrenceAdapter`](../../packages/core/modules/rating/src/Internal/Adapters/ScheduleOccurrenceAdapter.php) | class | *Internal* |  |
 | [`UsageAggregateAdapter`](../../packages/core/modules/rating/src/Internal/Adapters/UsageAggregateAdapter.php) | class | *Internal* | Rating's only route to the optional usage capability; every member is absent when usage is not installed. |
+| [`WirePriceVersionMapper`](../../packages/core/modules/rating/src/Internal/Adapters/WirePriceVersionMapper.php) | class | *Internal* |  |
 
 ## Internal/Canonical
 
@@ -217,6 +218,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`FixedStrategy`](../../packages/core/modules/rating/src/Internal/Strategies/FixedStrategy.php) | class | *Internal* |  |
 | [`GraduatedStrategy`](../../packages/core/modules/rating/src/Internal/Strategies/GraduatedStrategy.php) | class | *Internal* |  |
 | [`PerUnitStrategy`](../../packages/core/modules/rating/src/Internal/Strategies/PerUnitStrategy.php) | class | *Internal* |  |
+| [`PerUnitV2Strategy`](../../packages/core/modules/rating/src/Internal/Strategies/PerUnitV2Strategy.php) | class | *Internal* |  |
 | [`StrategyCatalog`](../../packages/core/modules/rating/src/Internal/Strategies/StrategyCatalog.php) | class | *Internal* |  |
 | [`VolumeStrategy`](../../packages/core/modules/rating/src/Internal/Strategies/VolumeStrategy.php) | class | *Internal* |  |
 

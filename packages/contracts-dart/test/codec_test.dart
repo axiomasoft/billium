@@ -160,20 +160,38 @@ void main() {
   test('decodes a problem only when it matches its registry entry', () {
     const problem =
         '{"code":"billium.idempotency.in_flight","category":"idempotency","retryable":true,"sameKey":true,"receipt":"none","title":"In flight","status":409}';
-    final decoded = codec.decodeProblem(problem);
-    expect(decoded.code, ProblemCode.idempotencyInFlight);
-    expect(decoded.status, 409);
-    expect(
-      () => codec.decodeProblem(
-        problem.replaceFirst('"retryable":true', '"retryable":false'),
-      ),
-      throwsA(
-        isA<ProblemException>().having(
-          (e) => e.problem,
-          'problem',
-          ProblemCode.validationInvalid,
+    for (final revCodec in [
+      codec,
+      Codec.forRevision('2026-10'),
+      Codec.forRevision('2026-12'),
+    ]) {
+      final decoded = revCodec.decodeProblem(problem);
+      expect(decoded.code, ProblemCode.idempotencyInFlight);
+      expect(decoded.status, 409);
+      expect(
+        () => revCodec.decodeProblem(
+          problem.replaceFirst('"retryable":true', '"retryable":false'),
         ),
-      ),
-    );
+        throwsA(
+          isA<ProblemException>().having(
+            (e) => e.problem,
+            'problem',
+            ProblemCode.validationInvalid,
+          ),
+        ),
+      );
+    }
   });
+
+  test(
+    'supports both 2026-10 and 2026-12 revisions and reports supportedUnits',
+    () {
+      expect(codec.specRevision, '2026-12');
+      expect(codec.supportedUnits(), contains('token'));
+      final legacy = Codec.forRevision('2026-10');
+      expect(legacy.specRevision, '2026-10');
+      expect(legacy.supportedUnits(), isNot(contains('token')));
+      expect(legacy.decode(_execute), isA<ExecutePayment>());
+    },
+  );
 }

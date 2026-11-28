@@ -1,5 +1,6 @@
 [
   "billium.server.capabilities",
+  "billium.server.capabilities.v2",
   "billium.server.collection.authorize",
   "billium.server.execution.authorize",
   "billium.server.execution.cancel",
@@ -20,5 +21,6 @@
   "billium.server.ready",
   "billium.server.receipts.find",
   "billium.server.schedule.ensure",
-  "billium.server.usage.accept"
+  "billium.server.usage.accept",
+  "billium.server.usage.accept.v2"
 ]

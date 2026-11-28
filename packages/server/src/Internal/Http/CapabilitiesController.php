@@ -6,9 +6,11 @@ namespace Billium\Server\Internal\Http;
 
 use Billium\Contracts\Contracts\SpecRevision;
 use Billium\Contracts\Data\Envelopes\Capabilities;
+use Billium\Contracts\Data\Envelopes\CapabilitiesV2;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Contracts\Modules\ModuleRegistry;
+use Billium\Core\Contracts\Runtime\ContractCapabilities;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,9 +28,20 @@ final readonly class CapabilitiesController
         private HttpLimits $limits,
         private BilliumOptions $options,
         private ModuleRegistry $modules,
+        private ContractCapabilities $capabilities,
     ) {}
 
     public function show(Request $request): JsonResponse
+    {
+        return $this->buildCapabilities($request, v2: false);
+    }
+
+    public function showV2(Request $request): JsonResponse
+    {
+        return $this->buildCapabilities($request, v2: true);
+    }
+
+    private function buildCapabilities(Request $request, bool $v2): JsonResponse
     {
         try {
             $installation = $this->access->installation($request);
@@ -36,7 +49,10 @@ final readonly class CapabilitiesController
             return ProblemResponse::from($refusal->problem);
         }
 
-        $routes = array_filter(HttpContract::ROUTES, function (string $name): bool {
+        $routes = array_filter(HttpContract::ROUTES, function (string $name) use ($v2): bool {
+            if (! $v2 && in_array($name, ['billium.server.capabilities.v2', 'billium.server.usage.accept.v2'], true)) {
+                return false;
+            }
             $port = ModuleCommandsController::HOST_INPUTS[$name] ?? null;
 
             return $this->router->getRoutes()->hasNamedRoute($name) && ($port === null || $this->app->bound($port));
@@ -67,12 +83,12 @@ final readonly class CapabilitiesController
             }
         }
 
-        return $this->response->fromBody([
-            'schema' => Capabilities::SCHEMA,
+        $body = [
+            'schema' => $v2 ? CapabilitiesV2::SCHEMA : Capabilities::SCHEMA,
             'installationRef' => $installation->installationRef,
             'environment' => $installation->environment,
-            'specRevision' => SpecRevision::CURRENT,
-            'specHash' => HttpContract::SPEC_HASH,
+            'specRevision' => $v2 ? SpecRevision::CURRENT : '2026-10',
+            'specHash' => $v2 ? SpecRevision::HASHES[SpecRevision::CURRENT] : HttpContract::SPEC_HASH,
             'serverApiVersion' => '1',
             'acceptedCommandSchemas' => array_values(array_unique($commands)),
             'producedResponseSchemas' => array_values(array_unique($responses)),
@@ -98,6 +114,21 @@ final readonly class CapabilitiesController
             'lookupCompletenessPolicyRef' => 'BC-ENV-16',
             'catalogs' => array_values($catalogs),
             'selectionMode' => 'explicit',
-        ], digest: true);
+        ];
+        if ($v2) {
+            $body['supportedSpecRevisions'] = array_map(
+                static fn (string $rev): array => ['revision' => $rev, 'specHash' => SpecRevision::HASHES[$rev]],
+                SpecRevision::SUPPORTED,
+            );
+            $body['supportedUnits'] = $this->capabilities->supportedUnits();
+            $body['usageIngressSchemas'] = isset($routes['billium.server.usage.accept.v2']) ? ['usage.fact.v2'] : [];
+            $strategies = ['fixed@1', 'per_unit@1', 'graduated@1', 'volume@1'];
+            if ($this->capabilities->supportsRatingStrategy('per_unit', 2)) {
+                $strategies[] = 'per_unit@2';
+            }
+            $body['ratingStrategyVersions'] = $this->capabilities->isModuleEnabled('rating') ? $strategies : [];
+        }
+
+        return $this->response->fromBody($body, digest: true);
     }
 }

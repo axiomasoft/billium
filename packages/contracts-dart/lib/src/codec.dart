@@ -5,6 +5,7 @@ import 'package:crypto/crypto.dart';
 import 'envelope.dart';
 import 'generated/envelopes.g.dart';
 import 'generated/problem_codes.g.dart';
+import 'generated/spec_data.g.dart' as spec_data;
 import 'jcs.dart';
 import 'money.dart';
 import 'p4_wire.dart';
@@ -13,14 +14,35 @@ import 'problem_exception.dart';
 import 'schema_validator.dart';
 import 'spec.dart';
 
-const _problemSchema = 'urn:billium:spec:2026-10:problem/problem.json';
-
 /// Strict decode and canonical encode of the envelopes of the spec revision, plus the digest of D32.
 final class Codec {
-  /// Creates a codec, optionally pinned to explicitly negotiated client capabilities.
-  const Codec({this.supportedSchemas});
+  /// Creates a codec, optionally pinned to explicitly negotiated client capabilities and spec revision.
+  const Codec({this.supportedSchemas, String? specRevision})
+    : specRevision = specRevision ?? spec_data.specRevision;
+
+  /// Creates a codec pinned to a specific spec revision.
+  factory Codec.forRevision(
+    String revision, {
+    List<String>? supportedSchemas,
+  }) => Codec(supportedSchemas: supportedSchemas, specRevision: revision);
 
   final List<String>? supportedSchemas;
+  final String specRevision;
+
+  /// Returns the P4 usage/rating units supported by [specRevision].
+  List<String> supportedUnits() {
+    final defs =
+        schemasForRevision(
+              specRevision,
+            )['urn:billium:spec:$specRevision:common/defs.json']!
+            as Map<String, Object?>;
+    final p4Unit =
+        (defs[r'$defs']! as Map<String, Object?>)['p4Unit']!
+            as Map<String, Object?>;
+    return List<String>.unmodifiable(
+      (p4Unit['enum']! as List<Object?>).cast<String>(),
+    );
+  }
 
   /// Decodes a JSON text. Checks run in order: JSON syntax, `schema`, fields, amounts (BC-ENV-03).
   ///
@@ -42,7 +64,7 @@ final class Codec {
         'Schema is outside the pinned client capabilities',
       );
     }
-    final entry = envelopeRegistry[schema];
+    final entry = envelopeRegistryForRevision(specRevision)[schema];
     if (entry == null) {
       throw ProblemException(
         ProblemCode.schemaUnsupported,
@@ -57,12 +79,13 @@ final class Codec {
         'unknown pinned event catalog',
       );
     }
-    final problem = SchemaValidator(schemas).check(entry.schemaId, raw);
+    final problem = SchemaValidator(schemasForRevision(specRevision))
+        .check(entry.schemaId, raw);
     if (problem != null) {
       throw ProblemException(problem, 'the object does not match $schema');
     }
     if (p4Schemas.contains(schema)) {
-      validateP4Wire(raw);
+      validateP4Wire(raw, specRevision: specRevision);
       for (final child in raw.values) {
         if (child is Map && child.containsKey('schema')) {
           decode(canonicalizeValue(child));
@@ -160,7 +183,9 @@ final class Codec {
   /// The digest of a decoded envelope, computed over the object as received (BC-ID-12).
   String digestOf(Envelope envelope) => digest(
     envelope.raw,
-    member: envelopeRegistry[envelope.schema]!.variants.first.digestMember,
+    member: envelopeRegistryForRevision(
+      specRevision,
+    )[envelope.schema]!.variants.first.digestMember,
   );
 
   /// Decodes a problem object.
@@ -168,7 +193,11 @@ final class Codec {
   /// Throws `billium.validation.invalid` when the object breaks the problem schema or its registry entry.
   Problem decodeProblem(String json) {
     final value = parseJson(json);
-    if (SchemaValidator(schemas).check(_problemSchema, value) != null ||
+    if (SchemaValidator(schemasForRevision(specRevision)).check(
+              'urn:billium:spec:$specRevision:problem/problem.json',
+              value,
+            ) !=
+            null ||
         value is! Map) {
       throw const ProblemException(
         ProblemCode.validationInvalid,

@@ -55,6 +55,11 @@
       "name": "billium.server.capabilities"
     },
     {
+      "method": "GET",
+      "path": "/billium/v1/capabilities/v2",
+      "name": "billium.server.capabilities.v2"
+    },
+    {
       "method": "POST",
       "path": "/billium/v1/sellers/{sellerRef}/queries",
       "name": "billium.server.ledger.query"
@@ -123,6 +128,11 @@
       "method": "POST",
       "path": "/billium/v1/sellers/{sellerRef}/usage/facts",
       "name": "billium.server.usage.accept"
+    },
+    {
+      "method": "POST",
+      "path": "/billium/v1/sellers/{sellerRef}/usage/facts/v2",
+      "name": "billium.server.usage.accept.v2"
     },
     {
       "method": "POST",
@@ -195,6 +205,23 @@
         "x-billium-auth-action": "capabilities.read",
         "x-billium-request-schema": null,
         "x-billium-result-schema": "billium.capabilities.v1",
+        "x-billium-statuses": [
+          200
+        ],
+        "x-billium-idempotency-header": false,
+        "responses": {
+          "200": {
+            "description": "success"
+          }
+        }
+      }
+    },
+    "/billium/v1/capabilities/v2": {
+      "get": {
+        "operationId": "capabilities.read",
+        "x-billium-auth-action": "capabilities.read",
+        "x-billium-request-schema": null,
+        "x-billium-result-schema": "billium.capabilities.v2",
         "x-billium-statuses": [
           200
         ],
@@ -504,6 +531,28 @@
           200
         ],
         "x-billium-idempotency-header": false,
+        "responses": {
+          "200": {
+            "description": "success"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/sellerRef"
+          }
+        ]
+      }
+    },
+    "/billium/v1/sellers/{sellerRef}/usage/facts/v2": {
+      "post": {
+        "operationId": "usage.accept.v2",
+        "x-billium-auth-action": "usage.accept.v2",
+        "x-billium-request-schema": "usage.fact.v2",
+        "x-billium-result-schema": "usage.receipt.v2",
+        "x-billium-statuses": [
+          200
+        ],
+        "x-billium-idempotency-header": true,
         "responses": {
           "200": {
             "description": "success"

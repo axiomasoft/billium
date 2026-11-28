@@ -44,7 +44,7 @@ final class StrategyCatalog implements PricingStrategyRegistry
     /** @return list<PricingStrategy> */
     public static function builtins(): array
     {
-        return [new FixedStrategy, new PerUnitStrategy, new GraduatedStrategy, new VolumeStrategy];
+        return [new FixedStrategy, new PerUnitStrategy, new PerUnitV2Strategy, new GraduatedStrategy, new VolumeStrategy];
     }
 
     public function resolve(StrategyId $id, int $version): PricingStrategy
@@ -73,6 +73,13 @@ final class StrategyCatalog implements PricingStrategyRegistry
         $rules = $version->quantityRules;
         if ($rules->quantityScale < 0 || $rules->quantityScale > 12 || preg_match('/^[1-9][0-9]*$/D', $rules->conversionNumerator) !== 1 || preg_match('/^[1-9][0-9]*$/D', $rules->conversionDenominator) !== 1) {
             throw RatingProblems::invalid('invalid quantity rules');
+        }
+        if ($version->strategyId === StrategyId::PerUnit && $version->strategyVersion === 2) {
+            assert(is_numeric($rules->conversionNumerator) && is_numeric($rules->conversionDenominator));
+            $scaledUnit = bcmul($rules->conversionNumerator, bcpow('10', (string) $rules->quantityScale, 0), 0);
+            if (bcmod($scaledUnit, $rules->conversionDenominator, 0) !== '0') {
+                throw RatingProblems::invalid('BC-ENV-46: quantityConversion is not exact for a single unit at quantityScale');
+            }
         }
         try {
             $increment = Dec::parse($rules->billingIncrement);

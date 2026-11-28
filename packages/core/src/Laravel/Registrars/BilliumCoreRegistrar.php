@@ -15,6 +15,7 @@ use Billium\Core\Contracts\Runner\OperationRunner;
 use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Core\Contracts\Runtime\AuthenticatedObservationContext;
 use Billium\Core\Contracts\Runtime\CallerContext;
+use Billium\Core\Contracts\Runtime\ContractCapabilities;
 use Billium\Core\Contracts\Runtime\EventPublisher;
 use Billium\Core\Contracts\Runtime\FinancialAuthorityEvidence;
 use Billium\Core\Contracts\Runtime\FinancialSessionAdmission;
@@ -28,6 +29,7 @@ use Billium\Core\Internal\Runner\DatabaseOperationRunner;
 use Billium\Core\Internal\Runner\UnboundCallerContext;
 use Billium\Core\Internal\Runner\UnboundFinancialAuthorityEvidence;
 use Billium\Core\Internal\Runner\UnboundSessionAdmission;
+use Billium\Core\Internal\Runtime\DefaultContractCapabilities;
 use Billium\Core\Internal\Runtime\PaymentObservationCommandReceiver;
 use Billium\Core\Internal\Runtime\TransportObservationContext;
 use Billium\Core\Plugins\CollectionPlugin;
@@ -173,6 +175,7 @@ final class BilliumCoreRegistrar implements PackageRegistrar
         ));
         $app->alias(TransportObservationContext::class, AuthenticatedObservationContext::class);
         $app->bindIf(InternalCommandReceiver::class, PaymentObservationCommandReceiver::class);
+        $app->singleton(ContractCapabilities::class, DefaultContractCapabilities::class);
 
         $app->singleton(BilliumCompatibilityDoctorCheck::class, static fn (Application $app): BilliumCompatibilityDoctorCheck => new BilliumCompatibilityDoctorCheck(
             config: $app->make(Repository::class),

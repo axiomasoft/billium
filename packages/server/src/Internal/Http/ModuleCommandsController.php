@@ -6,10 +6,12 @@ namespace Billium\Server\Internal\Http;
 
 use Billium\Collection\Contracts\DunningCaseService;
 use Billium\Collection\Contracts\PinnedCollectionInputs;
+use Billium\Contracts\Contracts\Codec;
 use Billium\Contracts\Data\Envelopes\AuthorizeCollection;
 use Billium\Contracts\Data\Envelopes\EnsureBillingOccurrence;
 use Billium\Contracts\Data\Envelopes\PrepareObligation;
 use Billium\Contracts\Data\Envelopes\UsageFact;
+use Billium\Contracts\Data\Envelopes\UsageFactV2;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Rating\Contracts\PinnedRatingInputs;
@@ -54,7 +56,26 @@ final readonly class ModuleCommandsController
 
     public function usage(Request $request, string $sellerRef): JsonResponse
     {
-        return $this->access->run($request, $sellerRef, [UsageFact::class], fn (UsageFact $fact): JsonResponse => $this->response->from($this->app->make(Usage::class)->acceptUsageFact($fact, $this->input(UsageFactV1Attribution::class))), 'usage.accept');
+        return $this->access->run(
+            $request,
+            $sellerRef,
+            [UsageFact::class],
+            fn (UsageFact $fact): JsonResponse => $this->response->from($this->app->make(Usage::class)->acceptUsageFact($fact, $this->input(UsageFactV1Attribution::class))),
+            'usage.accept',
+            codec: Codec::forRevision('2026-10'),
+        );
+    }
+
+    public function usageV2(Request $request, string $sellerRef): JsonResponse
+    {
+        return $this->access->run(
+            $request,
+            $sellerRef,
+            [UsageFactV2::class],
+            fn (UsageFactV2 $fact): JsonResponse => $this->response->from($this->app->make(Usage::class)->submitUsageFact($fact)),
+            'usage.accept.v2',
+            codec: Codec::forRevision('2026-12'),
+        );
     }
 
     /**

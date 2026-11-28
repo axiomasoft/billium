@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Billium\Contracts\Internal;
 
+use Billium\Contracts\Contracts\SpecRevision;
 use LogicException;
 use Packman\Attributes\Internal;
 
@@ -13,20 +14,20 @@ use Packman\Attributes\Internal;
 #[Internal]
 final class Spec
 {
-    /** @var array<string, mixed>|null */
-    private static ?array $schemas = null;
+    /** @var array<string, array<string, mixed>> */
+    private static array $schemas = [];
 
-    /** @var array<string, array{schemaId: string, variants: list<array{class: string, digestMember: string, verifyDigest: bool, requires?: string}>}>|null */
-    private static ?array $envelopes = null;
+    /** @var array<string, array<string, array{schemaId: string, variants: list<array{class: string, digestMember: string, verifyDigest: bool, requires?: string}>}>> */
+    private static array $envelopes = [];
 
     /**
      * Every schema of the revision by `$id`.
      *
      * @return array<string, mixed>
      */
-    public static function schemas(): array
+    public static function schemas(string $revision = SpecRevision::CURRENT): array
     {
-        return self::$schemas ??= self::read('schemas.json');
+        return self::$schemas[$revision] ??= self::read('schemas.json', $revision);
     }
 
     /**
@@ -34,23 +35,27 @@ final class Spec
      *
      * @return array<string, array{schemaId: string, variants: list<array{class: string, digestMember: string, verifyDigest: bool, requires?: string}>}>
      */
-    public static function envelopes(): array
+    public static function envelopes(string $revision = SpecRevision::CURRENT): array
     {
-        if (self::$envelopes === null) {
+        if (! isset(self::$envelopes[$revision])) {
             /** @var array<string, array{schemaId: string, variants: list<array{class: string, digestMember: string, verifyDigest: bool, requires?: string}>}> $envelopes */
-            $envelopes = self::read('envelopes.json');
-            self::$envelopes = $envelopes;
+            $envelopes = self::read('envelopes.json', $revision);
+            self::$envelopes[$revision] = $envelopes;
         }
 
-        return self::$envelopes;
+        return self::$envelopes[$revision];
     }
 
     /**
      * @return array<string, mixed>
      */
-    private static function read(string $file): array
+    private static function read(string $file, string $revision): array
     {
-        $text = file_get_contents(dirname(__DIR__, 2).'/resources/spec/'.$file);
+        $baseDir = dirname(__DIR__, 2).'/resources/spec';
+        $revisionPath = "{$baseDir}/{$revision}/{$file}";
+        $path = is_file($revisionPath) ? $revisionPath : "{$baseDir}/{$file}";
+
+        $text = is_file($path) ? file_get_contents($path) : false;
         if ($text === false) {
             throw new LogicException("spec resource {$file} is missing");
         }

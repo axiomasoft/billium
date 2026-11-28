@@ -25,25 +25,27 @@ void main() {
   });
 
   test('lists the problem codes in the order and with the metadata of the registry', () {
-    final registry = (jsonDecode(
-      File('../../spec/revisions/2026-10/problem-codes.json')
-          .readAsStringSync(),
-    ) as List<Object?>).cast<Map<String, Object?>>();
-    final cases = [
-      for (final code in ProblemCode.values)
-        {
-          'code': code.value,
-          'category': code.category,
-          'retryable': code.retryable,
-          'sameKey': code.sameKey,
-          'receipt': code.receipt,
-        },
-    ];
-    final expected = [
-      for (final entry in registry)
-        {for (final key in cases.first.keys) key: entry[key]},
-    ];
-    expect(cases, expected);
+    for (final revision in supportedSpecRevisions) {
+      final registry = (jsonDecode(
+        File('../../spec/revisions/$revision/problem-codes.json')
+            .readAsStringSync(),
+      ) as List<Object?>).cast<Map<String, Object?>>();
+      final cases = [
+        for (final code in ProblemCode.values)
+          {
+            'code': code.value,
+            'category': code.category,
+            'retryable': code.retryable,
+            'sameKey': code.sameKey,
+            'receipt': code.receipt,
+          },
+      ];
+      final expected = [
+        for (final entry in registry)
+          {for (final key in cases.first.keys) key: entry[key]},
+      ];
+      expect(cases, expected);
+    }
   });
 
   test('imports nothing from the package internals in the public library', () {

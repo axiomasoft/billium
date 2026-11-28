@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-testkit
 
-Path `packages/testkit/src`, namespace `Billium\Testkit\`, layer L4. 37 types.
+Path `packages/testkit/src`, namespace `Billium\Testkit\`, layer L4. 38 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Accounting
@@ -62,6 +62,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`DeterministicWriterHost`](../../packages/testkit/src/Fixtures/DeterministicWriterHost.php) | class | **Api** | Simulated host boundary; never production fencing or authority qualification. |
 | [`DurableJournal`](../../packages/testkit/src/Fixtures/DurableJournal.php) | class | **Api** | Trusted test data only. |
 | [`DurableReceiver`](../../packages/testkit/src/Fixtures/DurableReceiver.php) | class | **Api** |  |
+| [`FakeTarifflerOverageSource`](../../packages/testkit/src/Fixtures/FakeTarifflerOverageSource.php) | class | **Api** |  |
 | [`FixtureClock`](../../packages/testkit/src/Fixtures/FixtureClock.php) | class | **Api** |  |
 | [`FixtureValue`](../../packages/testkit/src/Fixtures/FixtureValue.php) | class | **Api** |  |
 | [`JournalEvent`](../../packages/testkit/src/Fixtures/JournalEvent.php) | class | **Api** | Test lifecycle event; never a production retirement proof. |

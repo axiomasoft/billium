@@ -161,6 +161,7 @@ Cursor привязан к subscription, scope, lineage и selectionDigest. См
 | GET | `/billium/live` | `health.live` | — | — | 200 | — |
 | GET | `/billium/ready` | `health.ready` | — | — | 200, 503 | — |
 | GET | `/billium/v1/capabilities` | `capabilities.read` | — | `billium.capabilities.v1` | 200 | — |
+| GET | `/billium/v1/capabilities/v2` | `capabilities.read` | — | `billium.capabilities.v2` | 200 | — |
 | POST | `/billium/v1/sellers/{sellerRef}/payments/execute` | `payment.execute` | `payment.execute.v1` | `payment.admission.v1` | 202, 200 | — |
 | POST | `/billium/v1/sellers/{sellerRef}/payments/refund` | `payment.refund` | `payment.refund.v1` | `payment.admission.v1` | 202, 200 | — |
 | POST | `/billium/v1/sellers/{sellerRef}/payments/authorize` | `payment.authorize` | `payment.authorize.v1` | `payment.admission.v1` | 202, 200 | — |
@@ -173,6 +174,7 @@ Cursor привязан к subscription, scope, lineage и selectionDigest. См
 | POST | `/billium/v1/sellers/{sellerRef}/collection/authorize` | `collection.authorize` | `collection.authorize.v1` | `billium.command_receipt.v1` | 200 | — |
 | POST | `/billium/v1/sellers/{sellerRef}/observations` | `payment.observe` | `payment.observation.v1` | `ledger.allocation_receipt.v1` | 200, 202 | HTTP-21: grant только из principal; impersonation → 403 billium.auth.denied, receipt none; 202 → `ledger.observation_custody.v1` |
 | POST | `/billium/v1/sellers/{sellerRef}/usage/facts` | `usage.accept` | `usage.fact.v1` | `usage.receipt.v1` | 200 | — |
+| POST | `/billium/v1/sellers/{sellerRef}/usage/facts/v2` | `usage.accept.v2` | `usage.fact.v2` | `usage.receipt.v2` | 200 | — |
 | POST | `/billium/v1/sellers/{sellerRef}/allocations/reallocate` | `allocation.reallocate` | `allocation.reallocate.v1` | `ledger.allocation_receipt.v1` | 200 | — |
 | POST | `/billium/v1/sellers/{sellerRef}/queries` | `ledger.query` | `billium.query.v1` | — | 200 | paymentStatus→`ledger.payment_status.v1`, dueObligations→`ledger.due_obligations.v1`, obligation→`ledger.obligation.v1`, invoice→`ledger.invoice.v1`, allocationByOperation→`ledger.allocations.v1`, refundAuthorization→`ledger.refund_authorization.v1`; readRender без HTTP-результата |
 | POST | `/billium/v1/sellers/{sellerRef}/receipts/find` | `receipt.find` | `receipt.find.v1` | `receipt.find.v1` | 200 | — |
@@ -198,6 +200,7 @@ Cursor привязан к subscription, scope, lineage и selectionDigest. См
 | GET | `/billium/live` | `billium.server.live` |
 | GET | `/billium/ready` | `billium.server.ready` |
 | GET | `/billium/v1/capabilities` | `billium.server.capabilities` |
+| GET | `/billium/v1/capabilities/v2` | `billium.server.capabilities.v2` |
 | POST | `/billium/v1/sellers/{sellerRef}/queries` | `billium.server.ledger.query` |
 | POST | `/billium/v1/sellers/{sellerRef}/observations` | `billium.server.ledger.observations` |
 | POST | `/billium/v1/sellers/{sellerRef}/allocations/reallocate` | `billium.server.ledger.reallocate` |
@@ -212,6 +215,7 @@ Cursor привязан к subscription, scope, lineage и selectionDigest. См
 | POST | `/billium/v1/sellers/{sellerRef}/occurrences/ensure` | `billium.server.schedule.ensure` |
 | POST | `/billium/v1/sellers/{sellerRef}/collection/authorize` | `billium.server.collection.authorize` |
 | POST | `/billium/v1/sellers/{sellerRef}/usage/facts` | `billium.server.usage.accept` |
+| POST | `/billium/v1/sellers/{sellerRef}/usage/facts/v2` | `billium.server.usage.accept.v2` |
 | POST | `/billium/v1/sellers/{sellerRef}/receipts/find` | `billium.server.receipts.find` |
 | POST | `/billium/v1/sellers/{sellerRef}/feed/open` | `billium.server.feed.open` |
 | POST | `/billium/v1/sellers/{sellerRef}/feed/read` | `billium.server.feed.read` |

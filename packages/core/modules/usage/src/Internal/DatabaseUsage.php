@@ -222,8 +222,9 @@ final readonly class DatabaseUsage implements Usage
             $body['correction'] = ['correctionRef' => $pinned->correctionRef,
                 'supersedesRevision' => $fact->revision - 1, 'originalFactDigest' => self::text($previous->digest)];
         }
-        $body['digest'] = $this->codec->digest($body);
-        $normalized = $this->codec->decode($this->codec->canonicalize($body));
+        $v1Codec = Codec::forRevision('2026-10');
+        $body['digest'] = $v1Codec->digest($body);
+        $normalized = $v1Codec->decode($v1Codec->canonicalize($body));
         assert($normalized instanceof UsageFactV2);
 
         return $normalized;

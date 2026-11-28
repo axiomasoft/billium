@@ -28,6 +28,8 @@ void main() {
   });
 
   test('matches the spec-revision snapshot', () {
-    expect(snapshot('spec-revision'), [specRevision]);
+    expect(snapshot('spec-revision'), supportedSpecRevisions);
+    expect(supportedSpecRevisions, containsAll(['2026-10', '2026-12']));
+    expect(specRevision, '2026-12');
   });
 }

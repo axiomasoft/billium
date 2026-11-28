@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-core
 
-Path `packages/core/src`, namespace `Billium\Core\`, layer L2. 110 types.
+Path `packages/core/src`, namespace `Billium\Core\`, layer L2. 112 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## .
@@ -51,6 +51,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 |---|---|---|---|
 | [`AuthenticatedObservationContext`](../../packages/core/src/Contracts/Runtime/AuthenticatedObservationContext.php) | interface | **Spi** |  |
 | [`CallerContext`](../../packages/core/src/Contracts/Runtime/CallerContext.php) | interface | **Spi** | Host SPI: the authenticated caller of the current request or job. |
+| [`ContractCapabilities`](../../packages/core/src/Contracts/Runtime/ContractCapabilities.php) | interface | **Api** |  |
 | [`EventPublisher`](../../packages/core/src/Contracts/Runtime/EventPublisher.php) | interface | **Spi** | D63/BC-EVT-04/05: host transport, outside a Tx. |
 | [`FinancialAuthorityEvidence`](../../packages/core/src/Contracts/Runtime/FinancialAuthorityEvidence.php) | interface | **Spi** | Host trust boundary for every financial profile. |
 | [`FinancialSessionAdmission`](../../packages/core/src/Contracts/Runtime/FinancialSessionAdmission.php) | interface | **Spi** | Host SPI for every financial profile, ledger-only/embedded-commerz included (D62). |
@@ -197,6 +198,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
+| [`DefaultContractCapabilities`](../../packages/core/src/Internal/Runtime/DefaultContractCapabilities.php) | class | *Internal* |  |
 | [`ExecutionCompositionGuard`](../../packages/core/src/Internal/Runtime/ExecutionCompositionGuard.php) | class | *Internal* | Validates outgoing startup without resolving a provider effect or opening a financial root. |
 | [`PaymentObservationCommandReceiver`](../../packages/core/src/Internal/Runtime/PaymentObservationCommandReceiver.php) | class | *Internal* | Separate receiving root: transport ACK follows durable ledger custody, never implies projection applied. |
 | [`TransportObservationContext`](../../packages/core/src/Internal/Runtime/TransportObservationContext.php) | class | *Internal* |  |

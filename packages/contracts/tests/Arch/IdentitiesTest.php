@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Billium\Contracts\Contracts\SpecRevision;
 use Billium\Contracts\Data\Envelope;
 use Billium\Contracts\Enums\ProblemCode;
 
@@ -40,5 +41,6 @@ it('matches the envelope snapshot', function (): void {
 it('has the spec revision of the package in the revision snapshot', function (): void {
     $manifest = json_decode((string) file_get_contents(dirname(__DIR__, 2).'/composer.json'), true, 512, JSON_THROW_ON_ERROR);
 
-    expect(identitiesSnapshot('spec-revision'))->toBe([$manifest['extra']['billium']['spec_rev']]);
+    expect(identitiesSnapshot('spec-revision'))->toContain($manifest['extra']['billium']['spec_rev']);
+    expect(identitiesSnapshot('spec-revision'))->toBe(SpecRevision::SUPPORTED);
 });

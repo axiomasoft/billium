@@ -29,6 +29,7 @@ $composition = $this->app->make(Readiness::class);
 $router->get('/billium/live', [HealthController::class, 'live'])->name('billium.server.live');
 $router->get('/billium/ready', [HealthController::class, 'ready'])->name('billium.server.ready');
 $router->get('/billium/v1/capabilities', [CapabilitiesController::class, 'show'])->name('billium.server.capabilities');
+$router->get('/billium/v1/capabilities/v2', [CapabilitiesController::class, 'showV2'])->name('billium.server.capabilities.v2');
 
 if ($this->app->bound(LedgerQueries::class)) {
     $router->post('/billium/v1/sellers/{sellerRef}/queries', [LedgerController::class, 'query'])->name('billium.server.ledger.query');
@@ -67,6 +68,7 @@ if ($this->app->bound(DunningCaseService::class)) {
 }
 if ($this->app->bound(Usage::class)) {
     $router->post('/billium/v1/sellers/{sellerRef}/usage/facts', [ModuleCommandsController::class, 'usage'])->name('billium.server.usage.accept');
+    $router->post('/billium/v1/sellers/{sellerRef}/usage/facts/v2', [ModuleCommandsController::class, 'usageV2'])->name('billium.server.usage.accept.v2');
 }
 if ($this->app->bound(IdempotencyReceiptQueries::class)) {
     $router->post('/billium/v1/sellers/{sellerRef}/receipts/find', [RecoveryController::class, 'findReceipt'])->name('billium.server.receipts.find');

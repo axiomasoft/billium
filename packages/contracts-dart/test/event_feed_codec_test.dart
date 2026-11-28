@@ -18,27 +18,52 @@ void main() {
     File('${root.path}/event/envelope/event-type-unknown.json'),
   ];
   const codec = Codec();
+  final legacyRevisionCodec = Codec.forRevision('2026-10');
   for (final file in files) {
     final vector = jsonDecode(file.readAsStringSync()) as Map;
-    test('EVT-07 ${vector['id']}', () {
+    final vectorId = vector['id'] as String;
+    test('EVT-07 $vectorId', () {
       final json = vector['script'][0]['args']['json_text'] as String;
       final expected = vector['expect'][0] as Map;
       if (expected.containsKey('error')) {
+        for (final targetCodec in [codec, legacyRevisionCodec]) {
+          expect(
+            () => targetCodec.decode(json),
+            throwsA(
+              isA<ProblemException>().having(
+                (e) => e.problem.value,
+                'code',
+                expected['error']['code'],
+              ),
+            ),
+          );
+        }
+      } else if (vectorId == 'event/v2/catalog-valid') {
+        // Vector carries 2026-10 payloadSchemaRef URN; 2026-10 accepts it and 2026-12 rejects it.
+        final value = legacyRevisionCodec.decode(json);
+        expect(value.schema, expected['ok']['schema']);
+        expect(legacyRevisionCodec.digestOf(value), expected['ok']['digest']);
+        expect(
+          legacyRevisionCodec.encode(value),
+          legacyRevisionCodec.canonicalizeJson(json),
+        );
         expect(
           () => codec.decode(json),
           throwsA(
             isA<ProblemException>().having(
-              (e) => e.problem.value,
+              (e) => e.problem,
               'code',
-              expected['error']['code'],
+              ProblemCode.validationInvalid,
             ),
           ),
         );
       } else {
-        final value = codec.decode(json);
-        expect(value.schema, expected['ok']['schema']);
-        expect(codec.digestOf(value), expected['ok']['digest']);
-        expect(codec.encode(value), codec.canonicalizeJson(json));
+        for (final targetCodec in [codec, legacyRevisionCodec]) {
+          final value = targetCodec.decode(json);
+          expect(value.schema, expected['ok']['schema']);
+          expect(targetCodec.digestOf(value), expected['ok']['digest']);
+          expect(targetCodec.encode(value), targetCodec.canonicalizeJson(json));
+        }
       }
     });
   }

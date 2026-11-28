@@ -25,6 +25,7 @@ import lint  # noqa: E402
 import oracle  # noqa: E402
 
 REV = ROOT / "spec/revisions/2026-10"
+REV_CURRENT = ROOT / "spec/revisions/2026-12"
 OPENAPI_PATH = ROOT / "spec/server/openapi.v1.json"
 DOC_PATH = ROOT / "docs/contracts/server-api-v1.md"
 HTTP_ROUTES = ROOT / "packages/server/routes/http.php"
@@ -65,6 +66,7 @@ ROUTES: tuple[dict[str, object], ...] = (
     {"method": "GET", "path": "/billium/live", "auth": "health.live", "request": None, "result": None, "statuses": [200]},
     {"method": "GET", "path": "/billium/ready", "auth": "health.ready", "request": None, "result": None, "statuses": [200, 503]},
     {"method": "GET", "path": "/billium/v1/capabilities", "auth": "capabilities.read", "request": None, "result": "billium.capabilities.v1", "statuses": [200]},
+    {"method": "GET", "path": "/billium/v1/capabilities/v2", "auth": "capabilities.read", "request": None, "result": "billium.capabilities.v2", "statuses": [200]},
     {"method": "POST", "path": "/billium/v1/sellers/{sellerRef}/payments/execute", "auth": "payment.execute", "request": "payment.execute.v1", "result": "payment.admission.v1", "statuses": [202, 200]},
     {"method": "POST", "path": "/billium/v1/sellers/{sellerRef}/payments/refund", "auth": "payment.refund", "request": "payment.refund.v1", "result": "payment.admission.v1", "statuses": [202, 200]},
     {"method": "POST", "path": "/billium/v1/sellers/{sellerRef}/payments/authorize", "auth": "payment.authorize", "request": "payment.authorize.v1", "result": "payment.admission.v1", "statuses": [202, 200]},
@@ -77,6 +79,7 @@ ROUTES: tuple[dict[str, object], ...] = (
     {"method": "POST", "path": "/billium/v1/sellers/{sellerRef}/collection/authorize", "auth": "collection.authorize", "request": "collection.authorize.v1", "result": "billium.command_receipt.v1", "statuses": [200]},
     {"method": "POST", "path": "/billium/v1/sellers/{sellerRef}/observations", "auth": "payment.observe", "request": "payment.observation.v1", "result": "ledger.allocation_receipt.v1", "statuses": [200, 202], "custody": "ledger.observation_custody.v1", "http21": True},
     {"method": "POST", "path": "/billium/v1/sellers/{sellerRef}/usage/facts", "auth": "usage.accept", "request": "usage.fact.v1", "result": "usage.receipt.v1", "statuses": [200]},
+    {"method": "POST", "path": "/billium/v1/sellers/{sellerRef}/usage/facts/v2", "auth": "usage.accept.v2", "request": "usage.fact.v2", "result": "usage.receipt.v2", "statuses": [200]},
     {"method": "POST", "path": "/billium/v1/sellers/{sellerRef}/allocations/reallocate", "auth": "allocation.reallocate", "request": "allocation.reallocate.v1", "result": "ledger.allocation_receipt.v1", "statuses": [200]},
     {"method": "POST", "path": "/billium/v1/sellers/{sellerRef}/queries", "auth": "ledger.query", "request": "billium.query.v1", "result": None, "statuses": [200], "results": QUERY_RESULTS},
     {"method": "POST", "path": "/billium/v1/sellers/{sellerRef}/receipts/find", "auth": "receipt.find", "request": "receipt.find.v1", "result": "receipt.find.v1", "statuses": [200]},
@@ -119,10 +122,10 @@ def load_json(path: Path) -> object:
 
 def schemas() -> dict[str, dict[str, object]]:
     found: dict[str, dict[str, object]] = {}
-    for path in (REV / "schema").rglob("*.json"):
+    for path in (REV_CURRENT / "schema").rglob("*.json"):
         document = load_json(path)
         if isinstance(document, dict):
-            found[path.relative_to(REV / "schema").as_posix()] = document
+            found[path.relative_to(REV_CURRENT / "schema").as_posix()] = document
     return found
 
 
@@ -164,6 +167,12 @@ def has_command_key(documents: dict[str, dict[str, object]], name: str | None) -
         if node is not None and "commandKey" in node.get("properties", {}):  # type: ignore[operator]
             return True
     return False
+
+
+def requires_idempotency_header(documents: dict[str, dict[str, object]], name: object) -> bool:
+    if not isinstance(name, str):
+        return False
+    return has_command_key(documents, name) or name == "usage.fact.v2"
 
 
 def installed_routes() -> list[dict[str, str]]:
@@ -303,7 +312,7 @@ def operation(route: dict[str, object], documents: dict[str, dict[str, object]])
         "x-billium-request-schema": route["request"],
         "x-billium-result-schema": route["result"],
         "x-billium-statuses": route["statuses"],
-        "x-billium-idempotency-header": has_command_key(documents, route["request"] if isinstance(route["request"], str) else None),
+        "x-billium-idempotency-header": requires_idempotency_header(documents, route["request"]),
         "responses": {str(code): {"description": "success"} for code in route["statuses"]},  # type: ignore[union-attr]
     }
     parameters = PATH_PARAMETER_RE.findall(str(route["path"]))
@@ -681,7 +690,7 @@ def check_openapi(openapi: object, codes: list[dict[str, object]], installed: li
         ):
             if op.get(ext) != route[key]:
                 errors.append(f"{route['path']}: {ext} differs")
-        if op.get("x-billium-idempotency-header") != has_command_key(documents, route["request"] if isinstance(route["request"], str) else None):
+        if op.get("x-billium-idempotency-header") != requires_idempotency_header(documents, route["request"]):
             errors.append(f"{route['path']}: idempotency header flag differs")
         if route.get("http21") is True and op.get("x-http-21", {}).get("impersonation", {}).get("code") != "billium.auth.denied":
             errors.append("HTTP-21 metadata is missing on observations")
