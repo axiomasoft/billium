@@ -15,7 +15,7 @@ use PHPUnit\Framework\Attributes\Group;
 use stdClass;
 
 /**
- * D60 source-economic dedupe (INV-06, observation-apply): the ledger materialDigest is separate from the transport
+ * Source-economic dedupe (observation-apply): the ledger materialDigest is separate from the transport
  * contentDigest. Delivery identity, timestamps and evidence refs are custody metadata; operation binding, state,
  * currency, totals and the discrepancy identity are economic. Another delivery of the same snapshot has no second
  * effect; the same revision with another economic snapshot is quarantined, while the original stays untouched.
@@ -80,7 +80,7 @@ final class ObservationMaterialDigestTest extends ObservationTestCase
 
         $state = ObservationFactory::with($original, ['eventId' => (string) Str::ulid(), 'sourceSequence' => 2, 'state' => 'pending']);
         self::assertSame(ProblemCode::ObservationConflict->value, $this->tryObserve($state));
-        // The same event identity with another transport digest is preserved apart and refused as well (REQ-FAIL-04).
+        // The same event identity with another transport digest is preserved apart and refused as well.
         $sameEvent = ObservationFactory::with($original, ['capturedTotal' => 700, 'authorizedTotal' => 700, 'requested' => 700]);
         self::assertSame(ProblemCode::ObservationConflict->value, $this->tryObserve($sameEvent));
 

@@ -9,15 +9,15 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`AggregationLocks`](../../packages/core/modules/usage/src/Contracts/AggregationLocks.php) | interface | **Api** | The owning module plans and acquires the complete early rank-35 set for a composed root (D27/D60). |
+| [`AggregationLocks`](../../packages/core/modules/usage/src/Contracts/AggregationLocks.php) | interface | **Api** | The owning module plans and acquires the complete early rank-35 set for a composed root. |
 | [`AggregationParticipants`](../../packages/core/modules/usage/src/Contracts/AggregationParticipants.php) | interface | **Spi** |  |
 | [`AggregationQueries`](../../packages/core/modules/usage/src/Contracts/AggregationQueries.php) | interface | **Api** |  |
 | [`AggregationService`](../../packages/core/modules/usage/src/Contracts/AggregationService.php) | interface | **Spi** |  |
-| [`MetricReducer`](../../packages/core/modules/usage/src/Contracts/MetricReducer.php) | interface | **Spi** | Trusted, pure computation over immutable normalized inputs; no persistence capability (D13/D56). |
+| [`MetricReducer`](../../packages/core/modules/usage/src/Contracts/MetricReducer.php) | interface | **Spi** | Trusted, pure computation over immutable normalized inputs; no persistence capability. |
 | [`MetricReducerRegistry`](../../packages/core/modules/usage/src/Contracts/MetricReducerRegistry.php) | interface | **Spi** |  |
 | [`SourceCompletenessIntake`](../../packages/core/modules/usage/src/Contracts/SourceCompletenessIntake.php) | interface | **Spi** |  |
 | [`Usage`](../../packages/core/modules/usage/src/Contracts/Usage.php) | interface | **Api** |  |
-| [`UsageAttribution`](../../packages/core/modules/usage/src/Contracts/UsageAttribution.php) | interface | **Spi** | D13/D56: host-owned lookup, outside the root Tx. |
+| [`UsageAttribution`](../../packages/core/modules/usage/src/Contracts/UsageAttribution.php) | interface | **Spi** | Host-owned lookup, outside the root Tx. |
 | [`UsageFactV1Attribution`](../../packages/core/modules/usage/src/Contracts/UsageFactV1Attribution.php) | interface | **Spi** |  |
 
 ## Data
@@ -27,7 +27,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`AggregateSnapshot`](../../packages/core/modules/usage/src/Data/AggregateSnapshot.php) | class | **Api** |  |
 | [`AggregateSnapshotRef`](../../packages/core/modules/usage/src/Data/AggregateSnapshotRef.php) | class | **Api** |  |
 | [`AggregationPolicy`](../../packages/core/modules/usage/src/Data/AggregationPolicy.php) | class | **Api** |  |
-| [`AttributionSnapshot`](../../packages/core/modules/usage/src/Data/AttributionSnapshot.php) | class | **Api** | D56: trusted host evidence; mappingRef is the immutable host mapping revision, not a live account alias. |
+| [`AttributionSnapshot`](../../packages/core/modules/usage/src/Data/AttributionSnapshot.php) | class | **Api** | Trusted host evidence; mappingRef is the immutable host mapping revision, not a live account alias. |
 
 ## Data/Commands
 
@@ -138,7 +138,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
 | [`UnresolvedAttribution`](../../packages/core/modules/usage/src/Internal/UnresolvedAttribution.php) | class | *Internal* |  |
-| [`UsageQueries`](../../packages/core/modules/usage/src/Internal/UsageQueries.php) | class | *Internal* | D56 / COV-334: authorized keyset scan; each page is bounded, and always filters frozen attribution. |
+| [`UsageQueries`](../../packages/core/modules/usage/src/Internal/UsageQueries.php) | class | *Internal* | Authorized keyset scan; each page is bounded, and always filters frozen attribution. |
 
 ## Internal/Window
 

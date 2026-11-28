@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PLAN1.P10.5 — Compact restore, fencing, activation, and retention drill.
+# Compact restore, fencing, activation, and retention drill.
 # Usage:
 #   bash scripts/drills/billing-restore.sh --fake-provider [--report path/to/manifest.json]
 set -euo pipefail

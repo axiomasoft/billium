@@ -252,7 +252,7 @@ def check_import_fixtures(repo_root: Path = ROOT) -> list[str]:
     if not negative_leak_checked:
         errors.append("missing negative-leaked-credential.json control check")
 
-    # D71 isolation scan across import fixtures, vectors, conformance and P9.6 tests.
+    # Isolation scan across import fixtures, vectors, conformance and P9.6 tests.
     scan_targets: list[Path] = [
         *sorted(import_fixtures_dir.rglob("*.json")),
         *sorted((repo_root / "fixtures/vectors/import").glob("*.json")),

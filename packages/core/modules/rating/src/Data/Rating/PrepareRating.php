@@ -11,8 +11,8 @@ use Packman\Attributes\Api;
 final readonly class PrepareRating
 {
     /**
-     * Versions are pinned host agreement inputs, never current-price selectors (D56).
-     * snapshotRef="fixed" selects one fixed-price component occurrence without a usage backend (D55).
+     * Versions are pinned host agreement inputs, never current-price selectors.
+     * snapshotRef="fixed" selects one fixed-price component occurrence without a usage backend.
      *
      * @param  list<array{componentRef: string, snapshotRef: string, priceRef: string, priceVersion: int, quantitySnapshot?: QuantitySnapshot}>  $components
      */

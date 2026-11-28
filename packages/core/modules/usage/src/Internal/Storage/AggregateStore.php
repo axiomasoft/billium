@@ -341,7 +341,7 @@ final readonly class AggregateStore
         if ($changed !== 1) {
             throw UsageProblems::error('snapshot_superseded');
         }
-        // D63: internal module-owned notification, never inserted into the frozen public event feed.
+        // Internal module-owned notification, never inserted into the frozen public event feed.
         $db->table('billium_usage_aggregate_event')->insert([
             'snapshot_id' => $id, 'seller_ref' => $window->sellerRef, 'environment' => $window->environment,
             'event_type' => 'usage.aggregate.frozen.v1',

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lightweight PostgreSQL query-plan verification for Billium hot paths (PLAN1 P10.4, D71/D72).
+"""Lightweight PostgreSQL query-plan verification for Billium hot paths.
 
 Runs deterministic EXPLAIN (FORMAT JSON) checks inside a rolled-back transaction using a compact
 multi-seller dataset and `SET LOCAL enable_seqscan = off` so key index usage and bounded-limit

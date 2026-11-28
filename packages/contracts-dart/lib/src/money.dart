@@ -40,7 +40,7 @@ final class Currency {
   String toString() => code;
 }
 
-/// A sum of money in minor units of one currency; the wire form is a string amount in major units (D29).
+/// A sum of money in minor units of one currency; the wire form is a string amount in major units.
 ///
 /// The minor amount is a [BigInt] inside the int64 range: no `int` or `double` carries money.
 final class Money {

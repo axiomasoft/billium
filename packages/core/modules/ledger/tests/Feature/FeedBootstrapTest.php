@@ -16,7 +16,7 @@ use Billium\Platform\Data\Inbox\BootstrapPartition;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * PF-13 (REQ-CON-27, D60 staged bootstrap): a snapshot of three operations at cursor 20 is verified, every item gets a
+ * Staged bootstrap: a snapshot of three operations at cursor 20 is verified, every item gets a
  * durable disposition (an item without its settlement intent is an explicit pending allocation, not lost capture
  * evidence), the cursor is adopted in one short root and sequences 21..23 follow, including one that arrived while the
  * partition did not exist yet. An altered snapshot is refused before any item is applied.

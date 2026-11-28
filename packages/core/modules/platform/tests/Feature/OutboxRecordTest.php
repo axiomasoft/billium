@@ -20,7 +20,7 @@ use LogicException;
 use PHPUnit\Framework\Attributes\Group;
 use RuntimeException;
 
-/** PF-10/COV-279: the outbox row and its owning state share one root Tx on one connection, or neither exists. */
+/** The outbox row and its owning state share one root Tx on one connection, or neither exists. */
 #[Group('PF-10')]
 #[Group('ACC-CON-14')]
 #[Group('pg')]
@@ -43,7 +43,7 @@ final class OutboxRecordTest extends PlatformTestCase
             return self::receipt(['effect' => $effect]);
         });
 
-        // A fresh connection (restart) still sees the committed event with every durable column (COV-086..089).
+        // A fresh connection (restart) still sees the committed event with every durable column (..089).
         $statement = TestEnvironment::pdo()->query("SELECT * FROM billium_outbox_event WHERE event_id = '3V82FS6B9CH3MQY30QCXP8886K'");
         $row = $statement === false ? [] : (array) $statement->fetch();
         self::assertSame('obligation.created.v1', $row['type']);

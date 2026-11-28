@@ -51,7 +51,7 @@ use Packman\Schema\Contracts\Migration\SchemaMigrator;
 require dirname(__DIR__, 2).'/vendor/autoload.php';
 
 /**
- * Product-agnostic Billium external import CLI (P9.3 / D71).
+ * Product-agnostic Billium external import CLI.
  *
  * Commands:
  *   preview   --manifest <path> [--profile auto]

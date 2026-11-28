@@ -14,7 +14,7 @@ final class PruneCommand extends Command
 {
     protected $signature = 'billium:outbox:prune';
 
-    protected $description = 'Prune a proven delivered prefix under retention and bootstrap pins (D52/D60)';
+    protected $description = 'Prune a proven delivered prefix under retention and bootstrap pins';
 
     public function handle(OutboxPruner $pruner): int
     {

@@ -16,7 +16,7 @@ use LogicException;
 use Packman\Attributes\Internal;
 use stdClass;
 
-/** D58: an independent host routing journal. All registry inserts and barriers serialize on the scope row. */
+/** An independent host routing journal. All registry inserts and barriers serialize on the scope row. */
 #[Internal]
 final readonly class DatabaseAuthorityRouter implements AuthorityRouter
 {

@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:billium_client_conformance/billium_client_conformance.dart';
 
-/// JSON stdin/stdout for the test-only consumer. Public contracts only (D9).
+/// JSON stdin/stdout for the test-only consumer. Public contracts only.
 Future<void> main() async {
   final archive = Platform.environment['BILLIUM_ARCHIVE_ROOT'];
   if (archive != null && archive.isNotEmpty) {

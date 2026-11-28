@@ -21,13 +21,13 @@ final class ConcurrencyStand
             throw new InvalidArgumentException('Expected a Scenario, positive worker count and positive timeout');
         }
         if (! function_exists('proc_open')) {
-            throw new RuntimeException('M-33: proc_open is required for concurrency proofs');
+            throw new RuntimeException('Proc_open is required for concurrency proofs');
         }
         $arguments = base64_encode(json_encode($args, JSON_THROW_ON_ERROR));
         $root = dirname(__DIR__, 5);
         $barrier = TestEnvironment::pdo(owner: true);
         $key = random_int(1, 2_147_483_647);
-        // D50: test coordination only; this lock is never financial writer fencing.
+        // Test coordination only; this lock is never financial writer fencing.
         $lock = $barrier->prepare('SELECT pg_advisory_lock(?)');
         $lock->execute([$key]);
         $released = false;

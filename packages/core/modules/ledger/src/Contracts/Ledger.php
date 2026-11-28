@@ -22,7 +22,7 @@ use Billium\Ledger\Data\Obligations\RecordObligation;
 use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
 use Packman\Attributes\Api;
 
-/** Root-only financial commands (D60). Composition uses LedgerParticipants in the existing root. */
+/** Root-only financial commands. Composition uses LedgerParticipants in the existing root. */
 #[Api(since: '1.0')]
 interface Ledger
 {
@@ -36,13 +36,13 @@ interface Ledger
 
     public function declareSettlementIntent(DeclareSettlementIntent $command): StoredOutcome;
 
-    /** Draft over unbilled obligations (D49: no legal number). */
+    /** Draft over unbilled obligations (no legal number). */
     public function createInvoice(CreateInvoice $command): StoredOutcome;
 
-    /** Allow-list keys only (note, external_ref, labels); after issue anything else is billium.invoice.frozen (INV-13). */
+    /** Allow-list keys only (note, external_ref, labels); after issue anything else is billium.invoice.frozen. */
     public function updateInvoiceMetadata(UpdateInvoiceMetadata $command): StoredOutcome;
 
-    /** Root-only issue without a legal number; composed issue with numbering is LedgerParticipants::issueInvoice (D60). */
+    /** Root-only issue without a legal number; composed issue with numbering is LedgerParticipants::issueInvoice. */
     public function issueInvoice(IssueInvoice $command): StoredOutcome;
 
     public function discardInvoice(DiscardInvoice $command): StoredOutcome;
@@ -51,15 +51,15 @@ interface Ledger
 
     public function markUncollectible(MarkUncollectible $command): StoredOutcome;
 
-    /** One funds source → one obligation; AllocationReceipt, allocation.applied.v1 (INV-09). No PSP call. */
+    /** One funds source → one obligation; AllocationReceipt, allocation.applied.v1. No PSP call. */
     public function allocate(Allocate $command): StoredOutcome;
 
-    /** Full immutable reversal of an original allocation, optionally placing a remainder again (COV-289). */
+    /** Full immutable reversal of an original allocation, optionally placing a remainder again. */
     public function reverseAllocation(ReverseAllocation $command): StoredOutcome;
 
     /** open_only or reverse_allocations credit note on an issued invoice; credit_note.issued.v1. */
     public function issueCreditNote(IssueCreditNote $command): StoredOutcome;
 
-    /** allocation.reallocate.v1 after a confirmed refund (D35); ReallocatePayment::fromWire decodes the wire form. */
+    /** allocation.reallocate.v1 after a confirmed refund; ReallocatePayment::fromWire decodes the wire form. */
     public function reallocatePayment(ReallocatePayment $command): StoredOutcome;
 }

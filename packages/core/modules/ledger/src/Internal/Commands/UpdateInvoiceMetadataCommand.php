@@ -10,7 +10,7 @@ use Billium\Ledger\Data\Runtime\LedgerReceipt;
 use Billium\Ledger\Internal\Repositories\InvoiceRepository;
 use Packman\Attributes\Internal;
 
-/** Allow-list merge; keys outside it are refused by state in the guarded routine (INV-13). */
+/** Allow-list merge; keys outside it are refused by state in the guarded routine. */
 #[Internal]
 final readonly class UpdateInvoiceMetadataCommand
 {

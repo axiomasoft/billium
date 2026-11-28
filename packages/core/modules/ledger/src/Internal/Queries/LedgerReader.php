@@ -16,7 +16,7 @@ use LogicException;
 use Packman\Attributes\Internal;
 use stdClass;
 
-/** D60: shared query/snapshot projection over ledger-owned facts, scoped before resolving any selector (INV-14). */
+/** Shared query/snapshot projection over ledger-owned facts, scoped before resolving any selector. */
 #[Internal]
 final readonly class LedgerReader
 {
@@ -165,7 +165,7 @@ final readonly class LedgerReader
                 'overCaptured' => $money(max(0, View::integer($observed->captured_minor) - View::integer($observed->authorized_minor))),
                 'overRefunded' => $money(max(0, View::integer($observed->refunded_minor) - View::integer($observed->captured_minor)))],
             'spendable' => $money(0), 'projectionStatus' => $status, 'bootstrap' => ['status' => $recovery['bootstrapStatus']],
-            // D48: a comparison window/digest is not a source-completeness certificate. Never invent a completed cursor.
+            // A comparison window/digest is not a source-completeness certificate. Never invent a completed cursor.
             'reconciliation' => ['status' => $discrepancies->isEmpty() ? ($observed->refunded_minor > 0 ? 'pending' : 'not_started') : 'discrepancy']];
         if ($park !== null) {
             $result['pendingAllocationReason'] = $park->dependency_kind;

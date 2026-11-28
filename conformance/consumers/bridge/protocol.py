@@ -28,7 +28,7 @@ REPORT_PROTOCOL_ID = "billium.consumer.contract.report.v1"
 CASE_PROTOCOL_ID = "billium.consumer.bridge.case.v1"
 REQUIRED_CASES = tuple(f"CT-{idx:02d}" for idx in range(1, 21))
 
-# D71 strict self-isolation terms (constructed without literal forbidden tokens).
+# Strict self-isolation terms (constructed without literal forbidden tokens).
 FORBIDDEN_D71_TERMS = (
     "mem" + "ster",
     "edu" + "fy",

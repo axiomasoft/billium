@@ -19,7 +19,7 @@ use Billium\Platform\Tests\PlatformTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * D54/D62 local barrier: every financial root holds financial_session FOR SHARE to commit; a seal takes it FOR UPDATE
+ * Local barrier: every financial root holds financial_session FOR SHARE to commit; a seal takes it FOR UPDATE
  * with a bounded wait. An admitted root completes before the seal; nothing financial is admitted after it.
  */
 #[Group('D54')]

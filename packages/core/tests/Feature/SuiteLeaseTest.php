@@ -67,7 +67,7 @@ final class SuiteLeaseTest extends DatabaseTestCase
         ], dirname(__DIR__, 4), $environment, timeout: 5);
 
         self::assertNotSame(0, $probe->run());
-        self::assertStringContainsString('inherited test database lease', $probe->getErrorOutput().$probe->getOutput());
+        self::assertStringContainsString('Inherited test database lease', $probe->getErrorOutput().$probe->getOutput());
     }
 
     public function test_template_cleanup_keeps_a_database_that_holds_a_suite_lease(): void

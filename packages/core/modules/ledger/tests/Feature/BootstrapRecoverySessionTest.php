@@ -13,7 +13,7 @@ use Billium\Ledger\Tests\Observation\ObservationTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * ledger.feed.bootstrap in a genuine recovery session (D54, PF-14): after an ownership change the session epoch is in
+ * ledger.feed.bootstrap in a genuine recovery session: after an ownership change the session epoch is in
  * recovery and this process holds a Recovery-only host token. Every root of the bootstrap — staging, items, adoption,
  * the tail drain and the status read — keeps Recovery admission, returns the adopted status, and a repeat is
  * idempotent, with an empty or a populated held tail.

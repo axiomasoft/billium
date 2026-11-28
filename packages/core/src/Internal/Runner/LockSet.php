@@ -90,7 +90,7 @@ final class LockSet
         if ($new !== []) {
             if ($comparison < 0) {
                 throw new LockOrderViolation(sprintf(
-                    'Lock %s rank %d segment %d requested after rank %d segment %d (D27)',
+                    'Lock %s rank %d segment %d requested after rank %d segment %d',
                     $request->table, $request->rank->value, $request->segment, $this->position[0], $this->position[1],
                 ));
             }
@@ -127,7 +127,7 @@ final class LockSet
             static fn (int|string $key): string => $text ? '"'.addcslashes((string) $key, '"\\').'"' : (string) $key,
             $keys,
         )).'}';
-        // D60: PostgreSQL FOR UPDATE itself requires UPDATE privilege. Protected owners expose lock-only routines.
+        // PostgreSQL FOR UPDATE itself requires UPDATE privilege. Protected owners expose lock-only routines.
         if ($request->guardedRoutine !== null) {
             return [
                 'SELECT lock_key FROM public."'.$request->guardedRoutine.'"(?::bigint[], ?::text, ?::text, ?::boolean)',

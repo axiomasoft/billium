@@ -13,7 +13,7 @@ use PDOException;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * ACC-CON-19 (INV-14): seller A's payment funds A's obligation; the same payment aimed at seller B's obligation is
+ * Seller A's payment funds A's obligation; the same payment aimed at seller B's obligation is
  * billium.reference.unknown (B's rows are invisible to A) and leaves no row. A raw INSERT that bypasses the guard
  * still fails on the scoped foreign key (23503).
  */

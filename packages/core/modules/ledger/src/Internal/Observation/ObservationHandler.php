@@ -18,7 +18,7 @@ use Packman\Attributes\Internal;
 use stdClass;
 
 /**
- * The ledger's economic handler of payment.observation.v1 (INV-08): platform custody calls it for exactly one accounted
+ * The ledger's economic handler of payment.observation.v1: platform custody calls it for exactly one accounted
  * delivery (or one verified bootstrap snapshot item) inside that event's root Tx, after the partition lock. The stored
  * envelope is decoded again (contentDigest included) and applied by PaymentProjection with the same economic dedupe for
  * live and bootstrap input; a snapshot item must name the operation, revision and material digest of its payload.

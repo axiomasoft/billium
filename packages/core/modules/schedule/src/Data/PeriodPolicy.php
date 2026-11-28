@@ -8,7 +8,7 @@ use Billium\Schedule\Internal\ScheduleProblems;
 use DateTimeZone;
 use Packman\Attributes\Api;
 
-/** D56; owner schedule. Explicit strategies; no process-zone or fixed-30-day fallback. */
+/** Owner schedule. Explicit strategies; no process-zone or fixed-30-day fallback. */
 #[Api]
 final readonly class PeriodPolicy
 {

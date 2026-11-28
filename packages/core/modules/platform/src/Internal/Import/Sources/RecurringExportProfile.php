@@ -93,7 +93,7 @@ final readonly class RecurringExportProfile implements SourceExportProfile
             );
         }
 
-        // IM-06: Mutable subscription state without frozen price/occurrences never implies historical recurring charges.
+        // Mutable subscription state without frozen price/occurrences never implies historical recurring charges.
         if (in_array($recordType, ['mutable_subscription_state', 'recurring_subscription'], true)) {
             $missing = ['frozenPriceSnapshot', 'provenOccurrences', 'money'];
             $reasons = ['import.mutable_subscription_without_frozen_occurrences'];
@@ -122,7 +122,7 @@ final readonly class RecurringExportProfile implements SourceExportProfile
             );
         }
 
-        // IM-13 + IM-07: Periodic entitlement/access grants remain nonfinancial references, never monetary obligations or balances.
+        // Periodic entitlement/access grants remain nonfinancial references, never monetary obligations or balances.
         if (in_array($recordType, ['periodic_grant', 'entitlement_grant'], true)) {
             $grantMeta = [];
             if (is_array($rawRecord['nonMonetaryEntitlement'] ?? null)) {
@@ -151,7 +151,7 @@ final readonly class RecurringExportProfile implements SourceExportProfile
             );
         }
 
-        // IM-13 + IM-09: Annual funding bundle with attached periodic grants emits AT MOST ONE proven obligation (never 12).
+        // Annual funding bundle with attached periodic grants emits AT MOST ONE proven obligation (never 12).
         if ($recordType === 'annual_funding_with_grants') {
             $moneyRes = $this->normalizer->parseOptionalMoney($rawRecord);
             $priceRes = $this->normalizer->parseFrozenPriceSnapshot($rawRecord);

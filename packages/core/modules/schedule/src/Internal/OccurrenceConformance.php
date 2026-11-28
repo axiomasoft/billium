@@ -17,7 +17,7 @@ use DateTimeImmutable;
 use Packman\Attributes\Internal;
 use stdClass;
 
-/** Module-owned test protocol dispatch; no second scheduler or monetary writer (D55/D56). */
+/** Module-owned test protocol dispatch; no second scheduler or monetary writer. */
 #[Internal]
 final readonly class OccurrenceConformance
 {

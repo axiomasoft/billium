@@ -11,7 +11,7 @@ use Packman\Attributes\Spi;
 use Packman\Attributes\SpiKind;
 
 /**
- * Transactional outbox (PF-10, COV-279): the event is written on the root connection inside the same root Tx as the
+ * Transactional outbox: the event is written on the root connection inside the same root Tx as the
  * owning state and receipt, or not at all. An afterCommit callback may only wake delivery; it never replaces this row.
  * Delivery, relay and feed are handled by OutboxRelay and the feed subscriptions.
  */

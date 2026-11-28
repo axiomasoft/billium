@@ -29,7 +29,7 @@ final class StrategyCatalog implements PricingStrategyRegistry
     /** @var array<string, PricingStrategy> */
     private array $strategies = [];
 
-    /** @param iterable<PricingStrategy>|null $strategies Trusted host code only (D55/D56). */
+    /** @param iterable<PricingStrategy>|null $strategies Trusted host code only. */
     public function __construct(?iterable $strategies = null)
     {
         foreach ($strategies ?? self::builtins() as $strategy) {

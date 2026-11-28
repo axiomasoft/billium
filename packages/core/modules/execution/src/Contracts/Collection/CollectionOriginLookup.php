@@ -10,7 +10,7 @@ use Billium\Execution\Data\OriginDecision;
 use Packman\Attributes\Spi;
 use Packman\Attributes\SpiKind;
 
-/** The registered collection owner reserves original identities before execution admission (D63/F04). */
+/** The registered collection owner reserves original identities before execution admission. */
 #[Spi(kind: SpiKind::Implement, since: '1.0')]
 interface CollectionOriginLookup
 {

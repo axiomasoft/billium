@@ -1,4 +1,4 @@
-"""One-request loopback relay. Faults have an explicit upstream checkpoint (D58/D59)."""
+"""One-request loopback relay. Faults have an explicit upstream checkpoint."""
 
 from __future__ import annotations
 

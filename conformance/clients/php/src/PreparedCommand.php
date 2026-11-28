@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Billium\ClientConformance;
 
 /**
- * One encoded command. Retries reuse these bytes and this key (D58).
+ * One encoded command. Retries reuse these bytes and this key.
  */
 final readonly class PreparedCommand
 {

@@ -30,7 +30,7 @@ use LogicException;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * D55/CV-R11: admission holds module rows FOR SHARE at rank 25 to commit; a transition takes the affected rows FOR UPDATE
+ * Admission holds module rows FOR SHARE at rank 25 to commit; a transition takes the affected rows FOR UPDATE
  * in module order. Disable versus command has one committed order: admitted work completes, or admission refuses
  * before any financial effect. History is append-only with a strictly increasing generation.
  */

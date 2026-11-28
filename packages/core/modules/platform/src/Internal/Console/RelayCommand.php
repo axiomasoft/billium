@@ -16,7 +16,7 @@ final class RelayCommand extends Command
 {
     protected $signature = 'billium:outbox:relay {--limit=} {--commands : Relay the separate internal command lane}';
 
-    protected $description = 'Claim and relay due outbox deliveries (D60/D63)';
+    protected $description = 'Claim and relay due outbox deliveries';
 
     public function handle(BilliumOptions $options): int
     {

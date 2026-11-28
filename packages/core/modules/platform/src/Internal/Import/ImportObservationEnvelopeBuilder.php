@@ -20,7 +20,7 @@ use stdClass;
 /**
  * Deterministic builder for payment.observation.v1 envelopes from proven external import records.
  *
- * Enforces D71 invariants:
+ * Enforces the import invariants:
  * - Never fabricates missing providerAccountRef or invents fake providerOperationId values.
  * - Never promotes unknown / accepted-unknown remote outcomes into succeeded/paid observations.
  * - Uses compound partition identity over (sourceInstallation, sourceBook, sellerRef, environment).

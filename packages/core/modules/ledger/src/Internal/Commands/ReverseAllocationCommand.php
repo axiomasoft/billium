@@ -17,7 +17,7 @@ use Packman\Attributes\Internal;
 
 /**
  * Full immutable reversal of one original allocation (UNIQUE reverses_id) plus an optional remainder placed again from
- * the same source in the same Tx; history is never deleted (COV-289). billium_reverse_allocation owns the rows/counters.
+ * the same source in the same Tx; history is never deleted. billium_reverse_allocation owns the rows/counters.
  */
 #[Internal]
 final readonly class ReverseAllocationCommand

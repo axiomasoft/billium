@@ -53,13 +53,13 @@ abstract class DatabaseTestCase extends TestCase
 
     protected function setUp(): void
     {
-        // D50/INV-03: reject wrappers before Testbench has a chance to begin a transaction.
+        // Reject wrappers before Testbench has a chance to begin a transaction.
         $traits = class_uses_recursive(static::class);
         self::assertNotContains(RefreshDatabase::class, $traits);
         self::assertNotContains(DatabaseTransactions::class, $traits);
         parent::setUp();
         SimulatedFinancialAuthorityEvidence::reset();
-        // D50: without a wrapper trait nothing else closes this application's connections; left to the cycle
+        // Without a wrapper trait nothing else closes this application's connections; left to the cycle
         // collector they outlive the test, pile up across the suite and exhaust PostgreSQL connection slots.
         $databases = $this->app['db'];
         $this->beforeApplicationDestroyed(static function () use ($databases): void {

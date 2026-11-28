@@ -1145,7 +1145,7 @@ final class DocumentCorrectionTest extends DocumentsTestCase
         }
         self::assertSame(0, $this->rows('billium_obligation', "obligation_ref = 'ob-usd'"));
 
-        // F12: Ready Correction finalization with matching obligation/amounts (1000/200/1200) but mismatched componentRef ('component-B' vs 'component-A') MUST refuse.
+        // Ready Correction finalization with matching obligation/amounts (1000/200/1200) but mismatched componentRef ('component-B' vs 'component-A') MUST refuse.
         $this->finalizations()->createDraft(new CreateDocumentDraft(
             scope: $this->docScope(),
             finalizationRef: 'fin-f12-comp',

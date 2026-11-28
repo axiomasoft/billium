@@ -23,7 +23,7 @@ use Orchestra\Testbench\TestCase;
 use Packman\Schema\Contracts\Migration\SchemaMigrator;
 use PDOException;
 
-/** Fresh schema per composition in the leased test database, with committed roots and distinct roles (D50/D55). */
+/** Fresh schema per composition in the leased test database, with committed roots and distinct roles. */
 abstract class CompositionTestCase extends TestCase
 {
     /** @return list<string> */

@@ -10,7 +10,7 @@ use Billium\Platform\Internal\Migration\MigrationDigest;
 use InvalidArgumentException;
 use Packman\Attributes\Api;
 
-/** D52/D63: source-attested retained scan from the manifest checkpoint to the sealed terminal cursor. */
+/** Source-attested retained scan from the manifest checkpoint to the sealed terminal cursor. */
 #[Api(since: '1.0')]
 final readonly class SealedTail
 {

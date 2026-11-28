@@ -33,7 +33,7 @@ use Packman\Attributes\Internal;
 use stdClass;
 
 /**
- * Staged import row hydration, receipt checkpointing, and bounded row helpers (P9.3, D71).
+ * Staged import row hydration, receipt checkpointing, and bounded row helpers.
  */
 #[Internal]
 final readonly class ImportStagedRecordHydrator

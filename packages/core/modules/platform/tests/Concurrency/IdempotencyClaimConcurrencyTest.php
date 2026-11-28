@@ -9,7 +9,7 @@ use Billium\Platform\Tests\Concurrency\Scenarios\RootOperationScenario;
 use Billium\Platform\Tests\PlatformTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
-/** INV-05 under real processes: the claim is an atomic first write, never check-then-insert (D51). */
+/** Under real processes: the claim is an atomic first write, never check-then-insert. */
 #[Group('INV-05')]
 #[Group('REQ-ACC-11')]
 #[Group('pg')]

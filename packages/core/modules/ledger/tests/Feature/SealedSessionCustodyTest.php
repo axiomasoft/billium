@@ -11,7 +11,7 @@ use Billium\Ledger\Tests\Observation\ObservationTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * D54/D60: raw custody of an authenticated observation commits in its own RawCustody root even while the financial
+ * Raw custody of an authenticated observation commits in its own RawCustody root even while the financial
  * session is sealed; the economic root is refused, so no money moves. After a new session is admitted, a drain applies
  * the delivery exactly once and a redelivery replays its receipt.
  */

@@ -23,7 +23,7 @@ use PDO;
 use RuntimeException;
 
 /**
- * One worker of the issue × metadata race (ACC-CON-17): worker 0 issues, the others update metadata with their own keys.
+ * One worker of the issue × metadata race: worker 0 issues, the others update metadata with their own keys.
  *
  * Each round starts at a gate that worker 0 holds exclusively from construction, which finishes before the stand's
  * barrier opens. The other workers block on the gate inside PostgreSQL, and worker 0 opens it once all of them wait.

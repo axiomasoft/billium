@@ -14,7 +14,7 @@ import 'problem_exception.dart';
 import 'schema_validator.dart';
 import 'spec.dart';
 
-/// Strict decode and canonical encode of the envelopes of the spec revision, plus the digest of D32.
+/// Strict decode and canonical encode of the envelopes of the spec revision, plus the digest of.
 final class Codec {
   /// Creates a codec, optionally pinned to explicitly negotiated client capabilities and spec revision.
   const Codec({this.supportedSchemas, String? specRevision})
@@ -145,7 +145,7 @@ final class Codec {
     }
     if (schema == 'billium.feed.page.v1' && raw['events'] is List) {
       for (final event in raw['events']! as List) {
-        // D63: nested events retain the same semantic and negotiated capability checks.
+        // Nested events retain the same semantic and negotiated capability checks.
         decode(canonicalizeValue(event));
       }
     }

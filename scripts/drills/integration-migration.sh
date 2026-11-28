@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PLAN1.P9.7 / D59. Rehearse with sanitized fixtures on the disposable PostgreSQL stand.
+# Rehearse with sanitized fixtures on the disposable PostgreSQL stand.
 set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
@@ -90,7 +90,7 @@ args = parser.parse_args()
 
 declared = {gate for step in manifest["steps"] for test in step["tests"].values() for gate in test["gates"]}
 if declared != set(GATES):
-    parser.error("the manifest must cover MGATE-01 through MGATE-11")
+    parser.error("the manifest must cover MGATE-01 through")
 chosen = GATES if args.scenario == "all" else [args.scenario]
 report = args.report.resolve()
 if report.suffix != ".json":

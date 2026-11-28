@@ -15,7 +15,7 @@ use Billium\Platform\Tests\Inbox\InboxTestCase;
 use Billium\Platform\Tests\Inbox\JournalHandler;
 use PHPUnit\Framework\Attributes\Group;
 
-/** Rank 30 (partition) precedes every domain lock: no handler discovers a second partition after it locked its rows (D27/D60). */
+/** Rank 30 (partition) precedes every domain lock: no handler discovers a second partition after it locked its rows. */
 #[Group('INV-03')]
 #[Group('ACC-CON-16')]
 #[Group('pg')]

@@ -9,7 +9,7 @@ use Billium\Ledger\Data\Runtime\BillingAccountScope;
 use Packman\Attributes\Api;
 
 /**
- * Monetary customer credit in one explicit account; no reward/quota or persistence behavior (D60).
+ * Monetary customer credit in one explicit account; no reward/quota or persistence behavior.
  */
 #[Api(since: '1.0')]
 final readonly class RecordCustomerCredit

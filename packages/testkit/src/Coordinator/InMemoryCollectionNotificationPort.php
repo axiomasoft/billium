@@ -14,7 +14,7 @@ use Packman\Attributes\Api;
 use RuntimeException;
 
 /**
- * Deterministic in-memory CollectionNotificationPort test double for P7.6 acceptance tests.
+ * Deterministic in-memory CollectionNotificationPort test double for acceptance tests.
  *
  * Records transport delivery attempts and returns transport-only ACKs without ever mutating
  * payment, step, or dunning case outcomes.

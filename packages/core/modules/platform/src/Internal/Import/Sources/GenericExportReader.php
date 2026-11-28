@@ -21,7 +21,7 @@ use stdClass;
 /**
  * Product-agnostic reader over immutable external export artifacts or readable local streams.
  *
- * Strictly enforces Billium self-isolation (D71):
+ * Strictly enforces Billium self-isolation:
  * - Reads ONLY immutable local files, JSON payloads or non-network readable streams.
  * - Rejects network URIs and database DSNs (zero network/SQL access to external hosts).
  * - Verifies exportCutoff, recordsChecksum, artifactDigest, recordCount and sanitizationPolicy before normalizing.

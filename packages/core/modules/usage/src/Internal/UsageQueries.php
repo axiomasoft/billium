@@ -11,7 +11,7 @@ use Billium\Core\Contracts\Runtime\CallerContext;
 use Illuminate\Database\DatabaseManager;
 use Packman\Attributes\Internal;
 
-/** D56 / COV-334: authorized keyset scan; each page is bounded, and always filters frozen attribution. */
+/** Authorized keyset scan; each page is bounded, and always filters frozen attribution. */
 #[Internal]
 final readonly class UsageQueries
 {

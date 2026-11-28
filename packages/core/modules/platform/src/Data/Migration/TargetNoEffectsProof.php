@@ -8,7 +8,7 @@ use Billium\Platform\Internal\Migration\MigrationDigest;
 use InvalidArgumentException;
 use Packman\Attributes\Api;
 
-/** D54: claim that the exact target has no monetary commits or effects and can no longer acquire write admission. */
+/** Claim that the exact target has no monetary commits or effects and can no longer acquire write admission. */
 #[Api(since: '1.0')]
 final readonly class TargetNoEffectsProof
 {

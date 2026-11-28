@@ -25,7 +25,7 @@ use LogicException;
 use Packman\Attributes\Internal;
 use stdClass;
 
-/** D54/D56/D62: bounded worker claims with a financial epoch and a monotonically increasing lease fence. */
+/** Bounded worker claims with a financial epoch and a monotonically increasing lease fence. */
 #[Internal]
 final readonly class CollectionWork
 {

@@ -12,7 +12,7 @@ use stdClass;
 /**
  * A complete source snapshot for one partition at `cursorSequence`, pinned by the source retention lease. The snapshot
  * digest covers the complete source namespace, cursor and every item in (operationRef, revision) order, so an altered snapshot never
- * verifies (D60, inbox-feed).
+ * verifies (inbox-feed).
  */
 #[Api(since: '1.0')]
 final readonly class BootstrapPartition

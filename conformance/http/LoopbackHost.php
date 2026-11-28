@@ -81,7 +81,7 @@ use Illuminate\Foundation\Bootstrap\LoadConfiguration;
 use Illuminate\Foundation\PackageManifest;
 use LogicException;
 
-/** D55/D57/D59/D62/D63, test-only host policy and evidence. The HTTP kernel still owns all request handling. */
+/** Test-only host policy and evidence. The HTTP kernel still owns all request handling. */
 final readonly class LoopbackHost implements Authenticator, AuthorizationVerdict, InstallationContextResolver, SellerEligibility
 {
     public const string INSTALLATION = 'inst-test';
@@ -372,7 +372,7 @@ final readonly class LoopbackHost implements Authenticator, AuthorizationVerdict
     public function drain(Application $app): void
     {
         $app->make(Installation::class)->transitionModule(new ModuleTransitionRequest(
-            'drain-http', 'execution', ModuleLifecycleState::Draining, 'D55 loopback proof',
+            'drain-http', 'execution', ModuleLifecycleState::Draining, 'Loopback proof',
         ))->orThrow();
     }
 

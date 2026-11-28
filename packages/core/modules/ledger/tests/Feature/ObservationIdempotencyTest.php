@@ -14,7 +14,7 @@ use PHPUnit\Framework\Attributes\Group;
 use RuntimeException;
 
 /**
- * PB-14 and PF-12 (INV-05, INV-06, INV-08): a redelivered observation returns the original receipt with exactly one
+ * A redelivered observation returns the original receipt with exactly one
  * allocation; a failure after the allocation but before the inbox disposition rolls back the observed fact, projection,
  * allocation, receipt, outbox and custody together, and the retry has exactly one effect.
  */
@@ -72,7 +72,7 @@ final class ObservationIdempotencyTest extends ObservationTestCase
             'billium_allocation', 'billium_observation_park', 'billium_ledger_discrepancy'] as $table) {
             self::assertSame(0, $this->rows($table), $table.' rolled back');
         }
-        // Raw custody committed in its own root before the economic root; it is not ProjectionApplied (INV-08).
+        // Raw custody committed in its own root before the economic root; it is not ProjectionApplied.
         self::assertSame('ready', $this->inboxStatus(self::eventId($charge)));
         self::assertSame(0, self::integer($this->partition()['accounted_sequence']), 'the failed economic root advanced nothing');
         self::assertSame(0, $this->rows('billium_allocation_receipt', "kind = 'payment_observation'"));

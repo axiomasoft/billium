@@ -8,7 +8,7 @@ use Billium\Contracts\Data\Money;
 use Billium\Ledger\Data\Runtime\BillingAccountScope;
 use Packman\Attributes\Api;
 
-/** Signed Money appends an increase (>0) or decrease (<0); the journal stores a positive magnitude (INV-12). */
+/** Signed Money appends an increase (>0) or decrease (<0); the journal stores a positive magnitude. */
 #[Api(since: '1.0')]
 final readonly class AdjustObligation
 {

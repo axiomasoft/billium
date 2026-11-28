@@ -14,7 +14,7 @@ use Billium\Platform\Data\Migration\TargetReconciliation;
 use Packman\Attributes\Spi;
 use Packman\Attributes\SpiKind;
 
-/** Privileged D58 handoff commands. Evidence failures require recovery or rebootstrap (D54/D63). */
+/** Privileged authority handoff commands. Evidence failures require recovery or rebootstrap. */
 #[Spi(kind: SpiKind::Call, since: '1.0')]
 interface AuthorityHandoff
 {

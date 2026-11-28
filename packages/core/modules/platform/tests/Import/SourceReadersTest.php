@@ -43,7 +43,7 @@ final class SourceReadersTest extends PlatformTestCase
     }
 
     /**
-     * IM-01, IM-06, IM-09, IM-13, IM-16 on the product-agnostic reference-recurring fixture.
+     * On the product-agnostic reference-recurring fixture.
      */
     public function test_recurring_export_reader_enforces_im01_im06_im09_im13_im16_and_hashes_preview_report(): void
     {
@@ -60,13 +60,13 @@ final class SourceReadersTest extends PlatformTestCase
         self::assertCount(7, $records);
         self::assertMatchesRegularExpression('/^sha256:[0-9a-f]{64}$/', $reader->artifactDigest());
 
-        // IM-13 + IM-09: Annual funding with 12 attached grants + changed current plan yields ONLY ONE proven_obligation
+        // Annual funding with 12 attached grants + changed current plan yields ONLY ONE proven_obligation
         // preserving exact historical frozenPriceSnapshot (12000.00 RUB, pv-2025-annual-rub, tax-ru-2025-v1), NOT 15900.00 RUB and NOT 12 obligations.
         $provenObligations = array_values(array_filter(
             $records,
             static fn (ImportRecordInput $r): bool => $r->identity->recordKind === ImportRecordKind::ProvenObligation,
         ));
-        self::assertCount(1, $provenObligations, 'IM-13: annual funding + 12 grants must not spawn 12 new obligations');
+        self::assertCount(1, $provenObligations, 'Annual funding + 12 grants must not spawn 12 new obligations');
         $annual = $byId['rec-obl-annual-001'];
         self::assertSame(ImportRecordKind::ProvenObligation, $annual->identity->recordKind);
         self::assertNotNull($annual->money);
@@ -79,14 +79,14 @@ final class SourceReadersTest extends PlatformTestCase
         self::assertSame(12, $annual->payload['provenanceDetails']['attachedGrantCount'] ?? null);
         self::assertSame(0, $annual->payload['provenanceDetails']['expandedGrantObligations'] ?? null);
 
-        // IM-13 + IM-07: Standalone periodic grant maps to nonfinancial_agreement_reference with money=null.
+        // Standalone periodic grant maps to nonfinancial_agreement_reference with money=null.
         $grant = $byId['rec-grant-m01'];
         self::assertSame(ImportRecordKind::NonfinancialAgreementReference, $grant->identity->recordKind);
         self::assertNull($grant->money);
         self::assertSame('agr-annual-100', $grant->originalBusinessRefs['agreementRef'] ?? null);
         self::assertSame('sub-annual-100', $grant->originalBusinessRefs['subscriptionRef'] ?? null);
 
-        // IM-06: Mutable monthly subscription without frozen price/occurrences becomes unanchored_evidence, zero recurring charges.
+        // Mutable monthly subscription without frozen price/occurrences becomes unanchored_evidence, zero recurring charges.
         $mutableSub = $byId['rec-sub-monthly-unanchored'];
         self::assertSame(ImportRecordKind::UnanchoredEvidence, $mutableSub->identity->recordKind);
         self::assertNull($mutableSub->money);
@@ -94,7 +94,7 @@ final class SourceReadersTest extends PlatformTestCase
         self::assertContains('provenOccurrences', $mutableSub->missingEvidence);
         self::assertSame(['import.mutable_subscription_without_frozen_occurrences'], $mutableSub->payload['unanchoredReasonCodes'] ?? null);
 
-        // IM-09 negative: Record with only currentPlanSnapshot / documentDisplayPrice NEVER produces a paid PriceVersion.
+        // Negative: Record with only currentPlanSnapshot / documentDisplayPrice NEVER produces a paid PriceVersion.
         $currentPlanOnly = $byId['rec-obl-current-plan-only'];
         self::assertSame(ImportRecordKind::UnanchoredEvidence, $currentPlanOnly->identity->recordKind);
         self::assertNull($currentPlanOnly->money);
@@ -102,7 +102,7 @@ final class SourceReadersTest extends PlatformTestCase
         self::assertContains('frozenPriceSnapshot', $currentPlanOnly->missingEvidence);
         self::assertContains('import.current_plan_cannot_anchor_history', $currentPlanOnly->payload['unanchoredReasonCodes'] ?? []);
 
-        // IM-16: Historical invoice preserves originalIssuer and sourceNumber without issuing a second Billium legal number.
+        // Historical invoice preserves originalIssuer and sourceNumber without issuing a second Billium legal number.
         $histInvoice = $byId['rec-inv-hist-001'];
         self::assertSame(ImportRecordKind::ProvenInvoiceHistory, $histInvoice->identity->recordKind);
         self::assertNotNull($histInvoice->legalDocument);
@@ -113,7 +113,7 @@ final class SourceReadersTest extends PlatformTestCase
         self::assertFalse($histInvoice->payload['provenanceDetails']['secondBilliumLegalNumberIssued'] ?? true);
         self::assertTrue($histInvoice->payload['provenanceDetails']['historicalEvidenceOnly'] ?? false);
 
-        // IM-01: Missing currency & provider refs yields unanchored_evidence with zero invented captures.
+        // Missing currency & provider refs yields unanchored_evidence with zero invented captures.
         $missingPsp = $byId['rec-pay-missing-psp'];
         self::assertSame(ImportRecordKind::UnanchoredEvidence, $missingPsp->identity->recordKind);
         self::assertNull($missingPsp->money);
@@ -188,7 +188,7 @@ final class SourceReadersTest extends PlatformTestCase
     }
 
     /**
-     * IM-01, IM-07, IM-08, IM-09, IM-16 on the product-agnostic reference-credits fixture.
+     * On the product-agnostic reference-credits fixture.
      */
     public function test_credits_export_reader_enforces_im07_im08_im01_im09_im16_and_currency_isolation(): void
     {
@@ -200,31 +200,31 @@ final class SourceReadersTest extends PlatformTestCase
 
         self::assertCount(7, $records);
 
-        // IM-07: Non-monetary credit grant stays nonfinancial_agreement_reference with money=null.
+        // Non-monetary credit grant stays nonfinancial_agreement_reference with money=null.
         $creditGrant = $byId['cred-grant-welcome-001'];
         self::assertSame(ImportRecordKind::NonfinancialAgreementReference, $creditGrant->identity->recordKind);
         self::assertNull($creditGrant->money);
         self::assertFalse($creditGrant->payload['provenanceDetails']['monetaryBalancePromoted'] ?? true);
 
-        // IM-07: Credit balance mistakenly claimed as monetary becomes unanchored_evidence with money=null.
+        // Credit balance mistakenly claimed as monetary becomes unanchored_evidence with money=null.
         $claimedBalance = $byId['cred-balance-claimed-money-002'];
         self::assertSame(ImportRecordKind::UnanchoredEvidence, $claimedBalance->identity->recordKind);
         self::assertNull($claimedBalance->money);
         self::assertSame(['import.nonmonetary_credit_not_money'], $claimedBalance->payload['unanchoredReasonCodes'] ?? null);
         self::assertContains('iso4217_currency', $claimedBalance->missingEvidence);
 
-        // IM-08: Non-currency reward quantity (REWARD_POINTS) becomes unanchored_evidence, NEVER a currency.
+        // Non-currency reward quantity (REWARD_POINTS) becomes unanchored_evidence, NEVER a currency.
         $rewardPoints = $byId['cred-reward-points-003'];
         self::assertSame(ImportRecordKind::UnanchoredEvidence, $rewardPoints->identity->recordKind);
         self::assertNull($rewardPoints->money);
         self::assertSame(['import.noncurrency_reward_not_currency'], $rewardPoints->payload['unanchoredReasonCodes'] ?? null);
 
-        // IM-08: Pure non-monetary reward reference (STARS) stays nonfinancial_agreement_reference, money=null.
+        // Pure non-monetary reward reference (STARS) stays nonfinancial_agreement_reference, money=null.
         $rewardRef = $byId['cred-reward-ref-004'];
         self::assertSame(ImportRecordKind::NonfinancialAgreementReference, $rewardRef->identity->recordKind);
         self::assertNull($rewardRef->money);
 
-        // IM-09: Proven USD obligation keeps historical 49.00 USD / pv-2025-pack-usd despite current plan changing to 59.00 USD.
+        // Proven USD obligation keeps historical 49.00 USD / pv-2025-pack-usd despite current plan changing to 59.00 USD.
         $provenUsd = $byId['cred-obl-proven-usd-005'];
         self::assertSame(ImportRecordKind::ProvenObligation, $provenUsd->identity->recordKind);
         self::assertNotNull($provenUsd->money);
@@ -232,14 +232,14 @@ final class SourceReadersTest extends PlatformTestCase
         self::assertSame('USD', $provenUsd->money->currency->code);
         self::assertSame('pv-2025-pack-usd', $provenUsd->frozenPriceSnapshot['priceVersionRef'] ?? null);
 
-        // IM-01: Missing price/money yields unanchored_evidence with zero invented obligations.
+        // Missing price/money yields unanchored_evidence with zero invented obligations.
         $missingPrice = $byId['cred-missing-price-006'];
         self::assertSame(ImportRecordKind::UnanchoredEvidence, $missingPrice->identity->recordKind);
         self::assertNull($missingPrice->money);
         self::assertContains('money', $missingPrice->missingEvidence);
         self::assertContains('frozenPriceSnapshot', $missingPrice->missingEvidence);
 
-        // IM-16: Historical EUR invoice preserves originalIssuer & sourceNumber without second Billium legal number.
+        // Historical EUR invoice preserves originalIssuer & sourceNumber without second Billium legal number.
         $histEur = $byId['cred-inv-hist-007'];
         self::assertSame(ImportRecordKind::ProvenInvoiceHistory, $histEur->identity->recordKind);
         self::assertSame('seller-legal-entity-cred-1', $histEur->legalDocument['originalIssuer'] ?? null);

@@ -25,7 +25,7 @@ use Packman\Attributes\Internal;
  * root then claims the delivery (it survives a sealed financial session); the economic apply of the next sequence and
  * every follow-up sequence or unblocked parked revision runs in its own financial root (ObservationHandler). The answer
  * reflects the durable disposition of THIS delivery: its AllocationReceipt, or — after commit — parked,
- * recovery-required or conflict (D31). Receipts are read on the configured Billium connection.
+ * recovery-required or conflict. Receipts are read on the configured Billium connection.
  */
 #[Internal]
 final readonly class ObservationIntake implements QualifiedObservationApplier
@@ -72,7 +72,7 @@ final readonly class ObservationIntake implements QualifiedObservationApplier
             }
             $this->origins->assertOrigin($this->callers->current(), $scope, $raw, $proof);
         }
-        // 1. Raw custody in its own RawCustody root: it commits even while the financial session is sealed (D60).
+        // 1. Raw custody in its own RawCustody root: it commits even while the financial session is sealed.
         $result = $this->roots->custody($raw, $this->handler, $scope, $proof);
         if ($result->disposition === CustodyDisposition::Conflict) {
             throw new ProblemException(ProblemCode::ObservationConflict, 'the event identity carries another content digest');

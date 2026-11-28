@@ -13,7 +13,7 @@ use Billium\Platform\Data\Migration\TargetReconciliation;
 use Packman\Attributes\Spi;
 use Packman\Attributes\SpiKind;
 
-/** D54/D58/D62/D63. Target authority and attachment generation come from the host outside restored ledger state. */
+/** Target authority and attachment generation come from the host outside restored ledger state. */
 #[Spi(kind: SpiKind::Implement, since: '1.0')]
 interface TargetHandoffHost
 {
@@ -33,7 +33,7 @@ interface TargetHandoffHost
     public function reconciliation(MigrationManifest $manifest): ?TargetReconciliation;
 
     /**
-     * Authenticate the operator's exact manifest+receipt authorization and D54/D62 proof, including applicable
+     * Authenticate the operator's exact manifest+receipt authorization and retirement/activation proof, including applicable
      * provider inventory and namespace dispositions. At the exclusive admission boundary recheck the source
      * seal, attachment and live retention pin and consume the authorization idempotently. Serialize against
      * proof issuance for rollback. Return false on any refusal. No network inside a Billium transaction.

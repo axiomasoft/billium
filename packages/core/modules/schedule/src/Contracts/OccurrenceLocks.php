@@ -8,7 +8,7 @@ use Billium\Core\Contracts\Runner\TransactionContext;
 use Packman\Attributes\Spi;
 use Packman\Attributes\SpiKind;
 
-/** Outer roots acquire the complete rank-50 set before settlement/obligation locks (D27/FA03). */
+/** Outer roots acquire the complete rank-50 set before settlement/obligation locks. */
 #[Spi(SpiKind::Call)]
 interface OccurrenceLocks
 {

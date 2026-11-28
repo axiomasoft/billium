@@ -9,15 +9,15 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`AccountingExportExtension`](../../packages/testkit/src/Accounting/AccountingExportExtension.php) | class | **Api** | Minimal COV-299 accounting export extension demonstrating capability/version negotiation and extension-owned export state without altering core financial migra… |
-| [`FakeFinBridgeConsumer`](../../packages/testkit/src/Accounting/FakeFinBridgeConsumer.php) | class | **Api** | Deterministic in-memory FinBridge consumer test double for P6.6 conformance and integration tests. |
+| [`AccountingExportExtension`](../../packages/testkit/src/Accounting/AccountingExportExtension.php) | class | **Api** | Minimal accounting export extension demonstrating capability/version negotiation and extension-owned export state without altering core financial migrations or… |
+| [`FakeFinBridgeConsumer`](../../packages/testkit/src/Accounting/FakeFinBridgeConsumer.php) | class | **Api** | Deterministic in-memory FinBridge consumer test double for conformance and integration tests. |
 
 ## Coordinator
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`FakeProductCoordinator`](../../packages/testkit/src/Coordinator/FakeProductCoordinator.php) | class | **Api** | Deterministic host ProductCoordinator test double for P7.6 acceptance tests. |
-| [`InMemoryCollectionNotificationPort`](../../packages/testkit/src/Coordinator/InMemoryCollectionNotificationPort.php) | class | **Api** | Deterministic in-memory CollectionNotificationPort test double for P7.6 acceptance tests. |
+| [`FakeProductCoordinator`](../../packages/testkit/src/Coordinator/FakeProductCoordinator.php) | class | **Api** | Deterministic host ProductCoordinator test double for acceptance tests. |
+| [`InMemoryCollectionNotificationPort`](../../packages/testkit/src/Coordinator/InMemoryCollectionNotificationPort.php) | class | **Api** | Deterministic in-memory CollectionNotificationPort test double for acceptance tests. |
 | [`ProvisioningAttemptReceipt`](../../packages/testkit/src/Coordinator/ProvisioningAttemptReceipt.php) | class | **Api** | Durable provisioning attempt receipt owned by the host ProductCoordinator double. |
 
 ## Documents
@@ -50,7 +50,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`FiscalIntegrationExtension`](../../packages/testkit/src/Fiscal/FiscalIntegrationExtension.php) | class | **Api** | Minimal COV-295 fiscal integration extension stub proving capability/version negotiation without implementing WithSchema or touching any core/platform/ledger/e… |
+| [`FiscalIntegrationExtension`](../../packages/testkit/src/Fiscal/FiscalIntegrationExtension.php) | class | **Api** | Minimal fiscal integration extension stub proving capability/version negotiation without implementing WithSchema or touching any core/platform/ledger/execution… |
 | [`SimulatedFiscalDriver`](../../packages/testkit/src/Fiscal/SimulatedFiscalDriver.php) | class | **Api** | Deterministic simulated fiscal driver for testing psp_passthrough and fiscal_driver flows, lost registration responses, 24h outages, duplicate registration gua… |
 | [`SimulatedFiscalDrivers`](../../packages/testkit/src/Fiscal/SimulatedFiscalDrivers.php) | class | **Api** | Exact-version fiscal driver registry for tests. |
 

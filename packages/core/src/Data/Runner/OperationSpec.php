@@ -12,10 +12,10 @@ use Packman\Attributes\Api;
 
 /**
  * Declaration of one root operation (operation-runner). A keyed command carries its idempotency key and the semantic
- * digest of its payload; the same key with another digest conflicts (INV-05). `commitKind` marks a monetary mutation:
+ * digest of its payload; the same key with another digest conflicts. `commitKind` marks a monetary mutation:
  * it appends a diagnostic money_commit_log row in the same root Tx. `modules` is the complete participating-module
  * closure: the runner admits every module in it (rank 25) for `operationClass` before any domain work, and a
- * participant outside it is refused (D55). financialScope selects the authenticated installation, seller, environment
+ * participant outside it is refused. financialScope selects the authenticated installation, seller, environment
  * and any owner/source used by this operation. Omitting the selection declares a namespace-neutral root. The runner
  * checks the selected grants before receipt lookup and admitted money roots require matching host evidence.
  * inputDigest is the optional canonical command input fingerprint for a scoped keyed receipt. The runner's claim
@@ -50,7 +50,7 @@ final readonly class OperationSpec
             throw new InvalidArgumentException('Operation seller and environment are required');
         }
         if (($commandKey === null) !== ($digest === null)) {
-            throw new InvalidArgumentException('An idempotency key needs its digest and vice versa (INV-05)');
+            throw new InvalidArgumentException('An idempotency key needs its digest and vice versa');
         }
         foreach ([$commandKey, $digest] as $value) {
             if ($value !== null && ($value === '' || strlen($value) > 200)) {
@@ -77,7 +77,7 @@ final readonly class OperationSpec
             throw new InvalidArgumentException('Duplicate participating module');
         }
         if ($mode->financial() && $modules === []) {
-            throw new InvalidArgumentException('A financial operation declares its participating-module closure (D55)');
+            throw new InvalidArgumentException('A financial operation declares its participating-module closure');
         }
         if ($mode === FinancialMode::SessionControl && $modules !== []) {
             throw new InvalidArgumentException('Session control takes no module admission');

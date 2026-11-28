@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PLAN1.P10.6 — Compact supply-chain, license policy, and release hold sanity gate.
+# Compact supply-chain, license policy, and release hold sanity gate.
 # Usage:
 #   bash scripts/quality/release-supply-chain.sh [--profile baseline|contract-only|embedded|standalone|remote|remote-live] [--holds-file path.json] [--report path.json]
 set -euo pipefail

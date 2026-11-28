@@ -36,8 +36,8 @@ use Billium\Platform\Tests\PlatformTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * Product-agnostic external import adversarial scenario & N-process concurrency matrix (P9.6 / D71):
- * covers IM-01..IM-17 with real PostgreSQL 16 and P3 advisory barrier stand (no transaction wrappers).
+ * Product-agnostic external import adversarial scenario & N-process concurrency matrix:
+ * covers IM-01..IM-17 with real PostgreSQL 16 and the advisory barrier stand (no transaction wrappers).
  */
 #[Group('P9.6')]
 #[Group('D71')]
@@ -51,7 +51,6 @@ final class ImportScenarioTest extends PlatformTestCase
     }
 
     /**
-     * IM-01, IM-06, IM-07, IM-08, IM-13:
      * Unanchored evidence, mutable subscriptions without frozen occurrences, host non-monetary credits/rewards,
      * and annual funding with 12 attached quota grants never invent obligations, captures or customer credits.
      */
@@ -103,7 +102,7 @@ final class ImportScenarioTest extends PlatformTestCase
             );
         }
 
-        // Apply reference-recurring export artifact with annual funding + 12 grants + mutable monthly subscription (IM-06, IM-13).
+        // Apply reference-recurring export artifact with annual funding + 12 grants + mutable monthly subscription.
         $this->asAuthorizedCaller('seller-recurring-1');
         $recurringPath = $this->repoPath('fixtures/integration/import/reference-recurring/complete-manifest.json');
         $recurringReader = GenericExportReader::fromFile($recurringPath, new RecurringExportProfile, 'import-policy-v1', new Codec);
@@ -117,7 +116,7 @@ final class ImportScenarioTest extends PlatformTestCase
         );
         self::assertSame(ImportBatchStatus::Completed, $applyRecurring->batchStatus);
 
-        // IM-13: Annual funding (12000.00 RUB) + 12 attached grants + 1 USD addon => strictly 2 obligations total (1 RUB, 1 USD), NEVER 13!
+        // Annual funding (12000.00 RUB) + 12 attached grants + 1 USD addon => strictly 2 obligations total (1 RUB, 1 USD), NEVER 13!
         self::assertSame(1, $this->rows('billium_obligation', "seller_ref = 'seller-recurring-1' AND currency = 'RUB'"));
         self::assertSame(1, $this->rows('billium_obligation', "seller_ref = 'seller-recurring-1' AND currency = 'USD'"));
         self::assertNull($this->value("SELECT billium_target_ref FROM billium_import_mapping WHERE source_record_id = 'rec-sub-monthly-unanchored'"));
@@ -125,11 +124,10 @@ final class ImportScenarioTest extends PlatformTestCase
     }
 
     /**
-     * IM-02, IM-03, IM-05, IM-11:
      * Uses the P3 ConcurrencyStand barrier (no transaction wrapper) to race 4 OS processes importing
      * the exact same source identities packaged into different batchIds and different mapper versions (1.0.0..4.0.0).
      * Asserts unique mapping/receipt/economic effect and identical sourceFactRef across all workers,
-     * followed by IM-03 payloadDigest conflict quarantine.
+     * followed payloadDigest conflict quarantine.
      */
     public function test_im02_im03_im05_im11_concurrent_repacked_batches_across_mapper_versions_and_digest_conflict(): void
     {
@@ -199,7 +197,7 @@ final class ImportScenarioTest extends PlatformTestCase
         self::assertSame(6, $this->rows('billium_import_receipt', "seller_ref = ? AND status = 'applied'", [$sellerRef]));
         self::assertSame(3, $this->rows('billium_import_receipt', "seller_ref = ? AND status = 'observation_queued'", [$sellerRef]));
 
-        // IM-03: Submitting the same source identity & revision with a different payload digest conflicts and quarantines.
+        // Submitting the same source identity & revision with a different payload digest conflicts and quarantines.
         $conflictingArtifact = $artifact;
         $conflictingArtifact['batchId'] = 'batch-repacked-conflict-im03';
         unset($conflictingArtifact['artifactDigest']);
@@ -222,7 +220,6 @@ final class ImportScenarioTest extends PlatformTestCase
     }
 
     /**
-     * IM-04:
      * Force interruption after EACH individual root commit checkpoint (maxSteps=1, chunkSize=1)
      * and verify that every resume retains already-committed receipt_ref and mapping_ref values
      * without re-executing or minting duplicate receipts.
@@ -278,7 +275,6 @@ final class ImportScenarioTest extends PlatformTestCase
     }
 
     /**
-     * IM-05, IM-09, IM-10, IM-11, IM-14, IM-16:
      * Multi-currency conservation (RUB, USD, EUR), frozen historical PriceVersion retention after current PlanVersion change,
      * concurrent partial refund cap race at P3 barrier, multi-component MoneyMath rounding (10.00 -> 3.34 + 3.33 + 3.33),
      * original owner routing, and historical legal invoice number preservation.
@@ -304,7 +300,7 @@ final class ImportScenarioTest extends PlatformTestCase
         );
         self::assertSame(ImportBatchStatus::Completed, $initRes->batchStatus);
 
-        // IM-09: Unrelated current PlanVersion never alters historical amounts or price_version_ref.
+        // Unrelated current PlanVersion never alters historical amounts or price_version_ref.
         $queries = $this->application()->make(LedgerQueries::class);
         self::assertSame('1000.00', $queries->obligation('src-obl-rub-1')['originalDue']['amount']);
         self::assertSame('250.00', $queries->obligation('src-obl-usd-1')['originalDue']['amount']);
@@ -313,7 +309,7 @@ final class ImportScenarioTest extends PlatformTestCase
         self::assertSame('pv-2025-usd-v1', $this->value("SELECT price_version_ref FROM billium_obligation WHERE obligation_ref = 'src-obl-usd-1'"));
         self::assertSame('pv-2025-eur-v1', $this->value("SELECT price_version_ref FROM billium_obligation WHERE obligation_ref = 'src-obl-eur-1'"));
 
-        // IM-14: RUB, USD and EUR are reconciled separately and conserved.
+        // RUB, USD and EUR are reconciled separately and conserved.
         $initReconcile = $this->reconciler()->reconcileBatch('batch-multi-init-1');
         self::assertTrue($initReconcile->reconciled);
         self::assertSame(['EUR', 'RUB', 'USD'], array_keys($initReconcile->ledgerConservationByCurrency));
@@ -321,13 +317,13 @@ final class ImportScenarioTest extends PlatformTestCase
         self::assertSame(100_000, $initReconcile->ledgerConservationByCurrency['RUB']['obligationsDueMinor']);
         self::assertSame(25_000, $initReconcile->ledgerConservationByCurrency['USD']['obligationsDueMinor']);
 
-        // IM-16: Historical EUR invoice preserves originalIssuer and sourceNumber with 0 Billium invoices issued.
+        // Historical EUR invoice preserves originalIssuer and sourceNumber with 0 Billium invoices issued.
         self::assertSame(0, $this->rows('billium_invoice'));
         $histRow = $this->row("SELECT original_issuer, original_source_number FROM billium_import_mapping WHERE source_record_id = 'inv-hist-eur-1'");
         self::assertSame('seller-legal-eu-1', $histRow['original_issuer']);
         self::assertSame('EU-HIST-2025-0099', $histRow['original_source_number']);
 
-        // IM-05 + IM-10: Race 3 concurrent workers on the same 300.00 RUB partial refund identity + 1 worker with an over-capacity 1200.00 RUB refund!
+        // Race 3 concurrent workers on the same 300.00 RUB partial refund identity + 1 worker with an over-capacity 1200.00 RUB refund!
         $validRefundArtifact = ImportScenarioFixtures::artifactForRecords(self::INSTALLATION, 'batch-rfnd-valid', $sellerRef, [
             ImportScenarioFixtures::refund('rfnd-part-300', '300.00', 'RUB', 'orig-cap-pay-001', 'exec-gateway-alpha'),
         ]);
@@ -373,7 +369,7 @@ final class ImportScenarioTest extends PlatformTestCase
         self::assertSame('refund.succeeded', $rfndReconcile->accountingFacts[0]['factKind']);
         self::assertSame(30_000, $rfndReconcile->accountingFacts[0]['amountMinor']);
 
-        // IM-10: Multi-component partial adjustment (10.00 RUB across 3 equal components -> 3.34, 3.33, 3.33) + CreditNote with zero live PSP calls.
+        // Multi-component partial adjustment (10.00 RUB across 3 equal components -> 3.34, 3.33, 3.33) + CreditNote with zero live PSP calls.
         $oblIdentity = $initialReader->records()[0]->identity;
         $posCorr = $this->applier()->applyLinkedCorrection(new ImportLinkedCorrection(
             capabilityScope: ImportApplyOptions::REQUIRED_SCOPE,
@@ -419,7 +415,6 @@ final class ImportScenarioTest extends PlatformTestCase
     }
 
     /**
-     * IM-05, IM-12, IM-15:
      * Cross-source same refs across sellers (`seller-alpha` and `seller-beta`) run concurrently across P3 advisory barrier
      * with zero cross-seller interference, isolated obligations/payments/mappings, and distinct seller-scoped sourceFactRefs;
      * missing exportCutoff, tampered recordsChecksum, or unexplained manifest currency delta blocks cutover.
@@ -467,7 +462,7 @@ final class ImportScenarioTest extends PlatformTestCase
         self::assertSame(500_000, self::integer($this->value("SELECT amount_due_minor FROM billium_obligation WHERE seller_ref = 'seller-alpha'")));
         self::assertSame(750_000, self::integer($this->value("SELECT amount_due_minor FROM billium_obligation WHERE seller_ref = 'seller-beta'")));
 
-        // IM-12: Cross-seller caller attempting to apply seller-alpha's manifest is rejected before any mutation.
+        // Cross-seller caller attempting to apply seller-alpha's manifest is rejected before any mutation.
         $this->asAuthorizedCaller('seller-beta');
         $alphaReader = GenericExportReader::fromJson(json_encode($artifactAlpha, JSON_THROW_ON_ERROR), new GenericExportProfile);
         try {
@@ -481,7 +476,7 @@ final class ImportScenarioTest extends PlatformTestCase
             self::assertSame(ProblemCode::AuthDenied, $e->problem);
         }
 
-        // IM-15: Missing exportCutoff and unexplained currency delta block cutover readiness (preview surfaces delta, apply quarantines).
+        // Missing exportCutoff and unexplained currency delta block cutover readiness (preview surfaces delta, apply quarantines).
         try {
             GenericExportReader::fromFile($this->repoPath('fixtures/integration/import/reference-recurring/negative-missing-cutoff.json'), new RecurringExportProfile);
             self::fail('Expected ExportArtifactException for missing exportCutoff');

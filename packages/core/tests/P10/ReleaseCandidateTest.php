@@ -147,7 +147,7 @@ final class ReleaseCandidateTest extends TestCase
 
         // 1. Direct Pest invocation with nonexistent filter must fail with "No tests found".
         $pest = self::runProcess(['vendor/bin/pest', $missingFilter]);
-        self::assertNotSame(0, $pest['exitCode'], 'MECH-02 requires nonexistent Pest filter to return nonzero');
+        self::assertNotSame(0, $pest['exitCode'], 'Requires nonexistent Pest filter to return nonzero');
         self::assertStringContainsString('No tests found', $pest['stdout'].$pest['stderr']);
 
         // 2. Discovery gate script rejects empty selection.

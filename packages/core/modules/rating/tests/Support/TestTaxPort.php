@@ -38,6 +38,6 @@ final class TestTaxPort implements TaxSnapshotPort
 
     public function resolveCorrection(TaxCorrectionRequest $request): TaxCorrectionPolicySnapshot
     {
-        throw new RuntimeException('not used by P4.7');
+        throw new RuntimeException('not used');
     }
 }

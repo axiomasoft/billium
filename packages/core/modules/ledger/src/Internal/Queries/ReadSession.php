@@ -14,7 +14,7 @@ use Illuminate\Database\DatabaseManager;
 use LogicException;
 use Packman\Attributes\Internal;
 
-/** REQ-CON-14: an independent consistent read, with PostgreSQL enforcing the no-write boundary. */
+/** An independent consistent read, with PostgreSQL enforcing the no-write boundary. */
 #[Internal]
 final readonly class ReadSession
 {

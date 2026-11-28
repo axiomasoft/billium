@@ -10,7 +10,7 @@ use Packman\Attributes\Api;
 
 /**
  * One supported runtime composition row: which modules are mandatory/optional/forbidden, whether the server
- * package is part of it, and which host ports must be absent (D55, D61).
+ * package is part of it, and which host ports must be absent.
  */
 #[Api(since: '1.0')]
 final readonly class CompositionProfile

@@ -18,7 +18,7 @@ use Override;
 use Packman\Attributes\Internal;
 
 /**
- * Deterministic platform-owned accounting fact mapper and FinBridge contract translator (P6.6, D53, D56, D63).
+ * Deterministic platform-owned accounting fact mapper and FinBridge contract translator.
  *
  * Strictly separates:
  * - CashIn / CashOut from unique authenticated actual provider effects (never bounded refundedTotal or allocations);

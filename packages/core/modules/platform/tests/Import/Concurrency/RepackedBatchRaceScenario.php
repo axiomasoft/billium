@@ -21,7 +21,6 @@ use Billium\Platform\Internal\Import\Sources\RecurringExportProfile;
 use Illuminate\Foundation\Application;
 
 /**
- * IM-02 + IM-05 + IM-11:
  * N concurrent OS processes cross the P3 PostgreSQL advisory barrier simultaneously,
  * applying the exact same source economic identities packaged into different batchIds
  * and different mapper profile versions / importPolicyVersions.

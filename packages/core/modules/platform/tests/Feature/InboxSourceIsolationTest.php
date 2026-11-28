@@ -14,7 +14,7 @@ use Billium\Platform\Tests\Inbox\InboxTestCase;
 use Billium\Platform\Tests\Inbox\JournalHandler;
 use PHPUnit\Framework\Attributes\Group;
 
-/** The source namespace is compound: authority, lineage, seller, environment, channel and partition ref (INV-08, INV-14, D60). */
+/** The source namespace is compound: authority, lineage, seller, environment, channel and partition ref. */
 #[Group('INV-08')]
 #[Group('INV-14')]
 #[Group('pg')]

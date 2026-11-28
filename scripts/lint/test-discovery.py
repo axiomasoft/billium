@@ -59,7 +59,7 @@ def prove_empty_filter_is_red(runner=subprocess.run) -> None:
     )
     if result.returncode == 0 or "No tests found" not in result.stdout:
         raise RuntimeError(
-            "MECH-02: nonexistent filter must fail because no tests were found: "
+            "Nonexistent filter must fail because no tests were found: "
             + result.stdout
         )
 

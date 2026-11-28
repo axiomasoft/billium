@@ -161,11 +161,11 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`FixedOccurrenceInput`](../../packages/core/modules/rating/src/Internal/Pipeline/FixedOccurrenceInput.php) | class | *Internal* | Synthetic occurrence and host-approved quantity inputs do not depend on metered usage (D55/D56). |
+| [`FixedOccurrenceInput`](../../packages/core/modules/rating/src/Internal/Pipeline/FixedOccurrenceInput.php) | class | *Internal* | Synthetic occurrence and host-approved quantity inputs do not depend on metered usage. |
 | [`FrozenInputsBuilder`](../../packages/core/modules/rating/src/Internal/Pipeline/FrozenInputsBuilder.php) | class | *Internal* |  |
 | [`InputsDigest`](../../packages/core/modules/rating/src/Internal/Pipeline/InputsDigest.php) | class | *Internal* |  |
 | [`MeteredUnitGuard`](../../packages/core/modules/rating/src/Internal/Pipeline/MeteredUnitGuard.php) | class | *Internal* |  |
-| [`RatingComputation`](../../packages/core/modules/rating/src/Internal/Pipeline/RatingComputation.php) | class | *Internal* | Versioned strategies consume retained snapshots only; this class performs no I/O (D56). |
+| [`RatingComputation`](../../packages/core/modules/rating/src/Internal/Pipeline/RatingComputation.php) | class | *Internal* | Versioned strategies consume retained snapshots only; this class performs no I/O. |
 
 ## Internal/Proration
 
@@ -204,7 +204,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 |---|---|---|---|
 | [`CorrectionStore`](../../packages/core/modules/rating/src/Internal/Storage/CorrectionStore.php) | class | *Internal* |  |
 | [`DatabasePriceVersionStore`](../../packages/core/modules/rating/src/Internal/Storage/DatabasePriceVersionStore.php) | class | *Internal* |  |
-| [`FrozenInputsCodec`](../../packages/core/modules/rating/src/Internal/Storage/FrozenInputsCodec.php) | class | *Internal* | Retained v1 snapshots: explicit decoding, no current registry or vendor reads (D56). |
+| [`FrozenInputsCodec`](../../packages/core/modules/rating/src/Internal/Storage/FrozenInputsCodec.php) | class | *Internal* | Retained v1 snapshots: explicit decoding, no current registry or vendor reads. |
 | [`PricePublishedReceipt`](../../packages/core/modules/rating/src/Internal/Storage/PricePublishedReceipt.php) | class | *Internal* |  |
 | [`RatingRows`](../../packages/core/modules/rating/src/Internal/Storage/RatingRows.php) | class | *Internal* |  |
 | [`RatingStore`](../../packages/core/modules/rating/src/Internal/Storage/RatingStore.php) | class | *Internal* |  |

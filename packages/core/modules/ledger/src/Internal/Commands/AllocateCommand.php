@@ -17,10 +17,10 @@ use Illuminate\Database\DatabaseManager;
 use Packman\Attributes\Internal;
 
 /**
- * Explicit allocation of one funds source to one obligation (INV-09, COV-166). PHP authorizes, plans and prelocks
+ * Explicit allocation of one funds source to one obligation. PHP authorizes, plans and prelocks
  * intent → obligation → invoice → funds; billium_allocate and its guard alone check the account/currency/scope, the
  * source budget (captured − refunded − allocated without hold or reallocation, or credit remaining) and the open
- * budget, append the journal row and move every counter. No network call happens here (COV-003).
+ * budget, append the journal row and move every counter. No network call happens here.
  */
 #[Internal]
 final readonly class AllocateCommand
@@ -58,7 +58,7 @@ final readonly class AllocateCommand
         }
         $connection = $this->databases->connection($context->connectionName());
         $read = function () use ($connection, $caller, $command): array {
-            // Selectors are scoped by the authenticated seller: another seller's rows are invisible (INV-14).
+            // Selectors are scoped by the authenticated seller: another seller's rows are invisible.
             $obligation = $connection->table('billium_obligation')->where('seller_ref', $caller->sellerRef)->where('environment', $caller->environment)
                 ->where('obligation_ref', $command->obligationRef)->first(['id', 'billed_invoice_id']);
             $source = $command->paymentRef !== null

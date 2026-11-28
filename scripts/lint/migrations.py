@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""D21/D45/D60 migration checks. Static checks supplement live runtime-role proofs."""
+"""Migration checks. Static checks supplement live runtime-role proofs."""
 from __future__ import annotations
 
 import argparse

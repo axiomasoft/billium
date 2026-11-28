@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# D54/D58/D59/D62. Run on the role-separated PostgreSQL test stand.
+# Run on the role-separated PostgreSQL test stand.
 set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."

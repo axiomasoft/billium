@@ -9,7 +9,7 @@ use InvalidArgumentException;
 use Packman\Attributes\Api;
 
 /**
- * Immutable outbox event content (PF-10, COV-086..088): its own id, versioned type, aggregate reference and economic
+ * Immutable outbox event content (..088): its own id, versioned type, aggregate reference and economic
  * revision, and a bounded JSON object payload without secrets. Seller/environment come from the root context.
  */
 #[Api(since: '1.0')]

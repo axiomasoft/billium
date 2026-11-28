@@ -12,7 +12,7 @@ use stdClass;
 
 /**
  * Result of a root operation as stored with its idempotency claim: an accepted receipt `{class, body}` or a stored
- * business refusal `{problem}` (D31). `replayed` marks a duplicate of the same key and digest; `receiptId` is the
+ * business refusal `{problem}`. `replayed` marks a duplicate of the same key and digest; `receiptId` is the
  * claim row of a keyed operation (the same for the original and every replay).
  */
 #[Api(since: '1.0')]
@@ -37,7 +37,7 @@ final readonly class StoredOutcome
     public static function refused(ProblemException $problem, ?int $receiptId = null): self
     {
         if ($problem->problem->receipt() !== 'stored') {
-            throw new InvalidArgumentException("{$problem->problem->value} is not a stored refusal (D31)");
+            throw new InvalidArgumentException("{$problem->problem->value} is not a stored refusal");
         }
 
         return new self(false, null, [], $problem->problem, $problem->detail, $receiptId, false);

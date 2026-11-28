@@ -10,7 +10,7 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Packman\Attributes\Api;
 
 /**
- * FA02 typed proof that a collection step never had an external effect. The collection owner mints it under its
+ * Typed proof that a collection step never had an external effect. The collection owner mints it under its
  * DunningCase guard row in the SAME root Tx (`rootRef` = TransactionContext::rootRef()) after it checked the step
  * authorization, revocation and the absence of a committed dispatch permit and of pending/unknown work. The ledger
  * accepts only a proof of its current root; a proof that reports a permit or any external effect is not a no-effect proof.

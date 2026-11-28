@@ -10,7 +10,7 @@ use Billium\Ledger\Data\Runtime\BillingAccountScope;
 use Packman\Attributes\Api;
 
 /**
- * Keyed due-policy replacement, including explicit disabling with null dueAt (D60, BC-ENV-28).
+ * Keyed due-policy replacement, including explicit disabling with null dueAt (BC-ENV-28).
  */
 #[Api(since: '1.0')]
 final readonly class AmendObligationDuePolicy

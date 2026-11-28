@@ -9,7 +9,7 @@ use Packman\Attributes\Api;
 
 /**
  * The authenticated caller of a root operation. Payload refs are selectors, never authority: the seller/environment of
- * every command must equal these values (INV-14).
+ * every command must equal these values.
  */
 #[Api(since: '1.0')]
 final readonly class Caller
@@ -18,7 +18,7 @@ final readonly class Caller
     public array $permissions;
 
     /**
-     * @param  list<string>  $sourceAuthorities  authenticated fact sources this caller may speak for (D60)
+     * @param  list<string>  $sourceAuthorities  authenticated fact sources this caller may speak for
      * @param  list<string>  $intentOwnerNamespaces  authenticated business intent owners this caller may act for
      * @param  array<mixed>  $permissions  host-authenticated action grants; never taken from command payloads
      */

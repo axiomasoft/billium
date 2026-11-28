@@ -12,7 +12,7 @@ use LogicException;
 use Packman\Attributes\Api;
 use stdClass;
 
-/** D29/D60: lossless DB-to-query rendering; never float or a current pricing lookup. */
+/** Lossless DB-to-query rendering; never float or a current pricing lookup. */
 #[Api(since: '1.0')]
 final class LedgerView
 {

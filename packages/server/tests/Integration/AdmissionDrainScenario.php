@@ -25,7 +25,7 @@ use Packman\Doctor\Data\DoctorContext;
 use Packman\Doctor\Enums\CheckStatus;
 use RuntimeException;
 
-/** D55/D62. The contenders share a deployment and wait on the real module row lock. */
+/** The contenders share a deployment and wait on the real module row lock. */
 final class AdmissionDrainScenario implements Scenario
 {
     public function run(Application $app, int $index, array $args): array

@@ -11,7 +11,7 @@ use Billium\Ledger\Tests\Schema\LedgerTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * ACC-CON-08 (INV-09, COV-166, COV-284..286): ten processes allocate 50.00 each from one payment of 100.00 to two
+ * Ten processes allocate 50.00 each from one payment of 100.00 to two
  * obligations of 80.00 (even index → O1, odd → O2) under different keys. After the barrier the database totals hold.
  */
 #[Group('ACC-CON-08')]
@@ -51,7 +51,7 @@ final class AllocationSamePaymentTest extends LedgerTestCase
         }
         self::assertSame(2, $this->rows('billium_allocation_receipt', "kind='allocation'"));
         self::assertSame(2, $this->rows('billium_outbox_event', "type='allocation.applied.v1'"));
-        // Every refused worker stored a deterministic receipt for its key (D31).
+        // Every refused worker stored a deterministic receipt for its key.
         self::assertSame(8, $this->rows('billium_idempotency_receipt', "command_kind='ledger.allocate' AND outcome='refused'"));
     }
 }

@@ -7,7 +7,7 @@ namespace Billium\Collection\Data;
 use Billium\Execution\Data\ExecutionScope;
 use Packman\Attributes\Api;
 
-/** PHP owner command for an executable collection step (D56, D63/F04). */
+/** PHP owner command for an executable collection step. */
 #[Api(since: '1.0')]
 final readonly class AuthorizeCollection
 {

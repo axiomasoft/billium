@@ -11,7 +11,7 @@ use Packman\Attributes\Internal;
 use stdClass;
 
 /**
- * Economic materialDigest `ledger-material/1` of one observed revision (D60, INV-06), separate from the transport
+ * Economic materialDigest `ledger-material/1` of one observed revision, separate from the transport
  * contentDigest. It covers the source business binding (installation, environment, seller, sourceAuthority, provider
  * account), the operation identity/kind/root, the business intent, the revision, state, currency, the four cumulative
  * totals and the economic discrepancy identity. Delivery identity (eventId, lineage, partition, sequence), timestamps

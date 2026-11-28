@@ -646,7 +646,7 @@ final class CollectionCancellationTest extends CollectionTestCase
     }
 }
 
-/** In-memory host receipts for REQ-NBR-06 and COV-AC-373. */
+/** In-memory host receipts. */
 final class CollectionHostDouble
 {
     /** @var array<string, string> */

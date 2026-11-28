@@ -435,7 +435,7 @@ final readonly class DatabaseDocumentFinalizationService implements DocumentFina
             discountTaxOrder: DiscountTaxOrder::from(RowCast::str($row->discount_tax_order, 'discount_tax_order')),
         );
 
-        // External port call strictly outside any DB transaction (INV-06).
+        // External port call strictly outside any DB transaction.
         try {
             $snapshot = $this->taxSnapshotPort->resolve($request);
         } catch (Throwable $error) {

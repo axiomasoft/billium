@@ -9,7 +9,7 @@ use InvalidArgumentException;
 use Packman\Attributes\Api;
 
 /**
- * Post-apply linked correction request (D63/F01, D71, IM-10) without destructive rollback or automatic PSP dispatch.
+ * Post-apply linked correction request without destructive rollback or automatic PSP dispatch.
  */
 #[Api(since: '1.0')]
 final readonly class ImportLinkedCorrection

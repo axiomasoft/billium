@@ -16,16 +16,16 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`EventContractRegistrar`](../../packages/core/modules/platform/src/Contracts/EventContracts/EventContractRegistrar.php) | interface | **Spi** | Platform port through which a module declares its public event contracts (D63/F10). |
+| [`EventContractRegistrar`](../../packages/core/modules/platform/src/Contracts/EventContracts/EventContractRegistrar.php) | interface | **Spi** | Platform port through which a module declares its public event contracts. |
 
 ## Contracts/Feed
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`EventFeed`](../../packages/core/modules/platform/src/Contracts/Feed/EventFeed.php) | interface | **Spi** | D52/D60/D63. |
-| [`FeedPartitions`](../../packages/core/modules/platform/src/Contracts/Feed/FeedPartitions.php) | interface | **Spi** | Source-scoped observation custody and staged partition bootstrap (REQ-CON-27, REQ-FAIL-12/13/22/23). |
-| [`FeedRecoveryQueries`](../../packages/core/modules/platform/src/Contracts/Feed/FeedRecoveryQueries.php) | interface | **Spi** | D45/D60: platform-owned recovery metadata, read in the caller's consistent read-only snapshot (REQ-CON-14). |
-| [`SnapshotSource`](../../packages/core/modules/platform/src/Contracts/Feed/SnapshotSource.php) | interface | **Spi** | D60/D63: register with billium.snapshot_sources. |
+| [`EventFeed`](../../packages/core/modules/platform/src/Contracts/Feed/EventFeed.php) | interface | **Spi** | Feed position is never a database freshness certificate. |
+| [`FeedPartitions`](../../packages/core/modules/platform/src/Contracts/Feed/FeedPartitions.php) | interface | **Spi** | Source-scoped observation custody and staged partition bootstrap (13/22/23). |
+| [`FeedRecoveryQueries`](../../packages/core/modules/platform/src/Contracts/Feed/FeedRecoveryQueries.php) | interface | **Spi** | Platform-owned recovery metadata, read in the caller's consistent read-only snapshot. |
+| [`SnapshotSource`](../../packages/core/modules/platform/src/Contracts/Feed/SnapshotSource.php) | interface | **Spi** | Register with billium.snapshot_sources. |
 
 ## Contracts/Idempotency
 
@@ -33,7 +33,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 |---|---|---|---|
 | [`FinancialIdempotencyStore`](../../packages/core/modules/platform/src/Contracts/Idempotency/FinancialIdempotencyStore.php) | interface | **Spi** | Persists the authenticated selection, optional input fingerprint and original execution reference with the first claim. |
 | [`IdempotencyReceiptQueries`](../../packages/core/modules/platform/src/Contracts/Idempotency/IdempotencyReceiptQueries.php) | interface | **Spi** | Authenticated, exact-scope reads; an unqualified historical receipt supplies no scope proof. |
-| [`IdempotencyStore`](../../packages/core/modules/platform/src/Contracts/Idempotency/IdempotencyStore.php) | interface | **Spi** | Atomic first-write claim of (environment, seller, command kind, key) with its semantic digest (INV-05, D51). |
+| [`IdempotencyStore`](../../packages/core/modules/platform/src/Contracts/Idempotency/IdempotencyStore.php) | interface | **Spi** | Atomic first-write claim of (environment, seller, command kind, key) with its semantic digest. |
 | [`ReceiptAbsenceAuthority`](../../packages/core/modules/platform/src/Contracts/Idempotency/ReceiptAbsenceAuthority.php) | interface | **Spi** |  |
 
 ## Contracts/Import
@@ -53,24 +53,24 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 |---|---|---|---|
 | [`AuthenticatedObservationBootstrap`](../../packages/core/modules/platform/src/Contracts/Inbox/AuthenticatedObservationBootstrap.php) | interface | **Spi** |  |
 | [`BootstrapItemHandler`](../../packages/core/modules/platform/src/Contracts/Inbox/BootstrapItemHandler.php) | interface | **Spi** | Applies one verified snapshot item in a recovery-session root Tx with the same economic dedupe as a live delivery. |
-| [`CustodyHandler`](../../packages/core/modules/platform/src/Contracts/Inbox/CustodyHandler.php) | interface | **Spi** | The owning module's economic application of ONE accounted delivery (INV-08). |
+| [`CustodyHandler`](../../packages/core/modules/platform/src/Contracts/Inbox/CustodyHandler.php) | interface | **Spi** | The owning module's economic application of ONE accounted delivery. |
 | [`ObservationBootstrapAuthenticator`](../../packages/core/modules/platform/src/Contracts/Inbox/ObservationBootstrapAuthenticator.php) | interface | **Spi** |  |
 
 ## Contracts/Installation
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`Installation`](../../packages/core/modules/platform/src/Contracts/Installation/Installation.php) | interface | **Spi** | Installation administration of the platform module: explicit bootstrap, the local financial-session barrier (D54/D62) and module lifecycle transitions (D55). |
+| [`Installation`](../../packages/core/modules/platform/src/Contracts/Installation/Installation.php) | interface | **Spi** | Installation administration of the platform module: explicit bootstrap, the local financial-session barrier and module lifecycle transitions. |
 | [`RootAdmission`](../../packages/core/modules/platform/src/Contracts/Installation/RootAdmission.php) | interface | **Spi** | Platform barriers the root runner applies after the idempotency claim, inside the same root Tx and through the root LockSet. |
 
 ## Contracts/Migration
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`AuthorityHandoff`](../../packages/core/modules/platform/src/Contracts/Migration/AuthorityHandoff.php) | interface | **Spi** | Privileged D58 handoff commands. |
-| [`AuthorityRouter`](../../packages/core/modules/platform/src/Contracts/Migration/AuthorityRouter.php) | interface | **Spi** | D58. |
-| [`SourceHandoffHost`](../../packages/core/modules/platform/src/Contracts/Migration/SourceHandoffHost.php) | interface | **Spi** | D54/D58/D62/D63. |
-| [`TargetHandoffHost`](../../packages/core/modules/platform/src/Contracts/Migration/TargetHandoffHost.php) | interface | **Spi** | D54/D58/D62/D63. |
+| [`AuthorityHandoff`](../../packages/core/modules/platform/src/Contracts/Migration/AuthorityHandoff.php) | interface | **Spi** | Privileged authority handoff commands. |
+| [`AuthorityRouter`](../../packages/core/modules/platform/src/Contracts/Migration/AuthorityRouter.php) | interface | **Spi** | The host calls reserve before sending a command and uses the stored binding for all recovery. |
+| [`SourceHandoffHost`](../../packages/core/modules/platform/src/Contracts/Migration/SourceHandoffHost.php) | interface | **Spi** | Authenticated source authority external to restorable ledger state. |
+| [`TargetHandoffHost`](../../packages/core/modules/platform/src/Contracts/Migration/TargetHandoffHost.php) | interface | **Spi** | Target authority and attachment generation come from the host outside restored ledger state. |
 
 ## Contracts/Outbox
 
@@ -78,7 +78,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 |---|---|---|---|
 | [`CommandOutbox`](../../packages/core/modules/platform/src/Contracts/Outbox/CommandOutbox.php) | interface | **Spi** |  |
 | [`FactualCommandOutbox`](../../packages/core/modules/platform/src/Contracts/Outbox/FactualCommandOutbox.php) | interface | **Spi** | Narrow observation lane; never authorizes a provider effect in recovery. |
-| [`Outbox`](../../packages/core/modules/platform/src/Contracts/Outbox/Outbox.php) | interface | **Spi** | Transactional outbox (PF-10, COV-279): the event is written on the root connection inside the same root Tx as the owning state and receipt, or not at all. |
+| [`Outbox`](../../packages/core/modules/platform/src/Contracts/Outbox/Outbox.php) | interface | **Spi** | Transactional outbox: the event is written on the root connection inside the same root Tx as the owning state and receipt, or not at all. |
 | [`OutboxDeliveryQueries`](../../packages/core/modules/platform/src/Contracts/Outbox/OutboxDeliveryQueries.php) | interface | **Spi** | Exact authenticated feed scope; returned status contains no transferable claim token. |
 
 ## Data/Accounting
@@ -102,20 +102,20 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 |---|---|---|---|
 | [`EventContractConflict`](../../packages/core/modules/platform/src/Data/EventContracts/EventContractConflict.php) | class | **Api** |  |
 | [`EventContractRegistration`](../../packages/core/modules/platform/src/Data/EventContracts/EventContractRegistration.php) | class | **Api** | One billium_event_contract row as the platform stores it: key (contractRevision, envelopeSchema, eventType) plus the owner and the immutable contract. |
-| [`EventContractRegistrationPlan`](../../packages/core/modules/platform/src/Data/EventContracts/EventContractRegistrationPlan.php) | class | **Api** | Result of validating a module manifest against the registry (D63). |
+| [`EventContractRegistrationPlan`](../../packages/core/modules/platform/src/Data/EventContracts/EventContractRegistrationPlan.php) | class | **Api** | Result of validating a module manifest against the registry. |
 | [`PreparedFactualCommand`](../../packages/core/modules/platform/src/Data/EventContracts/PreparedFactualCommand.php) | class | **Api** | The route is fixed by type. |
 | [`PreparedInternalCommand`](../../packages/core/modules/platform/src/Data/EventContracts/PreparedInternalCommand.php) | class | **Api** |  |
 | [`PublicEventDestinations`](../../packages/core/modules/platform/src/Data/EventContracts/PublicEventDestinations.php) | class | **Api** | Immutable opt-in routes. |
-| [`RegisteredPublicEvent`](../../packages/core/modules/platform/src/Data/EventContracts/RegisteredPublicEvent.php) | class | **Api** | D63: typed reference is validated against persisted registration inside the root Tx. |
+| [`RegisteredPublicEvent`](../../packages/core/modules/platform/src/Data/EventContracts/RegisteredPublicEvent.php) | class | **Api** | Typed reference is validated against persisted registration inside the root Tx. |
 
 ## Data/Feed
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
 | [`FeedBootstrap`](../../packages/core/modules/platform/src/Data/Feed/FeedBootstrap.php) | class | **Api** |  |
-| [`FeedCursor`](../../packages/core/modules/platform/src/Data/Feed/FeedCursor.php) | class | **Api** | D63: only the source authenticates this token; positions are diagnostic, not authority. |
+| [`FeedCursor`](../../packages/core/modules/platform/src/Data/Feed/FeedCursor.php) | class | **Api** | Only the source authenticates this token; positions are diagnostic, not authority. |
 | [`FeedPage`](../../packages/core/modules/platform/src/Data/Feed/FeedPage.php) | class | **Api** |  |
-| [`FeedPosition`](../../packages/core/modules/platform/src/Data/Feed/FeedPosition.php) | class | **Api** | D52: decimal strings preserve xid8 and bigint exactly in PHP/Dart/wire clients. |
+| [`FeedPosition`](../../packages/core/modules/platform/src/Data/Feed/FeedPosition.php) | class | **Api** | Decimal strings preserve xid8 and bigint exactly in PHP/Dart/wire clients. |
 | [`FeedScope`](../../packages/core/modules/platform/src/Data/Feed/FeedScope.php) | class | **Api** |  |
 | [`FeedSelection`](../../packages/core/modules/platform/src/Data/Feed/FeedSelection.php) | class | **Api** |  |
 | [`RelayReport`](../../packages/core/modules/platform/src/Data/Feed/RelayReport.php) | class | **Api** |  |
@@ -124,7 +124,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`IdempotencyClaim`](../../packages/core/modules/platform/src/Data/Idempotency/IdempotencyClaim.php) | class | **Api** | Either a new in-progress claim row of this root Tx or the replay of a completed one (INV-05). |
+| [`IdempotencyClaim`](../../packages/core/modules/platform/src/Data/Idempotency/IdempotencyClaim.php) | class | **Api** | Either a new in-progress claim row of this root Tx or the replay of a completed one. |
 | [`PinnedCommand`](../../packages/core/modules/platform/src/Data/Idempotency/PinnedCommand.php) | class | **Api** |  |
 | [`StoredCommandReceipt`](../../packages/core/modules/platform/src/Data/Idempotency/StoredCommandReceipt.php) | class | **Api** | The optional command input fingerprint is separate from the qualified key, claim digest and economic identity. |
 
@@ -141,7 +141,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`ImportCurrencyReconciliation`](../../packages/core/modules/platform/src/Data/Import/ImportCurrencyReconciliation.php) | class | **Api** | Per-(sellerRef, currency, recordKind) reconciliation bucket comparing manifest/staged records against Billium state. |
 | [`ImportCurrencyTotal`](../../packages/core/modules/platform/src/Data/Import/ImportCurrencyTotal.php) | class | **Api** | Historical import total isolated per seller, currency and record kind; never an authoritative current balance. |
 | [`ImportEvidenceRef`](../../packages/core/modules/platform/src/Data/Import/ImportEvidenceRef.php) | class | **Api** | Immutable reference to one sanitized evidence item attached to an external import record. |
-| [`ImportLinkedCorrection`](../../packages/core/modules/platform/src/Data/Import/ImportLinkedCorrection.php) | class | **Api** | Post-apply linked correction request (D63/F01, D71, IM-10) without destructive rollback or automatic PSP dispatch. |
+| [`ImportLinkedCorrection`](../../packages/core/modules/platform/src/Data/Import/ImportLinkedCorrection.php) | class | **Api** | Post-apply linked correction request without destructive rollback or automatic PSP dispatch. |
 | [`ImportManifest`](../../packages/core/modules/platform/src/Data/Import/ImportManifest.php) | class | **Api** | Immutable evidence manifest describing one external export batch with seller/environment scope. |
 | [`ImportMappingRecord`](../../packages/core/modules/platform/src/Data/Import/ImportMappingRecord.php) | class | **Api** | Durable platform-owned mapping from external source identity to Billium economic fact lineage. |
 | [`ImportMappingRegistrationResult`](../../packages/core/modules/platform/src/Data/Import/ImportMappingRegistrationResult.php) | class | **Api** | Outcome of registering a source identity mapping revision in the platform store. |
@@ -169,8 +169,8 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`BootstrapPartition`](../../packages/core/modules/platform/src/Data/Inbox/BootstrapPartition.php) | class | **Api** | A complete source snapshot for one partition at `cursorSequence`, pinned by the source retention lease. |
 | [`BootstrapStatus`](../../packages/core/modules/platform/src/Data/Inbox/BootstrapStatus.php) | class | **Api** | Query view of a staged bootstrap; reading it never mutates and never triggers an effect. |
 | [`CustodyDisposition`](../../packages/core/modules/platform/src/Data/Inbox/CustodyDisposition.php) | enum | **Api** | Outcome of one custody step. |
-| [`CustodyResult`](../../packages/core/modules/platform/src/Data/Inbox/CustodyResult.php) | class | **Api** | Result of one custody step, returned after the root Tx commits (D31): the caller maps `problem()` to its transport answer. |
-| [`HandlerOutcome`](../../packages/core/modules/platform/src/Data/Inbox/HandlerOutcome.php) | class | **Api** | What the owning handler did with one delivery inside the root Tx (INV-08): applied with the business receipt it wrote, parked on a missing dependency (the sour… |
+| [`CustodyResult`](../../packages/core/modules/platform/src/Data/Inbox/CustodyResult.php) | class | **Api** | Result of one custody step, returned after the root Tx commits: the caller maps `problem()` to its transport answer. |
+| [`HandlerOutcome`](../../packages/core/modules/platform/src/Data/Inbox/HandlerOutcome.php) | class | **Api** | What the owning handler did with one delivery inside the root Tx: applied with the business receipt it wrote, parked on a missing dependency (the source order… |
 | [`HandlerOutcomeKind`](../../packages/core/modules/platform/src/Data/Inbox/HandlerOutcomeKind.php) | enum | **Api** |  |
 | [`InboxRow`](../../packages/core/modules/platform/src/Data/Inbox/InboxRow.php) | class | **Api** | Durable custody row of one authenticated delivery, as the handler sees it (content immutable, status moves). |
 | [`VerifiedObservationBootstrap`](../../packages/core/modules/platform/src/Data/Inbox/VerifiedObservationBootstrap.php) | class | **Api** |  |
@@ -179,8 +179,8 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`FinancialSessionView`](../../packages/core/modules/platform/src/Data/Installation/FinancialSessionView.php) | class | **Api** | Adopted financial session of one epoch (D54/D62). |
-| [`ModuleTransitionRequest`](../../packages/core/modules/platform/src/Data/Installation/ModuleTransitionRequest.php) | class | **Api** | One lifecycle step of a module (D55). |
+| [`FinancialSessionView`](../../packages/core/modules/platform/src/Data/Installation/FinancialSessionView.php) | class | **Api** | Adopted financial session of one epoch. |
+| [`ModuleTransitionRequest`](../../packages/core/modules/platform/src/Data/Installation/ModuleTransitionRequest.php) | class | **Api** | One lifecycle step of a module. |
 | [`PlatformReceipt`](../../packages/core/modules/platform/src/Data/Installation/PlatformReceipt.php) | class | **Api** | Receipt of a platform administrative operation (session or module transition). |
 
 ## Data/Migration
@@ -190,23 +190,23 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`ExecutionRoute`](../../packages/core/modules/platform/src/Data/Migration/ExecutionRoute.php) | class | **Api** |  |
 | [`HandoffActivation`](../../packages/core/modules/platform/src/Data/Migration/HandoffActivation.php) | class | **Api** | Claim shape. |
 | [`HandoffPlan`](../../packages/core/modules/platform/src/Data/Migration/HandoffPlan.php) | class | **Api** |  |
-| [`HandoffRecoveryRequired`](../../packages/core/modules/platform/src/Data/Migration/HandoffRecoveryRequired.php) | class | **Api** | D54/D63: the caller must recover or rebootstrap with current evidence. |
-| [`IntentBinding`](../../packages/core/modules/platform/src/Data/Migration/IntentBinding.php) | class | **Api** | D26/D58: persisted before dispatch. |
+| [`HandoffRecoveryRequired`](../../packages/core/modules/platform/src/Data/Migration/HandoffRecoveryRequired.php) | class | **Api** | The caller must recover or rebootstrap with current evidence. |
+| [`IntentBinding`](../../packages/core/modules/platform/src/Data/Migration/IntentBinding.php) | class | **Api** | Persisted before dispatch. |
 | [`LedgerScope`](../../packages/core/modules/platform/src/Data/Migration/LedgerScope.php) | class | **Api** |  |
-| [`MigrationManifest`](../../packages/core/modules/platform/src/Data/Migration/MigrationManifest.php) | class | **Api** | D52/D63: immutable source snapshot and pinned public feed checkpoint. |
-| [`ReconciliationChecksum`](../../packages/core/modules/platform/src/Data/Migration/ReconciliationChecksum.php) | class | **Api** | D63/F06: totals are signed decimal minor-unit strings, and the checksum covers the selected facts and retained identities. |
-| [`RoutingScope`](../../packages/core/modules/platform/src/Data/Migration/RoutingScope.php) | class | **Api** | D58: the consumer's origin scope stays fixed across changes of destination executor or installation. |
-| [`SealedTail`](../../packages/core/modules/platform/src/Data/Migration/SealedTail.php) | class | **Api** | D52/D63: source-attested retained scan from the manifest checkpoint to the sealed terminal cursor. |
-| [`SourceFreezeCertificate`](../../packages/core/modules/platform/src/Data/Migration/SourceFreezeCertificate.php) | class | **Api** | D58/D63: authenticated by the source host against its own authority journal. |
-| [`TargetNoEffectsProof`](../../packages/core/modules/platform/src/Data/Migration/TargetNoEffectsProof.php) | class | **Api** | D54: claim that the exact target has no monetary commits or effects and can no longer acquire write admission. |
-| [`TargetReconciliation`](../../packages/core/modules/platform/src/Data/Migration/TargetReconciliation.php) | class | **Api** | D63/F06: durable target receipt recorded with the adopted cursor and resolved dispositions. |
+| [`MigrationManifest`](../../packages/core/modules/platform/src/Data/Migration/MigrationManifest.php) | class | **Api** | Immutable source snapshot and pinned public feed checkpoint. |
+| [`ReconciliationChecksum`](../../packages/core/modules/platform/src/Data/Migration/ReconciliationChecksum.php) | class | **Api** | Totals are signed decimal minor-unit strings, and the checksum covers the selected facts and retained identities. |
+| [`RoutingScope`](../../packages/core/modules/platform/src/Data/Migration/RoutingScope.php) | class | **Api** | The consumer's origin scope stays fixed across changes of destination executor or installation. |
+| [`SealedTail`](../../packages/core/modules/platform/src/Data/Migration/SealedTail.php) | class | **Api** | Source-attested retained scan from the manifest checkpoint to the sealed terminal cursor. |
+| [`SourceFreezeCertificate`](../../packages/core/modules/platform/src/Data/Migration/SourceFreezeCertificate.php) | class | **Api** | Authenticated by the source host against its own authority journal. |
+| [`TargetNoEffectsProof`](../../packages/core/modules/platform/src/Data/Migration/TargetNoEffectsProof.php) | class | **Api** | Claim that the exact target has no monetary commits or effects and can no longer acquire write admission. |
+| [`TargetReconciliation`](../../packages/core/modules/platform/src/Data/Migration/TargetReconciliation.php) | class | **Api** | Durable target receipt recorded with the adopted cursor and resolved dispositions. |
 
 ## Data/Outbox
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
 | [`OutboxDeliveryStatus`](../../packages/core/modules/platform/src/Data/Outbox/OutboxDeliveryStatus.php) | class | **Api** |  |
-| [`OutboxEvent`](../../packages/core/modules/platform/src/Data/Outbox/OutboxEvent.php) | class | **Api** | Immutable outbox event content (PF-10, COV-086..088): its own id, versioned type, aggregate reference and economic revision, and a bounded JSON object payload… |
+| [`OutboxEvent`](../../packages/core/modules/platform/src/Data/Outbox/OutboxEvent.php) | class | **Api** | Immutable outbox event content (..088): its own id, versioned type, aggregate reference and economic revision, and a bounded JSON object payload without secret… |
 
 ## Exceptions
 
@@ -218,7 +218,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`AccountingFactMapper`](../../packages/core/modules/platform/src/Internal/Accounting/AccountingFactMapper.php) | class | *Internal* | Deterministic platform-owned accounting fact mapper and FinBridge contract translator (P6.6, D53, D56, D63). |
+| [`AccountingFactMapper`](../../packages/core/modules/platform/src/Internal/Accounting/AccountingFactMapper.php) | class | *Internal* | Deterministic platform-owned accounting fact mapper and FinBridge contract translator. |
 | [`AccountingFactSupport`](../../packages/core/modules/platform/src/Internal/Accounting/AccountingFactSupport.php) | class | *Internal* | Shared pure payload parsing and deterministic digest helpers for accounting fact mappers (0 I/O). |
 | [`ActualCashFactMapper`](../../packages/core/modules/platform/src/Internal/Accounting/ActualCashFactMapper.php) | class | *Internal* | Maps unique authenticated actual provider cash effects (CashIn / CashOut) (0 I/O). |
 | [`AllocationFactMapper`](../../packages/core/modules/platform/src/Internal/Accounting/AllocationFactMapper.php) | class | *Internal* | Maps NoncashAllocation facts (AllocationApplied, AllocationReversed) kept separate from cash facts (0 I/O). |
@@ -254,9 +254,9 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
 | [`AuthenticatedBootstrapContext`](../../packages/core/modules/platform/src/Internal/Feed/AuthenticatedBootstrapContext.php) | class | *Internal* |  |
-| [`BootstrapCoordinator`](../../packages/core/modules/platform/src/Internal/Feed/BootstrapCoordinator.php) | class | *Internal* | Staged partition bootstrap (D60, inbox-feed): the complete snapshot is verified and stored first; every item then gets a durable disposition in its own recover… |
+| [`BootstrapCoordinator`](../../packages/core/modules/platform/src/Internal/Feed/BootstrapCoordinator.php) | class | *Internal* | Staged partition bootstrap (inbox-feed): the complete snapshot is verified and stored first; every item then gets a durable disposition in its own recovery roo… |
 | [`DatabaseFeedPartitions`](../../packages/core/modules/platform/src/Internal/Feed/DatabaseFeedPartitions.php) | class | *Internal* |  |
-| [`DatabaseFeedRecoveryQueries`](../../packages/core/modules/platform/src/Internal/Feed/DatabaseFeedRecoveryQueries.php) | class | *Internal* | D45/D60: consumers receive scoped metadata; table access stays with platform on the supplied snapshot connection. |
+| [`DatabaseFeedRecoveryQueries`](../../packages/core/modules/platform/src/Internal/Feed/DatabaseFeedRecoveryQueries.php) | class | *Internal* | Consumers receive scoped metadata; table access stays with platform on the supplied snapshot connection. |
 | [`ObservationCommandHistory`](../../packages/core/modules/platform/src/Internal/Feed/ObservationCommandHistory.php) | class | *Internal* |  |
 | [`ObservationScopes`](../../packages/core/modules/platform/src/Internal/Feed/ObservationScopes.php) | class | *Internal* | Serialized immutable observation origin. |
 | [`PartitionRow`](../../packages/core/modules/platform/src/Internal/Feed/PartitionRow.php) | class | *Internal* |  |
@@ -268,20 +268,20 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
 | [`DatabaseIdempotencyReceiptQueries`](../../packages/core/modules/platform/src/Internal/Idempotency/DatabaseIdempotencyReceiptQueries.php) | class | *Internal* |  |
-| [`DatabaseIdempotencyStore`](../../packages/core/modules/platform/src/Internal/Idempotency/DatabaseIdempotencyStore.php) | class | *Internal* | INSERT … ON CONFLICT DO NOTHING with a bounded wait (D51): a concurrent claim of the same scope blocks on the unique index until the first root Tx commits or r… |
+| [`DatabaseIdempotencyStore`](../../packages/core/modules/platform/src/Internal/Idempotency/DatabaseIdempotencyStore.php) | class | *Internal* | INSERT … ON CONFLICT DO NOTHING with a bounded wait: a concurrent claim of the same scope blocks on the unique index until the first root Tx commits or rolls b… |
 
 ## Internal/Import
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`DatabaseImportBatchApplier`](../../packages/core/modules/platform/src/Internal/Import/DatabaseImportBatchApplier.php) | class | *Internal* | Dependency-ordered, chunked and crash-resumable external import applier over existing Billium monetary APIs (P9.3, D60, D71). |
+| [`DatabaseImportBatchApplier`](../../packages/core/modules/platform/src/Internal/Import/DatabaseImportBatchApplier.php) | class | *Internal* | Dependency-ordered, chunked and crash-resumable external import applier over existing Billium monetary APIs. |
 | [`DatabaseImportIdentityStore`](../../packages/core/modules/platform/src/Internal/Import/DatabaseImportIdentityStore.php) | class | *Internal* | PostgreSQL-backed staging, source identity mapping, tombstone and append-only receipt store for external.import.v1. |
 | [`DatabaseImportReconciler`](../../packages/core/modules/platform/src/Internal/Import/DatabaseImportReconciler.php) | class | *Internal* | Read-only per-(sellerRef, currency, recordKind) reconciler producing a canonical hashed ImportReconciliationReport. |
 | [`DefaultImportPreviewEvaluator`](../../packages/core/modules/platform/src/Internal/Import/DefaultImportPreviewEvaluator.php) | class | *Internal* | Pure read-only preview evaluator for external.import.v1 records. |
-| [`ImportLinkedCorrectionApplier`](../../packages/core/modules/platform/src/Internal/Import/ImportLinkedCorrectionApplier.php) | class | *Internal* | Post-apply linked corrections over imported records using positive obligations, credit notes, draft adjustments, or tombstones (P9.3, D71). |
-| [`ImportObservationCoordinator`](../../packages/core/modules/platform/src/Internal/Import/ImportObservationCoordinator.php) | class | *Internal* | Coordinates inline settlement intents, two-root observation custody queueing, partition reduction, and pure-query receipt adoption (P9.3, D60, D71). |
+| [`ImportLinkedCorrectionApplier`](../../packages/core/modules/platform/src/Internal/Import/ImportLinkedCorrectionApplier.php) | class | *Internal* | Post-apply linked corrections over imported records using positive obligations, credit notes, draft adjustments, or tombstones. |
+| [`ImportObservationCoordinator`](../../packages/core/modules/platform/src/Internal/Import/ImportObservationCoordinator.php) | class | *Internal* | Coordinates inline settlement intents, two-root observation custody queueing, partition reduction, and pure-query receipt adoption. |
 | [`ImportObservationEnvelopeBuilder`](../../packages/core/modules/platform/src/Internal/Import/ImportObservationEnvelopeBuilder.php) | class | *Internal* | Deterministic builder for payment.observation.v1 envelopes from proven external import records. |
-| [`ImportStagedRecordHydrator`](../../packages/core/modules/platform/src/Internal/Import/ImportStagedRecordHydrator.php) | class | *Internal* | Staged import row hydration, receipt checkpointing, and bounded row helpers (P9.3, D71). |
+| [`ImportStagedRecordHydrator`](../../packages/core/modules/platform/src/Internal/Import/ImportStagedRecordHydrator.php) | class | *Internal* | Staged import row hydration, receipt checkpointing, and bounded row helpers. |
 
 ## Internal/Import/Sources
 
@@ -299,7 +299,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`CustodyProcessor`](../../packages/core/modules/platform/src/Internal/Inbox/CustodyProcessor.php) | class | *Internal* | Source-scoped observation custody inside the caller's open root Tx (INV-08, REQ-FAIL-12/13/23). |
+| [`CustodyProcessor`](../../packages/core/modules/platform/src/Internal/Inbox/CustodyProcessor.php) | class | *Internal* | Source-scoped observation custody inside the caller's open root Tx (13/23). |
 | [`InboxEnvelope`](../../packages/core/modules/platform/src/Internal/Inbox/InboxEnvelope.php) | class | *Internal* | The custody-relevant fields of a decoded observation envelope. |
 | [`InboxRecords`](../../packages/core/modules/platform/src/Internal/Inbox/InboxRecords.php) | class | *Internal* | Mapping of billium_inbox_message records. |
 
@@ -308,18 +308,18 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
 | [`DatabaseInstallation`](../../packages/core/modules/platform/src/Internal/Installation/DatabaseInstallation.php) | class | *Internal* | Platform-owned writes of installation_state, financial_session(_event) and module_state/transitions. |
-| [`InitInstallationCommand`](../../packages/core/modules/platform/src/Internal/Installation/InitInstallationCommand.php) | class | *Internal* | Explicit bootstrap of an installation; never run implicitly by a request, a worker or server boot (D55). |
+| [`InitInstallationCommand`](../../packages/core/modules/platform/src/Internal/Installation/InitInstallationCommand.php) | class | *Internal* | Explicit bootstrap of an installation; never run implicitly by a request, a worker or server boot. |
 | [`Modules`](../../packages/core/modules/platform/src/Internal/Installation/Modules.php) | class | *Internal* | Plain reads of billium_module_state; locking happens only through the root LockSet. |
-| [`PlatformRootAdmission`](../../packages/core/modules/platform/src/Internal/Installation/PlatformRootAdmission.php) | class | *Internal* | Session (rank 15) and module (rank 25) barriers of the root runner, plus the diagnostic commit log (D54, D55, D62). |
+| [`PlatformRootAdmission`](../../packages/core/modules/platform/src/Internal/Installation/PlatformRootAdmission.php) | class | *Internal* | Session (rank 15) and module (rank 25) barriers of the root runner, plus the diagnostic commit log. |
 | [`Rows`](../../packages/core/modules/platform/src/Internal/Installation/Rows.php) | class | *Internal* | Narrowing of database row values. |
-| [`RuntimeGrants`](../../packages/core/modules/platform/src/Internal/Installation/RuntimeGrants.php) | class | *Internal* | Grants of platform migrations to the restricted runtime role (D60). |
+| [`RuntimeGrants`](../../packages/core/modules/platform/src/Internal/Installation/RuntimeGrants.php) | class | *Internal* | Grants of platform migrations to the restricted runtime role. |
 | [`Sessions`](../../packages/core/modules/platform/src/Internal/Installation/Sessions.php) | class | *Internal* | Plain reads of billium_financial_session; locking happens only through the root LockSet. |
 
 ## Internal/Migration
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`DatabaseAuthorityRouter`](../../packages/core/modules/platform/src/Internal/Migration/DatabaseAuthorityRouter.php) | class | *Internal* | D58: an independent host routing journal. |
+| [`DatabaseAuthorityRouter`](../../packages/core/modules/platform/src/Internal/Migration/DatabaseAuthorityRouter.php) | class | *Internal* | An independent host routing journal. |
 | [`HostAuthorityHandoff`](../../packages/core/modules/platform/src/Internal/Migration/HostAuthorityHandoff.php) | class | *Internal* |  |
 | [`MigrationDigest`](../../packages/core/modules/platform/src/Internal/Migration/MigrationDigest.php) | class | *Internal* |  |
 
@@ -331,10 +331,10 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`EventFeedReader`](../../packages/core/modules/platform/src/Internal/Outbox/EventFeedReader.php) | class | *Internal* |  |
 | [`EventRows`](../../packages/core/modules/platform/src/Internal/Outbox/EventRows.php) | class | *Internal* |  |
 | [`FeedCommandResults`](../../packages/core/modules/platform/src/Internal/Outbox/FeedCommandResults.php) | class | *Internal* |  |
-| [`FeedTokens`](../../packages/core/modules/platform/src/Internal/Outbox/FeedTokens.php) | class | *Internal* | D63: HMAC key comes from the host app key (or explicit feed signing key), never the copied database. |
-| [`OutboxPruner`](../../packages/core/modules/platform/src/Internal/Outbox/OutboxPruner.php) | class | *Internal* | D25/D52/D60: owner-only maintenance, complete safe physical prefix, all delivery destinations and active pins. |
+| [`FeedTokens`](../../packages/core/modules/platform/src/Internal/Outbox/FeedTokens.php) | class | *Internal* | HMAC key comes from the host app key (or explicit feed signing key), never the copied database. |
+| [`OutboxPruner`](../../packages/core/modules/platform/src/Internal/Outbox/OutboxPruner.php) | class | *Internal* | Owner-only maintenance, complete safe physical prefix, all delivery destinations and active pins. |
 | [`OutboxRecorder`](../../packages/core/modules/platform/src/Internal/Outbox/OutboxRecorder.php) | class | *Internal* |  |
-| [`OutboxRelay`](../../packages/core/modules/platform/src/Internal/Outbox/OutboxRelay.php) | class | *Internal* | D60/D63: SKIP LOCKED claim, transport outside Tx, token-CAS acknowledgement. |
+| [`OutboxRelay`](../../packages/core/modules/platform/src/Internal/Outbox/OutboxRelay.php) | class | *Internal* | SKIP LOCKED claim, transport outside Tx, token-CAS acknowledgement. |
 
 ## Internal/Reducers
 

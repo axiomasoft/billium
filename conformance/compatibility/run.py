@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""N/N−1 archive matrix for the PHP and Dart test consumers (D9, D59, D61, D63)."""
+"""N/N−1 archive matrix for the PHP and Dart test consumers."""
 
 from __future__ import annotations
 

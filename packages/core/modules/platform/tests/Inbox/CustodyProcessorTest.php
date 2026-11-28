@@ -22,7 +22,7 @@ use Closure;
 use PHPUnit\Framework\Attributes\Group;
 use RuntimeException;
 
-/** Custody order, parked, recovery and handler dispositions of one source partition (PF-12, PF-05, REQ-FAIL-12/13/23). */
+/** Custody order, parked, recovery and handler dispositions of one source partition (13/23). */
 #[Group('PF-12')]
 #[Group('PF-05')]
 #[Group('pg')]

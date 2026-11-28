@@ -20,7 +20,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`CollectionOriginLookup`](../../packages/core/modules/execution/src/Contracts/Collection/CollectionOriginLookup.php) | interface | **Spi** | The registered collection owner reserves original identities before execution admission (D63/F04). |
+| [`CollectionOriginLookup`](../../packages/core/modules/execution/src/Contracts/Collection/CollectionOriginLookup.php) | interface | **Spi** | The registered collection owner reserves original identities before execution admission. |
 | [`RootIdentityStore`](../../packages/core/modules/execution/src/Contracts/Collection/RootIdentityStore.php) | interface | **Spi** | Coordinates root identity claims between execution admission and collection authorization. |
 
 ## Contracts
@@ -91,7 +91,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`RootPaymentSemanticDigest`](../../packages/core/modules/execution/src/Data/Collection/RootPaymentSemanticDigest.php) | class | **Api** | Produces the exact execution digest a collection authorization freezes (D63/F04). |
+| [`RootPaymentSemanticDigest`](../../packages/core/modules/execution/src/Data/Collection/RootPaymentSemanticDigest.php) | class | **Api** | Produces the exact execution digest a collection authorization freezes. |
 
 ## Data
 

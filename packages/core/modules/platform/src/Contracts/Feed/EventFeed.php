@@ -16,7 +16,7 @@ use Billium\Platform\Data\Feed\FeedSelection;
 use Packman\Attributes\Spi;
 use Packman\Attributes\SpiKind;
 
-/** D52/D60/D63. Feed position is never a database freshness certificate. */
+/** Feed position is never a database freshness certificate. */
 #[Spi(kind: SpiKind::Call, since: '1.0')]
 interface EventFeed
 {

@@ -8,7 +8,7 @@ use Billium\Contracts\Contracts\Codec;
 use InvalidArgumentException;
 use Packman\Attributes\Api;
 
-/** D58: the consumer's origin scope stays fixed across changes of destination executor or installation. */
+/** The consumer's origin scope stays fixed across changes of destination executor or installation. */
 #[Api(since: '1.0')]
 final readonly class RoutingScope
 {

@@ -8,7 +8,7 @@ use Billium\Platform\Data\Feed\FeedSelection;
 use Packman\Attributes\Spi;
 use Packman\Attributes\SpiKind;
 
-/** D60/D63: register with billium.snapshot_sources. Read on the supplied REPEATABLE READ connection; no writes/network. */
+/** Register with billium.snapshot_sources. Read on the supplied REPEATABLE READ connection; no writes/network. */
 #[Spi(kind: SpiKind::Implement, since: '1.0')]
 interface SnapshotSource
 {

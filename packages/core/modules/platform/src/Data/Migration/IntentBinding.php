@@ -8,7 +8,7 @@ use Billium\Platform\Internal\Migration\MigrationDigest;
 use InvalidArgumentException;
 use Packman\Attributes\Api;
 
-/** D26/D58: persisted before dispatch. A refund records its own command and inherits the original binding. */
+/** Persisted before dispatch. A refund records its own command and inherits the original binding. */
 #[Api(since: '1.0')]
 final readonly class IntentBinding
 {

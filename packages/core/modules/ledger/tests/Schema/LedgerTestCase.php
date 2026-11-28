@@ -14,7 +14,7 @@ use Billium\Ledger\Data\Runtime\BillingAccountScope;
 use Billium\Platform\Tests\PlatformTestCase;
 use PDO;
 
-/** D50: real committed fixtures; all raw writes use the separate fixture owner, routines use runtime. */
+/** Real committed fixtures; all raw writes use the separate fixture owner, routines use runtime. */
 abstract class LedgerTestCase extends PlatformTestCase
 {
     protected function setUp(): void

@@ -41,7 +41,7 @@ interface FiscalOrchestrator
     public function lookupIntent(ExecutionScope $scope, string $intentRef, ?DateTimeImmutable $now = null): FiscalIntentRecord;
 
     /**
-     * Bounded seller-scoped keyset claim of due unknown lookups backed by billium_fiscal_intent_due_lookup (COV-337).
+     * Bounded seller-scoped keyset claim of due unknown lookups backed by billium_fiscal_intent_due_lookup.
      *
      * @return list<FiscalIntentRecord>
      */

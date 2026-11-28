@@ -33,7 +33,7 @@ require dirname(__DIR__, 2).'/vendor/autoload.php';
 require __DIR__.'/ImportBehaviorHost.php';
 
 /**
- * PHP sole-writer behavioral conformance runner for external.import.v1 (P9.6 / V962 / D71).
+ * PHP sole-writer behavioral conformance runner for external.import.v1 (V962).
  * Evaluates IM-01..IM-17 against real PostgreSQL 16 and emits observed JSON outcomes for oracle comparison.
  */
 final readonly class ImportBehaviorCorpusRunner

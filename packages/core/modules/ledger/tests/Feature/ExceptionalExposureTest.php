@@ -25,7 +25,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\TestWith;
 
 /**
- * D57 actual vs applied (invariant-model, observation-apply 7): an actual provider refund above the capture is retained
+ * Actual vs applied (invariant-model, observation-apply 7): an actual provider refund above the capture is retained
  * unclamped and unrejected, the applied projection keeps its last consistent totals, the exposure is visible, a
  * financial hold makes the payment unspendable and needs explicit repair. Over-capture and regressions take the same
  * path. No automatic refund, charge or collection is created.

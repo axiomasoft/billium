@@ -7,7 +7,7 @@ namespace Billium\Ledger\Data\Invoices;
 use Billium\Ledger\Data\Runtime\BillingAccountScope;
 use Packman\Attributes\Api;
 
-/** issued|partially_paid → uncollectible; the reason and the operator authorization stay in the immutable receipt (COV-248). */
+/** issued|partially_paid → uncollectible; the reason and the operator authorization stay in the immutable receipt. */
 #[Api(since: '1.0')]
 final readonly class MarkUncollectible
 {

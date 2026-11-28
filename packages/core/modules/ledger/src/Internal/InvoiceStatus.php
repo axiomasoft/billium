@@ -8,7 +8,7 @@ use InvalidArgumentException;
 use Packman\Attributes\Internal;
 
 /**
- * Invoice FSM table and the pure reference oracle of the derived payment status (p3-ledger-design invoice-fsm, D28, D47).
+ * Invoice FSM table and the pure reference oracle of the derived payment status (p3-ledger-design invoice-fsm).
  * The guarded DB routines own the authoritative status update in the Tx of the settled change; PHP never writes status
  * or counters and uses this type only to check the table and name the transitions the commands request.
  */
@@ -54,7 +54,7 @@ enum InvoiceStatus: string
         };
     }
 
-    /** Frozen after issue: every state but draft (INV-13). */
+    /** Frozen after issue: every state but draft. */
     public function isFrozen(): bool
     {
         return $this !== self::Draft;

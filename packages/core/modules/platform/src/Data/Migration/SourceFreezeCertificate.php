@@ -9,7 +9,7 @@ use Billium\Platform\Internal\Migration\MigrationDigest;
 use InvalidArgumentException;
 use Packman\Attributes\Api;
 
-/** D58/D63: authenticated by the source host against its own authority journal. */
+/** Authenticated by the source host against its own authority journal. */
 #[Api(since: '1.0')]
 final readonly class SourceFreezeCertificate
 {

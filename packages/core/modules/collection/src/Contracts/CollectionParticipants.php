@@ -11,7 +11,7 @@ use Billium\Execution\Data\ExecutionScope;
 use Packman\Attributes\Spi;
 use Packman\Attributes\SpiKind;
 
-/** The collection owner participants used by host composition (D63/F04). */
+/** The collection owner participants used by host composition. */
 #[Spi(kind: SpiKind::Call, since: '1.0')]
 interface CollectionParticipants extends CollectionCancellationParticipant, CollectionExecutionGuard, CollectionOriginLookup
 {

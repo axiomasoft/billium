@@ -121,7 +121,7 @@ final class P4BootstrapTest extends ModuleTestCase
     public function test_php_protocol_enrolls_runtime_operations_and_refuses_without_database_setup(): void
     {
         $root = dirname(__DIR__, 5);
-        // The adapter joins the parent's verified DB lease, including when earlier tests used committed data (D50).
+        // The adapter joins the parent's verified DB lease, including when earlier tests used committed data.
         $process = new Process(command: [PHP_BINARY, 'conformance/adapters/php/bin/adapter.php'], cwd: $root,
             env: TestEnvironment::suiteLeaseEnvironment());
         $messages = [

@@ -220,7 +220,7 @@ final class UsagePolicyVersionTest extends AggregationTestCase
     /** @return array<string, array{string}> */
     public static function policies(): array
     {
-        return ['COV-197 accepted attribution v2' => ['attributionPolicy'], 'COV-198 accepted correction v2' => ['correctionPolicy']];
+        return ['Accepted attribution v2' => ['attributionPolicy'], 'Accepted correction v2' => ['correctionPolicy']];
     }
 
     /** @param (callable(stdClass):void)|null $change */

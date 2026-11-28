@@ -10,7 +10,7 @@ use Billium\Platform\Internal\Migration\MigrationDigest;
 use InvalidArgumentException;
 use Packman\Attributes\Api;
 
-/** D63/F06: durable target receipt recorded with the adopted cursor and resolved dispositions. */
+/** Durable target receipt recorded with the adopted cursor and resolved dispositions. */
 #[Api(since: '1.0')]
 final readonly class TargetReconciliation
 {

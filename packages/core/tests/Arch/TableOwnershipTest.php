@@ -25,7 +25,7 @@ final class TableOwnershipTest extends TestCase
                 $violations = array_merge($violations, self::violations((string) file_get_contents($file->getPathname()), $path, $ownership));
             }
         }
-        self::assertSame([], $violations, 'D45/INV-01: table access belongs to its migration owner');
+        self::assertSame([], $violations, 'Table access belongs to its migration owner');
     }
 
     public function test_ownership_is_derived_from_create_and_rejects_cross_module_literals(): void

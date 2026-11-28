@@ -12,7 +12,7 @@ use Billium\Usage\Enums\AggregationSemantics;
 use Packman\Attributes\Spi;
 use Packman\Attributes\SpiKind;
 
-/** Trusted, pure computation over immutable normalized inputs; no persistence capability (D13/D56). */
+/** Trusted, pure computation over immutable normalized inputs; no persistence capability. */
 #[Spi(SpiKind::Implement)]
 interface MetricReducer
 {

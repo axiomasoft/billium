@@ -48,7 +48,7 @@ final class FiscalExceptionalEffectsTest extends ExecutionTestCase
     use CertifiesAbsentRefund;
 
     /**
-     * Reproduces real P5 ACC-RST-12 over-refund hold:
+     * Reproduces the real over-refund hold:
      * capture 100 (`root-a`), certified-absent refund `old` (70), paid replacement refund `replacement` (70),
      * then authenticated late provider evidence confirming `old` (70) also succeeded => actual refunds 140, applied 70, hold=true.
      */

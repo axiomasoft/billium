@@ -9,7 +9,7 @@ use Billium\Core\Internal\Modules\Shape;
 use Packman\Attributes\Api;
 
 /**
- * One public event stream a module declares (D63). Platform registers it explicitly at install/upgrade; the
+ * One public event stream a module declares. Platform registers it explicitly at install/upgrade; the
  * strict billium.event.v1 enum is not widened: a new public type needs a negotiated envelope/catalog revision.
  */
 #[Api(since: '1.0')]

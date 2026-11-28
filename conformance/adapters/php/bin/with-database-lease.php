@@ -14,7 +14,7 @@ if ($command === []) {
 }
 
 TestEnvironment::preflight();
-// Reserve the database before the runner starts its per-vector clock (BC-CNF-12, D50).
+// Reserve the database before the runner starts its per-vector clock (BC-CNF-12).
 $process = new Process($command, dirname(__DIR__, 4), TestEnvironment::suiteLeaseEnvironment(), timeout: null);
 exit($process->run(static function (string $type, string $buffer): void {
     fwrite($type === Process::ERR ? STDERR : STDOUT, $buffer);

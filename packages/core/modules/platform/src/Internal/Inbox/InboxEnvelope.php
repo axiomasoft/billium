@@ -61,7 +61,7 @@ final readonly class InboxEnvelope
         );
     }
 
-    /** The source namespace must be the authenticated caller's own and granted: no omission, no foreign seller (INV-14). */
+    /** The source namespace must be the authenticated caller's own and granted: no omission, no foreign seller. */
     public function authorize(Caller $caller): void
     {
         if ($this->sellerRef !== $caller->sellerRef || $this->environment !== $caller->environment

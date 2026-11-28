@@ -8,7 +8,7 @@ use InvalidArgumentException;
 use Packman\Attributes\Api;
 
 /**
- * Business receipt of an applied observation (BC-EVT-08, INV-08): the immutable AllocationReceipt row the guarded routine
+ * Business receipt of an applied observation (BC-EVT-08): the immutable AllocationReceipt row the guarded routine
  * wrote together with the applied projection, its allocations and outbox. A redelivery returns the same `receiptRef` and
  * body (`replayed`). `mode` is assign, hold, stale or refund_detail.
  */

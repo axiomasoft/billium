@@ -35,7 +35,7 @@ use Billium\Rating\Internal\Storage\RatingRows;
 use Billium\Rating\Internal\Tax\TaxCalculator;
 use Packman\Attributes\Internal;
 
-/** Versioned strategies consume retained snapshots only; this class performs no I/O (D56). */
+/** Versioned strategies consume retained snapshots only; this class performs no I/O. */
 #[Internal]
 final readonly class RatingComputation implements RatingQuoter
 {

@@ -34,7 +34,7 @@ final class ImportBoundaryTest extends TestCase
             }
         }
 
-        self::assertSame([], $violations, 'IM-17 / D71: P9 surfaces must remain strictly product-agnostic and legacy-free');
+        self::assertSame([], $violations, 'P9 surfaces must remain strictly product-agnostic and legacy-free');
     }
 
     public function test_im17_p9_production_code_touches_only_billium_owned_tables_and_never_accesses_external_product_databases(): void
@@ -74,7 +74,7 @@ final class ImportBoundaryTest extends TestCase
             $violations = array_merge($violations, self::scanSqlBoundaryViolations($source, $relCore, $ownership));
         }
 
-        self::assertSame([], $violations, 'IM-17: P9 production code must only access owned Billium tables and never external host DBs');
+        self::assertSame([], $violations, 'P9 production code must only access owned Billium tables and never external host DBs');
 
         // Negative control assertions proving the scanner rejects foreign product tables and external DB connections.
         self::assertNotEmpty(self::scanSqlBoundaryViolations(
@@ -209,12 +209,12 @@ final class ImportBoundaryTest extends TestCase
     private static function forbiddenTerms(): array
     {
         return [
-            'mem'.'ster' => 'D71 forbids external product name',
-            'edu'.'fy' => 'D71 forbids external product name',
-            'com'.'merz' => 'D71 forbids external product name',
-            'leg'.'acy.import.v1' => 'D71 forbids legacy contract name',
-            'leg'.'acy_unanchored' => 'D71 forbids legacy unanchored class name',
-            'Leg'.'acyScenarioTest' => 'D71 forbids legacy test class name',
+            'mem'.'ster' => 'Forbids external product name',
+            'edu'.'fy' => 'Forbids external product name',
+            'com'.'merz' => 'Forbids external product name',
+            'leg'.'acy.import.v1' => 'Forbids legacy contract name',
+            'leg'.'acy_unanchored' => 'Forbids legacy unanchored class name',
+            'Leg'.'acyScenarioTest' => 'Forbids legacy test class name',
         ];
     }
 

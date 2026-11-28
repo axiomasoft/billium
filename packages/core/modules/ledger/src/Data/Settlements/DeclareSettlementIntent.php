@@ -10,7 +10,7 @@ use Billium\Ledger\Data\Runtime\BillingAccountScope;
 use Packman\Attributes\Api;
 
 /**
- * Ordered target identities are frozen here; account/currency ownership is checked under ledger locks (D60).
+ * Ordered target identities are frozen here; account/currency ownership is checked under ledger locks.
  */
 #[Api(since: '1.0')]
 final readonly class DeclareSettlementIntent

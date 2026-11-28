@@ -8,7 +8,7 @@ use Billium\Core\Contracts\Runner\TransactionContext;
 use Billium\Usage\Data\AggregateSnapshotRef;
 use Packman\Attributes\Api;
 
-/** The owning module plans and acquires the complete early rank-35 set for a composed root (D27/D60). */
+/** The owning module plans and acquires the complete early rank-35 set for a composed root. */
 #[Api]
 interface AggregationLocks
 {

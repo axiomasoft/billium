@@ -9,7 +9,7 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Illuminate\Contracts\Container\Container;
 use stdClass;
 
-/** D56: dispatch only; the owning module binds its handler after its explicit installation. */
+/** Dispatch only; the owning module binds its handler after its explicit installation. */
 final readonly class P4RuntimeAdapter
 {
     public const array OPERATIONS = [

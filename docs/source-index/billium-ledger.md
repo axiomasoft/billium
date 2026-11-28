@@ -9,14 +9,14 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`CollectionObligation`](../../packages/core/modules/ledger/src/Contracts/CollectionObligation.php) | interface | **Spi** | Ledger-owned collection eligibility under the obligation lock (D35, D60, D63). |
+| [`CollectionObligation`](../../packages/core/modules/ledger/src/Contracts/CollectionObligation.php) | interface | **Spi** | Ledger-owned collection eligibility under the obligation lock. |
 | [`CorrectionCreditParticipants`](../../packages/core/modules/ledger/src/Contracts/CorrectionCreditParticipants.php) | interface | **Spi** |  |
 | [`CorrectionLocks`](../../packages/core/modules/ledger/src/Contracts/CorrectionLocks.php) | interface | **Spi** |  |
-| [`Ledger`](../../packages/core/modules/ledger/src/Contracts/Ledger.php) | interface | **Api** | Root-only financial commands (D60). |
-| [`LedgerParticipants`](../../packages/core/modules/ledger/src/Contracts/LedgerParticipants.php) | interface | **Spi** | Typed ledger participants of a root transaction owned by another module (D60, transaction-participants). |
-| [`LedgerQueries`](../../packages/core/modules/ledger/src/Contracts/LedgerQueries.php) | interface | **Api** | Authenticated, side-effect-free recovery reads (REQ-CON-14, INV-14, D35, D60). |
-| [`LockedInvoiceSnapshotParticipant`](../../packages/core/modules/ledger/src/Contracts/LockedInvoiceSnapshotParticipant.php) | interface | **Spi** | Read-only participant reading the live locked invoice totals and per-obligation lines inside an active root transaction (D60). |
-| [`ObservationApplier`](../../packages/core/modules/ledger/src/Contracts/ObservationApplier.php) | interface | **Spi** | applyPaymentObservation (REQ-CON-13, REQ-OWN-11, D28, D41, D46, D60): one authenticated payment.observation.v1 delivery is taken into source-scoped custody and… |
+| [`Ledger`](../../packages/core/modules/ledger/src/Contracts/Ledger.php) | interface | **Api** | Root-only financial commands. |
+| [`LedgerParticipants`](../../packages/core/modules/ledger/src/Contracts/LedgerParticipants.php) | interface | **Spi** | Typed ledger participants of a root transaction owned by another module (transaction-participants). |
+| [`LedgerQueries`](../../packages/core/modules/ledger/src/Contracts/LedgerQueries.php) | interface | **Api** | Authenticated, side-effect-free recovery reads. |
+| [`LockedInvoiceSnapshotParticipant`](../../packages/core/modules/ledger/src/Contracts/LockedInvoiceSnapshotParticipant.php) | interface | **Spi** | Read-only participant reading the live locked invoice totals and per-obligation lines inside an active root transaction. |
+| [`ObservationApplier`](../../packages/core/modules/ledger/src/Contracts/ObservationApplier.php) | interface | **Spi** | applyPaymentObservation: one authenticated payment.observation.v1 delivery is taken into source-scoped custody and, when it is next in its partition, applied i… |
 | [`ObservationCheckpointQueries`](../../packages/core/modules/ledger/src/Contracts/ObservationCheckpointQueries.php) | interface | **Spi** | Exact proven observation revision, independently of transport acknowledgement or later root state. |
 | [`QualifiedObservationApplier`](../../packages/core/modules/ledger/src/Contracts/QualifiedObservationApplier.php) | interface | **Spi** |  |
 | [`SettlementIntentLocks`](../../packages/core/modules/ledger/src/Contracts/SettlementIntentLocks.php) | interface | **Spi** | Discover the ledger-owned rank-65 row before composing a financial root. |
@@ -25,91 +25,91 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`Allocate`](../../packages/core/modules/ledger/src/Data/Allocations/Allocate.php) | class | **Api** | Applies available value of exactly one funds source (a payment or a customer credit) to one obligation (INV-09). |
-| [`AllocationReceipt`](../../packages/core/modules/ledger/src/Data/Allocations/AllocationReceipt.php) | class | **Api** | Business receipt of an applied observation (BC-EVT-08, INV-08): the immutable AllocationReceipt row the guarded routine wrote together with the applied project… |
+| [`Allocate`](../../packages/core/modules/ledger/src/Data/Allocations/Allocate.php) | class | **Api** | Applies available value of exactly one funds source (a payment or a customer credit) to one obligation. |
+| [`AllocationReceipt`](../../packages/core/modules/ledger/src/Data/Allocations/AllocationReceipt.php) | class | **Api** | Business receipt of an applied observation (BC-EVT-08): the immutable AllocationReceipt row the guarded routine wrote together with the applied projection, its… |
 | [`ObservationCheckpoint`](../../packages/core/modules/ledger/src/Data/Allocations/ObservationCheckpoint.php) | class | **Api** |  |
-| [`ReallocatePayment`](../../packages/core/modules/ledger/src/Data/Allocations/ReallocatePayment.php) | class | **Api** | allocation.reallocate.v1 (D35, D47): keyed policy reallocation of a payment that a confirmed refund over-allocated. |
-| [`ReallocationMode`](../../packages/core/modules/ledger/src/Data/Allocations/ReallocationMode.php) | enum | **Api** | D35: credit_note closes the reopened debt with a credit note in the same Tx; reversal leaves it open without collection. |
+| [`ReallocatePayment`](../../packages/core/modules/ledger/src/Data/Allocations/ReallocatePayment.php) | class | **Api** | allocation.reallocate.v1: keyed policy reallocation of a payment that a confirmed refund over-allocated. |
+| [`ReallocationMode`](../../packages/core/modules/ledger/src/Data/Allocations/ReallocationMode.php) | enum | **Api** | Credit_note closes the reopened debt with a credit note in the same Tx; reversal leaves it open without collection. |
 | [`ReverseAllocation`](../../packages/core/modules/ledger/src/Data/Allocations/ReverseAllocation.php) | class | **Api** | Reverses the whole original allocation `allocationRef` with an immutable linked negative row (UNIQUE per original); a partial correction names the `remainder`… |
 
 ## Data/Credits
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`RecordCustomerCredit`](../../packages/core/modules/ledger/src/Data/Credits/RecordCustomerCredit.php) | class | **Api** | Monetary customer credit in one explicit account; no reward/quota or persistence behavior (D60). |
+| [`RecordCustomerCredit`](../../packages/core/modules/ledger/src/Data/Credits/RecordCustomerCredit.php) | class | **Api** | Monetary customer credit in one explicit account; no reward/quota or persistence behavior. |
 
 ## Data/Invoices
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`CreateInvoice`](../../packages/core/modules/ledger/src/Data/Invoices/CreateInvoice.php) | class | **Api** | Creates a draft over unbilled obligations of one account and currency; the draft does not number or freeze anything (D49). |
+| [`CreateInvoice`](../../packages/core/modules/ledger/src/Data/Invoices/CreateInvoice.php) | class | **Api** | Creates a draft over unbilled obligations of one account and currency; the draft does not number or freeze anything. |
 | [`CreditNoteGroupReceipt`](../../packages/core/modules/ledger/src/Data/Invoices/CreditNoteGroupReceipt.php) | class | **Api** | `creditNoteRef` names the whole credit: the issued note itself for one invoice, otherwise a group reference that LedgerQueries::receipt('credit-note:'.$creditN… |
 | [`CreditNoteLine`](../../packages/core/modules/ledger/src/Data/Invoices/CreditNoteLine.php) | class | **Api** | One credited obligation of the invoice, the positive amount credited, and optional legal/tax/rounding provenance. |
 | [`CreditNoteMode`](../../packages/core/modules/ledger/src/Data/Invoices/CreditNoteMode.php) | enum | **Api** | open_only credits at most the open amount; reverse_allocations first releases live allocations of the line (last first, full reversal plus remainder) and never… |
 | [`CreditNotePart`](../../packages/core/modules/ledger/src/Data/Invoices/CreditNotePart.php) | class | **Api** | The lines of one invoice inside a credit that may span several invoices. |
 | [`DiscardInvoice`](../../packages/core/modules/ledger/src/Data/Invoices/DiscardInvoice.php) | class | **Api** | draft → discarded; releases the obligations of the lines. |
-| [`InvoiceLineInput`](../../packages/core/modules/ledger/src/Data/Invoices/InvoiceLineInput.php) | class | **Api** | One draft invoice line over an existing obligation; the line amount is the obligation's due + adjusted amount (INV-12). |
-| [`IssueCreditNote`](../../packages/core/modules/ledger/src/Data/Invoices/IssueCreditNote.php) | class | **Api** | Credits an issued invoice without rewriting it (COV-167, COV-174). |
+| [`InvoiceLineInput`](../../packages/core/modules/ledger/src/Data/Invoices/InvoiceLineInput.php) | class | **Api** | One draft invoice line over an existing obligation; the line amount is the obligation's due + adjusted amount. |
+| [`IssueCreditNote`](../../packages/core/modules/ledger/src/Data/Invoices/IssueCreditNote.php) | class | **Api** | Credits an issued invoice without rewriting it. |
 | [`IssueCreditNoteGroup`](../../packages/core/modules/ledger/src/Data/Invoices/IssueCreditNoteGroup.php) | class | **Api** | One business credit that may span several invoices. |
-| [`IssueInvoice`](../../packages/core/modules/ledger/src/Data/Invoices/IssueInvoice.php) | class | **Api** | Issue an existing draft; legal numbering is supplied by the composing root through LedgerParticipants (D49). |
-| [`MarkUncollectible`](../../packages/core/modules/ledger/src/Data/Invoices/MarkUncollectible.php) | class | **Api** | issued\|partially_paid → uncollectible; the reason and the operator authorization stay in the immutable receipt (COV-248). |
-| [`UpdateInvoiceMetadata`](../../packages/core/modules/ledger/src/Data/Invoices/UpdateInvoiceMetadata.php) | class | **Api** | Merges allow-list keys (`note`, `external_ref`, `labels`) into the metadata, in any invoice state (INV-13). |
+| [`IssueInvoice`](../../packages/core/modules/ledger/src/Data/Invoices/IssueInvoice.php) | class | **Api** | Issue an existing draft; legal numbering is supplied by the composing root through LedgerParticipants. |
+| [`MarkUncollectible`](../../packages/core/modules/ledger/src/Data/Invoices/MarkUncollectible.php) | class | **Api** | issued\|partially_paid → uncollectible; the reason and the operator authorization stay in the immutable receipt. |
+| [`UpdateInvoiceMetadata`](../../packages/core/modules/ledger/src/Data/Invoices/UpdateInvoiceMetadata.php) | class | **Api** | Merges allow-list keys (`note`, `external_ref`, `labels`) into the metadata, in any invoice state. |
 | [`VoidInvoice`](../../packages/core/modules/ledger/src/Data/Invoices/VoidInvoice.php) | class | **Api** | issued → void while nothing is settled; history stays and the obligations are released for a new invoice. |
 
 ## Data/Obligations
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`AdjustObligation`](../../packages/core/modules/ledger/src/Data/Obligations/AdjustObligation.php) | class | **Api** | Signed Money appends an increase (>0) or decrease (<0); the journal stores a positive magnitude (INV-12). |
-| [`AmendObligationDuePolicy`](../../packages/core/modules/ledger/src/Data/Obligations/AmendObligationDuePolicy.php) | class | **Api** | Keyed due-policy replacement, including explicit disabling with null dueAt (D60, BC-ENV-28). |
-| [`CorrectionBasis`](../../packages/core/modules/ledger/src/Data/Obligations/CorrectionBasis.php) | class | **Api** | D63/F01: a positive late correction of a finalized obligation is a separate linked obligation. |
-| [`ObligationDuePolicy`](../../packages/core/modules/ledger/src/Data/Obligations/ObligationDuePolicy.php) | class | **Api** | Frozen host inputs; null dueAt disables automatic due collection (D60, BC-ENV-28). |
-| [`RecordObligation`](../../packages/core/modules/ledger/src/Data/Obligations/RecordObligation.php) | class | **Api** | Immutable command input; persistence and root transaction admission belong to the ledger runner (D60). |
+| [`AdjustObligation`](../../packages/core/modules/ledger/src/Data/Obligations/AdjustObligation.php) | class | **Api** | Signed Money appends an increase (>0) or decrease (<0); the journal stores a positive magnitude. |
+| [`AmendObligationDuePolicy`](../../packages/core/modules/ledger/src/Data/Obligations/AmendObligationDuePolicy.php) | class | **Api** | Keyed due-policy replacement, including explicit disabling with null dueAt (BC-ENV-28). |
+| [`CorrectionBasis`](../../packages/core/modules/ledger/src/Data/Obligations/CorrectionBasis.php) | class | **Api** | A positive late correction of a finalized obligation is a separate linked obligation. |
+| [`ObligationDuePolicy`](../../packages/core/modules/ledger/src/Data/Obligations/ObligationDuePolicy.php) | class | **Api** | Frozen host inputs; null dueAt disables automatic due collection (BC-ENV-28). |
+| [`RecordObligation`](../../packages/core/modules/ledger/src/Data/Obligations/RecordObligation.php) | class | **Api** | Immutable command input; persistence and root transaction admission belong to the ledger runner. |
 
 ## Data/Runtime
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`BillingAccountScope`](../../packages/core/modules/ledger/src/Data/Runtime/BillingAccountScope.php) | class | **Api** | Authenticated selectors are checked by the ledger boundary; the DTO grants no authority (D60, INV-14). |
-| [`LedgerReceipt`](../../packages/core/modules/ledger/src/Data/Runtime/LedgerReceipt.php) | class | **Api** | Immutable body returned by the owning DB routine; it is also the root runner's replay result (D31). |
+| [`BillingAccountScope`](../../packages/core/modules/ledger/src/Data/Runtime/BillingAccountScope.php) | class | **Api** | Authenticated selectors are checked by the ledger boundary; the DTO grants no authority. |
+| [`LedgerReceipt`](../../packages/core/modules/ledger/src/Data/Runtime/LedgerReceipt.php) | class | **Api** | Immutable body returned by the owning DB routine; it is also the root runner's replay result. |
 
 ## Data/Settlements
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`CloseSettlementIntentNoEffect`](../../packages/core/modules/ledger/src/Data/Settlements/CloseSettlementIntentNoEffect.php) | class | **Api** | No-effect closure of a settlement intent (D63/F04, FA02). |
-| [`DeclareSettlementIntent`](../../packages/core/modules/ledger/src/Data/Settlements/DeclareSettlementIntent.php) | class | **Api** | Ordered target identities are frozen here; account/currency ownership is checked under ledger locks (D60). |
-| [`NoEffectProof`](../../packages/core/modules/ledger/src/Data/Settlements/NoEffectProof.php) | class | **Api** | FA02 typed proof that a collection step never had an external effect. |
+| [`CloseSettlementIntentNoEffect`](../../packages/core/modules/ledger/src/Data/Settlements/CloseSettlementIntentNoEffect.php) | class | **Api** | No-effect closure of a settlement intent. |
+| [`DeclareSettlementIntent`](../../packages/core/modules/ledger/src/Data/Settlements/DeclareSettlementIntent.php) | class | **Api** | Ordered target identities are frozen here; account/currency ownership is checked under ledger locks. |
+| [`NoEffectProof`](../../packages/core/modules/ledger/src/Data/Settlements/NoEffectProof.php) | class | **Api** | Typed proof that a collection step never had an external effect. |
 
 ## Data/Views
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`LedgerView`](../../packages/core/modules/ledger/src/Data/Views/LedgerView.php) | class | **Api** | D29/D60: lossless DB-to-query rendering; never float or a current pricing lookup. |
+| [`LedgerView`](../../packages/core/modules/ledger/src/Data/Views/LedgerView.php) | class | **Api** | Lossless DB-to-query rendering; never float or a current pricing lookup. |
 
 ## Internal/Commands
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
 | [`AdjustObligationCommand`](../../packages/core/modules/ledger/src/Internal/Commands/AdjustObligationCommand.php) | class | *Internal* |  |
-| [`AllocateCommand`](../../packages/core/modules/ledger/src/Internal/Commands/AllocateCommand.php) | class | *Internal* | Explicit allocation of one funds source to one obligation (INV-09, COV-166). |
-| [`AllocateLockPlan`](../../packages/core/modules/ledger/src/Internal/Commands/AllocateLockPlan.php) | class | *Internal* | Complete pre-read row set of one allocation-family command in the D27 order: settlement intents (65) → obligations (70) → invoices (80) → payments, then custom… |
-| [`AllocatePayload`](../../packages/core/modules/ledger/src/Internal/Commands/AllocatePayload.php) | class | *Internal* | Shape validation (D31 none policy, before any claim) and the semantic digest of the allocation-family commands. |
+| [`AllocateCommand`](../../packages/core/modules/ledger/src/Internal/Commands/AllocateCommand.php) | class | *Internal* | Explicit allocation of one funds source to one obligation. |
+| [`AllocateLockPlan`](../../packages/core/modules/ledger/src/Internal/Commands/AllocateLockPlan.php) | class | *Internal* | Complete pre-read row set of one allocation-family command in the global lock order: settlement intents (65) → obligations (70) → invoices (80) → payments, the… |
+| [`AllocatePayload`](../../packages/core/modules/ledger/src/Internal/Commands/AllocatePayload.php) | class | *Internal* | Shape validation (none policy, before any claim) and the semantic digest of the allocation-family commands. |
 | [`AmendObligationDuePolicyCommand`](../../packages/core/modules/ledger/src/Internal/Commands/AmendObligationDuePolicyCommand.php) | class | *Internal* |  |
-| [`BootstrapPartitionCommand`](../../packages/core/modules/ledger/src/Internal/Commands/BootstrapPartitionCommand.php) | class | *Internal* | ledger.feed.bootstrap (PF-13, PF-14, ACC-RST-07): staged bootstrap of one observation partition over FeedPartitions with the ledger ObservationHandler. |
-| [`CreateInvoiceCommand`](../../packages/core/modules/ledger/src/Internal/Commands/CreateInvoiceCommand.php) | class | *Internal* | Draft over unbilled obligations; no event, no number (D49). |
+| [`BootstrapPartitionCommand`](../../packages/core/modules/ledger/src/Internal/Commands/BootstrapPartitionCommand.php) | class | *Internal* | ledger.feed.bootstrap: staged bootstrap of one observation partition over FeedPartitions with the ledger ObservationHandler. |
+| [`CreateInvoiceCommand`](../../packages/core/modules/ledger/src/Internal/Commands/CreateInvoiceCommand.php) | class | *Internal* | Draft over unbilled obligations; no event, no number. |
 | [`CreditNoteGroupRef`](../../packages/core/modules/ledger/src/Internal/Commands/CreditNoteGroupRef.php) | class | *Internal* | The only place that knows how a multi-invoice credit names its parts and how the group reference lists them. |
-| [`CreditNotePlan`](../../packages/core/modules/ledger/src/Internal/Commands/CreditNotePlan.php) | class | *Internal* | The rows a credit note touches, read before and again after its lock plan is taken (COV-167): the invoice and its currency, the credited obligations by ref, an… |
+| [`CreditNotePlan`](../../packages/core/modules/ledger/src/Internal/Commands/CreditNotePlan.php) | class | *Internal* | The rows a credit note touches, read before and again after its lock plan is taken: the invoice and its currency, the credited obligations by ref, and the invo… |
 | [`DeclareSettlementIntentCommand`](../../packages/core/modules/ledger/src/Internal/Commands/DeclareSettlementIntentCommand.php) | class | *Internal* |  |
 | [`DiscardInvoiceCommand`](../../packages/core/modules/ledger/src/Internal/Commands/DiscardInvoiceCommand.php) | class | *Internal* | draft → discarded; the obligations are released. |
-| [`IssueCreditNoteCommand`](../../packages/core/modules/ledger/src/Internal/Commands/IssueCreditNoteCommand.php) | class | *Internal* | Credit note on an issued invoice (COV-167, COV-174): open_only reduces open; reverse_allocations first releases live allocations of the line (LIFO, full revers… |
+| [`IssueCreditNoteCommand`](../../packages/core/modules/ledger/src/Internal/Commands/IssueCreditNoteCommand.php) | class | *Internal* | Credit note on an issued invoice: open_only reduces open; reverse_allocations first releases live allocations of the line (LIFO, full reversal plus remainder)… |
 | [`IssueInvoiceCommand`](../../packages/core/modules/ledger/src/Internal/Commands/IssueInvoiceCommand.php) | class | *Internal* | draft → issued with the derived payment status in the same Tx. |
 | [`MarkUncollectibleCommand`](../../packages/core/modules/ledger/src/Internal/Commands/MarkUncollectibleCommand.php) | class | *Internal* | issued\|partially_paid → uncollectible with recorded reason and authorization. |
-| [`ReallocatePaymentCommand`](../../packages/core/modules/ledger/src/Internal/Commands/ReallocatePaymentCommand.php) | class | *Internal* | allocation.reallocate.v1 (D35): after a confirmed refund made the payment over-allocated (reallocation_required, derived by CHECK), reverse its live allocation… |
+| [`ReallocatePaymentCommand`](../../packages/core/modules/ledger/src/Internal/Commands/ReallocatePaymentCommand.php) | class | *Internal* | allocation.reallocate.v1: after a confirmed refund made the payment over-allocated (reallocation_required, derived by CHECK), reverse its live allocations last… |
 | [`RecordCustomerCreditCommand`](../../packages/core/modules/ledger/src/Internal/Commands/RecordCustomerCreditCommand.php) | class | *Internal* |  |
 | [`RecordObligationCommand`](../../packages/core/modules/ledger/src/Internal/Commands/RecordObligationCommand.php) | class | *Internal* |  |
 | [`ReverseAllocationCommand`](../../packages/core/modules/ledger/src/Internal/Commands/ReverseAllocationCommand.php) | class | *Internal* | Full immutable reversal of one original allocation (UNIQUE reverses_id) plus an optional remainder placed again from the same source in the same Tx; history is… |
-| [`UpdateInvoiceMetadataCommand`](../../packages/core/modules/ledger/src/Internal/Commands/UpdateInvoiceMetadataCommand.php) | class | *Internal* | Allow-list merge; keys outside it are refused by state in the guarded routine (INV-13). |
+| [`UpdateInvoiceMetadataCommand`](../../packages/core/modules/ledger/src/Internal/Commands/UpdateInvoiceMetadataCommand.php) | class | *Internal* | Allow-list merge; keys outside it are refused by state in the guarded routine. |
 | [`VoidInvoiceCommand`](../../packages/core/modules/ledger/src/Internal/Commands/VoidInvoiceCommand.php) | class | *Internal* | issued → void at settled = 0; the obligations are released. |
 
 ## Internal/Console
@@ -117,7 +117,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
 | [`DrainParkedCommand`](../../packages/core/modules/ledger/src/Internal/Console/DrainParkedCommand.php) | class | *Internal* | Drain worker of the observation path: one economic event per root Tx (inbox-feed), for the host's current caller. |
-| [`ReconcileRefundsCommand`](../../packages/core/modules/ledger/src/Internal/Console/ReconcileRefundsCommand.php) | class | *Internal* | D48 reconcile job: compares the D41 charge refund basis with refund details after the consistency window. |
+| [`ReconcileRefundsCommand`](../../packages/core/modules/ledger/src/Internal/Console/ReconcileRefundsCommand.php) | class | *Internal* | Reconcile job: compares the charge refund basis with refund details after the consistency window. |
 
 ## Internal/Import
 
@@ -129,21 +129,21 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`InvoiceStatus`](../../packages/core/modules/ledger/src/Internal/InvoiceStatus.php) | enum | *Internal* | Invoice FSM table and the pure reference oracle of the derived payment status (p3-ledger-design invoice-fsm, D28, D47). |
+| [`InvoiceStatus`](../../packages/core/modules/ledger/src/Internal/InvoiceStatus.php) | enum | *Internal* | Invoice FSM table and the pure reference oracle of the derived payment status (p3-ledger-design invoice-fsm). |
 | [`LedgerFacade`](../../packages/core/modules/ledger/src/Internal/LedgerFacade.php) | class | *Internal* |  |
 
 ## Internal/Observation
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`EconomicDigest`](../../packages/core/modules/ledger/src/Internal/Observation/EconomicDigest.php) | class | *Internal* | Economic materialDigest `ledger-material/1` of one observed revision (D60, INV-06), separate from the transport contentDigest. |
-| [`ObservationHandler`](../../packages/core/modules/ledger/src/Internal/Observation/ObservationHandler.php) | class | *Internal* | The ledger's economic handler of payment.observation.v1 (INV-08): platform custody calls it for exactly one accounted delivery (or one verified bootstrap snaps… |
+| [`EconomicDigest`](../../packages/core/modules/ledger/src/Internal/Observation/EconomicDigest.php) | class | *Internal* | Economic materialDigest `ledger-material/1` of one observed revision, separate from the transport contentDigest. |
+| [`ObservationHandler`](../../packages/core/modules/ledger/src/Internal/Observation/ObservationHandler.php) | class | *Internal* | The ledger's economic handler of payment.observation.v1: platform custody calls it for exactly one accounted delivery (or one verified bootstrap snapshot item)… |
 | [`ObservationIntake`](../../packages/core/modules/ledger/src/Internal/Observation/ObservationIntake.php) | class | *Internal* | applyPaymentObservation facade (ObservationApplier). |
 | [`ObservationOwnership`](../../packages/core/modules/ledger/src/Internal/Observation/ObservationOwnership.php) | class | *Internal* |  |
 | [`ParkedDrainer`](../../packages/core/modules/ledger/src/Internal/Observation/ParkedDrainer.php) | class | *Internal* | Drives observation work one economic event per NEW root Tx (inbox-feed): the next accounted sequence of a partition, the later parked revision of an operation… |
-| [`PaymentProjection`](../../packages/core/modules/ledger/src/Internal/Observation/PaymentProjection.php) | class | *Internal* | Economic apply of ONE observed revision inside its root Tx (observation-apply, D41, D46, D57, D60). |
+| [`PaymentProjection`](../../packages/core/modules/ledger/src/Internal/Observation/PaymentProjection.php) | class | *Internal* | Economic apply of ONE observed revision inside its root Tx (observation-apply). |
 | [`RefundReconcileReport`](../../packages/core/modules/ledger/src/Internal/Observation/RefundReconcileReport.php) | class | *Internal* | Counts of one refund reconcile pass: charges compared, mismatches recorded and earlier mismatches resolved. |
-| [`RefundReconciler`](../../packages/core/modules/ledger/src/Internal/Observation/RefundReconciler.php) | class | *Internal* | D48 reconcile job of the D41 refund basis: after the configured consistency window the ordinary charge basis (payment.refunded_minor, assigned only from the ch… |
+| [`RefundReconciler`](../../packages/core/modules/ledger/src/Internal/Observation/RefundReconciler.php) | class | *Internal* | Reconcile job of the charge refund basis: after the configured consistency window the ordinary charge basis (payment.refunded_minor, assigned only from the cha… |
 
 ## Internal/Participants
 
@@ -163,7 +163,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`ProRataOpenPolicy`](../../packages/core/modules/ledger/src/Internal/Policy/ProRataOpenPolicy.php) | class | *Internal* | pro_rata_open/1 (D46, allocation-policy): distributes an amount A over the open amounts of the settlement targets in their `position` order. |
+| [`ProRataOpenPolicy`](../../packages/core/modules/ledger/src/Internal/Policy/ProRataOpenPolicy.php) | class | *Internal* | pro_rata_open/1 (allocation-policy): distributes an amount A over the open amounts of the settlement targets in their `position` order. |
 
 ## Internal/Queries
 
@@ -173,14 +173,14 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`DatabaseLedgerQueries`](../../packages/core/modules/ledger/src/Internal/Queries/DatabaseLedgerQueries.php) | class | *Internal* |  |
 | [`DatabaseObservationCheckpointQueries`](../../packages/core/modules/ledger/src/Internal/Queries/DatabaseObservationCheckpointQueries.php) | class | *Internal* |  |
 | [`DatabaseSettlementIntentLocks`](../../packages/core/modules/ledger/src/Internal/Queries/DatabaseSettlementIntentLocks.php) | class | *Internal* |  |
-| [`LedgerReader`](../../packages/core/modules/ledger/src/Internal/Queries/LedgerReader.php) | class | *Internal* | D60: shared query/snapshot projection over ledger-owned facts, scoped before resolving any selector (INV-14). |
-| [`ReadSession`](../../packages/core/modules/ledger/src/Internal/Queries/ReadSession.php) | class | *Internal* | REQ-CON-14: an independent consistent read, with PostgreSQL enforcing the no-write boundary. |
+| [`LedgerReader`](../../packages/core/modules/ledger/src/Internal/Queries/LedgerReader.php) | class | *Internal* | Shared query/snapshot projection over ledger-owned facts, scoped before resolving any selector. |
+| [`ReadSession`](../../packages/core/modules/ledger/src/Internal/Queries/ReadSession.php) | class | *Internal* | An independent consistent read, with PostgreSQL enforcing the no-write boundary. |
 
 ## Internal/Receipts
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`AllocationReceiptWriter`](../../packages/core/modules/ledger/src/Internal/Receipts/AllocationReceiptWriter.php) | class | *Internal* | AllocationReceipt boundary (BC-EVT-08, INV-09): the guarded routine writes the immutable receipt together with the journal rows and counters in one statement;… |
+| [`AllocationReceiptWriter`](../../packages/core/modules/ledger/src/Internal/Receipts/AllocationReceiptWriter.php) | class | *Internal* | AllocationReceipt boundary (BC-EVT-08): the guarded routine writes the immutable receipt together with the journal rows and counters in one statement; PHP neve… |
 
 ## Internal/Registrars
 
@@ -194,9 +194,9 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 |---|---|---|---|
 | [`CommandPayload`](../../packages/core/modules/ledger/src/Internal/Repositories/CommandPayload.php) | class | *Internal* |  |
 | [`InvoicePayload`](../../packages/core/modules/ledger/src/Internal/Repositories/InvoicePayload.php) | class | *Internal* | Semantic payload, digest and shape validation of the invoice commands; the command key is not part of the identity. |
-| [`InvoiceRepository`](../../packages/core/modules/ledger/src/Internal/Repositories/InvoiceRepository.php) | class | *Internal* | Plans the D27 locks of the invoice commands (obligations of the lines, ids ascending, then the invoice) and calls the guarded routine that alone mutates invoic… |
-| [`LedgerPrivileges`](../../packages/core/modules/ledger/src/Internal/Repositories/LedgerPrivileges.php) | class | *Internal* | D60: installation fails closed without a separate, unprivileged runtime role. |
-| [`LedgerRepository`](../../packages/core/modules/ledger/src/Internal/Repositories/LedgerRepository.php) | class | *Internal* | Query builder reads and typed DB calls; no PHP counter writes (D60). |
+| [`InvoiceRepository`](../../packages/core/modules/ledger/src/Internal/Repositories/InvoiceRepository.php) | class | *Internal* | Plans the ordered locks of the invoice commands (obligations of the lines, ids ascending, then the invoice) and calls the guarded routine that alone mutates in… |
+| [`LedgerPrivileges`](../../packages/core/modules/ledger/src/Internal/Repositories/LedgerPrivileges.php) | class | *Internal* | Installation fails closed without a separate, unprivileged runtime role. |
+| [`LedgerRepository`](../../packages/core/modules/ledger/src/Internal/Repositories/LedgerRepository.php) | class | *Internal* | Query builder reads and typed DB calls; no PHP counter writes. |
 
 ## Internal/Snapshot
 
@@ -205,7 +205,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`AllocationsSnapshotSource`](../../packages/core/modules/ledger/src/Internal/Snapshot/AllocationsSnapshotSource.php) | class | *Internal* |  |
 | [`DiscrepanciesSnapshotSource`](../../packages/core/modules/ledger/src/Internal/Snapshot/DiscrepanciesSnapshotSource.php) | class | *Internal* |  |
 | [`InvoicesSnapshotSource`](../../packages/core/modules/ledger/src/Internal/Snapshot/InvoicesSnapshotSource.php) | class | *Internal* |  |
-| [`LedgerSnapshotSource`](../../packages/core/modules/ledger/src/Internal/Snapshot/LedgerSnapshotSource.php) | class | *Internal* | D60/D63: registered ledger snapshot streams share the feed's pinned read-only snapshot and source scope. |
+| [`LedgerSnapshotSource`](../../packages/core/modules/ledger/src/Internal/Snapshot/LedgerSnapshotSource.php) | class | *Internal* | Registered ledger snapshot streams share the feed's pinned read-only snapshot and source scope. |
 | [`ObligationsSnapshotSource`](../../packages/core/modules/ledger/src/Internal/Snapshot/ObligationsSnapshotSource.php) | class | *Internal* |  |
 | [`PaymentsSnapshotSource`](../../packages/core/modules/ledger/src/Internal/Snapshot/PaymentsSnapshotSource.php) | class | *Internal* |  |
 

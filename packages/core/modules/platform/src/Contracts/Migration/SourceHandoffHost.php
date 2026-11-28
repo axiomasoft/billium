@@ -14,7 +14,7 @@ use Billium\Platform\Data\Migration\TargetNoEffectsProof;
 use Packman\Attributes\Spi;
 use Packman\Attributes\SpiKind;
 
-/** D54/D58/D62/D63. Authenticated source authority external to restorable ledger state. Calls are at Tx0. */
+/** Authenticated source authority external to restorable ledger state. Calls are at Tx0. */
 #[Spi(kind: SpiKind::Implement, since: '1.0')]
 interface SourceHandoffHost
 {
@@ -24,16 +24,16 @@ interface SourceHandoffHost
     /** Check signature, exact plan, deployment/session/epoch, generation, seal receipt and continued exclusion of every source writer. */
     public function isSealed(SourceFreezeCertificate $freeze): bool;
 
-    /** Pin D52 retention before taking a REPEATABLE READ snapshot. Bind token, digest, lease and authenticated cursor to the exact scope/selection/catalog. */
+    /** Pin feed retention before taking a REPEATABLE READ snapshot. Bind token, digest, lease and authenticated cursor to the exact scope/selection/catalog. */
     public function snapshot(SourceFreezeCertificate $freeze): MigrationManifest;
 
     /**
-     * Authenticate the exact manifest, frozen lineage, snapshot bytes, active pin and safe D52 start and terminal cursors.
+     * Authenticate the exact manifest, frozen lineage, snapshot bytes, active pin and safe start and terminal cursors.
      * Return a seal only when the complete selected tail is retained and scanned, including empty selected pages
      * through the safe horizon. Observe partition gaps separately. Missing or superseded evidence returns null.
      */
     public function sealedTail(MigrationManifest $manifest): ?SealedTail;
 
-    /** Verify the target proof against independent authority, then explicitly activate a new source session under D54. */
+    /** Verify the target proof against independent authority, then explicitly activate a new source session. */
     public function resumeSource(SourceFreezeCertificate $freeze, TargetNoEffectsProof $target, RetirementProof $retirement, ActivationCertificate $certificate): bool;
 }

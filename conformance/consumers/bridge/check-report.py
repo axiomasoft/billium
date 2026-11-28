@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validator for consumer/bridge contract reports and external-runtime activation evidence (P9.5 / V952)."""
+"""Validator for consumer/bridge contract reports and external-runtime activation evidence (V952)."""
 
 from __future__ import annotations
 
@@ -168,7 +168,7 @@ def validate_report(
         if cls == "consumer-contract" and steps:
             has_consumer_contract_steps = True
 
-    # 6. Status, boundary, external readiness and rollout gate invariants (D59, D71).
+    # 6. Status, boundary, external readiness and rollout gate invariants.
     status = report.get("status")
     passed = report.get("passed")
     local_complete = report.get("localRequiredSuiteComplete")

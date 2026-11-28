@@ -841,7 +841,7 @@ final class DunningPolicyTest extends CollectionTestCase
             self::assertSame('billium.collection.case_parked_unknown', $error->detail);
         }
 
-        // Delivery retry on unknown step is forbidden (INV-04).
+        // Delivery retry on unknown step is forbidden.
         try {
             $this->dunningCaseService()->recordDeliveryRetry(new RecordStepDeliveryRetry(
                 commandKey: 'retry-u-1-blocked',

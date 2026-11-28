@@ -18,7 +18,7 @@ use Illuminate\Database\DatabaseManager;
 use LogicException;
 use Packman\Attributes\Internal;
 
-/** D60/D63: registered ledger snapshot streams share the feed's pinned read-only snapshot and source scope. */
+/** Registered ledger snapshot streams share the feed's pinned read-only snapshot and source scope. */
 #[Internal]
 readonly class LedgerSnapshotSource implements SnapshotSource
 {
@@ -142,7 +142,7 @@ readonly class LedgerSnapshotSource implements SnapshotSource
         $records = [];
         foreach ($reader->scoped('billium_observed_payment')->orderBy('id')->get() as $row) {
             if ($row->kind === 'refund') {
-                // D41: refund children are immutable detail, never a second applied charge/refund basis.
+                // Refund children are immutable detail, never a second applied charge/refund basis.
                 $payload = self::row($row);
                 $payload['observedRevisions'] = $observedRevisions[View::integer($row->id)] ?? [];
                 $records[] = self::record('refund:'.View::text($row->source_authority).':'.View::text($row->operation_ref), View::integer($row->revision), $payload);
@@ -169,7 +169,7 @@ readonly class LedgerSnapshotSource implements SnapshotSource
             $payload['closures'] = $closures[View::integer($row->id)] ?? [];
             $records[] = self::record('intent:'.View::text($row->business_intent_ref), View::integer($row->revision), $payload);
         }
-        // D60: include source recovery flags even for empty partitions / before the first observed operation.
+        // Include source recovery flags even for empty partitions / before the first observed operation.
         foreach ($this->feedRecovery->state($connectionName, ParkedDrainer::CHANNEL)['snapshots'] as $snapshot) {
             $records[] = $snapshot;
         }

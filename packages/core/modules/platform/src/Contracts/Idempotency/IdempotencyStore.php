@@ -12,10 +12,10 @@ use Packman\Attributes\Spi;
 use Packman\Attributes\SpiKind;
 
 /**
- * Atomic first-write claim of (environment, seller, command kind, key) with its semantic digest (INV-05, D51). Claim
+ * Atomic first-write claim of (environment, seller, command kind, key) with its semantic digest. Claim
  * and complete run inside the same root Tx of the runner; a concurrent claim of the same key waits on the unique index
  * (bounded by billium.idempotency.lock_timeout_ms → in_flight) and then sees the committed receipt, a conflict, or no
- * row because a none-policy error rolled the first claim back (D31).
+ * row because a none-policy error rolled the first claim back.
  */
 #[Spi(kind: SpiKind::Call, since: '1.0')]
 interface IdempotencyStore

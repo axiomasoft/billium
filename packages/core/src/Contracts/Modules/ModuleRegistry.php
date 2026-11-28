@@ -13,7 +13,7 @@ use Packman\Attributes\SpiKind;
 
 /**
  * Read access to the packaged module descriptors and the boot-time composition check. Billium registers only its
- * own modules; a host cannot add a descriptor (REQ-OUT-19).
+ * own modules; a host cannot add a descriptor.
  */
 #[Spi(kind: SpiKind::Call, since: '1.0')]
 interface ModuleRegistry

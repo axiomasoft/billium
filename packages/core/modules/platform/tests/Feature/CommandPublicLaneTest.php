@@ -95,7 +95,7 @@ final class CommandPublicLaneTest extends OutboxTestCase
                 });
             self::fail('A valid recovery root must not create an outgoing command');
         } catch (LogicException $exception) {
-            self::assertSame('Outbox recording requires an admitted financial write operation class and session (D54, D55, D60)', $exception->getMessage());
+            self::assertSame('Outbox recording requires an admitted financial write operation class and session', $exception->getMessage());
         }
         self::assertTrue($admitted, 'The recorder must refuse after recovery session and module admission succeed');
         self::assertSame(0, $this->rows('billium_outbox_command'));

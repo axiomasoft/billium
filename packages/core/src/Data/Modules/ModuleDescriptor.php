@@ -9,7 +9,7 @@ use Billium\Core\Internal\Modules\Shape;
 use Packman\Attributes\Api;
 
 /**
- * Static descriptor of one Billium core module (D55): identity, schema stream and ranges, API and wire versions,
+ * Static descriptor of one Billium core module: identity, schema stream and ranges, API and wire versions,
  * dependencies, ownership, lifecycle policies and event declarations. Data only: no secrets, no callbacks, and no
  * way to register an external plugin.
  */
@@ -78,7 +78,7 @@ final readonly class ModuleDescriptor
         self::unique($context, 'owned table', $ownedTables);
         foreach ($ownedTables as $table) {
             if (preg_match('/^billium_[a-z0-9_]+$/', $table) !== 1) {
-                throw Shape::fail($context, "table {$table} needs the billium_ prefix (D45)");
+                throw Shape::fail($context, "table {$table} needs the billium_ prefix");
             }
         }
         self::unique($context, 'config key', $configKeys);
@@ -90,7 +90,7 @@ final readonly class ModuleDescriptor
         self::unique($context, 'internal command', $commandTypes);
         foreach ($publicEvents as $event) {
             if (in_array($event->eventType, $commandTypes, true)) {
-                throw Shape::fail($context, "{$event->eventType} is both a public event and an internal command (D63)");
+                throw Shape::fail($context, "{$event->eventType} is both a public event and an internal command");
             }
         }
         if (in_array($moduleId, array_map(static fn (ModuleDependency $dependency): string => $dependency->moduleId, $requiresModules), true)) {

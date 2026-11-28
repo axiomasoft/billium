@@ -46,7 +46,7 @@ it('refuses numbers that are not exact integers', function (string $text): void 
     'syntax error' => ['{"a":'],
 ]);
 
-it('keeps the digest of the worked example of D32', function (): void {
+it('keeps the digest of the worked example of', function (): void {
     $json = '{"schema":"payment.execute.v1","commandKey":"0b6f2c1e-6d1a-4a44-9a51-3f0c6f2f7a10","operationRef":"op-1","operationKind":"charge","source":{"context":"commerz","orderRef":"ord-1","intentRef":"int-1"},"installationRef":"inst-1","environment":"test","executionProfile":"remote-billium","routingEpoch":1,"sellerRef":"seller-1","merchantAccountRef":"ma-1","money":{"amount":"1490.00","currency":"RUB"},"bindingRevision":"sha256:00","requestedAt":"2026-10-17T12:00:00Z"}';
 
     expect((new Codec)->digest($json))->toBe('sha256:4e51ca0273f40946bfc6ada7f414e9fd8d6228786142c0391070fa51132f4b52');

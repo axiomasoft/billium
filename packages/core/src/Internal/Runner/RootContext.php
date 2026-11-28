@@ -12,7 +12,7 @@ use Closure;
 use LogicException;
 use Packman\Attributes\Internal;
 
-/** The only TransactionContext implementation; its state lives in the runner-owned Operation (D60). */
+/** The only TransactionContext implementation; its state lives in the runner-owned Operation. */
 #[Internal]
 final readonly class RootContext implements TransactionContext
 {
@@ -77,10 +77,10 @@ final readonly class RootContext implements TransactionContext
     public function assertActive(?string $connectionName = null): void
     {
         if (! $this->isActive()) {
-            throw new LogicException('Stale TransactionContext: its root transaction is over (D60)');
+            throw new LogicException('Stale TransactionContext: its root transaction is over');
         }
         if ($connectionName !== null && $connectionName !== $this->connectionName) {
-            throw new LogicException("TransactionContext belongs to connection {$this->connectionName}, not {$connectionName} (D60)");
+            throw new LogicException("TransactionContext belongs to connection {$this->connectionName}, not {$connectionName}");
         }
     }
 
@@ -88,7 +88,7 @@ final readonly class RootContext implements TransactionContext
     {
         $this->assertActive($connectionName);
         if (! isset($this->operation->modules()[$moduleId])) {
-            throw new LogicException("Module {$moduleId} is outside the admitted closure of {$this->spec->commandKind} (D55)");
+            throw new LogicException("Module {$moduleId} is outside the admitted closure of {$this->spec->commandKind}");
         }
     }
 

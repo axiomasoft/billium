@@ -10,7 +10,7 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Packman\Attributes\Api;
 
 /**
- * D63/F01: a positive late correction of a finalized obligation is a separate linked obligation. Its basis is derived
+ * A positive late correction of a finalized obligation is a separate linked obligation. Its basis is derived
  * from the original basis and the correction identity/revision, so the same correction replays and never overwrites
  * the original (LedgerParticipants::recordObligation).
  */

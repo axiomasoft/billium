@@ -24,7 +24,7 @@ use Illuminate\Database\DatabaseManager;
 use LogicException;
 use Packman\Attributes\Internal;
 
-/** COV-328/D56: schedule one authenticated ledger keyset page using the host's selected mandate. */
+/** Schedule one authenticated ledger keyset page using the host's selected mandate. */
 #[Internal]
 final readonly class DueCollectionWorker
 {

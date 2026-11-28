@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-// D45/D60: unset retention refuses pruning; batches never share an economic root Tx.
+// Unset retention refuses pruning; batches never share an economic root Tx.
 return [
     'connection' => null,
     'installation_ref' => env('BILLIUM_INSTALLATION_REF'),
-    // D62: every root Tx has a hard deadline; a seal waits for admitted roots only up to its lock timeout.
+    // Every root Tx has a hard deadline; a seal waits for admitted roots only up to its lock timeout.
     'runner' => ['max_attempts' => 3, 'root_deadline_ms' => 30000],
     'financial_session' => ['seal_lock_timeout_ms' => 5000],
     'idempotency' => ['lock_timeout_ms' => 5000],
@@ -22,7 +22,7 @@ return [
         'drain_batch' => 100,
         'bootstrap_lease_seconds' => 60,
         'bootstrap_batch' => 100,
-        // D63: host-provisioned, independent of copied database state; app.key is the fallback.
+        // Host-provisioned, independent of copied database state; app.key is the fallback.
         'signing_key' => null,
     ],
     'inbox' => [
@@ -33,14 +33,14 @@ return [
     ],
     'runtime_role' => ['preflight' => true],
     'ledger' => ['refund_reconcile_after_seconds' => 3600],
-    // D55/D56: optional usage admission is discovered only when explicitly enabled; boot never installs SQL.
+    // Optional usage admission is discovered only when explicitly enabled; boot never installs SQL.
     'usage' => ['enabled' => false],
     'rating' => ['enabled' => false],
     'schedule' => ['enabled' => false],
     'documents' => ['enabled' => false],
     'collection' => ['enabled' => false],
     'execution' => ['release_evidence_ref' => null, 'retention_policy_ref' => null, 'outgoing_enabled' => false],
-    // D55: desired module set; unlisted optional modules create no routes, workers or tables.
+    // Desired module set; unlisted optional modules create no routes, workers or tables.
     'modules' => [
         'composition' => 'embedded-commerz',
         'enabled' => ['platform', 'ledger'],

@@ -79,7 +79,7 @@ use RuntimeException;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * PLAN1.P10.6 basic security, privacy, and isolation sanity gate (D71 + D72):
+ * Basic security, privacy, and isolation sanity gate:
  * - Spoofed seller header/payload rejection & cross-seller isolation
  * - Unauthorized replay, query, and manual-repair rejection
  * - Webhook authenticity, replay idempotency, and hash-conflict protection

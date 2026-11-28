@@ -12,7 +12,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\TestWith;
 
 /**
- * Database backstops of the observation path (D60, INV-01, INV-06): the runtime role reads observation tables and only
+ * Database backstops of the observation path: the runtime role reads observation tables and only
  * EXECUTEs the guarded routines; a direct counter or park write is refused; the projection routine itself refuses an
  * inconsistent snapshot in assign mode (only hold may carry it) and a parked marker is released once, never edited.
  */

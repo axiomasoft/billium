@@ -11,7 +11,7 @@ const _statusKeys = {
   'digest',
 };
 
-/// One encoded command. Retries reuse these bytes and this key (D58).
+/// One encoded command. Retries reuse these bytes and this key.
 final class PreparedCommand {
   /// Creates the frozen command.
   const PreparedCommand({
@@ -56,7 +56,7 @@ final class PreparedCommand {
       };
 }
 
-/// Test-only transport client. It encodes once and never writes money (D9, D58, D61).
+/// Test-only transport client. It encodes once and never writes money.
 ///
 /// Default is one send. A later send exists only for an explicit bound: one 401
 /// credential refresh, or a registry entry that is retryable and sameKey. Deadline

@@ -7,7 +7,7 @@ namespace Billium\Core\Enums\Runner;
 use Packman\Attributes\Api;
 
 /**
- * The single global lock order (D27, invariant-model). A root transaction acquires ranks strictly ascending; inside a
+ * The single global lock order (invariant-model). A root transaction acquires ranks strictly ascending; inside a
  * rank, ids only ascend. Claim is the first write of the root Tx (an insert, not a row lock). Funds orders payment ids
  * (segment 0) before customer-credit ids (segment 1).
  */

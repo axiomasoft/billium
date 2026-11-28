@@ -10,7 +10,7 @@ use InvalidArgumentException;
 use Packman\Attributes\Api;
 
 /**
- * One lifecycle step of a module (D55). `facts` are preview input, never proof of drained work. recovery_only and
+ * One lifecycle step of a module. `facts` are preview input, never proof of drained work. recovery_only and
  * retired require ModuleTransitionEvidence to obtain current owning-module facts under the exclusive barrier;
  * an evidence reference alone cannot authorize them. Platform recomputes active dependents under the same locks.
  */

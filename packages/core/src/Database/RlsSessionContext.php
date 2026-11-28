@@ -10,7 +10,7 @@ use LogicException;
 use Packman\Attributes\Api;
 
 /**
- * Transaction-local (SET LOCAL) PostgreSQL session context for optional seller-scoped RLS (ADR-08, REQ-PROF-09).
+ * Transaction-local (SET LOCAL) PostgreSQL session context for optional seller-scoped RLS (ADR-08).
  * Uses `billium.*` GUCs only (no tenant_id). Billium ships no policies; a host may define them on these GUCs.
  */
 #[Api(since: '1.0')]

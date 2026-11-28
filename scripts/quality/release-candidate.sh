@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PLAN1.P10.8 — Local Release Candidate validation runner (D71, D72).
+# Local Release Candidate validation runner.
 # Zero network calls, zero publish/tag/commit side effects.
 #
 # Usage:
@@ -176,7 +176,7 @@ profile_check = {
     "modules": selected_modules,
 }
 
-# 2. Supply-chain & unresolved holds check (reuses P10.6 gate).
+# 2. Supply-chain & unresolved holds check (reuses gate).
 sc_cmd = ["bash", str(root / "scripts" / "quality" / "release-supply-chain.sh"), "--profile", profile]
 if holds_file:
     sc_cmd.extend(["--holds-file", holds_file])
@@ -199,7 +199,7 @@ holds_check = {
     "unresolved": unresolved_holds,
 }
 
-# 3. Optional deployment manifest check (reuses P10.7 validator).
+# 3. Optional deployment manifest check (reuses validator).
 manifest_check: dict[str, Any] = {"checked": False, "passed": True}
 if deployment_manifest_arg:
     manifest_check["checked"] = True
@@ -216,7 +216,7 @@ if deployment_manifest_arg:
     if dp_proc.returncode != 0:
         add_error("rc.deployment_manifest_invalid", "Deployment profile manifest validation failed", dp_report.get("errors", dp_report))
 
-# 4. MECH-02 negative-filter self-test proof & non-empty discovery.
+# 4. Negative-filter self-test proof & non-empty discovery.
 mech02_check: dict[str, Any] = {
     "passed": False,
     "emptyFilterRejected": False,
@@ -234,9 +234,9 @@ try:
     mech02_check["discoveredTests"] = discovered_count
     mech02_check["passed"] = discovered_count > 0
     if discovered_count <= 0:
-        add_error("rc.mech02_zero_tests", "MECH-02 discovery returned 0 tests")
+        add_error("rc.mech02_zero_tests", "Discovery returned 0 tests")
 except Exception as exc:
-    add_error("rc.mech02_failed", f"MECH-02 empty-filter proof failed: {exc}")
+    add_error("rc.mech02_failed", f"Empty-filter proof failed: {exc}")
 
 # 5. Acceptance evidence validation (reject zero-test evidence).
 acceptance_check: dict[str, Any] = {

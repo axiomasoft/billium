@@ -292,7 +292,7 @@ final class LedgerAdapter
         $app = $this->app ?? throw new LogicException('Ledger host is not booted');
         $this->setCaller($this->callerInput);
         $owner = $app['db']->connection('billium_owner');
-        // D50: committed fixtures, no RefreshDatabase transaction. Never truncate host tables.
+        // Committed fixtures, no RefreshDatabase transaction. Never truncate host tables.
         TestEnvironment::truncateBilliumTables($owner->getPdo());
         $contractsIntact = $owner->scalar(<<<'SQL'
             SELECT (SELECT count(*) FROM public.billium_event_contract) = 7 AND NOT EXISTS (

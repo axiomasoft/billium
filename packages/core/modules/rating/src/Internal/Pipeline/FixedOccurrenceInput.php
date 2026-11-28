@@ -13,7 +13,7 @@ use Billium\Rating\Internal\Proration\QuantitySnapshotScope;
 use Billium\Rating\Internal\Storage\RatingRows;
 use Packman\Attributes\Internal;
 
-/** Synthetic occurrence and host-approved quantity inputs do not depend on metered usage (D55/D56). */
+/** Synthetic occurrence and host-approved quantity inputs do not depend on metered usage. */
 #[Internal]
 final class FixedOccurrenceInput
 {

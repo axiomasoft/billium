@@ -26,7 +26,7 @@ use PHPUnit\Framework\Attributes\Group;
 use RuntimeException;
 
 /**
- * FA02/D63-F04: the ledger participant accepts only a typed NoEffectProof of its own root, appends one immutable
+ * The ledger participant accepts only a typed NoEffectProof of its own root, appends one immutable
  * closure with stable targets, replays it, and refuses a committed permit, a pending/unknown/sent effect, a stale
  * revision, a changed proof or an applied intent. Later actual evidence is retained and never reopens the intent.
  */

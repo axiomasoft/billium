@@ -13,9 +13,9 @@ use Billium\Ledger\Tests\Observation\ObservationTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * ACC-CON-26 (D41, D48, INV-06): charge C1 captured 100.00 fully allocated; four processes deliver C2 (refundedTotal
+ * Charge C1 captured 100.00 fully allocated; four processes deliver C2 (refundedTotal
  * 30.00), the refund child R1 (30.00) and a repeat of each. The charge refundedTotal is the only basis: refunded 30.00,
- * never 60.00; reallocation_required is set (D35); nothing is quarantined; the reconcile job after the window finds no
+ * never 60.00; reallocation_required is set; nothing is quarantined; the reconcile job after the window finds no
  * discrepancy. With R1 = 40.00 it records exactly one discrepancy and the ledger is unchanged.
  */
 #[Group('ACC-CON-26')]

@@ -35,7 +35,7 @@ final readonly class DatabaseOccurrenceParticipants implements OccurrencePartici
             || ($row->state === 'rated' && $row->rated_basis_ref !== $command->ratedBasisRef)) {
             OccurrenceProblems::refuse('occurrence.transition_forbidden');
         }
-        // The outer root owns the rating/obligation write and its receipt/outbox (D60, FA03).
+        // The outer root owns the rating/obligation write and its receipt/outbox.
         $this->store->query(table: 'billing_occurrence', context: $context)->where('id', $row->id)->update([
             'state' => $command->to->value, 'rated_basis_ref' => $command->ratedBasisRef,
             'row_version' => $this->store->database($context)->raw('row_version+1')]);

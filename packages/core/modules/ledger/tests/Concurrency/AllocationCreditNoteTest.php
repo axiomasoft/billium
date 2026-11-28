@@ -12,7 +12,7 @@ use Billium\Ledger\Tests\Schema\LedgerTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * ACC-CON-09 (INV-09, COV-167, COV-286): two allocations of 60.00 and two open_only credit notes of 60.00 race on one
+ * Two allocations of 60.00 and two open_only credit notes of 60.00 race on one
  * issued invoice of 100.00. Exactly one of the four fits; open never goes below zero and nothing overcorrects.
  */
 #[Group('ACC-CON-09')]

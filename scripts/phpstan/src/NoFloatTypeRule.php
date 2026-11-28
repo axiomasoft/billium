@@ -15,7 +15,7 @@ use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
 
 /**
- * Forbids the native `float` type in parameters, return types and properties (D19, REQ-CON-31).
+ * Forbids the native `float` type in parameters, return types and properties.
  *
  * @implements Rule<Node>
  */

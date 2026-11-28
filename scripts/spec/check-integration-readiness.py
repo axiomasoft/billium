@@ -391,7 +391,7 @@ def validate_manifest(
                 runtime_reports_by_path[entry["path"]] = entry
             errors.extend(validate_runtime_report_file(entry, repo_root, require_runtime_reports))
 
-    # 6. Mandatory acceptance ID coverage (IM-01..17, CT-01..20, MGATE-01..11, P9 catalog IDs).
+    # 6. Mandatory acceptance ID coverage (..17, CT-01..20,..11, P9 catalog IDs).
     coverage = manifest.get("acceptance_coverage")
     if not isinstance(coverage, dict):
         errors.append("missing_acceptance_coverage: acceptance_coverage object required")
@@ -543,7 +543,7 @@ def validate_manifest(
         if missing_local_gates:
             errors.append(f"missing_local_gates: {missing_local_gates}")
 
-    # 8. Activation status consistency with pending external gates (D59).
+    # 8. Activation status consistency with pending external gates.
     activation = manifest.get("activation_status")
     if not isinstance(activation, dict):
         errors.append("missing_activation_status: activation_status object required")

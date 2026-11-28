@@ -36,7 +36,7 @@ use ReflectionNamedType;
 use RuntimeException;
 
 /**
- * D60/INV-01: a TransactionContext is the capability of exactly one root attempt on one connection. Typed participants
+ * A TransactionContext is the capability of exactly one root attempt on one connection. Typed participants
  * (doubles here, until the owning modules exist) act only through it, only for admitted modules, only in the global
  * lock order, and never start a runner.
  */
@@ -253,7 +253,7 @@ final class ParticipantContextIsolationTest extends PlatformTestCase
         } catch (LockOrderViolation) {
             $this->addToAssertionCount(1);
         }
-        // Another seller's rows are never locked through the context (INV-14).
+        // Another seller's rows are never locked through the context.
         $this->callers->as('seller-b');
         $this->runner()->run($this->spec(), static function (TransactionContext $context) use ($ids): Receipt {
             self::assertSame([], $context->lock(new LockRequest(LockRank::Obligation, 'billium_test_effect', $ids)));

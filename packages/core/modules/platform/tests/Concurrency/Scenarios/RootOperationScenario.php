@@ -32,7 +32,7 @@ use Illuminate\Foundation\Application;
 
 /**
  * One worker of a platform race: a root operation, a seal or a module transition, driven by JSON arguments. Each
- * worker joins the session with its own host process token (D62). Typed refusals are results, not crashes.
+ * worker joins the session with its own host process token. Typed refusals are results, not crashes.
  */
 final readonly class RootOperationScenario implements Scenario
 {

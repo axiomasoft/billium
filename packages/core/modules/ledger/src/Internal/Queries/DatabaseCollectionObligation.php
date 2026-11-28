@@ -37,7 +37,7 @@ final readonly class DatabaseCollectionObligation implements CollectionObligatio
             return 0;
         }
 
-        // D35: a refund reversal may leave an accounting balance, but cannot create automatically collectible debt.
+        // A refund reversal may leave an accounting balance, but cannot create automatically collectible debt.
         $seller = is_string($row->seller_ref) ? $row->seller_ref : throw new LockPlanChanged('Collection obligation vanished');
         $environment = is_string($row->environment) ? $row->environment : throw new LockPlanChanged('Collection obligation vanished');
         $minor = $db->scalar(<<<'SQL'

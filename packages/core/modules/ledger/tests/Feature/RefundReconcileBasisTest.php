@@ -17,7 +17,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\TestWith;
 
 /**
- * D41/D48 comparison basis (observation-apply, RefundReconciler): the charge refund basis is compared with succeeded
+ * Comparison basis (observation-apply, RefundReconciler): the charge refund basis is compared with succeeded
  * refund details only after the consistency window, so the ordinary refund → charge order records nothing; a mismatch
  * is stored with a basis digest of the charge revision and the ordered contributing refund revisions/amounts, an
  * identical basis dedupes, a changed detail under the same charge revision is a new visible row, and later agreement

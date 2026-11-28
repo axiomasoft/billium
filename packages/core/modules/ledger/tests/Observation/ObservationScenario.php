@@ -22,7 +22,7 @@ use Illuminate\Foundation\Application;
 use InvalidArgumentException;
 
 /**
- * One worker of the observation races (ACC-CON-24/26, allocation vs observation): `plan[index]` is either
+ * One worker of the observation races (26, allocation vs observation): `plan [index]` is either
  * {action: observe, json} — one delivery through the public ObservationApplier, which drains whatever becomes next in
  * new roots — or {action: allocate, obligation, payment, amount} through the public Ledger root of this process.
  */

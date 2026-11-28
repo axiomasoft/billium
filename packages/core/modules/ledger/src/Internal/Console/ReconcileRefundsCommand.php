@@ -9,13 +9,13 @@ use Illuminate\Console\Command;
 use Packman\Attributes\Internal;
 use Throwable;
 
-/** D48 reconcile job: compares the D41 charge refund basis with refund details after the consistency window. */
+/** Reconcile job: compares the charge refund basis with refund details after the consistency window. */
 #[Internal]
 final class ReconcileRefundsCommand extends Command
 {
     protected $signature = 'billium:ledger:reconcile-refunds {--limit=100 : Charges to compare} {--after= : Consistency window in seconds (default: config)}';
 
-    protected $description = 'Record refund basis discrepancies after the consistency window; the ledger is not changed (D41/D48)';
+    protected $description = 'Record refund basis discrepancies after the consistency window; the ledger is not changed';
 
     public function handle(RefundReconciler $reconciler): int
     {

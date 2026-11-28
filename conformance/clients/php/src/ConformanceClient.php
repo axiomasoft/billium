@@ -10,7 +10,7 @@ use Billium\Contracts\Exceptions\ProblemException;
 use stdClass;
 
 /**
- * Test-only transport client. It encodes a command once and never writes money (D9, D58, D61).
+ * Test-only transport client. It encodes a command once and never writes money.
  *
  * Default is one send. A later send exists only for an explicit bound: one 401 credential
  * refresh, or a registry entry that is retryable and sameKey. The body, key and requestedAt

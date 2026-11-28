@@ -13,7 +13,7 @@ use Billium\Ledger\Internal\Commands\ReallocatePaymentCommand;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
-/** allocation.reallocate.v1 (D35, INV-09): LIFO reversal with cause = refund, credit_note vs reversal policy, replay. */
+/** allocation.reallocate.v1: LIFO reversal with cause = refund, credit_note vs reversal policy, replay. */
 #[Group('pg')]
 final class ReallocatePaymentTest extends LedgerTestCase
 {

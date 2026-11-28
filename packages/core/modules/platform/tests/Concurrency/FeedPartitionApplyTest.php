@@ -17,7 +17,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\TestWith;
 
 /**
- * ACC-CON-16: four processes deliver sequences 11..14 of one partition (applied 10) at the same moment; the partition
+ * Four processes deliver sequences 11..14 of one partition (applied 10) at the same moment; the partition
  * lock and the one-event-per-root rule apply them in source order exactly once, whatever the arrival order.
  */
 #[Group('ACC-CON-16')]

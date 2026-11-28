@@ -9,7 +9,7 @@ use Billium\Core\Data\Runtime\FinancialAdmissionToken;
 use LogicException;
 use Packman\Attributes\Internal;
 
-/** Default binding: without a host admission service every financial mutation fails closed (D62). */
+/** Default binding: without a host admission service every financial mutation fails closed. */
 #[Internal]
 final class UnboundSessionAdmission implements FinancialSessionAdmission
 {

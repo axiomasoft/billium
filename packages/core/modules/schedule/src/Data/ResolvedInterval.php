@@ -10,7 +10,7 @@ use Billium\Schedule\Internal\ScheduleProblems;
 use DateTimeImmutable;
 use Packman\Attributes\Api;
 
-/** Immutable UTC boundaries plus retained source resolution evidence (D56; owner schedule). */
+/** Immutable UTC boundaries plus retained source resolution evidence (owner schedule). */
 #[Api]
 final readonly class ResolvedInterval
 {

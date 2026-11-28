@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 use LogicException;
 use Packman\Attributes\Internal;
 
-/** D60: installation fails closed without a separate, unprivileged runtime role. Owner/DBA is outside the backstop. */
+/** Installation fails closed without a separate, unprivileged runtime role. Owner/DBA is outside the backstop. */
 #[Internal]
 final readonly class LedgerPrivileges
 {
@@ -31,7 +31,7 @@ final readonly class LedgerPrivileges
         $data = is_object($row) ? get_object_vars($row) : [];
         if (($data['present'] ?? false) !== true || ($data['same'] ?? true) === true || ($data['privileged'] ?? true) === true
             || ($data['schema_owner'] ?? true) === true || ($data['owner_member'] ?? true) === true || ($data['can_create'] ?? true) === true) {
-            throw new LogicException('D60: ledger requires a separate runtime role without schema-owner powers');
+            throw new LogicException('Ledger requires a separate runtime role without schema-owner powers');
         }
     }
 
@@ -77,7 +77,7 @@ final readonly class LedgerPrivileges
             ORDER BY t
             SQL, [self::textArray(self::TABLES), $runtimeRole, $runtimeRole]);
         foreach ($writable as $row) {
-            throw new LogicException('D60: runtime has effective write privileges on protected ledger table billium_'.self::text($row, 'name'));
+            throw new LogicException('Runtime has effective write privileges on protected ledger table billium_'.self::text($row, 'name'));
         }
         foreach ($this->signatures(self::PRIVATE_ROUTINES, 'Missing ledger guard ', false) as $signature) {
             $pdo->exec('REVOKE ALL ON FUNCTION '.$signature.' FROM '.$role);

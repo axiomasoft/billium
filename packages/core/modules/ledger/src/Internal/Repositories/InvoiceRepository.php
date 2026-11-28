@@ -26,8 +26,8 @@ use Packman\Attributes\Internal;
 use stdClass;
 
 /**
- * Plans the D27 locks of the invoice commands (obligations of the lines, ids ascending, then the invoice) and calls the
- * guarded routine that alone mutates invoices, lines, obligation attachment and receipts (INV-13, D60). No PHP counter
+ * Plans the ordered locks of the invoice commands (obligations of the lines, ids ascending, then the invoice) and calls the
+ * guarded routine that alone mutates invoices, lines, obligation attachment and receipts. No PHP counter
  * or status write.
  */
 #[Internal]

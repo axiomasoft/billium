@@ -29,7 +29,7 @@ use LogicException;
 use Packman\Attributes\Internal;
 
 /**
- * Post-apply linked corrections over imported records using positive obligations, credit notes, draft adjustments, or tombstones (P9.3, D71).
+ * Post-apply linked corrections over imported records using positive obligations, credit notes, draft adjustments, or tombstones.
  */
 #[Internal]
 final readonly class ImportLinkedCorrectionApplier

@@ -217,7 +217,7 @@ final class TestEnvironment
     {
         $database = self::$profileDatabase ?? self::required('DB_DATABASE');
         if (! str_ends_with($database, '_test')) {
-            throw new RuntimeException('D50: DB_DATABASE must end in _test');
+            throw new RuntimeException('DB_DATABASE must end in _test');
         }
 
         return $database;
@@ -268,7 +268,7 @@ final class TestEnvironment
     }
 
     /**
-     * D50 under `pest --parallel` with PACKMAN_TEST_DB_PER_PROCESS=1: committed-data isolation TRUNCATEs every
+     * Under `pest --parallel` with PACKMAN_TEST_DB_PER_PROCESS=1: committed-data isolation TRUNCATEs every
      * table, so workers cannot share one database. Each worker switches DB_DATABASE to its own `<base>_<token>_test`
      * database, created on first use with the shared stand's role bootstrap and then reused across runs. The
      * switch happens in the environment so child processes and restore drills join their worker's database.
@@ -354,7 +354,7 @@ final class TestEnvironment
         TestDatabaseGuard::assertSafe(self::identity(owner: true));
         self::assertDestructiveResetAllowed(owner: true);
         if (! extension_loaded('pdo_pgsql')) {
-            throw new RuntimeException('D50/M-33: pdo_pgsql is required');
+            throw new RuntimeException('Pdo_pgsql is required');
         }
         if (self::$preflightVerified) {
             return;
@@ -367,24 +367,24 @@ final class TestEnvironment
                 break;
             } catch (PDOException $exception) {
                 if (microtime(true) >= $deadline) {
-                    throw new RuntimeException('M-33: PostgreSQL test database unavailable', previous: $exception);
+                    throw new RuntimeException('PostgreSQL test database unavailable', previous: $exception);
                 }
                 usleep(200_000);
             }
         } while (true);
 
         if ((int) $runtime->query("SELECT current_setting('server_version_num')")->fetchColumn() < 160000) {
-            throw new RuntimeException('D50: PostgreSQL 16 or newer is required');
+            throw new RuntimeException('PostgreSQL 16 or newer is required');
         }
         if ($runtime->query('SELECT current_user')->fetchColumn() === $owner->query('SELECT current_user')->fetchColumn()) {
-            throw new RuntimeException('D60: runtime and fixture owner must be different roles');
+            throw new RuntimeException('Runtime and fixture owner must be different roles');
         }
         self::assertRuntimeSafe($runtime);
         self::$preflightVerified = true;
     }
 
     /**
-     * D50: one test run per database. Committed-data isolation TRUNCATEs and drops fixtures, so a second runner
+     * One test run per database. Committed-data isolation TRUNCATEs and drops fixtures, so a second runner
      * on the same database (parallel checks, another shell) would destroy this run's state and exhaust its
      * connection slots. The first DatabaseTestCase of a process waits for this session-level advisory lock and
      * keeps it until the process exits; ConcurrencyStand workers belong to the holder's run and never take it.
@@ -406,14 +406,14 @@ final class TestEnvironment
         try {
             $lease->query('SELECT pg_advisory_lock('.self::LEASE_CLASS.', '.self::LEASE_OBJECT.')');
         } catch (PDOException $exception) {
-            throw new RuntimeException("D50: another test run kept the test database for {$timeoutSeconds}s", previous: $exception);
+            throw new RuntimeException("Another test run kept the test database for {$timeoutSeconds}s", previous: $exception);
         }
         $lease->exec('SET lock_timeout = 0');
         self::$suiteLease = $lease;
     }
 
     /**
-     * D50: the parent waits before starting a timed runner; its child adapters join that same exclusive run.
+     * The parent waits before starting a timed runner; its child adapters join that same exclusive run.
      * The claim is checked against a live advisory lock and a random holder token, never a bare skip flag.
      *
      * @return array<string, string>
@@ -431,7 +431,7 @@ final class TestEnvironment
         }
         $statement = self::$suiteLease->query('SELECT pg_backend_pid()');
         if ($statement === false) {
-            throw new RuntimeException('D50: cannot identify the test database lease holder');
+            throw new RuntimeException('Cannot identify the test database lease holder');
         }
         $pid = $statement->fetchColumn();
 
@@ -447,7 +447,7 @@ final class TestEnvironment
         $holder = json_decode($claim, true);
         if (! is_array($holder) || ($holder['database'] ?? null) !== self::databaseName()
             || ! is_int($holder['pid'] ?? null) || ! is_string($holder['token'] ?? null)) {
-            throw new RuntimeException('D50: invalid inherited test database lease');
+            throw new RuntimeException('Invalid inherited test database lease');
         }
         $statement = self::pdo(owner: true)->prepare(<<<'SQL'
             SELECT 1 WHERE EXISTS (SELECT 1 FROM pg_locks l JOIN pg_stat_activity a ON a.pid=l.pid
@@ -458,7 +458,7 @@ final class TestEnvironment
             SQL);
         $statement->execute([self::LEASE_CLASS, self::LEASE_OBJECT, $holder['pid'], $holder['token']]);
         if ($statement->fetchColumn() !== 1) {
-            throw new RuntimeException('D50: inherited test database lease is no longer held or does not match');
+            throw new RuntimeException('Inherited test database lease is no longer held or does not match');
         }
     }
 
@@ -485,7 +485,7 @@ final class TestEnvironment
               OR has_database_privilege(current_user, current_database(), 'TEMP')
             SQL)->fetchColumn();
         if ($unsafe) {
-            throw new RuntimeException('D60: runtime must not own schema/objects, inherit owner powers or create objects');
+            throw new RuntimeException('Runtime must not own schema/objects, inherit owner powers or create objects');
         }
 
         $protectedTables ??= array_keys(array_filter(
@@ -506,7 +506,7 @@ final class TestEnvironment
         )).'}']);
         $table = $probe->fetchColumn();
         if ($table !== false) {
-            throw new RuntimeException("D60: runtime has direct DML grants on protected ledger table {$table}");
+            throw new RuntimeException("Runtime has direct DML grants on protected ledger table {$table}");
         }
     }
 
@@ -674,7 +674,7 @@ final class TestEnvironment
 
     /**
      * Parallel databases whose suite lease is not held. A second template rebuild must not
-     * terminate or drop a database another run still holds (D50).
+     * terminate or drop a database another run still holds.
      *
      * @return list<string>
      */
@@ -813,7 +813,7 @@ final class TestEnvironment
     {
         $value = $_ENV[$name] ?? $_SERVER[$name] ?? getenv($name);
         if (! is_string($value) || $value === '') {
-            throw new RuntimeException("M-33: required test database environment missing: {$name}");
+            throw new RuntimeException("Required test database environment missing: {$name}");
         }
 
         return $value;

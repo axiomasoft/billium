@@ -12,7 +12,7 @@ use Billium\Platform\Internal\Import\Sources\GenericExportProfile;
 use Billium\Platform\Internal\Import\Sources\GenericExportReader;
 
 /**
- * Product-agnostic sanitized export artifact builders for P9.6 ImportScenarioTest.
+ * Product-agnostic sanitized export artifact builders for ImportScenarioTest.
  */
 final class ImportScenarioFixtures
 {

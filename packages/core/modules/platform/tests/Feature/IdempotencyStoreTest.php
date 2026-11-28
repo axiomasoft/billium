@@ -58,7 +58,7 @@ final class IdempotencyStoreTest extends PlatformTestCase
             self::assertSame(ProblemCode::IdempotencyConflict, $problem->problem);
             self::assertStringNotContainsString('once', $problem->getMessage(), 'conflict discloses nothing of the original');
         }
-        // The original command and receipt stay untouched (COV-133).
+        // The original command and receipt stay untouched.
         $row = $this->row('SELECT digest, outcome FROM billium_idempotency_receipt WHERE command_key = ?', ['k-1']);
         self::assertSame(['digest' => 'sha256:'.str_repeat('a', 64), 'outcome' => 'accepted'], $row);
         self::assertSame(1, $this->rows('billium_test_effect'));
@@ -102,7 +102,7 @@ final class IdempotencyStoreTest extends PlatformTestCase
         self::assertCount(6, array_unique($ids));
         self::assertSame(6, $this->rows('billium_idempotency_receipt', self::LEDGER));
 
-        // A different digest in another seller's scope is not a conflict: scopes never see each other (COV-119).
+        // A different digest in another seller's scope is not a conflict: scopes never see each other.
         $this->callers->set(new Caller('seller-c', 'test', self::INSTALLATION, 'actor-1'));
         $other = $this->runner()->run($this->spec(kind: 'ledger.record', key: 'k', digest: 'sha256:'.str_repeat('9', 64), modules: ['platform']), static fn (): Receipt => self::receipt());
         self::assertFalse($other->replayed);

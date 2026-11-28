@@ -54,7 +54,7 @@ final class RuntimeRoleGrantsTest extends DatabaseTestCase
             self::scalar($runtime, 'SELECT current_user'),
         );
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('D60: runtime must not own');
+        $this->expectExceptionMessage('Runtime must not own');
         TestEnvironment::assertRuntimeSafe(TestEnvironment::pdo(owner: true));
     }
 

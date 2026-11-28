@@ -14,7 +14,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`CollectionManualInterventionService`](../../packages/core/modules/collection/src/Contracts/CollectionManualInterventionService.php) | interface | **Api** | Privileged seller-scoped manual intervention port with CAS revision, non-empty reason, recovery proof, and durable audit repair receipts. |
 | [`CollectionNotificationPort`](../../packages/core/modules/collection/src/Contracts/CollectionNotificationPort.php) | interface | **Spi** | Optional host SPI for delivering deduplicated collection outbox notifications. |
 | [`CollectionNotificationService`](../../packages/core/modules/collection/src/Contracts/CollectionNotificationService.php) | interface | **Api** | Durable deduplicated notification outbox service keyed by (case, step, template revision, channel). |
-| [`CollectionParticipants`](../../packages/core/modules/collection/src/Contracts/CollectionParticipants.php) | interface | **Spi** | The collection owner participants used by host composition (D63/F04). |
+| [`CollectionParticipants`](../../packages/core/modules/collection/src/Contracts/CollectionParticipants.php) | interface | **Spi** | The collection owner participants used by host composition. |
 | [`CollectionSignalService`](../../packages/core/modules/collection/src/Contracts/CollectionSignalService.php) | interface | **Api** | Durable signal-only host facts (grace, read_only, renewal outcome) for ProductCoordinator and authoritative/stale/unknown host status projection. |
 | [`ConsentBindingService`](../../packages/core/modules/collection/src/Contracts/ConsentBindingService.php) | interface | **Api** | Owns versioned ConsentBinding proofs, durable DunningCase-rank consent/cancellation guards, immutable original refund routes, and requires_action customer-acti… |
 | [`ConsentQueries`](../../packages/core/modules/collection/src/Contracts/ConsentQueries.php) | interface | **Api** | Authenticated, seller-scoped read queries for consent proofs, durable guard state, tombstones, customer-action receipts, and historical refund routes. |
@@ -29,7 +29,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
 | [`ApplyManualIntervention`](../../packages/core/modules/collection/src/Data/ApplyManualIntervention.php) | class | **Api** |  |
-| [`AuthorizeCollection`](../../packages/core/modules/collection/src/Data/AuthorizeCollection.php) | class | **Api** | PHP owner command for an executable collection step (D56, D63/F04). |
+| [`AuthorizeCollection`](../../packages/core/modules/collection/src/Data/AuthorizeCollection.php) | class | **Api** | PHP owner command for an executable collection step. |
 | [`CollectionHostSignalView`](../../packages/core/modules/collection/src/Data/CollectionHostSignalView.php) | class | **Api** |  |
 | [`CollectionHostStatusSnapshot`](../../packages/core/modules/collection/src/Data/CollectionHostStatusSnapshot.php) | class | **Api** |  |
 | [`CollectionNotificationMessage`](../../packages/core/modules/collection/src/Data/CollectionNotificationMessage.php) | class | **Api** |  |
@@ -168,10 +168,10 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`CollectionRecoveryWorker`](../../packages/core/modules/collection/src/Internal/Work/CollectionRecoveryWorker.php) | class | *Internal* | D54/D56/D57/D63: replay the saved admission, look up the original attempt and project reduced, applied facts. |
-| [`CollectionWork`](../../packages/core/modules/collection/src/Internal/Work/CollectionWork.php) | class | *Internal* | D54/D56/D62: bounded worker claims with a financial epoch and a monotonically increasing lease fence. |
+| [`CollectionRecoveryWorker`](../../packages/core/modules/collection/src/Internal/Work/CollectionRecoveryWorker.php) | class | *Internal* | Replay the saved admission, look up the original attempt and project reduced, applied facts. |
+| [`CollectionWork`](../../packages/core/modules/collection/src/Internal/Work/CollectionWork.php) | class | *Internal* | Bounded worker claims with a financial epoch and a monotonically increasing lease fence. |
 | [`CollectionWorkClaim`](../../packages/core/modules/collection/src/Internal/Work/CollectionWorkClaim.php) | class | *Internal* |  |
-| [`DueCollectionWorker`](../../packages/core/modules/collection/src/Internal/Work/DueCollectionWorker.php) | class | *Internal* | COV-328/D56: schedule one authenticated ledger keyset page using the host's selected mandate. |
+| [`DueCollectionWorker`](../../packages/core/modules/collection/src/Internal/Work/DueCollectionWorker.php) | class | *Internal* | Schedule one authenticated ledger keyset page using the host's selected mandate. |
 
 ## Laravel
 

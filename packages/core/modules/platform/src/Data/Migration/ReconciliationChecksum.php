@@ -8,7 +8,7 @@ use Billium\Platform\Internal\Migration\MigrationDigest;
 use InvalidArgumentException;
 use Packman\Attributes\Api;
 
-/** D63/F06: totals are signed decimal minor-unit strings, and the checksum covers the selected facts and retained identities. */
+/** Totals are signed decimal minor-unit strings, and the checksum covers the selected facts and retained identities. */
 #[Api(since: '1.0')]
 final readonly class ReconciliationChecksum
 {

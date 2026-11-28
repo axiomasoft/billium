@@ -11,7 +11,7 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Packman\Attributes\Api;
 
 /**
- * allocation.reallocate.v1 (D35, D47): keyed policy reallocation of a payment that a confirmed refund over-allocated.
+ * allocation.reallocate.v1: keyed policy reallocation of a payment that a confirmed refund over-allocated.
  * The billing account and currency are the payment's own; the command never moves value across accounts.
  */
 #[Api(since: '1.0')]

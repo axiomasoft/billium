@@ -157,7 +157,7 @@ final class OperationRunnerTest extends PlatformTestCase
         self::assertSame(0, $this->rows('billium_idempotency_receipt', "command_kind NOT LIKE 'platform.%'"));
         self::assertSame(0, $this->rows('billium_test_effect'));
 
-        // D31: the receipt was not stored, so the same key with a corrected payload is a new command.
+        // The receipt was not stored, so the same key with a corrected payload is a new command.
         $outcome = $this->runner()->run($this->spec(key: 'k-none', digest: 'sha256:'.str_repeat('2', 64)), static fn (): Receipt => self::receipt());
         self::assertTrue($outcome->accepted);
         self::assertFalse($outcome->replayed);
@@ -171,7 +171,7 @@ final class OperationRunnerTest extends PlatformTestCase
             $outcome = $this->runner()->run($this->spec(key: "k-retry-{$state}"), function (TransactionContext $context) use (&$attempts, &$effects, $state): Receipt {
                 $attempts++;
                 self::effect($context, "attempt {$context->attempt()}");
-                // A network effect may only be woken after commit: it must run exactly once (COV-288).
+                // A network effect may only be woken after commit: it must run exactly once.
                 $context->afterCommit(function () use (&$effects): void {
                     $effects++;
                 });

@@ -10,7 +10,7 @@ use DateTimeImmutable;
 use Packman\Attributes\Api;
 
 /**
- * Frozen host inputs; null dueAt disables automatic due collection (D60, BC-ENV-28).
+ * Frozen host inputs; null dueAt disables automatic due collection (BC-ENV-28).
  */
 #[Api(since: '1.0')]
 final readonly class ObligationDuePolicy

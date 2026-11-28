@@ -15,7 +15,7 @@ final class DrainParkedCommand extends Command
 {
     protected $signature = 'billium:ledger:drain-parked {--limit=100 : Parked observations to retry} {--partition= : Also drain this partition id}';
 
-    protected $description = 'Retry dependency-parked payment observations and drain partitions one sequence per root (D60)';
+    protected $description = 'Retry dependency-parked payment observations and drain partitions one sequence per root';
 
     public function handle(ParkedDrainer $drainer): int
     {

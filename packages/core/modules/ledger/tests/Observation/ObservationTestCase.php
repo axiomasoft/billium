@@ -24,7 +24,7 @@ use Billium\Platform\Data\Inbox\BootstrapPartition;
 use stdClass;
 
 /**
- * Committed-data base of the observation proofs (D50): a caller granted the three source authorities, obligations and
+ * Committed-data base of the observation proofs: a caller granted the three source authorities, obligations and
  * settlement intents through the public Ledger root, observations through the public ObservationApplier.
  */
 abstract class ObservationTestCase extends LedgerTestCase

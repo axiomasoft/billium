@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Billium\ClientConformance\ConformanceClient;
 
 /*
- * JSON stdin/stdout for the test-only consumer. Public contracts only (D9).
+ * JSON stdin/stdout for the test-only consumer. Public contracts only.
  */
 
 require __DIR__.'/bootstrap.php';

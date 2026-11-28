@@ -9,7 +9,7 @@ use Billium\Ledger\Data\Runtime\BillingAccountScope;
 use Packman\Attributes\Api;
 
 /**
- * Immutable command input; persistence and root transaction admission belong to the ledger runner (D60).
+ * Immutable command input; persistence and root transaction admission belong to the ledger runner.
  */
 #[Api(since: '1.0')]
 final readonly class RecordObligation

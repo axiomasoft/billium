@@ -25,7 +25,7 @@ use Packman\Attributes\Api;
 use RuntimeException;
 
 /**
- * Deterministic in-memory FinBridge consumer test double for P6.6 conformance and integration tests.
+ * Deterministic in-memory FinBridge consumer test double for conformance and integration tests.
  *
  * Separates transport delivery ACKs from economic applied receipts, enforces idempotency under N replays,
  * quarantines unsupported schemas with post-upgrade recovery, supports outage/backpressure simulation,

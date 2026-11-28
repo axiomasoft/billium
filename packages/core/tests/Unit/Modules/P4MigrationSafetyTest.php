@@ -30,7 +30,7 @@ final class P4MigrationSafetyTest extends TestCase
         $rollback = [$migration, 'down'];
         self::assertIsCallable($rollback);
         $this->expectException(LogicException::class);
-        $this->expectExceptionMessage('forward-only (REQ-FAIL-29)');
+        $this->expectExceptionMessage('forward-only');
         $rollback();
     }
 }

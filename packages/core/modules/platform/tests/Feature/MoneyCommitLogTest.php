@@ -13,7 +13,7 @@ use Billium\Core\Tests\TestEnvironment;
 use Billium\Platform\Tests\PlatformTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
-/** D54: money_commit_log is diagnostic, append-only, one row per monetary root Tx with its session epoch. */
+/** Money_commit_log is diagnostic, append-only, one row per monetary root Tx with its session epoch. */
 #[Group('D54')]
 #[Group('pg')]
 final class MoneyCommitLogTest extends PlatformTestCase

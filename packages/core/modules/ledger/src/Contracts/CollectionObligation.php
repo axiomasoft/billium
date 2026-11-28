@@ -10,7 +10,7 @@ use DateTimeImmutable;
 use Packman\Attributes\Spi;
 use Packman\Attributes\SpiKind;
 
-/** Ledger-owned collection eligibility under the obligation lock (D35, D60, D63). */
+/** Ledger-owned collection eligibility under the obligation lock. */
 #[Spi(kind: SpiKind::Call, since: '1.0')]
 interface CollectionObligation
 {

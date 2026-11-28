@@ -413,7 +413,7 @@ final readonly class DatabaseCollectionParticipants implements CollectionPartici
             return null;
         }
 
-        // The locked, retired owner is durable evidence even after a financial epoch change (REQ-FAIL-19, D54/D63).
+        // The locked, retired owner is durable evidence even after a financial epoch change.
         return 'collection-owner-retired:'.hash('sha256', $id.':'.RowCast::integer($revision, 'owner_revision'));
     }
 

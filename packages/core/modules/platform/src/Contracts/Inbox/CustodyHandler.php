@@ -12,7 +12,7 @@ use Packman\Attributes\SpiKind;
 use stdClass;
 
 /**
- * The owning module's economic application of ONE accounted delivery (INV-08). It runs inside the root Tx of that single
+ * The owning module's economic application of ONE accounted delivery. It runs inside the root Tx of that single
  * event, after the partition lock (rank 30): it plans and locks its obligation/invoice/funds rows through the context in
  * the global order and writes its own state, receipt and outbox. Platform never loops over further events inside it.
  */

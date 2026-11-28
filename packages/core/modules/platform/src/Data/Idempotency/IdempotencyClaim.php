@@ -8,7 +8,7 @@ use Billium\Core\Data\Runner\StoredOutcome;
 use InvalidArgumentException;
 use Packman\Attributes\Api;
 
-/** Either a new in-progress claim row of this root Tx or the replay of a completed one (INV-05). */
+/** Either a new in-progress claim row of this root Tx or the replay of a completed one. */
 #[Api(since: '1.0')]
 final readonly class IdempotencyClaim
 {

@@ -13,7 +13,7 @@ use Packman\Attributes\SpiKind;
 
 /**
  * Installation administration of the platform module: explicit bootstrap, the local financial-session barrier
- * (D54/D62) and module lifecycle transitions (D55). The installation is the authenticated caller's. Every transition is
+ * and module lifecycle transitions. The installation is the authenticated caller's. Every transition is
  * a keyed root operation (its ref is the idempotency key); replays return the original receipt.
  *
  * Session protocol: the host authority opens a new epoch in recovery for every deployment/attachment generation

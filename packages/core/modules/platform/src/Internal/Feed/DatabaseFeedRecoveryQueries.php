@@ -13,7 +13,7 @@ use Illuminate\Database\DatabaseManager;
 use LogicException;
 use Packman\Attributes\Internal;
 
-/** D45/D60: consumers receive scoped metadata; table access stays with platform on the supplied snapshot connection. */
+/** Consumers receive scoped metadata; table access stays with platform on the supplied snapshot connection. */
 #[Internal]
 final readonly class DatabaseFeedRecoveryQueries implements FeedRecoveryQueries
 {

@@ -10,7 +10,7 @@ use Packman\Attributes\Spi;
 use Packman\Attributes\SpiKind;
 
 /**
- * Read-only participant reading the live locked invoice totals and per-obligation lines inside an active root transaction (D60).
+ * Read-only participant reading the live locked invoice totals and per-obligation lines inside an active root transaction.
  */
 #[Spi(kind: SpiKind::Call, since: '1.0')]
 interface LockedInvoiceSnapshotParticipant

@@ -33,7 +33,7 @@ use Closure;
 use DateTimeImmutable;
 use Packman\Attributes\Internal;
 
-/** D54/D56/D57/D63: replay the saved admission, look up the original attempt and project reduced, applied facts. */
+/** Replay the saved admission, look up the original attempt and project reduced, applied facts. */
 #[Internal]
 final readonly class CollectionRecoveryWorker
 {

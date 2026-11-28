@@ -559,7 +559,7 @@ final class DocumentsIntegrationTest extends ExecutionTestCase
             $ledger = $app->make(Ledger::class);
             $this->bindArithmeticTaxPort($app);
 
-            // Host supplies accepted offer/terms snapshot & stable purchase/component identity before obligations (COV-364).
+            // Host supplies accepted offer/terms snapshot & stable purchase/component identity before obligations.
             $offerSnapshot = [
                 'offerRef' => 'offer-bundle-sep-1',
                 'termsVersion' => 'terms-2026-v1',
@@ -643,7 +643,7 @@ final class DocumentsIntegrationTest extends ExecutionTestCase
             self::assertNotNull($legalView);
             $legalReceiptRef = $legalView->receiptRef;
 
-            // Receipt Level 2: Payment capture + N=4 observation replays (COV-006, COV-365).
+            // Receipt Level 2: Payment capture + N=4 observation replays.
             $this->declareSettlementIntent($app, $account, 'intent-a', ['ob-sep-1', 'ob-sep-2']);
             Fixture::seedMerchant($app);
             Fixture::host($app, $path);
@@ -681,7 +681,7 @@ final class DocumentsIntegrationTest extends ExecutionTestCase
             self::assertSame('paid', $queries->invoice('inv-sep')['status']);
             self::assertSame(2, $this->rows('billium_allocation'));
 
-            // Receipt Level 3: Fiscal adapter state machine experiences lost response & provider outage (COV-372, COV-523).
+            // Receipt Level 3: Fiscal adapter state machine experiences lost response & provider outage.
             $fiscalDriver = new SimulatedFiscalDriver(
                 id: 'cloud-fiscal-sep',
                 version: 'fiscal-driver.v1',
@@ -737,7 +737,7 @@ final class DocumentsIntegrationTest extends ExecutionTestCase
             self::assertNotNull($accountingReceipt);
             $accountingReceiptRef = $accountingReceipt->receiptRef;
 
-            // Receipt Level 5: Host provisioning/fulfilment double experiences timeout then delayed activation while fiscal is STILL down (COV-006, COV-364, COV-365, COV-372).
+            // Receipt Level 5: Host provisioning/fulfilment double experiences timeout then delayed activation while fiscal is STILL down.
             $hostFulfilment = new class
             {
                 public int $attempts = 0;
@@ -796,7 +796,7 @@ final class DocumentsIntegrationTest extends ExecutionTestCase
             self::assertNotNull($intentAfterFulfil);
             self::assertSame(FiscalIntentState::Unknown, $intentAfterFulfil->state);
 
-            // Finally fiscal provider recovers via lookup (COV-523): separate fiscal receipt obtained with 0 duplicate registrations & 1 PSP charge.
+            // Finally fiscal provider recovers via lookup: separate fiscal receipt obtained with 0 duplicate registrations & 1 PSP charge.
             $fiscalDriver->setOffline(false);
             $fiscalRecovered = $fiscal->lookupIntent($execScope, $saleIntent->intentRef, $t0->modify('+2 hours'));
             self::assertSame(FiscalIntentState::Registered, $fiscalRecovered->state);

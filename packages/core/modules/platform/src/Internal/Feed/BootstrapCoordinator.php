@@ -26,7 +26,7 @@ use Packman\Attributes\Internal;
 use stdClass;
 
 /**
- * Staged partition bootstrap (D60, inbox-feed): the complete snapshot is verified and stored first; every item then gets a
+ * Staged partition bootstrap (inbox-feed): the complete snapshot is verified and stored first; every item then gets a
  * durable disposition in its own recovery root; only when none is undisposed does one short root adopt the cursor, retire
  * the old partition and activate the new one together with the held tail. A partition is never active-partial and a crash
  * resumes from the item dispositions.

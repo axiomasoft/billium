@@ -10,7 +10,7 @@ use Billium\Platform\Data\Migration\RoutingScope;
 use Packman\Attributes\Spi;
 use Packman\Attributes\SpiKind;
 
-/** D58. The host calls reserve before sending a command and uses the stored binding for all recovery. */
+/** The host calls reserve before sending a command and uses the stored binding for all recovery. */
 #[Spi(kind: SpiKind::Call, since: '1.0')]
 interface AuthorityRouter
 {

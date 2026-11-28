@@ -11,7 +11,7 @@ use LogicException;
 use Packman\Attributes\Internal;
 
 /**
- * Complete pre-read row set of one allocation-family command in the D27 order: settlement intents (65) → obligations
+ * Complete pre-read row set of one allocation-family command in the global lock order: settlement intents (65) → obligations
  * (70) → invoices (80) → payments, then customer credits (90). The guarded routine takes the same rows again, which is
  * reentrant after this prelock; the caller re-reads its plan under the locks and retries on a change (LockPlanChanged).
  */

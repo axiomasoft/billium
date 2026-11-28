@@ -26,7 +26,7 @@ use PDO;
 use PDOException;
 
 /**
- * Committed-data base for platform proofs (D50): a host caller and a host process-token authority are bound as doubles;
+ * Committed-data base for platform proofs: a host caller and a host process-token authority are bound as doubles;
  * billium_test_effect stands for the owning module's state written in the root Tx.
  */
 abstract class PlatformTestCase extends DatabaseTestCase

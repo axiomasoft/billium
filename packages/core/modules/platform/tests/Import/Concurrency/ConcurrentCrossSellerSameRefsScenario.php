@@ -20,7 +20,7 @@ use Billium\Platform\Internal\Import\Sources\GenericExportReader;
 use Illuminate\Foundation\Application;
 
 /**
- * IM-05 + IM-12 + Cross-source same refs across sellers:
+ * Cross-source same refs across sellers:
  * Concurrent workers for seller-alpha (workers 0, 1) and seller-beta (workers 2, 3)
  * simultaneously import batches containing identical sourceInstallation, sourceBook,
  * sourceRecordId, obligationRef, paymentRef, originalOperationRef and historical sourceNumber.

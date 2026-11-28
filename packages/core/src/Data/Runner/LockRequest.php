@@ -36,7 +36,7 @@ final readonly class LockRequest
             throw new InvalidArgumentException('The claim is an insert, not a row lock');
         }
         if (preg_match('/^billium_[a-z0-9_]+$/', $table) !== 1 || preg_match('/^[a-z][a-z0-9_]*$/', $keyColumn) !== 1) {
-            throw new InvalidArgumentException('Lock target must be a billium_ table and a plain column (D45)');
+            throw new InvalidArgumentException('Lock target must be a billium_ table and a plain column');
         }
         if ($segment < 0 || $segment > 9) {
             throw new InvalidArgumentException('Lock segment out of range');

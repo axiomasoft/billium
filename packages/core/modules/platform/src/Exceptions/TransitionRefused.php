@@ -12,7 +12,7 @@ use Packman\Errors\Exceptions\CodedException;
 
 /**
  * A session or module transition was refused or could not take its barrier in time. Nothing changed and the transition
- * claim rolled back; a seal refusal never asserts that the session was safely sealed (D54).
+ * claim rolled back; a seal refusal never asserts that the session was safely sealed.
  */
 #[Api(since: '1.0')]
 final class TransitionRefused extends CodedException

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Repeatable profile matrix smoke check for Billium P10.1.
+# Repeatable profile matrix smoke check for Billium.
 # Covers: contract-only, embedded, standalone, remote profiles.
 # Run inside the toolchain image:
 #   docker compose run --rm -u 0:0 toolchain bash scripts/smoke/profile-matrix.sh [all|contract-only|embedded|standalone|remote]

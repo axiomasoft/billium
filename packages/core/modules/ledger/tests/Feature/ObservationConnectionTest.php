@@ -12,7 +12,7 @@ use Illuminate\Database\DatabaseManager;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * Embedded hosts keep their own default database (D45): with billium.connection different from database.default the
+ * Embedded hosts keep their own default database: with billium.connection different from database.default the
  * observation path reads receipts and selects drain/reconcile work on the Billium connection only. The host default
  * here points at an absent database, so any query against it would fail.
  */

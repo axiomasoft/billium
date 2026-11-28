@@ -441,7 +441,7 @@ final readonly class EventFeedReader implements EventFeed
     }
 
     /**
-     * D52 diagnostics only. Null age means the runtime cannot observe the blocker; no freshness claim follows.
+     * Diagnostics only. Null age means the runtime cannot observe the blocker; no freshness claim follows.
      *
      * @return array{safeHorizonTxId:string,horizonAgeSeconds:?int,safePendingRows:int}
      */

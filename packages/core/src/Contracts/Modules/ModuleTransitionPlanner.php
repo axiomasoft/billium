@@ -11,7 +11,7 @@ use Billium\Core\Enums\Modules\ModuleLifecycleState;
 use Packman\Attributes\Spi;
 use Packman\Attributes\SpiKind;
 
-/** Read-only preview of disable/retire/uninstall; the applying mutator and its re-check belong to P3.3. */
+/** Read-only preview of disable/retire/uninstall. */
 #[Spi(kind: SpiKind::Call, since: '1.0')]
 interface ModuleTransitionPlanner
 {

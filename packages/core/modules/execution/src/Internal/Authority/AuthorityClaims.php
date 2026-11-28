@@ -21,7 +21,7 @@ final class AuthorityClaims
 {
     public static function collectionPermitAuthorizationRef(FrozenBinding $binding, EffectKind $kind): ?string
     {
-        // A refund is independently authorized against the retained charge binding and capacity (D56/D57/D63).
+        // A refund is independently authorized against the retained charge binding and capacity.
         return $kind === EffectKind::Refund ? null : $binding->collectionAuthorizationRef;
     }
 

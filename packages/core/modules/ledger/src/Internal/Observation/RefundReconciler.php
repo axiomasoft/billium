@@ -20,7 +20,7 @@ use LogicException;
 use Packman\Attributes\Internal;
 
 /**
- * D48 reconcile job of the D41 refund basis: after the configured consistency window the ordinary charge basis
+ * Reconcile job of the charge refund basis: after the configured consistency window the ordinary charge basis
  * (payment.refunded_minor, assigned only from the charge refundedTotal) is compared with the succeeded refund details
  * linked to that charge. The window is a heuristic, not proof that the source is complete; the comparison therefore
  * stores its basis digest (charge revision AND the ordered contributing refund revisions/amounts): an identical basis

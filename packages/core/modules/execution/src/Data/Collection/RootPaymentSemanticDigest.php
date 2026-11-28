@@ -11,7 +11,7 @@ use Billium\Execution\Data\OriginDecision;
 use Billium\Execution\Internal\Identity\PaymentIdentity;
 use Packman\Attributes\Api;
 
-/** Produces the exact execution digest a collection authorization freezes (D63/F04). */
+/** Produces the exact execution digest a collection authorization freezes. */
 #[Api(since: '1.0')]
 final readonly class RootPaymentSemanticDigest
 {

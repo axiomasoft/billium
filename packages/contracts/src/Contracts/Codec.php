@@ -18,7 +18,7 @@ use Packman\Attributes\Api;
 use stdClass;
 
 /**
- * Strict decode and canonical encode of the envelopes of the spec revision, plus the digest of D32.
+ * Strict decode and canonical encode of the envelopes of the spec revision, plus the digest of.
  */
 #[Api(since: '1.0')]
 final readonly class Codec
@@ -124,7 +124,7 @@ final readonly class Codec
         }
         if ($value->schema === 'billium.feed.page.v1' && is_array($value->events)) {
             foreach ($value->events as $event) {
-                // D63: a page cannot bypass the event codec's semantics or this client's negotiated capabilities.
+                // A page cannot bypass the event codec's semantics or this client's negotiated capabilities.
                 $this->decode(Jcs::canonicalize($event));
             }
         }

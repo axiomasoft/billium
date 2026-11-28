@@ -11,7 +11,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Packman\Attributes\Api;
 
-/** Approved host input, not an agreement lifecycle (REQ-CON-33, REQ-NBR-06; owner schedule). */
+/** Approved host input, not an agreement lifecycle (owner schedule). */
 #[Api]
 final readonly class ScheduleRevisionTerms
 {

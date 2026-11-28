@@ -84,7 +84,7 @@ use Packman\Schema\Contracts\Migration\SchemaMigrator;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * Integrated ACC-RST-12 cross-module exposure fixture (Execution + Ledger + Documents + Fiscal + Accounting).
+ * Integrated cross-module exposure fixture (Execution + Ledger + Documents + Fiscal + Accounting).
  *
  * Proves capture 100 + two confirmed actual refunds 70 + 70 produce:
  * - 1 sale fiscal intent (100) + 2 refund fiscal intents (70 + 70 = 140, 2nd marked exceptional, NOT suppressed);
@@ -334,7 +334,7 @@ final class FiscalAccountingExposureTest extends ExecutionTestCase
                 $consumer->consume($outboxRecord, $mapper);
             }
 
-            // Assert exact ACC-RST-12 accounting totals: CashIn 100, CashOut 140 (NOT 180!), NoncashExposure 40, Receivable 100, NoncashAllocation 100.
+            // Assert exact accounting totals: CashIn 100, CashOut 140 (NOT 180!), NoncashExposure 40, Receivable 100, NoncashAllocation 100.
             self::assertSame(1, $consumer->appliedCount(AccountingFactCategory::CashIn));
             self::assertSame(100, $consumer->totalMinorByCategory(AccountingFactCategory::CashIn, 'RUB'));
             self::assertSame(2, $consumer->appliedCount(AccountingFactCategory::CashOut, AccountingFactKind::RefundSucceeded));
@@ -588,7 +588,7 @@ final class FiscalAccountingExposureTest extends ExecutionTestCase
     }
 
     /**
-     * Sets up the full integrated ACC-RST-12 fixture across Documents + Ledger + Execution:
+     * Sets up the full integrated accounting fixture across Documents + Ledger + Execution:
      * legal invoice 100 (1.00 RUB), capture 100, confirmed refund `replacement` (70) + late confirmed refund `old` (70).
      *
      * @return array{
@@ -648,7 +648,7 @@ final class FiscalAccountingExposureTest extends ExecutionTestCase
             invoiceRef: 'inv-acc12',
             customerRef: 'cust-acc12',
             lines: [new InvoiceLineInput('ob-acc12', 0, ['name' => 'Micro Service'])],
-            snapshot: ['buyer' => 'ACC-RST-12 Buyer LLC'],
+            snapshot: ['buyer' => 'Buyer LLC'],
         ))->orThrow();
 
         $finalizations = $app->make(DocumentFinalizationService::class);
@@ -667,7 +667,7 @@ final class FiscalAccountingExposureTest extends ExecutionTestCase
             roundingMode: 'half_up',
             discountTaxOrder: DiscountTaxOrder::DiscountBeforeTax,
             lines: [new DocumentLineBasis('line-1', 'ob-acc12', 'comp-1', '1', '1.00', 100, 0, 'VAT0', '0.00', 'Micro Service')],
-            buyerSnapshot: ['legalName' => 'ACC-RST-12 Buyer LLC', 'taxId' => 'RU-7712345678'],
+            buyerSnapshot: ['legalName' => 'Buyer LLC', 'taxId' => 'RU-7712345678'],
             termsSnapshot: ['offerRef' => 'offer-acc12', 'roundingPolicyVersion' => 'half_up/1'],
         ));
         $started = $finalizations->startFinalization($docScope, 'fin-acc12');

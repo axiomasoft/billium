@@ -34,7 +34,7 @@ final readonly class RequestScope
     public static function select(ExecutionContext $context, Envelope $envelope, mixed $routeOperation): ResourceScope
     {
         $body = $envelope->raw;
-        // D9: usage facts in this revision carry a seller selector only.
+        // Usage facts in this revision carry a seller selector only.
         $hasBodyScope = ! $envelope instanceof UsageFact && ! $envelope instanceof UsageFactV2;
         if (($body->sellerRef ?? null) !== $context->sellerRef
             || ($hasBodyScope && (($body->environment ?? null) !== $context->environment || ($body->installationRef ?? null) !== $context->installationRef))

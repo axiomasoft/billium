@@ -38,7 +38,7 @@ use RuntimeException;
 use stdClass;
 
 /**
- * Staged bootstrap of a recovering partition (PF-13, PF-14, ACC-RST-07, REQ-FAIL-22/23): a complete verified snapshot, a
+ * Staged bootstrap of a recovering partition (23): a complete verified snapshot, a
  * durable disposition per item, crash-resume, and one short atomic adoption of the cursor. Never an active partial state.
  */
 #[Group('PF-13')]
@@ -349,7 +349,7 @@ final class BootstrapAtomicAdoptionTest extends InboxTestCase
     {
         $old = $this->seedPartition(10);
         $handler = new JournalHandler(['op-3#1' => HandlerOutcome::parkedDependency('allocation', 'pay-9')]);
-        // Source restored under a new lineage: deliveries are held, nothing is applied (PF-14).
+        // Source restored under a new lineage: deliveries are held, nothing is applied.
         $hold = $this->custody($this->envelope(21, lineage: 'L2'), $handler);
         self::assertSame(CustodyDisposition::RecoveryRequired, $hold->disposition);
         $this->custody($this->envelope(22, lineage: 'L2'), $handler);

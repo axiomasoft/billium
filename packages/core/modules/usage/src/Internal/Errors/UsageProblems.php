@@ -11,7 +11,7 @@ use Packman\Attributes\Internal;
 #[Internal]
 final class UsageProblems
 {
-    /** Domain detail retains the aggregation code without widening the frozen wire enum (D63). */
+    /** Domain detail retains the aggregation code without widening the frozen wire enum. */
     public static function error(string $slug): ProblemException
     {
         return new ProblemException(problem: ProblemCode::UsageConflict, detail: 'billium.usage.'.$slug);

@@ -12,16 +12,16 @@ use Billium\Ledger\Internal\Policy\ProRataOpenPolicy;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
-/** pro_rata_open/1 worked examples of the allocation-policy knowledge (D46, SB-07, REQ-ACC-10); no database, no float. */
+/** pro_rata_open/1 worked examples of the allocation-policy knowledge; no database, no float. */
 final class ProRataOpenPolicyTest extends TestCase
 {
     /** @return iterable<string, array{int, list<int>, list<int>}> */
     public static function examples(): iterable
     {
-        // SB-07: O1 = 66.67, O2 = 33.33; 50.00 → 3333.5 / 1666.5 → floor 3333 + 1666, the tie goes to index 0.
-        yield 'SB-07 first payment' => [5000, [6667, 3333], [3334, 1666]];
+        // O1 = 66.67, O2 = 33.33; 50.00 → 3333.5 / 1666.5 → floor 3333 + 1666, the tie goes to index 0.
+        yield 'First payment' => [5000, [6667, 3333], [3334, 1666]];
         // Second payment of 50.00 meets open 3333 and 1667: A = O, both settled.
-        yield 'SB-07 second payment' => [5000, [3333, 1667], [3333, 1667]];
+        yield 'Second payment' => [5000, [3333, 1667], [3333, 1667]];
         yield 'partial payment rev1' => [3000, [10000], [3000]];
         yield 'partial payment rev2 delta' => [7000, [7000], [7000]];
         yield 'overpayment leaves the excess unallocated' => [12000, [6000, 4000], [6000, 4000]];
@@ -53,7 +53,7 @@ final class ProRataOpenPolicyTest extends TestCase
     public function test_the_tie_break_follows_target_position_not_obligation_identity(): void
     {
         $policy = new ProRataOpenPolicy;
-        // Reordering the targets moves the extra minor unit with the position (COV-287).
+        // Reordering the targets moves the extra minor unit with the position.
         self::assertSame([3334, 1666], array_map(static fn (Money $m): int => $m->minor, $policy->allocate(new Money(5000, Currency::of('RUB')), [6667, 3333])));
         self::assertSame([1667, 3333], array_map(static fn (Money $m): int => $m->minor, $policy->allocate(new Money(5000, Currency::of('RUB')), [3333, 6667])));
         self::assertSame('pro_rata_open/1', ProRataOpenPolicy::VERSION);

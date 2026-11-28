@@ -19,7 +19,7 @@ interface RootAdmission
 {
     /**
      * Rank 15: billium_financial_session FOR SHARE, held to commit. A financial mode also verifies the host process
-     * token against the adopted session (D62) and returns its epoch; Administrative returns the current epoch or null.
+     * token against the adopted session and returns its epoch; Administrative returns the current epoch or null.
      *
      * @throws ProblemException installation.quarantined (no/invalid token) or recovery.required
      */
@@ -27,7 +27,7 @@ interface RootAdmission
 
     /**
      * Rank 25: every module of the declared closure FOR SHARE in module_id order, validated against its descriptor,
-     * dependency closure, schema write range and the operation class (D55).
+     * dependency closure, schema write range and the operation class.
      *
      * @return array<string, int> module id => generation
      *

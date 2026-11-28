@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
-// ACC-RST-10: fixture only, outside production migration identities (D21).
+// Fixture only, outside production migration identities.
 return new class extends Migration
 {
     public function up(): void
@@ -42,6 +42,6 @@ return new class extends Migration
 
     public function down(): never
     {
-        throw new LogicException('Contract is deferred until after the rollback window (D21).');
+        throw new LogicException('Contract is deferred until after the rollback window.');
     }
 };

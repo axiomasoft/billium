@@ -183,7 +183,7 @@ final class InvoiceCommandsTest extends LedgerTestCase
         $row = $this->invoiceRow();
         self::assertSame(['issued', 1200, 1000, 200], [$row['status'], self::integer($row['total_minor']), self::integer($row['subtotal_minor']), self::integer($row['tax_minor'])]);
         self::assertNotNull($row['issued_at']);
-        self::assertNull($row['legal_document_ref'], 'D49: no legal number in P3');
+        self::assertNull($row['legal_document_ref'], 'No legal number in P3');
         self::assertSame(1200, self::integer($this->value('SELECT sum(amount_minor) FROM billium_invoice_line')));
         self::assertSame($o, self::integer($this->value('SELECT obligation_id FROM billium_invoice_line')));
 

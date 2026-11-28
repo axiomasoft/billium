@@ -14,7 +14,7 @@ use Billium\Ledger\Data\Settlements\DeclareSettlementIntent;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
-/** allocate and reverseAllocation through the public root (INV-09, COV-166, COV-289): receipts, refusals, replay, events. */
+/** allocate and reverseAllocation through the public root: receipts, refusals, replay, events. */
 #[Group('pg')]
 final class AllocationCommandsTest extends LedgerTestCase
 {
@@ -39,7 +39,7 @@ final class AllocationCommandsTest extends LedgerTestCase
         self::assertIsArray($payload);
         self::assertSame(['3000', 'partially_paid', 'payment'], [$payload['amount_minor'] ?? null, $payload['invoice_status'] ?? null, $payload['source_kind'] ?? null]);
 
-        // Same key → stored outcome; same identity under a new key → the same receipt, no second row (ACC-RST-05 shape).
+        // Same key → stored outcome; same identity under a new key → the same receipt, no second row (shape).
         self::assertSame($first->body, $this->allocateFrom('a1', 'obligation-a', '30.00')->body);
         $twin = $this->allocateFrom('a1', 'obligation-a', '30.00', key: 'another-key');
         self::assertSame($first->body, $twin->body);
@@ -52,7 +52,7 @@ final class AllocationCommandsTest extends LedgerTestCase
             self::assertSame(ProblemCode::IdempotencyConflict, $e->problem);
         }
 
-        // REQ-ACC-10: the remaining delta settles the invoice.
+        // The remaining delta settles the invoice.
         self::assertTrue($this->allocateFrom('a2', 'obligation-a', '70.00')->accepted);
         self::assertSame('paid', $this->invoiceStatus());
         self::assertSame('settled', $this->obligationState('obligation-a')['status']);
@@ -73,7 +73,7 @@ final class AllocationCommandsTest extends LedgerTestCase
         self::assertSame(ProblemCode::AllocationExceedsAvailable, $this->allocateFrom('a3', 'o2', '20.01')->problem);
         self::assertTrue($this->allocateFrom('a4', 'o2', '20.00')->accepted);
 
-        // A confirmed refund makes the payment over-allocated: new spend is refused until reallocation (D35).
+        // A confirmed refund makes the payment over-allocated: new spend is refused until reallocation.
         $this->refunded('payment-a', 500);
         self::assertSame(['allocated' => 10000, 'flag' => true], $this->paymentState());
         $this->obligation('o3', 100);

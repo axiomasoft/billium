@@ -31,7 +31,7 @@ use Packman\Attributes\Internal;
 use stdClass;
 
 /**
- * Source-scoped observation custody inside the caller's open root Tx (INV-08, REQ-FAIL-12/13/23).
+ * Source-scoped observation custody inside the caller's open root Tx (13/23).
  *
  * Order of one root: partition lock (rank 30) → immutable delivery claim → frontier decision → at most ONE handler call
  * (economic apply) for the delivery that is next in order. Further sequences are drained by new roots; no handler loop
@@ -480,7 +480,7 @@ final readonly class CustodyProcessor
             $earlierParkedId,
         );
         if ($decision->recordConflict) {
-            // The original stays untouched; this delivery is preserved apart (REQ-FAIL-04).
+            // The original stays untouched; this delivery is preserved apart.
             $db->insert(<<<'SQL'
                 INSERT INTO public.billium_inbox_conflict (inbox_id, conflicting_digest, payload) VALUES (?, ?, ?::jsonb)
                 ON CONFLICT (inbox_id, conflicting_digest) DO NOTHING

@@ -12,7 +12,7 @@ use Billium\Ledger\Tests\Schema\LedgerTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * INV-13: a race between issue and metadata updates never leaves an edit outside the allow-list on an issued invoice,
+ * A race between issue and metadata updates never leaves an edit outside the allow-list on an issued invoice,
  * and an allow-list key passes in either order.
  */
 #[Group('ACC-CON-17')]

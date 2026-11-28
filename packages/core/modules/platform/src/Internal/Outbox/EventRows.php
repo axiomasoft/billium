@@ -28,7 +28,7 @@ final class EventRows
     }
 
     /**
-     * Source scopes are compared by value, as SQL does with ::jsonb; rows written before D63 may hold a non-canonical text form.
+     * Source scopes are compared by value, as SQL does with::jsonb; the text form is not guaranteed to be canonical.
      */
     public static function sameScope(mixed $stored, FeedScope $scope): bool
     {

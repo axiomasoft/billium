@@ -31,11 +31,11 @@ final readonly class OutboxRecorder implements Outbox
 
     public function record(TransactionContext $context, OutboxEvent|RegisteredPublicEvent $event): int
     {
-        // Same runner, connection and root Tx as the owning state (PF-10); platform is in every admitted closure.
+        // Same runner, connection and root Tx as the owning state; platform is in every admitted closure.
         ($this->runner)()->assertCurrent($context, 'platform');
         if (! $context->spec()->mode->financial()
             || in_array($context->spec()->operationClass, [ModuleOperationClass::ReceiptReplay, ModuleOperationClass::HistoricalRead, ModuleOperationClass::CallbackCustody], true)) {
-            throw new LogicException('Outbox recording requires an admitted financial write operation class and session (D54, D55, D60)');
+            throw new LogicException('Outbox recording requires an admitted financial write operation class and session');
         }
         $context->sessionEpoch(); // Refuses a financial context without an admitted session.
         $registered = $event instanceof RegisteredPublicEvent ? $event : null;

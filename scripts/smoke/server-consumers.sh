@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Install the PHP and Dart test consumers from package archives.
-# The install has no symlink and no path into this monorepo (D9, D17, D61).
+# The install has no symlink and no path into this monorepo.
 # Run inside the toolchain image:
 #   docker compose run --rm toolchain bash scripts/smoke/server-consumers.sh
 set -euo pipefail
@@ -21,7 +21,7 @@ ROOT = Path(sys.argv[1]).resolve()
 PACKMAN = (ROOT / "../packman").resolve()
 PILOT = '{"schema":"payment.execute.v1","commandKey":"7e0c4a52-91d3-4b6f-8a25-c3d1e9f04b87","operationRef":"op-8f3a21","operationKind":"charge","source":{"context":"commerz","orderRef":"ord-10234","intentRef":"int-10234-1"},"installationRef":"inst-eu-1","environment":"test","executionProfile":"remote-billium","routingEpoch":1,"sellerRef":"seller-acme","merchantAccountRef":"ma-main","money":{"amount":"1490.00","currency":"RUB"},"bindingRevision":"bind-7c91d0e2","returnContextRef":"rc-10234","requestedAt":"2026-10-17T12:00:00Z"}'
 DART_PUBSPEC = """name: billium_client_conformance
-description: Test-only Billium HTTP consumer. Not a production SDK and not a money writer (D9, D61).
+description: Test-only Billium HTTP consumer. Not a production SDK and not a money writer.
 version: 0.1.0
 publish_to: none
 environment:

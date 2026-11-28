@@ -479,7 +479,7 @@ final class AccountingFactsTest extends PlatformTestCase
         self::assertSame(0, $consumer->appliedCount());
         self::assertSame(0, $consumer->deliveryAckCount());
 
-        // COV-299: minimal accounting export extension capability/version negotiation without touching core financial migrations/ownership.
+        // Minimal accounting export extension capability/version negotiation without touching core financial migrations/ownership.
         $extension = new AccountingExportExtension;
         $plugin = new PlatformPlugin;
         $migrationsBefore = $this->rows('public.migrations');

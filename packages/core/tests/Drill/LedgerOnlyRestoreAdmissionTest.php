@@ -19,7 +19,7 @@ use Billium\Platform\Tests\PlatformTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * Restore drill of the ledger-only profile (D54, D61, D62, REQ-ACC-12). The host controls the attachment generation
+ * Restore drill of the ledger-only profile. The host controls the attachment generation
  * outside the backup: a restored copy keeps its copied `active` row, yet no financial mutation is admitted until a new
  * epoch is opened in recovery and activated with an external certificate. Raw custody continues meanwhile. Neither a
  * clean seal nor any commit_no comparison activates an owner.

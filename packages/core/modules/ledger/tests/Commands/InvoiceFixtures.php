@@ -12,7 +12,7 @@ use Billium\Ledger\Data\Invoices\UpdateInvoiceMetadata;
 use PDO;
 use PDOException;
 
-/** Draft/issue helpers over the public Ledger root and small raw-SQL probes (D50: committed data, owner fixtures). */
+/** Draft/issue helpers over the public Ledger root and small raw-SQL probes (committed data, owner fixtures). */
 trait InvoiceFixtures
 {
     /** @param array<string, int> $lines obligationRef => tax minor */

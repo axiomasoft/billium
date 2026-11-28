@@ -141,10 +141,10 @@ final readonly class DatabaseLedgerParticipants implements LedgerParticipants, L
                 throw new ProblemException(ProblemCode::ValidationInvalid, 'references are bounded strings');
             }
         }
-        // FA02 typed boundary: only a proof minted for THIS root by the collection owner, for this intent revision and step.
+        // Typed boundary: only a proof minted for THIS root by the collection owner, for this intent revision and step.
         $proof = $command->proof ?? throw new ProblemException(ProblemCode::ValidationInvalid, 'a no-effect closure requires a typed NoEffectProof');
         if ($proof->rootRef !== $context->rootRef()) {
-            throw new LogicException('NoEffectProof belongs to another root transaction (D60, FA02)');
+            throw new LogicException('NoEffectProof belongs to another root transaction');
         }
         if ($proof->settlementIntentRef !== $command->settlementIntentRef || $proof->expectedRevision !== $command->expectedRevision
             || $proof->stepAuthorizationRef !== $command->stepAuthorizationRef) {
@@ -161,7 +161,7 @@ final readonly class DatabaseLedgerParticipants implements LedgerParticipants, L
         if (! is_int($intent)) {
             throw new ProblemException(ProblemCode::ReferenceUnknown, 'unknown settlement intent');
         }
-        // SettlementIntent rank 65 before any obligation/funds lock of this root (FA02).
+        // SettlementIntent rank 65 before any obligation/funds lock of this root.
         new AllocateLockPlan([$intent])->lock($context);
         if ($query->value('id') !== $intent) {
             throw new LockPlanChanged('settlement intent changed');

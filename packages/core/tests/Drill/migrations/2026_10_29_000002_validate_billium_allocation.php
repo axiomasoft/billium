@@ -14,6 +14,6 @@ return new class extends Migration
 
     public function down(): never
     {
-        throw new LogicException('Forward-only validation (D21).');
+        throw new LogicException('Forward-only validation.');
     }
 };

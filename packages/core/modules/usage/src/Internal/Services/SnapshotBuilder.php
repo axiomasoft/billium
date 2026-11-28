@@ -84,7 +84,7 @@ final readonly class SnapshotBuilder
             'factId' => $fact->factId, 'factRevision' => $fact->factRevision, 'factDigest' => $fact->factDigest,
         ], $effective);
         $frontier = new CompletenessFrontier(contractRef: $contract->contractRef, contractVersion: $contract->version, evidence: $evidence);
-        // D23: scope is part of the group identity, including for an empty, qualified window.
+        // Scope is part of the group identity, including for an empty, qualified window.
         $payload = [
             'algorithm' => ['id' => $policy->algorithmId, 'version' => $policy->algorithmVersion],
             'metric' => ['ref' => $policy->metricRef, 'version' => $policy->metricVersion, 'definitionDigest' => $policy->metricDefinitionDigest],

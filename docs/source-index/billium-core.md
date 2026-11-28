@@ -26,7 +26,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`OptionalModuleOptions`](../../packages/core/src/Configuration/OptionalModuleOptions.php) | class | **Api** | Compiled opt-in for an optional commercial module. |
 | [`OutboxOptions`](../../packages/core/src/Configuration/OutboxOptions.php) | class | **Api** | Compiled configuration for outbox relay and retention pruning. |
 | [`RunnerOptions`](../../packages/core/src/Configuration/RunnerOptions.php) | class | **Api** | Compiled configuration for the root operation runner. |
-| [`RuntimeRoleOptions`](../../packages/core/src/Configuration/RuntimeRoleOptions.php) | class | **Api** | Compiled configuration for PostgreSQL D60 runtime-role preflight verification. |
+| [`RuntimeRoleOptions`](../../packages/core/src/Configuration/RuntimeRoleOptions.php) | class | **Api** | Compiled configuration for the PostgreSQL runtime-role preflight verification. |
 
 ## Contracts/Modules
 
@@ -36,14 +36,14 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`ModuleRegistry`](../../packages/core/src/Contracts/Modules/ModuleRegistry.php) | interface | **Spi** | Read access to the packaged module descriptors and the boot-time composition check. |
 | [`ModuleStateReader`](../../packages/core/src/Contracts/Modules/ModuleStateReader.php) | interface | **Spi** | Implemented by the platform installation over billium_module_state. |
 | [`ModuleTransitionEvidence`](../../packages/core/src/Contracts/Modules/ModuleTransitionEvidence.php) | interface | **Spi** | Owning-module evidence, resolved only while the transition holds its sorted exclusive module barrier. |
-| [`ModuleTransitionPlanner`](../../packages/core/src/Contracts/Modules/ModuleTransitionPlanner.php) | interface | **Spi** | Read-only preview of disable/retire/uninstall; the applying mutator and its re-check belong to P3.3. |
+| [`ModuleTransitionPlanner`](../../packages/core/src/Contracts/Modules/ModuleTransitionPlanner.php) | interface | **Spi** | Read-only preview of disable/retire/uninstall. |
 
 ## Contracts/Runner
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
 | [`OperationRunner`](../../packages/core/src/Contracts/Runner/OperationRunner.php) | interface | **Spi** | Root pipeline of every money mutation (operation-runner). |
-| [`TransactionContext`](../../packages/core/src/Contracts/Runner/TransactionContext.php) | interface | **Spi** | Capability of exactly one root transaction attempt (D60, transaction-participants). |
+| [`TransactionContext`](../../packages/core/src/Contracts/Runner/TransactionContext.php) | interface | **Spi** | Capability of exactly one root transaction attempt (transaction-participants). |
 
 ## Contracts/Runtime
 
@@ -54,7 +54,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`ContractCapabilities`](../../packages/core/src/Contracts/Runtime/ContractCapabilities.php) | interface | **Api** |  |
 | [`EventPublisher`](../../packages/core/src/Contracts/Runtime/EventPublisher.php) | interface | **Spi** | D63/BC-EVT-04/05: host transport, outside a Tx. |
 | [`FinancialAuthorityEvidence`](../../packages/core/src/Contracts/Runtime/FinancialAuthorityEvidence.php) | interface | **Spi** | Host trust boundary for every financial profile. |
-| [`FinancialSessionAdmission`](../../packages/core/src/Contracts/Runtime/FinancialSessionAdmission.php) | interface | **Spi** | Host SPI for every financial profile, ledger-only/embedded-commerz included (D62). |
+| [`FinancialSessionAdmission`](../../packages/core/src/Contracts/Runtime/FinancialSessionAdmission.php) | interface | **Spi** | Host SPI for every financial profile, ledger-only/embedded-commerz included. |
 | [`IncomingCommandAuthenticator`](../../packages/core/src/Contracts/Runtime/IncomingCommandAuthenticator.php) | interface | **Spi** | Host transport authentication at Tx0; payload selectors never establish source authority. |
 | [`InternalCommandReceiver`](../../packages/core/src/Contracts/Runtime/InternalCommandReceiver.php) | interface | **Spi** |  |
 | [`QualifiedFactualCommandPublisher`](../../packages/core/src/Contracts/Runtime/QualifiedFactualCommandPublisher.php) | interface | **Spi** | Detached, credential-pinned transport for independently attested execution facts. |
@@ -71,20 +71,20 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`CompositionProfile`](../../packages/core/src/Data/Modules/CompositionProfile.php) | class | **Api** | One supported runtime composition row: which modules are mandatory/optional/forbidden, whether the server package is part of it, and which host ports must be a… |
 | [`DisablePolicy`](../../packages/core/src/Data/Modules/DisablePolicy.php) | class | **Api** | What stays served after the module stops accepting new intents. |
 | [`InstalledCheckpoint`](../../packages/core/src/Data/Modules/InstalledCheckpoint.php) | class | **Api** | What an installation really applied for a module stream: version 0 and no migrations when uninstalled. |
-| [`InternalCommandDeclaration`](../../packages/core/src/Data/Modules/InternalCommandDeclaration.php) | class | **Api** | An internal command on the separate command-outbox lane (D63). |
+| [`InternalCommandDeclaration`](../../packages/core/src/Data/Modules/InternalCommandDeclaration.php) | class | **Api** | An internal command on the separate command-outbox lane. |
 | [`MigrationIdentity`](../../packages/core/src/Data/Modules/MigrationIdentity.php) | class | **Api** | Immutable identity of one shipped module migration: basename, stream version and file checksum. |
 | [`ModuleAdmission`](../../packages/core/src/Data/Modules/ModuleAdmission.php) | class | **Api** | Verdict of the lifecycle gate for one operation class. |
 | [`ModuleBlocker`](../../packages/core/src/Data/Modules/ModuleBlocker.php) | class | **Api** |  |
 | [`ModuleDependency`](../../packages/core/src/Data/Modules/ModuleDependency.php) | class | **Api** | A required module and the module API range this module was built against. |
-| [`ModuleDescriptor`](../../packages/core/src/Data/Modules/ModuleDescriptor.php) | class | **Api** | Static descriptor of one Billium core module (D55): identity, schema stream and ranges, API and wire versions, dependencies, ownership, lifecycle policies and… |
+| [`ModuleDescriptor`](../../packages/core/src/Data/Modules/ModuleDescriptor.php) | class | **Api** | Static descriptor of one Billium core module: identity, schema stream and ranges, API and wire versions, dependencies, ownership, lifecycle policies and event… |
 | [`ModuleManifest`](../../packages/core/src/Data/Modules/ModuleManifest.php) | class | **Api** | The packaged module registry: core API version, host/module ports, compositions and descriptors. |
 | [`ModuleState`](../../packages/core/src/Data/Modules/ModuleState.php) | class | **Api** | Persisted lifecycle state of one module in one installation (billium_module_state, owned by the platform installation). |
 | [`ModuleTransitionFacts`](../../packages/core/src/Data/Modules/ModuleTransitionFacts.php) | class | **Api** | Counted facts of an installation that a transition/uninstall preview weighs. |
 | [`ModuleTransitionPreview`](../../packages/core/src/Data/Modules/ModuleTransitionPreview.php) | class | **Api** | What a disable/retire/uninstall would do. |
-| [`PublicEventDeclaration`](../../packages/core/src/Data/Modules/PublicEventDeclaration.php) | class | **Api** | One public event stream a module declares (D63). |
+| [`PublicEventDeclaration`](../../packages/core/src/Data/Modules/PublicEventDeclaration.php) | class | **Api** | One public event stream a module declares. |
 | [`RetirementPolicy`](../../packages/core/src/Data/Modules/RetirementPolicy.php) | class | **Api** | Blockers that must be zero before the module may become retired; the base set is mandatory for every module. |
 | [`SchemaRange`](../../packages/core/src/Data/Modules/SchemaRange.php) | class | **Api** | Closed SQL schema-version range of a module migration stream. |
-| [`UninstallPolicy`](../../packages/core/src/Data/Modules/UninstallPolicy.php) | class | **Api** | Uninstalling a binary is not a schema purge (D55): with module history a compatible read/recovery bundle is required, and purge stays a separate privileged ret… |
+| [`UninstallPolicy`](../../packages/core/src/Data/Modules/UninstallPolicy.php) | class | **Api** | Uninstalling a binary is not a schema purge: with module history a compatible read/recovery bundle is required, and purge stays a separate privileged retention… |
 
 ## Data/Runner
 
@@ -93,7 +93,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`LockRequest`](../../packages/core/src/Data/Runner/LockRequest.php) | class | **Api** | One planned row set of a LockSet (invariant-model). |
 | [`OperationSpec`](../../packages/core/src/Data/Runner/OperationSpec.php) | class | **Api** | Declaration of one root operation (operation-runner). |
 | [`Receipt`](../../packages/core/src/Data/Runner/Receipt.php) | interface | **Spi** | Business receipt of an accepted root operation. |
-| [`StoredOutcome`](../../packages/core/src/Data/Runner/StoredOutcome.php) | class | **Api** | Result of a root operation as stored with its idempotency claim: an accepted receipt `{class, body}` or a stored business refusal `{problem}` (D31). |
+| [`StoredOutcome`](../../packages/core/src/Data/Runner/StoredOutcome.php) | class | **Api** | Result of a root operation as stored with its idempotency claim: an accepted receipt `{class, body}` or a stored business refusal `{problem}`. |
 
 ## Data/Runtime
 
@@ -103,7 +103,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`ActivationCertificate`](../../packages/core/src/Data/Runtime/ActivationCertificate.php) | class | **Api** | Immutable claim shape only. |
 | [`Caller`](../../packages/core/src/Data/Runtime/Caller.php) | class | **Api** | The authenticated caller of a root operation. |
 | [`FactualCommandBinding`](../../packages/core/src/Data/Runtime/FactualCommandBinding.php) | class | **Api** | Canonical comparison for the host's detached attestation. |
-| [`FinancialAdmissionToken`](../../packages/core/src/Data/Runtime/FinancialAdmissionToken.php) | class | **Api** | Verified claims of a short-lived host process token (D62). |
+| [`FinancialAdmissionToken`](../../packages/core/src/Data/Runtime/FinancialAdmissionToken.php) | class | **Api** | Verified claims of a short-lived host process token. |
 | [`FinancialScope`](../../packages/core/src/Data/Runtime/FinancialScope.php) | class | **Api** | Independent business owner and fact source dimensions. |
 | [`NamespaceDisposition`](../../packages/core/src/Data/Runtime/NamespaceDisposition.php) | class | **Api** | Immutable claim shape only. |
 | [`OwnerSessionIdentity`](../../packages/core/src/Data/Runtime/OwnerSessionIdentity.php) | class | **Api** | Immutable claim shape only. |
@@ -121,7 +121,7 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`BilliumSchemaSetProvider`](../../packages/core/src/Database/BilliumSchemaSetProvider.php) | class | **Spi** | Declares Billium's central PostgreSQL schema sets (`billium-platform` platform stream and module streams). |
 | [`ExecutionSchemaSetProvider`](../../packages/core/src/Database/ExecutionSchemaSetProvider.php) | class | **Spi** |  |
 | [`OnlineDdl`](../../packages/core/src/Database/OnlineDdl.php) | class | **Api** | Builds an index on a live table without blocking writes. |
-| [`RlsSessionContext`](../../packages/core/src/Database/RlsSessionContext.php) | class | **Api** | Transaction-local (SET LOCAL) PostgreSQL session context for optional seller-scoped RLS (ADR-08, REQ-PROF-09). |
+| [`RlsSessionContext`](../../packages/core/src/Database/RlsSessionContext.php) | class | **Api** | Transaction-local (SET LOCAL) PostgreSQL session context for optional seller-scoped RLS (ADR-08). |
 
 ## Diagnostics
 
@@ -133,10 +133,10 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`BootstrapMode`](../../packages/core/src/Enums/Modules/BootstrapMode.php) | enum | **Api** | How a public event stream joins a bootstrap (D63): a SnapshotSource, or an explicit replay-only/no-bootstrap policy. |
+| [`BootstrapMode`](../../packages/core/src/Enums/Modules/BootstrapMode.php) | enum | **Api** | How a public event stream joins a bootstrap: a SnapshotSource, or an explicit replay-only/no-bootstrap policy. |
 | [`CompatibilityFindingCode`](../../packages/core/src/Enums/Modules/CompatibilityFindingCode.php) | enum | **Api** | Doctor finding identities of boot/composition validation (spec/modules.json findingCodes). |
-| [`ModuleLifecycleState`](../../packages/core/src/Enums/Modules/ModuleLifecycleState.php) | enum | **Api** | accepting → draining → recovery_only → retired (D55). |
-| [`ModuleOperationClass`](../../packages/core/src/Enums/Modules/ModuleOperationClass.php) | enum | **Api** | What a caller wants from a module; admission is decided per class (D55). |
+| [`ModuleLifecycleState`](../../packages/core/src/Enums/Modules/ModuleLifecycleState.php) | enum | **Api** | accepting → draining → recovery_only → retired. |
+| [`ModuleOperationClass`](../../packages/core/src/Enums/Modules/ModuleOperationClass.php) | enum | **Api** | What a caller wants from a module; admission is decided per class. |
 | [`ModulePresence`](../../packages/core/src/Enums/Modules/ModulePresence.php) | enum | **Api** | Mandatory / optional / forbidden in a supported composition. |
 | [`ModuleTransitionKind`](../../packages/core/src/Enums/Modules/ModuleTransitionKind.php) | enum | **Api** |  |
 | [`TransitionBlockerCode`](../../packages/core/src/Enums/Modules/TransitionBlockerCode.php) | enum | **Api** | Reasons a disable/retire/uninstall preview refuses. |
@@ -145,14 +145,14 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`LockRank`](../../packages/core/src/Enums/Runner/LockRank.php) | enum | **Api** | The single global lock order (D27, invariant-model). |
+| [`LockRank`](../../packages/core/src/Enums/Runner/LockRank.php) | enum | **Api** | The single global lock order (invariant-model). |
 | [`LockScope`](../../packages/core/src/Enums/Runner/LockScope.php) | enum | **Api** | Which authenticated scope LockSet adds to a row-lock predicate. |
 
 ## Enums/Runtime
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`FinancialMode`](../../packages/core/src/Enums/Runtime/FinancialMode.php) | enum | **Api** | What a root transaction needs from the financial session barrier (D54, D62). |
+| [`FinancialMode`](../../packages/core/src/Enums/Runtime/FinancialMode.php) | enum | **Api** | What a root transaction needs from the financial session barrier. |
 
 ## Errors
 
@@ -165,13 +165,13 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`ModuleAdmissionRefused`](../../packages/core/src/Exceptions/Modules/ModuleAdmissionRefused.php) | class | **Api** | Typed module-unavailable refusal of the admission barrier (D55): the module is missing, its lifecycle state closes the operation class, or its schema generatio… |
+| [`ModuleAdmissionRefused`](../../packages/core/src/Exceptions/Modules/ModuleAdmissionRefused.php) | class | **Api** | Typed module-unavailable refusal of the admission barrier: the module is missing, its lifecycle state closes the operation class, or its schema generation is o… |
 
 ## Exceptions/Runner
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`LockOrderViolation`](../../packages/core/src/Exceptions/Runner/LockOrderViolation.php) | class | **Api** | A lock request below an already acquired (rank, segment, key) or an upgrade of a held shared lock (D27). |
+| [`LockOrderViolation`](../../packages/core/src/Exceptions/Runner/LockOrderViolation.php) | class | **Api** | A lock request below an already acquired (rank, segment, key) or an upgrade of a held shared lock. |
 | [`LockPlanChanged`](../../packages/core/src/Exceptions/Runner/LockPlanChanged.php) | class | **Api** | The row set re-read under locks differs from the pre-read plan. |
 
 ## Internal/Modules
@@ -180,9 +180,9 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 |---|---|---|---|
 | [`BilliumPluginActivationGate`](../../packages/core/src/Internal/Modules/BilliumPluginActivationGate.php) | class | *Internal* |  |
 | [`ModuleCatalog`](../../packages/core/src/Internal/Modules/ModuleCatalog.php) | class | *Internal* | Descriptor set + desired config + capabilities + checkpoints → report. |
-| [`ModuleLifecycle`](../../packages/core/src/Internal/Modules/ModuleLifecycle.php) | class | *Internal* | Operation-class admission and disable/retire/uninstall preview rules (D55). |
+| [`ModuleLifecycle`](../../packages/core/src/Internal/Modules/ModuleLifecycle.php) | class | *Internal* | Operation-class admission and disable/retire/uninstall preview rules. |
 | [`Semver`](../../packages/core/src/Internal/Modules/Semver.php) | class | *Internal* | MAJOR.MINOR.PATCH only: delegates SemVer parsing to Packman PluginManifest without pre-release/build tags. |
-| [`Shape`](../../packages/core/src/Internal/Modules/Shape.php) | class | *Internal* | Strict reader of decoded JSON: unknown, missing or mistyped members fail loudly, so an incomplete or foreign manifest never reaches money admission (COV-301..3… |
+| [`Shape`](../../packages/core/src/Internal/Modules/Shape.php) | class | *Internal* | Strict reader of decoded JSON: unknown, missing or mistyped members fail loudly, so an incomplete or foreign manifest never reaches money admission (..308). |
 
 ## Internal/Runner
 
@@ -191,10 +191,10 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`DatabaseOperationRunner`](../../packages/core/src/Internal/Runner/DatabaseOperationRunner.php) | class | *Internal* | The root runner (operation-runner). |
 | [`LockSet`](../../packages/core/src/Internal/Runner/LockSet.php) | class | *Internal* | The only application row-lock interface (invariant-model). |
 | [`Operation`](../../packages/core/src/Internal/Runner/Operation.php) | class | *Internal* | One attempt of one root transaction: its LockSet, its admitted session/modules and the only TransactionContext minted for it. |
-| [`RootContext`](../../packages/core/src/Internal/Runner/RootContext.php) | class | *Internal* | The only TransactionContext implementation; its state lives in the runner-owned Operation (D60). |
+| [`RootContext`](../../packages/core/src/Internal/Runner/RootContext.php) | class | *Internal* | The only TransactionContext implementation; its state lives in the runner-owned Operation. |
 | [`UnboundCallerContext`](../../packages/core/src/Internal/Runner/UnboundCallerContext.php) | class | *Internal* | Default binding: an operation without a host-authenticated caller fails closed. |
 | [`UnboundFinancialAuthorityEvidence`](../../packages/core/src/Internal/Runner/UnboundFinancialAuthorityEvidence.php) | class | *Internal* |  |
-| [`UnboundSessionAdmission`](../../packages/core/src/Internal/Runner/UnboundSessionAdmission.php) | class | *Internal* | Default binding: without a host admission service every financial mutation fails closed (D62). |
+| [`UnboundSessionAdmission`](../../packages/core/src/Internal/Runner/UnboundSessionAdmission.php) | class | *Internal* | Default binding: without a host admission service every financial mutation fails closed. |
 
 ## Internal/Runtime
 

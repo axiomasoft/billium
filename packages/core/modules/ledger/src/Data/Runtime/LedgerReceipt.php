@@ -7,7 +7,7 @@ namespace Billium\Ledger\Data\Runtime;
 use Billium\Core\Data\Runner\Receipt;
 use Packman\Attributes\Api;
 
-/** Immutable body returned by the owning DB routine; it is also the root runner's replay result (D31). */
+/** Immutable body returned by the owning DB routine; it is also the root runner's replay result. */
 #[Api(since: '1.0')]
 final readonly class LedgerReceipt implements Receipt
 {

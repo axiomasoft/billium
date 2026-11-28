@@ -16,6 +16,6 @@ interface AgreementRevisionCommit
 
     public function commit(string $quoteRef, string $quoteDigest, int $expectedRevision, int $cancellationGeneration, string $commandKey): ScheduleReceipt;
 
-    /** Versioned integration query; always scoped to the authenticated seller/environment (D23/D56). */
+    /** Versioned integration query; always scoped to the authenticated seller/environment. */
     public function coverage(string $coverageRef): ?ScheduleReceipt;
 }

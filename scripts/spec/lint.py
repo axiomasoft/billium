@@ -61,7 +61,7 @@ OPEN = {
     ("external.import.preview.v1", ""),
 }
 NON_ENVELOPE_DIRS = {"common", "problem", "conformance", "migration"}
-# D63: rating correction.applied is an internal event payload, not a public wire envelope.
+# Rating correction.applied is an internal event payload, not a public wire envelope.
 NON_ENVELOPE_FILES = {"feed/defs.json", "import/defs.json", "rating/correction-applied.v1.json"}
 
 NORMATIVE = re.compile(r"\b(MUST|SHALL|SHOULD)\b|\b(долж(ен|на|но|ны)|обязан(а|о|ы)?)\b", re.IGNORECASE)
@@ -180,7 +180,7 @@ class Lint:
         nodes = {}
         for rel, document in self.schemas.items():
             if rel.startswith("migration/"):
-                continue  # D58: offline migration evidence is not a negotiable wire envelope.
+                continue  # Offline migration evidence is not a negotiable wire envelope.
             for pointer, node in self.walk(document):
                 if not isinstance(node, dict) or not isinstance(node.get("properties"), dict):
                     continue

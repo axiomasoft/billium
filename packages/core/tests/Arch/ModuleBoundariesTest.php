@@ -68,7 +68,7 @@ final class ModuleBoundariesTest extends TestCase
                 $class = 'Billium\\'.ucfirst($match[1]).'\\'.$match[2].'\\'.str_replace('/', '\\', $match[3]);
                 $reflection = new ReflectionClass($class);
                 if ($reflection->getAttributes(Api::class) === [] && $reflection->getAttributes(Spi::class) === []) {
-                    $violations[] = $path.': public type needs #[Api] or #[Spi] (M-38)';
+                    $violations[] = $path.': public type needs # [Api] or # [Spi]';
                 }
             }
         }
@@ -92,7 +92,7 @@ final class ModuleBoundariesTest extends TestCase
         $root = dirname(__DIR__, 2);
         foreach (array_merge(self::phpFiles($root.'/tests'), self::phpFiles($root.'/modules')) as $file) {
             if (str_ends_with($file, '/DatabaseTestCase.php')) {
-                continue; // D50: the base class names these traits only to reject them.
+                continue; // The base class names these traits only to reject them.
             }
             foreach (token_get_all((string) file_get_contents($file)) as $token) {
                 if (is_array($token) && in_array($token[0], [T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_STRING], true)) {
@@ -110,7 +110,7 @@ final class ModuleBoundariesTest extends TestCase
         self::assertSame(
             [],
             array_diff($categories, ['Configuration', 'Contracts', 'Data', 'Database', 'Diagnostics', 'Enums', 'Errors', 'Events', 'Exceptions', 'Internal', 'Laravel', 'Plugins']),
-            'unsupported public category (M-38)',
+            'unsupported public category',
         );
 
         $violations = [];
@@ -122,7 +122,7 @@ final class ModuleBoundariesTest extends TestCase
                 $class = 'Billium\\Core\\'.str_replace('/', '\\', substr($file, strlen($root) + 1, -4));
                 $reflection = new ReflectionClass($class);
                 if ($reflection->getAttributes(Api::class) === [] && $reflection->getAttributes(Spi::class) === []) {
-                    $violations[] = $class.': public type needs #[Api] or #[Spi] (M-38)';
+                    $violations[] = $class.': public type needs # [Api] or # [Spi]';
                 }
                 $violations = array_merge($violations, self::internalSignatureTypes($reflection));
             }
@@ -218,7 +218,7 @@ final class ModuleBoundariesTest extends TestCase
         $module = $location[1] ?? 'core';
         $category = $location[2] ?? 'Internal';
         if (! in_array($category, ['Internal', 'Contracts', 'Data', 'Enums', 'Events', 'Exceptions', 'Laravel'], true)) {
-            $violations[] = $path.': unsupported public category (M-38)';
+            $violations[] = $path.': unsupported public category';
         }
         $tree = (new ParserFactory)->createForNewestSupportedVersion()->parse($source) ?? [];
         $tree = new NodeTraverser(new NameResolver)->traverse($tree);
@@ -235,11 +235,11 @@ final class ModuleBoundariesTest extends TestCase
                 $name = ltrim($value, '\\');
                 if (preg_match('/^Billium\\\\(Platform|Ledger|Usage|Rating|Schedule|Documents|Execution|Collection|Core)\\\\Internal(?:\\\\|$)/', $name, $dependency) === 1
                     && strtolower($dependency[1]) !== $module) {
-                    $violations[] = $path.': foreign Internal dependency '.$name.' (D55/INV-01)';
+                    $violations[] = $path.': foreign Internal dependency '.$name.'';
                 }
                 if (str_starts_with($name, 'Illuminate\\Database\\Eloquent')
                     || ($category !== 'Internal' && (str_starts_with($name, 'Illuminate\\Database\\') || $name === DB::class))) {
-                    $violations[] = $path.': database dependency '.$name.' (M-38)';
+                    $violations[] = $path.': database dependency '.$name.'';
                 }
             }
             if ($path !== 'src/Internal/Runner/LockSet.php'

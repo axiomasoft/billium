@@ -56,7 +56,7 @@ use RuntimeException;
 use ValueError;
 
 /**
- * PLAN1.P10.5 minimal delta on top of P9.7:
+ * Minimal delta on top of:
  * - Restored snapshot starts in recovery with zero auto-dispatch + old-worker/egress fencing
  * - Explicit activation required; copy with identical max(commit_no) never auto-activates
  * - Retention prune preserves legal holds/pins, unknown attempts, provider evidence, and dedupe floors

@@ -19,8 +19,8 @@ use Packman\Attributes\Internal;
 use stdClass;
 
 /**
- * INSERT … ON CONFLICT DO NOTHING with a bounded wait (D51): a concurrent claim of the same scope blocks on the unique
- * index until the first root Tx commits or rolls back. No check-then-insert (INV-05).
+ * INSERT … ON CONFLICT DO NOTHING with a bounded wait: a concurrent claim of the same scope blocks on the unique
+ * index until the first root Tx commits or rolls back. No check-then-insert.
  */
 #[Internal]
 final readonly class DatabaseIdempotencyStore implements FinancialIdempotencyStore
@@ -77,7 +77,7 @@ final readonly class DatabaseIdempotencyStore implements FinancialIdempotencySto
             throw new LogicException('Claim conflict without a committed row');
         }
         if (Rows::field($existing, 'digest') !== $digest) {
-            // The same key with another payload: deterministic conflict, the original command is kept (COV-133).
+            // The same key with another payload: deterministic conflict, the original command is kept.
             throw new ProblemException(ProblemCode::IdempotencyConflict, 'the key was used with another payload');
         }
         if (Rows::field($existing, 'financial_scope') !== null && Rows::field($existing, 'scope_matches') !== true) {
@@ -121,7 +121,7 @@ final readonly class DatabaseIdempotencyStore implements FinancialIdempotencySto
     private function assertRootTransaction(): void
     {
         if ($this->connection->transactionLevel() < 1) {
-            throw new LogicException('Claim and complete run inside the runner root Tx (D51)');
+            throw new LogicException('Claim and complete run inside the runner root Tx');
         }
     }
 }

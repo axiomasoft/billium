@@ -8,7 +8,7 @@ use Packman\Attributes\Api;
 use Packman\Config\Laravel\ConfigurationValidator;
 
 /**
- * Compiled configuration for PostgreSQL D60 runtime-role preflight verification.
+ * Compiled configuration for the PostgreSQL runtime-role preflight verification.
  */
 #[Api(since: '1.0')]
 final readonly class RuntimeRoleOptions

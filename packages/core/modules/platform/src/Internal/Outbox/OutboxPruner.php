@@ -9,7 +9,7 @@ use Illuminate\Database\Connection;
 use LogicException;
 use Packman\Attributes\Internal;
 
-/** D25/D52/D60: owner-only maintenance, complete safe physical prefix, all delivery destinations and active pins. */
+/** Owner-only maintenance, complete safe physical prefix, all delivery destinations and active pins. */
 #[Internal]
 final readonly class OutboxPruner
 {

@@ -44,7 +44,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use RuntimeException;
 
-/** D49/D60: the composed issue (document numbering supplies the legal reference) is the same guarded routine in the caller's root Tx. */
+/** The composed issue (document numbering supplies the legal reference) is the same guarded routine in the caller's root Tx. */
 #[Group('pg')]
 final class InvoiceParticipantTest extends LedgerTestCase
 {
@@ -81,7 +81,7 @@ final class InvoiceParticipantTest extends LedgerTestCase
                     fn (TransactionContext $context): Receipt => $this->monetaryParticipant($context, $participant));
                 self::fail('a recovery root must not invoke '.$participant);
             } catch (LogicException $exception) {
-                self::assertSame('Monetary ledger operations require an admitted financial session and commit accounting (D54, D60, D62)', $exception->getMessage());
+                self::assertSame('Monetary ledger operations require an admitted financial session and commit accounting', $exception->getMessage());
             }
             self::assertSame($before, array_map($this->rows(...), $tables));
         }
@@ -119,7 +119,7 @@ final class InvoiceParticipantTest extends LedgerTestCase
                 fn (TransactionContext $context): Receipt => $this->monetaryParticipant($context, $participant));
             self::fail('a nonmonetary root must not invoke '.$participant);
         } catch (LogicException $exception) {
-            self::assertSame('Monetary ledger operations require an admitted financial session and commit accounting (D54, D60, D62)', $exception->getMessage());
+            self::assertSame('Monetary ledger operations require an admitted financial session and commit accounting', $exception->getMessage());
         }
 
         self::assertSame($before, array_map($this->rows(...), $tables));
@@ -163,7 +163,7 @@ final class InvoiceParticipantTest extends LedgerTestCase
                 });
             self::fail('operation class '.$class->value.' must not invoke '.$participant);
         } catch (LogicException $exception) {
-            self::assertSame('Monetary ledger operation is not permitted for operation class '.$class->value.' (D55, D60)', $exception->getMessage());
+            self::assertSame('Monetary ledger operation is not permitted for operation class '.$class->value.'', $exception->getMessage());
         }
 
         self::assertSame($before, array_map($this->rows(...), $tables));
@@ -209,7 +209,7 @@ final class InvoiceParticipantTest extends LedgerTestCase
                 });
             self::fail('a nonwriting root must not record outbox work');
         } catch (LogicException $exception) {
-            self::assertSame('Outbox recording requires an admitted financial write operation class and session (D54, D55, D60)', $exception->getMessage());
+            self::assertSame('Outbox recording requires an admitted financial write operation class and session', $exception->getMessage());
         }
 
         self::assertSame($before, array_map($this->rows(...), $tables));
@@ -248,7 +248,7 @@ final class InvoiceParticipantTest extends LedgerTestCase
             self::fail('operation class '.$class->value.' must not invoke an observation writer');
         } catch (LogicException $exception) {
             $prefix = $reconcile ? 'Ledger operation' : 'Monetary ledger operation';
-            self::assertSame($prefix.' is not permitted for operation class '.$class->value.' (D55, D60)', $exception->getMessage());
+            self::assertSame($prefix.' is not permitted for operation class '.$class->value.'', $exception->getMessage());
         }
 
         self::assertSame($before, array_map($this->rows(...), $tables));

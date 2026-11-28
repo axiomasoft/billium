@@ -18,7 +18,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\TestWith;
 
 /**
- * D60 (observation-apply 2/4, REQ-FAIL-12): a confirmed capture without a settlement intent (no authenticated account
+ * Observation apply: a confirmed capture without a settlement intent (no authenticated account
  * mapping) is observed and stays queryable, while allocation parks: no allocatable payment exists, the partition is not
  * blocked, and after the intent is declared a dependency retry in its own root applies it exactly once.
  */

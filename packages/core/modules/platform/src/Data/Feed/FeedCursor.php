@@ -6,7 +6,7 @@ namespace Billium\Platform\Data\Feed;
 
 use Packman\Attributes\Api;
 
-/** D63: only the source authenticates this token; positions are diagnostic, not authority. */
+/** Only the source authenticates this token; positions are diagnostic, not authority. */
 #[Api(since: '1.0')]
 final readonly class FeedCursor
 {

@@ -41,7 +41,7 @@ use Illuminate\Foundation\Application;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * ACC-RST-12 accounting exceptional effects proof:
+ * Accounting exceptional effects proof:
  * capture 100 + two confirmed actual refunds 70 + 70 =>
  * 1 capture CashIn (100), 2 refund CashOut facts totaling 140, 1 NoncashExposure (40) never counted as outgoing cash,
  * applied ledger projection retains last consistent 100 / 70 with financial_hold=true and spendable=0,
@@ -231,7 +231,7 @@ final class AccountingExceptionalEffectsTest extends ExecutionTestCase
                 self::assertSame(AccountingMappingStatus::Mapped, $consumer->consume($record, $mapper)->status);
             }
 
-            // Assert ACC-RST-12 accounting invariants:
+            // Assert the accounting invariants:
             // - 1 capture CashIn = 100 (counted separately)
             // - 2 distinct refund CashOut facts = 140 (70 + 70), NOT bounded 70!
             // - 1 NoncashExposure = 40, linked to both refund cash facts, NEVER counted again as outgoing cash!

@@ -76,7 +76,7 @@ final readonly class DatabaseInstallation implements Installation, ModuleStateRe
             $descriptor = $this->registry->descriptor($module) ?? throw new LogicException("Enabled module {$module} has no descriptor");
             $missing = array_diff($descriptor->requiredModuleIds(), $this->enabledModules);
             if ($missing !== []) {
-                throw new LogicException("Enabled module {$module} requires ".implode(', ', $missing).' (D55)');
+                throw new LogicException("Enabled module {$module} requires ".implode(', ', $missing).'');
             }
         }
         $db = $this->db();

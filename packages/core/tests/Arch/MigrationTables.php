@@ -12,7 +12,7 @@ final class MigrationTables
     /** @return list<string> */
     public static function createdBy(string $source): array
     {
-        // D45/INV-01: ownership comes from CREATE, never from a table merely referenced by a FK.
+        // Ownership comes from CREATE, never from a table merely referenced by a FK.
         $source = implode('', array_map(
             static fn (array|string $token): string => is_array($token)
                 ? (in_array($token[0], [T_COMMENT, T_DOC_COMMENT], true) ? '' : $token[1])

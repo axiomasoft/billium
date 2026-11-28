@@ -7,7 +7,7 @@ namespace Billium\Core\Enums\Modules;
 use Packman\Attributes\Api;
 
 /**
- * accepting → draining → recovery_only → retired (D55). The step list is operation-class based, never a Boolean:
+ * accepting → draining → recovery_only → retired. The step list is operation-class based, never a Boolean:
  * stop-new-intents keeps pending/unknown/lookup/callback/refund/history readers alive.
  */
 #[Api(since: '1.0')]

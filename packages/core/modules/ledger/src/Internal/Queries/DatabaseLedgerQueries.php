@@ -204,7 +204,7 @@ final readonly class DatabaseLedgerQueries implements LedgerQueries
         if ($requested->minor < 0) {
             throw self::invalid();
         }
-        // D35: no reservation. Required release after this refund = max(0, allocated - (captured - refunded - amount)).
+        // No reservation. Required release after this refund = max(0, allocated - (captured - refunded - amount)).
         // Keep intermediates in int64 even for a request above capacity.
         $release = min($allocated, max(0, $allocated - ($capacity - min($capacity, $requested->minor))));
         $held = is_array($payment['financialHold']) && ($payment['financialHold']['active'] ?? false) === true;

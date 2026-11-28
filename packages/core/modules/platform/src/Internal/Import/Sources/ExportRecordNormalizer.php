@@ -488,7 +488,7 @@ final readonly class ExportRecordNormalizer
     }
 
     /**
-     * Preserves historical invoice numbering without issuing a second Billium legal number (IM-16).
+     * Preserves historical invoice numbering without issuing a second Billium legal number.
      *
      * @param  array<string, mixed>  $rawRecord
      * @return array{legalDocument: ?array<string, mixed>, missing: list<string>, reasons: list<string>}

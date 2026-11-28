@@ -23,7 +23,7 @@ use Illuminate\Foundation\Application;
 use InvalidArgumentException;
 
 /**
- * One worker of the allocation races (ACC-CON-08/09/19): `plan[index]` is either
+ * One worker of the allocation races (09/19): `plan [index]` is either
  * {action: allocate, obligation, payment, amount} or {action: credit_note, obligation, invoice, amount}; every worker
  * has its own command key and business identity and runs the public Ledger root of its own process.
  */

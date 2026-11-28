@@ -10,7 +10,7 @@ use InvalidArgumentException;
 use Packman\Attributes\Api;
 
 /**
- * Verified claims of a short-lived host process token (D62). The host authority issues and authenticates it outside the
+ * Verified claims of a short-lived host process token. The host authority issues and authenticates it outside the
  * copied Billium database; Billium never stores the token or its credentials, only compares these claims with the
  * adopted financial session under the session row share lock. The expected epoch/mode comes from here, never from
  * copied financial_session metadata.

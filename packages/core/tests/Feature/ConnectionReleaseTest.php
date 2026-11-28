@@ -42,6 +42,6 @@ final class ConnectionReleaseTest extends DatabaseTestCase
             usleep(20_000);
         } while (true);
 
-        self::assertSame(0, $alive, 'D50: a finished test must not keep PostgreSQL connection slots');
+        self::assertSame(0, $alive, 'A finished test must not keep PostgreSQL connection slots');
     }
 }

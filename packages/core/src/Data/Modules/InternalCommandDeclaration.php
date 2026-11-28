@@ -8,7 +8,7 @@ use Billium\Core\Internal\Modules\Shape;
 use Packman\Attributes\Api;
 
 /**
- * An internal command on the separate command-outbox lane (D63). It is not a billium.event envelope and never
+ * An internal command on the separate command-outbox lane. It is not a billium.event envelope and never
  * enters the public feed, event catalog or SnapshotSource.
  */
 #[Api(since: '1.0')]

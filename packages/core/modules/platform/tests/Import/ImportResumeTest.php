@@ -50,7 +50,7 @@ final class ImportResumeTest extends PlatformTestCase
     }
 
     /**
-     * IM-04: Interrupting import application at EVERY single commit boundary (maxSteps=1 per invocation)
+     * Interrupting import application at EVERY single commit boundary (maxSteps=1 per invocation)
      * and resuming repeatedly produces the exact same obligations, payments, allocations, mappings, receipts
      * and outbox events as an uninterrupted run, with zero duplicates.
      */
@@ -123,7 +123,7 @@ final class ImportResumeTest extends PlatformTestCase
     }
 
     /**
-     * IM-04: Mid-batch crash after first obligation commits leaves first obligation intact, rolls back second obligation,
+     * Mid-batch crash after first obligation commits leaves first obligation intact, rolls back second obligation,
      * and subsequent resume completes all remaining stages cleanly without duplicating the first obligation.
      */
     public function test_mid_batch_exception_crash_between_obligations_resumes_cleanly_from_last_committed_checkpoint(): void
@@ -215,7 +215,7 @@ final class ImportResumeTest extends PlatformTestCase
     }
 
     /**
-     * IM-05: Concurrent OS processes crossing a PostgreSQL advisory barrier on the same source identities
+     * Concurrent OS processes crossing a PostgreSQL advisory barrier on the same source identities
      * serialize cleanly without creating duplicate obligations, payments, allocations or mappings.
      */
     public function test_concurrent_processes_importing_same_source_identity_never_create_duplicate_money(): void

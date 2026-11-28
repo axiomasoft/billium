@@ -285,7 +285,7 @@
         {
           "id": "2026_12_01_100001_create_billium_platform_core",
           "version": 1,
-          "checksum": "sha256:bffdb8b91e1b31558416a924edc98209620d389b15f89b7b64e09b1cbafd20ee"
+          "checksum": "sha256:579e898cdf829de608fc3cd50f8343e3df60a8de9c8dfecc7d7383ea886e3a70"
         },
         {
           "id": "2026_12_01_100002_create_billium_feed_inbox_and_event_protocol",
@@ -407,7 +407,7 @@
         {
           "id": "2026_12_01_200001_create_billium_ledger_tables",
           "version": 1,
-          "checksum": "sha256:cf4eb8fd8c3d5d21d2d971e85f3f94103c5e1ac120090ea2546e41de00b95925"
+          "checksum": "sha256:12f42f24d2e7f8960ac38648d9285d20bf797012c518b464d1114a2523db7598"
         },
         {
           "id": "2026_12_01_200002_create_billium_ledger_guards",
@@ -417,12 +417,12 @@
         {
           "id": "2026_12_01_200003_create_billium_ledger_invoice_routines",
           "version": 3,
-          "checksum": "sha256:89810a392af74108ebe5964b8763002a5fe43c1eb38fc4974f67060155cef23d"
+          "checksum": "sha256:2c6d1a0c8d33598d48a892d2a6621be7ec1f9b0712580c49526fee1a761914ef"
         },
         {
           "id": "2026_12_01_200004_create_billium_ledger_allocation_routines",
           "version": 4,
-          "checksum": "sha256:eb490662a43bba45803f82db3e17a03e11b2bddedd390fc50ae95f844942dd76"
+          "checksum": "sha256:3dd2543d4e804edf6f9abd71b7865e0ab4d3d0a0a43ea1aa4833de93d45bb8d2"
         },
         {
           "id": "2026_12_01_200005_create_billium_ledger_observation_routines",

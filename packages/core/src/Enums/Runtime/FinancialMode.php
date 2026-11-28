@@ -7,7 +7,7 @@ namespace Billium\Core\Enums\Runtime;
 use Packman\Attributes\Api;
 
 /**
- * What a root transaction needs from the financial session barrier (D54, D62).
+ * What a root transaction needs from the financial session barrier.
  *
  * Active and Recovery are financial: the runner takes billium_financial_session FOR SHARE after the claim, verifies the
  * host process token against the adopted session and holds the lock to commit. Administrative takes the same shared

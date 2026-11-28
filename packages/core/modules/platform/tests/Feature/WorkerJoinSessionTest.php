@@ -17,7 +17,7 @@ use Billium\Platform\Tests\PlatformTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * D62: the OwnerSession belongs to the deployment, not to a PHP/queue process. Workers join it with short-lived host
+ * The OwnerSession belongs to the deployment, not to a PHP/queue process. Workers join it with short-lived host
  * tokens; restart and scaling inside the session are not a transfer. Any other owner/deployment/attachment/epoch, an
  * expired or foreign token, or no token refuses before any financial effect.
  */

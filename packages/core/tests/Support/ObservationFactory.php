@@ -33,7 +33,7 @@ final class ObservationFactory
     }
 
     /**
-     * A refund child: its capturedTotal is the refunded amount (detail and reconcile only, D41).
+     * A refund child: its capturedTotal is the refunded amount (detail and reconcile only).
      *
      * @param  array<string, mixed>  $fields
      */

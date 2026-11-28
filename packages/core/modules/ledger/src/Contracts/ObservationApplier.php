@@ -11,13 +11,13 @@ use Packman\Attributes\Spi;
 use Packman\Attributes\SpiKind;
 
 /**
- * applyPaymentObservation (REQ-CON-13, REQ-OWN-11, D28, D41, D46, D60): one authenticated payment.observation.v1 delivery
+ * applyPaymentObservation: one authenticated payment.observation.v1 delivery
  * is taken into source-scoped custody and, when it is next in its partition, applied in ONE root Tx: observed fact →
- * applied projection (assigned cumulative totals, never deltas, INV-06) → pro_rata_open/1 allocation → receipt and
- * outbox (PF-12). Deliveries that become next are drained afterwards, each in its own root. The ledger never calls a PSP.
+ * applied projection (assigned cumulative totals, never deltas) → pro_rata_open/1 allocation → receipt and
+ * outbox. Deliveries that become next are drained afterwards, each in its own root. The ledger never calls a PSP.
  *
- * A transport ACK of custody is not a business receipt (INV-08): a parked, held-for-recovery or quarantined delivery
- * stays in custody, and the refusal is thrown only after that custody committed (D31).
+ * A transport ACK of custody is not a business receipt: a parked, held-for-recovery or quarantined delivery
+ * stays in custody, and the refusal is thrown only after that custody committed.
  */
 #[Spi(kind: SpiKind::Call, since: '1.0')]
 interface ObservationApplier

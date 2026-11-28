@@ -15,7 +15,7 @@ return new class extends PackmanMigration
         DB::unprepared(<<<'SQL'
             -- Guarded reversal, credit note and refund reallocation routines. Every journal row
             -- goes through billium_allocation_guard / billium_credit_note_guard, which alone change the counters.
-            -- Locks follow D27: settlement intents (65) → obligations (70) → invoices (80) → payments, then customer
+            -- Locks follow the global lock order: settlement intents (65) → obligations (70) → invoices (80) → payments, then customer
             -- credits (90), ids ascending. The runner prelocks the same rows, so these acquisitions are reentrant.
             -- Replay is decided after the locks: a concurrent twin waits and then replays.
             CREATE OR REPLACE FUNCTION public.billium_ledger_lock_scope(

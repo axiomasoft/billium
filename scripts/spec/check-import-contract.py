@@ -7,7 +7,7 @@ CLI modes:
                      and positive/negative schema fixtures.
   --source-mappings  Validate deterministic source mapping namespaces, seller/environment-scoped
                      source identities, immutable checksums and negative conflict/batch-identity fixtures.
-  --handoff          Validate handoff closure and authority evidence fixtures (D63/F06) and reject
+  --handoff Validate handoff closure and authority evidence fixtures and reject
                      activation without freeze/retirement/activation certificates or commit_no freshness claims.
 """
 from __future__ import annotations
@@ -67,7 +67,7 @@ SOURCE_IDENTITY_FIELDS = (
     "recordKind",
 )
 
-# D71: strict product-agnostic self-isolation guards (built dynamically to keep this file clean of literal leaks).
+# Strict product-agnostic self-isolation guards (built dynamically to keep this file clean of literal leaks).
 FORBIDDEN_TERMS = (
     ("mem" + "ster", "D71 forbids external product names in Billium import surfaces"),
     ("edu" + "fy", "D71 forbids external product names in Billium import surfaces"),

@@ -12,9 +12,9 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Packman\Attributes\Internal;
 
 /**
- * pro_rata_open/1 (D46, allocation-policy): distributes an amount A over the open amounts of the settlement targets in
+ * pro_rata_open/1 (allocation-policy): distributes an amount A over the open amounts of the settlement targets in
  * their `position` order. O = Σ open; O = 0 gives nothing; A ≥ O pays every open amount and leaves A − O unallocated
- * on the payment; A < O uses MoneyMath::allocate (largest remainder, ties to the lower index, D44). Parts sum to
+ * on the payment; A < O uses MoneyMath::allocate (largest remainder, ties to the lower index). Parts sum to
  * min(A, O) exactly and never use floats. A zero part creates no allocation row; that is the caller's choice.
  */
 #[Internal]

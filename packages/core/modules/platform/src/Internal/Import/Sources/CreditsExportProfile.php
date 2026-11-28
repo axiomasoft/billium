@@ -92,7 +92,7 @@ final readonly class CreditsExportProfile implements SourceExportProfile
             );
         }
 
-        // IM-07: Host non-monetary credits/grants NEVER become monetary balance.
+        // Host non-monetary credits/grants NEVER become monetary balance.
         if (in_array($recordType, ['credit_grant', 'bonus_grant', 'nonmonetary_credit', 'credit_balance'], true)) {
             $claimedAsMoney = ($rawRecord['monetaryClaim'] ?? false) === true || $recordType === 'credit_balance';
             $entitlement = is_array($rawRecord['nonMonetaryEntitlement'] ?? null)
@@ -148,7 +148,7 @@ final readonly class CreditsExportProfile implements SourceExportProfile
             );
         }
 
-        // IM-08: Host non-currency reward quantities NEVER become ISO currency.
+        // Host non-currency reward quantities NEVER become ISO currency.
         if (in_array($recordType, ['reward_quantity', 'loyalty_points', 'noncurrency_reward', 'nonmonetary_reward_reference'], true)) {
             $reward = is_array($rawRecord['nonMonetaryEntitlement'] ?? null)
                 ? $rawRecord['nonMonetaryEntitlement']

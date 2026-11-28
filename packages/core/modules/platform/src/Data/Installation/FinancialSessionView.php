@@ -7,7 +7,7 @@ namespace Billium\Platform\Data\Installation;
 use Packman\Attributes\Api;
 
 /**
- * Adopted financial session of one epoch (D54/D62). Copied metadata only: it never admits anything by itself; the host
+ * Adopted financial session of one epoch. Copied metadata only: it never admits anything by itself; the host
  * process token decides what the current process may do.
  */
 #[Api(since: '1.0')]

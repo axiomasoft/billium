@@ -7,7 +7,7 @@ namespace Billium\Platform\Data\Feed;
 use InvalidArgumentException;
 use Packman\Attributes\Api;
 
-/** D52: decimal strings preserve xid8 and bigint exactly in PHP/Dart/wire clients. */
+/** Decimal strings preserve xid8 and bigint exactly in PHP/Dart/wire clients. */
 #[Api(since: '1.0')]
 final readonly class FeedPosition
 {

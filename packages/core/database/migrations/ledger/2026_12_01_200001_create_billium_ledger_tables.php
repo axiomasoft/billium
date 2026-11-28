@@ -531,7 +531,7 @@ return new class extends PackmanMigration
                    IS DISTINCT FROM
                    (OLD.id,OLD.installation_ref,OLD.seller_ref,OLD.environment,OLD.billing_account_ref,OLD.currency,OLD.obligation_ref,OLD.basis_ref,
                     OLD.customer_ref,OLD.component_ref,OLD.amount_due_minor,OLD.terms_digest,OLD.semantic_digest,OLD.price_version_ref,OLD.tax_snapshot_ref,OLD.currency_exponent_version,OLD.receipt_ref,OLD.created_at)
-                THEN RAISE EXCEPTION 'billium: immutable obligation terms (INV-12)' USING ERRCODE = '55000'; END IF;
+                THEN RAISE EXCEPTION 'billium: immutable obligation terms' USING ERRCODE = '55000'; END IF;
                 IF NEW.revision <> OLD.revision + 1 THEN RAISE EXCEPTION 'billium: obligation revision' USING ERRCODE = '55000'; END IF;
                 IF NEW.adjusted_minor IS DISTINCT FROM OLD.adjusted_minor AND OLD.billed_invoice_id IS NOT NULL THEN
                     PERFORM 1 FROM public.billium_invoice WHERE id = OLD.billed_invoice_id AND seller_ref = OLD.seller_ref AND environment = OLD.environment AND status <> 'draft';

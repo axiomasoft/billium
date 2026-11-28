@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate Billium deployment profile & provider qualification manifests (PLAN1 P10.7)."""
+"""Validate Billium deployment profile & provider qualification manifests."""
 from __future__ import annotations
 
 import argparse

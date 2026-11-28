@@ -29,7 +29,7 @@ use LogicException;
 use Packman\Attributes\Internal;
 
 /**
- * Economic apply of ONE observed revision inside its root Tx (observation-apply, D41, D46, D57, D60).
+ * Economic apply of ONE observed revision inside its root Tx (observation-apply).
  *
  * 1. The observed fact is recorded first and survives every later branch: actual values stay exact and unbounded.
  * 2. A charge resolves its billing account through the authenticated settlement intent (or the payment it already
@@ -42,7 +42,7 @@ use Packman\Attributes\Internal;
  *    totals kept, never clamped. A compatible older revision moves no money.
  * 5. A refund child only records its own detail linked to the original charge; its absence parks the linkage.
  *
- * Receipt, journal, counters and outbox commit with the inbox disposition (PF-12). No PSP call happens here.
+ * Receipt, journal, counters and outbox commit with the inbox disposition. No PSP call happens here.
  */
 #[Internal]
 final readonly class PaymentProjection
@@ -171,7 +171,7 @@ final readonly class PaymentProjection
             // An effect on a closed intent never silently reopens it: the payment keeps no intent and is held below.
             [$account, $intentId] = [$intent['account'], $closed ? null : $intent['id']];
         } else {
-            // No authenticated account mapping yet: no allocatable source, the observed fact stays visible (D60).
+            // No authenticated account mapping yet: no allocatable source, the observed fact stays visible.
             return $this->park($db, $caller, $o, $observedId, $inboxId, 'settlement_intent', $o->businessIntentRef);
         }
         $targets = $intent !== null && $intentId === $intent['id'] ? $before['targets'] : [];
@@ -224,13 +224,13 @@ final readonly class PaymentProjection
         $payment = $db->table('billium_payment')->where('seller_ref', $caller->sellerRef)->where('environment', $caller->environment)
             ->where('source_authority', $o->sourceAuthority)->where('payment_ref', $original)->where('kind', 'charge')->first(['id', 'billing_account_ref', 'currency']);
         if ($payment === null) {
-            // Refund detail before its charge: observed and parked on the linkage, no ledger effect (REQ-FAIL-12).
+            // Refund detail before its charge: observed and parked on the linkage, no ledger effect.
             return $this->park($db, $caller, $o, $observedId, $inboxId, 'original_charge', $original);
         }
         new AllocateLockPlan(payments: [self::int($payment->id)])->lock($context);
         $exceptional = self::exceptional($db, $observedId, $o, null, false, false, self::text($payment->currency));
         $receiptRef = self::receiptRef('refund-detail', $o->sourceAuthority, $o->operationRef, $o->operationRevision);
-        // D41: the child never touches payment.refunded_minor; RefundReconciler compares it after the window (D48).
+        // The child never touches payment.refunded_minor; RefundReconciler compares it after the window.
         $receipt = $this->routines->call($db, 'record_refund_detail', [
             $caller->installationRef, $caller->sellerRef, $caller->environment, $observedId, $o->operationRevision, self::int($payment->id), $receiptRef, $material,
             $exceptional === null ? null : json_encode($exceptional, JSON_THROW_ON_ERROR),
@@ -260,7 +260,7 @@ final readonly class PaymentProjection
     {
         $available = $o->capturedTotal->minor - $o->refundedTotal->minor - ($applied['allocated'] ?? 0);
         if ($available <= 0 || $targets === []) {
-            return []; // nothing new, or a confirmed refund made the payment over-allocated (reallocation_required, D35)
+            return []; // nothing new, or a confirmed refund made the payment over-allocated (reallocation_required)
         }
         $open = [];
         foreach ($targets as $target) {
@@ -275,7 +275,7 @@ final readonly class PaymentProjection
             }
         }
 
-        return $parts; // the overpayment beyond the open amounts stays unallocated on the payment (REQ-OWN-12)
+        return $parts; // the overpayment beyond the open amounts stays unallocated on the payment
     }
 
     /** @return array{revision: int, state: string|null, captured: int, refunded: int, allocated: int, hold: bool} */
@@ -293,7 +293,7 @@ final readonly class PaymentProjection
     }
 
     /**
-     * Actual provider facts outside the normal bounds of the applied projection (D57): retained, held, never clamped.
+     * Actual provider facts outside the normal bounds of the applied projection: retained, held, never clamped.
      *
      * @param  array{revision: int, state: string|null, captured: int, refunded: int, allocated: int, hold: bool}|null  $applied
      * @return array{fingerprint: string, reason: string, expected_minor: string, actual_minor: string, exposure_minor: string}|null
@@ -438,7 +438,7 @@ final readonly class PaymentProjection
         }
     }
 
-    /** Scope and internal consistency the schema cannot express (INV-14, rule 6); a refusal quarantines. */
+    /** Scope and internal consistency the schema cannot express (rule 6); a refusal quarantines. */
     private static function refusal(Caller $caller, PaymentObservation $o): ?ProblemCode
     {
         if ($o->sellerRef !== $caller->sellerRef || $o->environment !== $caller->environment || $o->installationRef !== $caller->installationRef

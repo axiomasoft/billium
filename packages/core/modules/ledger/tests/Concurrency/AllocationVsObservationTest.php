@@ -14,7 +14,7 @@ use Billium\Ledger\Tests\Observation\ObservationTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * Explicit allocation racing an observation of the same payment (INV-09, D27 lock order, D35): both lock intent →
+ * Explicit allocation racing an observation of the same payment (lock order): both lock intent →
  * obligation → invoice → payment ascending, so neither deadlocks nor overspends. Whatever wins, the payment counter
  * equals its journal, no obligation is over-allocated, and allocated > captured − refunded only with
  * reallocation_required set; a refused allocation is a stored exceeds_available/exceeds_open/reallocation refusal.

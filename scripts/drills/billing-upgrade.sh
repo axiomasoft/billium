@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PLAN1.P10.5 — Compact mixed-version & non-destructive expand-contract rollback drill.
+# Compact mixed-version & non-destructive expand-contract rollback drill.
 # Usage:
 #   bash scripts/drills/billing-upgrade.sh [--report path/to/manifest.json]
 set -euo pipefail

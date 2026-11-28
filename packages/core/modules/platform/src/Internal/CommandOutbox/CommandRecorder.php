@@ -29,7 +29,7 @@ final readonly class CommandRecorder implements CommandOutbox
         ($this->runner)()->assertCurrent($context, $command->ownerModuleId);
         if ($context->spec()->mode !== FinancialMode::Active
             || in_array($context->spec()->operationClass, [ModuleOperationClass::ReceiptReplay, ModuleOperationClass::HistoricalRead, ModuleOperationClass::CallbackCustody], true)) {
-            throw new LogicException('Outbox recording requires an admitted financial write operation class and session (D54, D55, D60)');
+            throw new LogicException('Outbox recording requires an admitted financial write operation class and session');
         }
         $context->sessionEpoch(); // Refuses a financial context without an admitted session.
         $descriptor = $this->modules->descriptor($command->ownerModuleId);

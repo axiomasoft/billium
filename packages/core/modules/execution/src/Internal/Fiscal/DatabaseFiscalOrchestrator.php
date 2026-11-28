@@ -556,7 +556,7 @@ final readonly class DatabaseFiscalOrchestrator implements FiscalOrchestrator
                 if ($remaining <= 0) {
                     break;
                 }
-                // Exact COV-337 bounded seller-scoped keyset query backed by billium_fiscal_intent_due_lookup (seller_ref, state, next_lookup_at, id).
+                // Exact bounded seller-scoped keyset query backed by billium_fiscal_intent_due_lookup (seller_ref, state, next_lookup_at, id).
                 $rows = $db->select(
                     'SELECT id FROM public.billium_fiscal_intent '
                     .'WHERE seller_ref = ? AND state = ? AND next_lookup_at <= ? AND id > ? '

@@ -25,7 +25,7 @@ use Illuminate\Database\QueryException;
 use LogicException;
 use Packman\Attributes\Internal;
 
-/** Query builder reads and typed DB calls; no PHP counter writes (D60). */
+/** Query builder reads and typed DB calls; no PHP counter writes. */
 #[Internal]
 final readonly class LedgerRepository
 {
@@ -46,11 +46,11 @@ final readonly class LedgerRepository
     ): void {
         $this->runner->assertCurrent($context, 'ledger');
         if ($allowedModes === [] || ! in_array($context->spec()->mode, $allowedModes, true) || ! $context->spec()->monetary()) {
-            throw new LogicException('Monetary ledger operations require an admitted financial session and commit accounting (D54, D60, D62)');
+            throw new LogicException('Monetary ledger operations require an admitted financial session and commit accounting');
         }
         $context->sessionEpoch(); // Throws when the root has no admitted financial session.
         if (! in_array($context->spec()->operationClass, $allowedClasses, true)) {
-            throw new LogicException('Monetary ledger operation is not permitted for operation class '.$context->spec()->operationClass->value.' (D55, D60)');
+            throw new LogicException('Monetary ledger operation is not permitted for operation class '.$context->spec()->operationClass->value.'');
         }
     }
 
@@ -68,11 +68,11 @@ final readonly class LedgerRepository
     ): void {
         $this->runner->assertCurrent($context, 'ledger');
         if ($allowedModes === [] || ! in_array($context->spec()->mode, $allowedModes, true)) {
-            throw new LogicException('Ledger operations require an admitted financial session (D54, D60)');
+            throw new LogicException('Ledger operations require an admitted financial session');
         }
         $context->sessionEpoch(); // Throws when the root has no admitted financial session.
         if (! in_array($context->spec()->operationClass, $allowedClasses, true)) {
-            throw new LogicException('Ledger operation is not permitted for operation class '.$context->spec()->operationClass->value.' (D55, D60)');
+            throw new LogicException('Ledger operation is not permitted for operation class '.$context->spec()->operationClass->value.'');
         }
     }
 
@@ -160,7 +160,7 @@ final readonly class LedgerRepository
     /** @param list<mixed> $bindings */
     public function call(Connection $connection, string $routine, array $bindings, string $kind): LedgerReceipt
     {
-        // A PL/pgSQL refusal aborts its statement. Restore a local savepoint before converting it to a D31 refusal;
+        // A PL/pgSQL refusal aborts its statement. Restore a local savepoint before converting it to a stored refusal;
         // the runner must still be able to validate the live root and save the business receipt.
         $connection->beginTransaction();
         try {

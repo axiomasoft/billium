@@ -12,7 +12,7 @@ use Packman\Attributes\Spi;
 use Packman\Attributes\SpiKind;
 
 /**
- * Capability of exactly one root transaction attempt (D60, transaction-participants). Only the current OperationRunner
+ * Capability of exactly one root transaction attempt (transaction-participants). Only the current OperationRunner
  * mints it, for its connection and root nonce, after the idempotency claim; it carries the authenticated caller, the
  * adopted financial-session epoch, the admitted module closure with generations and the root LockSet. It expires on
  * commit, rollback and retry. A typed participant never trusts an object merely implementing this interface: it calls
@@ -49,7 +49,7 @@ interface TransactionContext
     public function assertActive(?string $connectionName = null): void;
 
     /**
-     * A participant of `$moduleId` may act only inside the admitted closure (D55).
+     * A participant of `$moduleId` may act only inside the admitted closure.
      *
      * @throws \LogicException
      */

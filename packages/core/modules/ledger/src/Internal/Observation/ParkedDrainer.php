@@ -98,7 +98,7 @@ final readonly class ParkedDrainer
     }
 
     /**
-     * Raw custody of one authenticated delivery (D60): a RawCustody root takes no financial session barrier and no
+     * Raw custody of one authenticated delivery: a RawCustody root takes no financial session barrier and no
      * monetary commit kind, so custody commits even while financial application is sealed. It never invokes a handler.
      */
     public function custody(stdClass $envelope, CustodyHandler $handler, ?FinancialScope $scope = null, ?string $proof = null): CustodyResult

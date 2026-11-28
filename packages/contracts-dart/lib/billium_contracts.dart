@@ -1,6 +1,6 @@
 /// Billium contracts v1: client-side types and codecs.
 ///
-/// Dart is a contracts client; it never writes money state (REQ-OWN-18).
+/// Dart is a contracts client; it never writes money state.
 library;
 
 export 'src/capabilities_negotiator.dart'

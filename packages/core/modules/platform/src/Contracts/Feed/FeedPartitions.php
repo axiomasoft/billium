@@ -19,7 +19,7 @@ use Packman\Attributes\SpiKind;
 use stdClass;
 
 /**
- * Source-scoped observation custody and staged partition bootstrap (REQ-CON-27, REQ-FAIL-12/13/22/23). Mutating methods run
+ * Source-scoped observation custody and staged partition bootstrap (13/22/23). Mutating methods run
  * inside the already open root Tx of the caller's OperationRunner; one economic event per root Tx, so a caller drains
  * `CustodyResult::drainPartitionId` and `retryInboxId` with a new root operation each (fresh context and lock plan).
  *

@@ -7,7 +7,7 @@ namespace Billium\Ledger\Data\Invoices;
 use Billium\Ledger\Data\Runtime\BillingAccountScope;
 use Packman\Attributes\Api;
 
-/** Merges allow-list keys (`note`, `external_ref`, `labels`) into the metadata, in any invoice state (INV-13). */
+/** Merges allow-list keys (`note`, `external_ref`, `labels`) into the metadata, in any invoice state. */
 #[Api(since: '1.0')]
 final readonly class UpdateInvoiceMetadata
 {

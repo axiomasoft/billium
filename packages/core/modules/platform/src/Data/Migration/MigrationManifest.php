@@ -12,7 +12,7 @@ use DateTimeImmutable;
 use InvalidArgumentException;
 use Packman\Attributes\Api;
 
-/** D52/D63: immutable source snapshot and pinned public feed checkpoint. */
+/** Immutable source snapshot and pinned public feed checkpoint. */
 #[Api(since: '1.0')]
 final readonly class MigrationManifest
 {

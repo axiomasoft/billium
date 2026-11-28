@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""External import conformance runner (P9.6 / V962 / V963 / D71).
+"""External import conformance runner (V962 / V963).
 
 Usage:
   python3 conformance/import/run.py --adapter php --suite all
@@ -212,7 +212,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.regenerate_golden:
-        print("conformance/import: regenerating golden from implementation output is forbidden (P9.6 / D71)", file=sys.stderr)
+        print("conformance/import: regenerating golden from implementation output is forbidden", file=sys.stderr)
         return 2
 
     if args.adapter == "dart" and args.suite != "codec":

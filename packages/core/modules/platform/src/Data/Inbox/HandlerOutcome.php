@@ -8,7 +8,7 @@ use InvalidArgumentException;
 use Packman\Attributes\Api;
 
 /**
- * What the owning handler did with one delivery inside the root Tx (INV-08): applied with the business receipt it
+ * What the owning handler did with one delivery inside the root Tx: applied with the business receipt it
  * wrote, parked on a missing dependency (the source order still advances), or refused as a conflict (quarantined).
  */
 #[Api(since: '1.0')]

@@ -38,7 +38,7 @@ use Packman\Attributes\Internal;
  *
  * Strictly performs zero writes and zero provider/GL side effects, never sums across currencies,
  * verifies Ledger conservation per currency, verifies stable AccountingFactMapper sourceFactRefs for imported
- * actual payment/refund facts (IM-11), and explicitly separates deferred external activation inputs.
+ * actual payment/refund facts, and explicitly separates deferred external activation inputs.
  */
 #[Internal]
 final readonly class DatabaseImportReconciler implements ImportReconciler

@@ -19,7 +19,7 @@ use LogicException;
 use Packman\Attributes\Internal;
 
 /**
- * allocation.reallocate.v1 (D35): after a confirmed refund made the payment over-allocated (reallocation_required,
+ * allocation.reallocate.v1: after a confirmed refund made the payment over-allocated (reallocation_required,
  * derived by CHECK), reverse its live allocations last-first with cause = refund until allocated = captured − refunded;
  * the overshoot of the last one is placed again. credit_note mode credits every reopened amount in the same Tx (debt
  * closed); reversal mode leaves the receivable open and authorizes no collection. The identity is the payment and the

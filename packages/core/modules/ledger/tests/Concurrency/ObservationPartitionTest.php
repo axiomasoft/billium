@@ -13,7 +13,7 @@ use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * ACC-CON-24 (INV-06, REQ-ACC-10 worked example): an obligation of 100.00 on an issued invoice, charge rev1 captured
+ * Worked example: an obligation of 100.00 on an issued invoice, charge rev1 captured
  * 30.00 already applied; six processes then deliver rev2 captured 100.00, its duplicate, another delivery of the rev1
  * snapshot, its duplicate, another delivery of rev2 and a duplicate of rev1 in one partition. Whatever the order:
  * exactly two allocations 30.00 + 70.00, invoice paid, totals assigned (never summed), nothing quarantined.

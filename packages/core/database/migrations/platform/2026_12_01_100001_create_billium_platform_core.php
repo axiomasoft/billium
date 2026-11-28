@@ -138,7 +138,7 @@ return new class extends PackmanMigration
             CREATE TRIGGER billium_event_contract_immutable BEFORE UPDATE OR DELETE ON public.billium_event_contract
                 FOR EACH ROW EXECUTE FUNCTION public.billium_event_contract_immutable();
 
-            -- 088: immutable event content written in the owning root Tx; (tx_id, id) is the D52 cursor.
+            -- Immutable event content written in the owning root Tx; (tx_id, id) is the feed cursor.
             CREATE TABLE public.billium_outbox_event (
                 id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
                 event_id text NOT NULL CHECK (event_id <> '' AND length(event_id) <= 200),
@@ -273,7 +273,7 @@ return new class extends PackmanMigration
                     SELECT 1 FROM public.billium_financial_session s
                     WHERE s.installation_ref = NEW.installation_ref AND s.epoch > NEW.epoch
                 ) THEN
-                    RAISE EXCEPTION 'billium: only the latest epoch may be activated (D54)' USING ERRCODE = '55000';
+                    RAISE EXCEPTION 'billium: only the latest epoch may be activated' USING ERRCODE = '55000';
                 END IF;
                 RETURN NEW;
             END $$;
@@ -298,7 +298,7 @@ return new class extends PackmanMigration
             CREATE TRIGGER billium_financial_session_event_append_only BEFORE UPDATE OR DELETE ON public.billium_financial_session_event
                 FOR EACH ROW EXECUTE FUNCTION public.billium_append_only();
 
-            -- D55/CV-R11: admission holds these rows FOR SHARE (rank 25), a transition FOR UPDATE; every change bumps generation.
+            -- Admission holds these rows FOR SHARE (rank 25), a transition FOR UPDATE; every change bumps generation.
             CREATE TABLE public.billium_module_state (
                 id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
                 installation_ref text NOT NULL CHECK (installation_ref <> '' AND length(installation_ref) <= 200),
@@ -316,7 +316,7 @@ return new class extends PackmanMigration
             LANGUAGE plpgsql SET search_path = pg_catalog, public AS $$
             BEGIN
                 IF TG_OP = 'DELETE' THEN
-                    RAISE EXCEPTION 'billium: module state is never deleted (D55)' USING ERRCODE = '55000';
+                    RAISE EXCEPTION 'billium: module state is never deleted' USING ERRCODE = '55000';
                 END IF;
                 IF (NEW.id, NEW.installation_ref, NEW.module_id) IS DISTINCT FROM (OLD.id, OLD.installation_ref, OLD.module_id)
                    OR NEW.generation <> OLD.generation + 1

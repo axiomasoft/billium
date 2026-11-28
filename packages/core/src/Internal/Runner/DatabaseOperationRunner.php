@@ -32,7 +32,7 @@ use Throwable;
 #[Internal]
 final class DatabaseOperationRunner implements OperationRunner
 {
-    /** SQLSTATEs whose whole database work may be repeated: serialization failure and deadlock (COV-288). */
+    /** SQLSTATEs whose whole database work may be repeated: serialization failure and deadlock. */
     private const array RETRYABLE = ['40001', '40P01'];
 
     /** The live attempt; the only context assertCurrent() accepts. */
@@ -55,9 +55,9 @@ final class DatabaseOperationRunner implements OperationRunner
     public function run(OperationSpec $spec, Closure $body): StoredOutcome
     {
         if ($this->current !== null || $this->connection->transactionLevel() !== 0) {
-            throw new LogicException("{$spec->commandKind}: OperationRunner is root-only; use a typed participant with the current TransactionContext (D60)");
+            throw new LogicException("{$spec->commandKind}: OperationRunner is root-only; use a typed participant with the current TransactionContext");
         }
-        // Step 1: authenticate before any write; payload refs are selectors, never authority (INV-14, D31: none).
+        // Step 1: authenticate before any write; payload refs are selectors, never authority (none).
         $caller = ($this->callers)()->current();
         if ($caller->sellerRef !== $spec->sellerRef || $caller->environment !== $spec->environment) {
             throw new ProblemException(ProblemCode::AuthDenied, 'operation scope differs from the authenticated caller');
@@ -91,7 +91,7 @@ final class DatabaseOperationRunner implements OperationRunner
                     'idle_in_transaction_session_timeout' => (string) $this->deadlineMs,
                 ]);
 
-                // Step 2: the claim is the first write of the root Tx (D51); a replay needs no session or module admission.
+                // Step 2: the claim is the first write of the root Tx; a replay needs no session or module admission.
                 if ($spec->commandKey !== null && $digest !== null) {
                     if ($scope !== null && ! $this->idempotency instanceof FinancialIdempotencyStore) {
                         throw new ProblemException(ProblemCode::RecoveryRequired, 'The configured idempotency store cannot retain financial scope provenance');
@@ -131,7 +131,7 @@ final class DatabaseOperationRunner implements OperationRunner
                     if ($problem->problem->receipt() !== 'stored' || $claimId === null) {
                         throw $problem;
                     }
-                    // Step 6: stored business refusal — no monetary change, receipt only (D31).
+                    // Step 6: stored business refusal — no monetary change, receipt only.
                     $this->assertDepth(2);
                     $this->assertCurrent($operation->context);
                     $this->connection->rollBack(1);
@@ -170,7 +170,7 @@ final class DatabaseOperationRunner implements OperationRunner
     {
         $current = $this->current;
         if ($current === null || $current->context !== $context || ! $current->isOpen()) {
-            throw new LogicException('Stale or foreign TransactionContext: not the live root of this runner (D60)');
+            throw new LogicException('Stale or foreign TransactionContext: not the live root of this runner');
         }
         if ($moduleId !== null) {
             $context->assertParticipant($moduleId, (string) $this->connection->getName());

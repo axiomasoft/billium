@@ -17,7 +17,7 @@ use DateTimeZone;
 use Packman\Attributes\Api;
 
 /**
- * Deterministic host ProductCoordinator test double for P7.6 acceptance tests.
+ * Deterministic host ProductCoordinator test double for acceptance tests.
  *
  * Consumes durable signal-only facts from Billium Collection without ever deleting host resources
  * or mutating grants/provisioning/GL directly, enforces provision-only retries on paid+provision-failure

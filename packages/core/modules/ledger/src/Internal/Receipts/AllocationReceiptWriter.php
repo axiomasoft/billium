@@ -17,7 +17,7 @@ use LogicException;
 use Packman\Attributes\Internal;
 
 /**
- * AllocationReceipt boundary (BC-EVT-08, INV-09): the guarded routine writes the immutable receipt together with the
+ * AllocationReceipt boundary (BC-EVT-08): the guarded routine writes the immutable receipt together with the
  * journal rows and counters in one statement; PHP never writes a counter, a status or a receipt row. After every change
  * of settled this writer re-reads the locked invoices and checks the DB-derived status against InvoiceStatus::derive,
  * then records the public event of a first (not replayed) application in the same root Tx.

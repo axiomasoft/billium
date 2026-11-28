@@ -13,7 +13,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * Opus F01/F05/F07/F11 correction under D62/D63: the observed actual projection and its hold are owned by the ledger in
+ * The observed actual projection and its hold are owned by the ledger in
  * every delivery/authority profile and do not depend on execution registration. The same wire vector from an
  * embedded-commerz source and from a standalone-billium source gives applied 100/70, observed 140, exposure 40,
  * hold, spendable 0 and the typed financial-hold allocation refusal; the ledger issues no PSP command.

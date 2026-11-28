@@ -11,7 +11,7 @@ use Billium\Ledger\Data\Runtime\BillingAccountScope;
 use Packman\Attributes\Api;
 
 /**
- * Applies available value of exactly one funds source (a payment or a customer credit) to one obligation (INV-09).
+ * Applies available value of exactly one funds source (a payment or a customer credit) to one obligation.
  * `allocationRef` is the business identity: the same identity replays its AllocationReceipt under any command key.
  */
 #[Api(since: '1.0')]

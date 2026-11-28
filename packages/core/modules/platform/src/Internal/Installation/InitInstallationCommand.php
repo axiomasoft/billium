@@ -9,7 +9,7 @@ use Billium\Platform\Contracts\Installation\Installation;
 use Illuminate\Console\Command;
 use Packman\Attributes\Internal;
 
-/** Explicit bootstrap of an installation; never run implicitly by a request, a worker or server boot (D55). */
+/** Explicit bootstrap of an installation; never run implicitly by a request, a worker or server boot. */
 #[Internal]
 final class InitInstallationCommand extends Command
 {

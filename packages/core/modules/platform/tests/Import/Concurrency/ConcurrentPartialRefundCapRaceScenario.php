@@ -19,7 +19,6 @@ use Billium\Platform\Internal\Import\Sources\GenericExportReader;
 use Illuminate\Foundation\Application;
 
 /**
- * IM-05 + IM-10:
  * N concurrent OS processes attempt to apply partial refund observations against the same original
  * charge owner across repacked batches and distinct over-capacity refund batches at the P3 advisory barrier.
  */

@@ -7,7 +7,7 @@ namespace Billium\Platform\Contracts\Feed;
 use Packman\Attributes\Spi;
 use Packman\Attributes\SpiKind;
 
-/** D45/D60: platform-owned recovery metadata, read in the caller's consistent read-only snapshot (REQ-CON-14). */
+/** Platform-owned recovery metadata, read in the caller's consistent read-only snapshot. */
 #[Spi(kind: SpiKind::Call, since: '1.0')]
 interface FeedRecoveryQueries
 {

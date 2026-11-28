@@ -6,7 +6,7 @@ namespace Billium\Core\Enums\Modules;
 
 use Packman\Attributes\Api;
 
-/** What a caller wants from a module; admission is decided per class (D55). */
+/** What a caller wants from a module; admission is decided per class. */
 #[Api(since: '1.0')]
 enum ModuleOperationClass: string
 {

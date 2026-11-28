@@ -14,7 +14,7 @@ use JsonException;
 use LogicException;
 use Packman\Attributes\Internal;
 
-/** D63: HMAC key comes from the host app key (or explicit feed signing key), never the copied database. */
+/** HMAC key comes from the host app key (or explicit feed signing key), never the copied database. */
 #[Internal]
 final readonly class FeedTokens
 {

@@ -10,7 +10,7 @@ use Billium\Ledger\Data\Runtime\LedgerReceipt;
 use Billium\Ledger\Internal\Repositories\InvoiceRepository;
 use Packman\Attributes\Internal;
 
-/** Draft over unbilled obligations; no event, no number (D49). */
+/** Draft over unbilled obligations; no event, no number. */
 #[Internal]
 final readonly class CreateInvoiceCommand
 {

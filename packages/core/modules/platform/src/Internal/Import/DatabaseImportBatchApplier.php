@@ -51,7 +51,7 @@ use Override;
 use Packman\Attributes\Internal;
 
 /**
- * Dependency-ordered, chunked and crash-resumable external import applier over existing Billium monetary APIs (P9.3, D60, D71).
+ * Dependency-ordered, chunked and crash-resumable external import applier over existing Billium monetary APIs.
  *
  * Strictly enforces:
  * - Explicit 'import:apply' capability scope and frozen manifestDigest match prior to any mutation.
@@ -140,7 +140,7 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
             );
         }
 
-        // Pre-mutation cross-seller / cross-environment & sourceAuthority authorization checks (IM-12).
+        // Pre-mutation cross-seller / cross-environment & sourceAuthority authorization checks.
         $needsSourceAuthority = false;
         foreach ($records as $record) {
             if (
@@ -1024,7 +1024,7 @@ final readonly class DatabaseImportBatchApplier implements ImportBatchApplier
         }
 
         $processedSteps++;
-        // Preserve originalIssuer + sourceNumber in mapping without calling Documents numbering or issuing a Billium legal number (IM-16).
+        // Preserve originalIssuer + sourceNumber in mapping without calling Documents numbering or issuing a Billium legal number.
         $reg = $this->store->registerMapping(
             identity: $identity,
             sourceRecordRevision: $revision,

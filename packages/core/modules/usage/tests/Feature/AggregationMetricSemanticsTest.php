@@ -72,6 +72,6 @@ final class AggregationMetricSemanticsTest extends AggregationTestCase
     /** @return array<string, array{string}> */
     public static function unsupportedModels(): array
     {
-        return ['COV-189 duration' => ['duration'], 'COV-190 rate' => ['rate']];
+        return ['Duration' => ['duration'], 'Rate' => ['rate']];
     }
 }

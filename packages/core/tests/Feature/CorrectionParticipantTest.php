@@ -26,7 +26,7 @@ use PHPUnit\Framework\Attributes\Group;
 use RuntimeException;
 
 /**
- * D62/D63 F01/F05/F07/F11: corrections compose through typed ledger participants in ONE root context and LockSet.
+ * Corrections compose through typed ledger participants in ONE root context and LockSet.
  * A draft obligation is adjusted; a finalized one is never overwritten: a positive late delta is a separate linked
  * obligation with a basis derived from the original basis and the correction identity/revision, a negative one is a
  * credit note on the issued invoice.

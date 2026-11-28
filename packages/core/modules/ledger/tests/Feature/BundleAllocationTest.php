@@ -9,7 +9,7 @@ use Billium\Ledger\Tests\Observation\ObservationTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * SB-07 (D46, allocation-policy): a bundle of two components settled through observations and one settlement intent
+ * Allocation policy: a bundle of two components settled through observations and one settlement intent
  * with pro_rata_open/1. O1 66.67 and O2 33.33; a capture of 50.00 gives 3333.5/1666.5 → 3334/1666 (tie to the lower
  * index); a second payment of 50.00 pays the open 3333/1667 and settles both. Every row carries its lineage.
  */

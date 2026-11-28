@@ -17,7 +17,7 @@ use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * applyPaymentObservation semantics (INV-06, D41, D46, D48, REQ-ACC-10, REQ-FAIL-12/13): cumulative totals are assigned
+ * applyPaymentObservation semantics: cumulative totals are assigned
  * per revision, a compatible older revision moves no money, a changed snapshot of the same revision is a conflict, a
  * source discrepancy holds the payment, and a refund child never adds to the charge refund basis.
  */
@@ -223,7 +223,7 @@ final class ObservationApplyTest extends ObservationTestCase
         self::assertSame('applied', $this->inboxStatus(self::eventId($refund)));
         self::assertSame(1, $this->rows('billium_allocation_receipt', "kind = 'refund_detail'"));
         self::assertSame(0, $this->rows('billium_observation_park', 'released_at IS NULL'));
-        self::assertSame(300, self::integer($this->paymentRow()['refunded_minor']), 'D41: charge refundedTotal is the only basis');
+        self::assertSame(300, self::integer($this->paymentRow()['refunded_minor']), 'Charge refundedTotal is the only basis');
         self::assertSame([], $this->drainer()->retryParked());
     }
 
@@ -244,7 +244,7 @@ final class ObservationApplyTest extends ObservationTestCase
         self::assertInstanceOf(AllocationReceipt::class, $again);
         self::assertSame($detail->receiptRef, $again->receiptRef);
         self::assertSame(300, self::integer($this->paymentRow()['refunded_minor']), 'charge 100.00, refund 30.00 → 30.00, not 60.00');
-        self::assertTrue($this->paymentRow()['reallocation_required'], 'allocated 1000 > captured 1000 − refunded 300 (D35)');
+        self::assertTrue($this->paymentRow()['reallocation_required'], 'allocated 1000 > captured 1000 − refunded 300');
         self::assertTrue($charge->body['reallocation_required']);
         self::assertSame([], $charge->body['allocations']);
         self::assertSame(1000, $this->allocated('o1'), 'a confirmed refund never reverses allocations by itself');

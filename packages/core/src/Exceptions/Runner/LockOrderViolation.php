@@ -11,7 +11,7 @@ use Packman\Attributes\Api;
 use Packman\Errors\Contracts\DescribesError;
 use Packman\Errors\Data\ErrorDescriptor;
 
-/** A lock request below an already acquired (rank, segment, key) or an upgrade of a held shared lock (D27). */
+/** A lock request below an already acquired (rank, segment, key) or an upgrade of a held shared lock. */
 #[Api(since: '1.0')]
 final class LockOrderViolation extends LogicException implements DescribesError
 {

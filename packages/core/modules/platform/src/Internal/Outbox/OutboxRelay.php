@@ -14,7 +14,7 @@ use LogicException;
 use Packman\Attributes\Internal;
 use Throwable;
 
-/** D60/D63: SKIP LOCKED claim, transport outside Tx, token-CAS acknowledgement. */
+/** SKIP LOCKED claim, transport outside Tx, token-CAS acknowledgement. */
 #[Internal]
 final readonly class OutboxRelay
 {

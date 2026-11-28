@@ -19,7 +19,7 @@ use Illuminate\Database\DatabaseManager;
 use Packman\Attributes\Internal;
 
 /**
- * Credit note on an issued invoice (COV-167, COV-174): open_only reduces open; reverse_allocations first releases live
+ * Credit note on an issued invoice: open_only reduces open; reverse_allocations first releases live
  * allocations of the line (LIFO, full reversal plus remainder) and credits without exceeding due. It is the same
  * routine for the public root and for correction and document-numbering participants (negative late delta, legal reference) in their root Tx.
  */

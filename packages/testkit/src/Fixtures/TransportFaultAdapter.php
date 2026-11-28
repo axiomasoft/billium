@@ -196,7 +196,7 @@ final readonly class TransportFaultAdapter
     }
 
     /**
-     * Verifies full-envelope RFC 8785 digest coverage, including preserved additive extension fields (D32).
+     * Verifies full-envelope RFC 8785 digest coverage, including preserved additive extension fields.
      *
      * @return array{
      *     valid: bool,

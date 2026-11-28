@@ -7,7 +7,7 @@ namespace Billium\Ledger\Internal\Commands;
 use Packman\Attributes\Internal;
 
 /**
- * The rows a credit note touches, read before and again after its lock plan is taken (COV-167): the invoice and its
+ * The rows a credit note touches, read before and again after its lock plan is taken: the invoice and its
  * currency, the credited obligations by ref, and the invoices, intents, payments and credits behind their allocations.
  */
 #[Internal]

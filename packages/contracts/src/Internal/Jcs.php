@@ -10,7 +10,7 @@ use Packman\Attributes\Internal;
 use stdClass;
 
 /**
- * RFC 8785 canonical JSON for strings, integers, booleans, null, arrays and objects (D32).
+ * RFC 8785 canonical JSON for strings, integers, booleans, null, arrays and objects.
  * Floats and integers outside the exact IEEE 754 range are refused (BC-ID-16).
  */
 #[Internal]

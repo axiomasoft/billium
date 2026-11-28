@@ -15,7 +15,7 @@ use Packman\Attributes\Api;
 use RuntimeException;
 
 /**
- * Minimal COV-299 accounting export extension demonstrating capability/version negotiation
+ * Minimal accounting export extension demonstrating capability/version negotiation
  * and extension-owned export state without altering core financial migrations or writer ownership.
  */
 #[Api(since: '1.0')]
@@ -67,14 +67,14 @@ final class AccountingExportExtension
         return self::SUPPORTED_EXPORT_CONTRACTS;
     }
 
-    /** COV-299 invariant: extension owns its own state and never alters core financial migrations. */
+    /** Invariant: extension owns its own state and never alters core financial migrations. */
     public function altersCoreMigrations(): bool
     {
         return false;
     }
 
     /**
-     * COV-299 invariant: extension never writes core financial tables directly.
+     * Invariant: extension never writes core financial tables directly.
      *
      * @return list<string>
      */

@@ -9,7 +9,7 @@ use LogicException;
 use Packman\Attributes\Internal;
 
 /**
- * Grants of platform migrations to the restricted runtime role (D60). The runtime role is the user of the
+ * Grants of platform migrations to the restricted runtime role. The runtime role is the user of the
  * `billium.connection` connection; migrations run as the distinct schema owner. When both are the same role (a
  * deployment without the split) nothing is granted and the strong backstop is not claimed.
  */

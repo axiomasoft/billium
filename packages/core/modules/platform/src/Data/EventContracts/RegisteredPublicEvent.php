@@ -7,7 +7,7 @@ namespace Billium\Platform\Data\EventContracts;
 use Billium\Platform\Data\Outbox\OutboxEvent;
 use Packman\Attributes\Api;
 
-/** D63: typed reference is validated against persisted registration inside the root Tx. */
+/** Typed reference is validated against persisted registration inside the root Tx. */
 #[Api(since: '1.0')]
 final readonly class RegisteredPublicEvent
 {

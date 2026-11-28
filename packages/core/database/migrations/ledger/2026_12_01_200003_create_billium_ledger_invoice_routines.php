@@ -13,7 +13,7 @@ return new class extends PackmanMigration
     public function up(): void
     {
         DB::unprepared(<<<'SQL'
-            -- Guarded invoice FSM routines. Locks follow D27: line obligations (ids asc) then invoice.
+            -- Guarded invoice FSM routines. Locks follow the global lock order: line obligations (ids asc) then invoice.
             -- Every routine takes the same rows in that order, so a runner prelock makes the acquisitions reentrant.
             -- Receipt replay is decided AFTER the locks: a concurrent twin waits and then replays instead of seeing a changed state.
             CREATE OR REPLACE FUNCTION public.billium_invoice_replay(

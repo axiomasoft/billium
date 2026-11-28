@@ -538,7 +538,7 @@ final class FixtureSourceHandoff implements SourceHandoffHost
     /** @return list<array{revision:string,amount:int}> */
     public function tailPayload(): array
     {
-        // The initial snapshot can include this economically identical fact before it is visible below the D52 horizon.
+        // The initial snapshot can include this economically identical fact before it is visible below the feed horizon.
         return self::SNAPSHOT;
     }
 

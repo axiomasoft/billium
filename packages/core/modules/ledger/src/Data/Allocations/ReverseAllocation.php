@@ -10,7 +10,7 @@ use Packman\Attributes\Api;
 
 /**
  * Reverses the whole original allocation `allocationRef` with an immutable linked negative row (UNIQUE per original);
- * a partial correction names the `remainder` that is placed again from the same source in the same Tx (COV-289).
+ * a partial correction names the `remainder` that is placed again from the same source in the same Tx.
  * A string `allocationRef` names an Allocate reference; an integer selects the immutable journal id returned as
  * `remainder_allocation_ref` by a partial reversal. Numeric strings retain their original reference semantics.
  */

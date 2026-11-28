@@ -270,7 +270,7 @@ def execute_suite(args: argparse.Namespace) -> int:
     adapter_cmd = shlex.split(external_cmd_str) if external_cmd_str.strip() else php_command(HERE / "adapter.php")
     if args.boundary == "external-runtime" and is_bundled_reference_command(adapter_cmd):
         print(
-            "conformance/consumers/bridge: bundled reference adapter cannot be promoted to --boundary external-runtime (D59/D71)",
+            "conformance/consumers/bridge: bundled reference adapter cannot be promoted to --boundary external-runtime",
             file=sys.stderr,
         )
         return 1

@@ -13,7 +13,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\TestWith;
 
 /**
- * PF-14, ACC-RST-07 (REQ-FAIL-23, D60): a restored source with another lineage, or a new event at an already accounted
+ * A restored source with another lineage, or a new event at an already accounted
  * sequence, puts the partition into recovery_required with zero economic effect; ledger.feed.bootstrap with the new
  * lineage and its cursor activates the partition, the held tail applies after the cursor and no total is doubled.
  */

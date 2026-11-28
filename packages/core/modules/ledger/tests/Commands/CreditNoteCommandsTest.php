@@ -17,7 +17,7 @@ use Billium\Ledger\Data\Invoices\IssueCreditNote;
 use Billium\Ledger\Tests\Schema\LedgerTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
-/** issueCreditNote (COV-167, COV-171, COV-173/174): open_only, reverse_allocations with LIFO release, refusals, replay. */
+/** issueCreditNote (174): open_only, reverse_allocations with LIFO release, refusals, replay. */
 #[Group('pg')]
 final class CreditNoteCommandsTest extends LedgerTestCase
 {
@@ -125,7 +125,7 @@ final class CreditNoteCommandsTest extends LedgerTestCase
         $this->obligation('o2', 5000);
         $this->draft(['o1' => 0, 'o2' => 0]);
         $this->issue();
-        // COV-173/174: payment 100, allocation 60, credit note 20, refund 10 are separate facts that reconcile.
+        // Payment 100, allocation 60, credit note 20, refund 10 are separate facts that reconcile.
         $this->payWith(captured: 10000);
         $this->allocateFrom('a1', 'o1', '60.00');
         $note = $this->creditNote('cn', ['o1' => '20.00', 'o2' => '10.00']);

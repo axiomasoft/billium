@@ -73,7 +73,6 @@ final class ImportApplyTest extends PlatformTestCase
     }
 
     /**
-     * IM-02 + IM-09 + IM-11 + IM-14 + IM-16:
      * Applies the reference-recurring complete manifest across RUB & USD, retains frozen historical PriceVersion,
      * preserves historical invoice originalIssuer/sourceNumber without issuing a second Billium legal number,
      * exports stable AccountingFactMapper sourceFactRefs without duplicate cash/GL or PSP calls, and replays
@@ -101,7 +100,7 @@ final class ImportApplyTest extends PlatformTestCase
         self::assertTrue($result1->reconciliation->reconciled);
         self::assertSame([], $result1->reconciliation->discrepancies);
 
-        // IM-09: Frozen historical PriceVersion (12000.00 RUB, pv-2025-annual-rub) is retained, never current plan (15900.00 RUB).
+        // Frozen historical PriceVersion (12000.00 RUB, pv-2025-annual-rub) is retained, never current plan (15900.00 RUB).
         $queries = $this->application()->make(LedgerQueries::class);
         $rubObl = $queries->obligation('src-obl-annual-rub-001');
         self::assertSame('12000.00', $rubObl['originalDue']['amount']);
@@ -115,14 +114,14 @@ final class ImportApplyTest extends PlatformTestCase
         self::assertSame('USD', $usdObl['originalDue']['currency']);
         self::assertSame('0.00', $usdObl['open']['amount']);
 
-        // IM-16: Historical invoice preserves originalIssuer + sourceNumber in mapping and issues ZERO Billium invoices/legal numbers.
+        // Historical invoice preserves originalIssuer + sourceNumber in mapping and issues ZERO Billium invoices/legal numbers.
         self::assertSame(0, $this->rows('billium_invoice'));
         $histMapping = $this->row("SELECT original_issuer, original_source_number, billium_target_kind, billium_target_ref FROM billium_import_mapping WHERE source_record_id = 'rec-inv-hist-001'");
         self::assertSame('seller-legal-entity-rec-1', $histMapping['original_issuer']);
         self::assertSame('REC-INV-2025-000412', $histMapping['original_source_number']);
         self::assertSame('historical_invoice', $histMapping['billium_target_kind']);
 
-        // IM-14: Mixed currencies (RUB and USD) are reconciled separately and never summed together.
+        // Mixed currencies (RUB and USD) are reconciled separately and never summed together.
         $reconcileReport = $this->reconciler()->reconcileBatch($reader1->manifest()->batchId);
         self::assertTrue($reconcileReport->reconciled);
         self::assertArrayHasKey('RUB', $reconcileReport->ledgerConservationByCurrency);
@@ -135,7 +134,7 @@ final class ImportApplyTest extends PlatformTestCase
         // External activation inputs are separated in report provenance.
         self::assertCount(3, $reconcileReport->externalActivationInputs);
 
-        // IM-11: Imported historical payments/refunds export deterministic sourceFactRef via AccountingFactMapper, zero PSP egress.
+        // Imported historical payments/refunds export deterministic sourceFactRef via AccountingFactMapper, zero PSP egress.
         $factsByRecord = [];
         foreach ($reconcileReport->accountingFacts as $fact) {
             $factsByRecord[$fact['sourceRecordId']] = $fact;
@@ -146,7 +145,7 @@ final class ImportApplyTest extends PlatformTestCase
         self::assertSame('payment.captured', $factsByRecord['rec-pay-rub-001']['factKind']);
         self::assertSame('refund.succeeded', $factsByRecord['rec-rfnd-rub-001']['factKind']);
 
-        // IM-02: Repackage the exact same source records into a second batch with a new mapper version & importPolicyVersion.
+        // Repackage the exact same source records into a second batch with a new mapper version & importPolicyVersion.
         $oblBefore = $this->rows('billium_obligation');
         $payBefore = $this->rows('billium_payment');
         $allocBefore = $this->rows('billium_allocation');
@@ -187,7 +186,7 @@ final class ImportApplyTest extends PlatformTestCase
     }
 
     /**
-     * IM-03: Same source identity and revision arriving with a different payloadDigest conflicts and quarantines the batch.
+     * Same source identity and revision arriving with a different payloadDigest conflicts and quarantines the batch.
      */
     public function test_conflicting_payload_digest_for_same_source_identity_and_revision_quarantines_batch(): void
     {
@@ -219,7 +218,7 @@ final class ImportApplyTest extends PlatformTestCase
     }
 
     /**
-     * IM-12: Revoked auth, missing import:apply scope, mismatched manifestDigest, missing sourceAuthority grant,
+     * Revoked auth, missing import:apply scope, mismatched manifestDigest, missing sourceAuthority grant,
      * and cross-seller records are rejected BEFORE any database mutation; pre-apply rejectBatch works and post-apply rejectBatch is refused.
      */
     public function test_authorization_scope_manifest_hash_and_cross_seller_guards_reject_before_mutation(): void
@@ -373,7 +372,7 @@ final class ImportApplyTest extends PlatformTestCase
     }
 
     /**
-     * IM-10: Refund capacity validation + post-apply linked corrections (positive multi-component with MoneyMath rounding,
+     * Refund capacity validation + post-apply linked corrections (positive multi-component with MoneyMath rounding,
      * negative credit note on issued invoice, mapping tombstone) without destructive rollback or automatic PSP dispatch.
      */
     public function test_refund_capacity_validation_and_post_apply_linked_corrections_without_destructive_rollback(): void
@@ -516,7 +515,7 @@ final class ImportApplyTest extends PlatformTestCase
     }
 
     /**
-     * P9.9 Round 2 F1 regression: Non-proportional historical split allocations (90/10 across 100/100 open obligations)
+     * Round 2 F1 regression: Non-proportional historical split allocations (90/10 across 100/100 open obligations)
      * diverge from ledger pro_rata_open/1 projection (50/50) and must fail closed (quarantined, reconciled=false)
      * instead of silently applying 50/50 and reporting completed.
      */
@@ -550,7 +549,7 @@ final class ImportApplyTest extends PlatformTestCase
     }
 
     /**
-     * P9.9 Round 2 F2 regression: A proven_allocation imported before its target obligation remains unresolved/quarantined
+     * Round 2 F2 regression: A proven_allocation imported before its target obligation remains unresolved/quarantined
      * without being marked Applied; once the obligation is imported, retrying the allocation applies it cleanly.
      */
     public function test_proven_allocation_before_target_obligation_remains_unresolved_and_applies_on_retry(): void
@@ -598,7 +597,7 @@ final class ImportApplyTest extends PlatformTestCase
     }
 
     /**
-     * P9.9 Round 2 F3 regression: Chained draft_obligation_adjustment linked corrections (rev 1->2 and 2->3)
+     * Round 2 F3 regression: Chained draft_obligation_adjustment linked corrections (rev 1->2 and 2->3)
      * resolve the underlying obligation target through ancestor mappings instead of failing with ReferenceUnknown.
      */
     public function test_chained_draft_obligation_adjustments_from_revision_1_to_2_to_3_succeed(): void

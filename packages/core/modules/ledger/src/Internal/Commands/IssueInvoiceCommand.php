@@ -16,7 +16,7 @@ use LogicException;
 use Packman\Attributes\Internal;
 
 /**
- * draft → issued with the derived payment status in the same Tx. The public root passes no legal reference (D49);
+ * draft → issued with the derived payment status in the same Tx. The public root passes no legal reference;
  * legal document numbering supplies it through LedgerParticipants::issueInvoice in the same root Tx.
  */
 #[Internal]

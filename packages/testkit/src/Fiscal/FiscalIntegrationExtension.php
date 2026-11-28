@@ -17,7 +17,7 @@ use Packman\Plugins\Data\Plugin\PluginManifest;
 use Packman\Plugins\Laravel\PluginRegistrar;
 
 /**
- * Minimal COV-295 fiscal integration extension stub proving capability/version negotiation
+ * Minimal fiscal integration extension stub proving capability/version negotiation
  * without implementing WithSchema or touching any core/platform/ledger/execution tables.
  */
 #[Api(since: '1.0')]

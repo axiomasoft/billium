@@ -8,7 +8,7 @@ use Billium\Contracts\Data\Currency;
 use Packman\Attributes\Internal;
 
 /**
- * The ISO 4217 currencies of the spec revision with their scale (D19), read from the package resources.
+ * The ISO 4217 currencies of the spec revision with their scale, read from the package resources.
  */
 #[Internal]
 final class CurrencyTable

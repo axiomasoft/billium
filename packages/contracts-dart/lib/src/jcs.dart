@@ -5,7 +5,7 @@ import 'problem_exception.dart';
 
 const _maxSafe = 9007199254740991;
 
-/// RFC 8785 canonical JSON for strings, integers, booleans, null, lists and maps (D32).
+/// RFC 8785 canonical JSON for strings, integers, booleans, null, lists and maps.
 ///
 /// Doubles and integers outside the exact IEEE 754 range are refused (BC-ID-16): `jsonEncode` escapes
 /// strings differently from RFC 8785, so the serializer is written here.

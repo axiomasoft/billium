@@ -10,7 +10,7 @@ use Billium\Ledger\Data\Allocations\Allocate;
 use Billium\Ledger\Data\Allocations\AllocationReceipt;
 
 /**
- * The D57/D60 exceptional-exposure vector (observation-apply 7, Opus F01/F05/F07/F11 under D62): one source charge is
+ * The exceptional-exposure vector: one source charge is
  * captured 100.00, refunded 70.00 consistently, then the provider reports refunded 140.00. The observed actual is kept
  * exactly (140.00), the applied projection stays at the last consistent 100.00/70.00, the exposure is 40.00, the
  * payment is held with spendable 0 and a new allocation from it is refused with the typed reallocation/hold code.

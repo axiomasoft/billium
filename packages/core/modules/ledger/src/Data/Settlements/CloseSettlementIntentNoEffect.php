@@ -10,7 +10,7 @@ use Billium\Ledger\Data\Runtime\BillingAccountScope;
 use Packman\Attributes\Api;
 
 /**
- * No-effect closure of a settlement intent (D63/F04, FA02). Binds the intent and its expected revision, the collection
+ * No-effect closure of a settlement intent. Binds the intent and its expected revision, the collection
  * step authorization, the closure identity, the account scope/currency, the cause and the typed same-root NoEffectProof.
  * The ledger participant validates the proof and the ledger state under its predeclared locks; it never clears a
  * sent/unknown intent by timeout. A missing proof is refused by the participant.

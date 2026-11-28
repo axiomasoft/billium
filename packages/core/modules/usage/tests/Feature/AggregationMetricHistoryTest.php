@@ -53,7 +53,7 @@ final class AggregationMetricHistoryTest extends AggregationTestCase
     /** @return array<string, array{string}> */
     public static function supportedChanges(): array
     {
-        return ['COV-193 aggregation kind' => ['kind'], 'COV-194 unit' => ['unit'], 'COV-195 source filter' => ['filter'], 'COV-196 extraction' => ['extraction']];
+        return ['Aggregation kind' => ['kind'], 'Unit' => ['unit'], 'Source filter' => ['filter'], 'Extraction' => ['extraction']];
     }
 
     #[DataProvider('unsupportedPolicies')]
@@ -86,6 +86,6 @@ final class AggregationMetricHistoryTest extends AggregationTestCase
     /** @return array<string, array{string}> */
     public static function unsupportedPolicies(): array
     {
-        return ['COV-197 attribution' => ['attributionPolicy'], 'COV-198 correction' => ['correctionPolicy']];
+        return ['Attribution' => ['attributionPolicy'], 'Correction' => ['correctionPolicy']];
     }
 }

@@ -17,7 +17,7 @@ final class RegisterEventContractsCommand extends Command
 {
     protected $signature = 'billium:event-contracts:register {--database= : Explicit installation/upgrade owner connection}';
 
-    protected $description = 'Explicitly register the configured module event contracts (D63)';
+    protected $description = 'Explicitly register the configured module event contracts';
 
     public function handle(DatabaseManager $databases, ModuleRegistry $modules, BilliumOptions $options): int
     {

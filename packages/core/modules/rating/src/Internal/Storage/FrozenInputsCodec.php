@@ -29,7 +29,7 @@ use Billium\Rating\Internal\Canonical\CanonicalJson;
 use DateTimeImmutable;
 use Packman\Attributes\Internal;
 
-/** Retained v1 snapshots: explicit decoding, no current registry or vendor reads (D56). */
+/** Retained v1 snapshots: explicit decoding, no current registry or vendor reads. */
 #[Internal]
 final class FrozenInputsCodec
 {

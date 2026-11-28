@@ -20,7 +20,7 @@ use Billium\Platform\Data\Inbox\VerifiedObservationBootstrap;
 use Packman\Attributes\Internal;
 
 /**
- * ledger.feed.bootstrap (PF-13, PF-14, ACC-RST-07): staged bootstrap of one observation partition over
+ * ledger.feed.bootstrap: staged bootstrap of one observation partition over
  * FeedPartitions with the ledger ObservationHandler. The complete snapshot is verified and staged first (the live
  * partition holds its tail); every item then gets a durable economic, discrepancy or pending-allocation disposition in
  * its own root with the same economic dedupe as live deliveries, so an already applied revision is never applied twice;

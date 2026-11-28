@@ -39,7 +39,7 @@ final readonly class DatabaseDocumentsNumberingParticipant implements DocumentsN
         $caller = $this->callers->current();
         $db = $this->databases->connection($context->connectionName());
 
-        // Acquire DocumentSeries rank strictly after Invoice (80) per LockRank DAG (D27).
+        // Acquire DocumentSeries rank strictly after Invoice (80) per LockRank DAG.
         $context->lock(new LockRequest(
             rank: LockRank::DocumentSeries,
             table: 'billium_document_series',

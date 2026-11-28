@@ -70,7 +70,7 @@ services:
 configs:
   test-database-roles:
     content: |
-      -- Throwaway test credentials only. D60: fixture owner and runtime are distinct.
+      -- Throwaway test credentials only. The fixture owner and runtime are distinct roles.
       CREATE ROLE billium_runtime LOGIN PASSWORD 'billium_runtime'
         NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS;
       REVOKE CREATE ON SCHEMA public FROM PUBLIC;

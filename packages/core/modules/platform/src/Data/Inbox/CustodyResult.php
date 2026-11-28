@@ -8,8 +8,8 @@ use Billium\Contracts\Enums\ProblemCode;
 use Packman\Attributes\Api;
 
 /**
- * Result of one custody step, returned after the root Tx commits (D31): the caller maps `problem()` to its transport
- * answer. A transport ACK of any disposition confirms custody only, never ProjectionApplied (INV-08).
+ * Result of one custody step, returned after the root Tx commits: the caller maps `problem()` to its transport
+ * answer. A transport ACK of any disposition confirms custody only, never ProjectionApplied.
  * `drainPartitionId` names a partition whose next accounted sequence is already in custody: the caller drains it in a
  * NEW root Tx, one sequence at a time.
  */

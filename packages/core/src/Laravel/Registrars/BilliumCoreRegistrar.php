@@ -237,7 +237,7 @@ final class BilliumCoreRegistrar implements PackageRegistrar
             SchemaExtensions::register($app, $pluginClass, $ownerId);
         }
 
-        // D55: packaged descriptors only; validation is explicit (doctor/readiness), never a hidden boot side effect.
+        // Packaged descriptors only; validation is explicit (doctor/readiness), never a hidden boot side effect.
         $app->singleton(ModuleRegistry::class, static fn (): ModuleCatalog => ModuleCatalog::packaged());
         $app->singleton(ModuleLifecycle::class, static fn (Application $app): ModuleLifecycle => new ModuleLifecycle($app->make(ModuleRegistry::class)));
         $app->alias(ModuleLifecycle::class, ModuleAdmissionGate::class);
@@ -288,7 +288,7 @@ final class BilliumCoreRegistrar implements PackageRegistrar
 
     private static function registerHostPortFallbacks(Application $app): void
     {
-        // Host SPIs fail closed until the host binds its authenticated caller and process-token authority (D62),
+        // Host SPIs fail closed until the host binds its authenticated caller and process-token authority,
         // while still forwarding host bindings registered under pre-reorganization legacy interface aliases.
         foreach ([
             CallerContext::class => UnboundCallerContext::class,

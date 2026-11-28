@@ -9,7 +9,7 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Illuminate\Foundation\Application;
 use RuntimeException;
 
-/** Infrastructure self-test only; domain scenarios belong to their owning module (D50). */
+/** Infrastructure self-test only; domain scenarios belong to their owning module. */
 final readonly class ProbeScenario implements Scenario
 {
     /** @param array<string, mixed> $args */

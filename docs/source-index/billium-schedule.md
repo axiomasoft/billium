@@ -10,13 +10,13 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
 | [`AgreementRevisionCommit`](../../packages/core/modules/schedule/src/Contracts/AgreementRevisionCommit.php) | interface | **Api** |  |
-| [`AgreementRevisionGuard`](../../packages/core/modules/schedule/src/Contracts/AgreementRevisionGuard.php) | interface | **Spi** | Host authority (REQ-NBR-06, D56; owner host). |
+| [`AgreementRevisionGuard`](../../packages/core/modules/schedule/src/Contracts/AgreementRevisionGuard.php) | interface | **Spi** | Host authority (owner host). |
 | [`Clock`](../../packages/core/modules/schedule/src/Contracts/Clock.php) | interface | **Api** |  |
 | [`CommercialPeriods`](../../packages/core/modules/schedule/src/Contracts/CommercialPeriods.php) | interface | **Api** |  |
 | [`CorrectionBasisPolicy`](../../packages/core/modules/schedule/src/Contracts/CorrectionBasisPolicy.php) | interface | **Spi** | Decides which obligation basis a correction child may bind. |
 | [`CorrectionParticipants`](../../packages/core/modules/schedule/src/Contracts/CorrectionParticipants.php) | interface | **Spi** |  |
 | [`IntervalResolver`](../../packages/core/modules/schedule/src/Contracts/IntervalResolver.php) | interface | **Api** |  |
-| [`OccurrenceLocks`](../../packages/core/modules/schedule/src/Contracts/OccurrenceLocks.php) | interface | **Spi** | Outer roots acquire the complete rank-50 set before settlement/obligation locks (D27/FA03). |
+| [`OccurrenceLocks`](../../packages/core/modules/schedule/src/Contracts/OccurrenceLocks.php) | interface | **Spi** | Outer roots acquire the complete rank-50 set before settlement/obligation locks. |
 | [`OccurrenceParticipants`](../../packages/core/modules/schedule/src/Contracts/OccurrenceParticipants.php) | interface | **Spi** |  |
 | [`OccurrenceService`](../../packages/core/modules/schedule/src/Contracts/OccurrenceService.php) | interface | **Spi** |  |
 | [`PinnedOccurrenceInputs`](../../packages/core/modules/schedule/src/Contracts/PinnedOccurrenceInputs.php) | interface | **Spi** |  |
@@ -43,11 +43,11 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`DueBatch`](../../packages/core/modules/schedule/src/Data/DueBatch.php) | class | **Api** |  |
 | [`OccurrenceReceipt`](../../packages/core/modules/schedule/src/Data/OccurrenceReceipt.php) | class | **Api** |  |
 | [`OccurrenceView`](../../packages/core/modules/schedule/src/Data/OccurrenceView.php) | class | **Api** | Read model of one occurrence incarnation with the schedule revision that currently applies to its period. |
-| [`PeriodPolicy`](../../packages/core/modules/schedule/src/Data/PeriodPolicy.php) | class | **Api** | D56; owner schedule. |
+| [`PeriodPolicy`](../../packages/core/modules/schedule/src/Data/PeriodPolicy.php) | class | **Api** | Owner schedule. |
 | [`PeriodQuote`](../../packages/core/modules/schedule/src/Data/PeriodQuote.php) | class | **Api** |  |
-| [`ResolvedInterval`](../../packages/core/modules/schedule/src/Data/ResolvedInterval.php) | class | **Api** | Immutable UTC boundaries plus retained source resolution evidence (D56; owner schedule). |
+| [`ResolvedInterval`](../../packages/core/modules/schedule/src/Data/ResolvedInterval.php) | class | **Api** | Immutable UTC boundaries plus retained source resolution evidence (owner schedule). |
 | [`ScheduleReceipt`](../../packages/core/modules/schedule/src/Data/ScheduleReceipt.php) | class | **Api** |  |
-| [`ScheduleRevisionTerms`](../../packages/core/modules/schedule/src/Data/ScheduleRevisionTerms.php) | class | **Api** | Approved host input, not an agreement lifecycle (REQ-CON-33, REQ-NBR-06; owner schedule). |
+| [`ScheduleRevisionTerms`](../../packages/core/modules/schedule/src/Data/ScheduleRevisionTerms.php) | class | **Api** | Approved host input, not an agreement lifecycle (owner schedule). |
 
 ## Enums
 
@@ -95,8 +95,8 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
-| [`OccurrenceConformance`](../../packages/core/modules/schedule/src/Internal/OccurrenceConformance.php) | class | *Internal* | Module-owned test protocol dispatch; no second scheduler or monetary writer (D55/D56). |
-| [`OccurrenceTime`](../../packages/core/modules/schedule/src/Internal/OccurrenceTime.php) | class | *Internal* | Occurrence identity and persistence retain every microsecond (D12/D56; owner schedule). |
+| [`OccurrenceConformance`](../../packages/core/modules/schedule/src/Internal/OccurrenceConformance.php) | class | *Internal* | Module-owned test protocol dispatch; no second scheduler or monetary writer. |
+| [`OccurrenceTime`](../../packages/core/modules/schedule/src/Internal/OccurrenceTime.php) | class | *Internal* | Occurrence identity and persistence retain every microsecond (owner schedule). |
 
 ## Internal/Operations
 

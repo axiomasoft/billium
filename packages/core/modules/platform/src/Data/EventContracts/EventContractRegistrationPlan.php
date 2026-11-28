@@ -8,7 +8,7 @@ use Billium\Core\Data\Modules\ModuleDescriptor;
 use Packman\Attributes\Api;
 
 /**
- * Result of validating a module manifest against the registry (D63). Only the explicit install/upgrade command may
+ * Result of validating a module manifest against the registry. Only the explicit install/upgrade command may
  * apply `toRegister`; ordinary boot never registers. A plan with conflicts is never applied.
  */
 #[Api(since: '1.0')]

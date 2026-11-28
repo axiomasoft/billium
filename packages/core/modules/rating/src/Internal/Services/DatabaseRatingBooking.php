@@ -112,7 +112,7 @@ final readonly class DatabaseRatingBooking implements RatingBooking
             commandKey: $command->operationKey, digest: $in->digest(), commitKind: 'rating.book.v1',
             financialScope: $wire?->scope, inputDigest: $wire?->inputDigest),
             body: PinnedCommand::retaining($wire, function (TransactionContext $context) use ($command, $in, $draft): BookingReceipt {
-                // This must precede every adapter, lock-head insert and write (D60).
+                // This must precede every adapter, lock-head insert and write.
                 $this->runner->assertCurrent(context: $context, moduleId: 'rating');
                 if (CanonicalJson::encode($this->computation->compute($in)) !== CanonicalJson::encode($draft)) {
                     RatingComputation::refuse('digest_mismatch');
@@ -145,7 +145,7 @@ final readonly class DatabaseRatingBooking implements RatingBooking
                     $kind = BookingOutcome::NoCharge;
                 } elseif ($ledgerOn) {
                     // A new obligation has no existing row to lock. The occurrence/frontier serializes creation;
-                    // ledger's seller-scoped basis UNIQUE is its final arbiter, through the actual D60 participant.
+                    // ledger's seller-scoped basis UNIQUE is its final arbiter, through the actual ledger participant.
                     $obligation = $this->ledger->record(context: $context, prepared: $command->prepared);
                     $this->store->insertBooking(context: $context, id: $id, obligation: $obligation, basis: $draft->basisRef);
                     $kind = BookingOutcome::Booked;

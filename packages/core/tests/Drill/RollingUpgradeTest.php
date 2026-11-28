@@ -13,7 +13,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Group;
 
-/** D21/REQ-FAIL-29: real processes and committed PostgreSQL data, simulated application generations. */
+/** Real processes and committed PostgreSQL data, simulated application generations. */
 #[Group('ACC-RST-10')]
 #[Group('pg')]
 final class RollingUpgradeTest extends LedgerTestCase
@@ -70,7 +70,7 @@ final class RollingUpgradeTest extends LedgerTestCase
             self::assertSame(20, $this->rows('billium_allocation', 'settlement_intent_id=?', [$intent]));
             self::assertSame(20, $this->rows('billium_idempotency_receipt', "command_kind='ledger.allocate' AND outcome='accepted'"));
             self::assertSame(20, $this->rows('billium_outbox_event', "type='allocation.applied.v1'"));
-            // Only accepted economic roots append commits; D31 refusals retain receipts without money writes.
+            // Only accepted economic roots append commits refusals retain receipts without money writes.
             self::assertSame($baseline + 20, $this->rows('billium_money_commit_log'));
             self::assertSame(20, self::integer($this->value(<<<'SQL'
                 SELECT count(*) FROM billium_allocation a

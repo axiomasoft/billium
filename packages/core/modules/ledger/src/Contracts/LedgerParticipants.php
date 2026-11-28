@@ -16,11 +16,11 @@ use Packman\Attributes\Spi;
 use Packman\Attributes\SpiKind;
 
 /**
- * Typed ledger participants of a root transaction owned by another module (D60, transaction-participants). Each method
+ * Typed ledger participants of a root transaction owned by another module (transaction-participants). Each method
  * receives the CURRENT TransactionContext, requires `ledger` in its admitted closure and the same runner/connection/
  * session, takes only predeclared locks through that context and never starts a runner; public Ledger mutations remain
  * root-only. No method exposes SQL, a connection or foreign tables.
- * Corrections (D63/F01): a draft obligation is adjusted (adjustObligation refuses a frozen invoice); a finalized one
+ * Corrections: a draft obligation is adjusted (adjustObligation refuses a frozen invoice); a finalized one
  * gets a positive delta as recordObligation with CorrectionBasis::derive(original basis, correction identity, revision)
  * and a negative delta as issueCreditNote. The original obligation is never overwritten.
  */
@@ -32,7 +32,7 @@ interface LedgerParticipants
 
     public function declareSettlementIntent(TransactionContext $context, DeclareSettlementIntent $command): Receipt;
 
-    /** Issues the draft and sets legal_document_ref once, in the same root Tx as legal document numbering (D49); the locks must be planned by the root. */
+    /** Issues the draft and sets legal_document_ref once, in the same root Tx as legal document numbering; the locks must be planned by the root. */
     public function issueInvoice(TransactionContext $context, IssueInvoice $command, string $legalDocumentRef): Receipt;
 
     public function issueCreditNote(TransactionContext $context, IssueCreditNote $command): Receipt;
@@ -40,7 +40,7 @@ interface LedgerParticipants
     public function adjustObligation(TransactionContext $context, AdjustObligation $command): Receipt;
 
     /**
-     * Appends a no-effect closure revision (D63/F04). Refuses missing proof, a stale/foreign context or proof of another
+     * Appends a no-effect closure revision. Refuses missing proof, a stale/foreign context or proof of another
      * root, a committed dispatch permit, a pending/unknown/sent external effect, a stale revision or an existing
      * economic application. Exact replay returns the saved closure receipt.
      */

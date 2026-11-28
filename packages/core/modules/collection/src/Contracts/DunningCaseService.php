@@ -42,7 +42,7 @@ interface DunningCaseService
      */
     public function planStep(PlanCollectionStep $command): CollectionStepView;
 
-    /** D63/F04: commits the executable step, incoming reservation, settlement intent and command together. */
+    /** Commits the executable step, incoming reservation, settlement intent and command together. */
     public function authorizeCollection(AuthorizeCollection $command): CollectionStepView;
 
     public function authorizePinnedCollection(WireAuthorization $command, PinnedCollectionInputs $inputs): CommandReceipt;

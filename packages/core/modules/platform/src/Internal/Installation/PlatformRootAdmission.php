@@ -31,7 +31,7 @@ use LogicException;
 use Packman\Attributes\Internal;
 
 /**
- * Session (rank 15) and module (rank 25) barriers of the root runner, plus the diagnostic commit log (D54, D55, D62).
+ * Session (rank 15) and module (rank 25) barriers of the root runner, plus the diagnostic commit log.
  * Every lock goes through the context's root LockSet and is held to commit.
  */
 #[Internal]
@@ -71,7 +71,7 @@ final readonly class PlatformRootAdmission implements RootAdmission
             return $session->epoch;
         }
 
-        // D62: the expected owner session, generations, epoch and mode come only from the host token.
+        // The expected owner session, generations, epoch and mode come only from the host token.
         $token = ($this->tokens)()->currentToken($installation);
         if ($token === null) {
             throw new ProblemException(ProblemCode::InstallationQuarantined, 'this process holds no host admission token');
@@ -166,7 +166,7 @@ final readonly class PlatformRootAdmission implements RootAdmission
             $descriptor = $this->registry->descriptor($module) ?? throw new LogicException("{$spec->commandKind}: unknown module {$module} in the closure");
             $missing = array_diff($descriptor->requiredModuleIds(), $modules);
             if ($missing !== []) {
-                throw new LogicException("{$spec->commandKind}: incomplete module closure, {$module} requires ".implode(', ', $missing).' (D55)');
+                throw new LogicException("{$spec->commandKind}: incomplete module closure, {$module} requires ".implode(', ', $missing).'');
             }
         }
         $locked = $context->lock(new LockRequest(LockRank::ModuleAdmission, Modules::TABLE, $modules, shared: true, scope: LockScope::Installation, keyColumn: 'module_id'));

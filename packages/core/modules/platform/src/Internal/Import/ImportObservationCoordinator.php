@@ -41,7 +41,7 @@ use Packman\Attributes\Internal;
 use stdClass;
 
 /**
- * Coordinates inline settlement intents, two-root observation custody queueing, partition reduction, and pure-query receipt adoption (P9.3, D60, D71).
+ * Coordinates inline settlement intents, two-root observation custody queueing, partition reduction, and pure-query receipt adoption.
  */
 #[Internal]
 final readonly class ImportObservationCoordinator
@@ -230,7 +230,7 @@ final readonly class ImportObservationCoordinator
             }
         }
 
-        // For proven refunds: verify original charge currency/capacity when already projected (IM-10).
+        // For proven refunds: verify original charge currency/capacity when already projected.
         $resolvedOriginalPaymentRef = null;
         if ($identity->recordKind === ImportRecordKind::ProvenRefundEvidence) {
             $rawOrigRef = ImportStagedRecordHydrator::nonEmptyString($record->fundingRefs['originalOperationRef'] ?? null);

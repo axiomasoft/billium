@@ -11,7 +11,7 @@ use Packman\Errors\Data\ErrorDescriptor;
 use Packman\Errors\Exceptions\CodedException;
 
 /**
- * Typed module-unavailable refusal of the admission barrier (D55): the module is missing, its lifecycle state closes the
+ * Typed module-unavailable refusal of the admission barrier: the module is missing, its lifecycle state closes the
  * operation class, or its schema generation is outside the descriptor write range. No receipt is stored; the claim
  * rolls back with the whole root Tx.
  */

@@ -11,7 +11,7 @@ use Billium\Platform\Data\Inbox\InboxRow;
 use RuntimeException;
 use stdClass;
 
-/** PF-12 fault: the real economic apply (allocation written) succeeds, then the root fails before the inbox is applied. */
+/** Fault: the real economic apply (allocation written) succeeds, then the root fails before the inbox is applied. */
 final class FailingHandler implements CustodyHandler
 {
     public int $calls = 0;

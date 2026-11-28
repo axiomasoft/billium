@@ -10,7 +10,7 @@ use Packman\Attributes\Api;
 use stdClass;
 
 /**
- * A sum of money in minor units of one currency; the wire form is a string amount in major units (D29).
+ * A sum of money in minor units of one currency; the wire form is a string amount in major units.
  */
 #[Api(since: '1.0')]
 final readonly class Money

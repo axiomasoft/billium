@@ -6,7 +6,7 @@ namespace Billium\Core\Enums\Modules;
 
 use Packman\Attributes\Api;
 
-/** How a public event stream joins a bootstrap (D63): a SnapshotSource, or an explicit replay-only/no-bootstrap policy. */
+/** How a public event stream joins a bootstrap: a SnapshotSource, or an explicit replay-only/no-bootstrap policy. */
 #[Api(since: '1.0')]
 enum BootstrapMode: string
 {
