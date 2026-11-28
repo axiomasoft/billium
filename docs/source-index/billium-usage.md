@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-usage
 
-Path `packages/core/modules/usage/src`, namespace `Billium\Usage\`, layer L2. 64 types.
+Path `packages/core/modules/usage/src`, namespace `Billium\Usage\`, layer L2. 63 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -82,12 +82,6 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
 | [`UsageProblems`](../../packages/core/modules/usage/src/Internal/Errors/UsageProblems.php) | class | *Internal* |  |
-
-## Internal/Locks
-
-| Type | Kind | Visibility | Summary |
-|---|---|---|---|
-| [`UsageLockRanks`](../../packages/core/modules/usage/src/Internal/Locks/UsageLockRanks.php) | class | *Internal* |  |
 
 ## Internal/Math
 
