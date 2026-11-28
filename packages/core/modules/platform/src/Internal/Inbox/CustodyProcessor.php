@@ -23,6 +23,7 @@ use Billium\Platform\Internal\Feed\ObservationScopes;
 use Billium\Platform\Internal\Feed\PartitionRow;
 use Billium\Platform\Internal\Feed\PartitionStore;
 use Billium\Platform\Internal\Installation\Rows;
+use Billium\Platform\Internal\Reducers\CustodyRoutingReducer;
 use Closure;
 use Illuminate\Database\Connection;
 use LogicException;
@@ -52,6 +53,7 @@ final readonly class CustodyProcessor
         private int $retryBackoffSeconds = 5,
         private int $retryBudget = 10,
         private ?AuthenticatedObservationContext $origins = null,
+        private CustodyRoutingReducer $reducer = new CustodyRoutingReducer,
     ) {}
 
     public function sourceForPartition(Caller $caller, string $channel, int $partitionId): string
@@ -200,7 +202,9 @@ final readonly class CustodyProcessor
             return $this->duplicate($db, $e, $this->identity($db, $e) ?? $existing, $root, $proofDigest);
         }
 
-        $status = $changed || $heldCollision ? 'held_recovery' : $this->decide($db, $e, $partition);
+        $status = $changed || $heldCollision
+            ? $this->reducer->classifyArrival($e->sourceLineage, $e->sourceSequence, $partition, false, false, $changed, $heldCollision)->status
+            : $this->decide($db, $e, $partition);
         $record = $db->selectOne(<<<'SQL'
             INSERT INTO public.billium_inbox_message
                 (channel, source_authority, source_lineage, seller_ref, environment, external_event_id, content_digest, payload,
@@ -220,18 +224,16 @@ final readonly class CustodyProcessor
         $id = Rows::int(Rows::field($record, 'id'));
 
         ObservationScopes::link($db, 'inbox_id', $id, $root, $proofDigest);
-        if ($partition === null || $status === 'held_recovery') {
-            return new CustodyResult($status === 'held_recovery' ? CustodyDisposition::RecoveryRequired : CustodyDisposition::ParkedGap, $id, $status);
+        if ($this->reducer->shouldExtendCustody($partition?->id, $status)) {
+            /** @var PartitionRow $partition */
+            $this->partitions->extendCustody($db, $partition);
+            $partition = $this->partitions->find($db, $partition->id, $e->sellerRef, $e->environment) ?? throw new LogicException('Locked partition vanished');
         }
-        $this->partitions->extendCustody($db, $partition);
-        $partition = $this->partitions->find($db, $partition->id, $e->sellerRef, $e->environment) ?? throw new LogicException('Locked partition vanished');
-        if ($status === 'parked_gap') {
-            return new CustodyResult(CustodyDisposition::ParkedGap, $id, $status);
+        $earlyResult = $this->reducer->classifyPostInsert($id, $status, $partition?->id, $context->spec()->mode->financial(), $custodyOnly);
+        if ($earlyResult !== null) {
+            return $earlyResult;
         }
-        if (! $context->spec()->mode->financial() || $custodyOnly) {
-            // Raw custody or explicit import custody queueing commits durable inbox state; a separate observation owner root applies it.
-            return new CustodyResult(CustodyDisposition::Received, $id, $status, null, $partition->id);
-        }
+        /** @var PartitionRow $partition */
 
         return $this->apply($context, $db, $partition, $record, $handler);
     }
@@ -389,30 +391,28 @@ final readonly class CustodyProcessor
     /** Records the handler's durable disposition of one delivery. */
     private function dispose(Connection $db, mixed $record, HandlerOutcome $outcome): CustodyResult
     {
-        if ($outcome->kind === HandlerOutcomeKind::Conflict && $outcome->reference === ProblemCode::AuthDenied->value) {
-            throw new ProblemException(ProblemCode::AuthDenied, 'The delivery is outside the authenticated source scope');
-        }
         $id = Rows::int(Rows::field($record, 'id'));
+        $result = $this->reducer->classifyDisposition($id, $outcome);
 
-        return match ($outcome->kind) {
+        match ($outcome->kind) {
             HandlerOutcomeKind::Applied => $this->applied($db, $id, $outcome),
             HandlerOutcomeKind::ParkedDependency => $this->parked($db, $id, $outcome),
             HandlerOutcomeKind::Conflict => $this->quarantined($db, $id, $outcome),
         };
+
+        return $result;
     }
 
-    private function applied(Connection $db, int $id, HandlerOutcome $outcome): CustodyResult
+    private function applied(Connection $db, int $id, HandlerOutcome $outcome): void
     {
         $db->update(<<<'SQL'
             UPDATE public.billium_inbox_message SET status = 'applied', result_ref = ?, applied_at = now(), attempts = attempts + 1,
                 next_attempt_at = NULL, park_kind = NULL, park_ref = NULL, last_error_class = NULL
             WHERE id = ?
             SQL, [$outcome->reference, $id]);
-
-        return new CustodyResult(CustodyDisposition::Applied, $id, 'applied', $outcome->reference);
     }
 
-    private function parked(Connection $db, int $id, HandlerOutcome $outcome): CustodyResult
+    private function parked(Connection $db, int $id, HandlerOutcome $outcome): void
     {
         $db->update(<<<'SQL'
             UPDATE public.billium_inbox_message SET status = 'parked_dependency', park_kind = ?, park_ref = ?,
@@ -420,15 +420,11 @@ final readonly class CustodyProcessor
                 next_attempt_at = now() + make_interval(secs => ?)
             WHERE id = ?
             SQL, [$outcome->dependencyKind, $outcome->reference, $this->retryBackoffSeconds, $id]);
-
-        return new CustodyResult(CustodyDisposition::ParkedDependency, $id, 'parked_dependency');
     }
 
-    private function quarantined(Connection $db, int $id, HandlerOutcome $outcome): CustodyResult
+    private function quarantined(Connection $db, int $id, HandlerOutcome $outcome): void
     {
         $db->update("UPDATE public.billium_inbox_message SET status = 'quarantined', last_error_class = ?, attempts = attempts + 1, next_attempt_at = NULL, park_kind = NULL, park_ref = NULL WHERE id = ?", [substr($outcome->reference, 0, 200), $id]);
-
-        return new CustodyResult(CustodyDisposition::Quarantined, $id, 'quarantined');
     }
 
     /** Status of a new delivery under the locked partition (or none). */
@@ -439,51 +435,59 @@ final readonly class CustodyProcessor
             WHERE channel = ? AND source_authority = ? AND source_lineage = ? AND seller_ref = ? AND environment = ? AND partition_ref = ?
               AND source_sequence = ? AND status NOT IN ('held_recovery', 'quarantined')
             SQL, [$e->channel, $e->sourceAuthority, $e->sourceLineage, $e->sellerRef, $e->environment, $e->partitionRef, $e->sourceSequence]);
-        if ($partition === null) {
-            return $taken === null && ! $this->retiredNamespace($db, $e) ? 'parked_gap' : 'held_recovery';
-        }
-        if ($partition->state === 'recovery_required') {
-            return 'held_recovery'; // custody continues, the tail waits for the adopted bootstrap
-        }
-        if ($partition->sourceLineage !== $e->sourceLineage) {
-            $this->partitions->requireRecovery($db, $partition, 'lineage_changed');
-
-            return 'held_recovery';
-        }
-        if ($e->sourceSequence <= $partition->accountedSequence || $taken !== null) {
-            // A new event identity at an already accounted or taken slot: the source regressed or forked (REQ-FAIL-23).
-            $this->partitions->requireRecovery($db, $partition, 'sequence_regressed');
-
-            return 'held_recovery';
+        $decision = $this->reducer->classifyArrival(
+            $e->sourceLineage,
+            $e->sourceSequence,
+            $partition,
+            $taken !== null,
+            $partition === null && $taken === null && $this->retiredNamespace($db, $e),
+            false,
+            false,
+        );
+        if ($decision->requireRecoveryReason !== null && $partition !== null) {
+            $this->partitions->requireRecovery($db, $partition, $decision->requireRecoveryReason);
         }
 
-        return $e->sourceSequence === $partition->accountedSequence + 1 ? 'ready' : 'parked_gap';
+        return $decision->status;
     }
 
     private function duplicate(Connection $db, InboxEnvelope $e, mixed $existing, ?stdClass $root, ?string $proof): CustodyResult
     {
         $id = Rows::int(Rows::field($existing, 'id'));
         $prior = ObservationScopes::binding($db, 'inbox_id', $id);
-        if ($prior?->id !== $root?->id && ($prior !== null || Rows::field($existing, 'content_digest') !== $e->contentDigest)) {
-            throw new ProblemException(ProblemCode::ObservationConflict, 'Delivery identity already has different immutable provenance');
-        }
+        $existingDigest = Rows::string(Rows::field($existing, 'content_digest'));
+        $this->reducer->assertDuplicateProvenance(
+            $prior === null ? null : Rows::int($prior->id),
+            $root === null ? null : Rows::int($root->id),
+            $existingDigest,
+            $e->contentDigest,
+        );
         ObservationScopes::link($db, 'inbox_id', $id, $root, $proof);
         $status = Rows::string(Rows::field($existing, 'status'));
         $result = Rows::field($existing, 'result_ref');
-        if (Rows::field($existing, 'content_digest') !== $e->contentDigest) {
+        $partition = Rows::field($existing, 'partition_id');
+        $partitionId = $partition === null ? null : Rows::int($partition);
+        $earlierParkedId = $existingDigest === $e->contentDigest && $status === 'parked_dependency' && $partitionId !== null
+            ? $this->earlierParked($db, $existing)
+            : null;
+        $decision = $this->reducer->classifyDuplicate(
+            $id,
+            $status,
+            $result === null ? null : Rows::string($result),
+            $existingDigest,
+            $e->contentDigest,
+            $partitionId,
+            $earlierParkedId,
+        );
+        if ($decision->recordConflict) {
             // The original stays untouched; this delivery is preserved apart (REQ-FAIL-04).
             $db->insert(<<<'SQL'
                 INSERT INTO public.billium_inbox_conflict (inbox_id, conflicting_digest, payload) VALUES (?, ?, ?::jsonb)
                 ON CONFLICT (inbox_id, conflicting_digest) DO NOTHING
                 SQL, [$id, $e->contentDigest, $e->json]);
-
-            return new CustodyResult(CustodyDisposition::Conflict, $id, $status, $result === null ? null : Rows::string($result));
         }
-        $partition = Rows::field($existing, 'partition_id');
 
-        return new CustodyResult(CustodyDisposition::Duplicate, $id, $status, $result === null ? null : Rows::string($result),
-            in_array($status, ['ready', 'parked_gap'], true) && $partition !== null ? Rows::int($partition) : null,
-            retryInboxId: $status === 'parked_dependency' && $partition !== null ? ($this->earlierParked($db, $existing) ?? $id) : null);
+        return $decision->result;
     }
 
     private function identity(Connection $db, InboxEnvelope $e): mixed
