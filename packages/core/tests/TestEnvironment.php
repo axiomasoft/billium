@@ -20,6 +20,7 @@ use Packman\Testkit\Support\Database\DatabaseLaneEnvironment;
 use Packman\Testkit\Support\Database\TestDatabaseGuard;
 use PDO;
 use PDOException;
+use Pdo\Pgsql;
 use RuntimeException;
 use Throwable;
 
@@ -327,6 +328,8 @@ final class TestEnvironment
             'prefix' => '',
             'search_path' => 'public',
             'sslmode' => 'prefer',
+            // One round trip per query (PQexecParams) instead of a separate prepare; see docs/operations/postgresql-deployment.md.
+            'options' => [Pgsql::ATTR_DISABLE_PREPARES => true],
         ];
     }
 
