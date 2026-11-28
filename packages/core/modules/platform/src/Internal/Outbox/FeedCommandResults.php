@@ -37,7 +37,7 @@ final readonly class FeedCommandResults
         $leaseKey = $codec->digest([get_object_vars($command->scope), $command->kind(), $command->key]);
         $leaseToken = bin2hex(random_bytes(24));
         $host = gethostname();
-        $ownerRef = substr(($host !== false ? $host : 'php').':'.(string) getmypid(), 0, 200);
+        $ownerRef = substr(($host !== false ? $host : 'php').':'.getmypid(), 0, 200);
 
         $acquired = $this->db->transaction(function () use (
             $leaseKey,

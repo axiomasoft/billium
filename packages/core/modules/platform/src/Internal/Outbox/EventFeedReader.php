@@ -477,9 +477,7 @@ final readonly class EventFeedReader implements EventFeed
             || $scope->channel !== 'events' || $scope->sourceAuthority !== 'billium') {
             throw new ProblemException(ProblemCode::AuthDenied, 'Feed source scope is not authenticated');
         }
-        $lookup = function () use ($scope): mixed {
-            return $this->db->selectOne('SELECT incarnation FROM public.billium_installation_state WHERE installation_ref = ?', [$scope->installationRef]);
-        };
+        $lookup = fn (): mixed => $this->db->selectOne('SELECT incarnation FROM public.billium_installation_state WHERE installation_ref = ?', [$scope->installationRef]);
         $row = $this->db->transactionLevel() === 0
             ? $this->db->transaction(function () use ($caller, $lookup): mixed {
                 RlsSessionContext::apply($this->db, $caller);
@@ -496,9 +494,7 @@ final readonly class EventFeedReader implements EventFeed
     {
         $this->authorize($selection->scope);
         $caller = ($this->callers)()->current();
-        $lookup = function () use ($selection): mixed {
-            return $this->db->selectOne('SELECT * FROM public.billium_feed_subscription WHERE subscription_ref = ? AND closed_at IS NULL', [$selection->subscriptionRef]);
-        };
+        $lookup = fn (): mixed => $this->db->selectOne('SELECT * FROM public.billium_feed_subscription WHERE subscription_ref = ? AND closed_at IS NULL', [$selection->subscriptionRef]);
         $row = $this->db->transactionLevel() === 0
             ? $this->db->transaction(function () use ($caller, $lookup): mixed {
                 RlsSessionContext::apply($this->db, $caller);
