@@ -205,14 +205,14 @@
         "maxExclusive": "2.0.0"
       },
       "migrationStream": "platform",
-      "currentSchemaVersion": 31,
+      "currentSchemaVersion": 32,
       "supportedSchemaReadRange": {
         "min": 30,
-        "max": 31
+        "max": 32
       },
       "supportedSchemaWriteRange": {
         "min": 30,
-        "max": 31
+        "max": 32
       },
       "requiresModules": [],
       "requiresPorts": [
@@ -436,6 +436,11 @@
           "id": "2026_11_22_000002_create_billium_authority_routing_tables",
           "version": 31,
           "checksum": "sha256:7aa84adce900ad3dd88ca68d9d46600ab19766ae14ede34bd5af7ff539aa07d8"
+        },
+        {
+          "id": "2026_11_30_000001_create_billium_feed_command_lease",
+          "version": 32,
+          "checksum": "sha256:c34c650d64e75d65db69902613ab5e5d85ea596ace40330aa62108ac29665348"
         }
       ],
       "disablePolicy": {
