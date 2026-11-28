@@ -25,10 +25,10 @@
             "const": "billium.event.v2"
           },
           "payloadSchemaRef": {
-            "const": "urn:billium:spec:2026-12:payment/effect-outcome.v1.json"
+            "const": "urn:billium:spec:2026-10:payment/effect-outcome.v1.json"
           },
           "payloadSchemaDigest": {
-            "const": "sha256:27439ef85bc6d6c73391d112689e2716b1a5b3ac710e136644396148256f04dc"
+            "const": "sha256:296b8117fe17c02b1853ccf5d6de2467a583588e83e6e2eedfcb1c020dd84fc5"
           },
           "bootstrapMode": {
             "const": "replay_only"

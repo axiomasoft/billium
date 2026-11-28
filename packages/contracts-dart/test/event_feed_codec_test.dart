@@ -38,31 +38,6 @@ void main() {
             ),
           );
         }
-      } else if (vectorId == 'event/v2/catalog-valid') {
-        // A catalog pins the payload schema URN and digest of its revision: the vector carries the 2026-12 catalog,
-        // which the 2026-10 codec refuses.
-        final value = codec.decode(json);
-        expect(value.schema, expected['ok']['schema']);
-        expect(codec.digestOf(value), expected['ok']['digest']);
-        expect(codec.encode(value), codec.canonicalizeJson(json));
-        expect(
-          () => legacyRevisionCodec.decode(json),
-          throwsA(
-            isA<ProblemException>().having(
-              (e) => e.problem,
-              'code',
-              ProblemCode.validationInvalid,
-            ),
-          ),
-        );
-        final legacyCatalog = File(
-          '../../spec/revisions/2026-10/event-catalogs/events-2026-10-v2.json',
-        ).readAsStringSync();
-        final legacyValue = legacyRevisionCodec.decode(legacyCatalog);
-        expect(
-          legacyRevisionCodec.digestOf(legacyValue),
-          (jsonDecode(legacyCatalog) as Map)['digest'],
-        );
       } else {
         for (final targetCodec in [codec, legacyRevisionCodec]) {
           final value = targetCodec.decode(json);

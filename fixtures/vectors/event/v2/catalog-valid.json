@@ -12,7 +12,7 @@
     {
       "op": "envelope.decode",
       "args": {
-        "json_text": "{\"digest\":\"sha256:717c45d105c7e2043f8d5be3f530d878513e3e1508e9b17891740e2939befe4f\",\"eventContractRevision\":\"events-2026-10-v2\",\"events\":[{\"bootstrapMode\":\"replay_only\",\"envelopeSchema\":\"billium.event.v2\",\"eventType\":\"payment.effect.outcome.v1\",\"ownerModuleId\":\"execution\",\"payloadSchemaDigest\":\"sha256:27439ef85bc6d6c73391d112689e2716b1a5b3ac710e136644396148256f04dc\",\"payloadSchemaRef\":\"urn:billium:spec:2026-12:payment/effect-outcome.v1.json\",\"retentionPolicyRef\":\"financial-permanent\",\"snapshotSourceKey\":null}],\"schema\":\"billium.event.catalog.v1\"}"
+        "json_text": "{\"digest\":\"sha256:2f02305ff6ecd3fbfbc8ab87617b95b31426fcbd7842293a7182eaecd483667d\",\"eventContractRevision\":\"events-2026-10-v2\",\"events\":[{\"bootstrapMode\":\"replay_only\",\"envelopeSchema\":\"billium.event.v2\",\"eventType\":\"payment.effect.outcome.v1\",\"ownerModuleId\":\"execution\",\"payloadSchemaDigest\":\"sha256:296b8117fe17c02b1853ccf5d6de2467a583588e83e6e2eedfcb1c020dd84fc5\",\"payloadSchemaRef\":\"urn:billium:spec:2026-10:payment/effect-outcome.v1.json\",\"retentionPolicyRef\":\"financial-permanent\",\"snapshotSourceKey\":null}],\"schema\":\"billium.event.catalog.v1\"}"
       }
     }
   ],
@@ -20,7 +20,7 @@
     {
       "ok": {
         "schema": "billium.event.catalog.v1",
-        "digest": "sha256:717c45d105c7e2043f8d5be3f530d878513e3e1508e9b17891740e2939befe4f"
+        "digest": "sha256:2f02305ff6ecd3fbfbc8ab87617b95b31426fcbd7842293a7182eaecd483667d"
       }
     }
   ]

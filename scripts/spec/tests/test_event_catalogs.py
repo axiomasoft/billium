@@ -11,6 +11,12 @@ from export_common import DEFAULT_REVISION, ExportError, Revision
 
 
 class EventCatalogTest(unittest.TestCase):
+    def test_published_catalog_is_unchanged_across_revisions(self):
+        catalog = Path("event-catalogs/events-2026-10-v2.json")
+        published = json.loads((DEFAULT_REVISION.with_name("2026-10") / catalog).read_text())
+        current = json.loads((DEFAULT_REVISION / catalog).read_text())
+        self.assertEqual(current, published)
+
     def test_current_catalog_exports(self):
         names = {e.schema for e in Revision(DEFAULT_REVISION).envelopes()}
         self.assertIn("billium.event.v2", names)

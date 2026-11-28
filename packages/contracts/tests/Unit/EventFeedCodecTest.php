@@ -36,22 +36,6 @@ it('runs the independent effect, repair, certified no-effect and feed vectors wh
     }
 });
 
-it('decodes each event catalog only under its own spec revision', function (): void {
-    $root = dirname(__DIR__, 4).'/spec/revisions/';
-    foreach (['2026-10' => '2026-12', '2026-12' => '2026-10'] as $own => $other) {
-        $json = (string) file_get_contents($root.$own.'/event-catalogs/events-2026-10-v2.json');
-        $codec = Codec::forRevision($own);
-        $catalog = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
-        expect($codec->digestOf($codec->decode($json)))->toBe($catalog['digest']);
-        try {
-            Codec::forRevision($other)->decode($json);
-            throw new LogicException("the {$other} codec accepted the {$own} catalog");
-        } catch (ProblemException $error) {
-            expect($error->problem)->toBe(ProblemCode::ValidationInvalid);
-        }
-    }
-});
-
 it('rejects v2 in a pinned old client and preserves the old canonical digest bytes', function (): void {
     $root = dirname(__DIR__, 4).'/fixtures/vectors/';
     $new = json_decode((string) file_get_contents($root.'event/v2/valid.json'), true, 512, JSON_THROW_ON_ERROR)['script'][0]['args']['json_text'];
