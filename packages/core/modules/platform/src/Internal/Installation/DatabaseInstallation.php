@@ -21,6 +21,7 @@ use Billium\Core\Data\Runner\StoredOutcome;
 use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Data\Runtime\OwnerSessionIdentity;
 use Billium\Core\Data\Runtime\VerifiedSessionAuthorization;
+use Billium\Core\Database\RlsSessionContext;
 use Billium\Core\Enums\Modules\ModuleLifecycleState;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Core\Enums\Runner\LockRank;
@@ -83,6 +84,7 @@ final readonly class DatabaseInstallation implements Installation, ModuleStateRe
             throw new LogicException('Installation init is an explicit root operation');
         }
         $db->transaction(function (Connection $db) use ($installationRef): void {
+            RlsSessionContext::applyForValues($db, $installationRef, '', '');
             $db->insert('INSERT INTO public.billium_installation_state (installation_ref) VALUES (?) ON CONFLICT (installation_ref) DO NOTHING', [$installationRef]);
             $db->insert("INSERT INTO public.billium_outbox_watermark (id, scope) VALUES (1, 'installation') ON CONFLICT DO NOTHING");
             $modules = $this->enabledModules;

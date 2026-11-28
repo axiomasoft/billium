@@ -239,6 +239,8 @@
         "billium_outbox_command_delivery",
         "billium_feed_subscription",
         "billium_feed_bootstrap_lease",
+        "billium_feed_command_lease",
+        "billium_feed_bootstrap_pin_auth",
         "billium_feed_partition",
         "billium_feed_bootstrap_session",
         "billium_feed_bootstrap_item",

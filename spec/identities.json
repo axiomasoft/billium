@@ -6757,6 +6757,13 @@
       "source": "packages/core/database/migrations/usage/2026_11_29_000101_validate_unit_evidence_on_usage_aggregate_snapshot.php"
     },
     {
+      "kind": "migration",
+      "id": "2026_11_30_000001_create_billium_feed_command_lease",
+      "status": "new",
+      "since": "2026-12",
+      "source": "packages/core/database/migrations/platform/2026_11_30_000001_create_billium_feed_command_lease.php"
+    },
+    {
       "kind": "route",
       "id": "billium.server.capabilities",
       "status": "new",

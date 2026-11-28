@@ -7,6 +7,7 @@ namespace Billium\Ledger\Internal\Queries;
 use Billium\Core\Configuration\BilliumOptions;
 use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Data\Runtime\Caller;
+use Billium\Core\Database\RlsSessionContext;
 use Closure;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
@@ -39,6 +40,7 @@ final readonly class ReadSession
 
         return $db->transaction(static function () use ($db, $caller, $read): mixed {
             $db->statement('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY');
+            RlsSessionContext::apply($db, $caller);
 
             return $read($db, $caller);
         });

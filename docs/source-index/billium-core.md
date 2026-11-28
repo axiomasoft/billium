@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-core
 
-Path `packages/core/src`, namespace `Billium\Core\`, layer L2. 112 types.
+Path `packages/core/src`, namespace `Billium\Core\`, layer L2. 114 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## .
@@ -120,6 +120,8 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 |---|---|---|---|
 | [`BilliumSchemaSetProvider`](../../packages/core/src/Database/BilliumSchemaSetProvider.php) | class | **Spi** | Declares Billium's central PostgreSQL schema sets (`billium-platform` platform stream and module streams). |
 | [`ExecutionSchemaSetProvider`](../../packages/core/src/Database/ExecutionSchemaSetProvider.php) | class | **Spi** |  |
+| [`OnlineDdl`](../../packages/core/src/Database/OnlineDdl.php) | class | *Internal* |  |
+| [`RlsSessionContext`](../../packages/core/src/Database/RlsSessionContext.php) | class | **Api** | Transaction-local (SET LOCAL) PostgreSQL session context for optional seller-scoped RLS (ADR-08, REQ-PROF-09). |
 
 ## Diagnostics
 

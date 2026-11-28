@@ -639,7 +639,7 @@ def main(argv: list[str]) -> int:
     )
     parser.add_argument(
         "--profile",
-        choices=["acceptance"],
+        choices=["acceptance", "lock-wait"],
         default="acceptance",
         help="Verification profile to execute (default: acceptance).",
     )

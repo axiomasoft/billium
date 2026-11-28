@@ -93,6 +93,36 @@ def lint(path: Path, source: str) -> list[str]:
         if re.search(r"\bSECURITY\s+DEFINER\b", routine[0], re.I):
             reject(not re.search(r"SET\s+search_path\s*=\s*pg_catalog\s*,\s*pg_temp\s+AS", routine[0], re.I),
                    "SECURITY DEFINER needs fixed search_path = pg_catalog, pg_temp")
+
+    # Online DDL discipline for all new migrations (>= 2026_11_29)
+    date_match = re.match(r"^(\d{4}_\d{2}_\d{2})_", path.stem)
+    if date_match and date_match.group(1) >= "2026_11_29":
+        created_tables = {
+            m[1].removeprefix("public.").lower()
+            for pat in [r"\bCREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?" + table, r"Schema::create\s*\(\s*['\"]([^'\"]+)"]
+            for m in re.finditer(pat, code, re.I)
+        }
+        has_lock_timeout = bool(re.search(r"\bSET\s+LOCAL\s+lock_timeout\b", code, re.I))
+        for alter in alters:
+            alter_match = re.match(r"\bALTER\s+TABLE\s+(?:ONLY\s+)?" + table, alter[0], re.I)
+            if alter_match and alter_match[1].removeprefix("public.").lower() not in created_tables:
+                reject(not has_lock_timeout, f"ALTER TABLE on existing table {alter_match[1]} requires SET LOCAL lock_timeout")
+        for idx in re.finditer(r"\bCREATE\s+(?:UNIQUE\s+)?INDEX\s+(?!CONCURRENTLY\b)(?:IF\s+NOT\s+EXISTS\s+)?\w+\s+ON\s+" + table, code, re.I):
+            target_tbl = idx[1].removeprefix("public.").lower()
+            if target_tbl not in created_tables:
+                errors.append(f"CREATE INDEX on existing table {idx[1]} requires CONCURRENTLY")
+    return errors
+
+
+def lint_runtime_locks() -> list[str]:
+    errors: list[str] = []
+    banned = re.compile(r"\b(?:pg_try_advisory_lock|pg_advisory_lock|pg_advisory_unlock|hashtext)\s*\(", re.I)
+    for php_file in sorted((ROOT / "packages/core").rglob("*.php")):
+        if "tests" in php_file.parts:
+            continue
+        text = php_file.read_text(encoding="utf-8", errors="ignore")
+        if banned.search(text):
+            errors.append(f"{php_file.relative_to(ROOT)}: session-level advisory lock or 32-bit hashtext() is forbidden")
     return errors
 
 
@@ -120,6 +150,8 @@ def main() -> int:
     paths = args.paths or sorted((ROOT / "packages/core/database/migrations").rglob("*.php"))
     errors = [f"{path}: {error}" for path in paths for error in lint(path, path.read_text())]
     errors.extend(duplicate_prefixes(paths))
+    if not args.paths:
+        errors.extend(lint_runtime_locks())
     if not paths:
         errors.append("migrations: no migration files found")
     for error in errors:

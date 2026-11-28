@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-collection
 
-Path `packages/core/modules/collection/src`, namespace `Billium\Collection\`, layer L2. 99 types.
+Path `packages/core/modules/collection/src`, namespace `Billium\Collection\`, layer L2. 103 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -110,6 +110,15 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`DatabaseConsentQueries`](../../packages/core/modules/collection/src/Internal/Queries/DatabaseConsentQueries.php) | class | *Internal* |  |
 | [`DatabaseDunningQueries`](../../packages/core/modules/collection/src/Internal/Queries/DatabaseDunningQueries.php) | class | *Internal* |  |
 | [`ParentIdLookup`](../../packages/core/modules/collection/src/Internal/Queries/ParentIdLookup.php) | class | *Internal* | Child tables of a dunning case (steps, notifications, signals, interventions, policy migrations) and of a consent guard (tombstones) carry the parent's public… |
+
+## Internal/Reducers
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`DunningStepPlanDecision`](../../packages/core/modules/collection/src/Internal/Reducers/DunningStepPlanDecision.php) | class | *Internal* |  |
+| [`DunningStepPlanner`](../../packages/core/modules/collection/src/Internal/Reducers/DunningStepPlanner.php) | class | *Internal* |  |
+| [`DunningTransitionDecision`](../../packages/core/modules/collection/src/Internal/Reducers/DunningTransitionDecision.php) | class | *Internal* |  |
+| [`DunningTransitionReducer`](../../packages/core/modules/collection/src/Internal/Reducers/DunningTransitionReducer.php) | class | *Internal* |  |
 
 ## Internal/Registrars
 

@@ -20,6 +20,7 @@ use Billium\Core\Data\Runner\OperationSpec;
 use Billium\Core\Data\Runner\StoredOutcome;
 use Billium\Core\Data\Runtime\Caller;
 use Billium\Core\Data\Runtime\FinancialScope;
+use Billium\Core\Database\RlsSessionContext;
 use Billium\Core\Enums\Modules\ModuleOperationClass;
 use Billium\Core\Enums\Runtime\FinancialMode;
 use Billium\Platform\Data\Installation\PlatformReceipt;
@@ -119,10 +120,14 @@ final readonly class DatabaseUsage implements Usage
         }
         // A committed replay needs no mutable host lookup. The runner still authenticates and checks its digest.
         $db = $this->databases->connection($this->options->connection);
-        $exists = $db->table('billium_usage_fact')->useWritePdo()->where([
-            'seller_ref' => $caller->sellerRef, 'environment' => $caller->environment,
-            'source' => $fact->source, 'fact_id' => $fact->factId, 'revision' => $fact->revision,
-        ])->exists();
+        $exists = $db->transaction(static function () use ($db, $caller, $fact): bool {
+            RlsSessionContext::apply($db, $caller);
+
+            return $db->table('billium_usage_fact')->useWritePdo()->where([
+                'seller_ref' => $caller->sellerRef, 'environment' => $caller->environment,
+                'source' => $fact->source, 'fact_id' => $fact->factId, 'revision' => $fact->revision,
+            ])->exists();
+        });
         $pinned = $exists || $fact instanceof UsageFactV2 ? null : $attribution?->resolve($caller, $fact);
         $snapshot = $exists ? null : ($fact instanceof UsageFactV2 ? $this->attribution->resolve($caller, $fact) : $pinned?->snapshot);
         $scope = $fact instanceof UsageFact ? new FinancialScope($caller->installationRef, $caller->sellerRef, $caller->environment, null, $fact->source) : null;

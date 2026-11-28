@@ -13,6 +13,7 @@ use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Data\Runtime\FinancialScope;
+use Billium\Core\Database\RlsSessionContext;
 use Billium\Platform\Contracts\Feed\EventFeed;
 use Billium\Platform\Contracts\Feed\SnapshotSource;
 use Billium\Platform\Data\Feed\FeedBootstrap;
@@ -113,6 +114,7 @@ final readonly class EventFeedReader implements EventFeed
         $ref = (string) Str::ulid();
         $selection = new FeedSelection($ref, $scope, $eventContractRevision, $envelopeSchemas, $eventTypes, $digest, $this->tokens->issue($ref, $scope, $digest, new FeedPosition));
         $this->db->transaction(function () use ($ref, $scope, $digest, $body, $required, $codec, $wire, $selection): void {
+            RlsSessionContext::apply($this->db, ($this->callers)()->current());
             self::barrier($this->db);
             // A required subscription pins prune for its scope; bound them so an abandoned or hostile caller cannot exhaust the scope.
             if ($required) {
@@ -138,12 +140,16 @@ final readonly class EventFeedReader implements EventFeed
         if ($scope->installationRef !== $caller->installationRef || $scope->sellerRef !== $caller->sellerRef || $scope->environment !== $caller->environment) {
             throw new ProblemException(ProblemCode::AuthDenied);
         }
-        $row = $this->db->selectOne(<<<'SQL'
-            SELECT selection FROM public.billium_feed_subscription
-            WHERE subscription_ref = ? AND selection_digest = ? AND closed_at IS NULL
-              AND source_scope::jsonb->>'installationRef' = ? AND source_scope::jsonb->>'sellerRef' = ?
-              AND source_scope::jsonb->>'environment' = ?
-            SQL, [$subscriptionRef, $selectionDigest, $scope->installationRef, $scope->sellerRef, $scope->environment]);
+        $row = $this->db->transaction(function () use ($caller, $subscriptionRef, $selectionDigest, $scope): mixed {
+            RlsSessionContext::apply($this->db, $caller);
+
+            return $this->db->selectOne(<<<'SQL'
+                SELECT selection FROM public.billium_feed_subscription
+                WHERE subscription_ref = ? AND selection_digest = ? AND closed_at IS NULL
+                  AND source_scope::jsonb->>'installationRef' = ? AND source_scope::jsonb->>'sellerRef' = ?
+                  AND source_scope::jsonb->>'environment' = ?
+                SQL, [$subscriptionRef, $selectionDigest, $scope->installationRef, $scope->sellerRef, $scope->environment]);
+        });
         if ($row === null) {
             throw new ProblemException(ProblemCode::ReferenceUnknown);
         }
@@ -185,6 +191,7 @@ final readonly class EventFeedReader implements EventFeed
         [$position, $lease] = $this->tokens->verify($cursor ?? $selection->cursor->token, $selection->subscriptionRef, $selection->scope, $selection->selectionDigest);
 
         return $this->db->transaction(function () use ($selection, $position, $lease, $limit): FeedPage {
+            RlsSessionContext::apply($this->db, ($this->callers)()->current());
             self::barrier($this->db, shared: true);
             $floor = $this->floor();
             $this->retained($position, $floor);
@@ -229,20 +236,49 @@ final readonly class EventFeedReader implements EventFeed
         $command = $codec->decode($codec->encode($command));
         assert($command instanceof FeedBootstrapRequest);
         $wire = new PinnedCommand(($this->callers)()->current(), $command, $command->installationRef, $command->sellerRef, $command->environment, $command->commandKey);
-        $result = $this->results->once($wire, function () use ($codec, $command, $wire): WireBootstrap {
+        $result = $this->results->once($wire, function (string $leaseKey, string $leaseToken) use ($codec, $command, $wire): WireBootstrap {
             $selection = $this->findSelection($wire->scope, $command->subscriptionRef, $command->selectionDigest);
-            $result = $codec->decode($codec->canonicalize($this->createBootstrap($selection, $wire)->toArray()));
+            $result = $codec->decode($codec->canonicalize($this->createBootstrap($selection, $wire, $leaseKey, $leaseToken)->toArray()));
             assert($result instanceof WireBootstrap);
 
             return $result;
-        });
+        }, $this->leaseSeconds);
         assert($result instanceof WireBootstrap);
 
         return $result;
     }
 
-    private function createBootstrap(FeedSelection $selection, ?PinnedCommand $wire = null): FeedBootstrap
-    {
+    public function extendBootstrapPin(
+        string $leaseRef,
+        string $subscriptionRef,
+        string $snapshotRef,
+        string $pinSecret,
+        int $ttlSeconds,
+        ?string $leaseToken = null,
+    ): ?string {
+        $row = $this->db->transaction(function () use ($leaseRef, $subscriptionRef, $snapshotRef, $pinSecret, $ttlSeconds, $leaseToken): mixed {
+            RlsSessionContext::apply($this->db, ($this->callers)()->current());
+
+            return $this->db->selectOne(
+                'SELECT public.billium_feed_extend_bootstrap_pin(?, ?, ?, ?, ?, ?) AS extended_expires_at',
+                [$leaseRef, $subscriptionRef, $snapshotRef, $pinSecret, $ttlSeconds, $leaseToken],
+                false,
+            );
+        });
+        $extended = $row !== null ? Rows::nullableString(Rows::field($row, 'extended_expires_at')) : null;
+        if ($extended === null) {
+            return null;
+        }
+
+        return new DateTimeImmutable($extended)->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z');
+    }
+
+    private function createBootstrap(
+        FeedSelection $selection,
+        ?PinnedCommand $wire = null,
+        ?string $commandLeaseKey = null,
+        ?string $commandLeaseToken = null,
+    ): FeedBootstrap {
         $this->outsideTransaction();
         $this->validateSelection($selection);
         $contracts = [];
@@ -257,8 +293,11 @@ final readonly class EventFeedReader implements EventFeed
         $replay = array_any($contracts, static fn (mixed $row): bool => Rows::field($row, 'bootstrap_mode') !== 'snapshot');
         $leaseRef = (string) Str::ulid();
         $snapshotRef = (string) Str::ulid();
+        $pinSecret = bin2hex(random_bytes(32));
+        $pinSecretHash = hash('sha256', $pinSecret);
         // Reserve before any module snapshot; prune uses the same exclusive barrier.
-        $pin = $this->db->transaction(function () use ($selection, $replay, $leaseRef, $snapshotRef): FeedPosition {
+        $pin = $this->db->transaction(function () use ($selection, $replay, $leaseRef, $snapshotRef, $pinSecretHash, $commandLeaseKey): FeedPosition {
+            RlsSessionContext::apply($this->db, ($this->callers)()->current());
             self::barrier($this->db);
             $floor = $this->floor();
             if ($replay) {
@@ -266,11 +305,16 @@ final readonly class EventFeedReader implements EventFeed
             }
             $this->db->insert("INSERT INTO public.billium_feed_bootstrap_lease(lease_ref,subscription_ref,source_scope,selection_digest,floor_tx_id,floor_id,snapshot_ref,expires_at) VALUES (?,?,?,?,?::xid8,?::bigint,?,clock_timestamp() + (? * interval '1 second'))",
                 [$leaseRef, $selection->subscriptionRef, $selection->scope->key(), $selection->selectionDigest, $floor->txId, $floor->id, $snapshotRef, $this->leaseSeconds]);
+            $this->db->selectOne(
+                'SELECT public.billium_feed_register_bootstrap_pin(?, ?, ?)',
+                [$leaseRef, $pinSecretHash, $commandLeaseKey],
+                false,
+            );
 
             return $floor;
         });
         try {
-            return $this->snapshot($selection, $contracts, $replay, $pin, $leaseRef, $snapshotRef, $wire);
+            return $this->snapshot($selection, $contracts, $replay, $pin, $leaseRef, $snapshotRef, $wire, $commandLeaseKey, $commandLeaseToken);
         } catch (Throwable $error) {
             // A failed snapshot must not keep the tail pinned until the lease runs out.
             $this->db->update("UPDATE public.billium_feed_bootstrap_lease SET state = 'expired' WHERE lease_ref = ? AND state = 'active'", [$leaseRef]);
@@ -280,11 +324,21 @@ final readonly class EventFeedReader implements EventFeed
     }
 
     /** @param list<mixed> $contracts */
-    private function snapshot(FeedSelection $selection, array $contracts, bool $replay, FeedPosition $pin, string $leaseRef, string $snapshotRef, ?PinnedCommand $wire): FeedBootstrap
-    {
+    private function snapshot(
+        FeedSelection $selection,
+        array $contracts,
+        bool $replay,
+        FeedPosition $pin,
+        string $leaseRef,
+        string $snapshotRef,
+        ?PinnedCommand $wire,
+        ?string $commandLeaseKey = null,
+        ?string $commandLeaseToken = null,
+    ): FeedBootstrap {
         $snapshots = [];
         $cursor = $this->db->transaction(function () use ($selection, $contracts, $replay, $pin, $leaseRef, &$snapshots): FeedCursor {
             $this->db->statement('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY');
+            RlsSessionContext::apply($this->db, ($this->callers)()->current());
             $row = $this->db->selectOne('SELECT tx_id,id FROM public.billium_outbox_event WHERE seller_ref = ? AND environment = ? AND source_scope::jsonb = ?::jsonb AND tx_id < pg_snapshot_xmin(pg_current_snapshot()) ORDER BY tx_id DESC,id DESC LIMIT 1',
                 [...self::partition($selection), $selection->scope->key()]);
             $position = $replay ? new FeedPosition : ($row === null ? $pin : self::position($row));
@@ -314,7 +368,11 @@ final readonly class EventFeedReader implements EventFeed
             'scope' => $selection->scope->toArray(), 'catalog' => $selection->eventContractRevision,
             'snapshotRef' => $snapshotRef, 'cursor' => $cursor->token, 'snapshots' => (object) $snapshots]);
 
-        return $this->db->transaction(function () use ($selection, $leaseRef, $cursor, $digest, $snapshotRef, $snapshots, $wire): FeedBootstrap {
+        return $this->db->transaction(function () use ($selection, $leaseRef, $cursor, $digest, $snapshotRef, $snapshots, $wire, $commandLeaseKey, $commandLeaseToken): FeedBootstrap {
+            RlsSessionContext::apply($this->db, ($this->callers)()->current());
+            if ($wire !== null && $commandLeaseKey !== null && $commandLeaseToken !== null) {
+                $this->results->verifyLeaseActive($commandLeaseKey, $commandLeaseToken);
+            }
             self::barrier($this->db);
             $this->lease($selection, $leaseRef);
             $this->retained($cursor->position, $this->floor());
@@ -326,7 +384,7 @@ final readonly class EventFeedReader implements EventFeed
             $expires = new DateTimeImmutable(Rows::string(Rows::field($row, 'expires_at')))->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z');
             $bootstrap = new FeedBootstrap($selection, $leaseRef, $snapshotRef, $digest, $snapshots, $cursor, $expires);
             if ($wire !== null) {
-                $this->results->retain(($this->callers)()->current(), $wire, $bootstrap->toArray());
+                $this->results->retain(($this->callers)()->current(), $wire, $bootstrap->toArray(), $commandLeaseKey, $commandLeaseToken);
             }
 
             return $bootstrap;
@@ -419,7 +477,16 @@ final readonly class EventFeedReader implements EventFeed
             || $scope->channel !== 'events' || $scope->sourceAuthority !== 'billium') {
             throw new ProblemException(ProblemCode::AuthDenied, 'Feed source scope is not authenticated');
         }
-        $row = $this->db->selectOne('SELECT incarnation FROM public.billium_installation_state WHERE installation_ref = ?', [$scope->installationRef]);
+        $lookup = function () use ($scope): mixed {
+            return $this->db->selectOne('SELECT incarnation FROM public.billium_installation_state WHERE installation_ref = ?', [$scope->installationRef]);
+        };
+        $row = $this->db->transactionLevel() === 0
+            ? $this->db->transaction(function () use ($caller, $lookup): mixed {
+                RlsSessionContext::apply($this->db, $caller);
+
+                return $lookup();
+            })
+            : $lookup();
         if ($row === null || (string) Rows::int(Rows::field($row, 'incarnation')) !== $scope->lineage) {
             throw new ProblemException(ProblemCode::RecoveryRequired, 'Feed lineage differs from current source');
         }
@@ -428,7 +495,17 @@ final readonly class EventFeedReader implements EventFeed
     private function validateSelection(FeedSelection $selection): void
     {
         $this->authorize($selection->scope);
-        $row = $this->db->selectOne('SELECT * FROM public.billium_feed_subscription WHERE subscription_ref = ? AND closed_at IS NULL', [$selection->subscriptionRef]);
+        $caller = ($this->callers)()->current();
+        $lookup = function () use ($selection): mixed {
+            return $this->db->selectOne('SELECT * FROM public.billium_feed_subscription WHERE subscription_ref = ? AND closed_at IS NULL', [$selection->subscriptionRef]);
+        };
+        $row = $this->db->transactionLevel() === 0
+            ? $this->db->transaction(function () use ($caller, $lookup): mixed {
+                RlsSessionContext::apply($this->db, $caller);
+
+                return $lookup();
+            })
+            : $lookup();
         $body = ['scope' => $selection->scope->toArray(), 'eventContractRevision' => $selection->eventContractRevision,
             'envelopeSchemas' => $selection->envelopeSchemas, 'eventTypes' => $selection->eventTypes];
         if ($row === null || Rows::field($row, 'selection_digest') !== $selection->selectionDigest || (new Codec)->digest($body) !== $selection->selectionDigest

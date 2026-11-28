@@ -12,6 +12,7 @@ use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Data\Runner\OperationSpec;
 use Billium\Core\Data\Runner\Receipt;
 use Billium\Core\Data\Runner\StoredOutcome;
+use Billium\Core\Database\RlsSessionContext;
 use Billium\Core\Exceptions\Runner\LockPlanChanged;
 use Billium\Platform\Contracts\Idempotency\FinancialIdempotencyStore;
 use Billium\Platform\Contracts\Idempotency\IdempotencyStore;
@@ -86,6 +87,7 @@ final class DatabaseOperationRunner implements OperationRunner
                 $this->connection->statement('SET TRANSACTION ISOLATION LEVEL READ COMMITTED');
                 $this->connection->statement('SET LOCAL statement_timeout = '.$this->deadlineMs);
                 $this->connection->statement('SET LOCAL idle_in_transaction_session_timeout = '.$this->deadlineMs);
+                RlsSessionContext::apply($this->connection, $caller);
 
                 // Step 2: the claim is the first write of the root Tx (D51); a replay needs no session or module admission.
                 if ($spec->commandKey !== null && $digest !== null) {
@@ -133,7 +135,7 @@ final class DatabaseOperationRunner implements OperationRunner
                     $this->connection->rollBack(1);
                     $outcome = StoredOutcome::refused($problem, $claimId);
                     $this->idempotency->complete($claimId, $outcome);
-                    $this->commit($started, $operation);
+                    $this->commit($started, $operation, false);
 
                     return $outcome;
                 }
@@ -173,7 +175,7 @@ final class DatabaseOperationRunner implements OperationRunner
         }
     }
 
-    private function commit(int $started, Operation $operation): void
+    private function commit(int $started, Operation $operation, bool $runAfterCommit = true): void
     {
         $this->assertDepth(1);
         $this->assertCurrent($operation->context);
@@ -186,7 +188,11 @@ final class DatabaseOperationRunner implements OperationRunner
             throw new LogicException('Root transaction did not physically commit');
         }
         $this->current = null;
-        foreach ($operation->close() as $callback) {
+        $callbacks = $operation->close();
+        if (! $runAfterCommit) {
+            return;
+        }
+        foreach ($callbacks as $callback) {
             try {
                 $callback();
             } catch (Throwable $exception) {

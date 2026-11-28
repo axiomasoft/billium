@@ -12,6 +12,7 @@ use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Contracts\Runtime\CallerContext;
 use Billium\Core\Data\Runner\StoredOutcome;
 use Billium\Core\Data\Runtime\FinancialScope;
+use Billium\Core\Database\RlsSessionContext;
 use Billium\Platform\Contracts\Idempotency\IdempotencyReceiptQueries;
 use Billium\Platform\Contracts\Idempotency\ReceiptAbsenceAuthority;
 use Billium\Platform\Data\Idempotency\StoredCommandReceipt;
@@ -59,7 +60,16 @@ final readonly class DatabaseIdempotencyReceiptQueries implements IdempotencyRec
             || preg_match('/\Asha256:[0-9a-f]{64}\z/', $inputDigest) !== 1) {
             throw new ProblemException(ProblemCode::ValidationInvalid);
         }
-        $receipt = $this->receipt($lookup->where('command_kind', $schema)->where('command_key', $key)->first());
+        $receipt = $this->connection->transaction(function () use ($lookup, $scope, $schema, $key): ?StoredCommandReceipt {
+            RlsSessionContext::applyForValues(
+                $this->connection,
+                $scope->installationRef,
+                $scope->sellerRef ?? '',
+                $scope->environment ?? '',
+            );
+
+            return $this->receipt($lookup->where('command_kind', $schema)->where('command_key', $key)->first());
+        });
         if ($receipt === null) {
             return null;
         }

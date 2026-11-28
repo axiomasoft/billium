@@ -144,7 +144,8 @@ final class LockSet
             $sql .= ' AND installation_ref = ?';
             $bindings[] = $this->caller->installationRef;
         }
-        $sql .= ' ORDER BY '.$column.($text ? ' COLLATE "C"' : '').($request->shared ? ' FOR SHARE' : ' FOR UPDATE');
+        $mode = $request->shared ? ' FOR SHARE' : ($request->noKeyUpdate ? ' FOR NO KEY UPDATE' : ' FOR UPDATE');
+        $sql .= ' ORDER BY '.$column.($text ? ' COLLATE "C"' : '').$mode;
 
         return [$sql, $bindings];
     }

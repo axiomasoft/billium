@@ -30,6 +30,7 @@ final readonly class LockRequest
         public string $keyColumn = 'id',
         public int $segment = 0,
         public ?string $guardedRoutine = null,
+        public bool $noKeyUpdate = false,
     ) {
         if ($rank === LockRank::Claim) {
             throw new InvalidArgumentException('The claim is an insert, not a row lock');

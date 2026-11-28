@@ -40,4 +40,19 @@ final readonly class RuntimeGrants
         }
         DB::connection()->getPdo()->exec('GRANT '.$privileges.' ON '.$object.' TO "'.str_replace('"', '""', $role).'"');
     }
+
+    public static function revokeAll(string $object): void
+    {
+        if (preg_match('/^public\.[a-z_]+(?:\([a-z ,]*\))?$|^FUNCTION public\.[a-z_]+\([a-z ,]*\)$/', $object) !== 1) {
+            throw new LogicException("Unsafe runtime revoke ON {$object}");
+        }
+        $role = self::role();
+        if ($role === null) {
+            return;
+        }
+        if (Rows::field(DB::selectOne('SELECT current_user AS name'), 'name') === $role) {
+            return;
+        }
+        DB::connection()->getPdo()->exec('REVOKE ALL ON '.$object.' FROM "'.str_replace('"', '""', $role).'"');
+    }
 }
