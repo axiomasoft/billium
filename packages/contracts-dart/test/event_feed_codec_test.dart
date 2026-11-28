@@ -38,25 +38,6 @@ void main() {
             ),
           );
         }
-      } else if (vectorId == 'event/v2/catalog-valid') {
-        // Vector carries 2026-10 payloadSchemaRef URN; 2026-10 accepts it and 2026-12 rejects it.
-        final value = legacyRevisionCodec.decode(json);
-        expect(value.schema, expected['ok']['schema']);
-        expect(legacyRevisionCodec.digestOf(value), expected['ok']['digest']);
-        expect(
-          legacyRevisionCodec.encode(value),
-          legacyRevisionCodec.canonicalizeJson(json),
-        );
-        expect(
-          () => codec.decode(json),
-          throwsA(
-            isA<ProblemException>().having(
-              (e) => e.problem,
-              'code',
-              ProblemCode.validationInvalid,
-            ),
-          ),
-        );
       } else {
         for (final targetCodec in [codec, legacyRevisionCodec]) {
           final value = targetCodec.decode(json);

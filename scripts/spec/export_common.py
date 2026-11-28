@@ -155,8 +155,18 @@ class Revision:
             if not entries or len({e["eventType"] for e in entries}) != len(entries):
                 raise ExportError(f"{path.name}: empty or duplicate catalog types")
             for event in entries:
-                _, payload = self.resolve("", event["payloadSchemaRef"])
+                ref = event["payloadSchemaRef"]
+                match = re.fullmatch(r"urn:billium:spec:(\d{4}-\d{2}):([^#]+)", ref)
+                if match is None:
+                    raise ExportError(f"{path.name}: invalid payload schema reference")
+                pinned_revision, payload_path = match.groups()
+                local_ref = self.document_id(payload_path)
+                if local_ref not in self.documents:
+                    raise ExportError(f"{path.name}: unknown payload schema {ref}")
+                _, payload = self.resolve("", local_ref)
                 canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+                # The catalog keeps its published URNs when the same schema is carried into a new revision.
+                canonical = canonical.replace(f'"urn:billium:spec:{self.name}:', f'"urn:billium:spec:{pinned_revision}:')
                 digest = "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
                 if event["payloadSchemaDigest"] != digest:
                     raise ExportError(f"{path.name}: payload schema digest differs for {event['eventType']}")
@@ -168,7 +178,7 @@ class Revision:
                     raise ExportError(f"{path.name}: envelope catalog revision differs")
                 if properties["eventType"].get("enum") != [e["eventType"] for e in entries]:
                     raise ExportError(f"{path.name}: envelope type-set differs")
-                if len(entries) == 1 and properties["payload"].get("$ref") != event["payloadSchemaRef"]:
+                if len(entries) == 1 and properties["payload"].get("$ref") != local_ref:
                     raise ExportError(f"{path.name}: envelope payload schema differs")
 
     def document_id(self, relative: str) -> str:
