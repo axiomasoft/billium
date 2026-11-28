@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Billium\Documents\Internal\Services;
 
-use Billium\Contracts\Data\Currency;
 use Billium\Contracts\Enums\ProblemCode;
 use Billium\Contracts\Exceptions\ProblemException;
 use Billium\Core\Configuration\BilliumOptions;
@@ -24,17 +23,17 @@ use Billium\Documents\Data\DocumentFinalizationEventView;
 use Billium\Documents\Data\DocumentFinalizationView;
 use Billium\Documents\Data\DocumentLineBasis;
 use Billium\Documents\Data\DocumentScope;
-use Billium\Documents\Data\DocumentTaxLineSnapshot;
 use Billium\Documents\Data\DocumentTaxSnapshot;
 use Billium\Documents\Data\ReviseDocumentDraft;
-use Billium\Documents\Data\TaxSnapshotRequest;
 use Billium\Documents\Enums\DiscountTaxOrder;
 use Billium\Documents\Enums\DocumentType;
 use Billium\Documents\Enums\FinalizationState;
 use Billium\Documents\Enums\TaxConvention;
 use Billium\Documents\Internal\Canonical\CanonicalJson;
 use Billium\Documents\Internal\DocumentReceipt;
-use Billium\Documents\Internal\Math\Dec;
+use Billium\Documents\Internal\Reducers\AttachSnapshotDecision;
+use Billium\Documents\Internal\Reducers\DocumentSnapshotAssembler;
+use Billium\Documents\Internal\Reducers\FinalizationStateReducer;
 use Billium\Documents\Internal\Support\RowCast;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -54,6 +53,8 @@ final readonly class DatabaseDocumentFinalizationService implements DocumentFina
         private DocumentProfileRegistry $profiles,
         private DocumentTaxSnapshotPort $taxSnapshotPort,
         private BilliumOptions $options,
+        private DocumentSnapshotAssembler $assembler = new DocumentSnapshotAssembler,
+        private FinalizationStateReducer $reducer = new FinalizationStateReducer,
     ) {}
 
     public function createDraft(CreateDocumentDraft $command): DocumentFinalizationView
@@ -63,13 +64,14 @@ final readonly class DatabaseDocumentFinalizationService implements DocumentFina
         RowCast::bounded($command->finalizationRef, 'finalizationRef');
         RowCast::bounded($command->economicRef, 'economicRef');
         RowCast::bounded($command->basisDigest, 'basisDigest');
-        if ($command->basisRevision < 1) {
-            throw new ProblemException(ProblemCode::ValidationInvalid, 'basisRevision must be positive');
-        }
 
-        $currency = self::validateCurrency($command->currency, $command->currencyExponent);
-        self::validateRoundingMode($command->roundingMode);
-        self::validateLines($command->lines);
+        $currency = $this->assembler->validateDraftInputs(
+            basisRevision: $command->basisRevision,
+            currencyCode: $command->currency,
+            currencyExponent: $command->currencyExponent,
+            roundingMode: $command->roundingMode,
+            lines: $command->lines,
+        );
 
         $profile = $this->profiles->find($command->scope, $command->profileRef, $command->profileVersion);
         if ($profile === null) {
@@ -79,8 +81,8 @@ final readonly class DatabaseDocumentFinalizationService implements DocumentFina
             throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.document_type_unsupported');
         }
 
-        $linesPayload = self::serializeLines($command->lines);
-        $inputDigest = self::computeInputDigest(
+        $linesPayload = $this->assembler->serializeLines($command->lines);
+        $inputDigest = $this->assembler->computeInputDigest(
             sellerRef: $caller->sellerRef,
             environment: $caller->environment,
             finalizationRef: $command->finalizationRef,
@@ -122,9 +124,10 @@ final readonly class DatabaseDocumentFinalizationService implements DocumentFina
                     ->first();
 
                 if ($existing !== null) {
-                    if (RowCast::str($existing->input_digest, 'input_digest') !== $inputDigest) {
-                        throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.finalization_conflict');
-                    }
+                    $this->reducer->assertDraftIdempotentOrThrow(
+                        RowCast::str($existing->input_digest, 'input_digest'),
+                        $inputDigest,
+                    );
 
                     return new DocumentReceipt('documents.finalization.draft_created', [
                         'id' => RowCast::integer($existing->id, 'id'),
@@ -209,14 +212,11 @@ final readonly class DatabaseDocumentFinalizationService implements DocumentFina
                 }
 
                 $rowId = RowCast::integer($row->id, 'id');
-                $state = RowCast::str($row->state, 'state');
+                $state = FinalizationState::from(RowCast::str($row->state, 'state'));
                 $rev = RowCast::integer($row->finalization_revision, 'finalization_revision');
                 $inputDigest = RowCast::str($row->input_digest, 'input_digest');
 
-                if ($state === FinalizationState::SnapshotReady->value) {
-                    throw new ProblemException(ProblemCode::InvoiceFrozen, 'billium.documents.finalization_already_ready');
-                }
-                if ($state === FinalizationState::Finalizing->value) {
+                if (! $this->reducer->decideStartFinalization($state)) {
                     return new DocumentReceipt('documents.finalization.started', ['id' => $rowId]);
                 }
 
@@ -260,14 +260,14 @@ final readonly class DatabaseDocumentFinalizationService implements DocumentFina
         RowCast::assertScope($caller, $command->scope);
         RowCast::bounded($command->finalizationRef, 'finalizationRef');
         RowCast::bounded($command->basisDigest, 'basisDigest');
-        if ($command->basisRevision < 1) {
-            throw new ProblemException(ProblemCode::ValidationInvalid, 'basisRevision must be positive');
-        }
-
-        $currency = self::validateCurrency($command->currency, $command->currencyExponent);
-        self::validateRoundingMode($command->roundingMode);
-        self::validateLines($command->lines);
-        $linesPayload = self::serializeLines($command->lines);
+        $currency = $this->assembler->validateDraftInputs(
+            basisRevision: $command->basisRevision,
+            currencyCode: $command->currency,
+            currencyExponent: $command->currencyExponent,
+            roundingMode: $command->roundingMode,
+            lines: $command->lines,
+        );
+        $linesPayload = $this->assembler->serializeLines($command->lines);
 
         $outcome = $this->runner->run(
             spec: new OperationSpec(
@@ -294,10 +294,8 @@ final readonly class DatabaseDocumentFinalizationService implements DocumentFina
                     throw new ProblemException(ProblemCode::ReferenceUnknown, 'billium.documents.finalization_not_found');
                 }
 
-                $currentState = RowCast::str($current->state, 'state');
-                if ($currentState === FinalizationState::SnapshotReady->value) {
-                    throw new ProblemException(ProblemCode::InvoiceFrozen, 'billium.documents.finalization_frozen');
-                }
+                $currentState = FinalizationState::from(RowCast::str($current->state, 'state'));
+                $this->reducer->assertRevisable($currentState);
 
                 $currentId = RowCast::integer($current->id, 'id');
                 $currentRev = RowCast::integer($current->finalization_revision, 'finalization_revision');
@@ -308,7 +306,7 @@ final readonly class DatabaseDocumentFinalizationService implements DocumentFina
                 $docType = RowCast::str($current->document_type, 'document_type');
                 $economicRef = RowCast::str($current->economic_ref, 'economic_ref');
 
-                $newDigest = self::computeInputDigest(
+                $newDigest = $this->assembler->computeInputDigest(
                     sellerRef: $caller->sellerRef,
                     environment: $caller->environment,
                     finalizationRef: $command->finalizationRef,
@@ -429,26 +427,12 @@ final readonly class DatabaseDocumentFinalizationService implements DocumentFina
             throw new ProblemException(ProblemCode::ReferenceUnknown, 'billium.documents.profile_not_found');
         }
 
-        $request = new TaxSnapshotRequest(
-            sellerRef: $finalizing->sellerRef,
-            environment: $finalizing->environment,
-            finalizationRef: $finalizing->finalizationRef,
-            finalizationRevision: $finalizing->finalizationRevision,
-            documentType: $finalizing->documentType,
-            economicRef: $finalizing->economicRef,
-            basisRevision: $finalizing->basisRevision,
-            basisDigest: $finalizing->basisDigest,
-            inputDigest: $finalizing->inputDigest,
-            taxSnapshotSchema: $profile->taxSnapshotSchema,
-            jurisdictionRef: $profile->jurisdictionRef,
-            currency: $finalizing->currency,
-            currencyExponent: $finalizing->currencyExponent,
+        $request = $this->assembler->buildTaxSnapshotRequest(
+            finalization: $finalizing,
+            profile: $profile,
             convention: TaxConvention::from(RowCast::str($row->tax_convention, 'tax_convention')),
             roundingMode: RowCast::str($row->rounding_mode, 'rounding_mode'),
             discountTaxOrder: DiscountTaxOrder::from(RowCast::str($row->discount_tax_order, 'discount_tax_order')),
-            lines: $finalizing->lines,
-            buyerSnapshot: $finalizing->buyerSnapshot,
-            sellerSnapshot: $profile->sellerSnapshot,
         );
 
         // External port call strictly outside any DB transaction (INV-06).
@@ -488,8 +472,8 @@ final readonly class DatabaseDocumentFinalizationService implements DocumentFina
         RowCast::bounded($command->finalizationRef, 'finalizationRef');
         RowCast::bounded($command->inputDigest, 'inputDigest');
 
-        $taxSnapshotPayload = self::serializeSnapshot($command->snapshot);
-        $taxSnapshotDigest = CanonicalJson::digest($taxSnapshotPayload);
+        $taxSnapshotPayload = $this->assembler->serializeTaxSnapshot($command->snapshot);
+        $taxSnapshotDigest = $this->assembler->computeTaxSnapshotDigest($taxSnapshotPayload);
 
         $outcome = $this->runner->run(
             spec: new OperationSpec(
@@ -516,25 +500,9 @@ final readonly class DatabaseDocumentFinalizationService implements DocumentFina
                     throw new ProblemException(ProblemCode::ReferenceUnknown, 'billium.documents.finalization_not_found');
                 }
 
-                $targetId = RowCast::integer($target->id, 'id');
-                $targetState = RowCast::str($target->state, 'state');
-                $targetInputDigest = RowCast::str($target->input_digest, 'input_digest');
+                $targetView = self::hydrate($target);
+                $targetConvention = TaxConvention::from(RowCast::str($target->tax_convention, 'tax_convention'));
 
-                // Idempotent retry of identical snapshot on an already snapshot_ready revision.
-                if (
-                    $targetState === FinalizationState::SnapshotReady->value
-                    && $targetInputDigest === $command->inputDigest
-                    && $command->snapshot->inputDigest === $command->inputDigest
-                    && RowCast::optStr($target->tax_snapshot_digest, 'tax_snapshot_digest') === $taxSnapshotDigest
-                ) {
-                    return new DocumentReceipt('documents.finalization.snapshot_idempotent', [
-                        'attached' => false,
-                        'staleIgnored' => false,
-                        'viewId' => $targetId,
-                    ]);
-                }
-
-                // Detect superseded / stale / digest-mismatched late result before snapshot conflict validation.
                 $latest = $db->table('billium_document_finalization')
                     ->where('seller_ref', $caller->sellerRef)
                     ->where('environment', $caller->environment)
@@ -542,61 +510,52 @@ final readonly class DatabaseDocumentFinalizationService implements DocumentFina
                     ->orderByDesc('finalization_revision')
                     ->first();
 
-                $latestId = $latest !== null ? RowCast::integer($latest->id, 'id') : $targetId;
+                $latestId = $latest !== null ? RowCast::integer($latest->id, 'id') : $targetView->id;
                 $latestRev = $latest !== null ? RowCast::integer($latest->finalization_revision, 'finalization_revision') : $command->finalizationRevision;
-                $latestInputDigest = $latest !== null ? RowCast::str($latest->input_digest, 'input_digest') : $targetInputDigest;
+                $latestInputDigest = $latest !== null ? RowCast::str($latest->input_digest, 'input_digest') : $targetView->inputDigest;
 
-                $isStale = $targetState === FinalizationState::Superseded->value
-                    || $latestRev !== $command->finalizationRevision
-                    || $targetInputDigest !== $command->inputDigest
-                    || $command->snapshot->inputDigest !== $command->inputDigest;
+                $decision = $this->reducer->decideAttachTaxSnapshot(
+                    target: $targetView,
+                    targetConvention: $targetConvention,
+                    latestId: $latestId,
+                    latestRevision: $latestRev,
+                    latestInputDigest: $latestInputDigest,
+                    command: $command,
+                    taxSnapshotDigest: $taxSnapshotDigest,
+                );
 
-                if ($isStale) {
+                if ($decision->action === AttachSnapshotDecision::ACTION_IDEMPOTENT) {
+                    return new DocumentReceipt('documents.finalization.snapshot_idempotent', [
+                        'attached' => false,
+                        'staleIgnored' => false,
+                        'viewId' => $decision->viewId,
+                    ]);
+                }
+
+                if ($decision->action === AttachSnapshotDecision::ACTION_STALE) {
                     $db->table('billium_document_finalization_event')->insert([
                         'seller_ref' => $caller->sellerRef,
                         'environment' => $caller->environment,
-                        'finalization_id' => $latestId,
+                        'finalization_id' => $decision->viewId,
                         'finalization_revision' => $command->finalizationRevision,
                         'event_kind' => 'stale_snapshot_ignored',
                         'input_digest' => $command->inputDigest,
-                        'details' => CanonicalJson::encode([
-                            'expectedInputDigest' => $latestInputDigest,
-                            'latestRevision' => $latestRev,
-                            'taxSnapshotRef' => $command->snapshot->taxSnapshotRef,
-                        ]),
+                        'details' => CanonicalJson::encode($decision->staleDetails ?? []),
                         'occurred_at' => $now,
                     ]);
 
                     return new DocumentReceipt('documents.finalization.snapshot_stale', [
                         'attached' => false,
                         'staleIgnored' => true,
-                        'viewId' => $latestId,
+                        'viewId' => $decision->viewId,
                     ]);
                 }
 
-                if ($targetState !== FinalizationState::Finalizing->value) {
-                    throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.finalization_not_finalizing');
-                }
-
-                self::validateSnapshotAgainstDraft($target, $command->snapshot);
-
-                $approvedSnapshotDigest = CanonicalJson::digest([
-                    'finalizationRef' => $command->finalizationRef,
-                    'finalizationRevision' => $command->finalizationRevision,
-                    'basisRevision' => RowCast::integer($target->basis_revision, 'basis_revision'),
-                    'basisDigest' => RowCast::str($target->basis_digest, 'basis_digest'),
-                    'inputDigest' => $targetInputDigest,
-                    'taxSnapshotDigest' => $taxSnapshotDigest,
-                    'profileId' => RowCast::integer($target->profile_id, 'profile_id'),
-                    'profileVersion' => RowCast::integer($target->profile_version, 'profile_version'),
-                    'currency' => $command->snapshot->currency,
-                    'subtotalMinor' => $command->snapshot->subtotalMinor,
-                    'taxMinor' => $command->snapshot->taxMinor,
-                    'totalMinor' => $command->snapshot->totalMinor,
-                ]);
+                $approvedSnapshotDigest = $decision->approvedSnapshotDigest
+                    ?? throw new LogicException('Attach decision missing approvedSnapshotDigest');
 
                 $affected = $db->table('billium_document_finalization')
-                    ->where('id', $targetId)
+                    ->where('id', $targetView->id)
                     ->where('state', FinalizationState::Finalizing->value)
                     ->where('finalization_revision', $command->finalizationRevision)
                     ->where('input_digest', $command->inputDigest)
@@ -634,7 +593,7 @@ final readonly class DatabaseDocumentFinalizationService implements DocumentFina
                 $db->table('billium_document_finalization_event')->insert([
                     'seller_ref' => $caller->sellerRef,
                     'environment' => $caller->environment,
-                    'finalization_id' => $targetId,
+                    'finalization_id' => $targetView->id,
                     'finalization_revision' => $command->finalizationRevision,
                     'event_kind' => 'snapshot_attached',
                     'input_digest' => $command->inputDigest,
@@ -648,7 +607,7 @@ final readonly class DatabaseDocumentFinalizationService implements DocumentFina
                 return new DocumentReceipt('documents.finalization.snapshot_attached', [
                     'attached' => true,
                     'staleIgnored' => false,
-                    'viewId' => $targetId,
+                    'viewId' => $targetView->id,
                 ]);
             },
         );
@@ -775,76 +734,13 @@ final readonly class DatabaseDocumentFinalizationService implements DocumentFina
     /** @return array<string, mixed> */
     public static function serializeSnapshot(DocumentTaxSnapshot $snapshot): array
     {
-        $lines = [];
-        foreach ($snapshot->lines as $line) {
-            $lines[] = [
-                'lineRef' => $line->lineRef,
-                'taxCode' => $line->taxCode,
-                'rateDecimal' => $line->rateDecimal,
-                'netMinor' => $line->netMinor,
-                'taxMinor' => $line->taxMinor,
-                'grossMinor' => $line->grossMinor,
-            ];
-        }
-
-        return [
-            'taxSnapshotRef' => $snapshot->taxSnapshotRef,
-            'taxPolicyVersion' => $snapshot->taxPolicyVersion,
-            'taxPoint' => $snapshot->taxPoint,
-            'convention' => $snapshot->convention->value,
-            'currency' => $snapshot->currency,
-            'currencyExponent' => $snapshot->currencyExponent,
-            'subtotalMinor' => $snapshot->subtotalMinor,
-            'taxMinor' => $snapshot->taxMinor,
-            'totalMinor' => $snapshot->totalMinor,
-            'lines' => $lines,
-            'inputDigest' => $snapshot->inputDigest,
-            'evidenceDigest' => $snapshot->evidenceDigest,
-            'resolver' => $snapshot->resolver,
-            'resolverVersion' => $snapshot->resolverVersion,
-            'noTaxReason' => $snapshot->noTaxReason,
-        ];
+        return new DocumentSnapshotAssembler()->serializeTaxSnapshot($snapshot);
     }
 
     /** @param array<string, mixed> $payload */
     public static function hydrateSnapshot(array $payload): DocumentTaxSnapshot
     {
-        $rawLines = $payload['lines'] ?? null;
-        if (! is_array($rawLines)) {
-            throw new LogicException('Expected snapshot lines array');
-        }
-        $lines = [];
-        foreach ($rawLines as $raw) {
-            if (! is_array($raw)) {
-                throw new LogicException('Expected snapshot line object');
-            }
-            $lines[] = new DocumentTaxLineSnapshot(
-                lineRef: RowCast::str($raw['lineRef'] ?? null, 'lineRef'),
-                taxCode: RowCast::str($raw['taxCode'] ?? null, 'taxCode'),
-                rateDecimal: RowCast::str($raw['rateDecimal'] ?? null, 'rateDecimal'),
-                netMinor: RowCast::integer($raw['netMinor'] ?? null, 'netMinor'),
-                taxMinor: RowCast::integer($raw['taxMinor'] ?? null, 'taxMinor'),
-                grossMinor: RowCast::integer($raw['grossMinor'] ?? null, 'grossMinor'),
-            );
-        }
-
-        return new DocumentTaxSnapshot(
-            taxSnapshotRef: RowCast::str($payload['taxSnapshotRef'] ?? null, 'taxSnapshotRef'),
-            taxPolicyVersion: RowCast::str($payload['taxPolicyVersion'] ?? null, 'taxPolicyVersion'),
-            taxPoint: RowCast::str($payload['taxPoint'] ?? null, 'taxPoint'),
-            convention: TaxConvention::from(RowCast::str($payload['convention'] ?? null, 'convention')),
-            currency: RowCast::str($payload['currency'] ?? null, 'currency'),
-            currencyExponent: RowCast::integer($payload['currencyExponent'] ?? null, 'currencyExponent'),
-            subtotalMinor: RowCast::integer($payload['subtotalMinor'] ?? null, 'subtotalMinor'),
-            taxMinor: RowCast::integer($payload['taxMinor'] ?? null, 'taxMinor'),
-            totalMinor: RowCast::integer($payload['totalMinor'] ?? null, 'totalMinor'),
-            lines: $lines,
-            inputDigest: RowCast::str($payload['inputDigest'] ?? null, 'inputDigest'),
-            evidenceDigest: RowCast::str($payload['evidenceDigest'] ?? null, 'evidenceDigest'),
-            resolver: RowCast::str($payload['resolver'] ?? null, 'resolver'),
-            resolverVersion: RowCast::str($payload['resolverVersion'] ?? null, 'resolverVersion'),
-            noTaxReason: RowCast::optStr($payload['noTaxReason'] ?? null, 'noTaxReason'),
-        );
+        return new DocumentSnapshotAssembler()->hydrateTaxSnapshot($payload);
     }
 
     private function requireById(int $id, string $sellerRef, string $environment): DocumentFinalizationView
@@ -899,179 +795,6 @@ final readonly class DatabaseDocumentFinalizationService implements DocumentFina
                 return new DocumentReceipt('documents.finalization.event_recorded', ['eventKind' => $eventKind]);
             },
         );
-    }
-
-    private static function validateSnapshotAgainstDraft(stdClass $target, DocumentTaxSnapshot $snapshot): void
-    {
-        $draftCurrency = RowCast::str($target->currency, 'currency');
-        $draftExponent = RowCast::integer($target->currency_exponent, 'currency_exponent');
-        $draftConvention = TaxConvention::from(RowCast::str($target->tax_convention, 'tax_convention'));
-
-        if ($snapshot->currency !== $draftCurrency || $snapshot->currencyExponent !== $draftExponent) {
-            throw new ProblemException(ProblemCode::MoneyCurrencyMismatch, 'billium.documents.tax_snapshot_currency_conflict');
-        }
-        if ($snapshot->convention !== $draftConvention) {
-            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.tax_snapshot_convention_conflict');
-        }
-        if ($draftConvention === TaxConvention::NoneDeclared && ($snapshot->taxMinor !== 0 || $snapshot->noTaxReason === null || trim($snapshot->noTaxReason) === '')) {
-            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.none_declared_requires_zero_tax_and_reason');
-        }
-        if ($snapshot->subtotalMinor + $snapshot->taxMinor !== $snapshot->totalMinor) {
-            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.tax_snapshot_total_conflict');
-        }
-
-        $view = self::hydrate($target);
-        $draftByLine = [];
-        $draftNetSum = 0;
-        foreach ($view->lines as $line) {
-            $draftByLine[$line->lineRef] = $line;
-            $draftNetSum += $line->netMinor;
-        }
-
-        if (count($snapshot->lines) !== count($draftByLine)) {
-            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.tax_snapshot_line_count_conflict');
-        }
-
-        $sumNet = 0;
-        $sumTax = 0;
-        $sumGross = 0;
-        $seen = [];
-        foreach ($snapshot->lines as $snapLine) {
-            if (isset($seen[$snapLine->lineRef]) || ! isset($draftByLine[$snapLine->lineRef])) {
-                throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.tax_snapshot_line_ref_conflict');
-            }
-            $seen[$snapLine->lineRef] = true;
-            if ($snapLine->netMinor + $snapLine->taxMinor !== $snapLine->grossMinor || $snapLine->netMinor < 0 || $snapLine->taxMinor < 0) {
-                throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.tax_snapshot_line_math_conflict');
-            }
-            if ($draftConvention !== TaxConvention::Inclusive && $snapLine->netMinor !== $draftByLine[$snapLine->lineRef]->netMinor) {
-                throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.tax_snapshot_line_amount_conflict');
-            }
-            if ($draftConvention === TaxConvention::Inclusive && $snapLine->grossMinor !== $draftByLine[$snapLine->lineRef]->netMinor && $snapLine->netMinor !== $draftByLine[$snapLine->lineRef]->netMinor) {
-                throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.tax_snapshot_inclusive_amount_conflict');
-            }
-            $sumNet += $snapLine->netMinor;
-            $sumTax += $snapLine->taxMinor;
-            $sumGross += $snapLine->grossMinor;
-        }
-
-        if ($sumNet !== $snapshot->subtotalMinor || $sumTax !== $snapshot->taxMinor || $sumGross !== $snapshot->totalMinor) {
-            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.tax_snapshot_sum_conflict');
-        }
-        if ($draftConvention !== TaxConvention::Inclusive && $snapshot->subtotalMinor !== $draftNetSum) {
-            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.tax_snapshot_subtotal_conflict');
-        }
-    }
-
-    private static function validateCurrency(string $code, int $exponent): Currency
-    {
-        $currency = Currency::of($code);
-        if ($currency->scale !== $exponent) {
-            throw new ProblemException(ProblemCode::MoneyScaleInvalid, 'currency exponent mismatch for '.$currency->code);
-        }
-
-        return $currency;
-    }
-
-    private static function validateRoundingMode(string $mode): void
-    {
-        if (! in_array($mode, ['down', 'up', 'half_up', 'half_even'], true)) {
-            throw new ProblemException(ProblemCode::ValidationInvalid, 'unsupported rounding mode: '.$mode);
-        }
-    }
-
-    /** @param list<DocumentLineBasis> $lines */
-    private static function validateLines(array $lines): void
-    {
-        if ($lines === []) {
-            throw new ProblemException(ProblemCode::ValidationInvalid, 'document draft requires at least one line');
-        }
-        $seen = [];
-        foreach ($lines as $line) {
-            RowCast::bounded($line->lineRef, 'lineRef');
-            RowCast::bounded($line->obligationRef, 'obligationRef');
-            RowCast::bounded($line->componentRef, 'componentRef');
-            if (isset($seen[$line->lineRef])) {
-                throw new ProblemException(ProblemCode::ValidationInvalid, 'duplicate lineRef: '.$line->lineRef);
-            }
-            $seen[$line->lineRef] = true;
-            if ($line->netMinor < 0 || $line->discountMinor < 0) {
-                throw new ProblemException(ProblemCode::ValidationInvalid, 'line minor amounts must be non-negative');
-            }
-            Dec::parse($line->quantity);
-            Dec::parse($line->unitPriceDecimal);
-            Dec::parse($line->taxRate);
-        }
-    }
-
-    /**
-     * @param  list<DocumentLineBasis>  $lines
-     * @return list<array<string, mixed>>
-     */
-    private static function serializeLines(array $lines): array
-    {
-        $out = [];
-        foreach ($lines as $line) {
-            $out[] = [
-                'lineRef' => $line->lineRef,
-                'obligationRef' => $line->obligationRef,
-                'componentRef' => $line->componentRef,
-                'quantity' => $line->quantity,
-                'unitPriceDecimal' => $line->unitPriceDecimal,
-                'netMinor' => $line->netMinor,
-                'discountMinor' => $line->discountMinor,
-                'taxCode' => $line->taxCode,
-                'taxRate' => $line->taxRate,
-                'description' => $line->description,
-            ];
-        }
-
-        return $out;
-    }
-
-    /**
-     * @param  list<array<string, mixed>>  $lines
-     * @param  array<string, mixed>  $buyerSnapshot
-     * @param  array<string, mixed>  $termsSnapshot
-     */
-    private static function computeInputDigest(
-        string $sellerRef,
-        string $environment,
-        string $finalizationRef,
-        string $documentType,
-        string $economicRef,
-        int $basisRevision,
-        string $basisDigest,
-        int $profileId,
-        int $profileVersion,
-        string $currency,
-        int $currencyExponent,
-        string $convention,
-        string $roundingMode,
-        string $discountTaxOrder,
-        array $lines,
-        array $buyerSnapshot,
-        array $termsSnapshot,
-    ): string {
-        return CanonicalJson::digest([
-            'sellerRef' => $sellerRef,
-            'environment' => $environment,
-            'finalizationRef' => $finalizationRef,
-            'documentType' => $documentType,
-            'economicRef' => $economicRef,
-            'basisRevision' => $basisRevision,
-            'basisDigest' => $basisDigest,
-            'profileId' => $profileId,
-            'profileVersion' => $profileVersion,
-            'currency' => $currency,
-            'currencyExponent' => $currencyExponent,
-            'convention' => $convention,
-            'roundingMode' => $roundingMode,
-            'discountTaxOrder' => $discountTaxOrder,
-            'lines' => $lines,
-            'buyerSnapshot' => $buyerSnapshot,
-            'termsSnapshot' => $termsSnapshot,
-        ]);
     }
 
     private static function nowUtc(): string

@@ -18,8 +18,6 @@ use Billium\Documents\Contracts\DocumentsNumberingParticipant;
 use Billium\Documents\Contracts\LedgerIssuePolicy;
 use Billium\Documents\Contracts\LegalDocumentIssuer;
 use Billium\Documents\Data\AllocateLegalNumberCommand;
-use Billium\Documents\Data\DocumentFinalizationView;
-use Billium\Documents\Data\DocumentProfile;
 use Billium\Documents\Data\DocumentScope;
 use Billium\Documents\Data\IssueLegalDocument;
 use Billium\Documents\Data\LegalDocumentView;
@@ -30,6 +28,8 @@ use Billium\Documents\Enums\FinalizationState;
 use Billium\Documents\Enums\LegalDocumentStatus;
 use Billium\Documents\Internal\Canonical\CanonicalJson;
 use Billium\Documents\Internal\DocumentReceipt;
+use Billium\Documents\Internal\Reducers\DocumentSnapshotAssembler;
+use Billium\Documents\Internal\Reducers\LegalIssuePreconditionChecker;
 use Billium\Documents\Internal\Support\RowCast;
 use Billium\Ledger\Contracts\LockedInvoiceSnapshotParticipant;
 use Billium\Ledger\Data\Invoices\IssueInvoice;
@@ -43,15 +43,6 @@ use stdClass;
 #[Internal]
 final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
 {
-    /** @var list<string> */
-    private const array ALLOWED_DISPLAY_METADATA_KEYS = [
-        'displayLabel',
-        'deliveryNote',
-        'locale',
-        'customNotes',
-        'externalReference',
-    ];
-
     public function __construct(
         private DatabaseManager $databases,
         private OperationRunner $runner,
@@ -60,6 +51,8 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
         private LedgerIssuePolicy $ledgerIssuePolicy,
         private LockedInvoiceSnapshotParticipant $lockedInvoiceSnapshots,
         private DocumentsNumberingParticipant $numberingParticipant,
+        private LegalIssuePreconditionChecker $preconditions = new LegalIssuePreconditionChecker,
+        private DocumentSnapshotAssembler $assembler = new DocumentSnapshotAssembler,
     ) {}
 
     public function issueInvoiceDocument(IssueLegalDocument $command): StoredOutcome
@@ -76,28 +69,13 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
         if ($command->documentRevision < 1) {
             throw new ProblemException(ProblemCode::ValidationInvalid, 'documentRevision must be positive');
         }
-        self::assertDisplayMetadataAllowList($command->displayMetadata);
+        $this->preconditions->assertDisplayMetadataAllowList($command->displayMetadata);
 
         $legalDocumentRef = $command->legalDocumentRef !== null
             ? RowCast::bounded($command->legalDocumentRef, 'legalDocumentRef')
-            : self::deterministicLegalDocumentRef($caller->sellerRef, $caller->environment, DocumentType::Invoice, $command->economicRef, $command->documentRevision);
+            : $this->preconditions->deterministicLegalDocumentRef($caller->sellerRef, $caller->environment, DocumentType::Invoice, $command->economicRef, $command->documentRevision);
 
-        $digest = CanonicalJson::digest([
-            'scope' => [
-                'sellerRef' => $command->scope->sellerRef,
-                'environment' => $command->scope->environment,
-                'billingAccountRef' => $command->scope->billingAccountRef,
-            ],
-            'invoiceRef' => $command->invoiceRef,
-            'economicRef' => $command->economicRef,
-            'documentRevision' => $command->documentRevision,
-            'finalizationRef' => $command->finalizationRef,
-            'approvedSnapshotDigest' => $command->approvedSnapshotDigest,
-            'seriesRef' => $command->seriesRef,
-            'periodKey' => $command->periodKey,
-            'displayMetadata' => $command->displayMetadata,
-            'legalDocumentRef' => $legalDocumentRef,
-        ]);
+        $digest = $this->preconditions->computeIssueDigest($command, $legalDocumentRef);
 
         return $this->runner->run(
             spec: new OperationSpec(
@@ -122,25 +100,23 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
                     ->where('state', '<>', FinalizationState::Superseded->value)
                     ->first();
 
-                if ($finRow === null || RowCast::str($finRow->state, 'state') !== FinalizationState::SnapshotReady->value) {
+                if ($finRow === null) {
                     throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.snapshot_not_ready');
                 }
-                if (
-                    RowCast::str($finRow->document_type, 'document_type') !== DocumentType::Invoice->value
-                    || RowCast::str($finRow->economic_ref, 'economic_ref') !== $command->economicRef
-                    || RowCast::optStr($finRow->approved_snapshot_digest, 'approved_snapshot_digest') !== $command->approvedSnapshotDigest
-                ) {
-                    throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.snapshot_mismatch');
-                }
 
-                $finalization = DatabaseDocumentFinalizationService::hydrate($finRow);
+                $finalization = $this->preconditions->assertFinalizationReadyForIssue(
+                    finalization: DatabaseDocumentFinalizationService::hydrate($finRow),
+                    expectedType: DocumentType::Invoice,
+                    expectedEconomicRef: $command->economicRef,
+                    expectedApprovedSnapshotDigest: $command->approvedSnapshotDigest,
+                );
                 $profile = $this->profiles->requireComplete(
                     new DocumentScope($caller->sellerRef, $caller->environment),
                     RowCast::str($finRow->profile_ref, 'profile_ref'),
                     $finalization->profileVersion,
                     DocumentType::Invoice,
                 );
-                self::assertRequiredBuyerFields($profile, $finalization->buyerSnapshot);
+                $this->preconditions->assertRequiredBuyerFields($profile, $finalization->buyerSnapshot);
 
                 $series = $db->table('billium_document_series')
                     ->where('seller_ref', $caller->sellerRef)
@@ -152,12 +128,11 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
                 if ($series === null) {
                     throw new ProblemException(ProblemCode::AuthDenied, 'billium.documents.series_not_in_scope');
                 }
-                if (! RowCast::boolean($series->active, 'active')) {
-                    throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.series_inactive');
-                }
-                if (RowCast::str($series->document_type, 'document_type') !== DocumentType::Invoice->value) {
-                    throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.series_document_type_mismatch');
-                }
+                $this->preconditions->assertSeriesEligible(
+                    active: RowCast::boolean($series->active, 'active'),
+                    seriesType: DocumentType::from(RowCast::str($series->document_type, 'document_type')),
+                    expectedType: DocumentType::Invoice,
+                );
 
                 $seriesId = RowCast::integer($series->id, 'id');
 
@@ -170,7 +145,7 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
                 $lockedInvoice = $this->lockedInvoiceSnapshots->lockedInvoiceSnapshot($context, $command->scope, $command->invoiceRef);
 
                 // Step 2: verify live locked invoice totals and every refreshed line under Obligation/Invoice lock match finalization.
-                self::assertLockedInvoiceMatchesFinalization($lockedInvoice, $ledgerReceipt->body(), $finalization, $legalDocumentRef);
+                $this->preconditions->assertLockedInvoiceMatchesFinalization($lockedInvoice, $ledgerReceipt->body(), $finalization, $legalDocumentRef);
 
                 // Step 3: if another concurrent worker already committed this exact legal basis, replay cleanly without touching series.
                 $existingLegal = $db->table('billium_document_legal')
@@ -182,18 +157,18 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
                     ->first();
 
                 if ($existingLegal !== null) {
-                    if (
-                        RowCast::str($existingLegal->approved_snapshot_digest, 'approved_snapshot_digest') !== $command->approvedSnapshotDigest
-                        || RowCast::str($existingLegal->series_ref, 'series_ref') !== $command->seriesRef
-                        || RowCast::str($existingLegal->period_key, 'period_key') !== $command->periodKey
-                        || RowCast::str($existingLegal->legal_document_ref, 'legal_document_ref') !== $legalDocumentRef
-                    ) {
-                        throw new ProblemException(ProblemCode::IdempotencyConflict, 'billium.documents.basis_already_issued');
-                    }
+                    $existingView = self::hydrate($existingLegal);
+                    $this->preconditions->assertExistingLegalMatchesOrThrow(
+                        existing: $existingView,
+                        approvedSnapshotDigest: $command->approvedSnapshotDigest,
+                        seriesRef: $command->seriesRef,
+                        periodKey: $command->periodKey,
+                        legalDocumentRef: $legalDocumentRef,
+                    );
 
                     return new DocumentReceipt(
                         'documents.legal_document.issued',
-                        self::viewToReceiptBody(self::hydrate($existingLegal)),
+                        $this->preconditions->viewToReceiptBody($existingView),
                     );
                 }
 
@@ -205,10 +180,10 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
                     ? $termsRoundingPolicy
                     : $roundingPolicyVersion;
 
-                $linesSnapshot = self::serializeFinalizationLines($finalization, $defaultLineRoundingPolicy);
+                $linesSnapshot = $this->assembler->serializeFinalizationLines($finalization, $defaultLineRoundingPolicy);
                 $taxSnapshotPayload = $finalization->taxSnapshot !== null
                     ? [
-                        ...DatabaseDocumentFinalizationService::serializeSnapshot($finalization->taxSnapshot),
+                        ...$this->assembler->serializeTaxSnapshot($finalization->taxSnapshot),
                         'roundingPolicyVersion' => $roundingPolicyVersion,
                     ]
                     : throw new LogicException('Snapshot-ready finalization missing tax snapshot payload');
@@ -238,7 +213,7 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
                     receiptRef: 'legal-issue:'.$legalDocumentRef,
                 ));
 
-                return new DocumentReceipt('documents.legal_document.issued', self::viewToReceiptBody($view));
+                return new DocumentReceipt('documents.legal_document.issued', $this->preconditions->viewToReceiptBody($view));
             },
         );
     }
@@ -251,12 +226,7 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
         RowCast::bounded($command->legalDocumentRef, 'legalDocumentRef');
         RowCast::bounded($command->reason, 'reason', 500);
 
-        $digest = CanonicalJson::digest([
-            'sellerRef' => $caller->sellerRef,
-            'environment' => $caller->environment,
-            'legalDocumentRef' => $command->legalDocumentRef,
-            'reason' => $command->reason,
-        ]);
+        $digest = $this->preconditions->computeVoidDigest($caller->sellerRef, $caller->environment, $command);
 
         return $this->runner->run(
             spec: new OperationSpec(
@@ -284,13 +254,9 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
                     throw new ProblemException(ProblemCode::ReferenceUnknown, 'billium.documents.legal_document_not_found');
                 }
 
-                $status = RowCast::str($row->status, 'status');
-                if ($status === LegalDocumentStatus::Voided->value) {
-                    if (RowCast::optStr($row->void_reason, 'void_reason') === $command->reason) {
-                        return new DocumentReceipt('documents.legal_document.voided', self::viewToReceiptBody(self::hydrate($row)));
-                    }
-
-                    throw new ProblemException(ProblemCode::InvoiceTransitionInvalid, 'billium.documents.already_voided');
+                $status = LegalDocumentStatus::from(RowCast::str($row->status, 'status'));
+                if (! $this->preconditions->decideVoidTransition($status, RowCast::optStr($row->void_reason, 'void_reason'), $command->reason)) {
+                    return new DocumentReceipt('documents.legal_document.voided', $this->preconditions->viewToReceiptBody(self::hydrate($row)));
                 }
 
                 $affected = $db->table('billium_document_legal')
@@ -324,7 +290,7 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
                     throw new LogicException('Voided legal document disappeared');
                 }
 
-                return new DocumentReceipt('documents.legal_document.voided', self::viewToReceiptBody(self::hydrate($updated)));
+                return new DocumentReceipt('documents.legal_document.voided', $this->preconditions->viewToReceiptBody(self::hydrate($updated)));
             },
         );
     }
@@ -335,14 +301,9 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
         RowCast::assertScope($caller, $command->scope);
         RowCast::bounded($command->commandKey, 'commandKey');
         RowCast::bounded($command->legalDocumentRef, 'legalDocumentRef');
-        self::assertDisplayMetadataAllowList($command->displayMetadata);
+        $this->preconditions->assertDisplayMetadataAllowList($command->displayMetadata);
 
-        $digest = CanonicalJson::digest([
-            'sellerRef' => $caller->sellerRef,
-            'environment' => $caller->environment,
-            'legalDocumentRef' => $command->legalDocumentRef,
-            'displayMetadata' => $command->displayMetadata,
-        ]);
+        $digest = $this->preconditions->computeDisplayMetadataDigest($caller->sellerRef, $caller->environment, $command);
 
         return $this->runner->run(
             spec: new OperationSpec(
@@ -369,7 +330,7 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
                     throw new ProblemException(ProblemCode::ReferenceUnknown, 'billium.documents.legal_document_not_found');
                 }
 
-                $merged = array_merge(
+                $merged = $this->preconditions->mergeDisplayMetadata(
                     RowCast::jsonObject($row->display_metadata, 'display_metadata'),
                     $command->displayMetadata,
                 );
@@ -383,7 +344,7 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
                     throw new LogicException('Updated legal document disappeared');
                 }
 
-                return new DocumentReceipt('documents.legal_document.display_metadata_updated', self::viewToReceiptBody(self::hydrate($updated)));
+                return new DocumentReceipt('documents.legal_document.display_metadata_updated', $this->preconditions->viewToReceiptBody(self::hydrate($updated)));
             },
         );
     }
@@ -435,200 +396,5 @@ final readonly class DatabaseLegalDocumentIssuer implements LegalDocumentIssuer
             receiptRef: RowCast::str($row->receipt_ref, 'receipt_ref'),
             issuedAt: RowCast::timestamp($row->issued_at, 'issued_at'),
         );
-    }
-
-    /** @return array<string, mixed> */
-    private static function viewToReceiptBody(LegalDocumentView $view): array
-    {
-        return [
-            'id' => $view->id,
-            'legalDocumentRef' => $view->legalDocumentRef,
-            'documentType' => $view->documentType->value,
-            'economicRef' => $view->economicRef,
-            'documentRevision' => $view->documentRevision,
-            'seriesRef' => $view->seriesRef,
-            'periodKey' => $view->periodKey,
-            'sequenceNumber' => $view->sequenceNumber,
-            'legalNumber' => $view->legalNumber,
-            'status' => $view->status->value,
-            'approvedSnapshotDigest' => $view->approvedSnapshotDigest,
-            'currency' => $view->currency,
-            'subtotalMinor' => $view->subtotalMinor,
-            'taxMinor' => $view->taxMinor,
-            'totalMinor' => $view->totalMinor,
-            'voidReason' => $view->voidReason,
-        ];
-    }
-
-    private static function deterministicLegalDocumentRef(
-        string $sellerRef,
-        string $environment,
-        DocumentType $type,
-        string $economicRef,
-        int $revision,
-    ): string {
-        return 'ldoc-'.substr(hash('sha256', CanonicalJson::encode([
-            $sellerRef,
-            $environment,
-            $type->value,
-            $economicRef,
-            $revision,
-        ])), 0, 24);
-    }
-
-    /** @param array<string, mixed> $buyerSnapshot */
-    private static function assertRequiredBuyerFields(DocumentProfile $profile, array $buyerSnapshot): void
-    {
-        foreach ($profile->requiredFields as $field) {
-            if (! str_starts_with($field, 'buyer.')) {
-                continue;
-            }
-            $key = substr($field, 6);
-            $val = $buyerSnapshot[$key] ?? null;
-            if (! is_string($val) || trim($val) === '') {
-                throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.missing_required_buyer_field: '.$key);
-            }
-        }
-    }
-
-    /** @param array<string, mixed> $metadata */
-    private static function assertDisplayMetadataAllowList(array $metadata): void
-    {
-        foreach ($metadata as $key => $value) {
-            if (! in_array($key, self::ALLOWED_DISPLAY_METADATA_KEYS, true)) {
-                throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.display_metadata_key_forbidden: '.$key);
-            }
-            if (! is_string($value) && ! is_int($value) && ! is_bool($value)) {
-                throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.display_metadata_scalar_required');
-            }
-        }
-    }
-
-    /**
-     * @param  array{currency: string, subtotalMinor: int, taxMinor: int, totalMinor: int, lines: list<array{obligationRef: string, subtotalMinor: int, taxMinor: int, totalMinor: int}>}  $lockedInvoice
-     * @param  array<string, mixed>  $lockedReceiptBody
-     */
-    private static function assertLockedInvoiceMatchesFinalization(
-        array $lockedInvoice,
-        array $lockedReceiptBody,
-        DocumentFinalizationView $finalization,
-        string $legalDocumentRef,
-    ): void {
-        if (
-            ($lockedReceiptBody['legal_document_ref'] ?? null) !== $legalDocumentRef
-            || ($lockedReceiptBody['currency'] ?? null) !== $finalization->currency
-            || $lockedInvoice['currency'] !== $finalization->currency
-        ) {
-            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.basis_changed_under_lock');
-        }
-
-        $lockedTotalMinor = RowCast::integer($lockedReceiptBody['total_minor'] ?? null, 'total_minor');
-        if (
-            $finalization->subtotalMinor === null
-            || $finalization->taxMinor === null
-            || $finalization->totalMinor === null
-            || $lockedTotalMinor !== $finalization->totalMinor
-            || $lockedInvoice['subtotalMinor'] !== $finalization->subtotalMinor
-            || $lockedInvoice['taxMinor'] !== $finalization->taxMinor
-            || $lockedInvoice['totalMinor'] !== $finalization->totalMinor
-        ) {
-            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.basis_changed_under_lock');
-        }
-
-        if (count($lockedInvoice['lines']) !== count($finalization->lines)) {
-            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.basis_changed_under_lock');
-        }
-
-        $ledgerByObligation = [];
-        foreach ($lockedInvoice['lines'] as $invLine) {
-            $obRef = $invLine['obligationRef'];
-            if (isset($ledgerByObligation[$obRef])) {
-                throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.basis_changed_under_lock');
-            }
-            $ledgerByObligation[$obRef] = [
-                'sub' => $invLine['subtotalMinor'],
-                'tax' => $invLine['taxMinor'],
-                'tot' => $invLine['totalMinor'],
-            ];
-        }
-
-        $taxByLineRef = [];
-        if ($finalization->taxSnapshot !== null) {
-            foreach ($finalization->taxSnapshot->lines as $tLine) {
-                $taxByLineRef[$tLine->lineRef] = $tLine;
-            }
-        }
-        if (count($taxByLineRef) !== count($finalization->lines)) {
-            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.basis_changed_under_lock');
-        }
-
-        $matchedObligations = [];
-        foreach ($finalization->lines as $basisLine) {
-            if (
-                isset($matchedObligations[$basisLine->obligationRef])
-                || ! isset($ledgerByObligation[$basisLine->obligationRef], $taxByLineRef[$basisLine->lineRef])
-            ) {
-                throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.basis_changed_under_lock');
-            }
-            $matchedObligations[$basisLine->obligationRef] = true;
-            $lLine = $ledgerByObligation[$basisLine->obligationRef];
-            $tLine = $taxByLineRef[$basisLine->lineRef];
-
-            if (
-                $lLine['sub'] !== $tLine->netMinor
-                || $lLine['tax'] !== $tLine->taxMinor
-                || $lLine['tot'] !== $tLine->grossMinor
-            ) {
-                throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.basis_changed_under_lock');
-            }
-        }
-
-        if (count($matchedObligations) !== count($ledgerByObligation)) {
-            throw new ProblemException(ProblemCode::ValidationInvalid, 'billium.documents.basis_changed_under_lock');
-        }
-    }
-
-    /** @return list<array<string, mixed>> */
-    private static function serializeFinalizationLines(
-        DocumentFinalizationView $finalization,
-        string $defaultRoundingPolicyVersion,
-    ): array {
-        $taxByLine = [];
-        if ($finalization->taxSnapshot !== null) {
-            foreach ($finalization->taxSnapshot->lines as $line) {
-                $taxByLine[$line->lineRef] = $line;
-            }
-        }
-
-        $linePolicies = is_array($finalization->termsSnapshot['lineRoundingPolicies'] ?? null)
-            ? $finalization->termsSnapshot['lineRoundingPolicies']
-            : [];
-
-        $out = [];
-        foreach ($finalization->lines as $line) {
-            $t = $taxByLine[$line->lineRef] ?? null;
-            $lineSpecific = $linePolicies[$line->lineRef] ?? null;
-            $lineRounding = is_string($lineSpecific) && trim($lineSpecific) !== ''
-                ? $lineSpecific
-                : $defaultRoundingPolicyVersion;
-
-            $out[] = [
-                'lineRef' => $line->lineRef,
-                'obligationRef' => $line->obligationRef,
-                'componentRef' => $line->componentRef,
-                'quantity' => $line->quantity,
-                'unitPriceDecimal' => $line->unitPriceDecimal,
-                'netMinor' => $t->netMinor ?? $line->netMinor,
-                'discountMinor' => $line->discountMinor,
-                'taxCode' => $line->taxCode,
-                'taxRate' => $t->rateDecimal ?? $line->taxRate,
-                'taxMinor' => $t->taxMinor ?? 0,
-                'grossMinor' => $t->grossMinor ?? $line->netMinor,
-                'roundingPolicyVersion' => $lineRounding,
-                'description' => $line->description,
-            ];
-        }
-
-        return $out;
     }
 }
