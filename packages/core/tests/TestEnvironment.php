@@ -19,8 +19,8 @@ use Packman\Testkit\Data\Database\TestDatabaseIdentity;
 use Packman\Testkit\Support\Database\DatabaseLaneEnvironment;
 use Packman\Testkit\Support\Database\TestDatabaseGuard;
 use PDO;
-use PDOException;
 use Pdo\Pgsql;
+use PDOException;
 use RuntimeException;
 use Throwable;
 
