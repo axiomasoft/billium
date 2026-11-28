@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-12:migration/handoff-evidence.v1.json",
+  "title": "D54/D63/F06 local handoff evidence for an explicit activation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "evidenceClass",
+    "verifiedAt",
+    "usesCommitNoAsFreshnessProof",
+    "reliesOnLocalActiveFlag",
+    "sourceFreezeCertificate",
+    "migrationManifest",
+    "sealedTail",
+    "targetReceipt",
+    "activation",
+    "digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "billium.migration.handoff_evidence.v1"
+    },
+    "evidenceClass": {
+      "const": "local_fixture"
+    },
+    "verifiedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "usesCommitNoAsFreshnessProof": {
+      "const": false
+    },
+    "reliesOnLocalActiveFlag": {
+      "const": false
+    },
+    "sourceFreezeCertificate": {
+      "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/sourceFreezeCertificate"
+    },
+    "migrationManifest": {
+      "$ref": "urn:billium:spec:2026-12:migration/manifest.v1.json"
+    },
+    "sealedTail": {
+      "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/tail"
+    },
+    "targetReceipt": {
+      "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/targetReceipt"
+    },
+    "activation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requested",
+        "tailVerified",
+        "reconciliationEqual",
+        "unresolvedBlockers",
+        "retirementProof",
+        "activationCertificate"
+      ],
+      "properties": {
+        "requested": {
+          "const": true
+        },
+        "tailVerified": {
+          "const": true
+        },
+        "reconciliationEqual": {
+          "const": true
+        },
+        "unresolvedBlockers": {
+          "const": []
+        },
+        "retirementProof": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "proofRef",
+            "oldOwner",
+            "issuedAt",
+            "digest",
+            "stoppedProducerManifestDigest",
+            "terminatedWorkerManifestDigest",
+            "revokedEgressProofDigest",
+            "inFlightRequestManifestDigest",
+            "issuerRef"
+          ],
+          "properties": {
+            "proofRef": {
+              "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/ref"
+            },
+            "oldOwner": {
+              "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/owner"
+            },
+            "issuedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "digest": {
+              "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/digest"
+            },
+            "stoppedProducerManifestDigest": {
+              "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/digest"
+            },
+            "terminatedWorkerManifestDigest": {
+              "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/digest"
+            },
+            "revokedEgressProofDigest": {
+              "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/digest"
+            },
+            "inFlightRequestManifestDigest": {
+              "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/digest"
+            },
+            "issuerRef": {
+              "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/ref"
+            }
+          }
+        },
+        "activationCertificate": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "certificateRef",
+            "newOwner",
+            "localEpoch",
+            "retirementProofDigest",
+            "backupLineageRef",
+            "actorRef",
+            "verdict",
+            "expiresAt",
+            "nonce",
+            "digest",
+            "manifestDigest",
+            "targetReceiptDigest"
+          ],
+          "properties": {
+            "certificateRef": {
+              "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/ref"
+            },
+            "newOwner": {
+              "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/owner"
+            },
+            "localEpoch": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "retirementProofDigest": {
+              "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/digest"
+            },
+            "backupLineageRef": {
+              "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/ref"
+            },
+            "actorRef": {
+              "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/ref"
+            },
+            "verdict": {
+              "const": "activate"
+            },
+            "expiresAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "nonce": {
+              "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/ref"
+            },
+            "digest": {
+              "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/digest"
+            },
+            "manifestDigest": {
+              "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/digest"
+            },
+            "targetReceiptDigest": {
+              "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/digest"
+            }
+          }
+        }
+      }
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/digest"
+    }
+  }
+}

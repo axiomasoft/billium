@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-12:conformance/vector.json",
+  "title": "Вектор conformance",
+  "type": "object",
+  "required": [
+    "id",
+    "spec_refs",
+    "profiles",
+    "given",
+    "script",
+    "expect"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_-]+(/[a-z0-9_.-]+)+$"
+    },
+    "description": {
+      "type": "string"
+    },
+    "spec_refs": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^(BC-[A-Z]+-[0-9]{2}|REQ-[A-Z]+-[0-9]{2}|INV-[0-9]{2}|D[0-9]+)$"
+      }
+    },
+    "profiles": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/profile"
+      }
+    },
+    "given": {
+      "type": "object"
+    },
+    "script": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/step"
+      }
+    },
+    "expect": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/output"
+      }
+    },
+    "control": {
+      "const": "must-fail"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "profile": {
+      "description": "Профиль адаптера.",
+      "enum": [
+        "php",
+        "dart"
+      ]
+    },
+    "op": {
+      "description": "Операция каталога ops адаптера.",
+      "enum": [
+        "money.parse",
+        "money.format",
+        "money.add",
+        "money.allocate",
+        "money.round",
+        "canon.canonicalize",
+        "canon.digest",
+        "envelope.decode",
+        "envelope.roundtrip",
+        "problem.decode",
+        "codes.registry",
+        "ledger.reset",
+        "ledger.caller",
+        "ledger.obligation.record",
+        "ledger.intent.declare",
+        "ledger.credit.record",
+        "ledger.invoice.create",
+        "ledger.invoice.issue",
+        "ledger.invoice.void",
+        "ledger.invoice.metadata",
+        "ledger.allocate",
+        "ledger.reverse",
+        "ledger.credit_note",
+        "ledger.reallocate",
+        "ledger.observe",
+        "ledger.drain",
+        "ledger.reconcile_refunds",
+        "ledger.query",
+        "ledger.bootstrap",
+        "usage.ingest",
+        "usage.aggregate",
+        "usage.quantity",
+        "rating.rate",
+        "rating.correct",
+        "schedule.ensure",
+        "schedule.generate",
+        "schedule.revise"
+      ]
+    },
+    "step": {
+      "type": "object",
+      "required": [
+        "op",
+        "args"
+      ],
+      "properties": {
+        "op": {
+          "$ref": "#/$defs/op"
+        },
+        "args": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    "output": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "ok"
+          ],
+          "properties": {
+            "ok": {}
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "error"
+          ],
+          "properties": {
+            "error": {
+              "type": "object",
+              "required": [
+                "code"
+              ],
+              "properties": {
+                "code": {
+                  "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/problemCode"
+                },
+                "detail": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

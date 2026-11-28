@@ -1,0 +1,29 @@
+{
+  "id": "revisions/2026-12/rating/price-token-per-1000000",
+  "description": "2026-12 per_unit@2 per 1000000 tokens",
+  "spec_refs": [
+    "BC-ENV-46",
+    "D56"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"allowancePolicy\":\"none/1\",\"amountPrecision\":\"decimal_24_12/1\",\"billableStream\":{\"commercialBasisRef\":\"commercial-units-1\",\"mode\":\"normalized_net_billable\",\"normalizationRef\":\"net-overage-1\",\"policy\":\"exclusive_commercial_basis/1\"},\"chargeTiming\":\"arrears\",\"commercialPolicyRef\":\"approved-agreement-1\",\"commitment\":{\"maximumMinor\":\"9223372036854775807\",\"minimumMinor\":\"0\",\"policy\":\"same_component_period/1\",\"scope\":\"seller_customer_component_period\"},\"componentRef\":\"component-1\",\"currency\":\"RUB\",\"currencyExponentVersion\":\"ISO4217-2026-10\",\"digest\":\"sha256:8eab9cfb9ea767cec94f953f1db859c8fa4964b409100f017ab6372a5db9dec3\",\"effectiveInterval\":{\"end\":\"2026-11-01T00:00:00Z\",\"start\":\"2026-10-01T00:00:00Z\"},\"modifierOrder\":\"strategy_bounds_tax_round/1\",\"priceVersionRef\":\"price-token-1m-1\",\"quantityBasis\":\"aggregate\",\"quantityPrecision\":\"decimal_24_9/1\",\"rounding\":{\"boundaries\":\"subtotal_then_bounds_then_tax\",\"mode\":\"HALF_EVEN\",\"policy\":\"named_boundaries/1\"},\"schema\":\"rating.price.v1\",\"sellerRef\":\"seller-1\",\"strategy\":{\"id\":\"per_unit\",\"quantityConversion\":{\"denominator\":\"1000000\",\"numerator\":\"1\",\"quantityScale\":9},\"unitPrice\":\"150.00\",\"version\":2},\"taxSnapshot\":{\"correctionPolicyVersion\":\"host-approved-correction/1\",\"mode\":\"exclusive\",\"policyVersion\":\"host-approved-tax/1\",\"rate\":\"0.20\",\"snapshotDigest\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\",\"snapshotRef\":\"host-tax-1\"},\"unit\":\"token\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "rating.price.v1",
+        "digest": "sha256:8eab9cfb9ea767cec94f953f1db859c8fa4964b409100f017ab6372a5db9dec3"
+      }
+    }
+  ]
+}

@@ -1,0 +1,292 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-12:query/payment-status.v1.json",
+  "title": "PaymentStatus",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "ledger.payment_status.v1"
+    },
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "paymentRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "sourceAuthority": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/sourceAuthority"
+        },
+        "providerAccountRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "billingAccountRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "applied": {
+          "type": "object",
+          "properties": {
+            "revision": {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+            },
+            "state": {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/operationStatus"
+            },
+            "requested": {
+              "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/nonNegative"
+            },
+            "authorizedTotal": {
+              "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/nonNegative"
+            },
+            "capturedTotal": {
+              "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/nonNegative"
+            },
+            "refundedTotal": {
+              "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/nonNegative"
+            },
+            "allocated": {
+              "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/nonNegative"
+            },
+            "unallocated": {
+              "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/nonNegative"
+            }
+          },
+          "required": [
+            "revision",
+            "state",
+            "requested",
+            "authorizedTotal",
+            "capturedTotal",
+            "refundedTotal",
+            "allocated",
+            "unallocated"
+          ]
+        },
+        "observed": {
+          "type": "object",
+          "properties": {
+            "revision": {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+            },
+            "authorizedTotal": {
+              "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/nonNegative"
+            },
+            "capturedTotal": {
+              "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/nonNegative"
+            },
+            "refundedTotal": {
+              "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/nonNegative"
+            },
+            "voidedTotal": {
+              "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/nonNegative"
+            },
+            "evidenceRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+              }
+            },
+            "observedAt": {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/timestamp"
+            }
+          },
+          "required": [
+            "revision",
+            "authorizedTotal",
+            "capturedTotal",
+            "refundedTotal",
+            "voidedTotal",
+            "evidenceRefs",
+            "observedAt"
+          ]
+        },
+        "financialHold": {
+          "type": "object",
+          "properties": {
+            "active": {
+              "type": "boolean"
+            },
+            "reasonCodes": {
+              "type": "array",
+              "items": {
+                "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+              }
+            },
+            "discrepancyRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+              }
+            }
+          },
+          "required": [
+            "active",
+            "reasonCodes",
+            "discrepancyRefs"
+          ]
+        },
+        "exposure": {
+          "type": "object",
+          "properties": {
+            "currency": {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/currencyCode"
+            },
+            "overCaptured": {
+              "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/nonNegative"
+            },
+            "overRefunded": {
+              "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/nonNegative"
+            }
+          },
+          "required": [
+            "currency",
+            "overCaptured",
+            "overRefunded"
+          ]
+        },
+        "spendable": {
+          "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/nonNegative"
+        },
+        "projectionStatus": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/projectionStatus"
+        },
+        "pendingAllocationReason": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "bootstrap": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/bootstrapStatus"
+            }
+          },
+          "required": [
+            "status"
+          ]
+        },
+        "reconciliation": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/reconciliationStatus"
+            },
+            "lastCompletedAt": {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/timestamp"
+            },
+            "completenessCursor": {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+            }
+          },
+          "required": [
+            "status"
+          ]
+        }
+      },
+      "required": [
+        "paymentRef",
+        "sourceAuthority",
+        "providerAccountRef",
+        "observed",
+        "financialHold",
+        "exposure",
+        "spendable",
+        "projectionStatus",
+        "bootstrap",
+        "reconciliation"
+      ],
+      "allOf": [
+        {
+          "type": "object"
+        },
+        {
+          "if": {
+            "properties": {
+              "projectionStatus": {
+                "const": "current"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "applied",
+              "billingAccountRef"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "projectionStatus": {
+                "const": "allocation_pending"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "pendingAllocationReason"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "financialHold": {
+                "properties": {
+                  "active": {
+                    "const": true
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "spendable": {
+                "properties": {
+                  "amount": {
+                    "pattern": "^0(\\.0+)?$"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "not": {
+              "required": [
+                "applied"
+              ]
+            }
+          },
+          "then": {
+            "properties": {
+              "spendable": {
+                "properties": {
+                  "amount": {
+                    "pattern": "^0(\\.0+)?$"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "required": [
+    "schema",
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "result"
+  ]
+}

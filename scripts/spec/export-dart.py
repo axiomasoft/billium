@@ -16,10 +16,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from export_common import (  # noqa: E402
     DEFAULT_REVISION,
     ROOT,
+    SUPPORTED_REVISIONS,
     Envelope,
     ExportError,
     Revision,
     pascal,
+    revision_hash,
     write_or_check,
 )
 
@@ -100,12 +102,27 @@ def raw_string(text: str) -> str:
 
 def render_spec_data(revision: Revision) -> str:
     registry = revision.registry_text()
+    supported = ", ".join(f"'{rev}'" for rev in SUPPORTED_REVISIONS)
+    hashes = "".join(
+        f"  '{rev}': '{revision_hash(ROOT / 'spec/revisions' / rev)}',\n"
+        for rev in SUPPORTED_REVISIONS
+    )
+    schemas_by_rev = []
+    registries_by_rev = []
+    for rev_name in SUPPORTED_REVISIONS:
+        rev = revision if rev_name == revision.name else Revision(ROOT / "spec/revisions" / rev_name)
+        schemas_by_rev.append(f"  '{rev_name}': {raw_string(rev.bundle_text())},\n")
+        registries_by_rev.append(f"  '{rev_name}': {raw_string(rev.registry_text())},\n")
     return (
         header(revision, "revision.lock.json")
         + f"/// The revision the package implements.\nconst String specRevision = '{revision.name}';\n\n"
+        + f"/// Supported spec revisions.\nconst List<String> supportedSpecRevisions = [{supported}];\n\n"
+        + f"/// Lock hashes by spec revision.\nconst Map<String, String> specRevisionHashes = {{\n{hashes}}};\n\n"
         + f"/// Every schema of the revision by `$id` (JSON).\nconst String schemasJson = {raw_string(revision.bundle_text())};\n\n"
         + "/// Envelope registry by schema name (JSON): schema `$id` and the variants that pick a class.\n"
-        + f"const String envelopeRegistryJson = {raw_string(registry)};\n"
+        + f"const String envelopeRegistryJson = {raw_string(registry)};\n\n"
+        + f"/// Schema bundles by spec revision.\nconst Map<String, String> schemasJsonByRevision = {{\n{''.join(schemas_by_rev)}}};\n\n"
+        + f"/// Envelope registries by spec revision.\nconst Map<String, String> envelopeRegistryJsonByRevision = {{\n{''.join(registries_by_rev)}}};\n"
     )
 
 

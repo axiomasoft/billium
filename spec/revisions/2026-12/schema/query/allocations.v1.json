@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-12:query/allocations.v1.json",
+  "title": "AllocationQuery",
+  "type": "object",
+  "required": [
+    "schema",
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "result",
+    "digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "ledger.allocations.v1"
+    },
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "result": {
+      "type": "object",
+      "required": [
+        "operationRef",
+        "projectionStatus",
+        "receipts"
+      ],
+      "properties": {
+        "operationRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "projectionStatus": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/projectionStatus"
+        },
+        "receipts": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    }
+  }
+}

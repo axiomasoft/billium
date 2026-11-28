@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-12:payment/admission.v1.json",
+  "title": "Ответ admission платёжной команды",
+  "type": "object",
+  "required": [
+    "schema",
+    "result",
+    "operationRef",
+    "revision",
+    "digest",
+    "outcomeQueryRef",
+    "receipt"
+  ],
+  "properties": {
+    "schema": {
+      "const": "payment.admission.v1"
+    },
+    "result": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/admissionResult"
+    },
+    "operationRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "revision": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    },
+    "outcomeQueryRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "receipt": {
+      "allOf": [
+        {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/receiptKind"
+        }
+      ],
+      "const": "CommandAccepted"
+    }
+  }
+}

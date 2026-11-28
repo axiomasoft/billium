@@ -16,10 +16,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from export_common import (  # noqa: E402
     DEFAULT_REVISION,
     ROOT,
+    SUPPORTED_REVISIONS,
     Envelope,
     ExportError,
     Revision,
     pascal,
+    revision_hash,
     write_or_check,
 )
 
@@ -124,11 +126,21 @@ def render_envelope(revision: Revision, envelope: Envelope) -> str:
 
 
 def render_spec_revision(revision: Revision) -> str:
+    supported = ", ".join(f"'{rev}'" for rev in SUPPORTED_REVISIONS)
+    hashes = "".join(
+        f"        '{rev}' => '{revision_hash(ROOT / 'spec/revisions' / rev)}',\n"
+        for rev in SUPPORTED_REVISIONS
+    )
     return (
         "<?php\n\ndeclare(strict_types=1);\n\nnamespace Billium\\Contracts\\Contracts;\n\n"
         "use Packman\\Attributes\\Api;\n\n"
         f"/**\n * {header(revision, 'revision.lock.json')}\n */\n"
-        f"#[Api(since: '1.0')]\nfinal class SpecRevision\n{{\n    public const string CURRENT = '{revision.name}';\n}}\n"
+        f"#[Api(since: '1.0')]\nfinal class SpecRevision\n{{\n"
+        f"    public const string CURRENT = '{revision.name}';\n\n"
+        f"    /** @var list<string> */\n"
+        f"    public const array SUPPORTED = [{supported}];\n\n"
+        f"    /** @var array<string, string> */\n"
+        f"    public const array HASHES = [\n{hashes}    ];\n}}\n"
     )
 
 
@@ -140,6 +152,10 @@ def build(revision: Revision, out: Path) -> dict[Path, str]:
         out / "src/Enums/ProblemCode.php": render_problem_code(revision),
         out / "src/Contracts/SpecRevision.php": render_spec_revision(revision),
     }
+    for rev_name in SUPPORTED_REVISIONS:
+        rev = revision if rev_name == revision.name else Revision(ROOT / "spec/revisions" / rev_name)
+        files[out / f"resources/spec/{rev_name}/schemas.json"] = rev.bundle_text()
+        files[out / f"resources/spec/{rev_name}/envelopes.json"] = rev.registry_text()
     for envelope in revision.envelopes():
         files[out / f"src/Data/Envelopes/{envelope.class_name}.php"] = render_envelope(revision, envelope)
     return files

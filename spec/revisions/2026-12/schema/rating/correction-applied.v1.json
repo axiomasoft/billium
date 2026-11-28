@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-12:rating/correction-applied.v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["correctionRef", "correctionRevision", "outcome", "deltaGrossMinor", "obligationRef", "creditNoteRef", "currency", "legalRequirementPending"],
+  "properties": {
+    "correctionRef": {"type": "string", "minLength": 1},
+    "correctionRevision": {"type": "integer", "minimum": 1},
+    "outcome": {"enum": ["obligation", "credit_note", "none"]},
+    "deltaGrossMinor": {"type": "string", "pattern": "^-?[0-9]+$"},
+    "obligationRef": {"type": ["string", "null"]},
+    "creditNoteRef": {"type": ["string", "null"]},
+    "currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+    "legalRequirementPending": {"type": "boolean"}
+  }
+}

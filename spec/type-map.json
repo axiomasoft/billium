@@ -308,6 +308,13 @@
     "category": "Data"
   },
   {
+    "schema": "billium.capabilities.v2",
+    "variant": null,
+    "php": "Billium\\Contracts\\Data\\Envelopes\\CapabilitiesV2",
+    "dart": "CapabilitiesV2",
+    "category": "Data"
+  },
+  {
     "schema": "ledger.allocation_receipt.v1",
     "variant": null,
     "php": "Billium\\Contracts\\Data\\Envelopes\\AllocationReceiptResult",

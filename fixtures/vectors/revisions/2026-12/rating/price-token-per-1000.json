@@ -1,0 +1,31 @@
+{
+  "id": "revisions/2026-12/rating/price-token-per-1000",
+  "description": "2026-12 per_unit@2 per 1000 tokens",
+  "spec_refs": [
+    "BC-ENV-46",
+    "BC-ENV-47",
+    "BC-ENV-48",
+    "D56"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"allowancePolicy\":\"none/1\",\"amountPrecision\":\"decimal_24_12/1\",\"billableStream\":{\"commercialBasisRef\":\"commercial-units-1\",\"mode\":\"normalized_net_billable\",\"normalizationRef\":\"net-overage-1\",\"policy\":\"exclusive_commercial_basis/1\"},\"chargeTiming\":\"arrears\",\"commercialPolicyRef\":\"approved-agreement-1\",\"commitment\":{\"maximumMinor\":\"9223372036854775807\",\"minimumMinor\":\"0\",\"policy\":\"same_component_period/1\",\"scope\":\"seller_customer_component_period\"},\"componentRef\":\"component-1\",\"currency\":\"RUB\",\"currencyExponentVersion\":\"ISO4217-2026-10\",\"digest\":\"sha256:34973cba57430a6469930e63daf84a0bb07a56f6bde33389354564b726ada34b\",\"effectiveInterval\":{\"end\":\"2026-11-01T00:00:00Z\",\"start\":\"2026-10-01T00:00:00Z\"},\"modifierOrder\":\"strategy_bounds_tax_round/1\",\"priceVersionRef\":\"price-token-1k-1\",\"quantityBasis\":\"aggregate\",\"quantityPrecision\":\"decimal_24_9/1\",\"rounding\":{\"boundaries\":\"subtotal_then_bounds_then_tax\",\"mode\":\"HALF_EVEN\",\"policy\":\"named_boundaries/1\"},\"schema\":\"rating.price.v1\",\"sellerRef\":\"seller-1\",\"strategy\":{\"id\":\"per_unit\",\"quantityConversion\":{\"denominator\":\"1000\",\"numerator\":\"1\",\"quantityScale\":9},\"unitPrice\":\"2.00\",\"version\":2},\"taxSnapshot\":{\"correctionPolicyVersion\":\"host-approved-correction/1\",\"mode\":\"exclusive\",\"policyVersion\":\"host-approved-tax/1\",\"rate\":\"0.20\",\"snapshotDigest\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\",\"snapshotRef\":\"host-tax-1\"},\"unit\":\"token\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "rating.price.v1",
+        "digest": "sha256:34973cba57430a6469930e63daf84a0bb07a56f6bde33389354564b726ada34b"
+      }
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-12:usage/receipt.v2.json",
+  "title": "usage.receipt.v2 (D56; owner usage)",
+  "type": "object",
+  "required": [
+    "schema",
+    "sellerRef",
+    "source",
+    "factId",
+    "revision",
+    "result",
+    "factDigest",
+    "receiptRef",
+    "digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "usage.receipt.v2"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "source": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "factId": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "revision": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+    },
+    "result": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/p4ReceiptResult"
+    },
+    "factDigest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    },
+    "receiptRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "refusal": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/p4Refusal"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    }
+  },
+  "additionalProperties": false,
+  "if": {
+    "properties": {
+      "result": {
+        "const": "unsupported"
+      }
+    }
+  },
+  "then": {
+    "required": [
+      "refusal"
+    ]
+  },
+  "else": {
+    "not": {
+      "required": [
+        "refusal"
+      ]
+    }
+  }
+}

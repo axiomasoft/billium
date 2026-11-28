@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-12:common/money-wire.json",
+  "title": "MoneyWire",
+  "description": "Сумма в major units строкой и код валюты ISO 4217; число знаков проверяет codec по currencies.json.",
+  "type": "object",
+  "required": [
+    "amount",
+    "currency"
+  ],
+  "properties": {
+    "amount": {
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "currency": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/currencyCode"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "positive": {
+      "description": "MoneyWire с суммой больше нуля.",
+      "allOf": [
+        {
+          "$ref": "#"
+        }
+      ],
+      "properties": {
+        "amount": {
+          "not": {
+            "pattern": "^(-|0(\\.0+)?$)"
+          }
+        }
+      }
+    },
+    "nonNegative": {
+      "description": "MoneyWire с суммой не меньше нуля.",
+      "allOf": [
+        {
+          "$ref": "#"
+        }
+      ],
+      "properties": {
+        "amount": {
+          "not": {
+            "pattern": "^-"
+          }
+        }
+      }
+    }
+  }
+}

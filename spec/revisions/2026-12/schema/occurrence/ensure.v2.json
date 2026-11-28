@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-12:occurrence/ensure.v2.json",
+  "title": "occurrence.ensure.v2 (D56; owner occurrence)",
+  "type": "object",
+  "required": [
+    "schema",
+    "commandKey",
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "componentRef",
+    "purpose",
+    "interval",
+    "scheduleRevision",
+    "period",
+    "priceVersionRef",
+    "priceDigest",
+    "digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "occurrence.ensure.v2"
+    },
+    "commandKey": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/commandKey"
+    },
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "componentRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "purpose": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "interval": {
+      "$ref": "urn:billium:spec:2026-12:common/usage-rating.json#/$defs/interval"
+    },
+    "scheduleRevision": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+    },
+    "period": {
+      "$ref": "urn:billium:spec:2026-12:period/commercial.v1.json"
+    },
+    "priceVersionRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "priceDigest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    }
+  },
+  "additionalProperties": false
+}

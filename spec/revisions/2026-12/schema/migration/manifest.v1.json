@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-12:migration/manifest.v1.json",
+  "title": "D58/D63/F06 immutable ledger migration manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "plan",
+    "sourceFreezeCertificate",
+    "snapshotToken",
+    "snapshotDigest",
+    "subscriptionRef",
+    "eventContractRevision",
+    "selectionDigest",
+    "envelopeSchemas",
+    "eventTypes",
+    "safeFeedCursor",
+    "retentionLeaseRef",
+    "retentionLeaseExpiresAt",
+    "perSellerCurrencyChecksums",
+    "manifestDigest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "billium.migration.manifest.v1"
+    },
+    "plan": {
+      "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/plan"
+    },
+    "sourceFreezeCertificate": {
+      "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/sourceFreezeCertificate"
+    },
+    "snapshotToken": {
+      "type": "string",
+      "minLength": 1
+    },
+    "snapshotDigest": {
+      "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/digest"
+    },
+    "subscriptionRef": {
+      "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/ref"
+    },
+    "eventContractRevision": {
+      "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/ref"
+    },
+    "selectionDigest": {
+      "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/digest"
+    },
+    "envelopeSchemas": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/ref"
+      }
+    },
+    "eventTypes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/ref"
+      }
+    },
+    "safeFeedCursor": {
+      "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/cursor"
+    },
+    "retentionLeaseRef": {
+      "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/ref"
+    },
+    "retentionLeaseExpiresAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "perSellerCurrencyChecksums": {
+      "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/checksums"
+    },
+    "manifestDigest": {
+      "$ref": "urn:billium:spec:2026-12:migration/defs.json#/$defs/digest"
+    }
+  }
+}

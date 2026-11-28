@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-12:event/event.v1.json",
+  "title": "Событие outbox",
+  "type": "object",
+  "required": [
+    "schema",
+    "eventId",
+    "eventType",
+    "sellerRef",
+    "aggregateRef",
+    "revision",
+    "occurredAt",
+    "digest",
+    "payload"
+  ],
+  "properties": {
+    "schema": {
+      "const": "billium.event.v1"
+    },
+    "eventId": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ulid"
+    },
+    "eventType": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/eventType"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "aggregateRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "revision": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+    },
+    "occurredAt": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/timestamp"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    },
+    "payload": {
+      "type": "object"
+    }
+  }
+}

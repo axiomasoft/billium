@@ -45,6 +45,7 @@
   "currentOnlySchemas": [
     "allocation.reallocate.v1",
     "billium.capabilities.v1",
+    "billium.capabilities.v2",
     "billium.command_receipt.v1",
     "billium.event.catalog.v1",
     "billium.event.v2",
@@ -115,7 +116,9 @@
       "publishedRelease": false,
       "denotes": "Baseline 2026-10 contracts artifact before 2026-12",
       "specRevision": "2026-10",
-      "currentOnlySchemas": [],
+      "currentOnlySchemas": [
+        "billium.capabilities.v2"
+      ],
       "archives": {
         "php-contracts": {
           "path": "archives/baseline-2026-10-php-contracts.zip",

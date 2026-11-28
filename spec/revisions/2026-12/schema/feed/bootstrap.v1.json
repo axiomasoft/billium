@@ -1,0 +1,65 @@
+{
+  "$id": "urn:billium:spec:2026-12:feed/bootstrap.v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "billium.feed.bootstrap.v1"
+    },
+    "subscriptionRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "selectionDigest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    },
+    "scope": {
+      "$ref": "urn:billium:spec:2026-12:feed/defs.json#/$defs/scope"
+    },
+    "eventContractRevision": {
+      "type": "string"
+    },
+    "leaseRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "snapshotRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "snapshotDigest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    },
+    "snapshots": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      }
+    },
+    "nextCursor": {
+      "type": "string",
+      "minLength": 1
+    },
+    "expiresAt": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/timestamp"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    }
+  },
+  "required": [
+    "schema",
+    "subscriptionRef",
+    "selectionDigest",
+    "scope",
+    "eventContractRevision",
+    "leaseRef",
+    "snapshotRef",
+    "snapshotDigest",
+    "snapshots",
+    "nextCursor",
+    "expiresAt",
+    "digest"
+  ],
+  "additionalProperties": false
+}

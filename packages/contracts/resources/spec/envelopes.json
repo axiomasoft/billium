@@ -1,6 +1,6 @@
 {
   "payment.execute.v1": {
-    "schemaId": "urn:billium:spec:2026-10:payment/execute.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:payment/execute.v1.json",
     "variants": [
       {
         "class": "ExecutePayment",
@@ -10,7 +10,7 @@
     ]
   },
   "payment.authorize.v1": {
-    "schemaId": "urn:billium:spec:2026-10:payment/authorize.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:payment/authorize.v1.json",
     "variants": [
       {
         "class": "AuthorizePayment",
@@ -20,7 +20,7 @@
     ]
   },
   "payment.capture.v1": {
-    "schemaId": "urn:billium:spec:2026-10:payment/capture.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:payment/capture.v1.json",
     "variants": [
       {
         "class": "CapturePayment",
@@ -30,7 +30,7 @@
     ]
   },
   "payment.void_authorization.v1": {
-    "schemaId": "urn:billium:spec:2026-10:payment/void-authorization.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:payment/void-authorization.v1.json",
     "variants": [
       {
         "class": "VoidAuthorization",
@@ -40,7 +40,7 @@
     ]
   },
   "payment.execution_status.v1": {
-    "schemaId": "urn:billium:spec:2026-10:query/execution-status.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:query/execution-status.v1.json",
     "variants": [
       {
         "class": "ExecutionStatus",
@@ -50,7 +50,7 @@
     ]
   },
   "payment.refund.v1": {
-    "schemaId": "urn:billium:spec:2026-10:payment/refund.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:payment/refund.v1.json",
     "variants": [
       {
         "class": "RequestRefund",
@@ -60,7 +60,7 @@
     ]
   },
   "payment.cancel.v1": {
-    "schemaId": "urn:billium:spec:2026-10:payment/cancel.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:payment/cancel.v1.json",
     "variants": [
       {
         "class": "CancelOperation",
@@ -70,7 +70,7 @@
     ]
   },
   "payment.find.v1": {
-    "schemaId": "urn:billium:spec:2026-10:payment/find.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:payment/find.v1.json",
     "variants": [
       {
         "class": "FindResult",
@@ -86,7 +86,7 @@
     ]
   },
   "payment.admission.v1": {
-    "schemaId": "urn:billium:spec:2026-10:payment/admission.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:payment/admission.v1.json",
     "variants": [
       {
         "class": "PaymentAdmission",
@@ -96,7 +96,7 @@
     ]
   },
   "payment.outcome.v1": {
-    "schemaId": "urn:billium:spec:2026-10:payment/outcome.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:payment/outcome.v1.json",
     "variants": [
       {
         "class": "PaymentOutcome",
@@ -106,7 +106,7 @@
     ]
   },
   "payment.observation.v1": {
-    "schemaId": "urn:billium:spec:2026-10:payment/observation.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:payment/observation.v1.json",
     "variants": [
       {
         "class": "PaymentObservation",
@@ -116,7 +116,7 @@
     ]
   },
   "allocation.reallocate.v1": {
-    "schemaId": "urn:billium:spec:2026-10:allocation/reallocate.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:allocation/reallocate.v1.json",
     "variants": [
       {
         "class": "ReallocatePayment",
@@ -126,7 +126,7 @@
     ]
   },
   "usage.fact.v1": {
-    "schemaId": "urn:billium:spec:2026-10:usage/fact.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:usage/fact.v1.json",
     "variants": [
       {
         "class": "UsageFact",
@@ -136,7 +136,7 @@
     ]
   },
   "usage.receipt.v1": {
-    "schemaId": "urn:billium:spec:2026-10:usage/receipt.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:usage/receipt.v1.json",
     "variants": [
       {
         "class": "UsageReceipt",
@@ -146,7 +146,7 @@
     ]
   },
   "obligation.prepare.v1": {
-    "schemaId": "urn:billium:spec:2026-10:obligation/prepare.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:obligation/prepare.v1.json",
     "variants": [
       {
         "class": "PrepareObligation",
@@ -156,7 +156,7 @@
     ]
   },
   "occurrence.ensure.v1": {
-    "schemaId": "urn:billium:spec:2026-10:occurrence/ensure.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:occurrence/ensure.v1.json",
     "variants": [
       {
         "class": "EnsureBillingOccurrence",
@@ -166,7 +166,7 @@
     ]
   },
   "collection.authorize.v1": {
-    "schemaId": "urn:billium:spec:2026-10:collection/authorize.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:collection/authorize.v1.json",
     "variants": [
       {
         "class": "AuthorizeCollection",
@@ -176,7 +176,7 @@
     ]
   },
   "billium.query.v1": {
-    "schemaId": "urn:billium:spec:2026-10:query/query.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:query/query.v1.json",
     "variants": [
       {
         "class": "BilliumQuery",
@@ -186,7 +186,7 @@
     ]
   },
   "ledger.payment_status.v1": {
-    "schemaId": "urn:billium:spec:2026-10:query/payment-status.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:query/payment-status.v1.json",
     "variants": [
       {
         "class": "PaymentStatus",
@@ -196,7 +196,7 @@
     ]
   },
   "ledger.due_obligations.v1": {
-    "schemaId": "urn:billium:spec:2026-10:query/due-obligations.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:query/due-obligations.v1.json",
     "variants": [
       {
         "class": "DueObligations",
@@ -206,7 +206,7 @@
     ]
   },
   "billium.event.v1": {
-    "schemaId": "urn:billium:spec:2026-10:event/event.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:event/event.v1.json",
     "variants": [
       {
         "class": "EventEnvelope",
@@ -216,7 +216,7 @@
     ]
   },
   "payment.effect.outcome.v1": {
-    "schemaId": "urn:billium:spec:2026-10:payment/effect-outcome.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:payment/effect-outcome.v1.json",
     "variants": [
       {
         "class": "PaymentEffectOutcome",
@@ -226,7 +226,7 @@
     ]
   },
   "billium.event.catalog.v1": {
-    "schemaId": "urn:billium:spec:2026-10:event/catalog.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:event/catalog.v1.json",
     "variants": [
       {
         "class": "EventCatalog",
@@ -236,7 +236,7 @@
     ]
   },
   "billium.event.v2": {
-    "schemaId": "urn:billium:spec:2026-10:event/event.v2.json",
+    "schemaId": "urn:billium:spec:2026-12:event/event.v2.json",
     "variants": [
       {
         "class": "EventEnvelopeV2",
@@ -246,7 +246,7 @@
     ]
   },
   "billium.event.v3": {
-    "schemaId": "urn:billium:spec:2026-10:execution/repair-event.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:execution/repair-event.v1.json",
     "variants": [
       {
         "class": "ExecutionRepairEvent",
@@ -256,7 +256,7 @@
     ]
   },
   "billium.event.v4": {
-    "schemaId": "urn:billium:spec:2026-10:execution/certified-no-effect-event.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:execution/certified-no-effect-event.v1.json",
     "variants": [
       {
         "class": "ExecutionCertifiedNoEffectEvent",
@@ -266,7 +266,7 @@
     ]
   },
   "billium.feed.selection.v1": {
-    "schemaId": "urn:billium:spec:2026-10:feed/selection.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:feed/selection.v1.json",
     "variants": [
       {
         "class": "FeedSelection",
@@ -276,7 +276,7 @@
     ]
   },
   "billium.feed.page.v1": {
-    "schemaId": "urn:billium:spec:2026-10:feed/page.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:feed/page.v1.json",
     "variants": [
       {
         "class": "FeedPage",
@@ -286,7 +286,7 @@
     ]
   },
   "billium.feed.bootstrap.v1": {
-    "schemaId": "urn:billium:spec:2026-10:feed/bootstrap.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:feed/bootstrap.v1.json",
     "variants": [
       {
         "class": "FeedBootstrap",
@@ -296,7 +296,7 @@
     ]
   },
   "usage.metric.v1": {
-    "schemaId": "urn:billium:spec:2026-10:usage/metric.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:usage/metric.v1.json",
     "variants": [
       {
         "class": "MetricVersion",
@@ -306,7 +306,7 @@
     ]
   },
   "usage.fact.v2": {
-    "schemaId": "urn:billium:spec:2026-10:usage/fact.v2.json",
+    "schemaId": "urn:billium:spec:2026-12:usage/fact.v2.json",
     "variants": [
       {
         "class": "UsageFactV2",
@@ -316,7 +316,7 @@
     ]
   },
   "usage.receipt.v2": {
-    "schemaId": "urn:billium:spec:2026-10:usage/receipt.v2.json",
+    "schemaId": "urn:billium:spec:2026-12:usage/receipt.v2.json",
     "variants": [
       {
         "class": "UsageReceiptV2",
@@ -326,7 +326,7 @@
     ]
   },
   "usage.aggregate.v1": {
-    "schemaId": "urn:billium:spec:2026-10:usage/aggregate.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:usage/aggregate.v1.json",
     "variants": [
       {
         "class": "AggregateSnapshot",
@@ -336,7 +336,7 @@
     ]
   },
   "usage.quantity.v1": {
-    "schemaId": "urn:billium:spec:2026-10:usage/quantity.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:usage/quantity.v1.json",
     "variants": [
       {
         "class": "QuantitySnapshot",
@@ -346,7 +346,7 @@
     ]
   },
   "rating.price.v1": {
-    "schemaId": "urn:billium:spec:2026-10:rating/price.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:rating/price.v1.json",
     "variants": [
       {
         "class": "PriceVersion",
@@ -356,7 +356,7 @@
     ]
   },
   "period.commercial.v1": {
-    "schemaId": "urn:billium:spec:2026-10:period/commercial.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:period/commercial.v1.json",
     "variants": [
       {
         "class": "CommercialPeriod",
@@ -366,7 +366,7 @@
     ]
   },
   "rating.basis.v1": {
-    "schemaId": "urn:billium:spec:2026-10:rating/basis.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:rating/basis.v1.json",
     "variants": [
       {
         "class": "RatedBasis",
@@ -376,7 +376,7 @@
     ]
   },
   "occurrence.ensure.v2": {
-    "schemaId": "urn:billium:spec:2026-10:occurrence/ensure.v2.json",
+    "schemaId": "urn:billium:spec:2026-12:occurrence/ensure.v2.json",
     "variants": [
       {
         "class": "EnsureBillingOccurrenceV2",
@@ -386,7 +386,7 @@
     ]
   },
   "obligation.prepare.v2": {
-    "schemaId": "urn:billium:spec:2026-10:obligation/prepare.v2.json",
+    "schemaId": "urn:billium:spec:2026-12:obligation/prepare.v2.json",
     "variants": [
       {
         "class": "PrepareObligationV2",
@@ -396,7 +396,7 @@
     ]
   },
   "occurrence.no_charge.v1": {
-    "schemaId": "urn:billium:spec:2026-10:occurrence/no-charge.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:occurrence/no-charge.v1.json",
     "variants": [
       {
         "class": "NoChargeReceipt",
@@ -406,7 +406,7 @@
     ]
   },
   "receipt.find.v1": {
-    "schemaId": "urn:billium:spec:2026-10:receipt/find.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:receipt/find.v1.json",
     "variants": [
       {
         "class": "ReceiptResult",
@@ -422,7 +422,7 @@
     ]
   },
   "billium.capabilities.v1": {
-    "schemaId": "urn:billium:spec:2026-10:capabilities/capabilities.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:capabilities/capabilities.v1.json",
     "variants": [
       {
         "class": "Capabilities",
@@ -431,8 +431,18 @@
       }
     ]
   },
+  "billium.capabilities.v2": {
+    "schemaId": "urn:billium:spec:2026-12:capabilities/capabilities.v2.json",
+    "variants": [
+      {
+        "class": "CapabilitiesV2",
+        "digestMember": "digest",
+        "verifyDigest": true
+      }
+    ]
+  },
   "ledger.allocation_receipt.v1": {
-    "schemaId": "urn:billium:spec:2026-10:ledger/allocation-receipt.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:ledger/allocation-receipt.v1.json",
     "variants": [
       {
         "class": "AllocationReceiptResult",
@@ -442,7 +452,7 @@
     ]
   },
   "ledger.observation_custody.v1": {
-    "schemaId": "urn:billium:spec:2026-10:ledger/observation-custody.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:ledger/observation-custody.v1.json",
     "variants": [
       {
         "class": "ObservationCustody",
@@ -452,7 +462,7 @@
     ]
   },
   "billium.command_receipt.v1": {
-    "schemaId": "urn:billium:spec:2026-10:command/receipt.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:command/receipt.v1.json",
     "variants": [
       {
         "class": "CommandReceipt",
@@ -462,7 +472,7 @@
     ]
   },
   "billium.feed.open.v1": {
-    "schemaId": "urn:billium:spec:2026-10:feed/open.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:feed/open.v1.json",
     "variants": [
       {
         "class": "FeedOpen",
@@ -472,7 +482,7 @@
     ]
   },
   "billium.feed.read.v1": {
-    "schemaId": "urn:billium:spec:2026-10:feed/read.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:feed/read.v1.json",
     "variants": [
       {
         "class": "FeedRead",
@@ -482,7 +492,7 @@
     ]
   },
   "billium.feed.bootstrap_request.v1": {
-    "schemaId": "urn:billium:spec:2026-10:feed/bootstrap-request.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:feed/bootstrap-request.v1.json",
     "variants": [
       {
         "class": "FeedBootstrapRequest",
@@ -492,7 +502,7 @@
     ]
   },
   "billium.feed.bootstrap_ack.v1": {
-    "schemaId": "urn:billium:spec:2026-10:feed/bootstrap-ack.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:feed/bootstrap-ack.v1.json",
     "variants": [
       {
         "class": "FeedBootstrapAck",
@@ -502,7 +512,7 @@
     ]
   },
   "ledger.obligation.v1": {
-    "schemaId": "urn:billium:spec:2026-10:query/obligation.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:query/obligation.v1.json",
     "variants": [
       {
         "class": "ObligationView",
@@ -512,7 +522,7 @@
     ]
   },
   "ledger.invoice.v1": {
-    "schemaId": "urn:billium:spec:2026-10:query/invoice.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:query/invoice.v1.json",
     "variants": [
       {
         "class": "InvoiceView",
@@ -522,7 +532,7 @@
     ]
   },
   "ledger.allocations.v1": {
-    "schemaId": "urn:billium:spec:2026-10:query/allocations.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:query/allocations.v1.json",
     "variants": [
       {
         "class": "AllocationQuery",
@@ -532,7 +542,7 @@
     ]
   },
   "ledger.refund_authorization.v1": {
-    "schemaId": "urn:billium:spec:2026-10:query/refund-authorization.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:query/refund-authorization.v1.json",
     "variants": [
       {
         "class": "RefundAuthorization",
@@ -542,7 +552,7 @@
     ]
   },
   "external.import.v1": {
-    "schemaId": "urn:billium:spec:2026-10:import/external.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:import/external.v1.json",
     "variants": [
       {
         "class": "ExternalImport",
@@ -552,7 +562,7 @@
     ]
   },
   "external.import.manifest.v1": {
-    "schemaId": "urn:billium:spec:2026-10:import/manifest.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:import/manifest.v1.json",
     "variants": [
       {
         "class": "ExternalImportManifest",
@@ -562,7 +572,7 @@
     ]
   },
   "external.import.preview.v1": {
-    "schemaId": "urn:billium:spec:2026-10:import/preview.v1.json",
+    "schemaId": "urn:billium:spec:2026-12:import/preview.v1.json",
     "variants": [
       {
         "class": "ExternalImportPreview",

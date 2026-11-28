@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-12:payment/observation.v1.json",
+  "title": "Денежное наблюдение операции",
+  "type": "object",
+  "required": [
+    "schema",
+    "eventId",
+    "contentDigest",
+    "sourceAuthority",
+    "sourceLineage",
+    "partitionRef",
+    "sourceSequence",
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "operationRef",
+    "operationKind",
+    "businessIntentRef",
+    "operationRevision",
+    "state",
+    "currency",
+    "requested",
+    "authorizedTotal",
+    "capturedTotal",
+    "refundedTotal",
+    "providerAccountRef",
+    "evidenceRef",
+    "observedAt",
+    "recordedAt"
+  ],
+  "properties": {
+    "schema": {
+      "const": "payment.observation.v1"
+    },
+    "eventId": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ulid"
+    },
+    "contentDigest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    },
+    "sourceAuthority": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/sourceAuthority"
+    },
+    "sourceLineage": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "partitionRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sourceSequence": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+    },
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "operationRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "operationKind": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/operationKind"
+    },
+    "originalPaymentRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "businessIntentRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "operationRevision": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+    },
+    "state": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/operationStatus"
+    },
+    "currency": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/currencyCode"
+    },
+    "requested": {
+      "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/positive"
+    },
+    "authorizedTotal": {
+      "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/nonNegative"
+    },
+    "capturedTotal": {
+      "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/nonNegative"
+    },
+    "refundedTotal": {
+      "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/nonNegative"
+    },
+    "providerAccountRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "providerOperationId": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "evidenceRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "observedAt": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/timestamp"
+    },
+    "recordedAt": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/timestamp"
+    },
+    "discrepancy": {
+      "type": "object",
+      "required": [
+        "discrepancyRef",
+        "kind",
+        "revision"
+      ],
+      "properties": {
+        "discrepancyRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "kind": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "revision": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+        },
+        "acceptedTotals": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/nonNegative"
+          }
+        },
+        "verifiedExternalFacts": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "resolution": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "if": {
+    "properties": {
+      "operationKind": {
+        "const": "refund"
+      }
+    },
+    "required": [
+      "operationKind"
+    ]
+  },
+  "then": {
+    "required": [
+      "originalPaymentRef"
+    ]
+  }
+}

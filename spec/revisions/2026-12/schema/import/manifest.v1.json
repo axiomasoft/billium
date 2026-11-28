@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-12:import/manifest.v1.json",
+  "title": "external.import.manifest.v1 (D71; owner platform)",
+  "type": "object",
+  "required": [
+    "schema",
+    "batchId",
+    "sourceSystem",
+    "sourceInstallation",
+    "sourceBook",
+    "sourceExportRevision",
+    "exportCutoff",
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "recordCount",
+    "recordsChecksum",
+    "totalsByCurrency",
+    "sanitizationPolicy",
+    "digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "external.import.manifest.v1"
+    },
+    "batchId": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sourceSystem": {
+      "$ref": "urn:billium:spec:2026-12:import/defs.json#/$defs/sourceNamespaceRef"
+    },
+    "sourceInstallation": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sourceBook": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sourceExportRevision": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+    },
+    "exportCutoff": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/timestamp"
+    },
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "recordCount": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+    },
+    "recordsChecksum": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    },
+    "totalsByCurrency": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "$ref": "urn:billium:spec:2026-12:import/defs.json#/$defs/currencyTotal"
+      }
+    },
+    "sanitizationPolicy": {
+      "$ref": "urn:billium:spec:2026-12:import/defs.json#/$defs/sanitizationPolicy"
+    },
+    "sourceLineage": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "importPolicyVersion": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sourceFreezeCertificateRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    }
+  },
+  "additionalProperties": false
+}

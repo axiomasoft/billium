@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-12:execution/repair-event.v1.json",
+  "title": "Execution repair recorded event",
+  "type": "object",
+  "required": [
+    "schema",
+    "eventId",
+    "eventType",
+    "sellerRef",
+    "aggregateRef",
+    "revision",
+    "occurredAt",
+    "digest",
+    "payload",
+    "eventContractRevision"
+  ],
+  "properties": {
+    "schema": {
+      "const": "billium.event.v3"
+    },
+    "eventId": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ulid"
+    },
+    "eventType": {
+      "const": "execution.repair_recorded.v1"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "aggregateRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1
+    },
+    "occurredAt": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/timestamp"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    },
+    "payload": {
+      "type": "object",
+      "required": [
+        "repairRef",
+        "rootOperationRef",
+        "originalReviewRef",
+        "reviewEventRef",
+        "action",
+        "beforeDigest",
+        "afterDigest"
+      ],
+      "properties": {
+        "repairRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "rootOperationRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "originalReviewRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "reviewEventRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "action": {
+          "enum": [
+            "attach_trusted_evidence",
+            "adopt_external_effect",
+            "mark_verified_duplicate",
+            "record_verified_absence",
+            "close_namespace",
+            "approve_linked_correction",
+            "resolve_discrepancy"
+          ]
+        },
+        "beforeDigest": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+        },
+        "afterDigest": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+        }
+      },
+      "additionalProperties": false
+    },
+    "eventContractRevision": {
+      "const": "events-2026-11-v3"
+    }
+  },
+  "additionalProperties": false
+}

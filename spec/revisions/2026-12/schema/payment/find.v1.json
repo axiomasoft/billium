@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-12:payment/find.v1.json",
+  "title": "FindOperation",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/request"
+    },
+    {
+      "$ref": "#/$defs/response"
+    }
+  ],
+  "$defs": {
+    "request": {
+      "type": "object",
+      "required": [
+        "schema",
+        "operationRef",
+        "installationRef",
+        "environment",
+        "sellerRef"
+      ],
+      "properties": {
+        "schema": {
+          "const": "payment.find.v1"
+        },
+        "installationRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "environment": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "sellerRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "operationRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        }
+      },
+      "additionalProperties": false
+    },
+    "response": {
+      "type": "object",
+      "required": [
+        "schema",
+        "operationRef",
+        "status"
+      ],
+      "properties": {
+        "schema": {
+          "const": "payment.find.v1"
+        },
+        "operationRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "status": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/findStatus"
+        },
+        "revision": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+        },
+        "digest": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+        },
+        "capturedTotal": {
+          "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/nonNegative"
+        },
+        "refundedTotal": {
+          "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/nonNegative"
+        },
+        "reservedRefundTotal": {
+          "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/nonNegative"
+        },
+        "absenceCertificate": {
+          "type": "object"
+        }
+      },
+      "if": {
+        "properties": {
+          "status": {
+            "const": "absent"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "absenceCertificate"
+        ]
+      },
+      "else": {
+        "required": [
+          "revision",
+          "digest",
+          "capturedTotal",
+          "refundedTotal",
+          "reservedRefundTotal"
+        ]
+      }
+    }
+  }
+}

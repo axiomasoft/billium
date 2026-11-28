@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-12:usage/aggregate.v1.json",
+  "title": "usage.aggregate.v1 (D56; owner usage)",
+  "type": "object",
+  "required": [
+    "schema",
+    "snapshotRef",
+    "sellerRef",
+    "metricRef",
+    "metricVersion",
+    "metricDigest",
+    "unit",
+    "attribution",
+    "grouping",
+    "window",
+    "effectiveRevision",
+    "sourceFrontier",
+    "completeness",
+    "sourceDigest",
+    "model",
+    "quantity",
+    "billableStream",
+    "digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "usage.aggregate.v1"
+    },
+    "snapshotRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "metricRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "metricVersion": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "metricDigest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    },
+    "unit": {
+      "$ref": "urn:billium:spec:2026-12:common/usage-rating.json#/$defs/unit"
+    },
+    "attribution": {
+      "$ref": "urn:billium:spec:2026-12:common/usage-rating.json#/$defs/attribution"
+    },
+    "grouping": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "$ref": "urn:billium:spec:2026-12:common/usage-rating.json#/$defs/dimension"
+      }
+    },
+    "window": {
+      "$ref": "urn:billium:spec:2026-12:common/usage-rating.json#/$defs/interval"
+    },
+    "effectiveRevision": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+    },
+    "sourceFrontier": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "urn:billium:spec:2026-12:common/usage-rating.json#/$defs/frontier"
+      }
+    },
+    "completeness": {
+      "$ref": "urn:billium:spec:2026-12:common/usage-rating.json#/$defs/completeness"
+    },
+    "sourceDigest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    },
+    "model": {
+      "$ref": "urn:billium:spec:2026-12:common/usage-rating.json#/$defs/model"
+    },
+    "quantity": {
+      "$ref": "urn:billium:spec:2026-12:common/usage-rating.json#/$defs/quantity"
+    },
+    "billableStream": {
+      "$ref": "urn:billium:spec:2026-12:common/usage-rating.json#/$defs/stream"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,17 @@
+{
+  "schema": "billium.event.catalog.v1",
+  "eventContractRevision": "events-2026-10-v2",
+  "events": [
+    {
+      "eventType": "payment.effect.outcome.v1",
+      "ownerModuleId": "execution",
+      "envelopeSchema": "billium.event.v2",
+      "payloadSchemaRef": "urn:billium:spec:2026-12:payment/effect-outcome.v1.json",
+      "payloadSchemaDigest": "sha256:27439ef85bc6d6c73391d112689e2716b1a5b3ac710e136644396148256f04dc",
+      "bootstrapMode": "replay_only",
+      "snapshotSourceKey": null,
+      "retentionPolicyRef": "financial-permanent"
+    }
+  ],
+  "digest": "sha256:2f02305ff6ecd3fbfbc8ab87617b95b31426fcbd7842293a7182eaecd483667d"
+}

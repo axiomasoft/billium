@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-12:receipt/find.v1.json",
+  "title": "Поиск сохранённого receipt",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/request"
+    },
+    {
+      "$ref": "#/$defs/response"
+    }
+  ],
+  "$defs": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "installationRef",
+        "environment",
+        "sellerRef",
+        "receiptRef"
+      ],
+      "properties": {
+        "schema": {
+          "const": "receipt.find.v1"
+        },
+        "installationRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "environment": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "sellerRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "receiptRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "digest": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+        }
+      }
+    },
+    "response": {
+      "type": "object",
+      "required": [
+        "schema",
+        "installationRef",
+        "environment",
+        "sellerRef",
+        "receiptRef",
+        "status",
+        "digest"
+      ],
+      "properties": {
+        "schema": {
+          "const": "receipt.find.v1"
+        },
+        "installationRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "environment": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "sellerRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "receiptRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "status": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/receiptFindStatus"
+        },
+        "receiptSchema": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/envelopeName"
+        },
+        "body": {
+          "type": "object"
+        },
+        "absenceCertificate": {
+          "type": "object"
+        },
+        "digest": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+        }
+      },
+      "if": {
+        "properties": {
+          "status": {
+            "const": "absent"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "absenceCertificate"
+        ]
+      },
+      "else": {
+        "required": [
+          "receiptSchema",
+          "body"
+        ]
+      }
+    }
+  }
+}

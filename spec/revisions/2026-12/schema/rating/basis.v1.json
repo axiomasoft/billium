@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-12:rating/basis.v1.json",
+  "title": "rating.basis.v1 (D56; owner rating)",
+  "type": "object",
+  "required": [
+    "schema",
+    "ratedBasisRef",
+    "sellerRef",
+    "attribution",
+    "billingOccurrenceRef",
+    "period",
+    "priceVersionRef",
+    "priceDigest",
+    "quantityEvidence",
+    "quantity",
+    "unit",
+    "billableStream",
+    "commitmentScopeKey",
+    "taxSnapshot",
+    "currencyExponentVersion",
+    "rounding",
+    "amount",
+    "digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "rating.basis.v1"
+    },
+    "ratedBasisRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "attribution": {
+      "$ref": "urn:billium:spec:2026-12:common/usage-rating.json#/$defs/attribution"
+    },
+    "billingOccurrenceRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "period": {
+      "$ref": "urn:billium:spec:2026-12:period/commercial.v1.json"
+    },
+    "priceVersionRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "priceDigest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    },
+    "quantityEvidence": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "quantity"
+          ],
+          "properties": {
+            "kind": {
+              "const": "fixed"
+            },
+            "quantity": {
+              "const": "1"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "snapshotRef",
+            "snapshotDigest",
+            "effectiveRevision",
+            "sourceDigest"
+          ],
+          "properties": {
+            "kind": {
+              "const": "aggregate"
+            },
+            "snapshotRef": {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+            },
+            "snapshotDigest": {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+            },
+            "effectiveRevision": {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+            },
+            "sourceDigest": {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "snapshotRef",
+            "snapshotDigest",
+            "effectiveRevision",
+            "sourceDigest"
+          ],
+          "properties": {
+            "kind": {
+              "const": "approved_snapshot"
+            },
+            "snapshotRef": {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+            },
+            "snapshotDigest": {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+            },
+            "effectiveRevision": {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+            },
+            "sourceDigest": {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+            }
+          },
+          "additionalProperties": false
+        }
+      ],
+      "type": "object"
+    },
+    "quantity": {
+      "$ref": "urn:billium:spec:2026-12:common/usage-rating.json#/$defs/quantity"
+    },
+    "unit": {
+      "$ref": "urn:billium:spec:2026-12:common/usage-rating.json#/$defs/unit"
+    },
+    "billableStream": {
+      "$ref": "urn:billium:spec:2026-12:common/usage-rating.json#/$defs/stream"
+    },
+    "commitmentScopeKey": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "taxSnapshot": {
+      "$ref": "urn:billium:spec:2026-12:common/usage-rating.json#/$defs/tax"
+    },
+    "currencyExponentVersion": {
+      "const": "ISO4217-2026-10"
+    },
+    "rounding": {
+      "$ref": "urn:billium:spec:2026-12:common/usage-rating.json#/$defs/rounding"
+    },
+    "amount": {
+      "$ref": "urn:billium:spec:2026-12:common/money-wire.json"
+    },
+    "correction": {
+      "type": "object",
+      "required": [
+        "correctionRef",
+        "originalRatedBasisRef",
+        "originalPeriodRef",
+        "policyVersion",
+        "direction",
+        "previouslyBookedAmount",
+        "recomputedAmount"
+      ],
+      "properties": {
+        "correctionRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "originalRatedBasisRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "originalPeriodRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "policyVersion": {
+          "const": "original_period_delta/1"
+        },
+        "direction": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/p4CorrectionDirection"
+        },
+        "previouslyBookedAmount": {
+          "$ref": "urn:billium:spec:2026-12:common/money-wire.json"
+        },
+        "recomputedAmount": {
+          "$ref": "urn:billium:spec:2026-12:common/money-wire.json"
+        }
+      },
+      "additionalProperties": false
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    }
+  },
+  "additionalProperties": false
+}

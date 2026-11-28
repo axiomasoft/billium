@@ -51,7 +51,11 @@ class CorpusLint:
 
     def run(self) -> list[str]:
         schemas = Schemas(self.rev / "schema")
-        vectors = load_vectors(self.vectors_dir, schemas)
+        all_vectors = load_vectors(self.vectors_dir, schemas)
+        vectors = [
+            v for v in all_vectors
+            if not (self.rev.name == "2026-10" and v.id.startswith("revisions/2026-12/"))
+        ]
         valid = []
         for vector in vectors:
             if vector.problem is not None:
@@ -200,6 +204,8 @@ class CorpusLint:
         if self.golden_dir.is_dir():
             for path in sorted(self.golden_dir.rglob("*")):
                 rel = path.relative_to(self.golden_dir).as_posix()
+                if self.rev.name == "2026-10" and rel.startswith("revisions/2026-12/"):
+                    continue
                 if path.is_file() and rel not in referenced:
                     self.error("golden", f"{rel} is not referenced by any vector")
 

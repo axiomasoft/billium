@@ -14,7 +14,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_REVISION = ROOT / "spec/revisions/2026-10"
+SUPPORTED_REVISIONS = ("2026-10", "2026-12")
+CURRENT_REVISION = "2026-12"
+DEFAULT_REVISION = ROOT / "spec/revisions" / CURRENT_REVISION
 
 ANNOTATIONS = ("$schema", "title", "description", "$comment")
 SCHEMA_BASE = "urn:billium:spec:{revision}:{path}"
@@ -66,6 +68,7 @@ ENVELOPES = (
     ("FindReceipt", "receipt.find.v1", "receipt/find.v1.json", "request"),
     ("ReceiptResult", "receipt.find.v1", "receipt/find.v1.json", "response"),
     ("Capabilities", "billium.capabilities.v1", "capabilities/capabilities.v1.json", None),
+    ("CapabilitiesV2", "billium.capabilities.v2", "capabilities/capabilities.v2.json", None),
     ("AllocationReceiptResult", "ledger.allocation_receipt.v1", "ledger/allocation-receipt.v1.json", None),
     ("ObservationCustody", "ledger.observation_custody.v1", "ledger/observation-custody.v1.json", None),
     ("CommandReceipt", "billium.command_receipt.v1", "command/receipt.v1.json", None),
@@ -206,6 +209,8 @@ class Revision:
         result = []
         for class_name, schema, source, variant in ENVELOPES:
             document_id = self.document_id(source)
+            if document_id not in self.documents:
+                continue
             document = self.documents[document_id]
             root = document["$defs"][variant] if variant else document  # type: ignore[index]
             properties: dict[str, dict[str, object]] = root["properties"]  # type: ignore[assignment]
@@ -267,6 +272,11 @@ def pascal(code: str) -> str:
     """billium.idempotency.in_flight -> IdempotencyInFlight."""
     body = code.removeprefix("billium.")
     return "".join(part[:1].upper() + part[1:] for part in re.split(r"[._]", body))
+
+
+def revision_hash(rev_dir: Path) -> str:
+    lock = rev_dir / "revision.lock.json"
+    return "sha256:" + hashlib.sha256(lock.read_bytes()).hexdigest()
 
 
 def write_or_check(

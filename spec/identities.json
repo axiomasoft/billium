@@ -1,5 +1,5 @@
 {
-  "revision": "2026-10",
+  "revision": "2026-12",
   "entries": [
     {
       "kind": "envelope",
@@ -14,6 +14,13 @@
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/capabilities/capabilities.v1.json"
+    },
+    {
+      "kind": "envelope",
+      "id": "billium.capabilities.v2",
+      "status": "new",
+      "since": "2026-12",
+      "source": "spec/revisions/2026-12/schema/capabilities/capabilities.v2.json"
     },
     {
       "kind": "envelope",
@@ -581,6 +588,160 @@
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/schema/capabilities/capabilities.v1.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v2#/properties/acceptedCommandSchemas",
+      "status": "new",
+      "since": "2026-12",
+      "source": "spec/revisions/2026-12/schema/capabilities/capabilities.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v2#/properties/catalogs",
+      "status": "new",
+      "since": "2026-12",
+      "source": "spec/revisions/2026-12/schema/capabilities/capabilities.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v2#/properties/digest",
+      "status": "new",
+      "since": "2026-12",
+      "source": "spec/revisions/2026-12/schema/capabilities/capabilities.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v2#/properties/effects",
+      "status": "new",
+      "since": "2026-12",
+      "source": "spec/revisions/2026-12/schema/capabilities/capabilities.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v2#/properties/enabledModules",
+      "status": "new",
+      "since": "2026-12",
+      "source": "spec/revisions/2026-12/schema/capabilities/capabilities.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v2#/properties/environment",
+      "status": "new",
+      "since": "2026-12",
+      "source": "spec/revisions/2026-12/schema/capabilities/capabilities.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v2#/properties/eventSchemas",
+      "status": "new",
+      "since": "2026-12",
+      "source": "spec/revisions/2026-12/schema/capabilities/capabilities.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v2#/properties/features",
+      "status": "new",
+      "since": "2026-12",
+      "source": "spec/revisions/2026-12/schema/capabilities/capabilities.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v2#/properties/installationRef",
+      "status": "new",
+      "since": "2026-12",
+      "source": "spec/revisions/2026-12/schema/capabilities/capabilities.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v2#/properties/limits",
+      "status": "new",
+      "since": "2026-12",
+      "source": "spec/revisions/2026-12/schema/capabilities/capabilities.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v2#/properties/lookupCompletenessPolicyRef",
+      "status": "new",
+      "since": "2026-12",
+      "source": "spec/revisions/2026-12/schema/capabilities/capabilities.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v2#/properties/moduleApiVersions",
+      "status": "new",
+      "since": "2026-12",
+      "source": "spec/revisions/2026-12/schema/capabilities/capabilities.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v2#/properties/producedResponseSchemas",
+      "status": "new",
+      "since": "2026-12",
+      "source": "spec/revisions/2026-12/schema/capabilities/capabilities.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v2#/properties/ratingStrategyVersions",
+      "status": "new",
+      "since": "2026-12",
+      "source": "spec/revisions/2026-12/schema/capabilities/capabilities.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v2#/properties/schema",
+      "status": "new",
+      "since": "2026-12",
+      "source": "spec/revisions/2026-12/schema/capabilities/capabilities.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v2#/properties/selectionMode",
+      "status": "new",
+      "since": "2026-12",
+      "source": "spec/revisions/2026-12/schema/capabilities/capabilities.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v2#/properties/serverApiVersion",
+      "status": "new",
+      "since": "2026-12",
+      "source": "spec/revisions/2026-12/schema/capabilities/capabilities.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v2#/properties/specHash",
+      "status": "new",
+      "since": "2026-12",
+      "source": "spec/revisions/2026-12/schema/capabilities/capabilities.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v2#/properties/specRevision",
+      "status": "new",
+      "since": "2026-12",
+      "source": "spec/revisions/2026-12/schema/capabilities/capabilities.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v2#/properties/supportedSpecRevisions",
+      "status": "new",
+      "since": "2026-12",
+      "source": "spec/revisions/2026-12/schema/capabilities/capabilities.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v2#/properties/supportedUnits",
+      "status": "new",
+      "since": "2026-12",
+      "source": "spec/revisions/2026-12/schema/capabilities/capabilities.v2.json"
+    },
+    {
+      "kind": "envelope-field",
+      "id": "billium.capabilities.v2#/properties/usageIngressSchemas",
+      "status": "new",
+      "since": "2026-12",
+      "source": "spec/revisions/2026-12/schema/capabilities/capabilities.v2.json"
     },
     {
       "kind": "envelope-field",
@@ -5558,6 +5719,13 @@
       "status": "new",
       "since": "2026-10",
       "source": "spec/revisions/2026-10/README.md"
+    },
+    {
+      "kind": "spec-revision",
+      "id": "2026-12",
+      "status": "new",
+      "since": "2026-12",
+      "source": "spec/revisions/2026-12/README.md"
     },
     {
       "kind": "config-key",

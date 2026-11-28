@@ -1,0 +1,504 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-12:import/defs.json",
+  "title": "Shared definitions for external.import.v1",
+  "$defs": {
+    "importRecordKind": {
+      "description": "Normalized classification of an external import record.",
+      "enum": [
+        "proven_obligation",
+        "proven_invoice_history",
+        "proven_payment_evidence",
+        "proven_refund_evidence",
+        "proven_allocation",
+        "nonfinancial_agreement_reference",
+        "unanchored_evidence"
+      ]
+    },
+    "importValidationStatus": {
+      "description": "Typed preview validation outcome for one imported record.",
+      "enum": [
+        "ready",
+        "unanchored_evidence",
+        "rejected",
+        "conflict",
+        "already_applied"
+      ]
+    },
+    "importBatchStatus": {
+      "description": "Lifecycle state of a platform-owned import batch.",
+      "enum": [
+        "staged",
+        "validated",
+        "approved",
+        "applying",
+        "reconciled",
+        "completed",
+        "rejected",
+        "quarantined"
+      ]
+    },
+    "importReceiptStatus": {
+      "description": "Audit disposition recorded on an import receipt.",
+      "enum": [
+        "staged",
+        "applied",
+        "observation_queued",
+        "unanchored_evidence",
+        "rejected",
+        "conflict",
+        "tombstoned"
+      ]
+    },
+    "importEvidenceKind": {
+      "description": "Category of verifiable evidence attached to an external import record.",
+      "enum": [
+        "price_snapshot",
+        "tax_snapshot",
+        "invoice_document",
+        "payment_provider_fact",
+        "refund_provider_fact",
+        "allocation_lineage",
+        "agreement_reference",
+        "source_manifest",
+        "authority_fence"
+      ]
+    },
+    "importFundingStatus": {
+      "description": "Proven historical funding status supplied by authoritative external evidence.",
+      "enum": [
+        "authorized",
+        "captured",
+        "refunded",
+        "failed_terminal",
+        "cancelled",
+        "unknown"
+      ]
+    },
+    "sourceNamespaceRef": {
+      "description": "Product-agnostic source system namespace identifier.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]{0,63}(/[a-z0-9_.-]{1,64})*$"
+    },
+    "sourceFactRef": {
+      "description": "Stable economic fact reference preserved across batch retries and mapper updates.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]{0,63}:[A-Za-z0-9._:/-]{1,192}$"
+    },
+    "evidenceItem": {
+      "description": "Immutable reference to one sanitized external evidence artifact.",
+      "type": "object",
+      "required": [
+        "evidenceRef",
+        "kind",
+        "digest",
+        "sanitized"
+      ],
+      "properties": {
+        "evidenceRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "kind": {
+          "$ref": "#/$defs/importEvidenceKind"
+        },
+        "digest": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+        },
+        "sanitized": {
+          "type": "boolean"
+        },
+        "capturedAt": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/timestamp"
+        },
+        "sourceUri": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        }
+      },
+      "additionalProperties": false
+    },
+    "originalBusinessRefs": {
+      "description": "Opaque business references copied from the source export without renaming.",
+      "type": "object",
+      "properties": {
+        "customerRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "billingAccountRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "agreementRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "subscriptionRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "orderRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "obligationRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "invoiceRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "paymentRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "originalPaymentRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "correctionOfRecordId": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "originalIssuer": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "sourceNumber": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        }
+      },
+      "additionalProperties": false
+    },
+    "frozenPriceSnapshot": {
+      "description": "Proven historical commercial price, terms and tax snapshot.",
+      "type": "object",
+      "required": [
+        "priceVersionRef",
+        "priceDigest",
+        "currency"
+      ],
+      "properties": {
+        "priceVersionRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "priceDigest": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+        },
+        "currency": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/currencyCode"
+        },
+        "termsRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "taxPolicyVersion": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "taxSnapshotDigest": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+        },
+        "unitPrice": {
+          "$ref": "urn:billium:spec:2026-12:common/money-wire.json"
+        },
+        "effectiveAt": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/timestamp"
+        }
+      },
+      "additionalProperties": false
+    },
+    "fundingRefs": {
+      "description": "Proven external funding and original operation/executor ownership references.",
+      "type": "object",
+      "required": [
+        "sourceAuthority",
+        "fundingStatus"
+      ],
+      "properties": {
+        "sourceAuthority": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "fundingStatus": {
+          "$ref": "#/$defs/importFundingStatus"
+        },
+        "providerAccountRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "providerOperationRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "originalOperationRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "originalExecutorRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "observedAt": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/timestamp"
+        }
+      },
+      "additionalProperties": false
+    },
+    "legalDocument": {
+      "description": "Historical legal document numbering preserved without issuing a second Billium legal number.",
+      "type": "object",
+      "required": [
+        "originalIssuer",
+        "sourceNumber",
+        "legalOwnershipConfirmed"
+      ],
+      "properties": {
+        "originalIssuer": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "sourceNumber": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "legalOwnershipConfirmed": {
+          "type": "boolean"
+        },
+        "issuedAt": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/timestamp"
+        },
+        "renderDigest": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+        }
+      },
+      "additionalProperties": false
+    },
+    "currencyTotal": {
+      "description": "Historical sum isolated by seller, currency and record kind; not an authoritative current balance.",
+      "type": "object",
+      "required": [
+        "sellerRef",
+        "currency",
+        "recordKind",
+        "count",
+        "totalAmount",
+        "authoritativeCurrentBalance"
+      ],
+      "properties": {
+        "sellerRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "currency": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/currencyCode"
+        },
+        "recordKind": {
+          "$ref": "#/$defs/importRecordKind"
+        },
+        "count": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+        },
+        "totalAmount": {
+          "$ref": "urn:billium:spec:2026-12:common/money-wire.json"
+        },
+        "authoritativeCurrentBalance": {
+          "const": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "sanitizationPolicy": {
+      "description": "Explicit PII and secret sanitization declaration for an import manifest.",
+      "type": "object",
+      "required": [
+        "piiRedacted",
+        "secretsStripped",
+        "policyVersion"
+      ],
+      "properties": {
+        "piiRedacted": {
+          "type": "boolean"
+        },
+        "secretsStripped": {
+          "type": "boolean"
+        },
+        "policyVersion": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        }
+      },
+      "additionalProperties": false
+    },
+    "previewRecordOutcome": {
+      "description": "Per-record typed validation outcome in an import preview report.",
+      "type": "object",
+      "required": [
+        "sourceRecordId",
+        "sourceRecordRevision",
+        "recordKind",
+        "sourceIdentityDigest",
+        "payloadDigest",
+        "status"
+      ],
+      "properties": {
+        "sourceRecordId": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "sourceRecordRevision": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+        },
+        "recordKind": {
+          "$ref": "#/$defs/importRecordKind"
+        },
+        "sourceIdentityDigest": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+        },
+        "payloadDigest": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+        },
+        "status": {
+          "$ref": "#/$defs/importValidationStatus"
+        },
+        "reasonCodes": {
+          "type": "array",
+          "minItems": 0,
+          "items": {
+            "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+          }
+        },
+        "missingEvidence": {
+          "type": "array",
+          "minItems": 0,
+          "items": {
+            "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+          }
+        },
+        "rejectionCode": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "existingMappingRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "receiptRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "sourceFactRef": {
+          "$ref": "#/$defs/sourceFactRef"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "unanchored_evidence"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "reasonCodes",
+              "missingEvidence"
+            ],
+            "properties": {
+              "reasonCodes": {
+                "minItems": 1
+              },
+              "missingEvidence": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "rejected"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "rejectionCode"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "conflict"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "existingMappingRef"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "already_applied"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "receiptRef"
+            ]
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "unexplainedDelta": {
+      "description": "Unexplained currency-scoped variance surfaced during import preview.",
+      "type": "object",
+      "required": [
+        "currency",
+        "delta",
+        "reasonCode"
+      ],
+      "properties": {
+        "currency": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/currencyCode"
+        },
+        "delta": {
+          "$ref": "urn:billium:spec:2026-12:common/money-wire.json"
+        },
+        "reasonCode": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "detail": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        }
+      },
+      "additionalProperties": false
+    },
+    "duplicateMapping": {
+      "description": "Duplicate source identity mapping noticed during import preview.",
+      "type": "object",
+      "required": [
+        "sourceRecordId",
+        "recordKind",
+        "existingMappingRef"
+      ],
+      "properties": {
+        "sourceRecordId": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "recordKind": {
+          "$ref": "#/$defs/importRecordKind"
+        },
+        "existingMappingRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        }
+      },
+      "additionalProperties": false
+    },
+    "planPriceMismatch": {
+      "description": "Mismatch between claimed plan/price reference and frozen price evidence.",
+      "type": "object",
+      "required": [
+        "sourceRecordId",
+        "claimedPriceRef",
+        "reasonCode"
+      ],
+      "properties": {
+        "sourceRecordId": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "claimedPriceRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "reasonCode": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

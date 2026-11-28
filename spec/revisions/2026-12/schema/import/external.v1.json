@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-12:import/external.v1.json",
+  "title": "external.import.v1 (D71; owner platform)",
+  "type": "object",
+  "required": [
+    "schema",
+    "batchId",
+    "sourceSystem",
+    "sourceInstallation",
+    "sourceBook",
+    "sourceExportRevision",
+    "exportCutoff",
+    "manifestDigest",
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "sourceRecordId",
+    "sourceRecordRevision",
+    "recordKind",
+    "originalBusinessRefs",
+    "eventBusinessDate",
+    "evidenceRefs",
+    "digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "external.import.v1"
+    },
+    "batchId": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sourceSystem": {
+      "$ref": "urn:billium:spec:2026-12:import/defs.json#/$defs/sourceNamespaceRef"
+    },
+    "sourceInstallation": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sourceBook": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sourceExportRevision": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+    },
+    "exportCutoff": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/timestamp"
+    },
+    "manifestDigest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    },
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sourceRecordId": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sourceRecordRevision": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+    },
+    "recordKind": {
+      "$ref": "urn:billium:spec:2026-12:import/defs.json#/$defs/importRecordKind"
+    },
+    "originalBusinessRefs": {
+      "$ref": "urn:billium:spec:2026-12:import/defs.json#/$defs/originalBusinessRefs"
+    },
+    "eventBusinessDate": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/timestamp"
+    },
+    "evidenceRefs": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "$ref": "urn:billium:spec:2026-12:import/defs.json#/$defs/evidenceItem"
+      }
+    },
+    "money": {
+      "$ref": "urn:billium:spec:2026-12:common/money-wire.json"
+    },
+    "frozenPriceSnapshot": {
+      "$ref": "urn:billium:spec:2026-12:import/defs.json#/$defs/frozenPriceSnapshot"
+    },
+    "fundingRefs": {
+      "$ref": "urn:billium:spec:2026-12:import/defs.json#/$defs/fundingRefs"
+    },
+    "legalDocument": {
+      "$ref": "urn:billium:spec:2026-12:import/defs.json#/$defs/legalDocument"
+    },
+    "importPolicyVersion": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sourceFactRef": {
+      "$ref": "urn:billium:spec:2026-12:import/defs.json#/$defs/sourceFactRef"
+    },
+    "missingEvidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+      }
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "recordKind": {
+            "const": "proven_obligation"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "money",
+          "frozenPriceSnapshot"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "recordKind": {
+            "const": "proven_payment_evidence"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "money",
+          "fundingRefs"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "recordKind": {
+            "const": "proven_refund_evidence"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "money",
+          "fundingRefs"
+        ],
+        "properties": {
+          "fundingRefs": {
+            "required": [
+              "originalOperationRef"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "recordKind": {
+            "const": "proven_invoice_history"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "legalDocument"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "recordKind": {
+            "const": "proven_allocation"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "money"
+        ]
+      }
+    }
+  ],
+  "additionalProperties": false
+}

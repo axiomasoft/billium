@@ -8,7 +8,8 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 LAYERS=(lint derived php dart conformance)
-SPEC_REV_DIR=spec/revisions/2026-10
+SPEC_REVISIONS=(2026-10 2026-12)
+SPEC_REV_DIR=spec/revisions/2026-12
 
 declare -A SUBJECTS=(
     [lint]="normative documents and schemas"
@@ -35,12 +36,17 @@ layer_lint() {
     need_tool python3
     need_path scripts/ci/tests
     python3 -m unittest discover -s scripts/ci/tests -p 'test_*.py'
-    need_path "$SPEC_REV_DIR/schema"
-    python3 scripts/spec/lint.py "$SPEC_REV_DIR"
+    local rev
+    for rev in "${SPEC_REVISIONS[@]}"; do
+        need_path "spec/revisions/$rev/schema"
+        python3 scripts/spec/lint.py "spec/revisions/$rev"
+    done
     need_path scripts/spec/lint-vectors.py
     need_path scripts/spec/check-module-compatibility.py
     python3 -m unittest discover -s scripts/spec/tests -p 'test_*.py'
-    python3 scripts/spec/lint-vectors.py
+    for rev in "${SPEC_REVISIONS[@]}"; do
+        python3 scripts/spec/lint-vectors.py --rev "spec/revisions/$rev"
+    done
     python3 scripts/spec/check-module-compatibility.py --check
     python3 -m unittest discover -s scripts/lint/tests -p 'test_migrations.py'
     python3 scripts/lint/migrations.py
@@ -65,9 +71,14 @@ layer_lint() {
 
 layer_derived() {
     need_tool python3
-    local found=0 script
-    for script in scripts/spec/build-rules.py scripts/spec/build-currencies.py \
-        scripts/spec/build-codes-index.py scripts/spec/build-golden.py scripts/spec/build-lock.py scripts/spec/identities.py \
+    local found=0 script rev
+    for rev in "${SPEC_REVISIONS[@]}"; do
+        python3 scripts/spec/build-rules.py --rev "spec/revisions/$rev" --check
+        python3 scripts/spec/build-lock.py --rev "spec/revisions/$rev" --check
+        python3 scripts/spec/build-golden.py --rev "spec/revisions/$rev" --check
+    done
+    for script in scripts/spec/build-currencies.py \
+        scripts/spec/build-codes-index.py scripts/spec/identities.py \
         scripts/spec/type-map.py scripts/spec/export-*.py; do
         [[ -f "$script" ]] || continue
         python3 "$script" --check

@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-12:rating/price.v1.json",
+  "title": "rating.price.v1 (D56; owner rating)",
+  "type": "object",
+  "required": [
+    "schema",
+    "sellerRef",
+    "priceVersionRef",
+    "componentRef",
+    "effectiveInterval",
+    "unit",
+    "quantityPrecision",
+    "amountPrecision",
+    "currency",
+    "currencyExponentVersion",
+    "strategy",
+    "commitment",
+    "modifierOrder",
+    "rounding",
+    "taxSnapshot",
+    "chargeTiming",
+    "quantityBasis",
+    "billableStream",
+    "allowancePolicy",
+    "commercialPolicyRef",
+    "digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "rating.price.v1"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "priceVersionRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "componentRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "effectiveInterval": {
+      "$ref": "urn:billium:spec:2026-12:common/usage-rating.json#/$defs/interval"
+    },
+    "unit": {
+      "$ref": "urn:billium:spec:2026-12:common/usage-rating.json#/$defs/unit"
+    },
+    "quantityPrecision": {
+      "const": "decimal_24_9/1"
+    },
+    "amountPrecision": {
+      "const": "decimal_24_12/1"
+    },
+    "currency": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/currencyCode"
+    },
+    "currencyExponentVersion": {
+      "const": "ISO4217-2026-10"
+    },
+    "strategy": {
+      "$ref": "urn:billium:spec:2026-12:common/usage-rating.json#/$defs/strategy"
+    },
+    "commitment": {
+      "$ref": "urn:billium:spec:2026-12:common/usage-rating.json#/$defs/commitment"
+    },
+    "modifierOrder": {
+      "const": "strategy_bounds_tax_round/1"
+    },
+    "rounding": {
+      "$ref": "urn:billium:spec:2026-12:common/usage-rating.json#/$defs/rounding"
+    },
+    "taxSnapshot": {
+      "$ref": "urn:billium:spec:2026-12:common/usage-rating.json#/$defs/tax"
+    },
+    "chargeTiming": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/p4ChargeTiming"
+    },
+    "quantityBasis": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/p4QuantityBasis"
+    },
+    "billableStream": {
+      "$ref": "urn:billium:spec:2026-12:common/usage-rating.json#/$defs/stream"
+    },
+    "allowancePolicy": {
+      "const": "none/1"
+    },
+    "commercialPolicyRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "chargeTiming": {
+            "const": "advance"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "quantityBasis": {
+            "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/p4AdvanceBasis"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "quantityBasis": {
+            "const": "fixed"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "strategy": {
+            "properties": {
+              "id": {
+                "const": "fixed"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "strategy": {
+            "properties": {
+              "id": {
+                "const": "fixed"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "quantityBasis": {
+            "const": "fixed"
+          }
+        }
+      }
+    }
+  ]
+}

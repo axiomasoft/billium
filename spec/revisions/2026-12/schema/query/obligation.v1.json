@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-12:query/obligation.v1.json",
+  "title": "ObligationView",
+  "type": "object",
+  "required": [
+    "schema",
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "result",
+    "digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "ledger.obligation.v1"
+    },
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "result": {
+      "type": "object",
+      "required": [
+        "obligationRef",
+        "billingAccountRef",
+        "originalDue",
+        "adjusted",
+        "allocated",
+        "credited",
+        "open",
+        "status",
+        "revision"
+      ],
+      "properties": {
+        "obligationRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "billingAccountRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "basisRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "customerRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "componentRef": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+        },
+        "originalDue": {
+          "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/nonNegative"
+        },
+        "adjusted": {
+          "$ref": "urn:billium:spec:2026-12:common/money-wire.json"
+        },
+        "allocated": {
+          "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/nonNegative"
+        },
+        "credited": {
+          "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/nonNegative"
+        },
+        "open": {
+          "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/nonNegative"
+        },
+        "termsDigest": {
+          "anyOf": [
+            {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "priceVersionRef": {
+          "anyOf": [
+            {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "taxSnapshotRef": {
+          "anyOf": [
+            {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "revision": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+        },
+        "dueAt": {
+          "anyOf": [
+            {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "duePolicyVersion": {
+          "anyOf": [
+            {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sourcePolicyRef": {
+          "anyOf": [
+            {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sourcePolicySnapshotDigest": {
+          "anyOf": [
+            {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "collectionEligibleAt": {
+          "anyOf": [
+            {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "billedInvoiceRef": {
+          "anyOf": [
+            {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "billedInvoiceStatus": {
+          "anyOf": [
+            {
+              "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/invoiceStatus"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    }
+  }
+}

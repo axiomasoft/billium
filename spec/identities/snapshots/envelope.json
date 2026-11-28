@@ -1,6 +1,7 @@
 [
   "allocation.reallocate.v1",
   "billium.capabilities.v1",
+  "billium.capabilities.v2",
   "billium.command_receipt.v1",
   "billium.event.catalog.v1",
   "billium.event.v1",

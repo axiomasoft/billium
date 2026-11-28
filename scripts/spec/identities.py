@@ -21,7 +21,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from export_common import ENVELOPES, DEFAULT_REVISION, ExportError, Revision  # noqa: E402
+from export_common import ENVELOPES, DEFAULT_REVISION, SUPPORTED_REVISIONS, ExportError, Revision  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 REGISTRY = ROOT / "spec/identities.json"
@@ -92,7 +92,8 @@ def collect(directory: Path) -> dict[tuple[str, str], dict[str, str]]:
     def add(kind: str, identity: str, source: str) -> None:
         found[(kind, identity)] = {"since": rev, "source": source}
 
-    for envelope, (_class, _schema, _source, variant) in zip(revision.envelopes(), ENVELOPES, strict=True):
+    rev_envelopes = [(c, s, src, v) for (c, s, src, v) in ENVELOPES if revision.document_id(src) in revision.documents]
+    for envelope, (_class, _schema, _source, variant) in zip(revision.envelopes(), rev_envelopes, strict=True):
         source = f"{base}/schema/{envelope.source}"
         add("envelope", envelope.schema, source)
         prefix = f"{envelope.schema}#/$defs/{variant}" if variant else f"{envelope.schema}#"
@@ -115,7 +116,8 @@ def collect(directory: Path) -> dict[tuple[str, str], dict[str, str]]:
     for catalog in sorted((directory / 'event-catalogs').glob('*.json')):
         for event in json.loads(catalog.read_text(encoding='utf-8'))['events']:
             add('event-type', event['eventType'], f'{base}/event-catalogs/{catalog.name}')
-    add("spec-revision", rev, f"{base}/README.md")
+    for sup_rev in SUPPORTED_REVISIONS:
+        found[("spec-revision", sup_rev)] = {"since": sup_rev, "source": f"spec/revisions/{sup_rev}/README.md"}
     modules = MODULES.read_text(encoding="utf-8") if MODULES.is_file() else None
     if modules is not None:
         registry = json.loads(modules)

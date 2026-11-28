@@ -1,0 +1,30 @@
+{
+  "id": "revisions/2026-12/capabilities/capabilities-v2",
+  "description": "2026-12 closed capabilities.v2",
+  "spec_refs": [
+    "BC-ENV-47",
+    "BC-ENV-48",
+    "D55"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"acceptedCommandSchemas\":[\"usage.fact.v2\"],\"catalogs\":[{\"envelopeSchema\":\"billium.event.v1\",\"eventContractRevision\":\"2026-10\",\"eventTypes\":[\"obligation.recorded.v1\"]}],\"digest\":\"sha256:e4306f4e8e3eda330e594851a3512980618d309a1897cbde93e3d41c093ba08c\",\"effects\":{\"authorize\":false,\"cancel\":false,\"capture\":false,\"sale\":false,\"voidAuthorization\":false},\"enabledModules\":[{\"apiVersion\":\"1.0.0\",\"module\":\"platform\"},{\"apiVersion\":\"1.0.0\",\"module\":\"ledger\"},{\"apiVersion\":\"1.0.0\",\"module\":\"usage\"},{\"apiVersion\":\"1.0.0\",\"module\":\"rating\"},{\"apiVersion\":\"1.0.0\",\"module\":\"schedule\"}],\"environment\":\"test\",\"eventSchemas\":[\"billium.event.v1\"],\"features\":{\"charge\":true,\"document\":false,\"execution\":false,\"find\":true,\"receipt\":true,\"refund\":true},\"installationRef\":\"inst-1\",\"limits\":{\"maxBodyBytes\":1048576,\"maxDepth\":32},\"lookupCompletenessPolicyRef\":\"default/1\",\"moduleApiVersions\":{\"ledger\":\"1.0.0\",\"platform\":\"1.0.0\",\"rating\":\"1.0.0\",\"schedule\":\"1.0.0\",\"usage\":\"1.0.0\"},\"producedResponseSchemas\":[\"usage.receipt.v2\"],\"ratingStrategyVersions\":[\"fixed@1\",\"per_unit@1\",\"per_unit@2\",\"graduated@1\",\"volume@1\"],\"schema\":\"billium.capabilities.v2\",\"selectionMode\":\"explicit\",\"serverApiVersion\":\"1\",\"specHash\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\",\"specRevision\":\"2026-12\",\"supportedSpecRevisions\":[{\"revision\":\"2026-10\",\"specHash\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\"},{\"revision\":\"2026-12\",\"specHash\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\"}],\"supportedUnits\":[\"call\",\"seat\",\"byte\",\"member\",\"second\",\"event\",\"token\"],\"usageIngressSchemas\":[\"usage.fact.v2\"]}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "billium.capabilities.v2",
+        "digest": "sha256:e4306f4e8e3eda330e594851a3512980618d309a1897cbde93e3d41c093ba08c"
+      }
+    }
+  ]
+}

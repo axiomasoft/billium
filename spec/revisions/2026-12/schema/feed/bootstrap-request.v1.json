@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-12:feed/bootstrap-request.v1.json",
+  "title": "Запрос bootstrap той же pinned подписки",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "commandKey",
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "subscriptionRef",
+    "selectionDigest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "billium.feed.bootstrap_request.v1"
+    },
+    "commandKey": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/commandKey"
+    },
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "subscriptionRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "selectionDigest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    }
+  }
+}

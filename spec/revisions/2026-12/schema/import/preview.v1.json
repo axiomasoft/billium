@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-12:import/preview.v1.json",
+  "title": "external.import.preview.v1 (D71; owner platform)",
+  "type": "object",
+  "required": [
+    "schema",
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "batchId",
+    "sourceSystem",
+    "sourceInstallation",
+    "sourceBook",
+    "sourceExportRevision",
+    "exportCutoff",
+    "manifestDigest",
+    "batchStatus",
+    "counts",
+    "totalsByCurrency",
+    "records",
+    "unexplainedDeltas",
+    "referencesWithoutEvidence",
+    "duplicateMappings",
+    "planPriceMismatches",
+    "digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "external.import.preview.v1"
+    },
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "batchId": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sourceSystem": {
+      "$ref": "urn:billium:spec:2026-12:import/defs.json#/$defs/sourceNamespaceRef"
+    },
+    "sourceInstallation": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sourceBook": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sourceExportRevision": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+    },
+    "exportCutoff": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/timestamp"
+    },
+    "manifestDigest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    },
+    "batchStatus": {
+      "$ref": "urn:billium:spec:2026-12:import/defs.json#/$defs/importBatchStatus"
+    },
+    "counts": {
+      "type": "object",
+      "required": [
+        "total",
+        "ready",
+        "unanchored_evidence",
+        "rejected",
+        "conflict",
+        "already_applied"
+      ],
+      "properties": {
+        "total": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+        },
+        "ready": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+        },
+        "unanchored_evidence": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+        },
+        "rejected": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+        },
+        "conflict": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+        },
+        "already_applied": {
+          "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+        }
+      },
+      "additionalProperties": false
+    },
+    "totalsByCurrency": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "$ref": "urn:billium:spec:2026-12:import/defs.json#/$defs/currencyTotal"
+      }
+    },
+    "records": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "$ref": "urn:billium:spec:2026-12:import/defs.json#/$defs/previewRecordOutcome"
+      }
+    },
+    "unexplainedDeltas": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "$ref": "urn:billium:spec:2026-12:import/defs.json#/$defs/unexplainedDelta"
+      }
+    },
+    "referencesWithoutEvidence": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+      }
+    },
+    "duplicateMappings": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "$ref": "urn:billium:spec:2026-12:import/defs.json#/$defs/duplicateMapping"
+      }
+    },
+    "planPriceMismatches": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "$ref": "urn:billium:spec:2026-12:import/defs.json#/$defs/planPriceMismatch"
+      }
+    },
+    "importPolicyVersion": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "generatedAt": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/timestamp"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    }
+  }
+}

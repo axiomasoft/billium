@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-12:payment/refund.v1.json",
+  "title": "RequestRefund",
+  "type": "object",
+  "required": [
+    "schema",
+    "commandKey",
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "operationRef",
+    "originalOperationRef",
+    "source",
+    "money",
+    "reasonCode",
+    "category",
+    "requestedAt"
+  ],
+  "properties": {
+    "schema": {
+      "const": "payment.refund.v1"
+    },
+    "commandKey": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/commandKey"
+    },
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    },
+    "operationRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "originalOperationRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "source": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/commandSource"
+    },
+    "money": {
+      "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/positive"
+    },
+    "reasonCode": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "category": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "requestedAt": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/timestamp"
+    }
+  },
+  "additionalProperties": false
+}

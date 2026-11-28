@@ -1,0 +1,124 @@
+{
+  "owner": "contracts (PLAN1.P4.1; D13/D56)",
+  "revision": "2026-12",
+  "historicalEnvelopesRetained": true,
+  "entries": [
+    {
+      "from": "specRevision:2026-10",
+      "to": "specRevision:2026-12",
+      "mode": "explicit_capability_negotiation",
+      "requiredEvidence": [
+        "billium.capabilities.v2 with supportedSpecRevisions containing 2026-12",
+        "supportedUnits containing token",
+        "usageIngressSchemas containing usage.fact.v2",
+        "ratingStrategyVersions containing per_unit@2"
+      ],
+      "onMissing": "billium.schema.unsupported"
+    },
+    {
+      "from": "per_unit@1",
+      "to": "per_unit@2",
+      "mode": "explicit_quantity_conversion_required",
+      "requiredEvidence": [
+        "quantityConversion {numerator, denominator, quantityScale} with exact single-unit divisibility"
+      ],
+      "onMissing": "billium.validation.invalid"
+    },
+    {
+      "from": "usage.fact.v1",
+      "to": "usage.fact.v2",
+      "mode": "explicit_host_enrichment_and_negotiation",
+      "requiredEvidence": [
+        "immutable attribution at original effective cutoff",
+        "registered MetricVersion digest/model/unit",
+        "source provenance digest",
+        "exclusive billable stream commercial basis",
+        "Billium receivedAt",
+        "correction revision identity when applicable"
+      ],
+      "forbiddenInference": [
+        "current subject payer",
+        "observedAt as receivedAt",
+        "distinct quantity as member evidence",
+        "gross usage as normalized overage"
+      ],
+      "onMissing": "billium.policy.unknown"
+    },
+    {
+      "from": "usage.receipt.v1",
+      "to": "usage.receipt.v2",
+      "mode": "new_acceptance_receipt_only",
+      "requiredEvidence": [
+        "sellerRef",
+        "original fact digest",
+        "stable receiptRef"
+      ],
+      "onMissing": "billium.policy.unknown"
+    },
+    {
+      "from": "occurrence.ensure.v1",
+      "to": "occurrence.ensure.v2",
+      "mode": "explicit_host_enrichment_and_negotiation",
+      "requiredEvidence": [
+        "persisted CommercialPeriod",
+        "immutable PriceVersion ref/digest"
+      ],
+      "identityRetained": [
+        "sellerRef",
+        "componentRef",
+        "purpose",
+        "interval"
+      ],
+      "provenanceOnly": [
+        "scheduleRevision"
+      ],
+      "onMissing": "billium.policy.unknown"
+    },
+    {
+      "from": "obligation.prepare.v1",
+      "to": "obligation.prepare.v2",
+      "mode": "explicit_rated_basis_required",
+      "requiredEvidence": [
+        "RatedBasis independent of invoice/payment",
+        "original immutable payer, period, price, quantity, tax and rounding evidence"
+      ],
+      "onMissing": "billium.policy.unknown"
+    },
+    {
+      "from": "Tariffler.OverageEvent.v1",
+      "to": "usage.fact.v2",
+      "mode": "external_source_owned_adapter_only",
+      "requiredEvidence": [
+        "explicit normalized_net_billable stream",
+        "original attribution",
+        "normalization/commercial basis",
+        "registered MetricVersion"
+      ],
+      "sourceContractChanged": false,
+      "onMissing": "billium.policy.unknown"
+    },
+    {
+      "from": "usage.metric.v1 policies version 1",
+      "to": "usage.metric.v1 attribution/correction policies version 2",
+      "mode": "explicit_new_immutable_metric_version_with_host_inputs",
+      "requiredEvidence": [
+        "new metricVersion and canonical definition digest",
+        "attribution policy 2: explicit mappingRef and complete immutable host-approved attribution snapshot",
+        "correction policy 2: explicit positive maxRevision and retained contiguous full-replacement lineage"
+      ],
+      "historicalMeaningRetained": true,
+      "onMissing": "billium.validation.invalid"
+    }
+  ],
+  "extensionGate": [
+    "stable policy/strategy identity and version",
+    "typed schema and owner-approved commercial input",
+    "scope/order/combination matrix",
+    "unit/precision/tax/rounding rules",
+    "positive/negative/boundary expected amount vectors",
+    "replay/concurrency/compatibility proof",
+    "type/identity/upgrade registration",
+    "retained historical implementation"
+  ],
+  "runtimeDisposition": "Optional usage/rating/schedule implementations are installed only when explicitly enabled; PHP owns runtime algorithms. Registered nested usage policy version 2 is additive and requires new immutable metric identity; policy version 1 bytes and semantics are retained."
+}

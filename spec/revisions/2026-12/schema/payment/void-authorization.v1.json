@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:billium:spec:2026-12:payment/void-authorization.v1.json",
+  "title": "VoidAuthorization",
+  "type": "object",
+  "required": [
+    "schema",
+    "commandKey",
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "operationRef",
+    "originalOperationRef",
+    "source",
+    "money",
+    "reasonCode",
+    "requestedAt"
+  ],
+  "properties": {
+    "schema": {
+      "const": "payment.void_authorization.v1"
+    },
+    "commandKey": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/commandKey"
+    },
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    },
+    "operationRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "originalOperationRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "source": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/commandSource"
+    },
+    "money": {
+      "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/positive"
+    },
+    "reasonCode": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "requestedAt": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/timestamp"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Explicit positive authorization-release amount. Full-only provider requires amount equal currently unconsumed authorized remainder; partial-void needs independently qualified support (add CapabilitySnapshot.partialVoidAuthorization). Never maps payment.cancel to this action."
+}

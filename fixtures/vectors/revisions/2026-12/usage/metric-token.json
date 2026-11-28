@@ -1,0 +1,31 @@
+{
+  "id": "revisions/2026-12/usage/metric-token",
+  "description": "2026-12 token metric",
+  "spec_refs": [
+    "BC-ENV-45",
+    "BC-ENV-47",
+    "BC-ENV-48",
+    "D56"
+  ],
+  "profiles": [
+    "php",
+    "dart"
+  ],
+  "given": {},
+  "script": [
+    {
+      "op": "envelope.decode",
+      "args": {
+        "json_text": "{\"attributionPolicy\":{\"id\":\"immutable_host_snapshot\",\"version\":1},\"billableStream\":{\"commercialBasisRef\":\"commercial-units-1\",\"mode\":\"normalized_net_billable\",\"normalizationRef\":\"net-overage-1\",\"policy\":\"exclusive_commercial_basis/1\"},\"correctionPolicy\":{\"id\":\"replace_same_fact_revision\",\"version\":1},\"digest\":\"sha256:cd07bd54c979dc453bf7fc22f4ce65d58365198afdec0a1a83cf64421d2103eb\",\"effectiveCutoffPolicy\":{\"id\":\"event_at\",\"version\":1},\"extraction\":{\"field\":\"quantity\",\"kind\":\"decimal_field\"},\"finalityPolicy\":{\"id\":\"source_watermark\",\"version\":1},\"groupingDimensions\":[\"region\"],\"latePolicy\":{\"id\":\"original_period_adjustment\",\"version\":1},\"metricRef\":\"ai_tokens\",\"metricVersion\":\"ai_tokens/1\",\"model\":{\"id\":\"additive_sum\",\"version\":1},\"quantityPrecision\":\"decimal_24_9/1\",\"schema\":\"usage.metric.v1\",\"sellerRef\":\"seller-1\",\"sourceSelection\":{\"filters\":[{\"field\":\"billable\",\"operator\":\"equals\",\"value\":\"true\"}],\"sources\":[\"tariffler\"]},\"unit\":\"token\"}"
+      }
+    }
+  ],
+  "expect": [
+    {
+      "ok": {
+        "schema": "usage.metric.v1",
+        "digest": "sha256:cd07bd54c979dc453bf7fc22f4ce65d58365198afdec0a1a83cf64421d2103eb"
+      }
+    }
+  ]
+}

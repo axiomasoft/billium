@@ -1,0 +1,457 @@
+[
+  {
+    "code": "billium.validation.invalid",
+    "category": "validation",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none",
+    "producer": "contracts",
+    "when": "нарушена схема или поле envelope",
+    "clientAction": "исправить envelope; тот же ключ допустим",
+    "basis": [
+      "REQ-CON-05",
+      "REQ-CON-20",
+      "M-45",
+      "D31"
+    ]
+  },
+  {
+    "code": "billium.schema.unsupported",
+    "category": "schema",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none",
+    "producer": "contracts",
+    "when": "неизвестная обязательная схема или major-версия",
+    "clientAction": "обновить клиента",
+    "basis": [
+      "REQ-CON-20",
+      "M-45",
+      "D31"
+    ]
+  },
+  {
+    "code": "billium.money.scale_invalid",
+    "category": "money",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none",
+    "producer": "contracts",
+    "when": "строка суммы не по scale валюты, валюта вне currencies.json или JSON number",
+    "clientAction": "исправить сумму; тот же ключ допустим",
+    "basis": [
+      "REQ-CON-02",
+      "D29",
+      "D31"
+    ]
+  },
+  {
+    "code": "billium.money.currency_mismatch",
+    "category": "money",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none",
+    "producer": "contracts",
+    "when": "валюта не совпадает с операцией или obligation",
+    "clientAction": "исправить; тот же ключ допустим",
+    "basis": [
+      "REQ-CON-30",
+      "D31"
+    ]
+  },
+  {
+    "code": "billium.auth.denied",
+    "category": "auth",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none",
+    "producer": "platform",
+    "when": "caller, seller или environment не совпадают с контекстом или scope partition",
+    "clientAction": "не повторять новым ключом",
+    "basis": [
+      "REQ-CON-05",
+      "REQ-CON-21",
+      "INV-14",
+      "M-45"
+    ]
+  },
+  {
+    "code": "billium.idempotency.conflict",
+    "category": "idempotency",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "none",
+    "producer": "platform",
+    "when": "тот же ключ с другим digest; тот же business binding у иного seller",
+    "clientAction": "найти исходную команду; её receipt не меняется",
+    "basis": [
+      "INV-05",
+      "REQ-FAIL-06",
+      "D36"
+    ]
+  },
+  {
+    "code": "billium.idempotency.in_flight",
+    "category": "idempotency",
+    "retryable": true,
+    "sameKey": true,
+    "receipt": "none",
+    "producer": "platform",
+    "when": "ключ claim-нут, команда выполняется",
+    "clientAction": "повторить тот же envelope позже",
+    "basis": [
+      "INV-05",
+      "M-53",
+      "M-45"
+    ]
+  },
+  {
+    "code": "billium.key.expired",
+    "category": "key",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "none",
+    "producer": "platform",
+    "when": "ключ старше горизонта namespace",
+    "clientAction": "payment.find.v1; нового эффекта нет",
+    "basis": [
+      "REQ-FAIL-07",
+      "REQ-FAIL-16"
+    ]
+  },
+  {
+    "code": "billium.recovery.required",
+    "category": "recovery",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none",
+    "producer": "platform",
+    "when": "restore, clone или пробел retention; источник feed ниже применённой revision или регресс sourceSequence",
+    "clientAction": "ждать сверки оператора",
+    "basis": [
+      "REQ-FAIL-15",
+      "REQ-FAIL-23",
+      "REQ-FAIL-25"
+    ]
+  },
+  {
+    "code": "billium.lookup.unavailable",
+    "category": "lookup",
+    "retryable": true,
+    "sameKey": true,
+    "receipt": "none",
+    "producer": "execution",
+    "when": "lookup неполон (реплика, доступ)",
+    "clientAction": "повторить find тем же запросом",
+    "basis": [
+      "REQ-CON-08",
+      "REQ-FAIL-08",
+      "M-45"
+    ]
+  },
+  {
+    "code": "billium.refund.capacity_exceeded",
+    "category": "refund",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored",
+    "producer": "execution",
+    "when": "сумма refund больше доступной ёмкости",
+    "clientAction": "уменьшить сумму или ждать исходов, новым ключом",
+    "basis": [
+      "INV-10",
+      "D31"
+    ]
+  },
+  {
+    "code": "billium.operation.not_cancellable",
+    "category": "operation",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored",
+    "producer": "execution",
+    "when": "запрос уже отправлен или исход terminal",
+    "clientAction": "ждать исхода; refund отдельно",
+    "basis": [
+      "REQ-CON-07",
+      "D31"
+    ]
+  },
+  {
+    "code": "billium.observation.parked",
+    "category": "observation",
+    "retryable": true,
+    "sameKey": true,
+    "receipt": "none",
+    "producer": "ledger",
+    "when": "refund раньше платежа, нет основания или пропуск sourceSequence",
+    "clientAction": "дослать зависимость или пропуск; повторная доставка того же eventId",
+    "basis": [
+      "REQ-FAIL-12",
+      "REQ-FAIL-13",
+      "REQ-CON-27"
+    ]
+  },
+  {
+    "code": "billium.observation.conflict",
+    "category": "observation",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored",
+    "producer": "ledger",
+    "when": "та же revision или тот же eventId с другим digest",
+    "clientAction": "reconcile или оператор; наблюдение в quarantine",
+    "basis": [
+      "REQ-FAIL-04",
+      "REQ-CON-27"
+    ]
+  },
+  {
+    "code": "billium.usage.conflict",
+    "category": "usage",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "none",
+    "producer": "usage",
+    "when": "та же identity и revision факта, иной digest",
+    "clientAction": "новая revision факта",
+    "basis": [
+      "REQ-CON-15",
+      "D31"
+    ]
+  },
+  {
+    "code": "billium.policy.unknown",
+    "category": "policy",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored",
+    "producer": "ledger",
+    "when": "нет policy для денежного эффекта",
+    "clientAction": "задать policy",
+    "basis": [
+      "REQ-ACC-23",
+      "D31"
+    ]
+  },
+  {
+    "code": "billium.invoice.frozen",
+    "category": "invoice",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored",
+    "producer": "ledger",
+    "when": "изменение issued invoice вне allow-list",
+    "clientAction": "credit note или void/reissue",
+    "basis": [
+      "INV-13",
+      "D31"
+    ]
+  },
+  {
+    "code": "billium.allocation.reallocation_required",
+    "category": "allocation",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored",
+    "producer": "ledger",
+    "when": "новая allocation из платежа с reallocation_required после refund",
+    "clientAction": "выполнить allocation.reallocate.v1, затем новый ключ",
+    "basis": [
+      "INV-09",
+      "D35",
+      "D31"
+    ]
+  },
+  {
+    "code": "billium.installation.quarantined",
+    "category": "installation",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none",
+    "producer": "platform",
+    "when": "нет допуска writer WriterAdmission: restore, клон, иная incarnation, lease занят",
+    "clientAction": "ждать допуска writer",
+    "basis": [
+      "REQ-FAIL-15",
+      "INV-02",
+      "D34"
+    ]
+  },
+  {
+    "code": "billium.transport.unavailable",
+    "category": "transport",
+    "retryable": true,
+    "sameKey": true,
+    "receipt": "none",
+    "producer": "contracts",
+    "when": "сервер недоступен или timeout",
+    "clientAction": "повторить тот же envelope",
+    "basis": [
+      "REQ-CON-05",
+      "INV-04",
+      "M-45"
+    ]
+  },
+  {
+    "code": "billium.allocation.exceeds_open",
+    "category": "allocation",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored",
+    "producer": "ledger",
+    "when": "сумма allocation или credit note больше открытой суммы obligation; уменьшение obligation ниже распределённого",
+    "clientAction": "уменьшить сумму или пересмотреть распределения; новый ключ",
+    "basis": [
+      "REQ-CON-20",
+      "D31",
+      "D47"
+    ]
+  },
+  {
+    "code": "billium.allocation.exceeds_available",
+    "category": "allocation",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored",
+    "producer": "ledger",
+    "when": "сумма allocation больше доступного остатка платежа или customer credit",
+    "clientAction": "уменьшить сумму или дождаться доступного остатка; новый ключ",
+    "basis": [
+      "REQ-CON-20",
+      "D31",
+      "D47"
+    ]
+  },
+  {
+    "code": "billium.invoice.transition_invalid",
+    "category": "invoice",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored",
+    "producer": "ledger",
+    "when": "команда недопустима в текущем статусе invoice или allocation",
+    "clientAction": "выбрать допустимую для текущего статуса команду; новый ключ",
+    "basis": [
+      "REQ-CON-20",
+      "D31",
+      "D47"
+    ]
+  },
+  {
+    "code": "billium.reference.unknown",
+    "category": "reference",
+    "retryable": true,
+    "sameKey": true,
+    "receipt": "none",
+    "producer": "ledger",
+    "when": "ссылка на obligation, invoice, payment, credit или allocation не найдена в scope seller (чужой seller не раскрывается)",
+    "clientAction": "проверить ссылку в scope seller или дождаться зависимости; повторить тем же ключом",
+    "basis": [
+      "REQ-CON-20",
+      "INV-14",
+      "D31",
+      "D47"
+    ]
+  },
+  {
+    "code": "billium.capability.unsupported",
+    "category": "capability",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none",
+    "producer": "execution",
+    "when": "Exact frozen driver/capability/action/account/currency evidence not supported; refuse before admission/effect; no fallback",
+    "clientAction": "Inspect the typed refusal and resolve its stated capability, capacity, hold or evidence condition.",
+    "basis": [
+      "D31",
+      "REQ-CON-05"
+    ]
+  },
+  {
+    "code": "billium.capture.capacity_exceeded",
+    "category": "capture",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored",
+    "producer": "execution",
+    "when": "Capture exceeds locked available authorization",
+    "clientAction": "Inspect the typed refusal and resolve its stated capability, capacity, hold or evidence condition.",
+    "basis": [
+      "D31",
+      "REQ-CON-05"
+    ]
+  },
+  {
+    "code": "billium.authorization.capacity_exceeded",
+    "category": "authorization",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored",
+    "producer": "execution",
+    "when": "Void amount exceeds locked unconsumed authorization",
+    "clientAction": "Inspect the typed refusal and resolve its stated capability, capacity, hold or evidence condition.",
+    "basis": [
+      "D31",
+      "REQ-CON-05"
+    ]
+  },
+  {
+    "code": "billium.operation.financial_hold",
+    "category": "operation",
+    "retryable": false,
+    "sameKey": false,
+    "receipt": "stored",
+    "producer": "execution",
+    "when": "New monetary intent refused under discrepancy hold",
+    "clientAction": "Inspect the typed refusal and resolve its stated capability, capacity, hold or evidence condition.",
+    "basis": [
+      "D31",
+      "REQ-CON-05"
+    ]
+  },
+  {
+    "code": "billium.lookup.ambiguous",
+    "category": "lookup",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none",
+    "producer": "execution",
+    "when": "Provider evidence cannot identify reliable actual effect; retain unknown and reconcile",
+    "clientAction": "Inspect the typed refusal and resolve its stated capability, capacity, hold or evidence condition.",
+    "basis": [
+      "D31",
+      "REQ-CON-05"
+    ]
+  },
+  {
+    "code": "billium.module.unavailable",
+    "category": "module",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none",
+    "producer": "platform",
+    "when": "модуль не включён; отказ до custody и денежного эффекта, исторический query может остаться",
+    "clientAction": "не создавать новый ключ и не повторять эффект; читать историю там, где она ещё доступна",
+    "basis": [
+      "D55",
+      "D31",
+      "REQ-CON-05"
+    ]
+  },
+  {
+    "code": "billium.auth.unauthenticated",
+    "category": "auth",
+    "retryable": false,
+    "sameKey": true,
+    "receipt": "none",
+    "producer": "platform",
+    "when": "credential отсутствует или недействителен, до чтения ресурса и custody",
+    "clientAction": "исправить credential; тот же ключ допустим, receipt не сохранён",
+    "basis": [
+      "REQ-CON-21",
+      "D31",
+      "M-45"
+    ]
+  }
+]

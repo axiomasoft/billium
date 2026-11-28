@@ -1,0 +1,84 @@
+{
+  "$id": "urn:billium:spec:2026-12:payment/effect-outcome.v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Operation-local execution outcome. Actual cumulative effectTotal is assigned, never added; it is not ledger application or root charge totals. Additional optional response members are permitted.",
+  "properties": {
+    "bindingRevision": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "digest": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/digest"
+    },
+    "effectTotal": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/operationTotal",
+      "description": "Cumulative normalized actual amount for this child: captured funds for capture, released authorization for void_authorization. Decimal string in money.currency with its scale. Zero means no confirmed amount recorded at this revision, not certified absence. No admission-capacity upper bound is imposed on actual evidence."
+    },
+    "environment": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "installationRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "merchantAccountRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "money": {
+      "$ref": "urn:billium:spec:2026-12:common/money-wire.json#/$defs/positive",
+      "description": "Frozen positive requested amount of this child, in the root binding currency. Not a claim that the provider applied it."
+    },
+    "occurredAt": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/timestamp"
+    },
+    "operationKind": {
+      "description": "Separate child wire kind; internal execution kind void maps to void_authorization. Shared v1 charge/refund enum is unchanged.",
+      "enum": [
+        "capture",
+        "void_authorization"
+      ]
+    },
+    "operationRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref",
+      "description": "Child logical operation identity; independent of transport retries."
+    },
+    "originalOperationRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref",
+      "description": "Original root charge operationRef, never the latest merchant route."
+    },
+    "providerEvidenceRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref",
+      "description": "Stable sanitized evidence reference, not a credential or mandatory PSP effect identifier. Same existing outcome evidence boundary."
+    },
+    "revision": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/counter"
+    },
+    "schema": {
+      "const": "payment.effect.outcome.v1"
+    },
+    "sellerRef": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/ref"
+    },
+    "status": {
+      "$ref": "urn:billium:spec:2026-12:common/defs.json#/$defs/operationStatus"
+    }
+  },
+  "required": [
+    "schema",
+    "installationRef",
+    "environment",
+    "sellerRef",
+    "operationRef",
+    "originalOperationRef",
+    "operationKind",
+    "revision",
+    "status",
+    "money",
+    "effectTotal",
+    "bindingRevision",
+    "merchantAccountRef",
+    "providerEvidenceRef",
+    "occurredAt",
+    "digest"
+  ],
+  "title": "Capture or authorization-void child outcome",
+  "type": "object"
+}
