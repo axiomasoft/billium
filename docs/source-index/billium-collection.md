@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-collection
 
-Path `packages/core/modules/collection/src`, namespace `Billium\Collection\`, layer L2. 103 types.
+Path `packages/core/modules/collection/src`, namespace `Billium\Collection\`, layer L2. 105 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -115,6 +115,8 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
+| [`ConsentLifecycleReducer`](../../packages/core/modules/collection/src/Internal/Reducers/ConsentLifecycleReducer.php) | class | *Internal* |  |
+| [`ConsentRevocationDecision`](../../packages/core/modules/collection/src/Internal/Reducers/ConsentRevocationDecision.php) | class | *Internal* |  |
 | [`DunningStepPlanDecision`](../../packages/core/modules/collection/src/Internal/Reducers/DunningStepPlanDecision.php) | class | *Internal* |  |
 | [`DunningStepPlanner`](../../packages/core/modules/collection/src/Internal/Reducers/DunningStepPlanner.php) | class | *Internal* |  |
 | [`DunningTransitionDecision`](../../packages/core/modules/collection/src/Internal/Reducers/DunningTransitionDecision.php) | class | *Internal* |  |

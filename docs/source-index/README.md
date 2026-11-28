@@ -9,12 +9,12 @@ One page per PHP package. Open the package page, find the directory, then read o
 | [billium-contracts](billium-contracts.md) | L1 | 85 | — |
 | [billium-core](billium-core.md) | L2 | 114 | billium-collection, billium-contracts, billium-documents, billium-execution, billium-ledger, billium-platform, billium-rating, billium-schedule, billium-usage |
 | [billium-server](billium-server.md) | L3 | 39 | billium-collection, billium-contracts, billium-core, billium-execution, billium-ledger, billium-platform, billium-rating, billium-schedule, billium-usage |
-| [billium-platform](billium-platform.md) | L2 | 175 | billium-contracts, billium-core |
+| [billium-platform](billium-platform.md) | L2 | 183 | billium-contracts, billium-core |
 | [billium-ledger](billium-ledger.md) | L2 | 101 | billium-contracts, billium-core, billium-platform |
 | [billium-usage](billium-usage.md) | L2 | 64 | billium-contracts, billium-core, billium-platform |
-| [billium-schedule](billium-schedule.md) | L2 | 56 | billium-contracts, billium-core, billium-platform |
+| [billium-schedule](billium-schedule.md) | L2 | 57 | billium-contracts, billium-core, billium-platform |
 | [billium-rating](billium-rating.md) | L2 | 122 | billium-contracts, billium-core, billium-ledger, billium-platform, billium-schedule, billium-usage |
-| [billium-documents](billium-documents.md) | L2 | 89 | billium-contracts, billium-core, billium-ledger |
+| [billium-documents](billium-documents.md) | L2 | 93 | billium-contracts, billium-core, billium-ledger |
 | [billium-execution](billium-execution.md) | L2 | 206 | billium-contracts, billium-core, billium-ledger, billium-platform |
-| [billium-collection](billium-collection.md) | L2 | 103 | billium-contracts, billium-core, billium-execution, billium-ledger, billium-platform |
+| [billium-collection](billium-collection.md) | L2 | 105 | billium-contracts, billium-core, billium-execution, billium-ledger, billium-platform |
 | [billium-testkit](billium-testkit.md) | L4 | 38 | billium-collection, billium-contracts, billium-core, billium-documents, billium-execution, billium-platform |

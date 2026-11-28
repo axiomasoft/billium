@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-schedule
 
-Path `packages/core/modules/schedule/src`, namespace `Billium\Schedule\`, layer L2. 56 types.
+Path `packages/core/modules/schedule/src`, namespace `Billium\Schedule\`, layer L2. 57 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -117,6 +117,17 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
 | [`Payload`](../../packages/core/modules/schedule/src/Internal/Payload.php) | class | *Internal* | Strict hydration of owned persisted evidence; never coerce malformed commercial terms. |
+
+## Internal/Reducers
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`OccurrenceDecisionReducer`](../../packages/core/modules/schedule/src/Internal/Reducers/OccurrenceDecisionReducer.php) | class | *Internal* |  |
+
+## Internal
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
 | [`ScheduleProblems`](../../packages/core/modules/schedule/src/Internal/ScheduleProblems.php) | class | *Internal* |  |
 
 ## Internal/Services

@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-documents
 
-Path `packages/core/modules/documents/src`, namespace `Billium\Documents\`, layer L2. 89 types.
+Path `packages/core/modules/documents/src`, namespace `Billium\Documents\`, layer L2. 93 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts
@@ -120,6 +120,15 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
 | [`DatabaseLegalDocumentQueries`](../../packages/core/modules/documents/src/Internal/Queries/DatabaseLegalDocumentQueries.php) | class | *Internal* |  |
+
+## Internal/Reducers
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`AttachSnapshotDecision`](../../packages/core/modules/documents/src/Internal/Reducers/AttachSnapshotDecision.php) | class | *Internal* |  |
+| [`DocumentSnapshotAssembler`](../../packages/core/modules/documents/src/Internal/Reducers/DocumentSnapshotAssembler.php) | class | *Internal* |  |
+| [`FinalizationStateReducer`](../../packages/core/modules/documents/src/Internal/Reducers/FinalizationStateReducer.php) | class | *Internal* |  |
+| [`LegalIssuePreconditionChecker`](../../packages/core/modules/documents/src/Internal/Reducers/LegalIssuePreconditionChecker.php) | class | *Internal* |  |
 
 ## Internal/Registrars
 

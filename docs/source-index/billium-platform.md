@@ -2,7 +2,7 @@
 
 # axiomasoft/billium-platform
 
-Path `packages/core/modules/platform/src`, namespace `Billium\Platform\`, layer L2. 175 types.
+Path `packages/core/modules/platform/src`, namespace `Billium\Platform\`, layer L2. 183 types.
 Visibility: **Api** public, **Spi** host extension point, *Internal* not for consumers.
 
 ## Contracts/Accounting
@@ -219,6 +219,11 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | Type | Kind | Visibility | Summary |
 |---|---|---|---|
 | [`AccountingFactMapper`](../../packages/core/modules/platform/src/Internal/Accounting/AccountingFactMapper.php) | class | *Internal* | Deterministic platform-owned accounting fact mapper and FinBridge contract translator (P6.6, D53, D56, D63). |
+| [`AccountingFactSupport`](../../packages/core/modules/platform/src/Internal/Accounting/AccountingFactSupport.php) | class | *Internal* | Shared pure payload parsing and deterministic digest helpers for accounting fact mappers (0 I/O). |
+| [`ActualCashFactMapper`](../../packages/core/modules/platform/src/Internal/Accounting/ActualCashFactMapper.php) | class | *Internal* | Maps unique authenticated actual provider cash effects (CashIn / CashOut) (0 I/O). |
+| [`AllocationFactMapper`](../../packages/core/modules/platform/src/Internal/Accounting/AllocationFactMapper.php) | class | *Internal* | Maps NoncashAllocation facts (AllocationApplied, AllocationReversed) kept separate from cash facts (0 I/O). |
+| [`NoncashExposureFactMapper`](../../packages/core/modules/platform/src/Internal/Accounting/NoncashExposureFactMapper.php) | class | *Internal* | Maps NoncashExposure facts keyed by complete discrepancy basis fingerprint (0 I/O). |
+| [`ReceivableFactMapper`](../../packages/core/modules/platform/src/Internal/Accounting/ReceivableFactMapper.php) | class | *Internal* | Maps Receivable facts (InvoiceIssued, CreditNoteIssued, WriteOffRecorded) from bounded ledger projections (0 I/O). |
 
 ## Internal/CommandOutbox
 
@@ -330,6 +335,14 @@ Visibility: **Api** public, **Spi** host extension point, *Internal* not for con
 | [`OutboxPruner`](../../packages/core/modules/platform/src/Internal/Outbox/OutboxPruner.php) | class | *Internal* | D25/D52/D60: owner-only maintenance, complete safe physical prefix, all delivery destinations and active pins. |
 | [`OutboxRecorder`](../../packages/core/modules/platform/src/Internal/Outbox/OutboxRecorder.php) | class | *Internal* |  |
 | [`OutboxRelay`](../../packages/core/modules/platform/src/Internal/Outbox/OutboxRelay.php) | class | *Internal* | D60/D63: SKIP LOCKED claim, transport outside Tx, token-CAS acknowledgement. |
+
+## Internal/Reducers
+
+| Type | Kind | Visibility | Summary |
+|---|---|---|---|
+| [`CustodyArrivalDecision`](../../packages/core/modules/platform/src/Internal/Reducers/CustodyArrivalDecision.php) | class | *Internal* |  |
+| [`CustodyDuplicateDecision`](../../packages/core/modules/platform/src/Internal/Reducers/CustodyDuplicateDecision.php) | class | *Internal* |  |
+| [`CustodyRoutingReducer`](../../packages/core/modules/platform/src/Internal/Reducers/CustodyRoutingReducer.php) | class | *Internal* | Pure deterministic custody routing and disposition reducer (0 I/O). |
 
 ## Internal/Registrars
 
